@@ -1,0 +1,21 @@
+diff --git a/modules/xfeatures2d/src/vgg.cpp b/modules/xfeatures2d/src/vgg.cpp
+--- a/modules/xfeatures2d/src/vgg.cpp
++++ b/modules/xfeatures2d/src/vgg.cpp
+@@ -559,11 +559,11 @@ void VGG_Impl::write (FileStorage& fs) const
+     }
+ }
+
+-String VGG::getDefaultName() const
+-{
+-    return (Feature2D::getDefaultName() + ".VGG");
+-}
+-
+-#endif
++#endif
++
++String VGG::getDefaultName() const
++{
++    return (Feature2D::getDefaultName() + ".VGG");
++}
+
+ Ptr<VGG> VGG::create( int desc, float isigma, bool img_normalize, bool use_scale_orientation,

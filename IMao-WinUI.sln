@@ -1,0 +1,27 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.12112.369
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IMao-WinUI", "IMao-WinUI\IMao-WinUI.csproj", "{36D3C6A1-A93C-422A-BE84-ACBFA053C20D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IMao-WinUI.Core", "IMao-WinUI.Core\IMao-WinUI.Core.csproj", "{01352109-15EA-4624-8D8F-A9E76AE8F29F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{36D3C6A1-A93C-422A-BE84-ACBFA053C20D}.Debug|x64.ActiveCfg = Debug|x64
+		{36D3C6A1-A93C-422A-BE84-ACBFA053C20D}.Debug|x64.Build.0 = Debug|x64
+		{36D3C6A1-A93C-422A-BE84-ACBFA053C20D}.Release|x64.ActiveCfg = Release|x64
+		{36D3C6A1-A93C-422A-BE84-ACBFA053C20D}.Release|x64.Build.0 = Release|x64
+		{01352109-15EA-4624-8D8F-A9E76AE8F29F}.Debug|x64.ActiveCfg = Debug|AnyCPU
+		{01352109-15EA-4624-8D8F-A9E76AE8F29F}.Debug|x64.Build.0 = Debug|AnyCPU
+		{01352109-15EA-4624-8D8F-A9E76AE8F29F}.Release|x64.ActiveCfg = Release|AnyCPU
+		{01352109-15EA-4624-8D8F-A9E76AE8F29F}.Release|x64.Build.0 = Release|AnyCPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

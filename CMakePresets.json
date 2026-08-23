@@ -1,0 +1,40 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "windows-x64-release",
+      "displayName": "Windows x64 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/windows-x64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "windows-x64-relwithdebinfo-diagnostics",
+      "displayName": "Windows x64 RelWithDebInfo Diagnostics",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/windows-x64-relwithdebinfo-diagnostics",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "IMAO_ENABLE_DIAGNOSTICS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-x64-release-core",
+      "configurePreset": "windows-x64-release",
+      "targets": [
+        "IMao-Core"
+      ]
+    },
+    {
+      "name": "windows-x64-relwithdebinfo-diagnostics-core",
+      "configurePreset": "windows-x64-relwithdebinfo-diagnostics",
+      "targets": [
+        "IMao-Core"
+      ]
+    }
+  ]
+}

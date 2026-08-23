@@ -1,6 +1,13 @@
 *build*/
 x64/
+Debug/
 bin/
+.vs/
 IMao-WinUI/obj
 IMao-WinUI.Core/obj
 CMakeFiles/
+1.0.2解压文件/
+out/
+third_party/
+tools/dotnet/
+tools/dotnet-sdk-8.0.424/

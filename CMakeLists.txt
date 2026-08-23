@@ -1,7 +1,11 @@
 ﻿cmake_minimum_required(VERSION 3.14)
-project(IMao-Core CXX C CSharp)
+project(IMao-Core CXX C)
 
 SET(DEMO_NAME "IMao-Core")
+
+if(NOT WIN32 OR NOT MSVC)
+    message(FATAL_ERROR "IMao-Core requires the MSVC toolchain on Windows.")
+endif()
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
     set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "" FORCE)
@@ -30,8 +34,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-SET(PADDLE_LIB "" CACHE PATH "Location of paddle libraries")
-SET(OPENCV_DIR "" CACHE PATH "Location of OpenCV libraries")
+SET(PADDLE_LIB "" CACHE PATH "Paddle Inference root (contains paddle/ and third_party/)")
+SET(OPENCV_DIR "" CACHE PATH "Directory containing OpenCVConfig.cmake")
+option(IMAO_ENABLE_DIAGNOSTICS "Write bounded runtime screenshots and event logs for map matching diagnostics" OFF)
 
 macro(safe_set_static_flag)
     foreach(flag_var
@@ -49,12 +54,12 @@ endif()
 
 ADD_DEFINITIONS(-DUSE_MKL)
 
-if(NOT DEFINED PADDLE_LIB)
-  message(FATAL_ERROR "please set PADDLE_LIB with -DPADDLE_LIB=/path/paddle/lib")
+if(PADDLE_LIB STREQUAL "" OR NOT EXISTS "${PADDLE_LIB}/paddle/include/paddle_inference_api.h")
+  message(FATAL_ERROR "Set PADDLE_LIB to the Paddle Inference root containing paddle/include/paddle_inference_api.h.")
 endif()
 
-if(NOT DEFINED OPENCV_DIR)
-    message(FATAL_ERROR "please set OPENCV_DIR with -DOPENCV_DIR=/path/opencv")
+if(OPENCV_DIR STREQUAL "" OR NOT EXISTS "${OPENCV_DIR}/OpenCVConfig.cmake")
+    message(FATAL_ERROR "Set OPENCV_DIR to the directory containing OpenCVConfig.cmake.")
 endif()
 
 include_directories("${PADDLE_LIB}/paddle/include")
@@ -67,8 +72,10 @@ add_definitions("/DUNICODE" "/D_UNICODE")
 set(FLAG_OPENMP "/openmp")
 set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG} /bigobj ${FLAG_OPENMP}")
 set(CMAKE_C_FLAGS_RELEASE  "${CMAKE_C_FLAGS_RELEASE} /bigobj ${FLAG_OPENMP}")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /bigobj ${FLAG_OPENMP}")
 set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} /bigobj ${FLAG_OPENMP}")
 set(CMAKE_CXX_FLAGS_RELEASE   "${CMAKE_CXX_FLAGS_RELEASE} /bigobj ${FLAG_OPENMP}")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /bigobj ${FLAG_OPENMP}")
 
 safe_set_static_flag()
 add_definitions(-DSTATIC_LIB)
@@ -175,6 +182,10 @@ target_compile_definitions(${DEMO_NAME} PRIVATE
     IMAO_CORE_EXPORTS  
 )
 
+if(IMAO_ENABLE_DIAGNOSTICS)
+    target_compile_definitions(${DEMO_NAME} PRIVATE IMAO_ENABLE_DIAGNOSTICS=1)
+endif()
+
 set_target_properties(${DEMO_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
@@ -186,6 +197,7 @@ target_include_directories(${DEMO_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(${DEMO_NAME} ${DEPS})
 
 add_custom_command(TARGET ${DEMO_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Assets ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/Assets
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_LIB}/third_party/install/mklml/lib/mklml.dll ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/mklml.dll
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_LIB}/third_party/install/mklml/lib/libiomp5md.dll ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/libiomp5md.dll
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_LIB}/third_party/install/onednn/lib/mkldnn.dll ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/mkldnn.dll
