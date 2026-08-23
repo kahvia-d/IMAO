@@ -1,0 +1,99 @@
+{
+  "formatVersion": 1,
+  "generatedAtUtc": "2026-08-23T18:34:41.8407562Z",
+  "resourceVersion": "E62CEAC5F80745288BF76C7AD5F731C3",
+  "source": {
+    "api": "https://api.kurobbs.com",
+    "static": "https://web-static.kurobbs.com",
+    "states": [
+      "903",
+      "902",
+      "909",
+      "906",
+      "8",
+      "900",
+      "905",
+      "910"
+    ]
+  },
+  "aliases": {
+    "sx·lgn": "sx_lgn",
+    "sx·qq": "sx_qq"
+  },
+  "states": [
+    {
+      "state": 8,
+      "runtime": "World",
+      "supported": true,
+      "reason": "",
+      "itemTypes": 430,
+      "points": 19184,
+      "sha256": "e5e67445c596da794c51a95878ca392d2bc819b64814070316459a89b0c71d15"
+    },
+    {
+      "state": 900,
+      "runtime": "Tethys",
+      "supported": true,
+      "reason": "",
+      "itemTypes": 40,
+      "points": 415,
+      "sha256": "e9f843161fa8b88ece5c193740bb776ffa829e5b19f0d58f6ad4d138555b165b"
+    },
+    {
+      "state": 905,
+      "runtime": "Fabricatorium",
+      "supported": true,
+      "reason": "",
+      "itemTypes": 35,
+      "points": 236,
+      "sha256": "264ff655f8d2e33fd988520e1a640bb8396603845a2c896a37b5155d84b94674"
+    },
+    {
+      "state": 903,
+      "runtime": "Avinoleum",
+      "supported": true,
+      "reason": "",
+      "itemTypes": 31,
+      "points": 462,
+      "sha256": "fc27a41145e5d38e808452dd947a2c9d39f9f3f9b13ef67c38aa6eb6069dbbd8"
+    },
+    {
+      "state": 906,
+      "runtime": "Lahai",
+      "supported": true,
+      "reason": "",
+      "itemTypes": 75,
+      "points": 2536,
+      "sha256": "76481ac43d69064e4f422a1f199d543d200510bb7516497de7a74a159059db2e"
+    },
+    {
+      "state": 902,
+      "runtime": "",
+      "supported": false,
+      "reason": "待接入：尚未建立坐标换算、地图底图和 SURF 特征库。",
+      "itemTypes": 37,
+      "points": 238,
+      "sha256": "5144b4471d9b40cdda8c2c56264217c84eb944e3c035467a958752bfe53188b3"
+    },
+    {
+      "state": 909,
+      "runtime": "",
+      "supported": false,
+      "reason": "待接入：尚未建立坐标换算、地图底图和 SURF 特征库。",
+      "itemTypes": 43,
+      "points": 673,
+      "sha256": "3bc3d270186198da1d50cea056cca819420b1260f1eaed599f30bc36d520f8a0"
+    },
+    {
+      "state": 910,
+      "runtime": "",
+      "supported": false,
+      "reason": "待接入：尚未建立坐标换算、地图底图和 SURF 特征库。",
+      "itemTypes": 9,
+      "points": 59,
+      "sha256": "9362dc70711680f399c7c91ed250276ee3caede3123604776c9012cf0d535d2c"
+    }
+  ],
+  "iconCount": 527,
+  "runtimeFilterItemCount": 506
+}

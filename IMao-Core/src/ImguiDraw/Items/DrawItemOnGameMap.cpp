@@ -117,12 +117,17 @@ void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd) {
 
 		if (texture == nullptr && !itemDatas.nameId.empty()) {
 			if (DrawItemBase::IsValidItemNameId(itemDatas.nameId)) {
-				cout << itemDatas.nameId << endl;;
-				std::wstring temp = L"IDB_PNG_" + std::wstring(itemDatas.nameId.begin(), itemDatas.nameId.end());
-				ret = ImGuiOverWindows::LoadTextureFromResource(temp.c_str(), &texture, &image_width1, &image_height1);
-
-				//DrawItemBase::itemsTextureData.push_back(ItemTextureData(itemDatas.nameId, texture.Get()));
-				DrawItemBase::itemsTextureData.push_back(ItemTextureData(itemDatas.nameId, texture));
+				const string externalIcon = DrawItemBase::GetExternalIconPath(itemDatas.nameId);
+				if (!externalIcon.empty()) {
+					ret = ImGuiOverWindows::LoadTextureFromPath(externalIcon.c_str(), &texture, &image_width1, &image_height1);
+				}
+				if (!ret) {
+					std::wstring temp = L"IDB_PNG_" + std::wstring(itemDatas.nameId.begin(), itemDatas.nameId.end());
+					ret = ImGuiOverWindows::LoadTextureFromResource(temp.c_str(), &texture, &image_width1, &image_height1);
+				}
+				if (ret) {
+					DrawItemBase::itemsTextureData.push_back(ItemTextureData(itemDatas.nameId, texture));
+				}
 			}
 		}
 		if (ret) {

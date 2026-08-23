@@ -40,6 +40,9 @@ public:
 	static void SaveItemPoint(std::string scene, ItemDatas itemDatas);
 	static void RemoveSavedItemPoint(std::string scene, ItemDatas itemDatas);
 	static bool IsValidItemNameId(std::string itemNameId);
+	// Kuro map icons are synchronized outside the DLL so new item types do not
+	// require adding a new Windows resource for every upstream update.
+	static std::string GetExternalIconPath(const std::string& itemNameId);
 	static std::vector<std::string> GetFilteredPoints(std::string scene, std::string nameId);
 
 	static std::vector<ItemTextureData> itemsTextureData;

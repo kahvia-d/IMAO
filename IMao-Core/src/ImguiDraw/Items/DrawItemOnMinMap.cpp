@@ -113,11 +113,17 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect) {
         }
 
         if (texture == nullptr && !itemData.nameId.empty()) {
-            std::wstring temp = L"IDB_PNG_" + std::wstring(itemData.nameId.begin(), itemData.nameId.end());
-            ret = ImGuiOverWindows::LoadTextureFromResource(temp.c_str(), &texture, &image_width1, &image_height1);
-            //ret = ImGuiOverWindows::LoadTextureFromPath(itemData.iconPath.c_str(), &texture, &image_width1, &image_height1);
-           // DrawItemBase::itemsTextureData.push_back(ItemTextureData(itemData.nameId, texture.Get()));
-            DrawItemBase::itemsTextureData.push_back(ItemTextureData(itemData.nameId, texture));
+            const string externalIcon = DrawItemBase::GetExternalIconPath(itemData.nameId);
+            if (!externalIcon.empty()) {
+                ret = ImGuiOverWindows::LoadTextureFromPath(externalIcon.c_str(), &texture, &image_width1, &image_height1);
+            }
+            if (!ret) {
+                std::wstring temp = L"IDB_PNG_" + std::wstring(itemData.nameId.begin(), itemData.nameId.end());
+                ret = ImGuiOverWindows::LoadTextureFromResource(temp.c_str(), &texture, &image_width1, &image_height1);
+            }
+            if (ret) {
+                DrawItemBase::itemsTextureData.push_back(ItemTextureData(itemData.nameId, texture));
+            }
         }
        
         if (ret) {

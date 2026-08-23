@@ -172,6 +172,17 @@ file(GLOB_RECURSE ResourceFiles
     "IMao-Core/src/Resource/*.json"
 )
 
+# rc.exe does not reliably report the JSON files referenced by IMao-Core.rc
+# as Ninja dependencies. Keep synchronized map snapshots from producing a
+# stale DLL when only an embedded JSON resource changes.
+set_property(SOURCE "${CMAKE_SOURCE_DIR}/IMao-Core/src/IMao-Core.rc" APPEND PROPERTY OBJECT_DEPENDS
+    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_World.json"
+    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Tethys.json"
+    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Fabricatorium.json"
+    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Avinoleum.json"
+    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Lahai.json"
+)
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/IMao-Core/src PREFIX "" FILES ${CppFiles} ${HppFiles} ${ResourceFiles})
 
 add_library(${DEMO_NAME} SHARED 

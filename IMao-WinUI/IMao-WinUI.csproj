@@ -74,6 +74,17 @@
   </PropertyGroup>
  
 <!-- 删除其他语言文件夹 -->
+<Target Name="CopyKuroMapAssets" AfterTargets="CopyFilesToOutputDirectory">
+  <ItemGroup>
+    <KuroMapAssets Include="$(MSBuildProjectDirectory)\..\Assets\KuroMap\**\*" />
+  </ItemGroup>
+  <MakeDir Directories="$(TargetDir)Assets\KuroMap" Condition="Exists('$(MSBuildProjectDirectory)\..\Assets\KuroMap')" />
+  <Copy SourceFiles="@(KuroMapAssets)"
+        DestinationFiles="@(KuroMapAssets->'$(TargetDir)Assets\KuroMap\%(RecursiveDir)%(Filename)%(Extension)')"
+        SkipUnchangedFiles="true"
+        Condition="'@(KuroMapAssets)' != ''" />
+</Target>
+
 <Target Name="CleanUnsupportedLanguages" AfterTargets="CopyFilesToOutputDirectory;Publish" Condition="'$(Platform)'!='' and '$(Configuration)'!=''">
   <PropertyGroup>
     <RootOutputDir>$([System.IO.Path]::GetFullPath('$(BaseOutputPath)$(Platform)\$(Configuration)'))</RootOutputDir>

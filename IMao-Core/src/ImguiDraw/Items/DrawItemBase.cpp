@@ -6,6 +6,8 @@
 #include "../InteractiveInterface/Notification.h"
 #include <filesystem>
 #include <shared_mutex>
+#include <unordered_map>
+#include <mutex>
 
 using namespace std;
 namespace fs = filesystem;
@@ -122,6 +124,47 @@ bool DrawItemBase::IsValidItemNameId(string itemNameId) {
     }
 
     return false;
+}
+
+string DrawItemBase::GetExternalIconPath(const string& itemNameId) {
+    static once_flag manifestLoadOnce;
+    static unordered_map<string, string> iconPaths;
+
+    call_once(manifestLoadOnce, []() {
+        try {
+            const fs::path manifestPath = fs::path(GetCurrentPath()) / "Assets" / "KuroMap" / "icon-manifest.json";
+            ifstream file(manifestPath);
+            if (!file) {
+                return;
+            }
+
+            json manifest;
+            file >> manifest;
+            if (!manifest.contains("icons") || !manifest["icons"].is_object()) {
+                return;
+            }
+
+            for (const auto& [id, relativePath] : manifest["icons"].items()) {
+                if (!relativePath.is_string()) {
+                    continue;
+                }
+                const fs::path candidate = fs::path(relativePath.get<string>());
+                if (candidate.is_absolute() || candidate.empty()) {
+                    continue;
+                }
+                const fs::path fullPath = manifestPath.parent_path() / candidate;
+                if (fs::exists(fullPath) && fs::is_regular_file(fullPath)) {
+                    iconPaths.emplace(id, fullPath.string());
+                }
+            }
+        }
+        catch (const exception& e) {
+            cerr << "Unable to load Kuro map icon manifest: " << e.what() << endl;
+        }
+    });
+
+    const auto icon = iconPaths.find(itemNameId);
+    return icon == iconPaths.end() ? string() : icon->second;
 }
 
 bool DrawItemBase::FindItemJsonData(int sceneId, json*& itemJsonData, vector<ItemsDatas>*& itemsDatas_Storage) {

@@ -1,0 +1,2042 @@
+{
+  "库街区同步 · 大地图-敌人": {
+    "310000620": {
+      "zh-CN": "残星·深海造匠",
+      "en-US": "310000620"
+    },
+    "310000630": {
+      "zh-CN": "梦魇·审判战士",
+      "en-US": "310000630"
+    },
+    "310000640": {
+      "zh-CN": "梦魇·破霜猎手",
+      "en-US": "310000640"
+    },
+    "310000650": {
+      "zh-CN": "梦魇·惊蛰猎手",
+      "en-US": "310000650"
+    },
+    "310000660": {
+      "zh-CN": "梦魇·巡徊猎手",
+      "en-US": "310000660"
+    },
+    "310000670": {
+      "zh-CN": "梦魇·咕咕河豚",
+      "en-US": "310000670"
+    },
+    "310000680": {
+      "zh-CN": "梦魇·啾啾河豚",
+      "en-US": "310000680"
+    },
+    "310000720": {
+      "zh-CN": "梦魇·绿熔蜥（稚形）",
+      "en-US": "310000720"
+    },
+    "310000730": {
+      "zh-CN": "梦魇·刺玫菇（稚形）",
+      "en-US": "310000730"
+    },
+    "310000780": {
+      "zh-CN": "矿岩熊蜂",
+      "en-US": "310000780"
+    },
+    "310000790": {
+      "zh-CN": "岩蛛S4型",
+      "en-US": "310000790"
+    },
+    "310000800": {
+      "zh-CN": "执刃流民",
+      "en-US": "310000800"
+    },
+    "310000810": {
+      "zh-CN": "雷杖流民",
+      "en-US": "310000810"
+    },
+    "310000820": {
+      "zh-CN": "噼啪啪",
+      "en-US": "310000820"
+    },
+    "310000830": {
+      "zh-CN": "冰盈舞者",
+      "en-US": "310000830"
+    },
+    "310000840": {
+      "zh-CN": "影烁者",
+      "en-US": "310000840"
+    },
+    "310000900": {
+      "zh-CN": "融躯战士",
+      "en-US": "310000900"
+    },
+    "310001000": {
+      "zh-CN": "霁息兽尊·身",
+      "en-US": "310001000"
+    },
+    "310001010": {
+      "zh-CN": "霁息兽尊·首",
+      "en-US": "310001010"
+    },
+    "320000420": {
+      "zh-CN": "裁夺者",
+      "en-US": "320000420"
+    },
+    "320000430": {
+      "zh-CN": "梦魇·振铎乐师",
+      "en-US": "320000430"
+    },
+    "320000440": {
+      "zh-CN": "蚀脊龙",
+      "en-US": "320000440"
+    },
+    "320000450": {
+      "zh-CN": "梦魇·紫羽鹭",
+      "en-US": "320000450"
+    },
+    "320000460": {
+      "zh-CN": "梦魇·青羽鹭",
+      "en-US": "320000460"
+    },
+    "320000470": {
+      "zh-CN": "梦魇·绿熔蜥",
+      "en-US": "320000470"
+    },
+    "320000490": {
+      "zh-CN": "双极·星升辉铳",
+      "en-US": "320000490"
+    },
+    "320000500": {
+      "zh-CN": "双极·渊陨重锋",
+      "en-US": "320000500"
+    },
+    "320000510": {
+      "zh-CN": "莳植机麋",
+      "en-US": "320000510"
+    },
+    "320000520": {
+      "zh-CN": "矿岩机麋",
+      "en-US": "320000520"
+    },
+    "320000530": {
+      "zh-CN": "重工铁蹄",
+      "en-US": "320000530"
+    },
+    "320000540": {
+      "zh-CN": "探隧重机",
+      "en-US": "320000540"
+    },
+    "320000550": {
+      "zh-CN": "锯袭铁影",
+      "en-US": "320000550"
+    },
+    "320000560": {
+      "zh-CN": "隐迹铁影",
+      "en-US": "320000560"
+    },
+    "320000570": {
+      "zh-CN": "霜鳞蜃甲",
+      "en-US": "320000570"
+    },
+    "320000580": {
+      "zh-CN": "风鳞蜃甲",
+      "en-US": "320000580"
+    },
+    "320000590": {
+      "zh-CN": "冠顶械隼",
+      "en-US": "320000590"
+    },
+    "320000600": {
+      "zh-CN": "冠顶苍隼",
+      "en-US": "320000600"
+    },
+    "320000610": {
+      "zh-CN": "格洛犸图",
+      "en-US": "320000610"
+    },
+    "320000670": {
+      "zh-CN": "霁息兽尊",
+      "en-US": "320000670"
+    },
+    "SP_IconMonsterHead_015_UI": {
+      "zh-CN": "先锋幼岩",
+      "en-US": "SP_IconMonsterHead_015_UI"
+    },
+    "SP_IconMonsterHead_025_UI": {
+      "zh-CN": "裂变幼岩",
+      "en-US": "SP_IconMonsterHead_025_UI"
+    },
+    "SP_IconMonsterHead_035_UI": {
+      "zh-CN": "惊蛰猎手",
+      "en-US": "SP_IconMonsterHead_035_UI"
+    },
+    "SP_IconMonsterHead_045_UI": {
+      "zh-CN": "鸣泣战士",
+      "en-US": "SP_IconMonsterHead_045_UI"
+    },
+    "SP_IconMonsterHead_055_UI": {
+      "zh-CN": "审判战士",
+      "en-US": "SP_IconMonsterHead_055_UI"
+    },
+    "SP_IconMonsterHead_065_UI": {
+      "zh-CN": "咔嚓嚓",
+      "en-US": "SP_IconMonsterHead_065_UI"
+    },
+    "SP_IconMonsterHead_075_UI": {
+      "zh-CN": "阿嗞嗞",
+      "en-US": "SP_IconMonsterHead_075_UI"
+    },
+    "SP_IconMonsterHead_085_UI": {
+      "zh-CN": "呼咻咻",
+      "en-US": "SP_IconMonsterHead_085_UI"
+    },
+    "SP_IconMonsterHead_095_UI": {
+      "zh-CN": "呜咔咔",
+      "en-US": "SP_IconMonsterHead_095_UI"
+    },
+    "SP_IconMonsterHead_1000_UI": {
+      "zh-CN": "通行灯偶",
+      "en-US": "SP_IconMonsterHead_1000_UI"
+    },
+    "SP_IconMonsterHead_1001_UI": {
+      "zh-CN": "叮咚咚",
+      "en-US": "SP_IconMonsterHead_1001_UI"
+    },
+    "SP_IconMonsterHead_1003_UI": {
+      "zh-CN": "巡哨机傀",
+      "en-US": "SP_IconMonsterHead_1003_UI"
+    },
+    "SP_IconMonsterHead_1005_UI": {
+      "zh-CN": "躁乱戏猿",
+      "en-US": "SP_IconMonsterHead_1005_UI"
+    },
+    "SP_IconMonsterHead_1005_UI_1": {
+      "zh-CN": "锐爪幼猿",
+      "en-US": "SP_IconMonsterHead_1005_UI_1"
+    },
+    "SP_IconMonsterHead_105_UI": {
+      "zh-CN": "破霜猎手",
+      "en-US": "SP_IconMonsterHead_105_UI"
+    },
+    "SP_IconMonsterHead_115_UI": {
+      "zh-CN": "咕咕河豚",
+      "en-US": "SP_IconMonsterHead_115_UI"
+    },
+    "SP_IconMonsterHead_125_UI": {
+      "zh-CN": "紫羽鹭",
+      "en-US": "SP_IconMonsterHead_125_UI"
+    },
+    "SP_IconMonsterHead_135_UI": {
+      "zh-CN": "青羽鹭",
+      "en-US": "SP_IconMonsterHead_135_UI"
+    },
+    "SP_IconMonsterHead_145_UI": {
+      "zh-CN": "冷凝棱镜",
+      "en-US": "SP_IconMonsterHead_145_UI"
+    },
+    "SP_IconMonsterHead_155_UI": {
+      "zh-CN": "热熔棱镜",
+      "en-US": "SP_IconMonsterHead_155_UI"
+    },
+    "SP_IconMonsterHead_165_UI": {
+      "zh-CN": "衍射棱镜",
+      "en-US": "SP_IconMonsterHead_165_UI"
+    },
+    "SP_IconMonsterHead_175_UI": {
+      "zh-CN": "湮灭棱镜",
+      "en-US": "SP_IconMonsterHead_175_UI"
+    },
+    "SP_IconMonsterHead_185_UI": {
+      "zh-CN": "坚岩斗士",
+      "en-US": "SP_IconMonsterHead_185_UI"
+    },
+    "SP_IconMonsterHead_195_UI": {
+      "zh-CN": "奏谕乐师",
+      "en-US": "SP_IconMonsterHead_195_UI"
+    },
+    "SP_IconMonsterHead_205_UI": {
+      "zh-CN": "振铎乐师",
+      "en-US": "SP_IconMonsterHead_205_UI"
+    },
+    "SP_IconMonsterHead_215_UI": {
+      "zh-CN": "冥渊守卫",
+      "en-US": "SP_IconMonsterHead_215_UI"
+    },
+    "SP_IconMonsterHead_235_UI": {
+      "zh-CN": "巡徊猎手",
+      "en-US": "SP_IconMonsterHead_235_UI"
+    },
+    "SP_IconMonsterHead_245_UI": {
+      "zh-CN": "磐石守卫",
+      "en-US": "SP_IconMonsterHead_245_UI"
+    },
+    "SP_IconMonsterHead_255_UI": {
+      "zh-CN": "游弋蝶",
+      "en-US": "SP_IconMonsterHead_255_UI"
+    },
+    "SP_IconMonsterHead_265_UI": {
+      "zh-CN": "碎獠猪",
+      "en-US": "SP_IconMonsterHead_265_UI"
+    },
+    "SP_IconMonsterHead_275_UI": {
+      "zh-CN": "遁地鼠",
+      "en-US": "SP_IconMonsterHead_275_UI"
+    },
+    "SP_IconMonsterHead_285_UI": {
+      "zh-CN": "绿熔蜥（稚形）",
+      "en-US": "SP_IconMonsterHead_285_UI"
+    },
+    "SP_IconMonsterHead_295_UI": {
+      "zh-CN": "绿熔蜥",
+      "en-US": "SP_IconMonsterHead_295_UI"
+    },
+    "SP_IconMonsterHead_305_UI": {
+      "zh-CN": "刺玫菇（稚形）",
+      "en-US": "SP_IconMonsterHead_305_UI"
+    },
+    "SP_IconMonsterHead_31037_UI": {
+      "zh-CN": "风鬃狼",
+      "en-US": "SP_IconMonsterHead_31037_UI"
+    },
+    "SP_IconMonsterHead_31038_UI": {
+      "zh-CN": "雷鬃狼",
+      "en-US": "SP_IconMonsterHead_31038_UI"
+    },
+    "SP_IconMonsterHead_31039_UI": {
+      "zh-CN": "霜鬃狼",
+      "en-US": "SP_IconMonsterHead_31039_UI"
+    },
+    "SP_IconMonsterHead_31040_UI": {
+      "zh-CN": "浮灵偶·海德",
+      "en-US": "SP_IconMonsterHead_31040_UI"
+    },
+    "SP_IconMonsterHead_31041_UI": {
+      "zh-CN": "浮灵偶·蕾弗",
+      "en-US": "SP_IconMonsterHead_31041_UI"
+    },
+    "SP_IconMonsterHead_31042_UI": {
+      "zh-CN": "浮灵偶·莱特",
+      "en-US": "SP_IconMonsterHead_31042_UI"
+    },
+    "SP_IconMonsterHead_31043_UI": {
+      "zh-CN": "幽翎火",
+      "en-US": "SP_IconMonsterHead_31043_UI"
+    },
+    "SP_IconMonsterHead_31044_UI": {
+      "zh-CN": "云海妖精",
+      "en-US": "SP_IconMonsterHead_31044_UI"
+    },
+    "SP_IconMonsterHead_31045_UI": {
+      "zh-CN": "魔术先生",
+      "en-US": "SP_IconMonsterHead_31045_UI"
+    },
+    "SP_IconMonsterHead_31046_UI": {
+      "zh-CN": "寂寞小姐",
+      "en-US": "SP_IconMonsterHead_31046_UI"
+    },
+    "SP_IconMonsterHead_31047_UI": {
+      "zh-CN": "工头布偶",
+      "en-US": "SP_IconMonsterHead_31047_UI"
+    },
+    "SP_IconMonsterHead_31048_UI": {
+      "zh-CN": "欺诈奇藏",
+      "en-US": "SP_IconMonsterHead_31048_UI"
+    },
+    "SP_IconMonsterHead_31049_UI": {
+      "zh-CN": "愚金幼岩",
+      "en-US": "SP_IconMonsterHead_31049_UI"
+    },
+    "SP_IconMonsterHead_31050_UI": {
+      "zh-CN": "釉变幼岩",
+      "en-US": "SP_IconMonsterHead_31050_UI"
+    },
+    "SP_IconMonsterHead_31051_UI": {
+      "zh-CN": "气动棱镜",
+      "en-US": "SP_IconMonsterHead_31051_UI"
+    },
+    "SP_IconMonsterHead_31052_UI": {
+      "zh-CN": "卫冕节使",
+      "en-US": "SP_IconMonsterHead_31052_UI"
+    },
+    "SP_IconMonsterHead_31053_UI": {
+      "zh-CN": "赦罪节使",
+      "en-US": "SP_IconMonsterHead_31053_UI"
+    },
+    "SP_IconMonsterHead_31054_UI": {
+      "zh-CN": "慈悲节使",
+      "en-US": "SP_IconMonsterHead_31054_UI"
+    },
+    "SP_IconMonsterHead_31055_UI": {
+      "zh-CN": "小翼龙·气动",
+      "en-US": "SP_IconMonsterHead_31055_UI"
+    },
+    "SP_IconMonsterHead_31056_UI": {
+      "zh-CN": "小翼龙·导电",
+      "en-US": "SP_IconMonsterHead_31056_UI"
+    },
+    "SP_IconMonsterHead_31057_UI": {
+      "zh-CN": "小翼龙·冷凝",
+      "en-US": "SP_IconMonsterHead_31057_UI"
+    },
+    "SP_IconMonsterHead_31058_UI": {
+      "zh-CN": "小翼龙·热熔",
+      "en-US": "SP_IconMonsterHead_31058_UI"
+    },
+    "SP_IconMonsterHead_31059_UI": {
+      "zh-CN": "小翼龙·衍射",
+      "en-US": "SP_IconMonsterHead_31059_UI"
+    },
+    "SP_IconMonsterHead_31060_UI": {
+      "zh-CN": "小翼龙·湮灭",
+      "en-US": "SP_IconMonsterHead_31060_UI"
+    },
+    "SP_IconMonsterHead_31061_UI": {
+      "zh-CN": "苦信者的作俑",
+      "en-US": "SP_IconMonsterHead_31061_UI"
+    },
+    "SP_IconMonsterHead_31062_UI": {
+      "zh-CN": "角鳄",
+      "en-US": "SP_IconMonsterHead_31062_UI"
+    },
+    "SP_IconMonsterHead_315_UI": {
+      "zh-CN": "刺玫菇",
+      "en-US": "SP_IconMonsterHead_315_UI"
+    },
+    "SP_IconMonsterHead_32022_UI": {
+      "zh-CN": "巡游骑士",
+      "en-US": "SP_IconMonsterHead_32022_UI"
+    },
+    "SP_IconMonsterHead_32023_UI": {
+      "zh-CN": "幻昼骑士",
+      "en-US": "SP_IconMonsterHead_32023_UI"
+    },
+    "SP_IconMonsterHead_32024_UI": {
+      "zh-CN": "暗夜骑士",
+      "en-US": "SP_IconMonsterHead_32024_UI"
+    },
+    "SP_IconMonsterHead_32025_UI": {
+      "zh-CN": "毒冠贵族",
+      "en-US": "SP_IconMonsterHead_32025_UI"
+    },
+    "SP_IconMonsterHead_32026_UI": {
+      "zh-CN": "持刃贵族",
+      "en-US": "SP_IconMonsterHead_32026_UI"
+    },
+    "SP_IconMonsterHead_32027_UI": {
+      "zh-CN": "凝水贵族",
+      "en-US": "SP_IconMonsterHead_32027_UI"
+    },
+    "SP_IconMonsterHead_32028_UI": {
+      "zh-CN": "浮灵偶",
+      "en-US": "SP_IconMonsterHead_32028_UI"
+    },
+    "SP_IconMonsterHead_32029_UI": {
+      "zh-CN": "琉璃刀伶",
+      "en-US": "SP_IconMonsterHead_32029_UI"
+    },
+    "SP_IconMonsterHead_32030_UI": {
+      "zh-CN": "巨布偶",
+      "en-US": "SP_IconMonsterHead_32030_UI"
+    },
+    "SP_IconMonsterHead_32031_UI": {
+      "zh-CN": "重塑雕像的拳砾",
+      "en-US": "SP_IconMonsterHead_32031_UI"
+    },
+    "SP_IconMonsterHead_32032_UI": {
+      "zh-CN": "飓力熊",
+      "en-US": "SP_IconMonsterHead_32032_UI"
+    },
+    "SP_IconMonsterHead_32033_UI": {
+      "zh-CN": "荣光节使",
+      "en-US": "SP_IconMonsterHead_32033_UI"
+    },
+    "SP_IconMonsterHead_32034_UI": {
+      "zh-CN": "传道者的遗形",
+      "en-US": "SP_IconMonsterHead_32034_UI"
+    },
+    "SP_IconMonsterHead_32036_UI": {
+      "zh-CN": "炽冠角斗家",
+      "en-US": "SP_IconMonsterHead_32036_UI"
+    },
+    "SP_IconMonsterHead_32037_UI": {
+      "zh-CN": "羽冠角斗家",
+      "en-US": "SP_IconMonsterHead_32037_UI"
+    },
+    "SP_IconMonsterHead_32038_UI": {
+      "zh-CN": "耀冠角斗家",
+      "en-US": "SP_IconMonsterHead_32038_UI"
+    },
+    "SP_IconMonsterHead_32039_UI": {
+      "zh-CN": "凛冠角斗家",
+      "en-US": "SP_IconMonsterHead_32039_UI"
+    },
+    "SP_IconMonsterHead_32040_UI": {
+      "zh-CN": "雷冠角斗家",
+      "en-US": "SP_IconMonsterHead_32040_UI"
+    },
+    "SP_IconMonsterHead_32041_UI": {
+      "zh-CN": "冥冠角斗家",
+      "en-US": "SP_IconMonsterHead_32041_UI"
+    },
+    "SP_IconMonsterHead_326_UI": {
+      "zh-CN": "融火虫",
+      "en-US": "SP_IconMonsterHead_326_UI"
+    },
+    "SP_IconMonsterHead_329_UI": {
+      "zh-CN": "踏光兽",
+      "en-US": "SP_IconMonsterHead_329_UI"
+    },
+    "SP_IconMonsterHead_330_UI": {
+      "zh-CN": "游鳞机枢",
+      "en-US": "SP_IconMonsterHead_330_UI"
+    },
+    "SP_IconMonsterHead_331_UI": {
+      "zh-CN": "侏侏鸵",
+      "en-US": "SP_IconMonsterHead_331_UI"
+    },
+    "SP_IconMonsterHead_969_UI": {
+      "zh-CN": "寒霜陆龟",
+      "en-US": "SP_IconMonsterHead_969_UI"
+    },
+    "SP_IconMonsterHead_970_UI": {
+      "zh-CN": "车刃镰",
+      "en-US": "SP_IconMonsterHead_970_UI"
+    },
+    "SP_IconMonsterHead_971_UI": {
+      "zh-CN": "啾啾河豚",
+      "en-US": "SP_IconMonsterHead_971_UI"
+    },
+    "SP_IconMonsterHead_972_UI": {
+      "zh-CN": "残星·重锤造匠",
+      "en-US": "SP_IconMonsterHead_972_UI"
+    },
+    "SP_IconMonsterHead_973_UI": {
+      "zh-CN": "残星·枪肢造匠",
+      "en-US": "SP_IconMonsterHead_973_UI"
+    },
+    "SP_IconMonsterHead_974_UI": {
+      "zh-CN": "残星·枭面造匠",
+      "en-US": "SP_IconMonsterHead_974_UI"
+    },
+    "SP_IconMonsterHead_975_UI": {
+      "zh-CN": "处刑人",
+      "en-US": "SP_IconMonsterHead_975_UI"
+    },
+    "SP_IconMonsterHead_976_UI": {
+      "zh-CN": "流放者",
+      "en-US": "SP_IconMonsterHead_976_UI"
+    },
+    "SP_IconMonsterHead_977_UI": {
+      "zh-CN": "流放者",
+      "en-US": "SP_IconMonsterHead_977_UI"
+    },
+    "SP_IconMonsterHead_978_UI": {
+      "zh-CN": "流放者工匠",
+      "en-US": "SP_IconMonsterHead_978_UI"
+    },
+    "SP_IconMonsterHead_979_UI": {
+      "zh-CN": "流放者首领",
+      "en-US": "SP_IconMonsterHead_979_UI"
+    },
+    "SP_IconMonsterHead_980_UI": {
+      "zh-CN": "火鬃狼",
+      "en-US": "SP_IconMonsterHead_980_UI"
+    },
+    "SP_IconMonsterHead_984_UI": {
+      "zh-CN": "暗鬃狼",
+      "en-US": "SP_IconMonsterHead_984_UI"
+    },
+    "SP_IconMonsterHead_985_UI": {
+      "zh-CN": "雪鬃狼",
+      "en-US": "SP_IconMonsterHead_985_UI"
+    },
+    "SP_IconMonsterHead_986_UI": {
+      "zh-CN": "箭簇熊",
+      "en-US": "SP_IconMonsterHead_986_UI"
+    },
+    "SP_IconMonsterHead_987_UI": {
+      "zh-CN": "晶螯蝎",
+      "en-US": "SP_IconMonsterHead_987_UI"
+    },
+    "SP_IconMonsterHead_988_UI": {
+      "zh-CN": "抛石幼猿",
+      "en-US": "SP_IconMonsterHead_988_UI"
+    },
+    "SP_IconMonsterHead_989_UI": {
+      "zh-CN": "嚣风戏猿",
+      "en-US": "SP_IconMonsterHead_989_UI"
+    }
+  },
+  "库街区同步 · 大地图-BOSS": {
+    "3130001": {
+      "zh-CN": "星海迷途之扉",
+      "en-US": "3130001"
+    },
+    "340000150": {
+      "zh-CN": "芬莱克",
+      "en-US": "340000150"
+    },
+    "340000160": {
+      "zh-CN": "梦魇·赫卡忒",
+      "en-US": "340000160"
+    },
+    "3530001": {
+      "zh-CN": "失坠困咎之庭",
+      "en-US": "3530001"
+    },
+    "380015": {
+      "zh-CN": "无序边境之火",
+      "en-US": "380015"
+    },
+    "380016": {
+      "zh-CN": "无冠巨象之心",
+      "en-US": "380016"
+    },
+    "380021": {
+      "zh-CN": "时序命定之争",
+      "en-US": "380021"
+    },
+    "380043": {
+      "zh-CN": "彼世猩红之幕",
+      "en-US": "380043"
+    },
+    "380044": {
+      "zh-CN": "命途断章之轮",
+      "en-US": "380044"
+    },
+    "380102": {
+      "zh-CN": "烬夜天启之章",
+      "en-US": "380102"
+    },
+    "5021": {
+      "zh-CN": "无冠者",
+      "en-US": "5021"
+    },
+    "5022": {
+      "zh-CN": "昔日咏叹之钟",
+      "en-US": "5022"
+    },
+    "5023": {
+      "zh-CN": "云闪之鳞",
+      "en-US": "5023"
+    },
+    "5025": {
+      "zh-CN": "燎照之骑",
+      "en-US": "5025"
+    },
+    "5026": {
+      "zh-CN": "飞廉之猩",
+      "en-US": "5026"
+    },
+    "5027": {
+      "zh-CN": "哀声鸷",
+      "en-US": "5027"
+    },
+    "5028": {
+      "zh-CN": "无常凶鹭",
+      "en-US": "5028"
+    },
+    "5029": {
+      "zh-CN": "聚械机偶",
+      "en-US": "5029"
+    },
+    "5030": {
+      "zh-CN": "朔雷之鳞",
+      "en-US": "5030"
+    },
+    "5031": {
+      "zh-CN": "辉萤军势",
+      "en-US": "5031"
+    },
+    "5032": {
+      "zh-CN": "无归的谬误",
+      "en-US": "5032"
+    },
+    "5033": {
+      "zh-CN": "叹息古龙",
+      "en-US": "5033"
+    },
+    "5034": {
+      "zh-CN": "罗蕾莱",
+      "en-US": "5034"
+    },
+    "5035": {
+      "zh-CN": "异构武装",
+      "en-US": "5035"
+    },
+    "5036": {
+      "zh-CN": "荣耀狮像",
+      "en-US": "5036"
+    },
+    "5038": {
+      "zh-CN": "伪作的神王",
+      "en-US": "5038"
+    },
+    "5039": {
+      "zh-CN": "海之女",
+      "en-US": "5039"
+    },
+    "5040": {
+      "zh-CN": "海维夏",
+      "en-US": "5040"
+    },
+    "5041": {
+      "zh-CN": "炉芯机骸",
+      "en-US": "5041"
+    },
+    "5042": {
+      "zh-CN": "无铭探索者",
+      "en-US": "5042"
+    },
+    "5043": {
+      "zh-CN": "梦魇亚当·重锤",
+      "en-US": "5043"
+    },
+    "5044": {
+      "zh-CN": "万囮牢·朽躯",
+      "en-US": "5044"
+    },
+    "5045": {
+      "zh-CN": "天傀劫煞",
+      "en-US": "5045"
+    },
+    "SP_IconMonsterHead_33021_UI": {
+      "zh-CN": "梦魇·凯尔匹",
+      "en-US": "SP_IconMonsterHead_33021_UI"
+    },
+    "SP_IconMonsterHead_34013_UI": {
+      "zh-CN": "梦魇·辉萤军势",
+      "en-US": "SP_IconMonsterHead_34013_UI"
+    },
+    "SP_IconMonsterHead_YZ_33014_UI": {
+      "zh-CN": "梦魇·飞廉之猩",
+      "en-US": "SP_IconMonsterHead_YZ_33014_UI"
+    },
+    "SP_IconMonsterHead_YZ_33015_UI": {
+      "zh-CN": "梦魇·无常凶鹭",
+      "en-US": "SP_IconMonsterHead_YZ_33015_UI"
+    },
+    "SP_IconMonsterHead_YZ_33016_UI": {
+      "zh-CN": "梦魇·云闪之鳞",
+      "en-US": "SP_IconMonsterHead_YZ_33016_UI"
+    },
+    "SP_IconMonsterHead_YZ_33017_UI": {
+      "zh-CN": "梦魇·朔雷之鳞",
+      "en-US": "SP_IconMonsterHead_YZ_33017_UI"
+    },
+    "SP_IconMonsterHead_YZ_33018_UI": {
+      "zh-CN": "梦魇·无冠者",
+      "en-US": "SP_IconMonsterHead_YZ_33018_UI"
+    },
+    "SP_IconMonsterHead_YZ_33019_UI": {
+      "zh-CN": "梦魇·燎照之骑",
+      "en-US": "SP_IconMonsterHead_YZ_33019_UI"
+    },
+    "SP_IconMonsterHead_YZ_33020_UI": {
+      "zh-CN": "梦魇·哀声鸷",
+      "en-US": "SP_IconMonsterHead_YZ_33020_UI"
+    }
+  },
+  "库街区同步 · 大地图-NPC": {
+    "3510001": {
+      "zh-CN": "餐馆「渊中鲜」",
+      "en-US": "3510001"
+    },
+    "3510002": {
+      "zh-CN": "玉驹行商",
+      "en-US": "3510002"
+    },
+    "3510004": {
+      "zh-CN": "天工部印造处",
+      "en-US": "3510004"
+    },
+    "3510005": {
+      "zh-CN": "华胥院药店",
+      "en-US": "3510005"
+    },
+    "3510007": {
+      "zh-CN": "玄方坚盾基金",
+      "en-US": "3510007"
+    },
+    "3510008": {
+      "zh-CN": "玄方坚盾基金",
+      "en-US": "3510008"
+    },
+    "381031": {
+      "zh-CN": "深空文献中心",
+      "en-US": "381031"
+    },
+    "381032": {
+      "zh-CN": "共鸣医疗科",
+      "en-US": "381032"
+    },
+    "381033": {
+      "zh-CN": "游牧集市",
+      "en-US": "381033"
+    },
+    "381034": {
+      "zh-CN": "餐能终端机",
+      "en-US": "381034"
+    },
+    "381035": {
+      "zh-CN": "共生武装印造台",
+      "en-US": "381035"
+    },
+    "381036": {
+      "zh-CN": "拉海洛终声残卷回收",
+      "en-US": "381036"
+    },
+    "381037": {
+      "zh-CN": "青实归还之碑",
+      "en-US": "381037"
+    },
+    "381038": {
+      "zh-CN": "载具系泊场",
+      "en-US": "381038"
+    },
+    "Play_03": {
+      "zh-CN": "瑝览类书",
+      "en-US": "Play_03"
+    },
+    "Play_03_1": {
+      "zh-CN": "隐海修会",
+      "en-US": "Play_03_1"
+    },
+    "Play_03_2": {
+      "zh-CN": "埃弗拉德金库",
+      "en-US": "Play_03_2"
+    },
+    "Play_04_1": {
+      "zh-CN": "往日浮现",
+      "en-US": "Play_04_1"
+    },
+    "Play_04_2": {
+      "zh-CN": "我与我之外",
+      "en-US": "Play_04_2"
+    },
+    "SP_IconMap_Play_06_UI": {
+      "zh-CN": "寻遗商人",
+      "en-US": "SP_IconMap_Play_06_UI"
+    },
+    "SP_IconMap_Play_07_UI": {
+      "zh-CN": "先行公约",
+      "en-US": "SP_IconMap_Play_07_UI"
+    },
+    "SP_IconMap_Play_07_UI_1": {
+      "zh-CN": "先行公约",
+      "en-US": "SP_IconMap_Play_07_UI_1"
+    },
+    "SP_IconMap_Play_13_UI": {
+      "zh-CN": "补弦留歌",
+      "en-US": "SP_IconMap_Play_13_UI"
+    },
+    "SP_IconMap_Play_24_UI": {
+      "zh-CN": "小小",
+      "en-US": "SP_IconMap_Play_24_UI"
+    },
+    "SP_IconMap_Play_24_UI_1": {
+      "zh-CN": "七丘声匣回收",
+      "en-US": "SP_IconMap_Play_24_UI_1"
+    },
+    "SP_IconMap_Play_25_UI": {
+      "zh-CN": "留声珍藏",
+      "en-US": "SP_IconMap_Play_25_UI"
+    },
+    "SP_IconMap_Play_38_UI": {
+      "zh-CN": "列奥尼达酒店",
+      "en-US": "SP_IconMap_Play_38_UI"
+    },
+    "SP_IconMap_Play_39_UI": {
+      "zh-CN": "岩间中枢",
+      "en-US": "SP_IconMap_Play_39_UI"
+    },
+    "SP_IconMap_Play_42_UI": {
+      "zh-CN": "幽域实验场",
+      "en-US": "SP_IconMap_Play_42_UI"
+    },
+    "SP_IconMap_Play_46_UI": {
+      "zh-CN": "彼岸之镜",
+      "en-US": "SP_IconMap_Play_46_UI"
+    },
+    "SP_IconMap_Shop_01_UI": {
+      "zh-CN": "戏服与面具行「梦中人」",
+      "en-US": "SP_IconMap_Shop_01_UI"
+    },
+    "SP_IconMap_Shop_02_UI": {
+      "zh-CN": "合成台",
+      "en-US": "SP_IconMap_Shop_02_UI"
+    },
+    "SP_IconMap_Shop_02_UI_1": {
+      "zh-CN": "合成台",
+      "en-US": "SP_IconMap_Shop_02_UI_1"
+    },
+    "SP_IconMap_Shop_02_UI_2": {
+      "zh-CN": "合成台",
+      "en-US": "SP_IconMap_Shop_02_UI_2"
+    },
+    "SP_IconMap_Shop_03_UI": {
+      "zh-CN": "拾方药房",
+      "en-US": "SP_IconMap_Shop_03_UI"
+    },
+    "SP_IconMap_Shop_03_UI_1": {
+      "zh-CN": "益佰诊所",
+      "en-US": "SP_IconMap_Shop_03_UI_1"
+    },
+    "SP_IconMap_Shop_03_UI_2": {
+      "zh-CN": "药剂商店「迷迭香」",
+      "en-US": "SP_IconMap_Shop_03_UI_2"
+    },
+    "SP_IconMap_Shop_06_UI": {
+      "zh-CN": "攀花饭馆",
+      "en-US": "SP_IconMap_Shop_06_UI"
+    },
+    "SP_IconMap_Shop_06_UI_1": {
+      "zh-CN": "虎口大排档",
+      "en-US": "SP_IconMap_Shop_06_UI_1"
+    },
+    "SP_IconMap_Shop_06_UI_2": {
+      "zh-CN": "玛格烈特家庭餐厅",
+      "en-US": "SP_IconMap_Shop_06_UI_2"
+    },
+    "SP_IconMap_Shop_06_UI_3": {
+      "zh-CN": "布拉塔烘焙坊",
+      "en-US": "SP_IconMap_Shop_06_UI_3"
+    },
+    "SP_IconMap_Shop_06_UI_4": {
+      "zh-CN": "「烈日」酒馆",
+      "en-US": "SP_IconMap_Shop_06_UI_4"
+    },
+    "SP_IconMap_Shop_07_UI": {
+      "zh-CN": "印造台",
+      "en-US": "SP_IconMap_Shop_07_UI"
+    },
+    "SP_IconMap_Shop_08_UI": {
+      "zh-CN": "马和杂货",
+      "en-US": "SP_IconMap_Shop_08_UI"
+    },
+    "SP_IconMap_Shop_08_UI_1": {
+      "zh-CN": "贡多拉水市",
+      "en-US": "SP_IconMap_Shop_08_UI_1"
+    },
+    "SP_IconMap_Shop_08_UI_2": {
+      "zh-CN": "「服事人」物资站",
+      "en-US": "SP_IconMap_Shop_08_UI_2"
+    },
+    "SP_IconMap_Shop_10_UI": {
+      "zh-CN": "“纪念品”商店",
+      "en-US": "SP_IconMap_Shop_10_UI"
+    },
+    "SP_IconMap_Shop_10_UI_1": {
+      "zh-CN": "“纪念品”商店",
+      "en-US": "SP_IconMap_Shop_10_UI_1"
+    },
+    "SP_IconMap_Shop_10_UI_2": {
+      "zh-CN": "埃弗拉德银行柜台",
+      "en-US": "SP_IconMap_Shop_10_UI_2"
+    },
+    "SP_IconMap_Shop_11_UI": {
+      "zh-CN": "虎口矿石",
+      "en-US": "SP_IconMap_Shop_11_UI"
+    },
+    "SP_IconMap_Shop_12_UI": {
+      "zh-CN": "库默尼商行",
+      "en-US": "SP_IconMap_Shop_12_UI"
+    },
+    "SP_IconMap_Shop_13_UI": {
+      "zh-CN": "静风杂货",
+      "en-US": "SP_IconMap_Shop_13_UI"
+    },
+    "SP_IconMap_Shop_15_UI": {
+      "zh-CN": "商店「玫瑰蓓蕾号」",
+      "en-US": "SP_IconMap_Shop_15_UI"
+    },
+    "SP_IconMap_Shop_16_UI": {
+      "zh-CN": "银盔杂货铺",
+      "en-US": "SP_IconMap_Shop_16_UI"
+    }
+  },
+  "库街区同步 · 大地图-副本挑战": {
+    "353001": {
+      "zh-CN": "演武场",
+      "en-US": "353001"
+    },
+    "353002": {
+      "zh-CN": "云坠于渊",
+      "en-US": "353002"
+    },
+    "380002": {
+      "zh-CN": "欲燃之森",
+      "en-US": "380002"
+    },
+    "380003": {
+      "zh-CN": "熔毁废都",
+      "en-US": "380003"
+    },
+    "380004": {
+      "zh-CN": "旋雾之森",
+      "en-US": "380004"
+    },
+    "380006": {
+      "zh-CN": "侵蚀废都",
+      "en-US": "380006"
+    },
+    "380007": {
+      "zh-CN": "流月之森",
+      "en-US": "380007"
+    },
+    "390054": {
+      "zh-CN": "浸礼海渊",
+      "en-US": "390054"
+    },
+    "390055": {
+      "zh-CN": "祝祭海渊",
+      "en-US": "390055"
+    },
+    "390056": {
+      "zh-CN": "告解庭园",
+      "en-US": "390056"
+    },
+    "390057": {
+      "zh-CN": "赦罪庭园",
+      "en-US": "390057"
+    },
+    "390058": {
+      "zh-CN": "赞颂庭园",
+      "en-US": "390058"
+    },
+    "390066": {
+      "zh-CN": "残照终课",
+      "en-US": "390066"
+    },
+    "390067": {
+      "zh-CN": "虚诞终课",
+      "en-US": "390067"
+    },
+    "390068": {
+      "zh-CN": "余烬终课",
+      "en-US": "390068"
+    },
+    "390069": {
+      "zh-CN": "荒萋旧殿",
+      "en-US": "390069"
+    },
+    "390070": {
+      "zh-CN": "灾逆旧殿",
+      "en-US": "390070"
+    },
+    "390071": {
+      "zh-CN": "B.1.N.G.O.",
+      "en-US": "390071"
+    },
+    "4027": {
+      "zh-CN": "全息战略·同步",
+      "en-US": "4027"
+    },
+    "4028": {
+      "zh-CN": "全息战略·演武",
+      "en-US": "4028"
+    },
+    "7010": {
+      "zh-CN": "陷足流川残象聚落",
+      "en-US": "7010"
+    },
+    "7011": {
+      "zh-CN": "复生丘原残象聚落",
+      "en-US": "7011"
+    },
+    "7012": {
+      "zh-CN": "盲望之塌残象聚落",
+      "en-US": "7012"
+    },
+    "7013": {
+      "zh-CN": "落渊南丘残象聚落",
+      "en-US": "7013"
+    },
+    "Activity_02_1": {
+      "zh-CN": "浸梦海床",
+      "en-US": "Activity_02_1"
+    },
+    "IconMap_WYQ": {
+      "zh-CN": "无音区",
+      "en-US": "IconMap_WYQ"
+    },
+    "myjl": {
+      "zh-CN": "梦魇聚落",
+      "en-US": "myjl"
+    },
+    "Play_01": {
+      "zh-CN": "模拟训练场",
+      "en-US": "Play_01"
+    },
+    "Play_01_1": {
+      "zh-CN": "角斗士的肖像",
+      "en-US": "Play_01_1"
+    },
+    "Play_04": {
+      "zh-CN": "天地旋恒",
+      "en-US": "Play_04"
+    },
+    "Play_04+1": {
+      "zh-CN": "横览山岳",
+      "en-US": "Play_04+1"
+    },
+    "Play_06": {
+      "zh-CN": "逆境深塔",
+      "en-US": "Play_06"
+    },
+    "Play_10": {
+      "zh-CN": "全息战略",
+      "en-US": "Play_10"
+    },
+    "SP_IconActDreamB": {
+      "zh-CN": "失序梦途",
+      "en-US": "SP_IconActDreamB"
+    },
+    "SP_IconMap_Activity_17_UI": {
+      "zh-CN": "千道门扉的异想",
+      "en-US": "SP_IconMap_Activity_17_UI"
+    },
+    "SP_IconMap_Activity_18_UI": {
+      "zh-CN": "冥歌海墟",
+      "en-US": "SP_IconMap_Activity_18_UI"
+    },
+    "SP_IconMap_Activity_21_UI": {
+      "zh-CN": "团团团团转",
+      "en-US": "SP_IconMap_Activity_21_UI"
+    },
+    "SP_IconMap_Activity_23_UI": {
+      "zh-CN": "潮蚀模拟",
+      "en-US": "SP_IconMap_Activity_23_UI"
+    }
+  },
+  "库街区同步 · 大地图-地图探索": {
+    "37": {
+      "zh-CN": "烬潮之梦",
+      "en-US": "37"
+    },
+    "38": {
+      "zh-CN": "烬潮之梦·终末",
+      "en-US": "38"
+    },
+    "39": {
+      "zh-CN": "风之涌动",
+      "en-US": "39"
+    },
+    "40": {
+      "zh-CN": "流散于风的瞬间",
+      "en-US": "40"
+    },
+    "42": {
+      "zh-CN": "日灵",
+      "en-US": "42"
+    },
+    "43": {
+      "zh-CN": "虚质磁暴区",
+      "en-US": "43"
+    },
+    "44": {
+      "zh-CN": "重启智造立方",
+      "en-US": "44"
+    },
+    "46": {
+      "zh-CN": "温泉观星",
+      "en-US": "46"
+    },
+    "47": {
+      "zh-CN": "造路悬仪挑战赛道",
+      "en-US": "47"
+    },
+    "48": {
+      "zh-CN": "天帷机兵·跃送型",
+      "en-US": "48"
+    },
+    "49": {
+      "zh-CN": "竞速挑战",
+      "en-US": "49"
+    },
+    "50": {
+      "zh-CN": "光的来处",
+      "en-US": "50"
+    },
+    "51": {
+      "zh-CN": "车手一号",
+      "en-US": "51"
+    },
+    "52": {
+      "zh-CN": "失落的乐声",
+      "en-US": "52"
+    },
+    "55": {
+      "zh-CN": "日灵流引",
+      "en-US": "55"
+    },
+    "56": {
+      "zh-CN": "冰与铁之歌",
+      "en-US": "56"
+    },
+    "66": {
+      "zh-CN": "四鸣井",
+      "en-US": "66"
+    },
+    "68": {
+      "zh-CN": "取偶匣",
+      "en-US": "68"
+    },
+    "69": {
+      "zh-CN": "方庭演武",
+      "en-US": "69"
+    },
+    "71": {
+      "zh-CN": "危锁奇藏",
+      "en-US": "71"
+    },
+    "72": {
+      "zh-CN": "引歧帘",
+      "en-US": "72"
+    },
+    "73": {
+      "zh-CN": "静心座",
+      "en-US": "73"
+    },
+    "77": {
+      "zh-CN": "超级云帛机骑挑战",
+      "en-US": "77"
+    },
+    "ayphdyj": {
+      "zh-CN": "暗影徘徊的遗迹",
+      "en-US": "ayphdyj"
+    },
+    "byfy": {
+      "zh-CN": "白月？绯月？",
+      "en-US": "byfy"
+    },
+    "cbd": {
+      "zh-CN": "藏宝地",
+      "en-US": "cbd"
+    },
+    "CS_01": {
+      "zh-CN": "中枢信标",
+      "en-US": "CS_01"
+    },
+    "CS_02": {
+      "zh-CN": "小型信标",
+      "en-US": "CS_02"
+    },
+    "cxha": {
+      "zh-CN": "残息海岸",
+      "en-US": "cxha"
+    },
+    "FCRK": {
+      "zh-CN": "分层入口",
+      "en-US": "FCRK"
+    },
+    "FFZB": {
+      "zh-CN": "扶风转标",
+      "en-US": "FFZB"
+    },
+    "fyjs": {
+      "zh-CN": "飞翼竞速",
+      "en-US": "fyjs"
+    },
+    "GDLZT": {
+      "zh-CN": "贡多拉站台",
+      "en-US": "GDLZT"
+    },
+    "hcjs": {
+      "zh-CN": "行船竞速",
+      "en-US": "hcjs"
+    },
+    "lqtl": {
+      "zh-CN": "乐曲调律",
+      "en-US": "lqtl"
+    },
+    "MT": {
+      "zh-CN": "码头",
+      "en-US": "MT"
+    },
+    "qlty": {
+      "zh-CN": "青栎庭院",
+      "en-US": "qlty"
+    },
+    "qxzl·dlzw": {
+      "zh-CN": "全息战略·刀伶之舞",
+      "en-US": "qxzl·dlzw"
+    },
+    "rhzm": {
+      "zh-CN": "染秽之梦",
+      "en-US": "rhzm"
+    },
+    "shtz·hj": {
+      "zh-CN": "声骸挑战·幻觉",
+      "en-US": "shtz·hj"
+    },
+    "sxdtz": {
+      "zh-CN": "三兄弟挑战",
+      "en-US": "sxdtz"
+    },
+    "sxxw": {
+      "zh-CN": "圣箱寻物",
+      "en-US": "sxxw"
+    },
+    "sytz": {
+      "zh-CN": "闪翼挑战",
+      "en-US": "sytz"
+    },
+    "szgt": {
+      "zh-CN": "三重冠塔",
+      "en-US": "szgt"
+    },
+    "xlzm": {
+      "zh-CN": "巡礼之梦",
+      "en-US": "xlzm"
+    },
+    "ych": {
+      "zh-CN": "溢彩画",
+      "en-US": "ych"
+    },
+    "yldzscs": {
+      "zh-CN": "约兰的战术测试",
+      "en-US": "yldzscs"
+    },
+    "ylfy": {
+      "zh-CN": "音乐飞萤",
+      "en-US": "ylfy"
+    },
+    "YMRK": {
+      "zh-CN": "隐秘入口",
+      "en-US": "YMRK"
+    },
+    "ynwh": {
+      "zh-CN": "运能维护",
+      "en-US": "ynwh"
+    },
+    "yxdsz": {
+      "zh-CN": "英雄的瞬斩",
+      "en-US": "yxdsz"
+    }
+  },
+  "库街区同步 · 大地图-采集物": {
+    "42601320": {
+      "zh-CN": "松塔",
+      "en-US": "42601320"
+    },
+    "42601340": {
+      "zh-CN": "黄昏蜜罐",
+      "en-US": "42601340"
+    },
+    "42601350": {
+      "zh-CN": "蕨团蕨",
+      "en-US": "42601350"
+    },
+    "42601360": {
+      "zh-CN": "襁褓岩绒",
+      "en-US": "42601360"
+    },
+    "42601370": {
+      "zh-CN": "玉化木",
+      "en-US": "42601370"
+    },
+    "42601380": {
+      "zh-CN": "双子蕈星",
+      "en-US": "42601380"
+    },
+    "42601390": {
+      "zh-CN": "霜信花",
+      "en-US": "42601390"
+    },
+    "42601400": {
+      "zh-CN": "螺算石母",
+      "en-US": "42601400"
+    },
+    "42601410": {
+      "zh-CN": "衍光石矿",
+      "en-US": "42601410"
+    },
+    "42601420": {
+      "zh-CN": "时苔茧",
+      "en-US": "42601420"
+    },
+    "42601430": {
+      "zh-CN": "雪抚绒",
+      "en-US": "42601430"
+    },
+    "42601440": {
+      "zh-CN": "白蜡蛛蛛网",
+      "en-US": "42601440"
+    },
+    "42601450": {
+      "zh-CN": "狐尾蒲藻",
+      "en-US": "42601450"
+    },
+    "42601460": {
+      "zh-CN": "星陨铁",
+      "en-US": "42601460"
+    },
+    "42601470": {
+      "zh-CN": "寒地星苔",
+      "en-US": "42601470"
+    },
+    "42601530": {
+      "zh-CN": "未琢玉",
+      "en-US": "42601530"
+    },
+    "42601540": {
+      "zh-CN": "登青云",
+      "en-US": "42601540"
+    },
+    "42601550": {
+      "zh-CN": "六合瑛",
+      "en-US": "42601550"
+    },
+    "42601560": {
+      "zh-CN": "白玉美人",
+      "en-US": "42601560"
+    },
+    "42601570": {
+      "zh-CN": "洄音石",
+      "en-US": "42601570"
+    },
+    "42601580": {
+      "zh-CN": "叶中匠",
+      "en-US": "42601580"
+    },
+    "42601590": {
+      "zh-CN": "玟华璧",
+      "en-US": "42601590"
+    },
+    "42601600": {
+      "zh-CN": "栖云翼",
+      "en-US": "42601600"
+    },
+    "42601610": {
+      "zh-CN": "游霞惊梦",
+      "en-US": "42601610"
+    },
+    "42601620": {
+      "zh-CN": "白刃繁",
+      "en-US": "42601620"
+    },
+    "T_IconC_029_UI": {
+      "zh-CN": "雀翎果",
+      "en-US": "T_IconC_029_UI"
+    },
+    "T_IconC_030_UI": {
+      "zh-CN": "龙吐珠",
+      "en-US": "T_IconC_030_UI"
+    },
+    "T_IconC_031_UI": {
+      "zh-CN": "银雪莲",
+      "en-US": "T_IconC_031_UI"
+    },
+    "T_IconC_032_UI": {
+      "zh-CN": "龙萤石",
+      "en-US": "T_IconC_032_UI"
+    },
+    "T_IconC_035_UI": {
+      "zh-CN": "桂实",
+      "en-US": "T_IconC_035_UI"
+    },
+    "T_IconC_036_UI": {
+      "zh-CN": "日冕菊",
+      "en-US": "T_IconC_036_UI"
+    },
+    "T_IconC_037_UI": {
+      "zh-CN": "云凝乳香",
+      "en-US": "T_IconC_037_UI"
+    },
+    "T_IconC_038_UI": {
+      "zh-CN": "青枝果",
+      "en-US": "T_IconC_038_UI"
+    },
+    "T_IconC_039_UI": {
+      "zh-CN": "盾金龟",
+      "en-US": "T_IconC_039_UI"
+    },
+    "T_IconC_040_UI": {
+      "zh-CN": "铛铛蟹",
+      "en-US": "T_IconC_040_UI"
+    },
+    "T_IconC_041_UI": {
+      "zh-CN": "毒莴裙藻",
+      "en-US": "T_IconC_041_UI"
+    },
+    "T_IconC_042_UI": {
+      "zh-CN": "垂青橄榄",
+      "en-US": "T_IconC_042_UI"
+    },
+    "T_IconC_043_UI": {
+      "zh-CN": "礼花蒴",
+      "en-US": "T_IconC_043_UI"
+    },
+    "T_IconC_044_UI": {
+      "zh-CN": "剑菖蒲",
+      "en-US": "T_IconC_044_UI"
+    },
+    "T_IconC_045_UI": {
+      "zh-CN": "“金羊毛”",
+      "en-US": "T_IconC_045_UI"
+    },
+    "T_IconC_046_UI": {
+      "zh-CN": "云母釉岩",
+      "en-US": "T_IconC_046_UI"
+    },
+    "T_IconC_047_UI": {
+      "zh-CN": "愚惑金",
+      "en-US": "T_IconC_047_UI"
+    },
+    "T_IconC_048_UI": {
+      "zh-CN": "桂叶",
+      "en-US": "T_IconC_048_UI"
+    },
+    "T_IconC_049_UI": {
+      "zh-CN": "窃金指爪",
+      "en-US": "T_IconC_049_UI"
+    },
+    "T_IconC_051_UI": {
+      "zh-CN": "海兔肉",
+      "en-US": "T_IconC_051_UI"
+    },
+    "T_IconC_053_UI": {
+      "zh-CN": "暗渊引灯",
+      "en-US": "T_IconC_053_UI"
+    },
+    "T_IconC_054_UI": {
+      "zh-CN": "“来生”",
+      "en-US": "T_IconC_054_UI"
+    },
+    "T_IconC_056_UI": {
+      "zh-CN": "石蔷薇",
+      "en-US": "T_IconC_056_UI"
+    },
+    "T_IconC_057_UI": {
+      "zh-CN": "见月花",
+      "en-US": "T_IconC_057_UI"
+    },
+    "T_IconC_058_UI": {
+      "zh-CN": "辉光金盏",
+      "en-US": "T_IconC_058_UI"
+    },
+    "T_IconC_bianzhuhua_UI": {
+      "zh-CN": "扁竹花",
+      "en-US": "T_IconC_bianzhuhua_UI"
+    },
+    "T_IconC_Com_004_1_UI": {
+      "zh-CN": "菱果",
+      "en-US": "T_IconC_Com_004_1_UI"
+    },
+    "T_IconC_denglongguo_UI": {
+      "zh-CN": "灯笼果",
+      "en-US": "T_IconC_denglongguo_UI"
+    },
+    "T_IconC_fuguyoulan_UI": {
+      "zh-CN": "蚀夜幽兰",
+      "en-US": "T_IconC_fuguyoulan_UI"
+    },
+    "T_IconC_HuiYanGu_UI": {
+      "zh-CN": "地涌莲",
+      "en-US": "T_IconC_HuiYanGu_UI"
+    },
+    "T_IconC_limuguo_UI": {
+      "zh-CN": "栎木果",
+      "en-US": "T_IconC_limuguo_UI"
+    },
+    "T_IconC_Sep_021_UI": {
+      "zh-CN": "莲实",
+      "en-US": "T_IconC_Sep_021_UI"
+    },
+    "T_IconC_Sep_061_UI": {
+      "zh-CN": "紫珊瑚",
+      "en-US": "T_IconC_Sep_061_UI"
+    },
+    "T_IconC_SM_Gat_01A_UI": {
+      "zh-CN": "水灯花",
+      "en-US": "T_IconC_SM_Gat_01A_UI"
+    },
+    "T_IconC_SM_Gat_01B_UI": {
+      "zh-CN": "香苏",
+      "en-US": "T_IconC_SM_Gat_01B_UI"
+    },
+    "T_IconC_SM_Gat_06A_UI": {
+      "zh-CN": "珍珠草",
+      "en-US": "T_IconC_SM_Gat_06A_UI"
+    },
+    "T_IconC_SM_Gat_07A_UI": {
+      "zh-CN": "清芬草",
+      "en-US": "T_IconC_SM_Gat_07A_UI"
+    },
+    "T_IconC_SM_Gat_08A_UI": {
+      "zh-CN": "云露",
+      "en-US": "T_IconC_SM_Gat_08A_UI"
+    },
+    "T_IconC_SM_Gat_09A_UI": {
+      "zh-CN": "夜息香",
+      "en-US": "T_IconC_SM_Gat_09A_UI"
+    },
+    "T_IconC_SM_Gat_10A_UI": {
+      "zh-CN": "鸳鸯花",
+      "en-US": "T_IconC_SM_Gat_10A_UI"
+    },
+    "T_IconC_SM_Gat_12A_UI": {
+      "zh-CN": "崖仙子",
+      "en-US": "T_IconC_SM_Gat_12A_UI"
+    },
+    "T_IconC_SM_Gat_13A_UI": {
+      "zh-CN": "伞下客",
+      "en-US": "T_IconC_SM_Gat_13A_UI"
+    },
+    "T_IconC_SM_Gat_14A_UI": {
+      "zh-CN": "龙衔珠",
+      "en-US": "T_IconC_SM_Gat_14A_UI"
+    },
+    "T_IconC_SM_Gat_15A_UI": {
+      "zh-CN": "花蕈",
+      "en-US": "T_IconC_SM_Gat_15A_UI"
+    },
+    "T_IconC_SM_Gat_19A_UI": {
+      "zh-CN": "植珀",
+      "en-US": "T_IconC_SM_Gat_19A_UI"
+    },
+    "T_IconC_SM_Gat_20A_UI": {
+      "zh-CN": "紫晶簇",
+      "en-US": "T_IconC_SM_Gat_20A_UI"
+    },
+    "T_IconC_SM_Gat_21A_UI": {
+      "zh-CN": "辉萤石",
+      "en-US": "T_IconC_SM_Gat_21A_UI"
+    },
+    "T_IconC_SM_Gat_22A_UI": {
+      "zh-CN": "红针晶簇",
+      "en-US": "T_IconC_SM_Gat_22A_UI"
+    },
+    "T_IconC_SM_Gat_24A_UI": {
+      "zh-CN": "地丁堇",
+      "en-US": "T_IconC_SM_Gat_24A_UI"
+    },
+    "T_IconC_SM_Gat_25A_UI": {
+      "zh-CN": "香柠草",
+      "en-US": "T_IconC_SM_Gat_25A_UI"
+    },
+    "T_IconC_SM_Gat_26A_UI": {
+      "zh-CN": "锦色贝",
+      "en-US": "T_IconC_SM_Gat_26A_UI"
+    },
+    "T_IconC_SM_Gat_27A_UI": {
+      "zh-CN": "雨声蜗",
+      "en-US": "T_IconC_SM_Gat_27A_UI"
+    },
+    "T_IconC_SM_Gat_28A_UI": {
+      "zh-CN": "隐火蜕",
+      "en-US": "T_IconC_SM_Gat_28A_UI"
+    },
+    "T_IconC_xueyejiami_UI": {
+      "zh-CN": "血叶荚蒾",
+      "en-US": "T_IconC_xueyejiami_UI"
+    },
+    "T_IconC_yanhaipo_UI": {
+      "zh-CN": "盐海珀",
+      "en-US": "T_IconC_yanhaipo_UI"
+    },
+    "T_IconC_yuezao_UI": {
+      "zh-CN": "月藻",
+      "en-US": "T_IconC_yuezao_UI"
+    },
+    "T_IconRup_SM_Gat_18A_UI": {
+      "zh-CN": "金阳凤",
+      "en-US": "T_IconRup_SM_Gat_18A_UI"
+    },
+    "T_IconRup_SM_Gat_23A_UI": {
+      "zh-CN": "木莲",
+      "en-US": "T_IconRup_SM_Gat_23A_UI"
+    },
+    "T_IconRup_SM_Gat_29A_UI": {
+      "zh-CN": "妙弋花",
+      "en-US": "T_IconRup_SM_Gat_29A_UI"
+    },
+    "T_IconRup_SM_Gat_30A_UI": {
+      "zh-CN": "云芝",
+      "en-US": "T_IconRup_SM_Gat_30A_UI"
+    },
+    "T_IconRup_SM_Gat_31A_UI": {
+      "zh-CN": "傲寒钟",
+      "en-US": "T_IconRup_SM_Gat_31A_UI"
+    },
+    "T_IconRup_SM_Gat_32A_UI": {
+      "zh-CN": "金铃子",
+      "en-US": "T_IconRup_SM_Gat_32A_UI"
+    },
+    "T_IconRup_SM_Gat_33A_UI": {
+      "zh-CN": "鸢尾花",
+      "en-US": "T_IconRup_SM_Gat_33A_UI"
+    },
+    "T_IconTask_Task_084_UI": {
+      "zh-CN": "暂星",
+      "en-US": "T_IconTask_Task_084_UI"
+    },
+    "T_IconTask_Task_085_UI": {
+      "zh-CN": "伪贝母",
+      "en-US": "T_IconTask_Task_085_UI"
+    },
+    "T_IconTask_Task_144_UI": {
+      "zh-CN": "海浮棘",
+      "en-US": "T_IconTask_Task_144_UI"
+    }
+  },
+  "库街区同步 · 大地图-强敌": {
+    "alee": {
+      "zh-CN": "暗流恶鳄",
+      "en-US": "alee"
+    },
+    "boyd": {
+      "zh-CN": "布偶乐队",
+      "en-US": "boyd"
+    },
+    "byhm": {
+      "zh-CN": "冰原嗥鸣",
+      "en-US": "byhm"
+    },
+    "cljdj": {
+      "zh-CN": "炽凛角斗家",
+      "en-US": "cljdj"
+    },
+    "cmgbz": {
+      "zh-CN": "刺玫菇变株",
+      "en-US": "cmgbz"
+    },
+    "crllhyq": {
+      "zh-CN": "车刃镰零号引擎",
+      "en-US": "crllhyq"
+    },
+    "cxmt_qzzj": {
+      "zh-CN": "残星门徒",
+      "en-US": "cxmt_qzzj"
+    },
+    "cxmt_xmzj": {
+      "zh-CN": "残星门徒",
+      "en-US": "cxmt_xmzj"
+    },
+    "cxmt_zczj": {
+      "zh-CN": "残星门徒",
+      "en-US": "cxmt_zczj"
+    },
+    "cxxj": {
+      "zh-CN": "残熄刑锯",
+      "en-US": "cxxj"
+    },
+    "dojc": {
+      "zh-CN": "灯偶剧场",
+      "en-US": "dojc"
+    },
+    "fljo": {
+      "zh-CN": "浮灵巨偶",
+      "en-US": "fljo"
+    },
+    "flmx": {
+      "zh-CN": "浮灵魔像",
+      "en-US": "flmx"
+    },
+    "glyx_hxx": {
+      "zh-CN": "咕噜幼像",
+      "en-US": "glyx_hxx"
+    },
+    "glyx_kcc": {
+      "zh-CN": "咕噜幼像",
+      "en-US": "glyx_kcc"
+    },
+    "glyx_wkk": {
+      "zh-CN": "咕噜幼像",
+      "en-US": "glyx_wkk"
+    },
+    "gtyl": {
+      "zh-CN": "高天翼龙",
+      "en-US": "gtyl"
+    },
+    "hcyz": {
+      "zh-CN": "黑潮引兆",
+      "en-US": "hcyz"
+    },
+    "hyhm_azl": {
+      "zh-CN": "荒原嗥鸣",
+      "en-US": "hyhm_azl"
+    },
+    "hyhm_hzl": {
+      "zh-CN": "荒原嗥鸣",
+      "en-US": "hyhm_hzl"
+    },
+    "jcht": {
+      "zh-CN": "棘刺河豚",
+      "en-US": "jcht"
+    },
+    "jcxw": {
+      "zh-CN": "箭簇熊王",
+      "en-US": "jcxw"
+    },
+    "jhddd": {
+      "zh-CN": "极寒叮咚咚",
+      "en-US": "jhddd"
+    },
+    "jshxl": {
+      "zh-CN": "机枢护心鳞",
+      "en-US": "jshxl"
+    },
+    "jxzc": {
+      "zh-CN": "巨蝎之巢",
+      "en-US": "jxzc"
+    },
+    "jyws": {
+      "zh-CN": "巨岩卫士",
+      "en-US": "jyws"
+    },
+    "jyys": {
+      "zh-CN": "嗟怨乐师",
+      "en-US": "jyys"
+    },
+    "kyzx_psyy": {
+      "zh-CN": "狂野之猩",
+      "en-US": "kyzx_psyy"
+    },
+    "kyzx_rzyy": {
+      "zh-CN": "狂野之猩",
+      "en-US": "kyzx_rzyy"
+    },
+    "kyzx_xfxy": {
+      "zh-CN": "狂野之猩",
+      "en-US": "kyzx_xfxy"
+    },
+    "ljzx_lnlj": {
+      "zh-CN": "棱镜之心",
+      "en-US": "ljzx_lnlj"
+    },
+    "ljzx_rrlj": {
+      "zh-CN": "棱镜之心",
+      "en-US": "ljzx_rrlj"
+    },
+    "ljzx_ymlj": {
+      "zh-CN": "棱镜之心",
+      "en-US": "ljzx_ymlj"
+    },
+    "ljzx_yslj": {
+      "zh-CN": "棱镜之心",
+      "en-US": "ljzx_yslj"
+    },
+    "llsr": {
+      "zh-CN": "琉璃双刃",
+      "en-US": "llsr"
+    },
+    "lrjx": {
+      "zh-CN": "绿熔巨蜥",
+      "en-US": "lrjx"
+    },
+    "lxsy": {
+      "zh-CN": "龙乡三翼",
+      "en-US": "lxsy"
+    },
+    "lyjdj": {
+      "zh-CN": "雷羽角斗家",
+      "en-US": "lyjdj"
+    },
+    "mhsz": {
+      "zh-CN": "荒蛮兽尊",
+      "en-US": "mhsz"
+    },
+    "mqzr": {
+      "zh-CN": "鸣泣之刃",
+      "en-US": "mqzr"
+    },
+    "mscd": {
+      "zh-CN": "没世裁断",
+      "en-US": "mscd"
+    },
+    "mytq": {
+      "zh-CN": "冥渊铁骑",
+      "en-US": "mytq"
+    },
+    "pqtj": {
+      "zh-CN": "破囚铁骑",
+      "en-US": "pqtj"
+    },
+    "pzsf": {
+      "zh-CN": "破障霜风",
+      "en-US": "pzsf"
+    },
+    "qznf": {
+      "zh-CN": "囚中怒风",
+      "en-US": "qznf"
+    },
+    "sj·xzcy": {
+      "zh-CN": "双极·虚质残影",
+      "en-US": "sj·xzcy"
+    },
+    "slzq": {
+      "zh-CN": "碎獠之群",
+      "en-US": "slzq"
+    },
+    "smhw": {
+      "zh-CN": "山脉护卫",
+      "en-US": "smhw"
+    },
+    "ssll_qyl": {
+      "zh-CN": "双生翎鹭",
+      "en-US": "ssll_qyl"
+    },
+    "ssll_zyl": {
+      "zh-CN": "双生翎鹭",
+      "en-US": "ssll_zyl"
+    },
+    "ssyq": {
+      "zh-CN": "双生影骑",
+      "en-US": "ssyq"
+    },
+    "sxxy": {
+      "zh-CN": "失序械囿",
+      "en-US": "sxxy"
+    },
+    "tgzw": {
+      "zh-CN": "踏光之威",
+      "en-US": "tgzw"
+    },
+    "wbwx": {
+      "zh-CN": "无喜无悲",
+      "en-US": "wbwx"
+    },
+    "wzjs_cj": {
+      "zh-CN": "妄罪节使·裁决",
+      "en-US": "wzjs_cj"
+    },
+    "wzjs_xg": {
+      "zh-CN": "妄罪节使·宣告",
+      "en-US": "wzjs_xg"
+    },
+    "xsjk": {
+      "zh-CN": "巡哨机傀",
+      "en-US": "xsjk"
+    },
+    "xx·hwx": {
+      "zh-CN": "虚像·海维夏",
+      "en-US": "xx·hwx"
+    },
+    "xx·hyjs·wjwy": {
+      "zh-CN": "虚像·辉萤军势·雾境妄音",
+      "en-US": "xx·hyjs·wjwy"
+    },
+    "xx·jxjo": {
+      "zh-CN": "虚像·聚械机偶",
+      "en-US": "xx·jxjo"
+    },
+    "xx·lxjh": {
+      "zh-CN": "虚像·炉芯机骸",
+      "en-US": "xx·lxjh"
+    },
+    "xx·slzl·lpat": {
+      "zh-CN": "虚像·朔雷之鳞·雷畔哀恸",
+      "en-US": "xx·slzl·lpat"
+    },
+    "xx·wcxl·smqt": {
+      "zh-CN": "虚像·无常凶鹭·生灭歧途",
+      "en-US": "xx·wcxl·smqt"
+    },
+    "xyqs": {
+      "zh-CN": "晓月骑士",
+      "en-US": "xyqs"
+    },
+    "yhzg": {
+      "zh-CN": "云海之歌",
+      "en-US": "yhzg"
+    },
+    "ymjdj": {
+      "zh-CN": "耀冥角斗家",
+      "en-US": "ymjdj"
+    },
+    "ywgz": {
+      "zh-CN": "遗忘贵族",
+      "en-US": "ywgz"
+    },
+    "yyfb": {
+      "zh-CN": "游弋风暴",
+      "en-US": "yyfb"
+    },
+    "yyyl": {
+      "zh-CN": "业炎幽翎",
+      "en-US": "yyyl"
+    },
+    "zqdzy": {
+      "zh-CN": "斩切的炙炎",
+      "en-US": "zqdzy"
+    },
+    "zqs": {
+      "zh-CN": "重拳手",
+      "en-US": "zqs"
+    }
+  },
+  "库街区同步 · 大地图-收集道具": {
+    "cx_01": {
+      "zh-CN": "潮汐之遗·绿",
+      "en-US": "cx_01"
+    },
+    "cx_02": {
+      "zh-CN": "潮汐之遗·紫",
+      "en-US": "cx_02"
+    },
+    "cx_03": {
+      "zh-CN": "潮汐之遗·金",
+      "en-US": "cx_03"
+    },
+    "fls": {
+      "zh-CN": "飞猎手",
+      "en-US": "fls"
+    },
+    "fsc": {
+      "zh-CN": "伏霜虫",
+      "en-US": "fsc"
+    },
+    "gjd": {
+      "zh-CN": "观景点",
+      "en-US": "gjd"
+    },
+    "Play_12": {
+      "zh-CN": "定风铎",
+      "en-US": "Play_12"
+    },
+    "qzx_01": {
+      "zh-CN": "朴素奇藏箱",
+      "en-US": "qzx_01"
+    },
+    "qzx_02": {
+      "zh-CN": "基准奇藏箱",
+      "en-US": "qzx_02"
+    },
+    "qzx_03": {
+      "zh-CN": "精密奇藏箱",
+      "en-US": "qzx_03"
+    },
+    "qzx_04": {
+      "zh-CN": "辉光奇藏箱",
+      "en-US": "qzx_04"
+    },
+    "sx": {
+      "zh-CN": "声匣",
+      "en-US": "sx"
+    },
+    "sx_lgn": {
+      "zh-CN": "声匣·拉古那",
+      "en-US": "sx_lgn"
+    },
+    "sx_qq": {
+      "zh-CN": "声匣·七丘",
+      "en-US": "sx_qq"
+    },
+    "wzdly": {
+      "zh-CN": "无主的梁鸢",
+      "en-US": "wzdly"
+    },
+    "xsd": {
+      "zh-CN": "隙声蝶",
+      "en-US": "xsd"
+    },
+    "YHYC": {
+      "zh-CN": "渊海遗藏",
+      "en-US": "YHYC"
+    },
+    "zscj": {
+      "zh-CN": "终声残卷",
+      "en-US": "zscj"
+    }
+  }
+}
