@@ -1,4 +1,8 @@
 ﻿#include "DrawItemOnGameMap.h"
+#include "../../Diagnostics/Diagnostics.h"
+
+#include <chrono>
+#include <limits>
 using namespace cv;
 using namespace std;
 vector<ItemDatas> DrawItemOnGameMap::centerPointNearItemsData;
@@ -12,6 +16,21 @@ void DrawItemOnGameMap::UpdateCenterPointNearItemsData(const Coordinate& validGa
 	if (GetBasicDataBySenceId(senceId)) {
 		lock_guard<mutex> lock(PointNearItemsDataMutex);
 		centerPointNearItemsData = GetAndFilterItemsData(validGameMapcenterPointROC, captureCorners, rect);
+		if (Diagnostics::Enabled()) {
+			static auto lastReport = chrono::steady_clock::time_point{};
+			static size_t lastMarkerCount = numeric_limits<size_t>::max();
+			const auto now = chrono::steady_clock::now();
+			if (centerPointNearItemsData.size() != lastMarkerCount || now - lastReport >= chrono::seconds(2)) {
+				Diagnostics::Record("marker-filter", "scene=" + to_string(senceId) +
+					" itemGroups=" + to_string(itemsDatas_StoragePtr->size()) +
+					" markers=" + to_string(centerPointNearItemsData.size()) +
+					" centerROC=" + to_string(validGameMapcenterPointROC.x) + "," + to_string(validGameMapcenterPointROC.y) +
+					" captureWidth=" + to_string(captureCorners[2].x - captureCorners[0].x) +
+					" captureHeight=" + to_string(captureCorners[2].y - captureCorners[0].y));
+				lastMarkerCount = centerPointNearItemsData.size();
+				lastReport = now;
+			}
+		}
 	}
 }
 
@@ -80,6 +99,8 @@ void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd) {
 	}
 	lock_guard<mutex> lock(PointNearItemsDataMutex);
 	vector<ItemDatas>& itemsDatas = centerPointNearItemsData;
+	int texturesReady = 0;
+	int texturesMissing = 0;
 	for (const auto& itemDatas : itemsDatas) {
 		int image_width1;
 		int image_height1;
@@ -105,6 +126,7 @@ void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd) {
 			}
 		}
 		if (ret) {
+			texturesReady++;
 			float radius = (rect.right * 0.0135f) / 2;
 			ImVec2 screenPosition(itemDatas.screenCoordiante.x, itemDatas.screenCoordiante.y);
 			//ImVec2 mousePos = ImGui::GetMousePos();
@@ -135,6 +157,19 @@ void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd) {
 					DrawItemBase::SaveItemPoint(senceName, itemDatas);
 				}
 			}	
+		}
+		else {
+			texturesMissing++;
+		}
+	}
+	if (Diagnostics::Enabled()) {
+		static auto lastReport = chrono::steady_clock::time_point{};
+		const auto now = chrono::steady_clock::now();
+		if (now - lastReport >= chrono::seconds(2)) {
+			Diagnostics::Record("marker-draw", "candidates=" + to_string(itemsDatas.size()) +
+				" texturesReady=" + to_string(texturesReady) +
+				" texturesMissing=" + to_string(texturesMissing));
+			lastReport = now;
 		}
 	}
 	wasRightButtonDown = rightButtonDown;

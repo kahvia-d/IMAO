@@ -111,7 +111,7 @@ public:
 	}
 
 private:
-	bool allThreadStopFlag;
+	bool allThreadStopFlag = false;
 	std::thread mainThread;
 
 	static int updateMapDataCycleTime;
@@ -135,8 +135,8 @@ private:
 	cv::Mat nearPlayerMapDescriptors;
 	Coordinate lastPlayerImgMapCoordinate;
 	Coordinate gameMapCenterPointImgMapCoord;
-	bool existMapCenterPointCoordinate;
-	int map_ConsecutiveFailuresCount;
+	bool existMapCenterPointCoordinate = false;
+	int map_ConsecutiveFailuresCount = 0;
 
 	std::optional<CaptureSnapshot> graphicsCapture;
 	std::optional<BitBltCapture> bitBltCapture;
@@ -154,7 +154,7 @@ private:
 	float inertiaStep = 1;
 	float scaleFactor = 1;
 	std::vector<cv::Point2f> captrueCorners{ cv::Point2f(0,0),cv::Point2f(0,0),cv::Point2f(0,0) ,cv::Point2f(0,0) };
-	bool mapNotMoving;
+	bool mapNotMoving = true;
 
 	std::thread keyMonitoringThread;
 
@@ -167,7 +167,7 @@ private:
 	winrt::IAsyncAction Start();
 	void Thread_DetectGameState();
 	bool Init();
-	bool IsOpenMap(const cv::Mat& snapshot, int* goodMatchSize);
+	bool IsOpenMap(const cv::Mat& snapshot, int* goodMatchSize, bool useMapFeatureFallback);
 	int  GetCurrentSceneId(const Coordinate& identifyCoordinate, const Mat& minMapImg);
 	bool IsExistMinMap(cv::Mat& snapshot, int* goodMatchSize);
 	bool IsMapMoving(const Coordinate& gameMapcenterPointROC,const Coordinate& lastGameMapCenterPointROC);

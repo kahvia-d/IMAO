@@ -27,6 +27,24 @@ class FilterItemDatas
 
 class LocalItemFilter
 {
+    // These were the items enabled by the original standalone launcher.  The
+    // WinUI version delegates the selection to FilteredItemsData.json, but a
+    // clean install has no such file and used to start with no map markers at
+    // all.  Keep the legacy selection as the first-run default; entries in
+    // the local file below always take precedence over this list.
+    private static readonly string[] DefaultEnabledItemIds =
+    {
+        "sx", "qzx_01", "qzx_02", "qzx_03", "T_IconC_046_UI",
+        "SP_IconMonsterHead_326_UI", "T_IconC_SM_Gat_19A_UI", "T_IconC_049_UI",
+        "T_IconC_SM_Gat_22A_UI", "SP_IconMonsterHead_331_UI", "sx_lgn",
+        "cx_02", "cx_01", "cx_03", "SP_IconMonsterHead_315_UI",
+        "SSP_IconMonsterHead_977_UI", "SP_IconMonsterHead_32030_UI",
+        "T_IconC_029_UI", "T_IconC_030_UI", "T_IconC_031_UI", "T_IconC_032_UI",
+        "T_IconC_035_UI", "T_IconC_036_UI", "T_IconC_037_UI", "T_IconC_038_UI",
+        "T_IconC_039_UI", "T_IconC_040_UI", "T_IconC_041_UI", "T_IconC_042_UI",
+        "T_IconC_043_UI", "T_IconC_044_UI", "T_IconC_045_UI", "T_IconC_054_UI"
+    };
+
     private String filterJsonFileName = new String("FilteredItemsData.json");
     private JsonDocument? filterJsonData;
     private bool isParseSuccess = false;
@@ -88,10 +106,17 @@ class LocalItemFilter
 
     public List<FilterItemDatas> GetFilteredItemsDatas()
     {
-        List<FilterItemDatas> filterItemsDatas = new List<FilterItemDatas>();
+        List<FilterItemDatas> filterItemsDatas = DefaultEnabledItemIds
+            .Select(itemId => new FilterItemDatas(itemId, 1))
+            .ToList();
+
         try
         {
-            if (!isParseSuccess) { return filterItemsDatas; }
+            // A missing settings file means this is the first run.  Returning
+            // the legacy defaults makes markers visible immediately.  Once a
+            // user changes a checkbox, the saved value below overrides only
+            // that item and leaves all other defaults intact.
+            if (!isParseSuccess || filterJsonData == null) { return filterItemsDatas; }
 
             foreach (var category in filterJsonData.RootElement.EnumerateObject())//Status
             {
@@ -99,7 +124,18 @@ class LocalItemFilter
                 {
                     String filteredItemName = filteredItem.Name;
                     String filteredItemValue = filteredItem.Value.ToString();
-                    filterItemsDatas.Add(new FilterItemDatas(filteredItemName, filteredItemValue.ToInt()));
+                    int filteredItemStatus = filteredItemValue.ToInt();
+                    FilterItemDatas? existingItem = filterItemsDatas
+                        .FirstOrDefault(item => item.Name == filteredItemName);
+
+                    if (existingItem != null)
+                    {
+                        existingItem.Status = filteredItemStatus;
+                    }
+                    else
+                    {
+                        filterItemsDatas.Add(new FilterItemDatas(filteredItemName, filteredItemStatus));
+                    }
                 }
             }
             return filterItemsDatas;
