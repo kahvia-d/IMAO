@@ -131,7 +131,7 @@ set(DEPS
 )
 
 Set(DEPS ${DEPS} ${CMAKE_SOURCE_DIR}/IMao-Core/paddleocr_cpp_infer/lib/ppocr.lib)
-Set(DEPS ${DEPS} Windowscodecs.lib windowsapp.lib dwmapi.lib d3d11.lib shlwapi.lib)
+Set(DEPS ${DEPS} Windowscodecs.lib windowsapp.lib dwmapi.lib d3d11.lib shlwapi.lib bcrypt.lib)
 set(DEPS ${DEPS} ${OpenCV_LIBS})
 
 if (EXISTS "${PADDLE_LIB}/third_party/install/snappy/lib")
@@ -206,6 +206,17 @@ set_target_properties(${DEMO_NAME} PROPERTIES
 target_include_directories(${DEMO_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(${DEMO_NAME} ${DEPS})
+
+# Builds a small, reproducible helper for converting Kuro's public 1024px map
+# tiles directly into this project's World-coordinate SURF database.  Keeping
+# this independent from IMao-Core avoids the old temporary 40k x 40k mosaic.
+add_executable(KuroMapFeatureBuilder
+    tools/KuroMapFeatureBuilder/main.cpp
+)
+set_target_properties(KuroMapFeatureBuilder PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+target_link_libraries(KuroMapFeatureBuilder PRIVATE ${OpenCV_LIBS} bcrypt.lib)
 
 add_custom_command(TARGET ${DEMO_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Assets ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/Assets

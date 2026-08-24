@@ -1,3 +1,4 @@
 # The v1.0.2 map-feature database is required at runtime but exceeds GitHub's
 # regular Git file-size limit. Keep it in LFS so the repository remains cloneable.
 Assets/FeaturesDatas/Map_features.yml filter=lfs diff=lfs merge=lfs -text
+Assets/FeaturesDatas/KuroTilePacks/**/features.yml filter=lfs diff=lfs merge=lfs -text

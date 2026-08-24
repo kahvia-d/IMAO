@@ -7,17 +7,37 @@
 #include "..\Coordinate\locationCalculator\MapCoordinate.h"
 #include "..\WindowsCapture\BitBltCapture\BitBltCapture.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\IdentifyWorldCoordinates.h"
+#include "..\Diagnostics\Diagnostics.h"
 
 
 class App
 {
 public:
 
-	App(std::optional<CaptureSnapshot> graphicsCapture, std::optional<BitBltCapture> bitBltCapture,HWND& hwnd) : graphicsCapture(graphicsCapture), bitBltCapture(bitBltCapture),hwnd(hwnd){}
+	App(std::optional<CaptureSnapshot> graphicsCapture, std::optional<BitBltCapture> bitBltCapture, HWND hwnd, const RECT& validatedClientRect)
+		: graphicsCapture(graphicsCapture), bitBltCapture(bitBltCapture), hwnd(hwnd), rect(validatedClientRect) {
+		imguiWindowsHeight = rect.bottom * 0.15f;
+		imguiWindowsWidth = rect.right * 0.3f;
+	}
 
-	void StartTasks() {
+	bool StartTasks() {
 		allThreadStopFlag = false;
-		Init();
+		try {
+			if (!Init()) {
+				allThreadStopFlag = true;
+				return false;
+			}
+		}
+		catch (const std::exception& exception) {
+			Diagnostics::Record("app-init-error", exception.what());
+			allThreadStopFlag = true;
+			return false;
+		}
+		catch (...) {
+			Diagnostics::Record("app-init-error", "unknown native exception");
+			allThreadStopFlag = true;
+			return false;
+		}
 		mouseMonitoringThread = std::thread(&App::Thread_GetItemMapScreenCoordinateByMouseMonitoring, this);
 		detectGameStateThread = std::thread(&App::Thread_DetectGameState, this);
 		keyMonitoringThread = std::thread(&App::Thread_KeyMonitoring_SavePlayerNearItemPoint, this);
@@ -26,16 +46,20 @@ public:
 			winrt::init_apartment();
 			this->Start().get();
 		});
+		return true;
 	}
 
 	void StopTasks() {
 		allThreadStopFlag = true;
 
-		mainThread.join();
-		mouseMonitoringThread.join();
-		detectGameStateThread.join();
+		if (mainThread.joinable()) mainThread.join();
+		if (mouseMonitoringThread.joinable()) mouseMonitoringThread.join();
+		if (detectGameStateThread.joinable()) detectGameStateThread.join();
+		if (keyMonitoringThread.joinable()) keyMonitoringThread.join();
 
 		FeatureData_map.Release();
+		FeatureData_DreamzhouKuroTiles.Release();
+		FeatureData_DreamzhouCandidate.Release();
 		FeatureData_IconTask.Release();
 		FeatureData_wavePlateCrystal.Release();
 		std::vector<cv::KeyPoint>().swap(nearPlayerMapKeypoints);
@@ -125,6 +149,8 @@ private:
 	Mat gameSnapshot;
 
 	ImageFeatureData FeatureData_map;
+	ImageFeatureData FeatureData_DreamzhouKuroTiles;
+	ImageFeatureData FeatureData_DreamzhouCandidate;
 	ImageFeatureData FeatureData_IconTask;
 	int GoodMatchSize_IconTask = 0;
 	ImageFeatureData FeatureData_wavePlateCrystal;
@@ -137,6 +163,9 @@ private:
 	Coordinate gameMapCenterPointImgMapCoord;
 	bool existMapCenterPointCoordinate = false;
 	int map_ConsecutiveFailuresCount = 0;
+	bool hasStableMapCenter = false;
+	Coordinate pendingMapCenterROC;
+	int pendingMapCenterConfirmations = 0;
 
 	std::optional<CaptureSnapshot> graphicsCapture;
 	std::optional<BitBltCapture> bitBltCapture;

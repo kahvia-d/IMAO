@@ -294,7 +294,14 @@ int ImGuiOverWindows::start()
         if (ClientD2D.x != g_LastGamePos.x || ClientD2D.y != g_LastGamePos.y ||
             GameRect.right != g_LastGameRect.right || GameRect.bottom != g_LastGameRect.bottom)
         {
-            MoveWindow(overWindowsHwnd, ClientD2D.x, ClientD2D.y, GameRect.right, GameRect.bottom, FALSE);
+            // Opening the game's map changes the overlay from the minimap-sized
+            // surface to a full client-sized surface.  Reassert the topmost
+            // position during that transition: newer game UI surfaces can
+            // otherwise cover this transparent window even though marker
+            // rendering continues successfully in the native thread.
+            SetWindowPos(overWindowsHwnd, HWND_TOPMOST,
+                ClientD2D.x, ClientD2D.y, GameRect.right, GameRect.bottom,
+                SWP_NOACTIVATE | SWP_SHOWWINDOW);
             g_LastGamePos = ClientD2D;
             g_LastGameRect = GameRect;
         }

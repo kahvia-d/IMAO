@@ -2,9 +2,35 @@
 #include "../../Diagnostics/Diagnostics.h"
 
 #include <chrono>
+#include <iomanip>
 #include <limits>
+#include <sstream>
 using namespace cv;
 using namespace std;
+
+namespace {
+constexpr size_t kDiagnosticMarkerSampleLimit = 32;
+
+string DescribeMarkerSample(const vector<ItemDatas>& markers) {
+	ostringstream stream;
+	stream << fixed << setprecision(1);
+	const size_t count = min(markers.size(), kDiagnosticMarkerSampleLimit);
+	for (size_t index = 0; index < count; ++index) {
+		const auto& marker = markers[index];
+		if (index != 0) {
+			stream << ";";
+		}
+		stream << marker.itemId << "@"
+			<< marker.itemMapROC.x << "," << marker.itemMapROC.y << ">"
+			<< marker.screenCoordiante.x << "," << marker.screenCoordiante.y;
+	}
+	if (markers.size() > count) {
+		stream << ";...";
+	}
+	return stream.str();
+}
+}
+
 vector<ItemDatas> DrawItemOnGameMap::centerPointNearItemsData;
 bool DrawItemOnGameMap::visibleSavedPoints = true;
 mutex DrawItemOnGameMap::PointNearItemsDataMutex;
@@ -20,13 +46,18 @@ void DrawItemOnGameMap::UpdateCenterPointNearItemsData(const Coordinate& validGa
 			static auto lastReport = chrono::steady_clock::time_point{};
 			static size_t lastMarkerCount = numeric_limits<size_t>::max();
 			const auto now = chrono::steady_clock::now();
-			if (centerPointNearItemsData.size() != lastMarkerCount || now - lastReport >= chrono::seconds(2)) {
+			const bool shouldReport = centerPointNearItemsData.size() != lastMarkerCount || now - lastReport >= chrono::seconds(2);
+			if (shouldReport) {
 				Diagnostics::Record("marker-filter", "scene=" + to_string(senceId) +
 					" itemGroups=" + to_string(itemsDatas_StoragePtr->size()) +
 					" markers=" + to_string(centerPointNearItemsData.size()) +
 					" centerROC=" + to_string(validGameMapcenterPointROC.x) + "," + to_string(validGameMapcenterPointROC.y) +
 					" captureWidth=" + to_string(captureCorners[2].x - captureCorners[0].x) +
 					" captureHeight=" + to_string(captureCorners[2].y - captureCorners[0].y));
+				Diagnostics::Record("map-marker-sample", "scene=" + to_string(senceId) +
+					" markers=" + to_string(centerPointNearItemsData.size()) +
+					" centerROC=" + to_string(validGameMapcenterPointROC.x) + "," + to_string(validGameMapcenterPointROC.y) +
+					" samples=" + DescribeMarkerSample(centerPointNearItemsData));
 				lastMarkerCount = centerPointNearItemsData.size();
 				lastReport = now;
 			}

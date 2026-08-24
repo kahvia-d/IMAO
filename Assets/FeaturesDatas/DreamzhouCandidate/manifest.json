@@ -1,0 +1,19 @@
+{
+  "formatVersion": 1,
+  "packId": "dreamzhou-current-location",
+  "scene": "World",
+  "anchorWorldCoordinate": {
+    "x": -6725,
+    "y": -919
+  },
+  "reference": {
+    "image": "reference--6725--919.png",
+    "sha256": "9ba8c526ad798aa428baca422ed5d748d19273f5fb457661029689b3ce1bb69e",
+    "width": 184,
+    "height": 184
+  },
+  "mask": {
+    "innerRadius": 22,
+    "outerRadius": 80
+  }
+}

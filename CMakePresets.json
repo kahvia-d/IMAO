@@ -35,6 +35,13 @@
       "targets": [
         "IMao-Core"
       ]
+    },
+    {
+      "name": "windows-x64-relwithdebinfo-diagnostics-kuro-builder",
+      "configurePreset": "windows-x64-relwithdebinfo-diagnostics",
+      "targets": [
+        "KuroMapFeatureBuilder"
+      ]
     }
   ]
 }

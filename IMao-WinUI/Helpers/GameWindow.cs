@@ -19,6 +19,9 @@ class WindowClientSizeGetter
     [DllImport("user32.dll")]
     private static extern bool IsWindowVisible(IntPtr hWnd);
 
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
     // 客户区矩形结构
     private struct RECT
     {
@@ -37,41 +40,37 @@ class WindowClientSizeGetter
     {
         try
         {
-            var process = Process.GetProcessesByName(processName).FirstOrDefault();
-            if (process == null)
+            var processIds = Process.GetProcessesByName(processName)
+                .Select(process => (uint)process.Id)
+                .ToHashSet();
+            if (processIds.Count == 0)
             {
                 return Size.Empty;
             }
-            uint targetProcessId = (uint)process.Id;
 
-            IntPtr targetHwnd = IntPtr.Zero;
+            Size largestClientSize = Size.Empty;
+            long largestClientArea = 0;
 
             EnumWindows((hWnd, lParam) =>
             {
                 GetWindowThreadProcessId(hWnd, out uint processId);
 
-                if (processId == targetProcessId && IsWindowVisible(hWnd))
+                if (processIds.Contains(processId) && IsWindowVisible(hWnd) && !IsIconic(hWnd) &&
+                    GetClientRect(hWnd, out RECT clientRect))
                 {
-                    targetHwnd = hWnd;
-                    return false; 
+                    int width = clientRect.Right - clientRect.Left;
+                    int height = clientRect.Bottom - clientRect.Top;
+                    long area = (long)width * height;
+                    if (width >= 640 && height >= 360 && area > largestClientArea)
+                    {
+                        largestClientSize = new Size(width, height);
+                        largestClientArea = area;
+                    }
                 }
                 return true;
             }, IntPtr.Zero);
 
-            if (targetHwnd == IntPtr.Zero)
-            {
-                return Size.Empty;
-            }
-
-            // 获取客户区大小
-            if (GetClientRect(targetHwnd, out RECT clientRect))
-            {
-                int width = clientRect.Right - clientRect.Left;
-                int height = clientRect.Bottom - clientRect.Top;
-                return new Size(width, height);
-            }
-
-            return Size.Empty;
+            return largestClientSize;
         }
         catch (Exception ex)
         {

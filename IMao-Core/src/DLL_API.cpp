@@ -9,6 +9,7 @@
 #include "ImguiDraw/Items/DrawItemOnGameMap.h"
 #include "ImguiDraw/Routes/LoadEditRouteData.h"
 #include "ImguiDraw/Items/DrawItemOnMinMap.h"
+#include "Diagnostics/Diagnostics.h"
 #pragma comment(lib, "dwmapi.lib")
 using namespace std;
 
@@ -57,45 +58,63 @@ void SetMapDataUpdateCycle(int cycleTime){
 }
 
 void MainThread() {
-	while (clickedStopButton) {
-		std::this_thread::sleep_for(std::chrono::seconds(10));///l
+	for (;;) {
+		while (clickedStopButton) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		}
+
+		RECT clientRect{};
+		if (!GetUsableClientRect(hwnd, clientRect)) {
+			Diagnostics::Initialize();
+			Diagnostics::Record("core-start-rejected", "game window was no longer usable when startup began");
+			clickedStartButton = false;
+			clickedStopButton = true;
+			continue;
+		}
+
+		optional<BitBltCapture> bitBltCapture;
+		optional<CaptureSnapshot> graphicsCapture;
+		if (CaptureWay == 0) {
+			bitBltCapture = BitBltCapture(hwnd);
+		}
+		else if (CaptureWay == 1) {
+			graphicsCapture = CaptureSnapshot(hwnd);
+		}
+
+		Notification::Start();
+		app = make_unique<App>(graphicsCapture, bitBltCapture, hwnd, clientRect);
+
+		App::SetUpdateMapDataCycleTime(mapDataUpdateCycle);
+		App::SetUpdateMinMapDataCycleTime(minMapDataUpdateCycle);
+		App::SetEnabledMapShowItem(enabledMapShowItem);
+		App::SetEnabledMinMapShowItem(enabledMinMapShowItem);
+		ImGuiOverWindows imguioverwindows(hwnd, *app);
+
+		if (!app->StartTasks()) {
+			Notification::AddInfo(NotificationDatas("Startup failed. Please return to the visible game window and try again.", 5));
+			std::this_thread::sleep_for(std::chrono::seconds(2));
+			imguioverwindows.Stop();
+			Notification::Stop();
+			app.reset();
+			clickedStartButton = false;
+			clickedStopButton = true;
+			continue;
+		}
+
+		LoadEditRouteData::Initi(app.get());
+		while (clickedStartButton) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		}
+
+		//TODO:内存泄漏未完全解决
+		imguioverwindows.Stop();
+		Notification::Stop();
+		app->StopTasks();
+		LoadEditRouteData::StopThread();
+		app.reset();
+		DrawItemOnGameMap::ClearNearItemsData();
+		DrawItemOnMinMap::ClearNearItemsData();
 	}
-
-	optional<BitBltCapture> bitBltCapture;
-	optional<CaptureSnapshot> graphicsCapture;
-	if (CaptureWay == 0) {
-		bitBltCapture = BitBltCapture(hwnd);
-	}
-	else if (CaptureWay == 1) {
-		graphicsCapture = CaptureSnapshot(hwnd);
-	}
-
-	Notification::Start();
-    
-	app = make_unique<App>(graphicsCapture, bitBltCapture, hwnd);
-	ImGuiOverWindows imguioverwindows(hwnd, *app);
-
-	App::SetUpdateMapDataCycleTime(mapDataUpdateCycle);
-	App::SetUpdateMinMapDataCycleTime(minMapDataUpdateCycle);
-	App::SetEnabledMapShowItem(enabledMapShowItem);
-	App::SetEnabledMinMapShowItem(enabledMinMapShowItem);
-
-	app->StartTasks();
-    LoadEditRouteData::Initi(app.get());
-	while (clickedStartButton) {
-		std::this_thread::sleep_for(std::chrono::seconds(10));
-	}
-
-    //TODO:内存泄漏未完全解决
-    Notification::Stop();
-	imguioverwindows.Stop();
-	app->StopTasks();
-    LoadEditRouteData::StopThread();
-    app.release();
-    app.reset();
-    DrawItemOnGameMap::ClearNearItemsData();
-    DrawItemOnMinMap::ClearNearItemsData();
-	MainThread();
 }
 
 void Initi()
@@ -107,8 +126,10 @@ void Initi()
 }
 
 int Start() {
-    hwnd = GetWindowHandleByProcessName(L"Client-Win64-Shipping.exe");
-    if (hwnd && !app) {
+    const HWND gameWindow = GetWindowHandleByProcessName(L"Client-Win64-Shipping.exe");
+    RECT clientRect{};
+    if (gameWindow && GetUsableClientRect(gameWindow, clientRect) && !app) {
+        hwnd = gameWindow;
         clickedStartButton = true;
         clickedStopButton = false;
         return 1;

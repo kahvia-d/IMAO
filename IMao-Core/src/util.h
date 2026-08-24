@@ -57,6 +57,12 @@ std::string ReplaceSlashes(const std::string& input);
 
 HWND GetWindowHandleByProcessName(const wchar_t* processName);
 
+// Returns true only for a visible, non-minimized game client window with a
+// usable capture surface.  The game process can temporarily expose helper
+// windows (including 0x0 windows) while it is starting or closing; those must
+// never be used as the capture/overlay target.
+bool GetUsableClientRect(HWND hwnd, RECT& clientRect);
+
 bool isKeyPressed(int keyCode);
 
 double DistanceBetweenPoints(const Coordinate& p1, const Coordinate& p2);

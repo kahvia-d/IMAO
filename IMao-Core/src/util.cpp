@@ -145,37 +145,66 @@ HWND GetWindowHandleByProcessName(const wchar_t* processName) {
     processEntry.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
-    DWORD processId = 0;
+    std::unordered_set<DWORD> processIds;
     if (snapshot != INVALID_HANDLE_VALUE && Process32First(snapshot, &processEntry)) {
         do {
             if (_wcsicmp(processEntry.szExeFile, processName) == 0) {
-                processId = processEntry.th32ProcessID;
-                break;
+                processIds.insert(processEntry.th32ProcessID);
             }
         } while (Process32Next(snapshot, &processEntry));
     }
-    CloseHandle(snapshot);
+    if (snapshot != INVALID_HANDLE_VALUE) {
+        CloseHandle(snapshot);
+    }
 
-    if (processId == 0) return NULL;
+    if (processIds.empty()) return NULL;
 
     struct WindowData {
-        DWORD processId;
+        const std::unordered_set<DWORD>& processIds;
         HWND hwnd;
-    } windowData = { processId, NULL };
+        LONG_PTR area;
+    } windowData = { processIds, NULL, 0 };
 
     EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL {
         WindowData* data = reinterpret_cast<WindowData*>(lParam);
         DWORD windowProcessId = 0;
-
         GetWindowThreadProcessId(hwnd, &windowProcessId);
-        if (windowProcessId == data->processId && IsWindowVisible(hwnd)) {
+        if (data->processIds.count(windowProcessId) == 0) {
+            return TRUE;
+        }
+
+        RECT clientRect{};
+        if (!GetUsableClientRect(hwnd, clientRect)) {
+            return TRUE;
+        }
+
+        const LONG_PTR width = clientRect.right - clientRect.left;
+        const LONG_PTR height = clientRect.bottom - clientRect.top;
+        const LONG_PTR area = width * height;
+        if (area > data->area) {
             data->hwnd = hwnd;
-            return FALSE;
+            data->area = area;
         }
         return TRUE; 
         }, reinterpret_cast<LPARAM>(&windowData));
 
     return windowData.hwnd;
+}
+
+bool GetUsableClientRect(HWND hwnd, RECT& clientRect) {
+    clientRect = {};
+    if (hwnd == NULL || !IsWindow(hwnd) || !IsWindowVisible(hwnd) || IsIconic(hwnd)) {
+        return false;
+    }
+    if (!GetClientRect(hwnd, &clientRect)) {
+        return false;
+    }
+
+    constexpr LONG kMinimumCaptureWidth = 640;
+    constexpr LONG kMinimumCaptureHeight = 360;
+    const LONG width = clientRect.right - clientRect.left;
+    const LONG height = clientRect.bottom - clientRect.top;
+    return width >= kMinimumCaptureWidth && height >= kMinimumCaptureHeight;
 }
 
 

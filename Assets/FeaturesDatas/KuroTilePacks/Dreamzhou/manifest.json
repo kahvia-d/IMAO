@@ -1,0 +1,199 @@
+{
+  "formatVersion": 1,
+  "packId": "dreamzhou-kurotiles",
+  "scene": "World",
+  "resourceVersion": "E62CEAC5F80745288BF76C7AD5F731C3",
+  "generatedAtUtc": "2026-08-24T03:29:54.5931702Z",
+  "source": {
+    "static": "https://web-static.kurobbs.com",
+    "state": 8,
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "anchorWorldCoordinate": {
+    "x": -6725.0,
+    "y": -919.0
+  },
+  "tileRadius": 2,
+  "tiles": [
+    {
+      "x": -9,
+      "y": 0,
+      "file": "tiles/8_-9_0.png",
+      "sha256": "e4704daba66d96a13205e89e92485e2eee41da921409bd75865ca20d7b9ad435"
+    },
+    {
+      "x": -9,
+      "y": 1,
+      "file": "tiles/8_-9_1.png",
+      "sha256": "68e8ba0bd8a11b537cf2341ca73a58243b1ed34de918bf9a1978ef7e0e691895"
+    },
+    {
+      "x": -9,
+      "y": 2,
+      "file": "tiles/8_-9_2.png",
+      "sha256": "f58461b0ae8345680bbd8a7840af4b9d15c34d66350d219a05f0e96378ed2371"
+    },
+    {
+      "x": -9,
+      "y": 3,
+      "file": "tiles/8_-9_3.png",
+      "sha256": "d24a1e872145b0472b30cd5d78959548acf595f44306c6f35add60f6d9140e2c"
+    },
+    {
+      "x": -9,
+      "y": 4,
+      "file": "tiles/8_-9_4.png",
+      "sha256": "7d2e7f7290a5fded59f2b0719832e680ca721e0b22ee4ebce44ef35bbb6032ba"
+    },
+    {
+      "x": -8,
+      "y": 0,
+      "file": "tiles/8_-8_0.png",
+      "sha256": "9453b071b6dba0382f8b26261f0aab725bdb7c885d80f1b2671b85c17093da57"
+    },
+    {
+      "x": -8,
+      "y": 1,
+      "file": "tiles/8_-8_1.png",
+      "sha256": "2487eebc2e2e7763df5ecfaa20bb3de8265fa58f585c293fd49ae4e8effa4547"
+    },
+    {
+      "x": -8,
+      "y": 2,
+      "file": "tiles/8_-8_2.png",
+      "sha256": "2497ea333e405477144a7bf4d3b0c5a70d92d18d020b4c36a8dd88c4757a47a1"
+    },
+    {
+      "x": -8,
+      "y": 3,
+      "file": "tiles/8_-8_3.png",
+      "sha256": "adb193222ce3c6a9e017b0c2e2977bdffc0fa17da26f857cec4704267e148be2"
+    },
+    {
+      "x": -8,
+      "y": 4,
+      "file": "tiles/8_-8_4.png",
+      "sha256": "14c6472c1fc01140691f6daccc8f3601a4f4799201ebfb7412cf0d50816ec2dc"
+    },
+    {
+      "x": -7,
+      "y": 0,
+      "file": "tiles/8_-7_0.png",
+      "sha256": "df2885c933661ce11123e1500940147c148cc104ffb050756b9ed835538bceae"
+    },
+    {
+      "x": -7,
+      "y": 1,
+      "file": "tiles/8_-7_1.png",
+      "sha256": "686a097efc0c912f5ec7b375c3a95ac1b3b824e8c9db6a8240efd0de610fe4da"
+    },
+    {
+      "x": -7,
+      "y": 2,
+      "file": "tiles/8_-7_2.png",
+      "sha256": "669e055e0be459ccdee320f2453f6792109a6e6ae583f448566969f0063f56fb"
+    },
+    {
+      "x": -7,
+      "y": 3,
+      "file": "tiles/8_-7_3.png",
+      "sha256": "c1b0fde095be80a478106f5bb398d5fd7ea518428ce72ff2e338273af6726b63"
+    },
+    {
+      "x": -7,
+      "y": 4,
+      "file": "tiles/8_-7_4.png",
+      "sha256": "ca0b06ed00b3f314c67317e23cbe42609acaf59303f88c7a1979d132bff037a1"
+    },
+    {
+      "x": -6,
+      "y": 0,
+      "file": "tiles/8_-6_0.png",
+      "sha256": "8d1f46434cf43897d44bcf646bce6f0ad55db00d63c7255f765a8df48ffd3750"
+    },
+    {
+      "x": -6,
+      "y": 1,
+      "file": "tiles/8_-6_1.png",
+      "sha256": "7399341fb46c3b9456336e83d97908514e343f1ac606a7bf3af5e2d570a6f29c"
+    },
+    {
+      "x": -6,
+      "y": 2,
+      "file": "tiles/8_-6_2.png",
+      "sha256": "5b22695d5f4012186affd1b200a7b9726dbd2fff163a5e2685114473feec3e21"
+    },
+    {
+      "x": -6,
+      "y": 3,
+      "file": "tiles/8_-6_3.png",
+      "sha256": "3c7a49415a406058ae085059b73e8b822ef01e5818e3b3ae72cececff8b7f92f"
+    },
+    {
+      "x": -6,
+      "y": 4,
+      "file": "tiles/8_-6_4.png",
+      "sha256": "cf142b8490a7ae9e18c4b9c5dae715c90030cb0d4daa2e727a0753f56649464e"
+    },
+    {
+      "x": -5,
+      "y": 0,
+      "file": "tiles/8_-5_0.png",
+      "sha256": "545574a11de9af8d9fdc0c8ebd32cd557a3b4c79a24cbe10c57b9d1a31eed63a"
+    },
+    {
+      "x": -5,
+      "y": 1,
+      "file": "tiles/8_-5_1.png",
+      "sha256": "595470c7a59e026a2ca8a5e2cfc8a5edb1fc7f1e27683a86a55cdd05c07fb6c1"
+    },
+    {
+      "x": -5,
+      "y": 2,
+      "file": "tiles/8_-5_2.png",
+      "sha256": "8756a1856c5882c5da6c3b832b5c6fe4897a47b2c1fa913c28aca60fdb17d605"
+    },
+    {
+      "x": -5,
+      "y": 3,
+      "file": "tiles/8_-5_3.png",
+      "sha256": "f6a12ce8c3baf5635ef8106c37abb351c76e085c81c11aa9bf4acbaaa5e8a18c"
+    },
+    {
+      "x": -5,
+      "y": 4,
+      "file": "tiles/8_-5_4.png",
+      "sha256": "595b0433646dbe62998d69dc34a55b9b4b29e528a59156eb28833e62aadc8365"
+    }
+  ],
+  "coordinateBounds": {
+    "maxX": -3078.652099609375,
+    "maxY": 2966.7890625,
+    "minX": -7757.6572265625,
+    "minY": -672.7826538085938
+  },
+  "referenceVerification": {
+    "errorPixels": 4.167533628184416,
+    "expectedMapCoordinate": {
+      "x": -5629.625000000001,
+      "y": 849.605
+    },
+    "goodMatches": 2,
+    "mapKeypoints": 70,
+    "minimapKeypoints": 122,
+    "nearAnchorMatches": 2,
+    "passed": true,
+    "reference": "reference--6725--919.png",
+    "resultMapCoordinate": {
+      "x": -5631.4709624000225,
+      "y": 845.8685900439386
+    }
+  },
+  "features": {
+    "file": "features.yml",
+    "sha256": "6b691060f7405d174743856218019ab70886c3f9465159baac85257032562b83",
+    "keypointCount": 11287,
+    "extractedKeypointCount": 51689
+  }
+}

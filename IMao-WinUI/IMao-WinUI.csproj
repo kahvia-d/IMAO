@@ -85,6 +85,28 @@
         Condition="'@(KuroMapAssets)' != ''" />
 </Target>
 
+<Target Name="CopyDreamzhouCandidateAssets" AfterTargets="CopyFilesToOutputDirectory">
+  <ItemGroup>
+    <DreamzhouCandidateAssets Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\DreamzhouCandidate\**\*" />
+  </ItemGroup>
+  <MakeDir Directories="$(TargetDir)Assets\FeaturesDatas\DreamzhouCandidate" Condition="Exists('$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\DreamzhouCandidate')" />
+  <Copy SourceFiles="@(DreamzhouCandidateAssets)"
+        DestinationFiles="@(DreamzhouCandidateAssets->'$(TargetDir)Assets\FeaturesDatas\DreamzhouCandidate\%(RecursiveDir)%(Filename)%(Extension)')"
+        SkipUnchangedFiles="true"
+        Condition="'@(DreamzhouCandidateAssets)' != ''" />
+</Target>
+
+<Target Name="CopyKuroTileFeaturePackAssets" AfterTargets="CopyFilesToOutputDirectory">
+  <ItemGroup>
+    <KuroTileFeaturePackAssets Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\KuroTilePacks\**\*" />
+  </ItemGroup>
+  <MakeDir Directories="$(TargetDir)Assets\FeaturesDatas\KuroTilePacks" Condition="Exists('$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\KuroTilePacks')" />
+  <Copy SourceFiles="@(KuroTileFeaturePackAssets)"
+        DestinationFiles="@(KuroTileFeaturePackAssets->'$(TargetDir)Assets\FeaturesDatas\KuroTilePacks\%(RecursiveDir)%(Filename)%(Extension)')"
+        SkipUnchangedFiles="true"
+        Condition="'@(KuroTileFeaturePackAssets)' != ''" />
+</Target>
+
 <Target Name="CleanUnsupportedLanguages" AfterTargets="CopyFilesToOutputDirectory;Publish" Condition="'$(Platform)'!='' and '$(Configuration)'!=''">
   <PropertyGroup>
     <RootOutputDir>$([System.IO.Path]::GetFullPath('$(BaseOutputPath)$(Platform)\$(Configuration)'))</RootOutputDir>

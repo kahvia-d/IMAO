@@ -1,6 +1,36 @@
 ﻿#include "DrawItemOnMinMap.h"
 
+#include "../../Diagnostics/Diagnostics.h"
+
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+
 using namespace std;
+
+namespace {
+constexpr size_t kDiagnosticMarkerSampleLimit = 32;
+
+string DescribeMarkerSample(const vector<ItemDatas>& markers) {
+    ostringstream stream;
+    stream << fixed << setprecision(1);
+    const size_t count = min(markers.size(), kDiagnosticMarkerSampleLimit);
+    for (size_t index = 0; index < count; ++index) {
+        const auto& marker = markers[index];
+        if (index != 0) {
+            stream << ";";
+        }
+        stream << marker.itemId << "@"
+            << marker.itemMapROC.x << "," << marker.itemMapROC.y << ">"
+            << marker.screenCoordiante.x << "," << marker.screenCoordiante.y;
+    }
+    if (markers.size() > count) {
+        stream << ";...";
+    }
+    return stream.str();
+}
+}
+
 vector<ItemDatas> DrawItemOnMinMap::nearItemsDatas;
 Coordinate minMapCenterPoint;
 string DrawItemOnMinMap::senceName = "World";
@@ -14,8 +44,21 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(HWND &hwnd,Coordinate & playerR
 }
 
 void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & playerROC,float minMapRadius, int SceneId) {
-    if(GetBasicDataBySenceId(SceneId))
+    if(GetBasicDataBySenceId(SceneId)) {
         nearItemsDatas = GetAndFilterItemsData(w_Rect, playerROC, minMapRadius);
+        if (Diagnostics::Enabled()) {
+            static auto lastReport = chrono::steady_clock::time_point{};
+            const auto now = chrono::steady_clock::now();
+            if (now - lastReport >= chrono::seconds(2)) {
+                Diagnostics::Record("minimap-marker-sample", "scene=" + to_string(SceneId) +
+                    " markers=" + to_string(nearItemsDatas.size()) +
+                    " playerROC=" + to_string(playerROC.x) + "," + to_string(playerROC.y) +
+                    " radius=" + to_string(minMapRadius) +
+                    " samples=" + DescribeMarkerSample(nearItemsDatas));
+                lastReport = now;
+            }
+        }
+    }
 }
 
 bool DrawItemOnMinMap::GetBasicDataBySenceId(int senceId) {
