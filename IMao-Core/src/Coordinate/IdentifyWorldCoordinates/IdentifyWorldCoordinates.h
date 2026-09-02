@@ -13,6 +13,7 @@ struct CoordinateRecognitionRequest {
     std::uint64_t sessionId = 0;
     std::uint64_t uiGeneration = 0;
     std::uint64_t frameId = 0;
+    std::uint64_t requestId = 0;
     cv::Mat snapshot;
     RECT clientRect{};
     std::optional<Coordinate> previousTrusted;

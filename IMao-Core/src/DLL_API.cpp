@@ -15,10 +15,12 @@
 #include "Feature/RuntimeFeatureRepository.h"
 #include "util.h"
 #include <condition_variable>
+#include <DbgHelp.h>
 #include <filesystem>
 #include <mutex>
 #include <thread>
 #pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "Dbghelp.lib")
 using namespace std;
 
 HINSTANCE g_hDllInstance = NULL;
@@ -38,6 +40,50 @@ bool runtimeRunning = false;
 bool shutdownRequested = false;
 HWND requestedWindow = nullptr;
 std::once_flag drawItemsInitialized;
+
+// Native access violations bypass the managed WinUI exception handler.  Keep
+// the normal crash behavior, but leave a minidump next to the app so a repeat
+// fault can be mapped to the exact native call chain instead of only a DLL
+// offset from Windows Event Viewer.
+LONG WINAPI WriteNativeCrashDump(EXCEPTION_POINTERS* exceptionPointers) {
+	static volatile LONG writing = 0;
+	if (InterlockedCompareExchange(&writing, 1, 0) != 0) {
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+
+	wchar_t currentDirectory[MAX_PATH]{};
+	if (GetCurrentDirectoryW(MAX_PATH, currentDirectory) == 0) {
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+	wchar_t crashDirectory[MAX_PATH]{};
+	if (swprintf_s(crashDirectory, L"%s\\CrashReports", currentDirectory) < 0) {
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+	CreateDirectoryW(crashDirectory, nullptr);
+
+	SYSTEMTIME now{};
+	GetLocalTime(&now);
+	wchar_t dumpPath[MAX_PATH]{};
+	if (swprintf_s(dumpPath, L"%s\\IMao-Core-%04u%02u%02u-%02u%02u%02u.dmp", crashDirectory,
+		now.wYear, now.wMonth, now.wDay, now.wHour, now.wMinute, now.wSecond) < 0) {
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+	const HANDLE file = CreateFileW(dumpPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+		FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file == INVALID_HANDLE_VALUE) {
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+	MINIDUMP_EXCEPTION_INFORMATION exceptionInfo{};
+	exceptionInfo.ThreadId = GetCurrentThreadId();
+	exceptionInfo.ExceptionPointers = exceptionPointers;
+	exceptionInfo.ClientPointers = FALSE;
+	MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), file,
+		static_cast<MINIDUMP_TYPE>(MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules |
+			MiniDumpWithIndirectlyReferencedMemory),
+		exceptionPointers == nullptr ? nullptr : &exceptionInfo, nullptr, nullptr);
+	CloseHandle(file);
+	return EXCEPTION_CONTINUE_SEARCH;
+}
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
@@ -145,6 +191,7 @@ void RuntimeMain(std::stop_token stopToken) {
 void Initi()
 {
     SetConsoleOutputCP(CP_UTF8);
+	SetUnhandledExceptionFilter(WriteNativeCrashDump);
 	std::scoped_lock lock(runtimeMutex);
 	if (runtimeInitialized) return;
 	std::call_once(drawItemsInitialized, [] { DrawItemBase::Initi(); });

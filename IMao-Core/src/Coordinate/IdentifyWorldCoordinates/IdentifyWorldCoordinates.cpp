@@ -123,6 +123,7 @@ public:
         result.sessionId = request.sessionId;
         result.uiGeneration = request.uiGeneration;
         result.frameId = request.frameId;
+        result.requestId = request.requestId;
 
         cv::Rect region;
         if (!GetCoordinateRegion(request.snapshot, region)) {
@@ -324,6 +325,7 @@ private:
             result.sessionId = request.sessionId;
             result.uiGeneration = request.uiGeneration;
             result.frameId = request.frameId;
+            result.requestId = request.requestId;
             result.status = CoordinateRecognitionStatus::NoCandidate;
             try {
                 result = Recognize(request);

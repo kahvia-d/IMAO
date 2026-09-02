@@ -24,6 +24,8 @@ struct MapViewportLocalizationRequest {
     std::uint64_t uiGeneration = 0;
     std::uint64_t viewportGeneration = 0;
     std::uint64_t frameId = 0;
+    std::uint64_t requestId = 0;
+    std::uint64_t viewportRevision = 0;
     cv::Mat mapCrop;
     MapViewportSearchScope scope = MapViewportSearchScope::Global;
     std::optional<WorldSearchPrior> prior;
@@ -34,11 +36,17 @@ struct MapViewportLocalizationResult {
     std::uint64_t uiGeneration = 0;
     std::uint64_t viewportGeneration = 0;
     std::uint64_t frameId = 0;
+    std::uint64_t requestId = 0;
+    std::uint64_t viewportRevision = 0;
     MapViewportSearchScope scope = MapViewportSearchScope::Global;
     bool accepted = false;
     Coordinate centerMapCoordinate;
     std::vector<cv::Point2f> captureCorners;
     int goodMatchCount = 0;
+    int inlierCount = 0;
+    double inlierRatio = 0.0;
+    double medianReprojectionError = 0.0;
+    int coveredQuadrants = 0;
     int cropKeypointCount = 0;
     double durationMilliseconds = 0.0;
 };

@@ -32,6 +32,7 @@ struct CoordinateRecognitionResult {
     std::uint64_t sessionId = 0;
     std::uint64_t uiGeneration = 0;
     std::uint64_t frameId = 0;
+    std::uint64_t requestId = 0;
     CoordinateRecognitionStatus status = CoordinateRecognitionStatus::NoCandidate;
     std::vector<CoordinateCandidate> candidates;
     double preprocessingMilliseconds = 0.0;

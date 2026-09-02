@@ -84,6 +84,8 @@ void TestRecoveryController() {
     Expect(controller.State() == CoordinateLockState::Tracking, "validated OCR should enter Tracking");
     controller.OnContinuityFailure(start);
     Expect(controller.State() == CoordinateLockState::Suspect, "first failure should enter Suspect");
+    Expect(controller.CanUseTrustedPosition(start),
+        "the first local-tracking failure must retain the trusted marker");
     controller.OnContinuityFailure(start);
     Expect(controller.State() == CoordinateLockState::Suspect, "second failure should remain Suspect");
     controller.OnContinuityFailure(start);
@@ -128,8 +130,14 @@ void TestMapUiStateController() {
         "two gameplay frames should confirm a closed map");
 
     update = controller.Update({ false, false });
+    Expect(update.current == MapUiState::Gameplay,
+        "one Unknown map-UI frame should retain the last stable UI state");
+    update = controller.Update({ false, false });
+    Expect(update.current == MapUiState::Gameplay,
+        "two Unknown map-UI frames should retain the last stable UI state");
+    update = controller.Update({ false, false });
     Expect(update.current == MapUiState::Unknown,
-        "loading transitions should not retain either overlay");
+        "three Unknown map-UI frames should clear the stale overlay state");
 }
 
 void TestMapCompassVisualDetector() {
@@ -163,9 +171,11 @@ void TestMapViewportPredictor() {
     MapViewportPrediction prediction;
     Expect(predictor.GetPrediction(prediction) && prediction.isConfirmed && prediction.sceneId == worldScene,
         "a visual map confirmation should initialize the predictor");
+    const auto confirmedRevision = prediction.revision;
     Expect(predictor.SetDragCenter(Coordinate(1025.0, 2015.0)) && predictor.GetPrediction(prediction) &&
-        std::abs(prediction.centerMapCoordinate.x - 1025.0) < 0.01,
-        "a drag should update the predicted map center without clearing it");
+        std::abs(prediction.centerMapCoordinate.x - 1025.0) < 0.01 && prediction.revision > confirmedRevision,
+        "a drag should update the predicted map center and invalidate old viewport work");
+    const auto draggedRevision = prediction.revision;
 
     cv::Mat source = cv::Mat::zeros(256, 256, CV_8UC1);
     cv::RNG random(17);
@@ -180,8 +190,14 @@ void TestMapViewportPredictor() {
     const cv::Mat translation = (cv::Mat_<double>(2, 3) << 1.0, 0.0, -8.0, 0.0, 1.0, 0.0);
     cv::warpAffine(source, shifted, translation, source.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
     Expect(predictor.ObserveFrame(shifted, observed) && observed.isPredicted &&
-        observed.centerMapCoordinate.x > 1025.0,
-        "a shifted map crop should move the predicted center in the matching direction");
+        observed.centerMapCoordinate.x > 1025.0 && observed.revision > draggedRevision,
+        "a shifted map crop should move the predicted center and invalidate old viewport work");
+
+    cv::Mat blank = cv::Mat::zeros(256, 256, CV_8UC1);
+    MapViewportPrediction held;
+    predictor.ObserveFrame(blank, held);
+    Expect(predictor.GetPrediction(held) && held.confidence >= 2,
+        "one failed frame-to-frame match should not hide a confirmed map marker");
 }
 
 void TestWorldSearchPrior() {

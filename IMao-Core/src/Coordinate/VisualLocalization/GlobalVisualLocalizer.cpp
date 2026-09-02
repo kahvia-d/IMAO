@@ -26,6 +26,7 @@ constexpr double kExpectedScale = 194.0 / 184.0;
 constexpr double kMaximumScaleDeviation = 0.15;
 constexpr double kDuplicateCenterDistance = 24.0;
 constexpr double kOcrHintDistance = 160.0;
+constexpr double kOcrHintSearchRadius = 384.0;
 
 bool ExtractPreparedMinimapFeatures(const cv::Mat& normalized, ImageFeatureData& features,
     double surfThreshold = 10.0) {
@@ -53,6 +54,20 @@ double ElapsedMilliseconds(const std::chrono::steady_clock::time_point start) {
 
 double Distance(const Coordinate& left, const Coordinate& right) {
     return std::hypot(left.x - right.x, left.y - right.y);
+}
+
+bool TileMatchesHint(const MapVisualTile& tile, int resultSceneId,
+    const std::vector<VisualMapHint>& hints) {
+    for (const auto& hint : hints) {
+        if (hint.sceneId != resultSceneId) continue;
+        const double nearestX = std::clamp(hint.mapCoordinate.x,
+            static_cast<double>(tile.minX), static_cast<double>(tile.maxX));
+        const double nearestY = std::clamp(hint.mapCoordinate.y,
+            static_cast<double>(tile.minY), static_cast<double>(tile.maxY));
+        if (std::hypot(hint.mapCoordinate.x - nearestX,
+            hint.mapCoordinate.y - nearestY) <= kOcrHintSearchRadius) return true;
+    }
+    return false;
 }
 
 int QualityRank(VisualLocalizationQuality quality) {
@@ -84,7 +99,8 @@ public:
     VisualLocalizationResult Locate(const VisualLocalizationRequest& request) const {
         const auto overallStart = std::chrono::steady_clock::now();
         auto baseline = LocateOnce(request);
-        if (baseline.quality != VisualLocalizationQuality::Rejected || request.normalizedMinimap.empty()) {
+        if (baseline.quality != VisualLocalizationQuality::Rejected || request.normalizedMinimap.empty() ||
+            request.requireOcrHint) {
             return baseline;
         }
 
@@ -165,6 +181,8 @@ public:
         result.sessionId = request.sessionId;
         result.uiGeneration = request.uiGeneration;
         result.frameId = request.frameId;
+        result.requestId = request.requestId;
+        result.hintVersion = request.hintVersion;
         const auto totalStart = std::chrono::steady_clock::now();
         if (request.minimapFeatures.imgDescriptors.empty() ||
             request.minimapFeatures.imgDescriptors.type() != CV_32FC1 ||
@@ -174,7 +192,8 @@ public:
         }
 
         const auto coarseStart = std::chrono::steady_clock::now();
-        const auto coarseCandidates = RetrieveTiles(request.minimapFeatures.imgDescriptors);
+        const auto coarseCandidates = RetrieveTiles(request.minimapFeatures.imgDescriptors,
+            request.requireOcrHint ? &request.ocrHints : nullptr);
         if (!coarseCandidates.empty()) result.bestRetrievalScore = coarseCandidates.front().second;
         result.coarseMilliseconds = ElapsedMilliseconds(coarseStart);
 
@@ -202,6 +221,9 @@ public:
             const bool baseTile = resources_->baseVisualTileCount > 0 &&
                 tileIndex < resources_->baseVisualTileCount;
             const int resultSceneId = baseTile ? Scene::SceneNameToId("World") : tile.sceneId;
+            if (request.requireOcrHint && !TileMatchesHint(tile, resultSceneId, request.ocrHints)) {
+                continue;
+            }
             VisualLocalizationCandidate candidate = VerifyRows(rows, request.minimapFeatures,
                 request.normalizedMinimap.size(), resultSceneId, score, request.ocrHints);
             if (candidate.inlierCount >= 4) candidates.push_back(candidate);
@@ -223,6 +245,9 @@ public:
                 for (std::uint32_t tileIndex = shard.firstTile;
                     tileIndex < shard.firstTile + shard.tileCount; ++tileIndex) {
                     const auto& tile = resources_->visualIndex.tiles[tileIndex];
+                    if (request.requireOcrHint && !TileMatchesHint(tile, worldSceneId, request.ocrHints)) {
+                        continue;
+                    }
                     worldRows.insert(worldRows.end(),
                         resources_->visualIndex.featureRows.begin() + tile.featureRowOffset,
                         resources_->visualIndex.featureRows.begin() + tile.featureRowOffset +
@@ -303,7 +328,8 @@ public:
     }
 
 private:
-    std::vector<std::pair<std::uint32_t, double>> RetrieveTiles(const cv::Mat& descriptors) const {
+    std::vector<std::pair<std::uint32_t, double>> RetrieveTiles(const cv::Mat& descriptors,
+        const std::vector<VisualMapHint>* hints = nullptr) const {
         cv::Mat words(descriptors.rows, 1, CV_32S);
         cv::Mat distances(descriptors.rows, 1, CV_32F);
         vocabularyIndex_.knnSearch(descriptors, words, distances, 1, cv::flann::SearchParams(64));
@@ -341,6 +367,10 @@ private:
         for (std::uint32_t tileIndex = 0; tileIndex < scores.size(); ++tileIndex) {
             if (!(scores[tileIndex] > 0.0)) continue;
             const auto& tile = resources_->visualIndex.tiles[tileIndex];
+            const bool baseTile = resources_->baseVisualTileCount > 0 &&
+                tileIndex < resources_->baseVisualTileCount;
+            const int resultSceneId = baseTile ? Scene::SceneNameToId("World") : tile.sceneId;
+            if (hints != nullptr && !TileMatchesHint(tile, resultSceneId, *hints)) continue;
             auto& group = groupedScores[{ tile.sceneId, tile.gridY, tile.gridX }];
             if (group.second == 0.0 || tileIndex < group.first) group.first = tileIndex;
             group.second += scores[tileIndex];
@@ -551,6 +581,8 @@ private:
             result.sessionId = request.sessionId;
             result.uiGeneration = request.uiGeneration;
             result.frameId = request.frameId;
+            result.requestId = request.requestId;
+            result.hintVersion = request.hintVersion;
             result.quality = VisualLocalizationQuality::Rejected;
             try {
                 if (engine != nullptr) result = engine->Locate(request);

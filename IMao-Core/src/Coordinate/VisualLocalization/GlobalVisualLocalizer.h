@@ -40,15 +40,22 @@ struct VisualLocalizationRequest {
     std::uint64_t sessionId = 0;
     std::uint64_t uiGeneration = 0;
     std::uint64_t frameId = 0;
+    // A recovery can submit a hint-scoped retry while an older global request
+    // is still running.  App accepts only the active request id.
+    std::uint64_t requestId = 0;
+    std::uint64_t hintVersion = 0;
     cv::Mat normalizedMinimap;
     ImageFeatureData minimapFeatures;
     std::vector<VisualMapHint> ocrHints;
+    bool requireOcrHint = false;
 };
 
 struct VisualLocalizationResult {
     std::uint64_t sessionId = 0;
     std::uint64_t uiGeneration = 0;
     std::uint64_t frameId = 0;
+    std::uint64_t requestId = 0;
+    std::uint64_t hintVersion = 0;
     VisualLocalizationQuality quality = VisualLocalizationQuality::Rejected;
     bool ambiguous = false;
     std::vector<VisualLocalizationCandidate> candidates;

@@ -13,9 +13,17 @@ MapUiStateUpdate MapUiStateController::Update(const MapUiEvidence& evidence) {
     update.observed = Classify(evidence);
 
     if (update.observed == MapUiState::Unknown) {
-        pending_ = MapUiState::Unknown;
-        pendingFrames_ = 0;
-        if (state_ != MapUiState::Unknown) {
+        if (pending_ != MapUiState::Unknown) {
+            pending_ = MapUiState::Unknown;
+            pendingFrames_ = 1;
+        }
+        else {
+            ++pendingFrames_;
+        }
+        // A capture can lose the compass for one or two frames while the map
+        // itself remains visible.  Keep confirmed overlays through that short
+        // gap; explicit Gameplay evidence below still closes immediately.
+        if (state_ != MapUiState::Unknown && pendingFrames_ >= 3) {
             state_ = MapUiState::Unknown;
             update.current = state_;
             update.changed = true;

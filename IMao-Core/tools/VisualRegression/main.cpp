@@ -210,6 +210,9 @@ int wmain(int argumentCount, wchar_t** arguments) {
     int strong = 0;
     int labeledStrong = 0;
     int strongCorrect = 0;
+    int rawStrong = 0;
+    int labeledRawStrong = 0;
+    int rawStrongCorrect = 0;
     int finalAccepted = 0;
     int labeledAccepted = 0;
     int unlabeledAccepted = 0;
@@ -222,7 +225,11 @@ int wmain(int argumentCount, wchar_t** arguments) {
     std::vector<double> acceptedTotalTimes;
     std::vector<double> preparationTimes;
     std::vector<double> localTrackingTimes;
-    std::unordered_map<std::string, PendingMarginal> pendingMarginals;
+    // This mirrors App's publisher policy: a Strong global result is a good
+    // candidate, not a one-frame position.  Only a current OCR-bounded result
+    // may publish immediately; all other global candidates need a consistent
+    // next frame.
+    std::unordered_map<std::string, PendingMarginal> pendingConfirmations;
     nlohmann::json samples = nlohmann::json::array();
     std::uint64_t frameId = 0;
 
@@ -298,6 +305,7 @@ int wmain(int argumentCount, wchar_t** arguments) {
 
         const bool hasExpected = sample.contains("expected") && !sample.at("expected").is_null();
         const bool mustReject = sample.value("mustReject", false);
+        const bool requiresOcrHintVerification = sample.value("requiresOcrHintVerification", false);
         int expectedScene = 0;
         Coordinate expected;
         double tolerance = 24.0;
@@ -314,27 +322,34 @@ int wmain(int argumentCount, wchar_t** arguments) {
         bool requiresSecondFrame = false;
         const std::string session = sample.value("session", std::string{});
         if (!result.ambiguous && !result.candidates.empty() &&
-            result.quality == VisualLocalizationQuality::Strong) {
-            published = &result.candidates.front();
-            pendingMarginals.erase(session);
-            ++strong;
-        }
-        else if (!result.ambiguous && !result.candidates.empty() &&
-            result.quality == VisualLocalizationQuality::Marginal) {
-            requiresSecondFrame = true;
-            const auto previous = pendingMarginals.find(session);
-            if (previous != pendingMarginals.end() && previous->second.frameId + 1 == frameId &&
-                previous->second.candidate.sceneId == result.candidates.front().sceneId &&
-                Distance(previous->second.candidate.mapCenter, result.candidates.front().mapCenter) <= 12.0) {
-                published = &result.candidates.front();
-                pendingMarginals.erase(previous);
+            (result.quality == VisualLocalizationQuality::Strong ||
+                result.quality == VisualLocalizationQuality::Marginal)) {
+            const auto& candidate = result.candidates.front();
+            const bool isStrong = result.quality == VisualLocalizationQuality::Strong;
+            if (isStrong) ++rawStrong;
+            // Marginal matches always require a confirmation.  Strong matches
+            // can publish in one frame only when an OCR hint selected the
+            // region and image geometry has already confirmed that hint.
+            requiresSecondFrame = !isStrong || !candidate.ocrHintMatched;
+            if (!requiresSecondFrame) {
+                published = &candidate;
+                pendingConfirmations.erase(session);
             }
             else {
-                pendingMarginals[session] = { frameId, result.candidates.front() };
+                const auto previous = pendingConfirmations.find(session);
+                if (previous != pendingConfirmations.end() && previous->second.frameId + 1 == frameId &&
+                    previous->second.candidate.sceneId == candidate.sceneId &&
+                    Distance(previous->second.candidate.mapCenter, candidate.mapCenter) <= 12.0) {
+                    published = &candidate;
+                    pendingConfirmations.erase(previous);
+                }
+                else {
+                    pendingConfirmations[session] = { frameId, candidate };
+                }
             }
         }
         else {
-            pendingMarginals.erase(session);
+            pendingConfirmations.erase(session);
         }
 
         bool correct = false;
@@ -353,12 +368,22 @@ int wmain(int argumentCount, wchar_t** arguments) {
                 ++unlabeledAccepted;
             }
             if (mustReject) ++falseAccepted;
+            if (requiresOcrHintVerification && !published->ocrHintMatched) ++falseAccepted;
         }
         if (hasExpected && result.quality == VisualLocalizationQuality::Strong &&
             !result.ambiguous && !result.candidates.empty()) {
-            ++labeledStrong;
+            ++labeledRawStrong;
             const auto& top = result.candidates.front();
-            if (top.sceneId == expectedScene && Distance(top.mapCenter, expected) <= tolerance) ++strongCorrect;
+            if (top.sceneId == expectedScene && Distance(top.mapCenter, expected) <= tolerance) ++rawStrongCorrect;
+        }
+        if (published != nullptr && result.quality == VisualLocalizationQuality::Strong) {
+            ++strong;
+            if (hasExpected) {
+                ++labeledStrong;
+                if (published->sceneId == expectedScene && Distance(published->mapCenter, expected) <= tolerance) {
+                    ++strongCorrect;
+                }
+            }
         }
 
         nlohmann::json candidates = nlohmann::json::array();
@@ -366,6 +391,7 @@ int wmain(int argumentCount, wchar_t** arguments) {
         samples.push_back({
             {"id", sample.at("id")}, {"image", sample.at("image")},
             {"labeled", hasExpected}, {"mustReject", mustReject},
+            {"requiresOcrHintVerification", requiresOcrHintVerification},
             {"quality", GlobalVisualLocalizer::QualityName(result.quality)},
             {"ambiguous", result.ambiguous}, {"published", published != nullptr},
             {"requiresSecondFrame", requiresSecondFrame}, {"correct", correct},
@@ -380,11 +406,23 @@ int wmain(int argumentCount, wchar_t** arguments) {
     }
     GlobalVisualLocalizer::Shutdown();
 
+    const double acceptedGlobalP95 = Percentile(acceptedTotalTimes, 0.95);
+    const double localTrackingP95 = Percentile(localTrackingTimes, 0.95);
+    const double acceptedStrongPrecision = labeledStrong > 0
+        ? static_cast<double>(strongCorrect) / labeledStrong : 0.0;
+    const double rawStrongPrecision = labeledRawStrong > 0
+        ? static_cast<double>(rawStrongCorrect) / labeledRawStrong : 0.0;
+    const bool acceptancePassed = falseAccepted == 0 && acceptedStrongPrecision >= 0.95 &&
+        acceptedGlobalP95 <= 250.0 && localTrackingP95 <= 50.0;
     const nlohmann::json report = {
         {"processed", processed}, {"missing", missing}, {"featureless", featureless},
         {"labeled", labeled}, {"strong", strong}, {"labeledStrong", labeledStrong},
         {"strongCorrect", strongCorrect},
-        {"strongPrecision", labeledStrong > 0 ? static_cast<double>(strongCorrect) / labeledStrong : 0.0},
+        {"strongPrecision", acceptedStrongPrecision},
+        {"rawStrong", rawStrong}, {"labeledRawStrong", labeledRawStrong},
+        {"rawStrongCorrect", rawStrongCorrect},
+        {"rawStrongPrecision", rawStrongPrecision},
+        {"acceptancePassed", acceptancePassed},
         {"finalAccepted", finalAccepted}, {"labeledAccepted", labeledAccepted},
         {"unlabeledAccepted", unlabeledAccepted}, {"finalAcceptedCorrect", finalAcceptedCorrect},
         {"falseAccepted", falseAccepted}, {"ambiguousRejected", ambiguous},
@@ -399,14 +437,14 @@ int wmain(int argumentCount, wchar_t** arguments) {
         {"verificationP95Milliseconds", Percentile(verificationTimes, 0.95)},
         {"globalP50Milliseconds", Percentile(totalTimes, 0.50)},
         {"globalP95Milliseconds", Percentile(totalTimes, 0.95)},
-        {"acceptedGlobalP95Milliseconds", Percentile(acceptedTotalTimes, 0.95)},
+        {"acceptedGlobalP95Milliseconds", acceptedGlobalP95},
         {"localTrackingP50Milliseconds", Percentile(localTrackingTimes, 0.50)},
-        {"localTrackingP95Milliseconds", Percentile(localTrackingTimes, 0.95)},
+        {"localTrackingP95Milliseconds", localTrackingP95},
         {"samples", samples}
     };
     std::filesystem::create_directories(reportPath.parent_path());
     std::ofstream output(reportPath);
     output << report.dump(2) << '\n';
     std::cout << report.dump(2) << '\n';
-    return falseAccepted == 0 ? 0 : 3;
+    return acceptancePassed ? 0 : 3;
 }

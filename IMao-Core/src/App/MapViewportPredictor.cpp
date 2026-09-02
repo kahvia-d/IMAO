@@ -33,6 +33,8 @@ double SpanY(const std::vector<cv::Point2f>& corners) {
 
 void MapViewportPredictor::Reset() {
     hasPrediction_ = false;
+    revision_ = 0;
+    trackingFailures_ = 0;
     prediction_ = {};
     previousFrame_.release();
 }
@@ -48,14 +50,22 @@ void MapViewportPredictor::Confirm(int sceneId, const Coordinate& centerMapCoord
     prediction_.isConfirmed = true;
     prediction_.isPredicted = false;
     prediction_.confidence = 3;
+    prediction_.revision = revision_;
     hasPrediction_ = true;
+    trackingFailures_ = 0;
 }
 
 bool MapViewportPredictor::SetDragCenter(const Coordinate& centerMapCoordinate) {
     if (!hasPrediction_) return false;
+    if (std::hypot(prediction_.centerMapCoordinate.x - centerMapCoordinate.x,
+        prediction_.centerMapCoordinate.y - centerMapCoordinate.y) >= 0.01) {
+        ++revision_;
+    }
     prediction_.centerMapCoordinate = centerMapCoordinate;
     prediction_.isPredicted = true;
     prediction_.confidence = std::max(1, prediction_.confidence - 1);
+    prediction_.revision = revision_;
+    trackingFailures_ = 0;
     return true;
 }
 
@@ -88,7 +98,7 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
     orb->detectAndCompute(current, cv::noArray(), currentKeypoints, currentDescriptors);
     if (previousDescriptors.empty() || currentDescriptors.empty()) {
         previousFrame_ = current;
-        prediction_.confidence = std::max(0, prediction_.confidence - 1);
+        if (++trackingFailures_ >= 3) prediction_.confidence = std::max(0, prediction_.confidence - 1);
         return false;
     }
 
@@ -104,7 +114,7 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
     }
     if (trackedPrevious.size() < kMinimumInliers) {
         previousFrame_ = current;
-        prediction_.confidence = std::max(0, prediction_.confidence - 1);
+        if (++trackingFailures_ >= 3) prediction_.confidence = std::max(0, prediction_.confidence - 1);
         return false;
     }
 
@@ -113,7 +123,7 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
         cv::RANSAC, 2.0, 1000, 0.995, 10);
     previousFrame_ = current;
     if (affine.empty() || affine.rows != 2 || affine.cols != 3) {
-        prediction_.confidence = std::max(0, prediction_.confidence - 1);
+        if (++trackingFailures_ >= 3) prediction_.confidence = std::max(0, prediction_.confidence - 1);
         return false;
     }
     const int accepted = cv::countNonZero(inlierMask);
@@ -123,7 +133,7 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
     const double rotationDegrees = std::atan2(c, a) * 180.0 / CV_PI;
     if (accepted < kMinimumInliers || !std::isfinite(estimatedScale) || estimatedScale < 0.70 ||
         estimatedScale > 1.40 || std::abs(rotationDegrees) > 6.0) {
-        prediction_.confidence = std::max(0, prediction_.confidence - 1);
+        if (++trackingFailures_ >= 3) prediction_.confidence = std::max(0, prediction_.confidence - 1);
         return false;
     }
 
@@ -138,6 +148,7 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
 	const double screenShift = cv::norm(screenCenter[0] - previousCenter);
 	const bool changed = screenShift >= 0.5 || std::abs(estimatedScale - 1.0) >= 0.003;
 	if (!changed) {
+		trackingFailures_ = 0;
 		prediction_.confidence = std::min(5, prediction_.confidence + 1);
 		prediction = prediction_;
 		if (inlierCount != nullptr) *inlierCount = accepted;
@@ -155,7 +166,10 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
             (corner.y - oldCenter.y) / estimatedScale);
     }
     prediction_.isPredicted = true;
+    trackingFailures_ = 0;
     prediction_.confidence = std::min(5, prediction_.confidence + 1);
+    ++revision_;
+    prediction_.revision = revision_;
     if (inlierCount != nullptr) *inlierCount = accepted;
     if (scale != nullptr) *scale = estimatedScale;
     prediction = prediction_;

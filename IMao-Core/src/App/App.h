@@ -234,14 +234,34 @@ private:
 	};
 	std::optional<LocalizationResumeHint> localizationResumeHint;
 	std::optional<std::pair<std::uint64_t, std::uint64_t>> visualRequestInFlight;
+	std::uint64_t nextVisualRequestId = 1;
+	std::uint64_t activeVisualRequestId = 0;
+	std::uint64_t visualHintVersion = 0;
 	std::vector<VisualMapHint> latestOcrHints;
 	CoordinateRecoveryController::Clock::time_point lastVisualSubmitAt{};
+	std::optional<std::uint64_t> ocrRequestInFlight;
+	std::uint64_t nextOcrRequestId = 1;
+	bool ocrAttemptedForRecovery = false;
+	bool ocrAssistEnabled = true;
+	// OCR loads a native inference runtime.  Do not start that heavy runtime
+	// during App::Init, where capture and feature repositories are also being
+	// initialized.  Once visual localization has established one stable lock,
+	// it is safe to warm OCR in the background for later recoveries.
+	bool ocrPreloadStarted = false;
 	bool runLegacyLocalizationDiagnostics = false;
 	std::string localizationDiagnosticsMode = "visual";
 	WorldSearchPriorIndex worldSearchPriorIndex;
 	std::optional<WorldSearchPrior> activeWorldSearchPrior;
 	std::uint64_t mapViewportGeneration = 1;
 	std::optional<std::pair<std::uint64_t, std::uint64_t>> mapViewportRequestInFlight;
+	std::uint64_t nextMapViewportRequestId = 1;
+	std::uint64_t activeMapViewportRequestId = 0;
+	struct PendingMapViewportAnchor {
+		MapViewportLocalizationResult result;
+		int sceneId = 0;
+		std::uint64_t viewportRevision = 0;
+	};
+	std::optional<PendingMapViewportAnchor> pendingMapViewportAnchor;
 	std::chrono::steady_clock::time_point lastMapViewportSubmitAt{};
 	MapViewportSearchScope lastMapViewportScope = MapViewportSearchScope::Global;
 

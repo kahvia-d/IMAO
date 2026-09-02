@@ -21,8 +21,9 @@ struct MapUiStateUpdate {
 };
 
 // Keeps UI transitions separate from the raw per-frame feature checks.  A
-// transition must be observed twice, while a conflicting/unknown frame hides
-// overlays immediately so stale map markers cannot leak onto gameplay.
+// transition must be observed twice. Explicit conflicting gameplay evidence
+// hides map overlays immediately, while three unknown frames are required so
+// a transient compass miss cannot flash the overlay.
 class MapUiStateController {
 public:
     MapUiStateUpdate Update(const MapUiEvidence& evidence);

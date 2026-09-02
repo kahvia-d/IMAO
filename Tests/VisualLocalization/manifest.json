@@ -194,7 +194,8 @@
         "mapY": 2620.114963,
         "tolerance": 48.0,
         "source": "legacy-visual-verified"
-      }
+      },
+      "requiresOcrHintVerification": true
     },
     {
       "id": "20260824-011039-3_minimap-bootstrap-crop",
@@ -314,7 +315,8 @@
         "mapY": 2766.461493,
         "tolerance": 48.0,
         "source": "legacy-visual-verified"
-      }
+      },
+      "requiresOcrHintVerification": true
     },
     {
       "id": "20260824-024534-21_minimap-continuity-crop",

@@ -1,15 +1,19 @@
 #include "MapViewportLocalizer.h"
 
-#include "../Coordinate/locationCalculator/MapCoordinate.h"
-
+#include <opencv2/calib3d.hpp>
+#include <opencv2/features2d.hpp>
 #include <opencv2/xfeatures2d.hpp>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
+#include <cstdint>
 #include <mutex>
+#include <string>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -34,7 +38,7 @@ bool IntersectsPrior(const MapVisualTile& tile, const WorldSearchPrior& prior) {
         prior.centerMapCoordinate.y - nearestY) <= prior.radius;
 }
 
-ImageFeatureData SelectWorldCandidates(const RuntimeFeatureResources& resources,
+std::vector<std::uint32_t> SelectWorldTileIndices(const RuntimeFeatureResources& resources,
     const std::optional<WorldSearchPrior>& prior) {
     // Build the verification set from the visual-index rows rather than
     // merely filtering all map keypoints by X/Y.  This keeps an independent
@@ -42,16 +46,28 @@ ImageFeatureData SelectWorldCandidates(const RuntimeFeatureResources& resources,
     // includes every approved World supplement (such as BlackShores) exactly
     // once.
     if (!resources.visualIndexReady || resources.visualIndex.tiles.empty()) {
-        return resources.map;
+        return {};
     }
 
-    std::vector<unsigned char> selected(resources.map.imgKeypoints.size(), 0);
+    std::vector<std::uint32_t> selected;
     for (std::size_t tileIndex = 0; tileIndex < resources.visualIndex.tiles.size(); ++tileIndex) {
         const auto& tile = resources.visualIndex.tiles[tileIndex];
         if (!IsWorldTile(resources, tileIndex) ||
             (prior.has_value() && prior->valid && !IntersectsPrior(tile, *prior))) {
             continue;
         }
+        selected.push_back(static_cast<std::uint32_t>(tileIndex));
+    }
+    return selected;
+}
+
+ImageFeatureData SelectWorldCandidates(const RuntimeFeatureResources& resources,
+    const std::vector<std::uint32_t>& tileIndices) {
+    if (tileIndices.empty()) return resources.map;
+    std::vector<unsigned char> selected(resources.map.imgKeypoints.size(), 0);
+    for (const auto tileIndex : tileIndices) {
+        if (tileIndex >= resources.visualIndex.tiles.size()) continue;
+        const auto& tile = resources.visualIndex.tiles[tileIndex];
         const std::size_t first = tile.featureRowOffset;
         const std::size_t last = first + tile.featureRowCount;
         if (last > resources.visualIndex.featureRows.size()) continue;
@@ -60,7 +76,6 @@ ImageFeatureData SelectWorldCandidates(const RuntimeFeatureResources& resources,
             if (row < selected.size()) selected[row] = 1;
         }
     }
-
     ImageFeatureData candidates;
     for (std::size_t row = 0; row < selected.size(); ++row) {
         if (!selected[row]) continue;
@@ -70,20 +85,83 @@ ImageFeatureData SelectWorldCandidates(const RuntimeFeatureResources& resources,
     return candidates;
 }
 
-bool TryMatch(const ImageFeatureData& cropFeatures, const cv::Mat& crop,
-    const ImageFeatureData& candidateFeatures, MapViewportLocalizationResult& result) {
-    if (cropFeatures.imgDescriptors.empty() || candidateFeatures.imgDescriptors.empty()) return false;
-    const auto goodMatches = FeatureMatch::FindGoodMatchesFLANN(cropFeatures, candidateFeatures, 0.62f, 0.50f);
-    result.goodMatchCount = static_cast<int>(goodMatches.size());
-    if (result.goodMatchCount < 8) return false;
-
-    Coordinate center;
-    std::vector<cv::Point2f> corners;
-    cv::Mat cropForProjection = crop;
-    if (!MapCoordinate::GetMapCoordinateOfCenterGameMapPos(candidateFeatures, cropFeatures,
-        goodMatches, cropForProjection, center, corners) || corners.size() != 4) {
-        return false;
+std::string TileSetKey(const std::vector<std::uint32_t>& tileIndices) {
+    std::string key;
+    key.reserve(tileIndices.size() * 6);
+    for (const auto tileIndex : tileIndices) {
+        key += std::to_string(tileIndex);
+        key.push_back(',');
     }
+    return key;
+}
+
+std::vector<cv::DMatch> FilterGoodMatches(const std::vector<std::vector<cv::DMatch>>& pairs) {
+    std::vector<cv::DMatch> goodMatches;
+    for (const auto& pair : pairs) {
+        if (pair.size() < 2 || pair[0].distance >= 0.62f * pair[1].distance || pair[0].distance > 0.50f) continue;
+        goodMatches.push_back(pair[0]);
+    }
+    return goodMatches;
+}
+
+bool TryMatch(const ImageFeatureData& cropFeatures, const cv::Mat& crop,
+    const ImageFeatureData& candidateFeatures, const std::vector<cv::DMatch>& goodMatches,
+    MapViewportLocalizationResult& result) {
+    if (cropFeatures.imgDescriptors.empty() || candidateFeatures.imgDescriptors.empty()) return false;
+    result.goodMatchCount = static_cast<int>(goodMatches.size());
+    if (result.goodMatchCount < 12) return false;
+
+    std::vector<cv::Point2f> cropPoints;
+    std::vector<cv::Point2f> mapPoints;
+    cropPoints.reserve(goodMatches.size());
+    mapPoints.reserve(goodMatches.size());
+    for (const auto& match : goodMatches) {
+        if (match.queryIdx < 0 || match.trainIdx < 0 ||
+            match.queryIdx >= static_cast<int>(cropFeatures.imgKeypoints.size()) ||
+            match.trainIdx >= static_cast<int>(candidateFeatures.imgKeypoints.size())) continue;
+        cropPoints.push_back(cropFeatures.imgKeypoints[match.queryIdx].pt);
+        mapPoints.push_back(candidateFeatures.imgKeypoints[match.trainIdx].pt);
+    }
+    if (cropPoints.size() < 12) return false;
+
+    cv::Mat inlierMask;
+    const cv::Mat homography = cv::findHomography(cropPoints, mapPoints, cv::RANSAC, 3.0,
+        inlierMask, 2000, 0.995);
+    if (homography.empty() || inlierMask.empty()) return false;
+    result.inlierCount = cv::countNonZero(inlierMask);
+    result.inlierRatio = static_cast<double>(result.inlierCount) / cropPoints.size();
+    if (result.inlierCount < 12 || result.inlierRatio < 0.35) return false;
+
+    const cv::Point2f cropCenter(crop.cols / 2.0f, crop.rows / 2.0f);
+    std::array<bool, 4> quadrants{};
+    std::vector<cv::Point2f> projected;
+    cv::perspectiveTransform(cropPoints, projected, homography);
+    std::vector<double> errors;
+    errors.reserve(static_cast<std::size_t>(result.inlierCount));
+    for (int index = 0; index < inlierMask.rows; ++index) {
+        if (inlierMask.at<std::uint8_t>(index) == 0) continue;
+        const auto& source = cropPoints[static_cast<std::size_t>(index)];
+        const auto& expected = mapPoints[static_cast<std::size_t>(index)];
+        const auto& mapped = projected[static_cast<std::size_t>(index)];
+        errors.push_back(cv::norm(mapped - expected));
+        const int quadrant = (source.x >= cropCenter.x ? 1 : 0) + (source.y >= cropCenter.y ? 2 : 0);
+        quadrants[quadrant] = true;
+    }
+    std::sort(errors.begin(), errors.end());
+    result.medianReprojectionError = errors.empty() ? 0.0 : errors[errors.size() / 2];
+    result.coveredQuadrants = static_cast<int>(std::count(quadrants.begin(), quadrants.end(), true));
+    if (result.coveredQuadrants < 3 || result.medianReprojectionError > 3.0) return false;
+
+    std::vector<cv::Point2f> cropCorners = {
+        { 0.0f, 0.0f }, { static_cast<float>(crop.cols), 0.0f },
+        { static_cast<float>(crop.cols), static_cast<float>(crop.rows) },
+        { 0.0f, static_cast<float>(crop.rows) }
+    };
+    std::vector<cv::Point2f> corners;
+    cv::perspectiveTransform(cropCorners, corners, homography);
+    if (corners.size() != 4) return false;
+    Coordinate center((corners[0].x + corners[2].x) / 2.0,
+        (corners[0].y + corners[2].y) / 2.0);
     const double width = cv::norm(corners[1] - corners[0]);
     const double height = cv::norm(corners[3] - corners[0]);
     if (!std::isfinite(center.x) || !std::isfinite(center.y) || !std::isfinite(width) ||
@@ -105,6 +183,11 @@ public:
             return false;
         }
         resources_ = std::move(resources);
+        // The full World index can be large.  Construct it once on the
+        // viewport worker when the user actually opens the map rather than
+        // competing with capture/OCR/resource startup immediately after the
+        // Start button is pressed.
+        globalWorldIndexAttempted_ = false;
         ready_ = true;
         worker_ = std::jthread([this](std::stop_token token) { Worker(token); });
         return true;
@@ -123,6 +206,10 @@ public:
         ready_ = false;
         request_.reset();
         result_.reset();
+        globalWorldCandidates_ = {};
+        globalWorldMatcher_.release();
+        localMatchers_.clear();
+        localMatcherUseCounter_ = 0;
         resources_.reset();
     }
 
@@ -151,12 +238,14 @@ public:
     }
 
 private:
-    MapViewportLocalizationResult Locate(const MapViewportLocalizationRequest& request) const {
+    MapViewportLocalizationResult Locate(const MapViewportLocalizationRequest& request) {
         MapViewportLocalizationResult result;
         result.sessionId = request.sessionId;
         result.uiGeneration = request.uiGeneration;
         result.viewportGeneration = request.viewportGeneration;
         result.frameId = request.frameId;
+        result.requestId = request.requestId;
+        result.viewportRevision = request.viewportRevision;
         result.scope = request.scope;
         const auto start = std::chrono::steady_clock::now();
         if (!resources_ || request.mapCrop.empty()) {
@@ -173,10 +262,40 @@ private:
                 return result;
             }
 
-            const auto localPrior = request.scope == MapViewportSearchScope::Global
-                ? std::optional<WorldSearchPrior>{} : request.prior;
-            ImageFeatureData candidates = SelectWorldCandidates(*resources_, localPrior);
-            result.accepted = TryMatch(cropFeatures, request.mapCrop, candidates, result);
+            const ImageFeatureData* candidates = nullptr;
+            std::vector<cv::DMatch> goodMatches;
+            if (request.scope == MapViewportSearchScope::Global) {
+                if (!EnsureGlobalWorldMatcher()) {
+                    result.durationMilliseconds = ElapsedMilliseconds(start);
+                    return result;
+                }
+                candidates = &globalWorldCandidates_;
+                if (!globalWorldMatcher_) {
+                    result.durationMilliseconds = ElapsedMilliseconds(start);
+                    return result;
+                }
+                std::vector<std::vector<cv::DMatch>> pairs;
+                globalWorldMatcher_->knnMatch(cropFeatures.imgDescriptors, pairs, 2);
+                goodMatches = FilterGoodMatches(pairs);
+            }
+            else {
+                const auto tileIndices = SelectWorldTileIndices(*resources_, request.prior);
+                if (tileIndices.empty() && resources_->visualIndexReady) {
+                    result.durationMilliseconds = ElapsedMilliseconds(start);
+                    return result;
+                }
+                LocalMatcherCache* cache = GetLocalMatcher(tileIndices);
+                if (cache == nullptr || !cache->matcher) {
+                    result.durationMilliseconds = ElapsedMilliseconds(start);
+                    return result;
+                }
+                candidates = &cache->candidates;
+                std::vector<std::vector<cv::DMatch>> pairs;
+                cache->matcher->knnMatch(cropFeatures.imgDescriptors, pairs, 2);
+                goodMatches = FilterGoodMatches(pairs);
+            }
+            result.accepted = candidates != nullptr && TryMatch(cropFeatures, request.mapCrop,
+                *candidates, goodMatches, result);
         }
         catch (const cv::Exception&) {
             result.accepted = false;
@@ -186,6 +305,66 @@ private:
         }
         result.durationMilliseconds = ElapsedMilliseconds(start);
         return result;
+    }
+
+    struct LocalMatcherCache {
+        ImageFeatureData candidates;
+        cv::Ptr<cv::FlannBasedMatcher> matcher;
+        std::uint64_t lastUsed = 0;
+    };
+
+    bool EnsureGlobalWorldMatcher() {
+        if (globalWorldMatcher_) return true;
+        if (globalWorldIndexAttempted_ || !resources_) return false;
+        globalWorldIndexAttempted_ = true;
+        try {
+            globalWorldCandidates_ = SelectWorldCandidates(*resources_,
+                SelectWorldTileIndices(*resources_, std::nullopt));
+            if (globalWorldCandidates_.imgDescriptors.empty()) {
+                globalWorldCandidates_ = {};
+                return false;
+            }
+            globalWorldMatcher_ = cv::makePtr<cv::FlannBasedMatcher>();
+            globalWorldMatcher_->add(std::vector<cv::Mat>{ globalWorldCandidates_.imgDescriptors });
+            globalWorldMatcher_->train();
+            return true;
+        }
+        catch (const cv::Exception&) {
+            globalWorldCandidates_ = {};
+            globalWorldMatcher_.release();
+            return false;
+        }
+        catch (const std::exception&) {
+            globalWorldCandidates_ = {};
+            globalWorldMatcher_.release();
+            return false;
+        }
+    }
+
+    LocalMatcherCache* GetLocalMatcher(const std::vector<std::uint32_t>& tileIndices) {
+        const std::string key = TileSetKey(tileIndices);
+        const auto found = localMatchers_.find(key);
+        if (found != localMatchers_.end()) {
+            found->second.lastUsed = ++localMatcherUseCounter_;
+            return &found->second;
+        }
+        constexpr std::size_t kMaximumLocalMatcherCaches = 24;
+        if (localMatchers_.size() >= kMaximumLocalMatcherCaches) {
+            const auto oldest = std::min_element(localMatchers_.begin(), localMatchers_.end(),
+                [](const auto& left, const auto& right) {
+                    return left.second.lastUsed < right.second.lastUsed;
+                });
+            if (oldest != localMatchers_.end()) localMatchers_.erase(oldest);
+        }
+        LocalMatcherCache cache;
+        cache.candidates = SelectWorldCandidates(*resources_, tileIndices);
+        if (cache.candidates.imgDescriptors.empty()) return nullptr;
+        cache.matcher = cv::makePtr<cv::FlannBasedMatcher>();
+        cache.matcher->add(std::vector<cv::Mat>{ cache.candidates.imgDescriptors });
+        cache.matcher->train();
+        cache.lastUsed = ++localMatcherUseCounter_;
+        const auto inserted = localMatchers_.emplace(key, std::move(cache));
+        return &inserted.first->second;
     }
 
     void Worker(std::stop_token token) {
@@ -211,6 +390,11 @@ private:
     std::jthread worker_;
     bool ready_ = false;
     std::shared_ptr<const RuntimeFeatureResources> resources_;
+    ImageFeatureData globalWorldCandidates_;
+    cv::Ptr<cv::FlannBasedMatcher> globalWorldMatcher_;
+    bool globalWorldIndexAttempted_ = false;
+    std::unordered_map<std::string, LocalMatcherCache> localMatchers_;
+    std::uint64_t localMatcherUseCounter_ = 0;
     std::optional<MapViewportLocalizationRequest> request_;
     std::optional<MapViewportLocalizationResult> result_;
 };

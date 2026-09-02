@@ -4,6 +4,7 @@
 
 #include <opencv2/core.hpp>
 
+#include <cstdint>
 #include <vector>
 
 struct MapViewportPrediction {
@@ -13,6 +14,7 @@ struct MapViewportPrediction {
     bool isConfirmed = false;
     bool isPredicted = false;
     int confidence = 0;
+    std::uint64_t revision = 0;
 };
 
 // Keeps a short-lived, image-only estimate of the currently visible map.
@@ -31,6 +33,8 @@ public:
 
 private:
     bool hasPrediction_ = false;
+    std::uint64_t revision_ = 0;
+    int trackingFailures_ = 0;
     MapViewportPrediction prediction_;
     cv::Mat previousFrame_;
 };
