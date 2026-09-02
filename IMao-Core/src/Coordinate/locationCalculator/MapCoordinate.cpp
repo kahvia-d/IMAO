@@ -104,27 +104,11 @@ Coordinate MapCoordinate::PlayerLahaiCoordToImgMapCoord(Coordinate LahaiCoordina
 
 
 Coordinate MapCoordinate::IdentifyCoorToImgMapCoord(Coordinate identifyCoordinate,int sceneId) {
-    if (sceneId == 1) {
-       return PlayerWorldCoordToImgMapCoord(identifyCoordinate);
-    }
-
-    if (sceneId == 2) {
-        return PlayerTethysCoordToImgMapCoord(identifyCoordinate);
-    }
-
-    if (sceneId == 3) {
-        return PlayerFabricatoriumCoordToImgMapCoord(identifyCoordinate);
-    }
-
-    if (sceneId == 4) {
-        return PlayerAvinoleumCoordToImgMapCoord(identifyCoordinate);
-    }
-
-    if (sceneId == 5) {
-        return PlayerLahaiCoordToImgMapCoord(identifyCoordinate);
-    }
-
-    return Coordinate(0, 0);
+    const auto* scene = Scene::Find(sceneId);
+    if (scene == nullptr) return Coordinate(0, 0);
+    return Coordinate(
+        identifyCoordinate.x * scene->scale + scene->originX,
+        identifyCoordinate.y * scene->scale + scene->originY);
 }
 
 //截取游戏中心的地图区域(350*350),在通过特征匹配，取角点，算出截取区域中心点在MapImage的坐标

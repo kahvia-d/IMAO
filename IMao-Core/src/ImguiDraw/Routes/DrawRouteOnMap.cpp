@@ -34,7 +34,7 @@ void DrawRouteOnMap::DrawRoute(App& app) {
 	for (const auto& routeDatas : routesDatas) {
 		const auto screenPoints = routeDatas.routePointsScreenCoord;
 
-		if (routeDatas.senceId != app.GetPlayerCurrentSceneId()) {
+		if (routeDatas.senceId != app.GetMapViewportSceneId()) {
 			continue;
 		}
 			

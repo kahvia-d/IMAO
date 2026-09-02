@@ -1,0 +1,91 @@
+#pragma once
+
+#include "../../Feature/Match/FeatureMatch.h"
+#include "../../Feature/RuntimeFeatureRepository.h"
+#include "../CoordinateStruct.h"
+
+#include <chrono>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string_view>
+#include <vector>
+
+enum class VisualLocalizationQuality {
+    Rejected,
+    Marginal,
+    Strong
+};
+
+struct VisualMapHint {
+    int sceneId = 0;
+    Coordinate mapCoordinate;
+};
+
+struct VisualLocalizationCandidate {
+    int sceneId = 0;
+    Coordinate mapCenter;
+    double rotationDegrees = 0.0;
+    double scale = 0.0;
+    int inlierCount = 0;
+    double inlierRatio = 0.0;
+    double medianReprojectionError = 0.0;
+    int coveredQuadrants = 0;
+    double retrievalScore = 0.0;
+    bool ocrHintMatched = false;
+    VisualLocalizationQuality quality = VisualLocalizationQuality::Rejected;
+};
+
+struct VisualLocalizationRequest {
+    std::uint64_t sessionId = 0;
+    std::uint64_t uiGeneration = 0;
+    std::uint64_t frameId = 0;
+    cv::Mat normalizedMinimap;
+    ImageFeatureData minimapFeatures;
+    std::vector<VisualMapHint> ocrHints;
+};
+
+struct VisualLocalizationResult {
+    std::uint64_t sessionId = 0;
+    std::uint64_t uiGeneration = 0;
+    std::uint64_t frameId = 0;
+    VisualLocalizationQuality quality = VisualLocalizationQuality::Rejected;
+    bool ambiguous = false;
+    std::vector<VisualLocalizationCandidate> candidates;
+    double bestRetrievalScore = 0.0;
+    double coarseMilliseconds = 0.0;
+    double verificationMilliseconds = 0.0;
+    double totalMilliseconds = 0.0;
+};
+
+class GlobalVisualLocalizer {
+public:
+    static bool Initialize(std::shared_ptr<const RuntimeFeatureResources> resources, std::string& error);
+    static void Shutdown();
+    static bool IsReady();
+
+    static bool PrepareMinimap(const cv::Mat& minimap, cv::Mat& normalized,
+        ImageFeatureData& features, double surfThreshold = 10.0);
+
+    static bool Submit(VisualLocalizationRequest request);
+    static bool TryTakeLatestResult(VisualLocalizationResult& result);
+
+    static VisualLocalizationResult LocateForDiagnostics(
+        std::shared_ptr<const RuntimeFeatureResources> resources,
+        const VisualLocalizationRequest& request);
+
+    static bool TrackLocal(const cv::Mat& normalizedMinimap,
+        const ImageFeatureData& minimapFeatures, int sceneId,
+        const Coordinate& previousMapCenter,
+        VisualLocalizationCandidate& result);
+
+    // Revalidates a recently known area after returning from a full-screen UI.
+    // Unlike TrackLocal this may inspect neighbouring map tiles, but it never
+    // becomes a position until the caller validates the current minimap frame.
+    static bool TrackNearby(const cv::Mat& normalizedMinimap,
+        const ImageFeatureData& minimapFeatures, int sceneId,
+        const Coordinate& previousMapCenter, double searchRadius,
+        VisualLocalizationCandidate& result);
+
+    static std::string_view QualityName(VisualLocalizationQuality quality);
+};

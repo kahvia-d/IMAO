@@ -1,0 +1,250 @@
+{
+  "formatVersion": 1,
+  "items": {
+    "310000750": [
+      "TimeRiftRuins"
+    ],
+    "310000760": [
+      "TimeRiftRuins"
+    ],
+    "310000810": [
+      "Darkplain"
+    ],
+    "310000830": [
+      "Darkplain"
+    ],
+    "310000840": [
+      "Darkplain"
+    ],
+    "320000480": [
+      "TimeRiftRuins"
+    ],
+    "320000510": [
+      "Darkplain"
+    ],
+    "320000520": [
+      "Darkplain"
+    ],
+    "320000530": [
+      "Darkplain"
+    ],
+    "320000560": [
+      "Darkplain"
+    ],
+    "320000570": [
+      "Darkplain"
+    ],
+    "320000580": [
+      "Darkplain"
+    ],
+    "320000600": [
+      "Darkplain"
+    ],
+    "320000610": [
+      "Darkplain"
+    ],
+    "320000660": [
+      "Darkplain"
+    ],
+    "3330002": [
+      "Darkplain"
+    ],
+    "3330003": [
+      "Darkplain"
+    ],
+    "381037": [
+      "Darkplain"
+    ],
+    "42": [
+      "Darkplain"
+    ],
+    "42601480": [
+      "Darkplain"
+    ],
+    "42601490": [
+      "Darkplain"
+    ],
+    "42601500": [
+      "Darkplain"
+    ],
+    "43": [
+      "Darkplain"
+    ],
+    "47": [
+      "Darkplain"
+    ],
+    "57": [
+      "Darkplain"
+    ],
+    "58": [
+      "Darkplain"
+    ],
+    "59": [
+      "Darkplain"
+    ],
+    "60": [
+      "Darkplain"
+    ],
+    "61": [
+      "Darkplain"
+    ],
+    "62": [
+      "Darkplain"
+    ],
+    "63": [
+      "Darkplain"
+    ],
+    "64": [
+      "Darkplain"
+    ],
+    "cbd": [
+      "Darkplain",
+      "LowerVault"
+    ],
+    "CS_01": [
+      "Darkplain",
+      "TimeRiftRuins"
+    ],
+    "CS_02": [
+      "Darkplain",
+      "LowerVault"
+    ],
+    "cx_01": [
+      "LowerVault"
+    ],
+    "cx_02": [
+      "Darkplain",
+      "LowerVault"
+    ],
+    "cx_03": [
+      "Darkplain",
+      "LowerVault"
+    ],
+    "FCRK": [
+      "Darkplain",
+      "LowerVault"
+    ],
+    "IconMap_WYQ": [
+      "Darkplain"
+    ],
+    "jlxw": [
+      "LowerVault"
+    ],
+    "myjl": [
+      "TimeRiftRuins"
+    ],
+    "qzx_01": [
+      "Darkplain",
+      "LowerVault"
+    ],
+    "qzx_02": [
+      "Darkplain",
+      "LowerVault"
+    ],
+    "qzx_03": [
+      "Darkplain",
+      "LowerVault"
+    ],
+    "qzx_04": [
+      "Darkplain",
+      "LowerVault"
+    ],
+    "shtz·dlck": [
+      "LowerVault"
+    ],
+    "SP_IconMap_Activity_HonamiStory_UI": [
+      "TimeRiftRuins"
+    ],
+    "SP_IconMonsterHead_035_UI": [
+      "Darkplain"
+    ],
+    "SP_IconMonsterHead_105_UI": [
+      "Darkplain"
+    ],
+    "SP_IconMonsterHead_185_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31040_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31041_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31042_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31043_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31044_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31045_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31046_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31047_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31048_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31049_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31050_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_31051_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_32024_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_32028_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_32029_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_32030_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_32031_UI": [
+      "LowerVault"
+    ],
+    "SP_IconMonsterHead_32032_UI": [
+      "LowerVault"
+    ],
+    "T_IconC_042_UI": [
+      "LowerVault"
+    ],
+    "T_IconC_046_UI": [
+      "LowerVault"
+    ],
+    "T_IconC_047_UI": [
+      "LowerVault"
+    ],
+    "T_IconC_060_UI": [
+      "TimeRiftRuins"
+    ],
+    "T_IconC_SM_Gat_01B_UI": [
+      "LowerVault",
+      "TimeRiftRuins"
+    ],
+    "T_IconC_SM_Gat_25A_UI": [
+      "TimeRiftRuins"
+    ],
+    "xlzm": [
+      "LowerVault"
+    ],
+    "ylfy": [
+      "LowerVault"
+    ],
+    "zscj": [
+      "Darkplain"
+    ]
+  }
+}

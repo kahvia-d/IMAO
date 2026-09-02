@@ -1,0 +1,17 @@
+{
+  "formatVersion": 1,
+  "scenes": {
+    "LowerVault": {
+      "approved": false,
+      "reason": "等待四点校准、瓦片特征包与实机验证。"
+    },
+    "Darkplain": {
+      "approved": false,
+      "reason": "等待四点校准、瓦片特征包与实机验证。"
+    },
+    "TimeRiftRuins": {
+      "approved": false,
+      "reason": "等待四点校准、瓦片特征包与实机验证。"
+    }
+  }
+}

@@ -84,13 +84,28 @@ class StringItem
                 AppendItems(jsonData.RootElement, specifiedlLanguage, knownIds, false);
             }
 
-            // A manual Kuro map sync writes only new official item IDs here.
-            // The embedded translations intentionally win for existing items.
-            string syncPath = Path.Combine(AppContext.BaseDirectory, "Assets", "KuroMap", "filter-items.json");
+            // A map sync can add official item IDs here.  The embedded
+            // translations intentionally win for existing items.  New map
+            // states are kept in a separate file so publishing them never
+            // rewrites the established global synchronized catalog.
+            string kuroMapDirectory = Path.Combine(AppContext.BaseDirectory, "Assets", "KuroMap");
+            string syncPath = Path.Combine(kuroMapDirectory, "filter-items.json");
             if (File.Exists(syncPath))
             {
                 using JsonDocument syncData = JsonDocument.Parse(File.ReadAllText(syncPath));
                 AppendItems(syncData.RootElement, specifiedlLanguage, knownIds, true);
+            }
+
+            string newStatePath = Path.Combine(kuroMapDirectory, "new-state-filter-items.json");
+            if (File.Exists(newStatePath))
+            {
+                HashSet<string> approvedIds = GetApprovedNewStateItemIds(kuroMapDirectory);
+                if (approvedIds.Count > 0)
+                {
+                    using JsonDocument newStateData = JsonDocument.Parse(File.ReadAllText(newStatePath));
+                    AppendItems(newStateData.RootElement, specifiedlLanguage, knownIds, true,
+                        itemId => approvedIds.Contains(itemId));
+                }
             }
         }catch(Exception ex)
         {
@@ -99,7 +114,63 @@ class StringItem
        
     }
 
-    private void AppendItems(JsonElement source, string specifiedLanguage, HashSet<string> knownIds, bool fallbackToId)
+    private static HashSet<string> GetApprovedNewStateItemIds(string kuroMapDirectory)
+    {
+        HashSet<string> approvedScenes = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> approvedIds = new HashSet<string>(StringComparer.Ordinal);
+        string validationPath = Path.Combine(kuroMapDirectory, "scene-validation.json");
+        string sceneMapPath = Path.Combine(kuroMapDirectory, "new-state-item-scenes.json");
+        if (!File.Exists(validationPath) || !File.Exists(sceneMapPath))
+        {
+            return approvedIds;
+        }
+
+        try
+        {
+            using JsonDocument validation = JsonDocument.Parse(File.ReadAllText(validationPath));
+            if (!validation.RootElement.TryGetProperty("scenes", out JsonElement scenes) || scenes.ValueKind != JsonValueKind.Object)
+            {
+                return approvedIds;
+            }
+            foreach (JsonProperty scene in scenes.EnumerateObject())
+            {
+                if (scene.Value.ValueKind == JsonValueKind.Object &&
+                    scene.Value.TryGetProperty("approved", out JsonElement approved) && approved.ValueKind == JsonValueKind.True)
+                {
+                    approvedScenes.Add(scene.Name);
+                }
+            }
+
+            using JsonDocument sceneMap = JsonDocument.Parse(File.ReadAllText(sceneMapPath));
+            if (!sceneMap.RootElement.TryGetProperty("items", out JsonElement items) || items.ValueKind != JsonValueKind.Object)
+            {
+                return approvedIds;
+            }
+            foreach (JsonProperty item in items.EnumerateObject())
+            {
+                if (item.Value.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+                foreach (JsonElement scene in item.Value.EnumerateArray())
+                {
+                    if (scene.ValueKind == JsonValueKind.String && approvedScenes.Contains(scene.GetString()!))
+                    {
+                        approvedIds.Add(item.Name);
+                        break;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reading new scene approval: {ex.Message}");
+        }
+        return approvedIds;
+    }
+
+    private void AppendItems(JsonElement source, string specifiedLanguage, HashSet<string> knownIds, bool fallbackToId,
+        Func<string, bool>? shouldInclude = null)
     {
         if (source.ValueKind != JsonValueKind.Object)
         {
@@ -116,7 +187,8 @@ class StringItem
             List<ItemDatas> categoryItems = new List<ItemDatas>();
             foreach (var item in category.Value.EnumerateObject())
             {
-                if (knownIds.Contains(item.Name) || item.Value.ValueKind != JsonValueKind.Object)
+                if (knownIds.Contains(item.Name) || item.Value.ValueKind != JsonValueKind.Object ||
+                    (shouldInclude != null && !shouldInclude(item.Name)))
                 {
                     continue;
                 }

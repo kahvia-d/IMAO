@@ -7,51 +7,15 @@ Coordinate RelativeCoordinates::GetRelativeCoordinates(const Coordinate& coordin
 }
 
 Coordinate RelativeCoordinates::ImgMapCoordToROC(const Coordinate& imgMapCoordinate,int SceneId) {
-	if (SceneId == 1) {
-		return ImgMapCoordToROC_World(imgMapCoordinate);
-	}
-
-	if (SceneId == 2) {
-		return ImgMapCoordToROC_Tethys(imgMapCoordinate);
-	}
-
-	if (SceneId == 3) {
-		return ImgMapCoordToROC_Fabricatorium(imgMapCoordinate);
-	}
-
-	if (SceneId == 4) {
-		return ImgMapCoordToROC_Avinoleum(imgMapCoordinate);
-	}
-
-	if (SceneId == 5) {
-		return ImgMapCoordToROC_Lahai(imgMapCoordinate);
-	}
-
-	return Coordinate(0, 0);
+	const auto* scene = Scene::Find(SceneId);
+	if (scene == nullptr) return Coordinate(0, 0);
+	return Coordinate(imgMapCoordinate.x - scene->originX, scene->originY - imgMapCoordinate.y);
 }
 
 Coordinate RelativeCoordinates::IdentifyCoordToROC(const Coordinate& identifyCoordinate, int SceneId) {
-	if (SceneId == 1) {
-		return WorldCoordToROC_World(identifyCoordinate);
-	}
-
-	if (SceneId == 2) {
-		return TethysCoordToROC_Tethys(identifyCoordinate);
-	}
-
-	if (SceneId == 3) {
-		return FabricatoriumCoordToROC_Fabricatorium(identifyCoordinate);
-	}
-
-	if (SceneId == 4) {
-		return AvinoleumCoordToROC_Avinoleum(identifyCoordinate);
-	}
-
-	if (SceneId == 5) {
-		return LahaiCoordToROC_Lahai(identifyCoordinate);
-	}
-
-	return Coordinate(0, 0);
+	const auto* scene = Scene::Find(SceneId);
+	if (scene == nullptr) return Coordinate(0, 0);
+	return Coordinate(identifyCoordinate.x * scene->scale, -identifyCoordinate.y * scene->scale);
 }
 
 //ROC:Relative coordinates to the iamge map xxx origin.

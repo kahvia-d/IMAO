@@ -4,12 +4,31 @@ param(
     [switch]$Check,
     [Parameter(Mandatory = $true, ParameterSetName = 'Apply')]
     [switch]$Apply,
-    [ValidateSet('Dreamzhou')]
     [string]$PackId = 'Dreamzhou',
+    [ValidateSet('World', 'Tethys', 'Fabricatorium', 'Avinoleum', 'Lahai', 'LowerVault', 'Darkplain', 'TimeRiftRuins')]
+    [string]$Scene = 'World',
+    [int]$State = 8,
     [double]$AnchorWorldX = -6725,
     [double]$AnchorWorldY = -919,
+    [double]$TransformOriginX = 2474,
+    [double]$TransformOriginY = 1957,
+    [double]$TransformScale = 1.205,
+    [string]$ReferencePath = '',
+    # Generates a hash-checked tile/feature package without a real minimap
+    # reference. This is useful for broad coverage before field collection,
+    # but manifests stay explicitly unverified and the normal test script
+    # rejects them unless -AllowUnverified is specified.
+    [switch]$SkipReferenceVerification,
+    # Public map bounds are irregular. When enabled, only a confirmed HTTP 404
+    # is treated as an absent tile; transport failures and other HTTP errors
+    # still fail the build.
+    [switch]$AllowMissingTiles,
     [ValidateRange(1, 4)]
     [int]$TileRadius = 2,
+    [Nullable[int]]$TileMinX = $null,
+    [Nullable[int]]$TileMaxX = $null,
+    [Nullable[int]]$TileMinY = $null,
+    [Nullable[int]]$TileMaxY = $null,
     [string]$PaddleLib = $env:IMAO_PADDLE_LIB,
     [string]$OpenCvDir = $env:IMAO_OPENCV_DIR
 )
@@ -22,6 +41,11 @@ $kuroApiHost = 'api.kurobbs.com'
 $kuroStaticHost = 'web-static.kurobbs.com'
 $tileSize = 1024
 $kuroVirtualMapSize = 850.0
+$sceneIds = @{ World = 1; Tethys = 2; Fabricatorium = 3; Avinoleum = 4; Lahai = 5; LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8 }
+$expectedStates = @{ World = 8; Tethys = 900; Fabricatorium = 905; Avinoleum = 903; Lahai = 906; LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910 }
+if ($State -ne $expectedStates[$Scene]) { throw "State $State does not belong to scene $Scene." }
+if ([string]::IsNullOrWhiteSpace($PackId) -or $PackId -notmatch '^[A-Za-z0-9_-]+$') { throw 'PackId must be an ASCII directory name.' }
+if ($TransformScale -le 0 -or [double]::IsNaN($TransformScale) -or [double]::IsInfinity($TransformScale)) { throw 'TransformScale must be finite and positive.' }
 
 function Assert-KuroUri([string]$Url, [string[]]$AllowedHosts) {
     $uri = [Uri]$Url
@@ -32,8 +56,15 @@ function Assert-KuroUri([string]$Url, [string[]]$AllowedHosts) {
 
 function Invoke-KuroDownload([string]$Url, [string]$Destination) {
     Assert-KuroUri $Url @($kuroStaticHost)
-    & curl.exe --fail --silent --show-error --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 60 $Url --output $Destination
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $Destination)) { throw "Download failed: $Url" }
+    $curlOutput = & curl.exe --fail --silent --show-error --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 60 $Url --output $Destination 2>&1
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -eq 0 -and (Test-Path -LiteralPath $Destination)) { return $true }
+    if ($AllowMissingTiles -and $exitCode -eq 22 -and ($curlOutput -match '(?i)\b404\b')) {
+        if (Test-Path -LiteralPath $Destination) { [IO.File]::Delete($Destination) }
+        Write-Verbose "Kuro map tile is absent (404): $Url"
+        return $false
+    }
+    throw "Download failed: $Url $curlOutput"
 }
 
 function Get-KuroResourceVersion([string]$Destination) {
@@ -83,14 +114,39 @@ try {
     $kuroY = -$AnchorWorldY * $tileSize / $kuroVirtualMapSize
     $centerTileX = [int][Math]::Floor($kuroX / $tileSize)
     $centerTileY = Get-LocalTileY $kuroY
+    $specifiedBounds = @(@($TileMinX, $TileMaxX, $TileMinY, $TileMaxY) |
+        Where-Object { $null -ne $_ }).Count
+    if ($specifiedBounds -ne 0 -and $specifiedBounds -ne 4) {
+        throw 'TileMinX, TileMaxX, TileMinY, and TileMaxY must be specified together.'
+    }
+    $usesExplicitBounds = $specifiedBounds -eq 4
+    $minimumTileX = if ($usesExplicitBounds) { [int]$TileMinX } else { $centerTileX - $TileRadius }
+    $maximumTileX = if ($usesExplicitBounds) { [int]$TileMaxX } else { $centerTileX + $TileRadius }
+    $minimumTileY = if ($usesExplicitBounds) { [int]$TileMinY } else { $centerTileY - $TileRadius }
+    $maximumTileY = if ($usesExplicitBounds) { [int]$TileMaxY } else { $centerTileY + $TileRadius }
+    if ($minimumTileX -gt $maximumTileX -or $minimumTileY -gt $maximumTileY) {
+        throw 'Explicit tile bounds are inverted.'
+    }
+    if ($centerTileX -lt $minimumTileX -or $centerTileX -gt $maximumTileX -or
+        $centerTileY -lt $minimumTileY -or $centerTileY -gt $maximumTileY) {
+        throw 'Explicit tile bounds must contain the reference anchor tile.'
+    }
+    $requestedTileCount = ($maximumTileX - $minimumTileX + 1) * ($maximumTileY - $minimumTileY + 1)
+    if ($requestedTileCount -lt 1 -or $requestedTileCount -gt 256) {
+        throw "Requested tile bounds contain an unsupported number of tiles: $requestedTileCount"
+    }
     $tiles = [Collections.Generic.List[object]]::new()
+    $missingTileCount = 0
 
-    for ($tileX = $centerTileX - $TileRadius; $tileX -le $centerTileX + $TileRadius; ++$tileX) {
-        for ($tileY = $centerTileY - $TileRadius; $tileY -le $centerTileY + $TileRadius; ++$tileY) {
-            $fileName = "8_${tileX}_${tileY}.png"
+    for ($tileX = $minimumTileX; $tileX -le $maximumTileX; ++$tileX) {
+        for ($tileY = $minimumTileY; $tileY -le $maximumTileY; ++$tileY) {
+            $fileName = "${State}_${tileX}_${tileY}.png"
             $destination = Join-Path $tileDir $fileName
-            $url = "https://$kuroStaticHost/mcmap/tiles/$resourceVersion/8/$fileName"
-            Invoke-KuroDownload $url $destination
+            $url = "https://$kuroStaticHost/mcmap/tiles/$resourceVersion/$State/$fileName"
+            if (-not (Invoke-KuroDownload $url $destination)) {
+                ++$missingTileCount
+                continue
+            }
             Assert-MapTilePng $destination
             $tiles.Add([ordered]@{
                 x = $tileX; y = $tileY; file = "tiles/$fileName"
@@ -98,32 +154,61 @@ try {
             })
         }
     }
+    if ($tiles.Count -eq 0) { throw 'No source tiles were available in the requested bounds.' }
 
     $tileManifest = [ordered]@{
-        formatVersion = 1; packId = $PackId; scene = 'World'; resourceVersion = $resourceVersion
-        source = [ordered]@{ static = "https://$kuroStaticHost"; state = 8; tileSize = $tileSize; virtualMapSize = $kuroVirtualMapSize }
+        formatVersion = 1; packId = $PackId; scene = $Scene; sceneId = $sceneIds[$Scene]; resourceVersion = $resourceVersion
+        source = [ordered]@{ static = "https://$kuroStaticHost"; state = $State; tileSize = $tileSize; virtualMapSize = $kuroVirtualMapSize }
+        coordinateTransform = [ordered]@{ originX = $TransformOriginX; originY = $TransformOriginY; scale = $TransformScale }
         anchorWorldCoordinate = [ordered]@{ x = $AnchorWorldX; y = $AnchorWorldY }
-        tileRadius = $TileRadius; tiles = @($tiles)
+        tileRadius = if ($usesExplicitBounds) { $null } else { $TileRadius }
+        tileBounds = [ordered]@{ minX = $minimumTileX; maxX = $maximumTileX; minY = $minimumTileY; maxY = $maximumTileY }
+        tiles = @($tiles); missingTileCount = $missingTileCount
     }
     $tileManifestPath = Join-Path $rawDir 'tiles.json'
     Write-Utf8Json $tileManifest $tileManifestPath
     $featurePath = Join-Path $generatedDir 'features.yml'
     $builderReportPath = Join-Path $generatedDir 'builder-report.json'
-    $referencePath = Join-Path $repoRoot 'Assets\FeaturesDatas\DreamzhouCandidate\reference--6725--919.png'
-    if (-not (Test-Path -LiteralPath $referencePath)) { throw "Missing Dreamzhou reference minimap: $referencePath" }
-    & (Join-Path $PSScriptRoot 'Build-KuroMapFeaturePack.ps1') -TileManifest $tileManifestPath -Output $featurePath -Report $builderReportPath -VerifyReference $referencePath -AnchorWorldX $AnchorWorldX -AnchorWorldY $AnchorWorldY -PaddleLib $PaddleLib -OpenCvDir $OpenCvDir
+    if ([string]::IsNullOrWhiteSpace($ReferencePath) -and $PackId -eq 'Dreamzhou' -and -not $SkipReferenceVerification) {
+        $ReferencePath = Join-Path $repoRoot 'Assets\FeaturesDatas\DreamzhouCandidate\reference--6725--919.png'
+    }
+    $referencePath = if ($SkipReferenceVerification) { '' } else { $ReferencePath }
+    if (-not $SkipReferenceVerification -and -not (Test-Path -LiteralPath $referencePath)) {
+        throw "Missing reference minimap: $referencePath"
+    }
+    $builderArguments = @{
+        TileManifest = $tileManifestPath; Output = $featurePath; Report = $builderReportPath
+        PaddleLib = $PaddleLib; OpenCvDir = $OpenCvDir
+    }
+    if (-not $SkipReferenceVerification) {
+        $builderArguments.VerifyReference = $referencePath
+        $builderArguments.AnchorWorldX = $AnchorWorldX
+        $builderArguments.AnchorWorldY = $AnchorWorldY
+    }
+    & (Join-Path $PSScriptRoot 'Build-KuroMapFeaturePack.ps1') @builderArguments
     if ($LASTEXITCODE -ne 0) { throw "Feature-pack builder failed with exit code $LASTEXITCODE." }
 
     $builderReport = Get-Content -LiteralPath $builderReportPath -Raw | ConvertFrom-Json
-    if ($builderReport.selectedKeypoints -lt 12 -or [string]::IsNullOrWhiteSpace([string]$builderReport.featuresSha256) -or $null -eq $builderReport.referenceVerification -or -not [bool]$builderReport.referenceVerification.passed) {
+    if ($builderReport.selectedKeypoints -lt 12 -or [string]::IsNullOrWhiteSpace([string]$builderReport.featuresSha256) -or
+        (-not $SkipReferenceVerification -and ($null -eq $builderReport.referenceVerification -or -not [bool]$builderReport.referenceVerification.passed))) {
         throw 'Feature-pack builder report did not satisfy minimum validation.'
     }
+    $referenceVerification = if ($SkipReferenceVerification) {
+        [ordered]@{
+            skipped = $true; passed = $false; errorPixels = $null
+            reason = 'No game minimap reference was supplied; coverage package is not field-verified.'
+        }
+    }
+    else {
+        $builderReport.referenceVerification
+    }
     $packManifest = [ordered]@{
-        formatVersion = 1; packId = "$($PackId.ToLowerInvariant())-kurotiles"; scene = 'World'; resourceVersion = $resourceVersion
+        formatVersion = 1; packId = "$($PackId.ToLowerInvariant())-kurotiles"; scene = $Scene; sceneId = $sceneIds[$Scene]; resourceVersion = $resourceVersion
         generatedAtUtc = [DateTime]::UtcNow.ToString('o')
-        source = $tileManifest.source; anchorWorldCoordinate = $tileManifest.anchorWorldCoordinate; tileRadius = $TileRadius
-        tiles = @($tiles); coordinateBounds = $builderReport.coordinateBounds
-        referenceVerification = $builderReport.referenceVerification
+        source = $tileManifest.source; coordinateTransform = $tileManifest.coordinateTransform; anchorWorldCoordinate = $tileManifest.anchorWorldCoordinate
+        tileRadius = $tileManifest.tileRadius; tileBounds = $tileManifest.tileBounds
+        tiles = @($tiles); missingTileCount = $missingTileCount; coordinateBounds = $builderReport.coordinateBounds
+        referenceVerification = $referenceVerification
         features = [ordered]@{ file = 'features.yml'; sha256 = [string]$builderReport.featuresSha256; keypointCount = [int]$builderReport.selectedKeypoints; extractedKeypointCount = [int]$builderReport.extractedKeypoints }
     }
     $generatedManifestPath = Join-Path $generatedDir 'manifest.json'
@@ -132,15 +217,16 @@ try {
         '# Kuro map feature-pack report', '',
         "- Pack: $($packManifest.packId)",
         "- Kuro resource version: $resourceVersion",
-        "- Scene: World (state 8)",
+        "- Scene: $Scene (state $State)",
         "- Anchor game coordinate: $AnchorWorldX, $AnchorWorldY",
-        "- Tile center: $centerTileX, $centerTileY; radius: $TileRadius",
+        "- Tile center: $centerTileX, $centerTileY; bounds: x=$minimumTileX..$maximumTileX, y=$minimumTileY..$maximumTileY",
         "- Tiles validated: $($tiles.Count)",
+        "- Tiles absent from the public source: $missingTileCount",
         "- SURF keypoints extracted: $($builderReport.extractedKeypoints)",
         "- SURF keypoints retained: $($builderReport.selectedKeypoints)",
-        "- Reference-map verification: passed=$($builderReport.referenceVerification.passed); matches=$($builderReport.referenceVerification.nearAnchorMatches); error=$($builderReport.referenceVerification.errorPixels) pixels",
+        "- Reference-map verification: passed=$($referenceVerification.passed); skipped=$($referenceVerification.skipped); error=$($referenceVerification.errorPixels) pixels",
         "- Feature SHA-256: $($builderReport.featuresSha256)", '',
-        'The tiles were downloaded from Kuro public static assets. This pack adds World SURF coverage only; it does not change map-point data or claim support for other state IDs.'
+        'The tiles were downloaded from Kuro public static assets. An unverified coverage pack must be checked against a real minimap before accuracy is claimed.'
     )
     [IO.File]::WriteAllLines((Join-Path $generatedDir 'report.md'), $reportLines, [Text.UTF8Encoding]::new($false))
 
@@ -148,7 +234,7 @@ try {
     $existingHash = if (Test-Path -LiteralPath (Join-Path $target 'features.yml')) { (Get-FileHash -LiteralPath (Join-Path $target 'features.yml') -Algorithm SHA256).Hash.ToLowerInvariant() } else { '' }
     $status = if ($existingHash -eq $packManifest.features.sha256) { 'unchanged' } elseif ([string]::IsNullOrWhiteSpace($existingHash)) { 'new' } else { 'changed' }
     Write-Host "Kuro tile feature pack $($PSCmdlet.ParameterSetName): pack=$PackId resource=$resourceVersion tiles=$($tiles.Count) selected=$($builderReport.selectedKeypoints) status=$status"
-    Write-Host "Anchor=$AnchorWorldX,$AnchorWorldY -> raw tile center=$centerTileX,$centerTileY"
+    Write-Host "Anchor=$AnchorWorldX,$AnchorWorldY -> raw tile center=$centerTileX,$centerTileY bounds=x:$minimumTileX..$maximumTileX y:$minimumTileY..$maximumTileY"
 
     if ($Apply) {
         New-Item -ItemType Directory -Force -Path $target | Out-Null

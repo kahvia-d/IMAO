@@ -1,0 +1,1250 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "x64/Debug/Diagnostics",
+  "sampleCount": 113,
+  "bootstrapCount": 61,
+  "continuityCount": 23,
+  "syntheticCount": 27,
+  "labeledCount": 60,
+  "samples": [
+    {
+      "id": "20260823-234837-3_minimap-bootstrap-crop",
+      "session": "20260823-234837",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260823-234837/3_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260823-234837-7_minimap-bootstrap-crop",
+      "session": "20260823-234837",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260823-234837/7_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260823-234837-15_minimap-continuity-crop",
+      "session": "20260823-234837",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260823-234837/15_minimap-continuity-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-000639-3_minimap-bootstrap-crop",
+      "session": "20260824-000639",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-000639/3_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-000639-12_minimap-continuity-crop",
+      "session": "20260824-000639",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-000639/12_minimap-continuity-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-000639-23_minimap-continuity-crop",
+      "session": "20260824-000639",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-000639/23_minimap-continuity-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-001530-3_minimap-bootstrap-crop",
+      "session": "20260824-001530",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-001530/3_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-001530-11_minimap-bootstrap-crop",
+      "session": "20260824-001530",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-001530/11_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-001530-15_minimap-bootstrap-crop",
+      "session": "20260824-001530",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-001530/15_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-002824-3_minimap-bootstrap-crop",
+      "session": "20260824-002824",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-002824/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1981.358984,
+        "mapY": 2625.625019,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-003722-3_minimap-bootstrap-crop",
+      "session": "20260824-003722",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-003722/3_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-003722-7_minimap-bootstrap-crop",
+      "session": "20260824-003722",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-003722/7_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.959542,
+        "mapY": 2620.141511,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-003722-15_minimap-continuity-crop",
+      "session": "20260824-003722",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-003722/15_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.959542,
+        "mapY": 2620.141511,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-004212-3_minimap-bootstrap-crop",
+      "session": "20260824-004212",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-004212/3_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-004212-7_minimap-bootstrap-crop",
+      "session": "20260824-004212",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-004212/7_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-004212-11_minimap-bootstrap-crop",
+      "session": "20260824-004212",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-004212/11_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-004212-19_minimap-bootstrap-crop",
+      "session": "20260824-004212",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-004212/19_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-004623-3_minimap-bootstrap-crop",
+      "session": "20260824-004623",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-004623/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.937959,
+        "mapY": 2620.108524,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-004623-11_minimap-continuity-crop",
+      "session": "20260824-004623",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-004623/11_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.937959,
+        "mapY": 2620.108524,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-010102-3_minimap-bootstrap-crop",
+      "session": "20260824-010102",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-010102/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.870468,
+        "mapY": 2620.114963,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-010102-11_minimap-continuity-crop",
+      "session": "20260824-010102",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-010102/11_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.870468,
+        "mapY": 2620.114963,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-011039-3_minimap-bootstrap-crop",
+      "session": "20260824-011039",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-011039/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.952067,
+        "mapY": 2620.204482,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-011039-11_minimap-continuity-crop",
+      "session": "20260824-011039",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-011039/11_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.952067,
+        "mapY": 2620.204482,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-011926-3_minimap-bootstrap-crop",
+      "session": "20260824-011926",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-011926/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.948218,
+        "mapY": 2620.189932,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-011926-11_minimap-continuity-crop",
+      "session": "20260824-011926",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-011926/11_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1987.948218,
+        "mapY": 2620.189932,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-011926-17_minimap-bootstrap-crop",
+      "session": "20260824-011926",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-011926/17_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-011926-22_minimap-bootstrap-crop",
+      "session": "20260824-011926",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-011926/22_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-011926-26_minimap-bootstrap-crop",
+      "session": "20260824-011926",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-011926/26_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-011926-32_minimap-bootstrap-crop",
+      "session": "20260824-011926",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-011926/32_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-011926-46_minimap-bootstrap-crop",
+      "session": "20260824-011926",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-011926/46_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-024534-3_minimap-bootstrap-crop",
+      "session": "20260824-024534",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-024534/3_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-024534-7_minimap-bootstrap-crop",
+      "session": "20260824-024534",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-024534/7_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1993.269016,
+        "mapY": 2766.461493,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-024534-15_minimap-continuity-crop",
+      "session": "20260824-024534",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-024534/15_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": 1993.269016,
+        "mapY": 2766.461493,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-024534-21_minimap-continuity-crop",
+      "session": "20260824-024534",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-024534/21_minimap-continuity-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-024534-23_minimap-bootstrap-crop",
+      "session": "20260824-024534",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-024534/23_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-024534-27_minimap-bootstrap-crop",
+      "session": "20260824-024534",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-024534/27_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-024534-35_minimap-bootstrap-crop",
+      "session": "20260824-024534",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-024534/35_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-024534-41_minimap-bootstrap-crop",
+      "session": "20260824-024534",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-024534/41_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-024534-46_minimap-bootstrap-crop",
+      "session": "20260824-024534",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-024534/46_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-095239-3_minimap-bootstrap-crop",
+      "session": "20260824-095239",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-095239/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.607749,
+        "mapY": 849.599706,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-095239-12_minimap-continuity-crop",
+      "session": "20260824-095239",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-095239/12_minimap-continuity-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-100906-3_minimap-bootstrap-crop",
+      "session": "20260824-100906",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-100906/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.612564,
+        "mapY": 849.613737,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-101522-3_minimap-bootstrap-crop",
+      "session": "20260824-101522",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-101522/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.62336,
+        "mapY": 849.609391,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-101522-12_minimap-continuity-crop",
+      "session": "20260824-101522",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-101522/12_minimap-continuity-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-101522-14_minimap-bootstrap-crop",
+      "session": "20260824-101522",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-101522/14_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-101522-18_minimap-bootstrap-crop",
+      "session": "20260824-101522",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-101522/18_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-101522-22_minimap-bootstrap-crop",
+      "session": "20260824-101522",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-101522/22_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-101522-26_minimap-bootstrap-crop",
+      "session": "20260824-101522",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-101522/26_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-101522-30_minimap-bootstrap-crop",
+      "session": "20260824-101522",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-101522/30_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-101522-41_minimap-bootstrap-crop",
+      "session": "20260824-101522",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-101522/41_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-101522-45_minimap-bootstrap-crop",
+      "session": "20260824-101522",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-101522/45_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.6159,
+        "mapY": 849.619292,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-102116-3_minimap-bootstrap-crop",
+      "session": "20260824-102116",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-102116/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.634688,
+        "mapY": 849.608311,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-102116-11_minimap-continuity-crop",
+      "session": "20260824-102116",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-102116/11_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.634688,
+        "mapY": 849.608311,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-102116-23_minimap-continuity-crop",
+      "session": "20260824-102116",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-102116/23_minimap-continuity-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-102116-25_minimap-bootstrap-crop",
+      "session": "20260824-102116",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-102116/25_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-102116-29_minimap-bootstrap-crop",
+      "session": "20260824-102116",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-102116/29_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-102116-33_minimap-bootstrap-crop",
+      "session": "20260824-102116",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-102116/33_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-102116-37_minimap-bootstrap-crop",
+      "session": "20260824-102116",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-102116/37_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.627213,
+        "mapY": 849.626188,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-102116-45_minimap-continuity-crop",
+      "session": "20260824-102116",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-102116/45_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.627213,
+        "mapY": 849.626188,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-115605-3_minimap-bootstrap-crop",
+      "session": "20260824-115605",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-115605/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.639902,
+        "mapY": 849.594718,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-115605-11_minimap-continuity-crop",
+      "session": "20260824-115605",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-115605/11_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.639902,
+        "mapY": 849.594718,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-115605-21_minimap-continuity-crop",
+      "session": "20260824-115605",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-115605/21_minimap-continuity-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-115605-23_minimap-bootstrap-crop",
+      "session": "20260824-115605",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-115605/23_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-115605-27_minimap-bootstrap-crop",
+      "session": "20260824-115605",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-115605/27_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-115605-31_minimap-bootstrap-crop",
+      "session": "20260824-115605",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-115605/31_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-115605-35_minimap-bootstrap-crop",
+      "session": "20260824-115605",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-115605/35_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-120413-3_minimap-bootstrap-crop",
+      "session": "20260824-120413",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-120413/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.623887,
+        "mapY": 849.589319,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-120413-11_minimap-continuity-crop",
+      "session": "20260824-120413",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-120413/11_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.623887,
+        "mapY": 849.589319,
+        "tolerance": 48.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-123003-3_minimap-bootstrap-crop",
+      "session": "20260824-123003",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-123003/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5315.80327,
+        "mapY": 1181.348877,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-123003-11_minimap-continuity-crop",
+      "session": "20260824-123003",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-123003/11_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5315.486357,
+        "mapY": 1180.603286,
+        "tolerance": 48.0,
+        "source": "continuity-sample"
+      }
+    },
+    {
+      "id": "20260824-123003-15_minimap-bootstrap-crop",
+      "session": "20260824-123003",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-123003/15_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5308.001366,
+        "mapY": 1175.657612,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-123003-24_minimap-continuity-crop",
+      "session": "20260824-123003",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-123003/24_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5306.782709,
+        "mapY": 1171.7790949999999,
+        "tolerance": 48.0,
+        "source": "continuity-sample"
+      }
+    },
+    {
+      "id": "20260824-123003-34_minimap-bootstrap-crop",
+      "session": "20260824-123003",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-123003/34_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-123003-38_minimap-bootstrap-crop",
+      "session": "20260824-123003",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-123003/38_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-123003-42_minimap-bootstrap-crop",
+      "session": "20260824-123003",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-123003/42_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-123003-46_minimap-bootstrap-crop",
+      "session": "20260824-123003",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-123003/46_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-124646-3_minimap-bootstrap-crop",
+      "session": "20260824-124646",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-124646/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5625.573454,
+        "mapY": 852.810709,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-124646-11_minimap-continuity-crop",
+      "session": "20260824-124646",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-124646/11_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5625.545588,
+        "mapY": 852.852118,
+        "tolerance": 48.0,
+        "source": "continuity-sample"
+      }
+    },
+    {
+      "id": "20260824-124646-31_minimap-continuity-crop",
+      "session": "20260824-124646",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-124646/31_minimap-continuity-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-124646-33_minimap-bootstrap-crop",
+      "session": "20260824-124646",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-124646/33_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-124646-37_minimap-bootstrap-crop",
+      "session": "20260824-124646",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-124646/37_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5848.978653,
+        "mapY": 1077.152318,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-124646-41_minimap-continuity-crop",
+      "session": "20260824-124646",
+      "kind": "continuity",
+      "image": "x64/Debug/Diagnostics/20260824-124646/41_minimap-continuity-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5848.978653,
+        "mapY": 1077.152318,
+        "tolerance": 48.0,
+        "source": "continuity-sample"
+      }
+    },
+    {
+      "id": "20260824-124646-43_minimap-bootstrap-crop",
+      "session": "20260824-124646",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-124646/43_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "20260824-124646-47_minimap-bootstrap-crop",
+      "session": "20260824-124646",
+      "kind": "bootstrap",
+      "image": "x64/Debug/Diagnostics/20260824-124646/47_minimap-bootstrap-crop.png",
+      "expected": null
+    },
+    {
+      "id": "dreamzhou-curated--6725--919",
+      "session": "dreamzhou-curated-locations",
+      "kind": "curated-positive",
+      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--6725--919.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.625000000001,
+        "mapY": 849.605,
+        "tolerance": 12.0,
+        "source": "curated-visual-verified"
+      }
+    },
+    {
+      "id": "dreamzhou-curated--8519--292",
+      "session": "dreamzhou-curated-locations",
+      "kind": "curated-positive",
+      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--8519--292.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -7791.395,
+        "mapY": 1605.1399999999999,
+        "tolerance": 12.0,
+        "source": "curated-visual-verified"
+      }
+    },
+    {
+      "id": "20260824-095239-3_minimap-bootstrap-crop-synthetic-rotate37",
+      "session": "20260824-095239-synthetic-rotate37",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-095239/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.607749,
+        "mapY": 849.599706,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "rotationDegrees": 37.0
+      }
+    },
+    {
+      "id": "20260824-095239-3_minimap-bootstrap-crop-synthetic-brightness",
+      "session": "20260824-095239-synthetic-brightness",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-095239/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.607749,
+        "mapY": 849.599706,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "brightnessAlpha": 0.72,
+        "brightnessBeta": 18.0
+      }
+    },
+    {
+      "id": "20260824-095239-3_minimap-bootstrap-crop-synthetic-blur",
+      "session": "20260824-095239-synthetic-blur",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-095239/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.607749,
+        "mapY": 849.599706,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "blurKernel": 5
+      }
+    },
+    {
+      "id": "20260824-095239-3_minimap-bootstrap-crop-synthetic-scale092",
+      "session": "20260824-095239-synthetic-scale092",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-095239/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.607749,
+        "mapY": 849.599706,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "scale": 0.92
+      }
+    },
+    {
+      "id": "20260824-095239-3_minimap-bootstrap-crop-synthetic-center-occlusion",
+      "session": "20260824-095239-synthetic-center-occlusion",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-095239/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.607749,
+        "mapY": 849.599706,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "centerOcclusionRadius": 24
+      }
+    },
+    {
+      "id": "20260824-100906-3_minimap-bootstrap-crop-synthetic-rotate37",
+      "session": "20260824-100906-synthetic-rotate37",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-100906/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.612564,
+        "mapY": 849.613737,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "rotationDegrees": 37.0
+      }
+    },
+    {
+      "id": "20260824-100906-3_minimap-bootstrap-crop-synthetic-brightness",
+      "session": "20260824-100906-synthetic-brightness",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-100906/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.612564,
+        "mapY": 849.613737,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "brightnessAlpha": 0.72,
+        "brightnessBeta": 18.0
+      }
+    },
+    {
+      "id": "20260824-100906-3_minimap-bootstrap-crop-synthetic-blur",
+      "session": "20260824-100906-synthetic-blur",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-100906/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.612564,
+        "mapY": 849.613737,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "blurKernel": 5
+      }
+    },
+    {
+      "id": "20260824-100906-3_minimap-bootstrap-crop-synthetic-scale092",
+      "session": "20260824-100906-synthetic-scale092",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-100906/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.612564,
+        "mapY": 849.613737,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "scale": 0.92
+      }
+    },
+    {
+      "id": "20260824-100906-3_minimap-bootstrap-crop-synthetic-center-occlusion",
+      "session": "20260824-100906-synthetic-center-occlusion",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-100906/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.612564,
+        "mapY": 849.613737,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "centerOcclusionRadius": 24
+      }
+    },
+    {
+      "id": "20260824-101522-3_minimap-bootstrap-crop-synthetic-rotate37",
+      "session": "20260824-101522-synthetic-rotate37",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.62336,
+        "mapY": 849.609391,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "rotationDegrees": 37.0
+      }
+    },
+    {
+      "id": "20260824-101522-3_minimap-bootstrap-crop-synthetic-brightness",
+      "session": "20260824-101522-synthetic-brightness",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.62336,
+        "mapY": 849.609391,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "brightnessAlpha": 0.72,
+        "brightnessBeta": 18.0
+      }
+    },
+    {
+      "id": "20260824-101522-3_minimap-bootstrap-crop-synthetic-blur",
+      "session": "20260824-101522-synthetic-blur",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.62336,
+        "mapY": 849.609391,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "blurKernel": 5
+      }
+    },
+    {
+      "id": "20260824-101522-3_minimap-bootstrap-crop-synthetic-scale092",
+      "session": "20260824-101522-synthetic-scale092",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.62336,
+        "mapY": 849.609391,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "scale": 0.92
+      }
+    },
+    {
+      "id": "20260824-101522-3_minimap-bootstrap-crop-synthetic-center-occlusion",
+      "session": "20260824-101522-synthetic-center-occlusion",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.62336,
+        "mapY": 849.609391,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "centerOcclusionRadius": 24
+      }
+    },
+    {
+      "id": "20260824-101522-45_minimap-bootstrap-crop-synthetic-rotate37",
+      "session": "20260824-101522-synthetic-rotate37",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/45_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.6159,
+        "mapY": 849.619292,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "rotationDegrees": 37.0
+      }
+    },
+    {
+      "id": "20260824-101522-45_minimap-bootstrap-crop-synthetic-brightness",
+      "session": "20260824-101522-synthetic-brightness",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/45_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.6159,
+        "mapY": 849.619292,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "brightnessAlpha": 0.72,
+        "brightnessBeta": 18.0
+      }
+    },
+    {
+      "id": "20260824-101522-45_minimap-bootstrap-crop-synthetic-blur",
+      "session": "20260824-101522-synthetic-blur",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/45_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.6159,
+        "mapY": 849.619292,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "blurKernel": 5
+      }
+    },
+    {
+      "id": "20260824-101522-45_minimap-bootstrap-crop-synthetic-scale092",
+      "session": "20260824-101522-synthetic-scale092",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/45_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.6159,
+        "mapY": 849.619292,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "scale": 0.92
+      }
+    },
+    {
+      "id": "20260824-101522-45_minimap-bootstrap-crop-synthetic-center-occlusion",
+      "session": "20260824-101522-synthetic-center-occlusion",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-101522/45_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.6159,
+        "mapY": 849.619292,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "centerOcclusionRadius": 24
+      }
+    },
+    {
+      "id": "20260824-102116-3_minimap-bootstrap-crop-synthetic-rotate37",
+      "session": "20260824-102116-synthetic-rotate37",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-102116/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.634688,
+        "mapY": 849.608311,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "rotationDegrees": 37.0
+      }
+    },
+    {
+      "id": "20260824-102116-3_minimap-bootstrap-crop-synthetic-brightness",
+      "session": "20260824-102116-synthetic-brightness",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-102116/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.634688,
+        "mapY": 849.608311,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "brightnessAlpha": 0.72,
+        "brightnessBeta": 18.0
+      }
+    },
+    {
+      "id": "20260824-102116-3_minimap-bootstrap-crop-synthetic-blur",
+      "session": "20260824-102116-synthetic-blur",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-102116/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.634688,
+        "mapY": 849.608311,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "blurKernel": 5
+      }
+    },
+    {
+      "id": "20260824-102116-3_minimap-bootstrap-crop-synthetic-scale092",
+      "session": "20260824-102116-synthetic-scale092",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-102116/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.634688,
+        "mapY": 849.608311,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "scale": 0.92
+      }
+    },
+    {
+      "id": "20260824-102116-3_minimap-bootstrap-crop-synthetic-center-occlusion",
+      "session": "20260824-102116-synthetic-center-occlusion",
+      "kind": "synthetic-positive",
+      "image": "x64/Debug/Diagnostics/20260824-102116/3_minimap-bootstrap-crop.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -5629.634688,
+        "mapY": 849.608311,
+        "tolerance": 32.0,
+        "source": "legacy-visual-verified"
+      },
+      "transform": {
+        "centerOcclusionRadius": 24
+      }
+    },
+    {
+      "id": "synthetic-negative-blank",
+      "session": "synthetic-negative-blank",
+      "kind": "synthetic-negative",
+      "image": "x64/Debug/Diagnostics/20260824-095239/3_minimap-bootstrap-crop.png",
+      "expected": null,
+      "mustReject": true,
+      "transform": {
+        "blank": true
+      }
+    },
+    {
+      "id": "synthetic-negative-noise",
+      "session": "synthetic-negative-noise",
+      "kind": "synthetic-negative",
+      "image": "x64/Debug/Diagnostics/20260824-095239/3_minimap-bootstrap-crop.png",
+      "expected": null,
+      "mustReject": true,
+      "transform": {
+        "noise": true
+      }
+    }
+  ]
+}

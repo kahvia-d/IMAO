@@ -46,12 +46,14 @@ if ([string]::IsNullOrWhiteSpace($Dotnet)) {
     }
 }
 
-$hasDotnet8Sdk = $false
+$hasCompatibleDotnetSdk = $false
 if (-not [string]::IsNullOrWhiteSpace($Dotnet) -and (Test-Path -LiteralPath $Dotnet)) {
     $sdkList = & $Dotnet --list-sdks 2>$null
-    $hasDotnet8Sdk = [bool]($sdkList | Where-Object { $_ -match '^8\.' })
+    $hasCompatibleDotnetSdk = [bool]($sdkList | Where-Object {
+        $_ -match '^(\d+)\.' -and [int]$Matches[1] -ge 8
+    })
 }
-Test-Requirement $hasDotnet8Sdk 'Missing .NET 8 SDK. A runtime alone cannot build the WinUI project.'
+Test-Requirement $hasCompatibleDotnetSdk 'Missing a .NET SDK version 8 or newer. A runtime alone cannot build the WinUI project.'
 
 Test-Requirement (-not [string]::IsNullOrWhiteSpace($PaddleLib)) 'PADDLE_LIB is unset. Set IMAO_PADDLE_LIB to the Paddle Inference root.'
 if (-not [string]::IsNullOrWhiteSpace($PaddleLib)) {
@@ -66,6 +68,49 @@ if (-not [string]::IsNullOrWhiteSpace($OpenCvDir)) {
 }
 
 Test-Requirement (Test-Path -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.yml')) 'Missing archived runtime assets. Run Git LFS pull or restore Assets/.'
+Test-Requirement (Test-Path -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.imf')) 'Missing Map_features.imf. Build and run IMaoFeatureConverter before creating a Release package.'
+Test-Requirement (Test-Path -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\Map_visual_index.imx')) 'Missing Map_visual_index.imx. Run scripts\Build-VisualIndex.ps1 before creating a Release package.'
+$kuroRegistryPath = Join-Path $repoRoot 'Assets\FeaturesDatas\kuro-tile-packs.json'
+Test-Requirement (Test-Path -LiteralPath $kuroRegistryPath) 'Missing kuro-tile-packs.json. Restore the tile-pack registry.'
+if (Test-Path -LiteralPath $kuroRegistryPath) {
+    try {
+        $kuroRegistry = Get-Content -LiteralPath $kuroRegistryPath -Raw | ConvertFrom-Json
+        Test-Requirement ([int]$kuroRegistry.formatVersion -eq 1 -and $null -ne $kuroRegistry.packs) 'kuro-tile-packs.json has an unsupported format.'
+        foreach ($packDirectoryValue in @($kuroRegistry.packs)) {
+            $packDirectory = [string]$packDirectoryValue
+            $packRoot = Join-Path $repoRoot (Join-Path 'Assets\FeaturesDatas\KuroTilePacks' $packDirectory)
+            $manifestPath = Join-Path $packRoot 'manifest.json'
+            if (-not (Test-Path -LiteralPath $manifestPath)) {
+                # The three new states are intentionally absent until their
+                # public tiles and game screenshots have passed validation.
+                Test-Requirement ($packDirectory -ne 'Dreamzhou') "Missing Kuro tile-pack manifest: $packDirectory"
+                continue
+            }
+            Test-Requirement (Test-Path -LiteralPath (Join-Path $packRoot 'visual-index.imx')) "Missing Kuro visual-index.imx shard: $packDirectory. Run scripts\Build-VisualIndex.ps1."
+            Test-Requirement (Test-Path -LiteralPath (Join-Path $packRoot 'features.imf')) "Missing Kuro binary features: $packDirectory. Run scripts\Build-VisualIndex.ps1."
+        }
+    }
+    catch {
+        Test-Requirement $false "Unable to parse kuro-tile-packs.json: $($_.Exception.Message)"
+    }
+}
+$candidateRegistryPath = Join-Path $repoRoot 'Assets\FeaturesDatas\candidate-packs.json'
+Test-Requirement (Test-Path -LiteralPath $candidateRegistryPath) 'Missing candidate-packs.json. Restore the registered candidate feature packs.'
+if (Test-Path -LiteralPath $candidateRegistryPath) {
+    try {
+        $candidateRegistry = Get-Content -LiteralPath $candidateRegistryPath -Raw | ConvertFrom-Json
+        Test-Requirement ([int]$candidateRegistry.formatVersion -eq 1 -and $null -ne $candidateRegistry.packs) 'candidate-packs.json has an unsupported format.'
+        foreach ($candidateDirectory in @($candidateRegistry.packs)) {
+            $candidateName = [string]$candidateDirectory
+            $candidateRoot = Join-Path $repoRoot (Join-Path 'Assets\FeaturesDatas' $candidateName)
+            Test-Requirement (Test-Path -LiteralPath (Join-Path $candidateRoot 'manifest.json')) "Missing candidate manifest: $candidateName"
+            Test-Requirement (Test-Path -LiteralPath (Join-Path $candidateRoot 'visual-index.imx')) "Missing candidate visual-index.imx shard: $candidateName. Run scripts\Build-VisualIndex.ps1."
+        }
+    }
+    catch {
+        Test-Requirement $false "Unable to parse candidate-packs.json: $($_.Exception.Message)"
+    }
+}
 Test-Requirement (Test-Path -LiteralPath (Join-Path $repoRoot 'IMao-Core\paddleocr_cpp_infer\lib\ppocr.lib')) 'Missing the committed PaddleOCR helper library.'
 
 if ($errors.Count -gt 0) {

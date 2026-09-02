@@ -37,6 +37,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 SET(PADDLE_LIB "" CACHE PATH "Paddle Inference root (contains paddle/ and third_party/)")
 SET(OPENCV_DIR "" CACHE PATH "Directory containing OpenCVConfig.cmake")
 option(IMAO_ENABLE_DIAGNOSTICS "Write bounded runtime screenshots and event logs for map matching diagnostics" OFF)
+option(IMAO_ALLOW_XML_FEATURE_FALLBACK "Allow development builds to fall back to Map_features.yml" OFF)
 
 macro(safe_set_static_flag)
     foreach(flag_var
@@ -197,6 +198,10 @@ if(IMAO_ENABLE_DIAGNOSTICS)
     target_compile_definitions(${DEMO_NAME} PRIVATE IMAO_ENABLE_DIAGNOSTICS=1)
 endif()
 
+if(IMAO_ALLOW_XML_FEATURE_FALLBACK OR IMAO_ENABLE_DIAGNOSTICS)
+    target_compile_definitions(${DEMO_NAME} PRIVATE IMAO_ALLOW_XML_FEATURE_FALLBACK=1)
+endif()
+
 set_target_properties(${DEMO_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
@@ -218,8 +223,122 @@ set_target_properties(KuroMapFeatureBuilder PROPERTIES
 )
 target_link_libraries(KuroMapFeatureBuilder PRIVATE ${OpenCV_LIBS} bcrypt.lib)
 
+# Standalone game-capture helper for collecting calibration pairs and short
+# movement clips.  It reuses the same BitBlt/PrintWindow capture route as the
+# overlay, but deliberately does not initialize OCR, feature matching or the
+# overlay itself.
+add_executable(IMaoCaptureAssistant
+    tools/CaptureAssistant/main.cpp
+    IMao-Core/src/WindowsCapture/BitBltCapture/BitBltCapture.cpp
+)
+set_target_properties(IMaoCaptureAssistant PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+target_include_directories(IMaoCaptureAssistant PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/IMao-Core/src)
+target_link_libraries(IMaoCaptureAssistant PRIVATE ${OpenCV_LIBS} user32.lib gdi32.lib mfplat.lib mfreadwrite.lib mfuuid.lib)
+
+add_executable(IMaoFeatureConverter
+    IMao-Core/tools/FeatureConverter/main.cpp
+    IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
+    IMao-Core/src/Feature/Processing/FeatureProcessing.cpp
+)
+set_target_properties(IMaoFeatureConverter PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+target_include_directories(IMaoFeatureConverter PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
+)
+target_link_libraries(IMaoFeatureConverter PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib psapi.lib)
+
+add_executable(IMaoVisualIndexBuilder
+    IMao-Core/tools/VisualIndexBuilder/main.cpp
+    IMao-Core/src/Feature/VisualIndex/MapVisualIndex.cpp
+    IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
+    IMao-Core/src/Feature/Processing/FeatureProcessing.cpp
+    IMao-Core/src/Feature/Match/FeatureMatch.cpp
+    IMao-Core/src/Feature/KuroTileFeaturePack.cpp
+    IMao-Core/src/Feature/CandidateFeaturePack.cpp
+    IMao-Core/src/Coordinate/locationCalculator/MapCoordinate.cpp
+    IMao-Core/src/Coordinate/locationCalculator/RelativeCoordinates.cpp
+    IMao-Core/src/Coordinate/locationCalculator/ScreenCoordinate.cpp
+    IMao-Core/src/ImageProcessing/ImageProcessing.cpp
+    IMao-Core/src/util.cpp
+)
+set_target_properties(IMaoVisualIndexBuilder PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+target_include_directories(IMaoVisualIndexBuilder PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
+)
+target_link_libraries(IMaoVisualIndexBuilder PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
+
+add_executable(IMaoOptimizationTests
+    IMao-Core/tests/OptimizationTests.cpp
+    IMao-Core/src/App/MapUiStateController.cpp
+    IMao-Core/src/App/MapUiVisualDetector.cpp
+    IMao-Core/src/App/MapViewportPredictor.cpp
+    IMao-Core/src/App/WorldSearchPrior.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateRecoveryController.cpp
+    IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
+    IMao-Core/src/Feature/VisualIndex/MapVisualIndex.cpp
+)
+set_target_properties(IMaoOptimizationTests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+target_include_directories(IMaoOptimizationTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+target_compile_definitions(IMaoOptimizationTests PRIVATE IMAO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib)
+
+enable_testing()
+add_test(NAME IMaoOptimizationTests COMMAND IMaoOptimizationTests)
+
+add_executable(IMaoVisualRegression
+    IMao-Core/tools/VisualRegression/main.cpp
+    IMao-Core/src/Coordinate/VisualLocalization/GlobalVisualLocalizer.cpp
+    IMao-Core/src/Diagnostics/Diagnostics.cpp
+    IMao-Core/src/Feature/VisualIndex/MapVisualIndex.cpp
+    IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
+    IMao-Core/src/Feature/Processing/FeatureProcessing.cpp
+    IMao-Core/src/Feature/Match/FeatureMatch.cpp
+    IMao-Core/src/Feature/KuroTileFeaturePack.cpp
+    IMao-Core/src/Feature/CandidateFeaturePack.cpp
+    IMao-Core/src/Coordinate/locationCalculator/MapCoordinate.cpp
+    IMao-Core/src/Coordinate/locationCalculator/RelativeCoordinates.cpp
+    IMao-Core/src/Coordinate/locationCalculator/ScreenCoordinate.cpp
+    IMao-Core/src/ImageProcessing/ImageProcessing.cpp
+    IMao-Core/src/util.cpp
+)
+set_target_properties(IMaoVisualRegression PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+target_include_directories(IMaoVisualRegression PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
+)
+target_link_libraries(IMaoVisualRegression PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
+
+add_executable(IMaoCoordinateRegression
+    IMao-Core/tools/CoordinateRegression/main.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
+    IMao-Core/src/Diagnostics/Diagnostics.cpp
+    IMao-Core/src/util.cpp
+)
+set_target_properties(IMaoCoordinateRegression PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+target_include_directories(IMaoCoordinateRegression PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+target_link_libraries(IMaoCoordinateRegression PRIVATE ${DEPS})
+
 add_custom_command(TARGET ${DEMO_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Assets ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/Assets
+        COMMAND ${CMAKE_COMMAND}
+            -DIMAO_SOURCE_ASSETS=${CMAKE_SOURCE_DIR}/Assets
+            -DIMAO_DESTINATION_ROOT=${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+            -DIMAO_CONFIGURATION=$<CONFIG>
+            -P ${CMAKE_SOURCE_DIR}/cmake/StageAssets.cmake
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_LIB}/third_party/install/mklml/lib/mklml.dll ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/mklml.dll
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_LIB}/third_party/install/mklml/lib/libiomp5md.dll ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/libiomp5md.dll
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_LIB}/third_party/install/onednn/lib/mkldnn.dll ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/mkldnn.dll

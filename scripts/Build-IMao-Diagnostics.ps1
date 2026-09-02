@@ -73,7 +73,40 @@ try {
         Copy-Item -LiteralPath $nativePdb -Destination $debugDirectory -Force
     }
 
+    # The native post-build stages the current binary feature resources under
+    # x64\RelWithDebInfo.  A previously built WinUI Debug directory can still
+    # contain only the legacy XML, so install the visual runtime resources with
+    # the diagnostics DLL instead of requiring a full WinUI rebuild.
+    $nativeFeatureDirectory = Join-Path $nativeDirectory 'Assets\FeaturesDatas'
+    $debugFeatureDirectory = Join-Path $debugDirectory 'Assets\FeaturesDatas'
+    $runtimeFeatureFiles = @(
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_features.imf')
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_features.manifest.json')
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_visual_index.imx')
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_visual_index.manifest.json')
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'kuro-tile-packs.json')
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'candidate-packs.json')
+        Get-ChildItem -LiteralPath $nativeFeatureDirectory -Directory | Where-Object { $_.Name -like '*Candidate' } |
+            ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Recurse -File }
+    )
+    $kuroRegistry = Get-Content -LiteralPath (Join-Path $nativeFeatureDirectory 'kuro-tile-packs.json') -Raw | ConvertFrom-Json
+    foreach ($kuroDirectoryValue in @($kuroRegistry.packs)) {
+        $kuroDirectory = [string]$kuroDirectoryValue
+        $installedPack = Join-Path $nativeFeatureDirectory "KuroTilePacks\$kuroDirectory"
+        if (Test-Path -LiteralPath $installedPack) {
+            $runtimeFeatureFiles += Get-ChildItem -LiteralPath $installedPack -Recurse -File
+        }
+    }
+    foreach ($runtimeFeatureFile in $runtimeFeatureFiles) {
+        $relativePath = [System.IO.Path]::GetRelativePath($nativeFeatureDirectory, $runtimeFeatureFile.FullName)
+        $destinationPath = Join-Path $debugFeatureDirectory $relativePath
+        $destinationDirectory = Split-Path -Parent $destinationPath
+        [void](New-Item -ItemType Directory -Path $destinationDirectory -Force)
+        Copy-Item -LiteralPath $runtimeFeatureFile.FullName -Destination $destinationPath -Force
+    }
+
     Write-Host "Diagnostics build installed: $debugDirectory" -ForegroundColor Green
+    Write-Host "Visual runtime resources installed: $debugFeatureDirectory" -ForegroundColor Green
     Write-Host "After running the Debug app, diagnostics will be in: $debugDirectory\Diagnostics" -ForegroundColor Green
 }
 finally {

@@ -4,6 +4,8 @@
 #include "../../util.h"
 #include "../../Coordinate/locationCalculator/RelativeCoordinates.h"
 #include "../InteractiveInterface/Notification.h"
+#include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <shared_mutex>
 #include <unordered_map>
@@ -17,6 +19,9 @@ json DrawItemBase::itemsJsonData_Tethys;
 json DrawItemBase::itemsJsonData_Fabricatorium;
 json DrawItemBase::itemsJsonData_Avinoleum;
 json DrawItemBase::itemsJsonData_Lahai;
+json DrawItemBase::itemsJsonData_LowerVault;
+json DrawItemBase::itemsJsonData_Darkplain;
+json DrawItemBase::itemsJsonData_TimeRiftRuins;
 
 vector<ItemTextureData> DrawItemBase::itemsTextureData;
 vector<ItemsDatas> DrawItemBase::itemsDatas_World_Storage;
@@ -24,11 +29,33 @@ vector<ItemsDatas> DrawItemBase::itemsDatas_Tethys_Storage;
 vector<ItemsDatas> DrawItemBase::itemsDatas_Fabricatorium_Storage;
 vector<ItemsDatas> DrawItemBase::itemsDatas_Avinoleum_Storage;
 vector<ItemsDatas> DrawItemBase::itemsDatas_Lahai_Storage;
+vector<ItemsDatas> DrawItemBase::itemsDatas_LowerVault_Storage;
+vector<ItemsDatas> DrawItemBase::itemsDatas_Darkplain_Storage;
+vector<ItemsDatas> DrawItemBase::itemsDatas_TimeRiftRuins_Storage;
 thread DrawItemBase::thread_ReadSavedPointsJson;
 string DrawItemBase::savedJsonPath;
 
 static std::shared_mutex g_jsonMutex;          // 读写锁 
 static std::filesystem::file_time_type g_lastTime; // 上一次修改时间 
+static bool LoadExternalKuroRuntimeJson(json& jsonData, const char* sceneName);
+
+Coordinate KuroLocationToIdentifyCoordinate(const json& location, int sceneId) {
+    const double rawX = location.at("x").get<double>();
+    const double rawY = location.at("y").get<double>();
+    const int countryId = location.value("countryId", 0);
+    const int stateId = location.value("stateId", 0);
+
+    // Most legacy World records use centi-units.  Black Shores records from
+    // state 8 are already expressed in the game's coordinate units (for
+    // example, the nearby 3200,1700 point at a player position of about
+    // 3078,1341).  Dividing these compact records by 100 moves their markers
+    // several thousand map pixels away.
+    const bool compactWorldCoordinate = sceneId == Scene::SceneNameToId("World") &&
+        stateId == 8 && countryId == 1 &&
+        std::max(std::abs(rawX), std::abs(rawY)) <= 10'000.0;
+    if (compactWorldCoordinate) return Coordinate(rawX, rawY);
+    return Coordinate(rawX / 100.0, rawY / 100.0);
+}
 
 json& DrawItemBase::GetSavedItemPoints() {
     static json j;
@@ -88,8 +115,31 @@ void DrawItemBase::LoadItemsjson() {
     LoadJson(itemsJsonData_Tethys, L"ITEMSJSON_Tethys");
     LoadJson(itemsJsonData_World, L"ITEMSJSON_World");
     LoadJson(itemsJsonData_Fabricatorium, L"ITEMSJSON_Fabricatorium");
-    LoadJson(itemsJsonData_Avinoleum, L"ITEMSJSON_Avinoleum");
-    LoadJson(itemsJsonData_Lahai, L"ITEMSJSON_Lahai");
+	LoadJson(itemsJsonData_Avinoleum, L"ITEMSJSON_Avinoleum");
+	LoadJson(itemsJsonData_Lahai, L"ITEMSJSON_Lahai");
+	LoadExternalKuroRuntimeJson(itemsJsonData_LowerVault, "LowerVault");
+	LoadExternalKuroRuntimeJson(itemsJsonData_Darkplain, "Darkplain");
+	LoadExternalKuroRuntimeJson(itemsJsonData_TimeRiftRuins, "TimeRiftRuins");
+}
+
+static bool LoadExternalKuroRuntimeJson(json& jsonData, const char* sceneName) {
+    try {
+        const int sceneId = Scene::SceneNameToId(sceneName);
+        if (!Scene::IsRuntimeApproved(sceneId)) {
+            cerr << "Kuro map scene is not release-approved: " << sceneName << endl;
+            return false;
+        }
+        const fs::path path = fs::path(GetCurrentPath()) / "Assets" / "KuroMap" / "runtime" /
+            ("itemsData_" + string(sceneName) + ".json");
+        ifstream input(path);
+        if (!input) return false;
+        input >> jsonData;
+        return jsonData.is_array();
+    }
+    catch (const exception& exception) {
+        cerr << "Unable to load external Kuro runtime JSON: " << exception.what() << endl;
+        return false;
+    }
 }
 
 bool DrawItemBase::IsValidItemNameId(string itemNameId) {
@@ -117,10 +167,20 @@ bool DrawItemBase::IsValidItemNameId(string itemNameId) {
         }
     }
 
-    for (const auto& itemsDatas : itemsDatas_Lahai_Storage) {
+	for (const auto& itemsDatas : itemsDatas_Lahai_Storage) {
         if (itemsDatas.nameId == itemNameId) {
             return true;
-        }
+	}
+
+	for (const auto& itemsDatas : itemsDatas_LowerVault_Storage) {
+		if (itemsDatas.nameId == itemNameId) return true;
+	}
+	for (const auto& itemsDatas : itemsDatas_Darkplain_Storage) {
+		if (itemsDatas.nameId == itemNameId) return true;
+	}
+	for (const auto& itemsDatas : itemsDatas_TimeRiftRuins_Storage) {
+		if (itemsDatas.nameId == itemNameId) return true;
+	}
     }
 
     return false;
@@ -192,13 +252,32 @@ bool DrawItemBase::FindItemJsonData(int sceneId, json*& itemJsonData, vector<Ite
         return true;
     }
 
-    if (sceneId == 5) {
+	if (sceneId == 5) {
         itemJsonData = &itemsJsonData_Lahai;
         itemsDatas_Storage = &itemsDatas_Lahai_Storage;
         return true;
-    }
+	}
+	if (sceneId == 6) {
+		itemJsonData = &itemsJsonData_LowerVault;
+		itemsDatas_Storage = &itemsDatas_LowerVault_Storage;
+		return true;
+	}
+	if (sceneId == 7) {
+		itemJsonData = &itemsJsonData_Darkplain;
+		itemsDatas_Storage = &itemsDatas_Darkplain_Storage;
+		return true;
+	}
+	if (sceneId == 8) {
+		itemJsonData = &itemsJsonData_TimeRiftRuins;
+		itemsDatas_Storage = &itemsDatas_TimeRiftRuins_Storage;
+		return true;
+	}
 
     return false;
+}
+
+bool DrawItemBase::GetSceneItemsData(int sceneId, json*& itemJsonData, vector<ItemsDatas>*& itemsDatasStorage) {
+	return FindItemJsonData(sceneId, itemJsonData, itemsDatasStorage);
 }
 
 void DrawItemBase::AddItemDataFromJson(string itemId) {
@@ -213,12 +292,11 @@ void DrawItemBase::AddItemDataFromJson(string itemId) {
                 return;
 
             for (const auto& [item_id, item_info] : (*itemsJsonDataPtr).items()) {
-                string nameId = item_info["id"].get<string>();
+                    string nameId = item_info["id"].get<string>();
                 if (nameId == itemId) {
                     for (const auto& location : item_info["location"]) {
-                        double IdentifyCoord_x = location["x"] / 100;
-                        double IdentifyCoord_y = location["y"] / 100;
-                        Coordinate itemMapROC = RelativeCoordinates::IdentifyCoordToROC(Coordinate(IdentifyCoord_x, IdentifyCoord_y),sceneId);
+                        const Coordinate identifyCoordinate = KuroLocationToIdentifyCoordinate(location, sceneId);
+                        Coordinate itemMapROC = RelativeCoordinates::IdentifyCoordToROC(identifyCoordinate, sceneId);
    
                         string s = location["id"].get<string>();
                         ItemDatas tempItemDatas = { s ,nameId,Coordinate(0,0),itemMapROC ,false };
@@ -258,12 +336,21 @@ void DrawItemBase::ClearItemData(string itemId) {
         }
     }
 
-    for (int i = 0; i < itemsDatas_Lahai_Storage.size(); i++) {
+	for (int i = 0; i < itemsDatas_Lahai_Storage.size(); i++) {
         if (itemsDatas_Lahai_Storage[i].nameId == itemId) {
             itemsDatas_Lahai_Storage.erase(itemsDatas_Lahai_Storage.begin() + i);
             break;
-        }
-    }
+		}
+	}
+	for (int i = 0; i < itemsDatas_LowerVault_Storage.size(); i++) {
+		if (itemsDatas_LowerVault_Storage[i].nameId == itemId) { itemsDatas_LowerVault_Storage.erase(itemsDatas_LowerVault_Storage.begin() + i); break; }
+	}
+	for (int i = 0; i < itemsDatas_Darkplain_Storage.size(); i++) {
+		if (itemsDatas_Darkplain_Storage[i].nameId == itemId) { itemsDatas_Darkplain_Storage.erase(itemsDatas_Darkplain_Storage.begin() + i); break; }
+	}
+	for (int i = 0; i < itemsDatas_TimeRiftRuins_Storage.size(); i++) {
+		if (itemsDatas_TimeRiftRuins_Storage[i].nameId == itemId) { itemsDatas_TimeRiftRuins_Storage.erase(itemsDatas_TimeRiftRuins_Storage.begin() + i); break; }
+	}
 }
 
 
@@ -291,7 +378,7 @@ void DrawItemBase::SaveItemPoint(string scene, ItemDatas itemDatas) {
         g_lastTime = filesystem::last_write_time(savedJsonPath);
     }
     catch (const exception& e) {
-        Notification::AddInfo(NotificationDatas("DrawItemBase::SaveItemPoint: " + string(e.what()), 5));
+		Notification::AddError(NotificationDatas("DrawItemBase::SaveItemPoint: " + string(e.what()), 5));
     }
 }
 
@@ -312,7 +399,7 @@ void DrawItemBase::RemoveSavedItemPoint(string scene, ItemDatas itemDatas) {
         out_file << j.dump(4);
         g_lastTime = filesystem::last_write_time(savedJsonPath);
     }catch (const exception& e) {
-        Notification::AddInfo(NotificationDatas("DrawItemBase::RemoveSavedItemPoint: " + string(e.what()), 5));
+		Notification::AddError(NotificationDatas("DrawItemBase::RemoveSavedItemPoint: " + string(e.what()), 5));
     }
 }
 
@@ -355,7 +442,7 @@ void DrawItemBase::Thread_ReadSavedPointsJson() {
             }
         }
         catch (const exception& e) {
-            Notification::AddInfo(NotificationDatas("JSON reload failed.", 3));
+			Notification::AddError(NotificationDatas("JSON reload failed.", 3));
         }
         this_thread::sleep_for(chrono::milliseconds(250));
     }

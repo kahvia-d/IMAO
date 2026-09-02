@@ -9,10 +9,10 @@
 | --- | --- |
 | Visual Studio Build Tools | 2022，含 Desktop development with C++、CMake tools |
 | Windows SDK | 10.0.26100.0 |
-| .NET SDK | 8.x（运行时不能替代 SDK） |
+| .NET SDK | 8.x 或更高（运行时不能替代 SDK） |
 | OpenCV | 4.11.0 + `opencv_contrib` 4.11.0，启用 `OPENCV_ENABLE_NONFREE=ON` |
 | Paddle Inference | 3.0.0，Windows x64 / CPU / AVX / MKL |
-| Git LFS | 用于 `Assets/FeaturesDatas/Map_features.yml` |
+| Git LFS | 用于 `Map_features.yml`、`Map_features.imf`、基础/可选 `*.imx` 与生成清单 |
 
 发行包中的 `opencv_world4110.dll` 确定了 OpenCV 4.11.0 基线。本项目使用
 `cv::xfeatures2d::SURF`，因此普通 OpenCV 预编译包不够：必须包含
@@ -59,8 +59,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-BuildPrerequi
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build-IMao.ps1
 ```
 
+若仓库只有 XML 源而缺少 `Map_features.imf`，先执行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build-FeatureBinary.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build-VisualIndex.ps1
+```
+
+转换器显式写入小端字段、SHA-256 和固定 128 列 Float32 描述子；它会重新加载临时
+IMF，与 XML 中全部关键点逐字段、描述子逐字节比较，成功后才原子替换 IMF 与清单。
+视觉索引脚本随后以固定随机种子生成 4096 个视觉词、384×384/步长 192 的重叠分块，
+并在原子替换前完整回读、验证 IMF 哈希、负载哈希、行号和倒排表。
+
 构建成功后，运行目录为 `x64/Release/`，其中包含 WinUI 应用、`IMao-Core.dll`、
-`Assets/`、Paddle 运行库和 `opencv_world*.dll`。只验证 CMake 配置时，两个构建
+`Assets/`、Paddle 运行库和 `opencv_world*.dll`。Release 只暂存基础地图 IMF，不
+暂存 `Map_features.yml`；诊断构建仍允许 XML 回退。只验证 CMake 配置时，两个构建
 脚本都支持 `-ConfigureOnly`。
 
 ## 脚本的职责
@@ -68,6 +81,38 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build-IMao.ps1
 - `Build-OpenCV.ps1`：以 Ninja 构建包含 SURF 的最小 OpenCV 4.11.0 world DLL，自动应用离线 VGG 修补并跳过不需要的描述子下载。
 - `Test-BuildPrerequisites.ps1`：检查编译器、SDK、LFS、assets 和三个外部依赖。
 - `Build-IMao.ps1`：配置并编译 C++ 核心与 WinUI 前端，再收集运行时文件。
+- `Build-FeatureBinary.ps1`：编译转换器并生成、回读验证 IMF 与清单。
+- `Build-VisualIndex.ps1`：编译索引器并生成、回读验证 IMX 与清单。
+- `New-CoordinateRegressionManifest.ps1`：从已有诊断会话生成坐标回归清单。
+- `New-VisualLocalizationManifest.ps1`：登记现有小地图裁剪并生成旋转、亮度、模糊、比例、遮挡与拒绝样本。
+- `Test-Performance.ps1`：运行 IMF 多进程加载基准并汇总诊断日志为 JSON。
+
+## 优化回归
+
+```powershell
+cmake --build --preset windows-x64-release-optimization-tests
+.\x64\Release\IMaoOptimizationTests.exe
+.\scripts\New-CoordinateRegressionManifest.ps1
+cmake --build --preset windows-x64-release-coordinate-regression
+.\x64\Release\IMaoCoordinateRegression.exe $PWD .\Tests\CoordinateRegression\manifest.json .\x64\Performance\coordinate-regression.json
+cmake --build --preset windows-x64-release-visual-regression
+.\scripts\New-VisualLocalizationManifest.ps1
+.\x64\Release\IMaoVisualRegression.exe $PWD .\Tests\VisualLocalization\manifest.json .\x64\Performance\visual-regression.json
+.\scripts\Test-Performance.ps1 -FeatureLoadRuns 5
+```
+
+坐标回归会分别执行 CLAHE 与顶帽单路请求，并将联合候选的地图平面命中率、三维文本
+完全命中率和单路推理 P50/P95 写入 `coordinate-regression.json`；综合性能报告默认写入
+`x64/Performance/optimization-report.json`。若启动提示 IMF 魔数、
+版本、长度、描述子形状或 SHA-256 错误，不要放宽校验；重新拉取 Git LFS 资源或运行
+`Build-FeatureBinary.ps1`。非 1600×900、1920×1080、2560×1440 的画面会安全拒绝
+坐标 OCR，并在诊断日志中记录 `ocr-unsupported`。
+
+Release 必须同时含 `Map_features.imf`、基础 `Map_visual_index.imx` 与已有可选特征包的
+`visual-index.imx` 分片，且不得含基础 `Map_features.yml`。IMX 缺失、IMF/词表哈希不一致、
+倒排表损坏或视觉结果歧义时，运行时不会退回 OCR 独立提交位置。诊断构建可设置
+`IMAO_LOCALIZATION_MODE=visual|legacy|compare`；`legacy` 与 `compare` 中的旧链路只写
+对照日志，始终不能发布位置。
 
 脚本会清理开发宿主中同时存在的 `Path` / `PATH` 环境变量冲突；这类冲突会使
 MSBuild 失败。它还会把 .NET 首次运行状态与 NuGet 缓存隔离到被忽略的

@@ -26,7 +26,7 @@ bool FeatureLoader::loadFeaturesFromXML(const string& filename, ImageFeatureData
 }
 
 // 筛选当前位置附近的特征点
-void FeatureFilter::FilterNearKeypoints(const std::vector<cv::KeyPoint> inputKeypoints, const cv::Mat inputDescriptors,
+void FeatureFilter::FilterNearKeypoints(const std::vector<cv::KeyPoint>& inputKeypoints, const cv::Mat& inputDescriptors,
     const cv::Point2f palyerPoint, int searchRadius,
     std::vector<cv::KeyPoint>& outputKeypoints, cv::Mat& outputDescriptors) {
     

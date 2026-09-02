@@ -13,7 +13,7 @@ class FeatureLoader
 
 class FeatureFilter {
 	public:
-		static void FilterNearKeypoints(const std::vector<cv::KeyPoint> inputKeypoints, const cv::Mat inputDescriptors,
+		static void FilterNearKeypoints(const std::vector<cv::KeyPoint>& inputKeypoints, const cv::Mat& inputDescriptors,
 			const cv::Point2f palyerPoint, int searchRadius,
 			std::vector<cv::KeyPoint>& outputKeypoints, cv::Mat& outputDescriptors);
 

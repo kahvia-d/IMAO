@@ -8,8 +8,12 @@
 #include "InteractiveInterface\Debug.h"
 #include "InteractiveInterface/Notification.h"
 #include "../DLL_API.h"
+#include "../Diagnostics/Diagnostics.h"
 #include "Routes/DrawRouteOnMap.h"
 #include "Routes/DrawRouteOnMinMap.h"
+
+#include <chrono>
+#include <sstream>
 
 HWND ImGuiOverWindows::overWindowsHwnd;
 // Data
@@ -29,6 +33,68 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 const float TARGET_FRAME_TIME = 1000.0f /20.0f;// 20 FPS（ms）
 static RECT g_LastGameRect = { 0, 0, 0, 0 };
 static POINT g_LastGamePos = { 0, 0 };
+
+namespace {
+constexpr auto kOverlayDiagnosticsInterval = std::chrono::seconds(2);
+auto g_LastOverlayDiagnosticsAt = std::chrono::steady_clock::time_point{};
+
+std::string DescribeRect(const RECT& rect) {
+    std::ostringstream details;
+    details << rect.left << ',' << rect.top << ',' << rect.right << ',' << rect.bottom;
+    return details.str();
+}
+
+void RecordOverlayFrameDiagnostics(HWND overlayWindow, HRESULT presentResult) {
+    if (!Diagnostics::Enabled()) return;
+
+    const auto now = std::chrono::steady_clock::now();
+    if (now - g_LastOverlayDiagnosticsAt < kOverlayDiagnosticsInterval) return;
+    g_LastOverlayDiagnosticsAt = now;
+
+    RECT overlayRect{};
+    const bool rectAvailable = ::GetWindowRect(overlayWindow, &overlayRect) != FALSE;
+    const LONG_PTR extendedStyle = ::GetWindowLongPtrW(overlayWindow, GWL_EXSTYLE);
+    std::ostringstream details;
+    details << "present=" << static_cast<long>(presentResult)
+        << " visible=" << (::IsWindowVisible(overlayWindow) != FALSE)
+        << " iconic=" << (::IsIconic(overlayWindow) != FALSE)
+        << " topmost=" << ((extendedStyle & WS_EX_TOPMOST) != 0)
+        << " layered=" << ((extendedStyle & WS_EX_LAYERED) != 0)
+        << " transparent=" << ((extendedStyle & WS_EX_TRANSPARENT) != 0)
+        << " rect=" << (rectAvailable ? DescribeRect(overlayRect) : std::string("unavailable"))
+        << " predecessor=" << (::GetWindow(overlayWindow, GW_HWNDPREV) != nullptr);
+    Diagnostics::Record("overlay-frame", details.str());
+}
+
+void DrawOverlayDiagnosticsProbe() {
+    if (!Diagnostics::Enabled()) return;
+
+    // Keep diagnostics non-intrusive during normal gameplay. Runtime state and
+    // Present results are still written to the bounded session log; drawing a
+    // fixed probe over the game's minimap would otherwise look like a marker.
+    return;
+
+    // A fixed non-black probe is deliberately independent of map coordinates,
+    // filters and icon textures.  Markers use the background draw list, while
+    // the status UI uses the foreground draw list, so probe both layers.
+    // If either is absent while overlay-frame reports a successful Present,
+    // the compositor/z-order is hiding that transparent overlay layer rather
+    // than marker generation.
+    ImDrawList* background = ImGui::GetBackgroundDrawList();
+    ImDrawList* foreground = ImGui::GetForegroundDrawList();
+    const ImVec2 backgroundCenter(48.0f, 48.0f);
+    const ImVec2 foregroundCenter(48.0f, 96.0f);
+    const ImU32 magenta = IM_COL32(255, 0, 255, 255);
+    const ImU32 cyan = IM_COL32(0, 255, 255, 255);
+    const ImU32 white = IM_COL32(255, 255, 255, 255);
+    background->AddCircleFilled(backgroundCenter, 12.0f, magenta);
+    background->AddCircle(backgroundCenter, 15.0f, white, 24, 2.0f);
+    background->AddText(ImVec2(76.0f, 38.0f), white, "IMAO BG TEST");
+    foreground->AddCircleFilled(foregroundCenter, 12.0f, cyan);
+    foreground->AddCircle(foregroundCenter, 15.0f, white, 24, 2.0f);
+    foreground->AddText(ImVec2(76.0f, 86.0f), white, "IMAO FG TEST");
+}
+}
 
 
 bool  ImGuiOverWindows::LoadTextureFromPath(const char* filePath, ID3D11ShaderResourceView** out_srv, int* out_width, int* out_height) {
@@ -271,6 +337,7 @@ int ImGuiOverWindows::start()
             //DrawPiPWindows::DrawImgui();
             Notification::DrawInfo();
             //Debug::DebugWindow(io,app);
+            DrawOverlayDiagnosticsProbe();
         }
 
         // Rendering
@@ -283,6 +350,7 @@ int ImGuiOverWindows::start()
         // Present
         HRESULT hr = g_pSwapChain->Present(0, 0);
         g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
+        RecordOverlayFrameDiagnostics(overWindowsHwnd, hr);
 
         //刷新窗口
         GetClientRect(h_window, &GameRect);

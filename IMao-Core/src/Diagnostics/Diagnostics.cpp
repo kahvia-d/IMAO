@@ -18,7 +18,10 @@ namespace {
     std::filesystem::path sessionDirectory;
     std::map<std::string, std::chrono::steady_clock::time_point> lastSavedAt;
     int savedImageCount = 0;
-    constexpr int maxSavedImages = 48;
+    // A live coordinate regression session needs at least 100 raw crops plus
+    // both preprocessing variants. Keep the cap bounded while allowing that
+    // complete set to be collected in one session.
+    constexpr int maxSavedImages = 360;
 
     std::string Timestamp() {
         const auto now = std::chrono::system_clock::now();

@@ -36,4 +36,4 @@
 * [microsoft-ui-xaml](https://github.com/microsoft/microsoft-ui-xaml)
 
 ### 开发
-[如何编译项目](Docs/Compile_zh-Hans.md)
+[如何编译项目](Docs/Build_zh-Hans.md)

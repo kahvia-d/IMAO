@@ -1,0 +1,496 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "x64/Debug/Diagnostics",
+  "sampleCount": 61,
+  "minimumLiveTarget": 100,
+  "samples": [
+    {
+      "id": "20260823-234837-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260823-234837/4_ocr-coordinate-crop.png",
+      "expectedText": "-408,561,49",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260823-234837-8_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260823-234837/8_ocr-coordinate-crop.png",
+      "expectedText": "-408,561,49",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-000639-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-000639/4_ocr-coordinate-crop.png",
+      "expectedText": "-409,561,49",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-001530-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-001530/4_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "ocr-observed-needs-review"
+    },
+    {
+      "id": "20260824-001530-12_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-001530/12_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "ocr-observed-needs-review"
+    },
+    {
+      "id": "20260824-001530-17_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-001530/17_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-002824-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-002824/4_ocr-coordinate-crop.png",
+      "expectedText": "-410,560,49",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-003722-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-003722/4_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "ocr-observed-needs-review"
+    },
+    {
+      "id": "20260824-003722-8_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-003722/8_ocr-coordinate-crop.png",
+      "expectedText": "-405,555,49",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-004212-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-004212/4_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "ocr-observed-needs-review"
+    },
+    {
+      "id": "20260824-004212-8_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-004212/8_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "ocr-observed-needs-review"
+    },
+    {
+      "id": "20260824-004212-12_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-004212/12_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "ocr-observed-needs-review"
+    },
+    {
+      "id": "20260824-004212-20_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-004212/20_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-004623-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-004623/4_ocr-coordinate-crop.png",
+      "expectedText": "-405,555,49",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-010102-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-010102/4_ocr-coordinate-crop.png",
+      "expectedText": "-405,555,49",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-011039-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-011039/4_ocr-coordinate-crop.png",
+      "expectedText": "-405,555,49",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-011926-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-011926/4_ocr-coordinate-crop.png",
+      "expectedText": "-405,555,49",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-011926-18_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-011926/18_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-011926-23_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-011926/23_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-011926-27_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-011926/27_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-011926-33_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-011926/33_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-011926-47_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-011926/47_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-024534-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-024534/4_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "ocr-observed-needs-review"
+    },
+    {
+      "id": "20260824-024534-8_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-024534/8_ocr-coordinate-crop.png",
+      "expectedText": "-401,677,302",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-024534-24_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-024534/24_ocr-coordinate-crop.png",
+      "expectedText": "-6725,-919,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-024534-28_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-024534/28_ocr-coordinate-crop.png",
+      "expectedText": "-6725,-919,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-024534-37_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-024534/37_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-024534-42_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-024534/42_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-024534-47_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-024534/47_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-095239-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-095239/4_ocr-coordinate-crop.png",
+      "expectedText": "-6725,-919,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-100906-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-100906/4_ocr-coordinate-crop.png",
+      "expectedText": "-6725,-919,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-101522-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-101522/4_ocr-coordinate-crop.png",
+      "expectedText": "-6725,-919,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-101522-15_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-101522/15_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-101522-19_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-101522/19_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-101522-23_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-101522/23_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-101522-27_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-101522/27_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-101522-31_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-101522/31_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-101522-42_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-101522/42_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-101522-46_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-101522/46_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-102116-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-102116/4_ocr-coordinate-crop.png",
+      "expectedText": "-6725,-919,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-102116-26_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-102116/26_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-102116-30_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-102116/30_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-102116-34_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-102116/34_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-102116-38_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-102116/38_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-115605-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-115605/4_ocr-coordinate-crop.png",
+      "expectedText": "-6725,-919,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-115605-24_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-115605/24_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-115605-28_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-115605/28_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-115605-32_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-115605/32_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-115605-36_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-115605/36_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-120413-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-120413/4_ocr-coordinate-crop.png",
+      "expectedText": "-6725,-919,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-123003-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-123003/4_ocr-coordinate-crop.png",
+      "expectedText": "-6462,-641,-33",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-123003-16_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-123003/16_ocr-coordinate-crop.png",
+      "expectedText": "-6456,-645,-33",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-123003-35_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-123003/35_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-123003-39_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-123003/39_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-123003-43_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-123003/43_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-123003-47_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-123003/47_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": false,
+      "sceneId": null,
+      "labelConfidence": "noise-or-hidden"
+    },
+    {
+      "id": "20260824-124646-4_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-124646/4_ocr-coordinate-crop.png",
+      "expectedText": "-6721,-916,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-124646-34_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-124646/34_ocr-coordinate-crop.png",
+      "expectedText": "-6901,-708,-22",
+      "coordinateVisible": true,
+      "sceneId": 1,
+      "labelConfidence": "manually-verified"
+    },
+    {
+      "id": "20260824-124646-38_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-124646/38_ocr-coordinate-crop.png",
+      "expectedText": "-6905,-728,-22",
+      "coordinateVisible": true,
+      "sceneId": 1,
+      "labelConfidence": "manually-verified"
+    },
+    {
+      "id": "20260824-124646-44_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-124646/44_ocr-coordinate-crop.png",
+      "expectedText": "-6904,-763,-22",
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "historical-accepted"
+    },
+    {
+      "id": "20260824-124646-48_ocr-coordinate-crop.png",
+      "image": "x64/Debug/Diagnostics/20260824-124646/48_ocr-coordinate-crop.png",
+      "expectedText": null,
+      "coordinateVisible": true,
+      "sceneId": null,
+      "labelConfidence": "ocr-observed-needs-review"
+    }
+  ]
+}

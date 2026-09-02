@@ -3,6 +3,8 @@
 #include"App/App.h"
 #include "ImguiDraw/Items/DrawItemBase.h"
 #include "Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.h"
+#include "Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
+#include "App/MapViewportLocalizer.h"
 #include "ImguiDraw/ImGuiOverWindows.h"
 #include "WindowsCapture/BitBltCapture/BitBltCapture.h"
 #include "ImguiDraw/InteractiveInterface/Notification.h"
@@ -10,20 +12,33 @@
 #include "ImguiDraw/Routes/LoadEditRouteData.h"
 #include "ImguiDraw/Items/DrawItemOnMinMap.h"
 #include "Diagnostics/Diagnostics.h"
+#include "Feature/RuntimeFeatureRepository.h"
+#include "util.h"
+#include <condition_variable>
+#include <filesystem>
+#include <mutex>
+#include <thread>
 #pragma comment(lib, "dwmapi.lib")
 using namespace std;
 
 HINSTANCE g_hDllInstance = NULL;
-std::unique_ptr<App> app;
+std::atomic_int CaptureWay = 0;
+std::atomic_int minMapDataUpdateCycle = 100;
+std::atomic_int mapDataUpdateCycle = 60;
+std::atomic_bool enabledMapShowItem = false;
+std::atomic_bool enabledMinMapShowItem = true;
 
-bool clickedStartButton = false;
-bool clickedStopButton = true;
-int CaptureWay = 0;
-int minMapDataUpdateCycle = 100;
-int mapDataUpdateCycle = 60;
-bool enabledMapShowItem = false;
-bool enabledMinMapShowItem = true;
-HWND hwnd;
+namespace {
+std::mutex runtimeMutex;
+std::condition_variable runtimeCondition;
+std::jthread runtimeThread;
+bool runtimeInitialized = false;
+bool runRequested = false;
+bool runtimeRunning = false;
+bool shutdownRequested = false;
+HWND requestedWindow = nullptr;
+std::once_flag drawItemsInitialized;
+}
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
@@ -57,89 +72,136 @@ void SetMapDataUpdateCycle(int cycleTime){
     mapDataUpdateCycle = cycleTime;
 }
 
-void MainThread() {
+void RuntimeMain(std::stop_token stopToken) {
 	for (;;) {
-		while (clickedStopButton) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		HWND hwnd = nullptr;
+		{
+			std::unique_lock lock(runtimeMutex);
+			runtimeCondition.wait(lock, [&] {
+				return stopToken.stop_requested() || shutdownRequested || runRequested;
+			});
+			if (stopToken.stop_requested() || shutdownRequested) return;
+			hwnd = requestedWindow;
+			runtimeRunning = true;
 		}
 
 		RECT clientRect{};
 		if (!GetUsableClientRect(hwnd, clientRect)) {
 			Diagnostics::Initialize();
 			Diagnostics::Record("core-start-rejected", "game window was no longer usable when startup began");
-			clickedStartButton = false;
-			clickedStopButton = true;
+			std::scoped_lock lock(runtimeMutex);
+			runRequested = false;
+			runtimeRunning = false;
 			continue;
 		}
 
 		optional<BitBltCapture> bitBltCapture;
 		optional<CaptureSnapshot> graphicsCapture;
-		if (CaptureWay == 0) {
-			bitBltCapture = BitBltCapture(hwnd);
-		}
-		else if (CaptureWay == 1) {
-			graphicsCapture = CaptureSnapshot(hwnd);
-		}
+		if (CaptureWay.load() == 0) bitBltCapture.emplace(hwnd);
+		else graphicsCapture.emplace(hwnd);
 
 		Notification::Start();
-		app = make_unique<App>(graphicsCapture, bitBltCapture, hwnd, clientRect);
+		auto currentApp = make_unique<App>(graphicsCapture, bitBltCapture, hwnd, clientRect);
+		App::SetUpdateMapDataCycleTime(mapDataUpdateCycle.load());
+		App::SetUpdateMinMapDataCycleTime(minMapDataUpdateCycle.load());
+		App::SetEnabledMapShowItem(enabledMapShowItem.load());
+		App::SetEnabledMinMapShowItem(enabledMinMapShowItem.load());
+		ImGuiOverWindows imguioverwindows(hwnd, *currentApp);
 
-		App::SetUpdateMapDataCycleTime(mapDataUpdateCycle);
-		App::SetUpdateMinMapDataCycleTime(minMapDataUpdateCycle);
-		App::SetEnabledMapShowItem(enabledMapShowItem);
-		App::SetEnabledMinMapShowItem(enabledMinMapShowItem);
-		ImGuiOverWindows imguioverwindows(hwnd, *app);
-
-		if (!app->StartTasks()) {
-			Notification::AddInfo(NotificationDatas("Startup failed. Please return to the visible game window and try again.", 5));
-			std::this_thread::sleep_for(std::chrono::seconds(2));
-			imguioverwindows.Stop();
-			Notification::Stop();
-			app.reset();
-			clickedStartButton = false;
-			clickedStopButton = true;
-			continue;
+		const bool started = currentApp->StartTasks();
+		if (!started) {
+			Notification::AddError(NotificationDatas("Startup failed. Please return to the visible game window and try again.", 5));
+		}
+		else {
+			LoadEditRouteData::Initi(currentApp.get());
 		}
 
-		LoadEditRouteData::Initi(app.get());
-		while (clickedStartButton) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		{
+			std::unique_lock lock(runtimeMutex);
+			runtimeCondition.wait(lock, [&] {
+				return stopToken.stop_requested() || shutdownRequested || !runRequested || !started;
+			});
+			runRequested = false;
 		}
 
-		//TODO:内存泄漏未完全解决
 		imguioverwindows.Stop();
 		Notification::Stop();
-		app->StopTasks();
-		LoadEditRouteData::StopThread();
-		app.reset();
+		if (started) {
+			currentApp->StopTasks();
+			LoadEditRouteData::StopThread();
+		}
+		currentApp.reset();
 		DrawItemOnGameMap::ClearNearItemsData();
 		DrawItemOnMinMap::ClearNearItemsData();
+
+		{
+			std::scoped_lock lock(runtimeMutex);
+			runtimeRunning = false;
+		}
+		if (stopToken.stop_requested()) return;
 	}
 }
 
 void Initi()
 {
     SetConsoleOutputCP(CP_UTF8);
-    DrawItemBase::Initi();
-    std::thread mainThread(MainThread);
-    mainThread.detach();
+	std::scoped_lock lock(runtimeMutex);
+	if (runtimeInitialized) return;
+	std::call_once(drawItemsInitialized, [] { DrawItemBase::Initi(); });
+	Diagnostics::Initialize();
+	const auto assetRoot = std::filesystem::path(GetCurrentPath()) / "Assets";
+	RuntimeFeatureRepository::Instance().BeginPreload(assetRoot);
+	Diagnostics::Record("ocr-preload", "disabled=normal-runtime; enabled only by localization diagnostics mode");
+	shutdownRequested = false;
+	runRequested = false;
+	runtimeRunning = false;
+	runtimeThread = std::jthread(RuntimeMain);
+	runtimeInitialized = true;
 }
 
 int Start() {
     const HWND gameWindow = GetWindowHandleByProcessName(L"Client-Win64-Shipping.exe");
     RECT clientRect{};
-    if (gameWindow && GetUsableClientRect(gameWindow, clientRect) && !app) {
-        hwnd = gameWindow;
-        clickedStartButton = true;
-        clickedStopButton = false;
+	std::scoped_lock lock(runtimeMutex);
+    if (runtimeInitialized && gameWindow && GetUsableClientRect(gameWindow, clientRect) &&
+		!runtimeRunning && !runRequested && !shutdownRequested) {
+		requestedWindow = gameWindow;
+		runRequested = true;
+		runtimeCondition.notify_all();
         return 1;
     }
     return 0;
 }
 
 void Stop(){
-    clickedStartButton = false;
-    clickedStopButton = true;
+	std::scoped_lock lock(runtimeMutex);
+	runRequested = false;
+	runtimeCondition.notify_all();
+}
+
+void Shutdown() {
+	std::jthread thread;
+	{
+		std::scoped_lock lock(runtimeMutex);
+		if (!runtimeInitialized) return;
+		shutdownRequested = true;
+		runRequested = false;
+		runtimeThread.request_stop();
+		thread = std::move(runtimeThread);
+		runtimeCondition.notify_all();
+	}
+	if (thread.joinable()) thread.join();
+	MapViewportLocalizer::Shutdown();
+	GlobalVisualLocalizer::Shutdown();
+	IdentifyWorldCoordinates::Shutdown();
+	RuntimeFeatureRepository::Instance().Shutdown();
+	{
+		std::scoped_lock lock(runtimeMutex);
+		runtimeInitialized = false;
+		runtimeRunning = false;
+		shutdownRequested = false;
+		requestedWindow = nullptr;
+	}
 }
 
 void EnabledMinMapShowItem(bool setValue)

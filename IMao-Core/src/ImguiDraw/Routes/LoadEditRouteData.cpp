@@ -187,6 +187,6 @@ void LoadEditRouteData::WriteRoutesDatas(const string& routeFileName,const strin
 	}
 	catch (const exception& ex) {
 		cerr << "WriteRount:" << ex.what() << endl;
-		Notification::AddInfo(NotificationDatas(" LoadEditRouteData::WriteRoutesDatas: " + string(ex.what()), 5));
+		Notification::AddError(NotificationDatas(" LoadEditRouteData::WriteRoutesDatas: " + string(ex.what()), 5));
 	}
 }

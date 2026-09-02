@@ -62,37 +62,10 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & play
 }
 
 bool DrawItemOnMinMap::GetBasicDataBySenceId(int senceId) {
-    if (senceId == 1) {
-        senceName = "World";
-        itemsDatas_StoragePtr = &DrawItemBase::itemsDatas_World_Storage;
-        return true;
-    }
-
-    if (senceId == 2) {
-        senceName = "Tethys";
-        itemsDatas_StoragePtr = &DrawItemBase::itemsDatas_Tethys_Storage;
-        return true;
-    }
-
-    if (senceId == 3) {
-        senceName = "Fabricatorium";
-        itemsDatas_StoragePtr = &DrawItemBase::itemsDatas_Fabricatorium_Storage;
-        return true;
-    }
-
-    if (senceId == 4) {
-        senceName = "Avinoleum";
-        itemsDatas_StoragePtr = &DrawItemBase::itemsDatas_Avinoleum_Storage;
-        return true;
-    }
-
-    if (senceId == 5) {
-        senceName = "Lahai";
-        itemsDatas_StoragePtr = &DrawItemBase::itemsDatas_Lahai_Storage;
-        return true;
-    }
-
-    return false;
+	json* ignored = nullptr;
+	if (!DrawItemBase::GetSceneItemsData(senceId, ignored, itemsDatas_StoragePtr)) return false;
+	senceName = Scene::SceneIdToName(senceId);
+	return !senceName.empty();
 }
 
 vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, const Coordinate& playerROC, float minMapRadius) {

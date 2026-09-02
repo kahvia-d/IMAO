@@ -45,7 +45,6 @@ function Invoke-VisualStudioCommand([string]$CommandLine) {
     $startInfo.EnvironmentVariables.Add('PATH', (Split-Path -Parent $ninja) + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'Process'))
     $startInfo.EnvironmentVariables['DOTNET_CLI_HOME'] = $dotnetCliHome
     $startInfo.EnvironmentVariables['NUGET_PACKAGES'] = $nugetPackages
-    $startInfo.EnvironmentVariables['HOME'] = $dotnetUserProfile
     $startInfo.EnvironmentVariables['USERPROFILE'] = $dotnetUserProfile
     $startInfo.EnvironmentVariables['APPDATA'] = $dotnetAppData
     $startInfo.EnvironmentVariables['LOCALAPPDATA'] = $dotnetLocalAppData
@@ -73,7 +72,9 @@ function Invoke-VisualStudioCommand([string]$CommandLine) {
 
 Push-Location $repoRoot
 try {
-    Invoke-VisualStudioCommand ('"' + $cmake + '" --preset windows-x64-release "-DPADDLE_LIB=' + $PaddleLib + '" "-DOPENCV_DIR=' + $OpenCvDir + '"')
+    # Recreate only CMake's generated configuration so the compiler and STL
+    # always come from the same (latest) Visual Studio instance selected above.
+    Invoke-VisualStudioCommand ('"' + $cmake + '" --fresh --preset windows-x64-release "-DPADDLE_LIB=' + $PaddleLib + '" "-DOPENCV_DIR=' + $OpenCvDir + '"')
 
     if ($ConfigureOnly) {
         Write-Host 'CMake configuration completed.' -ForegroundColor Green
@@ -88,9 +89,40 @@ try {
         throw "Expected build output directory was not created: $outputDirectory"
     }
 
-    Copy-Item -LiteralPath (Join-Path $repoRoot 'Assets') -Destination $outputDirectory -Recurse -Force
+    & $cmake "-DIMAO_SOURCE_ASSETS=$(Join-Path $repoRoot 'Assets')" "-DIMAO_DESTINATION_ROOT=$outputDirectory" '-DIMAO_CONFIGURATION=Release' '-P' (Join-Path $repoRoot 'cmake\StageAssets.cmake')
+    if ($LASTEXITCODE -ne 0) { throw 'Release asset staging failed.' }
     $coreDll = Join-Path $repoRoot 'x64\Release\IMao-Core.dll'
     if (-not (Test-Path -LiteralPath $coreDll)) { throw "Missing C++ build output: $coreDll" }
+    $binaryFeatures = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_features.imf'
+    $visualIndex = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_visual_index.imx'
+    $xmlFeatures = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_features.yml'
+    if (-not (Test-Path -LiteralPath $binaryFeatures)) { throw "Missing staged binary map features: $binaryFeatures" }
+    if (-not (Test-Path -LiteralPath $visualIndex)) { throw "Missing staged visual map index: $visualIndex" }
+    $visualShards = [Collections.Generic.List[string]]::new()
+    $kuroRegistry = Get-Content -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\kuro-tile-packs.json') -Raw | ConvertFrom-Json
+    foreach ($kuroDirectoryValue in @($kuroRegistry.packs)) {
+        $kuroDirectory = [string]$kuroDirectoryValue
+        $kuroManifest = Join-Path $repoRoot "Assets\FeaturesDatas\KuroTilePacks\$kuroDirectory\manifest.json"
+        if (Test-Path -LiteralPath $kuroManifest) {
+            $visualShards.Add("Assets\FeaturesDatas\KuroTilePacks\$kuroDirectory\visual-index.imx")
+        }
+    }
+    $candidateRegistry = Get-Content -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\candidate-packs.json') -Raw | ConvertFrom-Json
+    foreach ($candidateDirectory in @($candidateRegistry.packs)) {
+        $visualShards.Add("Assets\FeaturesDatas\$candidateDirectory\visual-index.imx")
+    }
+    foreach ($visualShard in $visualShards) {
+        $stagedShard = Join-Path $outputDirectory $visualShard
+        if (-not (Test-Path -LiteralPath $stagedShard)) { throw "Missing staged visual index shard: $stagedShard" }
+    }
+    foreach ($kuroDirectoryValue in @($kuroRegistry.packs)) {
+        $kuroDirectory = [string]$kuroDirectoryValue
+        $sourceManifest = Join-Path $repoRoot "Assets\FeaturesDatas\KuroTilePacks\$kuroDirectory\manifest.json"
+        if (-not (Test-Path -LiteralPath $sourceManifest)) { continue }
+        $kuroBinaryFeatures = Join-Path $outputDirectory "Assets\FeaturesDatas\KuroTilePacks\$kuroDirectory\features.imf"
+        if (-not (Test-Path -LiteralPath $kuroBinaryFeatures)) { throw "Missing staged Kuro binary features: $kuroBinaryFeatures" }
+    }
+    if (Test-Path -LiteralPath $xmlFeatures) { throw "Release staging must not contain the base map XML: $xmlFeatures" }
 
     $paddleDllDirectory = Join-Path $PaddleLib 'paddle\lib'
     $paddleRuntime = 'paddle_inference.dll', 'common.dll'

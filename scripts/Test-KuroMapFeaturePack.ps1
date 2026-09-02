@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$PackRoot = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Assets\FeaturesDatas\KuroTilePacks\Dreamzhou')
+    [string]$PackRoot = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Assets\FeaturesDatas\KuroTilePacks\Dreamzhou'),
+    [switch]$AllowUnverified
 )
 
 Set-StrictMode -Version Latest
@@ -9,12 +10,30 @@ $ErrorActionPreference = 'Stop'
 $manifestPath = Join-Path $PackRoot 'manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw "Missing pack manifest: $manifestPath" }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-if ($manifest.formatVersion -ne 1 -or $manifest.scene -ne 'World' -or [string]::IsNullOrWhiteSpace([string]$manifest.packId)) {
+$sceneStates = @{ World = 8; Tethys = 900; Fabricatorium = 905; Avinoleum = 903; Lahai = 906; LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910 }
+$sceneIds = @{ World = 1; Tethys = 2; Fabricatorium = 3; Avinoleum = 4; Lahai = 5; LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8 }
+if ($manifest.formatVersion -ne 1 -or -not $sceneStates.ContainsKey([string]$manifest.scene) -or [string]::IsNullOrWhiteSpace([string]$manifest.packId)) {
     throw 'Pack manifest format, scene, or identifier is invalid.'
 }
+$manifestSceneId = if ($null -ne $manifest.PSObject.Properties['sceneId']) { [int]$manifest.sceneId } else { 1 }
+if ($manifestSceneId -ne [int]$sceneIds[[string]$manifest.scene] -or
+    [int]$manifest.source.state -ne [int]$sceneStates[[string]$manifest.scene]) {
+    throw 'Pack manifest scene ID or Kuro state is invalid.'
+}
+if ($null -ne $manifest.PSObject.Properties['coordinateTransform'] -and [double]$manifest.coordinateTransform.scale -le 0) {
+    throw 'Pack manifest coordinate transform is missing or invalid.'
+}
 if (@($manifest.tiles).Count -lt 1) { throw 'Pack manifest contains no source tiles.' }
-if ($null -eq $manifest.referenceVerification -or -not [bool]$manifest.referenceVerification.passed -or [double]$manifest.referenceVerification.errorPixels -gt 8.0) {
-    throw 'Reference-minimap verification is missing or did not pass the 8-pixel tolerance.'
+if ($null -eq $manifest.referenceVerification) {
+    throw 'Reference-minimap verification is missing.'
+}
+$isReferencePassed = [bool]$manifest.referenceVerification.passed -and
+    $null -ne $manifest.referenceVerification.errorPixels -and [double]$manifest.referenceVerification.errorPixels -le 8.0
+if (-not $isReferencePassed) {
+    if (-not $AllowUnverified -or -not [bool]$manifest.referenceVerification.skipped) {
+        throw 'Reference-minimap verification did not pass the 8-pixel tolerance.'
+    }
+    Write-Warning "Feature pack is intentionally unverified: $($manifest.packId)"
 }
 $ids = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($tile in @($manifest.tiles)) {
@@ -29,4 +48,16 @@ $header = (Get-Content -LiteralPath $featurePath -TotalCount 16) -join [Environm
 if ($header -notmatch '<opencv_storage>' -or $header -notmatch '<num_keypoints>(\d+)</num_keypoints>') { throw 'Feature XML header is invalid.' }
 $xmlCount = [int]$Matches[1]
 if ($xmlCount -ne [int]$manifest.features.keypointCount -or $xmlCount -lt 12) { throw 'Feature XML keypoint count does not match manifest.' }
+$binaryPath = Join-Path $PackRoot 'features.imf'
+$binaryManifestPath = Join-Path $PackRoot 'features.imf.manifest.json'
+if (-not (Test-Path -LiteralPath $binaryPath) -or -not (Test-Path -LiteralPath $binaryManifestPath)) {
+    throw 'Missing binary feature resource. Run scripts\Build-VisualIndex.ps1.'
+}
+$binaryManifest = Get-Content -LiteralPath $binaryManifestPath -Raw | ConvertFrom-Json
+if ([string]$binaryManifest.format -ne 'IMAOFT01' -or
+    [int]$binaryManifest.keypointCount -ne $xmlCount -or
+    [int]$binaryManifest.descriptorColumns -ne 128 -or
+    ([string]$binaryManifest.sourceXmlSha256).ToLowerInvariant() -ne $actualHash) {
+    throw 'Binary feature manifest does not match the verified XML source.'
+}
 Write-Host "Kuro tile feature pack valid: pack=$($manifest.packId) tiles=$($ids.Count) keypoints=$xmlCount resource=$($manifest.resourceVersion)" -ForegroundColor Green

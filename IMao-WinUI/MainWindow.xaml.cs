@@ -15,6 +15,7 @@ public sealed partial class MainWindow : WindowEx
     {
         InitializeComponent();
         this.Activated += MainWindow_Activated;
+        this.Closed += MainWindow_Closed;
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets/WindowIcon.ico"));
         Content = null;
         Title = "AppDisplayName".GetLocalized();
@@ -25,6 +26,12 @@ public sealed partial class MainWindow : WindowEx
         settings.ColorValuesChanged += Settings_ColorValuesChanged; // cannot use FrameworkElement.ActualThemeChanged event
         //Dll初始化
         IMaoCoreAPI.Initi();
+    }
+
+    private void MainWindow_Closed(object sender, WindowEventArgs args)
+    {
+        settings.ColorValuesChanged -= Settings_ColorValuesChanged;
+        IMaoCoreAPI.Shutdown();
     }
 
     private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)

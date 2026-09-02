@@ -84,7 +84,22 @@ void SimpleCapture::Close()
         m_framePool = nullptr;
         m_session = nullptr;
         m_item = nullptr;
+        m_frameCondition.notify_all();
     }
+}
+
+bool SimpleCapture::WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::milliseconds timeout,
+    std::uint64_t* frameSequence)
+{
+    std::unique_lock lock(m_frameMutex);
+    if (!m_frameCondition.wait_for(lock, timeout, [this] {
+        return m_closed.load() || (m_frameSequence > 0 && !m_latestFrame.empty());
+    }) || m_latestFrame.empty()) {
+        return false;
+    }
+    m_latestFrame.copyTo(outputFrame);
+    if (frameSequence != nullptr) *frameSequence = m_frameSequence;
+    return true;
 }
 
 void SimpleCapture::ResizeSwapChain()
@@ -226,12 +241,24 @@ void SimpleCapture::OnFrameArrived(winrt::Direct3D11CaptureFramePool const& send
             D3D11_MAPPED_SUBRESOURCE mappedResource;
             winrt::check_hresult(m_d3dContext->Map(cpuTexture.get(), 0, D3D11_MAP_READ, 0, &mappedResource));
 
-            cv::Mat frameMat(height, width, CV_8UC4, mappedResource.pData, static_cast<size_t>(mappedResource.RowPitch));
-
+            cv::Mat mappedFrame(height, width, CV_8UC4, mappedResource.pData, static_cast<size_t>(mappedResource.RowPitch));
+            cv::Mat ownedFrame;
+            // mappedFrame aliases D3D memory and must be copied before Unmap.
+            try {
+                mappedFrame.copyTo(ownedFrame);
+            }
+            catch (...) {
+                m_d3dContext->Unmap(cpuTexture.get(), 0);
+                throw;
+            }
             m_d3dContext->Unmap(cpuTexture.get(), 0);
 
-            std::lock_guard<std::mutex> lock(m_frameMutex);
-            frameMat.copyTo(m_latestFrame);
+            {
+                std::lock_guard<std::mutex> lock(m_frameMutex);
+                m_latestFrame = std::move(ownedFrame);
+                ++m_frameSequence;
+            }
+            m_frameCondition.notify_all();
 
            // m_imguiImTextureID = GetImTextureFromMat(m_latestFrame);
         }

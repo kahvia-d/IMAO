@@ -12,29 +12,30 @@
 #include "../ImguiDraw/Routes/DrawRouteOnMinMap.h"
 #include "../Diagnostics/Diagnostics.h"
 
+#include <cctype>
+#include <cstdlib>
+#include <filesystem>
+#include <sstream>
+
 using namespace std;
 using namespace cv;
 
-int	App::updateMapDataCycleTime = 80;
-int App::updateMinMapDataCycleTime = 80;
-bool App::enabledMapShowItem;
-bool App::enabledMinMapShowItem;
+std::atomic_int App::updateMapDataCycleTime = 80;
+std::atomic_int App::updateMinMapDataCycleTime = 80;
+std::atomic_bool App::enabledMapShowItem = false;
+std::atomic_bool App::enabledMinMapShowItem = false;
 Coordinate validGameMapcenterPointROC;
 
 namespace {
-constexpr double kMapTransitionThreshold = 30.0;
 constexpr double kMapCenterJitterTolerance = 12.0;
 constexpr double kMapCenterConfirmationTolerance = 4.0;
 constexpr int kRequiredMapCenterConfirmations = 2;
 
-double GetMeanFrameDifference(const Mat& before, const Mat& after) {
-	if (before.empty() || after.empty() || before.size() != after.size() || before.type() != after.type()) {
-		return 0.0;
-	}
-	Mat difference;
-	absdiff(before, after, difference);
-	const Scalar channelMean = mean(difference);
-	return (channelMean[0] + channelMean[1] + channelMean[2]) / 3.0;
+Coordinate ImgMapToWorldCoordinate(const Coordinate& mapCoordinate, int sceneId) {
+	const auto* scene = Scene::Find(sceneId);
+	if (scene == nullptr || scene->scale == 0.0) return {};
+	return Coordinate((mapCoordinate.x - scene->originX) / scene->scale,
+		(mapCoordinate.y - scene->originY) / scene->scale);
 }
 }
 
@@ -55,80 +56,59 @@ bool App::Init() {
 	Notification::AddInfo(NotificationDatas("这是一款免费使用的软件，如果你是付钱买来的，你已经被骗了。", 20));
 	Notification::AddInfo(NotificationDatas("The resource is loading, please be patient.", 40));
 
-	const string path = GetCurrentPath() + "\\Assets\\FeaturesDatas";
-	const string mapFeatureFilePath = path+"\\Map_features.yml";
-	const string IconTask_FeatureFilePath = path + "\\IconTask_Features.yml";
-	const string IconWavePlateCrystal_FeatureFilePath = path +"\\IconWavePlateCrystal_Features.yml";
-
-	try {
-		Diagnostics::Record("resource-load", "stage=map-features begin");
-		if (!FeatureLoader::loadFeaturesFromXML(mapFeatureFilePath, FeatureData_map)) {
-			Notification::AddInfo(NotificationDatas("Resource loading failed.", 30));
-			Diagnostics::Record("resource-load", "stage=map-features failed");
-			return false;
-		}
-		Diagnostics::Record("resource-load", "stage=map-features complete keypoints=" + std::to_string(FeatureData_map.imgKeypoints.size()));
-
-		if (!FeatureLoader::loadFeatures(IconTask_FeatureFilePath, FeatureData_IconTask)) {
-			Notification::AddInfo(NotificationDatas("Resource loading failed.", 30));
-			Diagnostics::Record("resource-load", "stage=task-icon failed");
-			return false;
-		}
-		if (!FeatureLoader::loadFeatures(IconWavePlateCrystal_FeatureFilePath, FeatureData_wavePlateCrystal)) {
-			Notification::AddInfo(NotificationDatas("Resource loading failed.", 30));
-			Diagnostics::Record("resource-load", "stage=map-icon failed");
-			return false;
-		}
-		Diagnostics::Record("resource-load", "stage=base-resources complete");
-	}
-	catch (const cv::Exception& exception) {
-		Diagnostics::Record("resource-load-error", exception.what());
-		Notification::AddInfo(NotificationDatas("Resource loading failed.", 30));
+	const auto assetRoot = std::filesystem::path(GetCurrentPath()) / "Assets";
+	RuntimeFeatureRepository::Instance().BeginPreload(assetRoot);
+	std::string resourceError;
+	const auto resourceWaitStart = std::chrono::steady_clock::now();
+	featureResources = RuntimeFeatureRepository::Instance().AwaitReady(resourceError);
+	Diagnostics::Record("resource-wait", "durationMs=" + std::to_string(
+		std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::steady_clock::now() - resourceWaitStart).count()) +
+		" ready=" + std::to_string(featureResources != nullptr));
+	if (!featureResources) {
+		Notification::AddError(NotificationDatas("Resource loading failed.", 30));
+		Diagnostics::Record("resource-load-error", resourceError);
 		return false;
 	}
-
-	// Kuro tile packs are generated from the same public tile coordinate system
-	// used by the historical World feature database. An invalid optional pack is
-	// skipped rather than changing behavior in existing regions.
-	auto dreamzhouKuroTiles = KuroTileFeaturePack::LoadDreamzhou(path);
-	FeatureData_DreamzhouKuroTiles = std::move(dreamzhouKuroTiles.featureData);
-	if (dreamzhouKuroTiles.loaded) {
-		CandidateFeaturePack::AppendFeatures(FeatureData_map, FeatureData_DreamzhouKuroTiles);
+	std::string visualError;
+	const bool visualReady = GlobalVisualLocalizer::Initialize(featureResources, visualError);
+	Diagnostics::Record("visual-localizer-init", "ready=" + std::to_string(visualReady) +
+		" error=" + visualError);
+	std::string viewportError;
+	const bool viewportReady = MapViewportLocalizer::Initialize(featureResources, viewportError);
+	Diagnostics::Record("map-viewport-localizer-init", "ready=" + std::to_string(viewportReady) +
+		" error=" + viewportError);
+	std::string worldPriorError;
+	const bool worldPriorReady = worldSearchPriorIndex.Load(assetRoot / "KuroMap" / "country.json", worldPriorError);
+	Diagnostics::Record("world-search-prior-init", "ready=" + std::to_string(worldPriorReady) +
+		" error=" + worldPriorError);
+#ifdef IMAO_ENABLE_DIAGNOSTICS
+	char diagnosticsMode[16]{};
+	size_t diagnosticsModeLength = 0;
+	getenv_s(&diagnosticsModeLength, diagnosticsMode, sizeof(diagnosticsMode), "IMAO_LOCALIZATION_MODE");
+	if (diagnosticsModeLength > 0) {
+		localizationDiagnosticsMode = diagnosticsMode;
+		std::transform(localizationDiagnosticsMode.begin(), localizationDiagnosticsMode.end(),
+			localizationDiagnosticsMode.begin(), [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
 	}
-	Diagnostics::Record("kuro-tile-feature-pack",
-		"id=" + (dreamzhouKuroTiles.packId.empty() ? std::string("Dreamzhou") : dreamzhouKuroTiles.packId) +
-		" present=" + std::to_string(dreamzhouKuroTiles.present) +
-		" loaded=" + std::to_string(dreamzhouKuroTiles.loaded) +
-		" keypoints=" + std::to_string(dreamzhouKuroTiles.keypointCount) +
-		" resourceVersion=" + dreamzhouKuroTiles.resourceVersion +
-		" error=" + dreamzhouKuroTiles.error);
+	if (localizationDiagnosticsMode != "visual" && localizationDiagnosticsMode != "legacy" &&
+		localizationDiagnosticsMode != "compare") localizationDiagnosticsMode = "visual";
+	runLegacyLocalizationDiagnostics = localizationDiagnosticsMode == "legacy" ||
+		localizationDiagnosticsMode == "compare";
+#endif
+	Diagnostics::Record("localization-mode", "mode=" + localizationDiagnosticsMode +
+		" visualPublishes=true legacyPublishes=false");
 
-	// Candidate packs extend the in-memory map database only after their image
-	// checksum and offline self-match pass. A failed experiment therefore cannot
-	// change behavior in the existing supported regions.
-	auto dreamzhouCandidate = CandidateFeaturePack::LoadDreamzhouCandidate(path);
-	FeatureData_DreamzhouCandidate = std::move(dreamzhouCandidate.featureData);
-	if (dreamzhouCandidate.loaded) {
-		CandidateFeaturePack::AppendFeatures(FeatureData_map, FeatureData_DreamzhouCandidate);
+	if (runLegacyLocalizationDiagnostics) {
+		IdentifyWorldCoordinates::BeginPreload((assetRoot / "models" / "PP-OCRv5_mobile_rec_infer").string());
+		Diagnostics::Record("ocr-preload", "mode=diagnostic-only role=weak-hint");
 	}
-	Diagnostics::Record("candidate-feature-pack",
-		"id=" + (dreamzhouCandidate.packId.empty() ? std::string("DreamzhouCandidate") : dreamzhouCandidate.packId) +
-		" present=" + std::to_string(dreamzhouCandidate.present) +
-		" loaded=" + std::to_string(dreamzhouCandidate.loaded) +
-		" keypoints=" + std::to_string(dreamzhouCandidate.keypointCount) +
-		" selfMatches=" + std::to_string(dreamzhouCandidate.selfMatchCount) +
-		" selfAccepted=" + std::to_string(dreamzhouCandidate.selfMatchAccepted) +
-		" selfErrorPixels=" + std::to_string(dreamzhouCandidate.selfMatchErrorPixels) +
-		" anchorWorld=" + std::to_string(dreamzhouCandidate.anchorWorldCoordinate.x) + "," + std::to_string(dreamzhouCandidate.anchorWorldCoordinate.y) +
-		" anchorMap=" + std::to_string(dreamzhouCandidate.anchorMapCoordinate.x) + "," + std::to_string(dreamzhouCandidate.anchorMapCoordinate.y) +
-		" error=" + dreamzhouCandidate.error);
-
-	if(!IdentifyWorldCoordinates::isLoaded)
-		IdentifyWorldCoordinates::Init(GetCurrentPath() + "\\Assets\\models\\PP-OCRv5_mobile_det_infer", GetCurrentPath() + "\\Assets\\models\\PP-OCRv5_mobile_rec_infer",string(), GetCurrentPath() + "\\Assets\\models\\ch_ppocr_mobile_v2.0_cls_infer");
+	else {
+		Diagnostics::Record("ocr-preload", "disabled=normal-runtime");
+	}
 
 	Mat snapshot;
-	GetMatSnapshot(true, snapshot);
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	GetMatSnapshot(true, snapshot).get();
 
 	const bool isReady = !snapshot.empty();
 	Diagnostics::Record("app-ready", "snapshot=" + std::string(isReady ? "available" : "empty"));
@@ -143,45 +123,132 @@ winrt::IAsyncAction App::Start() {
 	auto startTime = std::chrono::high_resolution_clock::now();
 	int cycleTime = 100;
 	while (!allThreadStopFlag) {
-		if (!GetClientRect(hwnd, &rect)) {
+		RECT currentRect{};
+		if (!GetClientRect(hwnd, &currentRect)) {
 			cout << "Rect error";
 			rect.right = 0;
 			co_return;
 		}
+		{
+			std::scoped_lock lock(gameSnapshotMutex);
+			rect = currentRect;
+		}
 
-		co_await GetMatSnapshot(false, gameSnapshot);
+		Mat currentSnapshot;
+		try {
+			co_await GetMatSnapshot(false, currentSnapshot);
+		}
+		catch (const cv::Exception& exception) {
+			currentSnapshot.release();
+			Diagnostics::Record("capture-frame-error", exception.what());
+		}
+		catch (const std::exception& exception) {
+			currentSnapshot.release();
+			Diagnostics::Record("capture-frame-error", exception.what());
+		}
+		if (!currentSnapshot.empty()) ++snapshotFrameId;
+		{
+			std::scoped_lock lock(gameSnapshotMutex);
+			gameSnapshot = currentSnapshot;
+		}
 
-		//GameMap
-		if (isOpenMap and enabledMapShowItem and !gameSnapshot.empty() and isWindowFocused) {
-			Coordinate gameMapCenterPointROC; Coordinate lastGameMapCenterPointROC;
+		if (coordinateSuspendRequested.exchange(false)) {
+			SuspendPlayerLocationForMapTransition();
+		}
+		if (coordinateResumeRequested.exchange(false)) {
+			BeginMinimapReacquisition();
+		}
+		if (mapViewportResetRequested.exchange(false)) {
+			ResetMapViewport();
+		}
+		if (mapViewportStartRequested.exchange(false)) {
+			BeginMapViewportSession();
+		}
 
-			//在绘制大地图区域 imgui透明窗口大小保持游戏窗口一样
+		// The full-screen map has its own asynchronous localizer.  Main capture
+		// and drawing only consume its latest accepted viewport or a lightweight
+		// frame-to-frame prediction; they never wait for SURF matching.
+		if (isOpenMap.load() and enabledMapShowItem and !currentSnapshot.empty() and isWindowFocused.load()) {
 			imguiWindowsHeight = rect.bottom;
 			imguiWindowsWidth = rect.right;
 
-			if (GetGameMapCenterPointROC(gameSnapshot, gameMapCenterPointROC, lastGameMapCenterPointROC) and mapNotMoving) {
-				if (!IsMapMoving(gameMapCenterPointROC, lastGameMapCenterPointROC)) {
-					DrawItemOnGameMap::UpdateCenterPointNearItemsData(validGameMapcenterPointROC,captrueCorners,rect,playerCurrentSceneId);
-					DrawRouteOnMap::GetRoutePointsScreen(validGameMapcenterPointROC, captrueCorners, rect, playerCurrentSceneId);
+			const auto now = std::chrono::steady_clock::now();
+			MapViewportPrediction prediction;
+			int predictionInliers = 0;
+			double predictionScale = 1.0;
+			const Mat mapCrop = ImageProcessing::CropToMapCenterArea(currentSnapshot, rect);
+			bool framePredictionChanged = false;
+			{
+				std::scoped_lock lock(mapViewportMutex);
+				framePredictionChanged = mapViewportPredictor.ObserveFrame(mapCrop, prediction,
+					&predictionInliers, &predictionScale);
+				if (framePredictionChanged) {
+					static auto lastFramePredictionReport = std::chrono::steady_clock::time_point{};
+					if (now - lastFramePredictionReport >= std::chrono::milliseconds(250)) {
+						Diagnostics::Record("map-viewport-prediction", "mode=frame inliers=" +
+							std::to_string(predictionInliers) + " scale=" + std::to_string(predictionScale));
+						lastFramePredictionReport = now;
+					}
 				}
+				mapViewportPredictor.GetPrediction(prediction);
+			}
+			ProcessMapViewportResult(currentSnapshot);
+			{
+				std::scoped_lock lock(mapViewportMutex);
+				mapViewportPredictor.GetPrediction(prediction);
 			}
 
-			cycleTime = App::updateMapDataCycleTime;
+			if (!mapViewportRequestInFlight.has_value() &&
+				now - lastMapViewportSubmitAt >= std::chrono::milliseconds(250)) {
+				std::optional<WorldSearchPrior> correctionPrior;
+				MapViewportSearchScope scope = MapViewportSearchScope::Global;
+				if (prediction.sceneId == Scene::SceneNameToId("World") && prediction.confidence >= 2 &&
+					featureResources) {
+					correctionPrior = worldSearchPriorIndex.Build(*featureResources,
+						prediction.centerMapCoordinate, 512.0);
+					scope = MapViewportSearchScope::Local512;
+				}
+				else if (activeWorldSearchPrior.has_value()) {
+					correctionPrior = activeWorldSearchPrior;
+					scope = MapViewportSearchScope::Local512;
+				}
+				SubmitMapViewportSearch(currentSnapshot, scope, correctionPrior);
+			}
+
+			if (prediction.sceneId != 0 && prediction.captureCorners.size() == 4 && prediction.confidence >= 2) {
+				const Coordinate predictedCenterROC = RelativeCoordinates::ImgMapCoordToROC(
+					prediction.centerMapCoordinate, prediction.sceneId);
+				DrawItemOnGameMap::UpdateCenterPointNearItemsData(predictedCenterROC,
+					prediction.captureCorners, rect, prediction.sceneId);
+				DrawRouteOnMap::GetRoutePointsScreen(predictedCenterROC, prediction.captureCorners,
+					rect, prediction.sceneId);
+			}
+
+			cycleTime = std::min(App::updateMapDataCycleTime.load(), 80);
 		}else {
 			DrawItemOnGameMap::ClearNearItemsData();
 			DrawRouteOnMap::ClearRountsData();
 		}
 
 
-		//MinMap
-		if (isExistMinMap and !gameSnapshot.empty()) {
+		// Minimap coordinate recognition is valid only while the gameplay HUD is
+		// visible and focused. A UI generation change invalidates queued OCR.
+		const bool coordinateVisible = isExistMinMap.load() && !isOpenMap.load() &&
+			isWindowFocused.load() && !currentSnapshot.empty();
+		if (coordinateVisible != lastCoordinateVisible) {
+			lastCoordinateVisible = coordinateVisible;
+			++coordinateUiGeneration;
+			if (!coordinateVisible) coordinateRecoveryStartedAt.reset();
+		}
+		coordinateRecovery.SetVisible(coordinateVisible);
+		if (coordinateVisible) {
 			Coordinate playerROC;
 			float minMapRadius;
 
 			imguiWindowsHeight = minMapBottomPoint.y + 10;//在绘制小地图区域 缩写imgui透明窗口范围
 			imguiWindowsWidth = rect.right * 0.3;
 
-			if (co_await GetMinMapPlayerROC(gameSnapshot, playerROC, minMapRadius)) {
+			if (co_await GetMinMapPlayerROC(currentSnapshot, playerROC, minMapRadius)) {
 				if (enabledMinMapShowItem) {
 					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, playerCurrentSceneId);
 					DrawRouteOnMinMap::GetRoutePointsScreen(rect, playerROC, minMapRadius, playerCurrentSceneId);
@@ -208,169 +275,186 @@ winrt::IAsyncAction App::Start() {
 }
 
 winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result) {
+	const auto waitStart = std::chrono::steady_clock::now();
 	Mat temp;
 	if (bitBltCapture.has_value()) {
-		bitBltCapture->GetSnapshot_PrintWindow(temp);
+		if (!bitBltCapture->GetSnapshot_PrintWindow(temp)) result.release();
 		temp.copyTo(result);
+		if (isTaketAsync) {
+			Diagnostics::Record("first-frame-wait", "capture=bitblt durationMs=" + std::to_string(
+				std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - waitStart).count()) +
+				" ready=" + std::to_string(!result.empty()));
+		}
 		co_return;
 	}
 	else if (graphicsCapture.has_value()) {
-		if (isTaketAsync) {
-			co_await graphicsCapture->TakeSnapshotAsync();
-			temp = graphicsCapture->getTakeSnapshotAsyncResult();
-		}
-		else {
-			graphicsCapture->Getcapture()->GetLatestFrame_Mat(temp);
+		const bool captured = isTaketAsync
+			? graphicsCapture->WaitForFirstFrame(temp, std::chrono::milliseconds(1500))
+			: graphicsCapture->GetLatestFrame(temp);
+		if (!captured || temp.empty()) {
+			result.release();
+			if (isTaketAsync) {
+				Diagnostics::Record("first-frame-wait", "capture=wgc durationMs=" + std::to_string(
+					std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - waitStart).count()) +
+					" ready=false");
+			}
+			co_return;
 		}
 		NonClientRegion nonClientRegion;
 		CalculateNonClientAreaSize(hwnd, nonClientRegion);
-		temp = ImageProcessing::CropToWindowsClientArea(temp, nonClientRegion, rect);
+		const cv::Rect clientRoi(nonClientRegion.non_client_width_total,
+			nonClientRegion.non_client_height_total, rect.right, rect.bottom);
+		if (clientRoi.width <= 0 || clientRoi.height <= 0 || clientRoi.x < 0 || clientRoi.y < 0 ||
+			clientRoi.x + clientRoi.width > temp.cols || clientRoi.y + clientRoi.height > temp.rows) {
+			result.release();
+			Diagnostics::Record("capture-frame-rejected", "client crop is outside the WGC frame");
+			co_return;
+		}
+		temp = temp(clientRoi);
 		temp.copyTo(result);
+		if (isTaketAsync) {
+			Diagnostics::Record("first-frame-wait", "capture=wgc durationMs=" + std::to_string(
+				std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - waitStart).count()) +
+				" ready=true");
+		}
 	}
 }
 
 
 void App::Thread_DetectGameState() {
 	const int cycleTime = 100;
-	bool lastMinimapState = false;
-	bool lastMapState = false;
 	auto lastStateReport = std::chrono::steady_clock::time_point{};
-	std::optional<std::chrono::steady_clock::time_point> mapFeatureFallbackAt;
-	std::optional<std::chrono::steady_clock::time_point> mapFeatureFallbackDeadline;
-	std::optional<bool> requestedMapOpenState;
-	// Once an M transition has been confirmed, keep that state until the next
-	// confirmed M transition.  The legacy minimap template still produces a few
-	// false positives on the current big-map UI and must not immediately undo a
-	// verified map-open state.
-	std::optional<bool> mapStateOverride;
-	Mat mapKeypressSnapshot;
-	bool manualMapCheckRequested = false;
 	while (!allThreadStopFlag) {
 		auto start = std::chrono::high_resolution_clock::now();
+		// This is a background sampling thread.  A transient capture with a
+		// mismatched size must not allow an OpenCV exception to escape the thread:
+		// std::thread would then terminate the whole WinUI process.
+		try {
+		Mat stateSnapshot;
+		RECT stateRect{};
+		{
+			std::scoped_lock lock(gameSnapshotMutex);
+			stateSnapshot = gameSnapshot;
+			stateRect = rect;
+		}
 		const bool mapKeyPressed = (GetAsyncKeyState(0x4D) & 1) != 0;
 		const bool manualMapCheckPressed = Diagnostics::Enabled() && (GetAsyncKeyState(VK_F10) & 1) != 0;
-		if (mapKeyPressed || manualMapCheckPressed) {
-			const bool gameIsFocusedAtKeypress = IsWindowFocused(hwnd);
-			if (gameIsFocusedAtKeypress && !gameSnapshot.empty()) {
-				// F10 is a diagnostics-only probe for when the game's map key has
-				// been rebound.  It never sends input to the game; the user must
-				// manually show the map before pressing it.
-				manualMapCheckRequested = manualMapCheckPressed;
-				const auto fallbackNow = std::chrono::steady_clock::now();
-				mapFeatureFallbackAt = fallbackNow + std::chrono::milliseconds(manualMapCheckPressed ? 100 : 750);
-				// The current game UI can take several seconds to finish opening the
-				// world map.  Keep the pre-M frame and retry transition detection for
-				// a bounded window rather than missing a delayed fade-in.
-				mapFeatureFallbackDeadline = fallbackNow + std::chrono::seconds(manualMapCheckPressed ? 1 : 10);
-				// Use the known map state rather than minimap matching: immediately
-				// after startup the latter may not have completed its first cycle yet.
-				requestedMapOpenState = manualMapCheckPressed ? true : !isOpenMap;
-				mapKeypressSnapshot = gameSnapshot.clone();
-				Diagnostics::Record("map-keypress", manualMapCheckPressed
-					? "F10 detected; manual big-map probe scheduled"
-					: "M detected in the game; scheduling transition check expectedMapOpen=" + std::to_string(*requestedMapOpenState));
-				Diagnostics::SaveImage("map-keypress-full", gameSnapshot);
-				Diagnostics::SaveImage("map-keypress-task-icon", ImageProcessing::CropToRegion_IconTask(gameSnapshot, rect));
-				Diagnostics::SaveImage("map-keypress-map-icon", ImageProcessing::CropToRegion_IconWavePlateCrystal(gameSnapshot, rect));
-				Diagnostics::SaveImage("map-keypress-center", ImageProcessing::CropToMapCenterArea(gameSnapshot, rect));
-			}
-			else {
-				Diagnostics::Record("map-keypress", manualMapCheckPressed
-					? "F10 ignored because the game window was not focused or no snapshot was available"
-					: "M ignored because the game window was not focused or no snapshot was available");
+		const bool focused = IsWindowFocused(hwnd);
+		if ((mapKeyPressed || manualMapCheckPressed) && focused) {
+			Diagnostics::Record("map-keypress", manualMapCheckPressed
+				? "F10 detected; requesting an immediate visual map check"
+				: "M detected; requesting an immediate visual map check");
+		}
+
+		int compassPixels = 0;
+		bool minimapVisible = false;
+		bool compassVisible = false;
+		bool legacyMapEvidence = false;
+		if (!stateSnapshot.empty()) {
+			minimapVisible = IsExistMinMap(stateSnapshot, stateRect, &GoodMatchSize_IconTask);
+			compassVisible = IsBigMapCompass(stateSnapshot, stateRect, &compassPixels);
+			// M/F10 only asks for an extra check of the legacy map texture.  Its
+			// answer is still fed through the same two-frame state controller and
+			// can never pin the UI state after the map has been closed another way.
+			if ((mapKeyPressed || manualMapCheckPressed) && focused) {
+				legacyMapEvidence = IsOpenMap(stateSnapshot, stateRect, &GoodMatchSize_IconWavePlateCrystal, true);
 			}
 		}
 
-		const auto detectNow = std::chrono::steady_clock::now();
-		const bool fallbackTimedOut = mapFeatureFallbackDeadline.has_value() && detectNow >= *mapFeatureFallbackDeadline;
-		const bool useMapFeatureFallback = !fallbackTimedOut && mapFeatureFallbackAt.has_value() && detectNow >= *mapFeatureFallbackAt;
-		if (useMapFeatureFallback && !manualMapCheckRequested) {
-			mapFeatureFallbackAt = detectNow + std::chrono::milliseconds(500);
-		}
-		else if (useMapFeatureFallback) {
-			mapFeatureFallbackAt.reset();
-		}
-		if (fallbackTimedOut) {
-			Diagnostics::Record("map-transition", "timed out waiting for the map transition after M");
-			mapFeatureFallbackAt.reset();
-			mapFeatureFallbackDeadline.reset();
-			mapKeypressSnapshot.release();
-			requestedMapOpenState.reset();
-			manualMapCheckRequested = false;
-		}
-		if (!gameSnapshot.empty()) {;
-			double mapTransitionScore = 0.0;
-			bool mapTransitionDetected = false;
-			if (useMapFeatureFallback) {
-				mapTransitionScore = GetMeanFrameDifference(mapKeypressSnapshot, gameSnapshot);
-				mapTransitionDetected = manualMapCheckRequested || mapTransitionScore >= kMapTransitionThreshold;
-				Diagnostics::Record("map-transition", "meanRgbDifference=" + std::to_string(mapTransitionScore) +
-					" detected=" + std::to_string(mapTransitionDetected) +
-					" manual=" + std::to_string(manualMapCheckRequested));
-			}
-			bool temp_isExistMinMap = IsExistMinMap(gameSnapshot, &GoodMatchSize_IconTask);
-			// The old map-open icon no longer matches the current UI.  Once the
-			// minimap has disappeared and the player location is known, validate
-			// the map with the nearby static-map features instead.  This path
-			// tested at 115+ matches on the current map capture.
-			const bool shouldCheckMapFeatures =
-				(useMapFeatureFallback && mapTransitionDetected && requestedMapOpenState.value_or(false)) ||
-				(!temp_isExistMinMap && existMapCenterPointCoordinate && !isOpenMap);
-			bool temp_isOpenMap = isOpenMap && !temp_isExistMinMap
-				? true
-				: IsOpenMap(gameSnapshot, &GoodMatchSize_IconWavePlateCrystal, shouldCheckMapFeatures);
-			if (useMapFeatureFallback && mapTransitionDetected) {
-				// The user pressed M while this process was focused.  The legacy UI
-				// icon and current map texture are both version-sensitive, so the
-				// input transition is the authoritative state change.  The local
-				// feature result remains logged for future asset adaptation.  Keep
-				// this state until the next M press: the obsolete minimap template
-				// still produces a few false matches on the current big-map UI.
-				mapStateOverride = requestedMapOpenState.value_or(temp_isOpenMap);
-				Diagnostics::Record("map-state-override", "mapOpen=" + std::to_string(*mapStateOverride));
-				mapFeatureFallbackAt.reset();
-				mapFeatureFallbackDeadline.reset();
-				mapKeypressSnapshot.release();
-				requestedMapOpenState.reset();
-				manualMapCheckRequested = false;
-			}
-			if (mapStateOverride.has_value()) {
-				temp_isOpenMap = *mapStateOverride;
-				temp_isExistMinMap = !*mapStateOverride;
-			}
-			if (temp_isExistMinMap && temp_isOpenMap) {
-				bool b = GoodMatchSize_IconTask > (GoodMatchSize_IconWavePlateCrystal * 0.375);//3 8
-				isExistMinMap = b;
-				isOpenMap = !b;
-			}
-			else {
-				isOpenMap = temp_isOpenMap;
-				isExistMinMap = temp_isExistMinMap;
-			}
-		}
-		else {
-			isOpenMap = isExistMinMap = false;
-		}
+		const auto update = mapUiState.Update({ compassVisible || legacyMapEvidence, minimapVisible });
+		isOpenMap = MapUiStateController::IsStableBigMap(update.current);
+		isExistMinMap = MapUiStateController::IsStableGameplay(update.current);
 
 		const auto now = std::chrono::steady_clock::now();
-		const bool stateChanged = lastMinimapState != isExistMinMap || lastMapState != isOpenMap;
-		if (stateChanged || now - lastStateReport >= std::chrono::seconds(2)) {
-			const std::string stateDetails = "minimap=" + std::to_string(isExistMinMap) +
+		if (update.changed || now - lastStateReport >= std::chrono::seconds(2)) {
+			Diagnostics::Record("game-state", "state=" + std::string(MapUiStateController::StateName(update.current)) +
+				" observed=" + MapUiStateController::StateName(update.observed) +
 				" minimapMatches=" + std::to_string(GoodMatchSize_IconTask) +
-				" map=" + std::to_string(isOpenMap) +
-				" mapMatches=" + std::to_string(GoodMatchSize_IconWavePlateCrystal) +
-				" focused=" + std::to_string(isWindowFocused) +
-				" client=" + std::to_string(rect.right) + "x" + std::to_string(rect.bottom);
-			Diagnostics::Record("game-state", stateDetails);
-			if (stateChanged) {
-				Diagnostics::SaveImage("state-change-full", gameSnapshot);
-			}
-			lastMinimapState = isExistMinMap;
-			lastMapState = isOpenMap;
+				" compassGoldPixels=" + std::to_string(compassPixels) +
+				" legacyMapMatches=" + std::to_string(GoodMatchSize_IconWavePlateCrystal) +
+				" focused=" + std::to_string(focused));
 			lastStateReport = now;
 		}
 
-	    isWindowFocused = IsWindowFocused(hwnd) || IsWindowFocused(ImGuiOverWindows::overWindowsHwnd);
+		if (update.changed) {
+			Diagnostics::Record("map-ui-transition", std::string(MapUiStateController::StateName(update.previous)) +
+				"->" + MapUiStateController::StateName(update.current));
+			Diagnostics::SaveImage("state-change-full", stateSnapshot);
+			if (!MapUiStateController::IsStableBigMap(update.current)) {
+				DrawItemOnGameMap::ClearNearItemsData();
+				DrawRouteOnMap::ClearRountsData();
+				Diagnostics::Record("map-marker-cache", "cleared because big map is no longer confirmed");
+			}
+			if (!MapUiStateController::IsStableGameplay(update.current)) {
+				DrawItemOnMinMap::ClearNearItemsData();
+				DrawRouteOnMinMap::ClearRountsData();
+			}
+			if (MapUiStateController::IsStableGameplay(update.previous) &&
+				!MapUiStateController::IsStableGameplay(update.current)) {
+				coordinateSuspendRequested = true;
+				Diagnostics::Record("map-ui-transition", "player location suspended; transition is not a teleport");
+			}
+			if (MapUiStateController::IsStableBigMap(update.previous) &&
+				!MapUiStateController::IsStableBigMap(update.current)) {
+				mapViewportResetRequested = true;
+				Diagnostics::Record("map-ui-transition", "viewport markers cleared; player hint preserved");
+			}
+			if (!MapUiStateController::IsStableBigMap(update.previous) &&
+				MapUiStateController::IsStableBigMap(update.current)) {
+				mapViewportStartRequested = true;
+				Diagnostics::Record("map-ui-transition", "big-map viewport session requested");
+			}
+			if (!MapUiStateController::IsStableGameplay(update.previous) &&
+				MapUiStateController::IsStableGameplay(update.current)) {
+				coordinateResumeRequested = true;
+				Diagnostics::Record("map-ui-transition", "gameplay confirmed; minimap will revalidate saved hint");
+			}
+		}
+
+		isWindowFocused = focused || IsWindowFocused(ImGuiOverWindows::overWindowsHwnd);
+		}
+		catch (const cv::Exception& exception) {
+			GoodMatchSize_IconTask = 0;
+			GoodMatchSize_IconWavePlateCrystal = 0;
+			mapUiState.Reset();
+			isOpenMap = false;
+			isExistMinMap = false;
+			coordinateSuspendRequested = true;
+			mapViewportResetRequested = true;
+			DrawItemOnGameMap::ClearNearItemsData();
+			DrawRouteOnMap::ClearRountsData();
+			DrawItemOnMinMap::ClearNearItemsData();
+			DrawRouteOnMinMap::ClearRountsData();
+			Diagnostics::Record("game-state-frame-error", exception.what());
+		}
+		catch (const std::exception& exception) {
+			GoodMatchSize_IconTask = 0;
+			GoodMatchSize_IconWavePlateCrystal = 0;
+			mapUiState.Reset();
+			isOpenMap = false;
+			isExistMinMap = false;
+			coordinateSuspendRequested = true;
+			mapViewportResetRequested = true;
+			DrawItemOnGameMap::ClearNearItemsData();
+			DrawRouteOnMap::ClearRountsData();
+			DrawItemOnMinMap::ClearNearItemsData();
+			DrawRouteOnMinMap::ClearRountsData();
+			Diagnostics::Record("game-state-frame-error", exception.what());
+		}
+		catch (...) {
+			GoodMatchSize_IconTask = 0;
+			GoodMatchSize_IconWavePlateCrystal = 0;
+			mapUiState.Reset();
+			isOpenMap = false;
+			isExistMinMap = false;
+			coordinateSuspendRequested = true;
+			mapViewportResetRequested = true;
+			DrawItemOnGameMap::ClearNearItemsData();
+			DrawRouteOnMap::ClearRountsData();
+			DrawItemOnMinMap::ClearNearItemsData();
+			DrawRouteOnMinMap::ClearRountsData();
+			Diagnostics::Record("game-state-frame-error", "unknown exception");
+		}
 		auto end = std::chrono::high_resolution_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 		if (elapsed < cycleTime) {
@@ -379,35 +463,58 @@ void App::Thread_DetectGameState() {
 	}
 }
 
-bool App::IsExistMinMap(Mat& snapshot,int* goodMatchSize) {
-	Mat IconTask = ImageProcessing::CropToRegion_IconTask(snapshot, rect);
-	IconTask = ImageProcessing::increaseImageResolution(IconTask, 2.5);//2.5
-	Ptr<cv::xfeatures2d::SURF> surt = cv::xfeatures2d::SURF::create(80,6,4,true,true);
-	ImageFeatureData test_FeatureData_IconTask = FeatureMatch::ExtractSurfFeatures(surt, IconTask);
+bool App::IsExistMinMap(Mat& snapshot, const RECT& captureRect, int* goodMatchSize) {
+	if (goodMatchSize == nullptr) return false;
+	*goodMatchSize = 0;
+	if (snapshot.empty() || !featureResources || captureRect.right <= captureRect.left ||
+		captureRect.bottom <= captureRect.top) return false;
 
-	if (!test_FeatureData_IconTask.imgDescriptors.empty()) {
-		auto goodMatchs = FeatureMatch::FindGoodMatches(FeatureData_IconTask, test_FeatureData_IconTask, 0.7f, 0.6f, DescriptorMatcher::BRUTEFORCE_SL2);
-		*goodMatchSize = goodMatchs.size();
-		if (*goodMatchSize >= 4) {
-			return true;
+	// WGC can briefly return a frame whose client crop has not caught up with
+	// the window resize/map transition.  Validate the task-icon ROI against the
+	// actual Mat before using OpenCV's unchecked ROI constructor.
+	const auto iconArea = ScreenCoordinate::SpecifyScreenCoordinate(captureRect,
+		GameWindowsScreenData::IconTask_ScreenData);
+	const cv::Rect iconRoi(iconArea.leftPoint.x, iconArea.topPoint.y,
+		iconArea.rightPoint.x - iconArea.leftPoint.x,
+		iconArea.bottomPoint.y - iconArea.topPoint.y);
+	if (iconRoi.width <= 0 || iconRoi.height <= 0 || iconRoi.x < 0 || iconRoi.y < 0 ||
+		iconRoi.x + iconRoi.width > snapshot.cols || iconRoi.y + iconRoi.height > snapshot.rows) {
+		return false;
+	}
+
+	try {
+		Mat IconTask = ImageProcessing::CropToRegion_IconTask(snapshot, captureRect);
+		IconTask = ImageProcessing::increaseImageResolution(IconTask, 2.5);//2.5
+		Ptr<cv::xfeatures2d::SURF> surt = cv::xfeatures2d::SURF::create(80,6,4,true,true);
+		ImageFeatureData test_FeatureData_IconTask = FeatureMatch::ExtractSurfFeatures(surt, IconTask);
+
+		if (!test_FeatureData_IconTask.imgDescriptors.empty()) {
+			auto goodMatchs = FeatureMatch::FindGoodMatches(featureResources->iconTask, test_FeatureData_IconTask, 0.7f, 0.6f, DescriptorMatcher::BRUTEFORCE_SL2);
+			*goodMatchSize = static_cast<int>(goodMatchs.size());
+			return *goodMatchSize >= 4;
 		}
 	}
-	else {
-		*goodMatchSize = 0;
+	catch (const cv::Exception& exception) {
+		Diagnostics::Record("minimap-hud-check", std::string("rejected capture: ") + exception.what());
 	}
-	
 	return false;
 }
 
-bool App::IsOpenMap(const Mat& snapshot, int* goodMatchSize, bool useMapFeatureFallback) {
+bool App::IsBigMapCompass(const Mat& snapshot, const RECT& captureRect, int* goodMatchSize) {
+	const auto detection = MapUiVisualDetector::DetectBigMapCompass(snapshot, captureRect);
+	*goodMatchSize = detection.goldPixels;
+	return detection.visible;
+}
+
+bool App::IsOpenMap(const Mat& snapshot, const RECT& captureRect, int* goodMatchSize, bool useMapFeatureFallback) {
 	int legacyIconMatchSize = 0;
-	Mat IconWavePlateCrystal = ImageProcessing::CropToRegion_IconWavePlateCrystal(snapshot, rect);
+	Mat IconWavePlateCrystal = ImageProcessing::CropToRegion_IconWavePlateCrystal(snapshot, captureRect);
 	IconWavePlateCrystal = ImageProcessing::increaseImageResolution(IconWavePlateCrystal, 2.5f);//2.5
 	Ptr<cv::xfeatures2d::SURF> surt = cv::xfeatures2d::SURF::create(80, 6, 4, true, true);
 	ImageFeatureData IconWavePlateCrystalFeatureData = FeatureMatch::ExtractSurfFeatures(surt, IconWavePlateCrystal);
 
 	if (!IconWavePlateCrystalFeatureData.imgDescriptors.empty()) {
-		auto goodMatchs = FeatureMatch::FindGoodMatches(FeatureData_wavePlateCrystal, IconWavePlateCrystalFeatureData, 0.5f, 0.5f, DescriptorMatcher::BRUTEFORCE_SL2);
+		auto goodMatchs = FeatureMatch::FindGoodMatches(featureResources->wavePlateCrystal, IconWavePlateCrystalFeatureData, 0.5f, 0.5f, DescriptorMatcher::BRUTEFORCE_SL2);
 		legacyIconMatchSize = static_cast<int>(goodMatchs.size());
 		if (legacyIconMatchSize >= 12) {
 			*goodMatchSize = legacyIconMatchSize;
@@ -424,12 +531,12 @@ bool App::IsOpenMap(const Mat& snapshot, int* goodMatchSize, bool useMapFeatureF
 	// no longer stable across game versions.  On an M-triggered check, compare
 	// the central crop only against features near the already-known player
 	// position.  This is both version-tolerant and bounded in cost.
-	Mat mapCenterArea = ImageProcessing::CropToMapCenterArea(snapshot, rect);
+	Mat mapCenterArea = ImageProcessing::CropToMapCenterArea(snapshot, captureRect);
 	Ptr<cv::xfeatures2d::SURF> mapSurf = cv::xfeatures2d::SURF::create(100, 4, 3, true, true);
 	ImageFeatureData mapCenterFeatureData = FeatureMatch::ExtractSurfFeatures(mapSurf, mapCenterArea);
 	vector<KeyPoint> nearbyMapKeypoints;
 	Mat nearbyMapDescriptors;
-	FeatureFilter::FilterNearKeypoints(FeatureData_map.imgKeypoints, FeatureData_map.imgDescriptors,
+	FeatureFilter::FilterNearKeypoints(featureResources->map.imgKeypoints, featureResources->map.imgDescriptors,
 		Point2f(lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y), 1000, nearbyMapKeypoints, nearbyMapDescriptors);
 	int mapFeatureMatchSize = 0;
 	if (!mapCenterFeatureData.imgDescriptors.empty() && !nearbyMapDescriptors.empty()) {
@@ -458,7 +565,12 @@ bool App::IsMapMoving(const Coordinate& gameMapcenterPointROC, const Coordinate&
 		pendingMapCenterConfirmations = 0;
 		Diagnostics::Record("map-center-stability", "initialized centerROC=" +
 			std::to_string(validGameMapcenterPointROC.x) + "," + std::to_string(validGameMapcenterPointROC.y));
-		return true;
+		// The map-open state is already confirmed and the caller has verified that
+		// no drag/inertia is active.  A valid first homography is therefore the
+		// only usable center while the current map UI intermittently rejects later
+		// frames.  Render from it immediately; later accepted frames still pass
+		// through the jitter/move confirmation below before replacing this center.
+		return false;
 	}
 
 	// SURF can vary by several map coordinates across otherwise identical frames.
@@ -482,10 +594,9 @@ bool App::IsMapMoving(const Coordinate& gameMapcenterPointROC, const Coordinate&
 	}
 
 	if (pendingMapCenterConfirmations < kRequiredMapCenterConfirmations) {
-		if (!isNear(gameMapcenterPointROC, lastGameMapCenterPointROC, 15.0)) {
-			DrawItemOnGameMap::ClearNearItemsData();
-			DrawRouteOnMap::ClearRountsData();
-		}
+		// Keep the predictor's current drawing while a second visual frame
+		// confirms this re-anchor.  It will be hidden only if the predictor
+		// itself loses confidence.
 		return true;
 	}
 
@@ -498,28 +609,43 @@ bool App::IsMapMoving(const Coordinate& gameMapcenterPointROC, const Coordinate&
 
 int App::GetCurrentSceneId(const Coordinate& identifyCoordinate, const Mat& minMapImg) {
 	Ptr<xfeatures2d::SURF> surf = xfeatures2d::SURF::create(10, 8, 4, true, true);
+	const ImageFeatureData minMapFeatureData = FeatureMatch::ExtractSurfFeatures(surf, minMapImg);
+	return ValidateCoordinateCandidate(identifyCoordinate, minMapImg, minMapFeatureData, 0, true, true);
+}
+
+int App::ValidateCoordinateCandidate(const Coordinate& identifyCoordinate, const Mat& minMapImg,
+	const ImageFeatureData& minMapFeatureData, int preferredSceneId, bool searchAllScenes,
+	bool commitPosition) {
+	if (minMapFeatureData.imgDescriptors.empty()) {
+		Diagnostics::Record("scene-identification", "minimap descriptors=empty");
+		return 0;
+	}
+
+	std::vector<int> scenes;
+	if (preferredSceneId > 0) scenes.push_back(preferredSceneId);
+	if (searchAllScenes || preferredSceneId == 0) {
+		for (const int sceneId : Scene::sceneIds) {
+			if (sceneId != preferredSceneId) scenes.push_back(sceneId);
+		}
+	}
+
 	vector<KeyPoint> playerMapKeypoints;
 	Mat playerMapDescriptors;
 
-	for (const auto sceneId : Scene::sceneIds) {
+	for (const int sceneId : scenes) {
 		Coordinate mapCoord = MapCoordinate::IdentifyCoorToImgMapCoord(identifyCoordinate, sceneId);
 
-		FeatureFilter::FilterNearKeypoints(App::FeatureData_map.imgKeypoints, App::FeatureData_map.imgDescriptors, Point2f(mapCoord.x, mapCoord.y), 100, playerMapKeypoints, playerMapDescriptors);
+		FeatureFilter::FilterNearKeypoints(featureResources->map.imgKeypoints, featureResources->map.imgDescriptors, Point2f(mapCoord.x, mapCoord.y), 100, playerMapKeypoints, playerMapDescriptors);
 		vector<KeyPoint> candidateMapKeypoints;
 		Mat candidateMapDescriptors;
-		FeatureFilter::FilterNearKeypoints(App::FeatureData_DreamzhouCandidate.imgKeypoints, App::FeatureData_DreamzhouCandidate.imgDescriptors,
+		FeatureFilter::FilterNearKeypoints(featureResources->curatedCandidates.imgKeypoints, featureResources->curatedCandidates.imgDescriptors,
 			Point2f(mapCoord.x, mapCoord.y), 100, candidateMapKeypoints, candidateMapDescriptors);
 		vector<KeyPoint> kuroTileMapKeypoints;
 		Mat kuroTileMapDescriptors;
-		FeatureFilter::FilterNearKeypoints(App::FeatureData_DreamzhouKuroTiles.imgKeypoints, App::FeatureData_DreamzhouKuroTiles.imgDescriptors,
+		FeatureFilter::FilterNearKeypoints(featureResources->kuroTileFeatures.imgKeypoints, featureResources->kuroTileFeatures.imgDescriptors,
 			Point2f(mapCoord.x, mapCoord.y), 100, kuroTileMapKeypoints, kuroTileMapDescriptors);
 
 		ImageFeatureData MapFeatureData(playerMapKeypoints, playerMapDescriptors);
-		ImageFeatureData minMapFeatureData = FeatureMatch::ExtractSurfFeatures(surf, minMapImg);
-		if (minMapFeatureData.imgDescriptors.empty()) {
-			Diagnostics::Record("scene-identification", "minimap descriptors=empty");
-			return 0;
-		}
 		vector<DMatch> goodMatch = FeatureMatch::FindGoodMatchesBetweenMapAndMinMap(minMapFeatureData, MapFeatureData);
 
 		Coordinate PlayerImgMapCoordinate;
@@ -543,237 +669,605 @@ int App::GetCurrentSceneId(const Coordinate& identifyCoordinate, const Mat& minM
 
 
 		if (isExistGoodCoordinate) {
-			App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = PlayerImgMapCoordinate;
+			if (commitPosition) {
+				App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = PlayerImgMapCoordinate;
+			}
 			return sceneId;
 		}
 	}
 	return 0;
 }
 
-winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot,Coordinate& outPlayerROC, float& outMinMapRadius) {
-	Ptr<xfeatures2d::SURF> surf = xfeatures2d::SURF::create(60, 8, 4, true, true);
+winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordinate& outPlayerROC, float& outMinMapRadius) {
 	Mat minMapImg = ImageProcessing::CropToMinMapAreaImg(snapshot, rect, minMapBottomPoint);
+	Mat normalizedMinimap;
+	ImageFeatureData minMapFeatureData;
+	const bool minimapFeaturesReady = GlobalVisualLocalizer::PrepareMinimap(
+		minMapImg, normalizedMinimap, minMapFeatureData, 10.0);
+	const auto now = CoordinateRecoveryController::Clock::now();
 
-	if ((identifyCoordinate.x == 0 && identifyCoordinate.y == 0) || playerCurrentSceneId == 0) {
+	auto returnTrustedPosition = [&]() -> bool {
+		if (playerCurrentSceneId == 0 || !coordinateRecovery.CanUseTrustedPosition(now)) return false;
+		outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
+		outMinMapRadius = minMapImg.rows / 2.0f;
+		return true;
+	};
 
-		Notification::AddInfo(NotificationDatas("Continuity match failed, trying to identify coordinates.", 3));
-		Diagnostics::Record("minimap-bootstrap", "coordinate=" + std::to_string(identifyCoordinate.x) + "," + std::to_string(identifyCoordinate.y) +
-			" scene=" + std::to_string(playerCurrentSceneId));
-		Diagnostics::SaveImage("minimap-bootstrap-full", snapshot);
-		Diagnostics::SaveImage("minimap-bootstrap-crop", minMapImg);
-
-		Mat snapshot_ocr;
-		if (graphicsCapture.has_value()) {
-			this_thread::sleep_for(std::chrono::milliseconds(50));
-		    co_await GetMatSnapshot(true, snapshot_ocr);
-		}
-		else {
-			snapshot_ocr = snapshot;
-		}
-
-		if (!IdentifyWorldCoordinates::IdentifyCoordinateFromSnapshot(snapshot_ocr, identifyCoordinate, rect)) {
-			Diagnostics::Record("minimap-bootstrap-failed", "coordinate OCR rejected the current capture");
-			identifyCoordinate = { 0,0 };
-			co_return false;
-		}
-		Diagnostics::Record("minimap-bootstrap-ocr", "coordinate=" + std::to_string(identifyCoordinate.x) + "," + std::to_string(identifyCoordinate.y));
-
-		playerCurrentSceneId = GetCurrentSceneId(identifyCoordinate, minMapImg);
-
-		if (playerCurrentSceneId == 0) {
-			Diagnostics::Record("minimap-bootstrap-failed", "no scene accepted after coordinate OCR");
-			co_return false;
-		}
-		// The first successful OCR/SURF location is also the only trustworthy
-		// starting estimate for an immediately opened big map. Previously this
-		// flag was set only after a later continuity frame; pressing M right after
-		// bootstrap then made the map matcher search around its default origin.
+	auto commitVisualPosition = [&](const VisualLocalizationCandidate& candidate, bool recognition) {
+		playerCurrentSceneId = candidate.sceneId;
+		App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = candidate.mapCenter;
+		gameMapCenterCoordinateByMouseMonitoring = candidate.mapCenter;
+		identifyCoordinate = ImgMapToWorldCoordinate(candidate.mapCenter, candidate.sceneId);
 		existMapCenterPointCoordinate = true;
-		gameMapCenterCoordinateByMouseMonitoring = lastPlayerImgMapCoordinate;
 		hasStableMapCenter = false;
 		pendingMapCenterConfirmations = 0;
-		Diagnostics::Record("minimap-bootstrap-ready", "scene=" + std::to_string(playerCurrentSceneId) +
-			" playerMap=" + std::to_string(lastPlayerImgMapCoordinate.x) + "," + std::to_string(lastPlayerImgMapCoordinate.y));
-		if (Diagnostics::Enabled()) {
-			Notification::AddInfo(NotificationDatas("Diagnostics: location locked. Press M once to test the big map.", 15));
+		pendingVisualCandidate.reset();
+		playerLocationLock = { candidate.sceneId, candidate.mapCenter, now, candidate.quality,
+			coordinateUiGeneration, true };
+		localizationResumeHint = LocalizationResumeHint{ candidate.sceneId, candidate.mapCenter, now, 0, 0 };
+		if (recognition) coordinateRecovery.OnRecognitionSuccess(now);
+		else coordinateRecovery.OnContinuitySuccess(now);
+		if (coordinateRecoveryStartedAt.has_value()) {
+			Diagnostics::Record("visual-localization-recovery", "durationMs=" + std::to_string(
+				std::chrono::duration_cast<std::chrono::milliseconds>(now - *coordinateRecoveryStartedAt).count()));
+			coordinateRecoveryStartedAt.reset();
 		}
-	}
+		Diagnostics::Record(recognition ? "visual-localization-accepted" : "visual-local-tracking",
+			"scene=" + std::to_string(candidate.sceneId) + " map=" +
+			std::to_string(candidate.mapCenter.x) + "," + std::to_string(candidate.mapCenter.y) +
+			" quality=" + std::string(GlobalVisualLocalizer::QualityName(candidate.quality)) +
+			" inliers=" + std::to_string(candidate.inlierCount) +
+			" ratio=" + std::to_string(candidate.inlierRatio) +
+			" error=" + std::to_string(candidate.medianReprojectionError));
+	};
 
-	const Point2f playerImgMapPoint(lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
-	FeatureFilter::FilterNearKeypoints(App::FeatureData_map.imgKeypoints, App::FeatureData_map.imgDescriptors, playerImgMapPoint, 120, nearPlayerMapKeypoints, nearPlayerMapDescriptors);
-
-	ImageFeatureData MapFeatureData(nearPlayerMapKeypoints, nearPlayerMapDescriptors);
-	ImageFeatureData minMapFeatureData = FeatureMatch::ExtractSurfFeatures(surf, minMapImg);
-
-	if (minMapFeatureData.imgDescriptors.empty()) {
-		Diagnostics::Record("minimap-continuity", "minimap descriptors=empty");
-		co_return false;
-	}
-
-	vector<DMatch> goodMatch = FeatureMatch::FindGoodMatchesBetweenMapAndMinMap(minMapFeatureData, MapFeatureData);
-
-	Coordinate PlayerImageMapCoordinate;
-	bool isExistGoodCoordinate = MapCoordinate::GetGoodPlayerImgMapCoordinateFromMatches(
-		minMapImg,
-		goodMatch,
-		nearPlayerMapKeypoints,
-		minMapFeatureData.imgKeypoints,
-		15.0f,
-		lastPlayerImgMapCoordinate,
-		PlayerImageMapCoordinate
-	);
-
-	if (isExistGoodCoordinate) {
-		App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = PlayerImageMapCoordinate;
-	}
-	else {
-		Diagnostics::Record("minimap-continuity", "failed goodMatches=" + std::to_string(goodMatch.size()) +
-			" mapKeypoints=" + std::to_string(nearPlayerMapKeypoints.size()) +
-			" minimapKeypoints=" + std::to_string(minMapFeatureData.imgKeypoints.size()));
-		Diagnostics::SaveImage("minimap-continuity-full", snapshot);
-		Diagnostics::SaveImage("minimap-continuity-crop", minMapImg);
-		this_thread::sleep_for(std::chrono::milliseconds(120));
-		if (isExistMinMap) {
-			identifyCoordinate = { 0,0 };//下一个循环进行ocr
-		}
-		co_return false;
-	}
-
-	outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
-	outMinMapRadius = minMapImg.rows / 2;
-	existMapCenterPointCoordinate = true;
-	co_return true;
-}
-
-bool App::GetGameMapCenterPointROC(const Mat& snapshot, Coordinate& outGameMapCenterPointROC, Coordinate& outLastGameMapCenterPointROC) {
-	Mat mapCenterAreaImgae = ImageProcessing::CropToMapCenterArea(snapshot, rect);
-
-	Ptr<xfeatures2d::SURF> surt = xfeatures2d::SURF::create(100, 4, 3, true, true);
-	ImageFeatureData mapCenterAreaFeatureData = FeatureMatch::ExtractSurfFeatures(surt, mapCenterAreaImgae);
-
-	if (!mapCenterAreaFeatureData.imgDescriptors.empty()) {
-		vector<vector<DMatch>> knnMatches;
-		vector<KeyPoint> mapCenterPointNearKeypoints;
-		Mat mapCenterPointNearDescriptors;
-
-		if (existMapCenterPointCoordinate) {
-			//true 小范围搜索featurePoint并给通过鼠标监视算的中心坐标赋正确的值（最后） 
-			const Point2f ImgMapCoord_gameMapCenterPoint(App::gameMapCenterPointImgMapCoord.x, App::gameMapCenterPointImgMapCoord.y);
-			FeatureFilter::FilterNearGoodKeypoints(App::FeatureData_map.imgKeypoints, App::FeatureData_map.imgDescriptors, ImgMapCoord_gameMapCenterPoint, 400, 16, mapCenterPointNearKeypoints, mapCenterPointNearDescriptors);
-		}
-		else {
-			//通过鼠标监视算出的中心坐标有一定偏差
-			//false 获取通过鼠标监视算的中心坐标 大范围搜索featurePoint
-			const Point2f ImgMapCoord_gameMapCenterPoint(App::gameMapCenterCoordinateByMouseMonitoring.x, App::gameMapCenterCoordinateByMouseMonitoring.y);
-			FeatureFilter::FilterNearGoodKeypoints(App::FeatureData_map.imgKeypoints, App::FeatureData_map.imgDescriptors, ImgMapCoord_gameMapCenterPoint, 2200, 22, mapCenterPointNearKeypoints, mapCenterPointNearDescriptors);
-		}
-
-		if (mapCenterPointNearDescriptors.empty()) {
-			Diagnostics::Record("map-center", "candidate map descriptors=empty");
-			Diagnostics::SaveImage("map-center-full", snapshot);
-			Diagnostics::SaveImage("map-center-crop", mapCenterAreaImgae);
-			existMapCenterPointCoordinate = false;
-			return false;
-		}
-
-		ImageFeatureData centerMapNearFeatureData(mapCenterPointNearKeypoints, mapCenterPointNearDescriptors);
-		auto goodMatchs = FeatureMatch::FindGoodMatchesFLANN(mapCenterAreaFeatureData, centerMapNearFeatureData, 0.62f, 0.50f);
-
-		Coordinate centerMapCoordinate; vector<Point2f> captrueCorners_temp;
-		existMapCenterPointCoordinate = MapCoordinate::GetMapCoordinateOfCenterGameMapPos(centerMapNearFeatureData, mapCenterAreaFeatureData, goodMatchs, mapCenterAreaImgae, centerMapCoordinate, captrueCorners_temp);
-
-		if (existMapCenterPointCoordinate) {
-			 outGameMapCenterPointROC = RelativeCoordinates::ImgMapCoordToROC(centerMapCoordinate, playerCurrentSceneId);
-			 outLastGameMapCenterPointROC = RelativeCoordinates::ImgMapCoordToROC(App::gameMapCenterPointImgMapCoord, playerCurrentSceneId);
-			if (Diagnostics::Enabled()) {
-				static auto lastReport = std::chrono::steady_clock::time_point{};
-				const auto now = std::chrono::steady_clock::now();
-				if (now - lastReport >= std::chrono::seconds(2)) {
-					Diagnostics::Record("map-center-success", "goodMatches=" + std::to_string(goodMatchs.size()) +
-						" centerImg=" + std::to_string(centerMapCoordinate.x) + "," + std::to_string(centerMapCoordinate.y) +
-						" centerROC=" + std::to_string(outGameMapCenterPointROC.x) + "," + std::to_string(outGameMapCenterPointROC.y));
-					lastReport = now;
+	CoordinateRecognitionResult ocrResult;
+	if (runLegacyLocalizationDiagnostics && IdentifyWorldCoordinates::TryTakeLatestResult(ocrResult)) {
+		if (ocrResult.sessionId == coordinateSessionId && ocrResult.uiGeneration == coordinateUiGeneration &&
+			ocrResult.frameId <= snapshotFrameId && lastCoordinateVisible) {
+			latestOcrHints.clear();
+			for (const auto& candidate : ocrResult.candidates) {
+				for (const int sceneId : Scene::sceneIds) {
+					latestOcrHints.push_back({ sceneId,
+						MapCoordinate::IdentifyCoorToImgMapCoord(candidate.Position(), sceneId) });
 				}
 			}
+			Diagnostics::Record("ocr-weak-hint", "candidates=" + std::to_string(ocrResult.candidates.size()) +
+				" mappedHints=" + std::to_string(latestOcrHints.size()));
+			if (runLegacyLocalizationDiagnostics && minimapFeaturesReady) {
+				for (const auto& candidate : ocrResult.candidates) {
+					const int legacyScene = ValidateCoordinateCandidate(candidate.Position(), normalizedMinimap,
+						minMapFeatureData, playerCurrentSceneId, true, false);
+					Diagnostics::Record("legacy-localization-result", "mode=" + localizationDiagnosticsMode +
+						" ocr=" + std::to_string(candidate.x) + "," + std::to_string(candidate.y) +
+						" scene=" + std::to_string(legacyScene) + " published=false");
+				}
+			}
+		}
+		else {
+			Diagnostics::Record("ocr-weak-hint-stale", "frame=" + std::to_string(ocrResult.frameId));
+		}
+	}
 
-			if (abs((captrueCorners[2].x - captrueCorners[0].x) - (captrueCorners_temp[2].x - captrueCorners_temp[0].x)) > 10)
-				captrueCorners = captrueCorners_temp;
-
-			App::gameMapCenterCoordinateByMouseMonitoring = App::gameMapCenterPointImgMapCoord = centerMapCoordinate;
-
-			map_ConsecutiveFailuresCount = 0;
+	auto acceptVisualResult = [&]() -> bool {
+		VisualLocalizationResult result;
+		if (!GlobalVisualLocalizer::TryTakeLatestResult(result)) return false;
+		if (visualRequestInFlight.has_value() && visualRequestInFlight->first == result.uiGeneration &&
+			visualRequestInFlight->second == result.frameId) {
+			visualRequestInFlight.reset();
+		}
+		if (result.sessionId != coordinateSessionId || result.uiGeneration != coordinateUiGeneration ||
+			result.frameId > snapshotFrameId || !lastCoordinateVisible) {
+			Diagnostics::Record("visual-localization-stale", "frame=" + std::to_string(result.frameId));
+			return false;
+		}
+		Diagnostics::Record("visual-localization-result", "quality=" +
+			std::string(GlobalVisualLocalizer::QualityName(result.quality)) +
+			" ambiguous=" + std::to_string(result.ambiguous) +
+			" candidates=" + std::to_string(result.candidates.size()) +
+			" coarseMs=" + std::to_string(result.coarseMilliseconds) +
+			" verifyMs=" + std::to_string(result.verificationMilliseconds) +
+			" totalMs=" + std::to_string(result.totalMilliseconds));
+		std::ostringstream candidateDetails;
+		for (std::size_t index = 0; index < result.candidates.size(); ++index) {
+			const auto& candidate = result.candidates[index];
+			if (index > 0) candidateDetails << ';';
+			candidateDetails << index << '@' << candidate.sceneId << ':' << candidate.mapCenter.x << ','
+				<< candidate.mapCenter.y << " inliers=" << candidate.inlierCount << " ratio="
+				<< candidate.inlierRatio << " error=" << candidate.medianReprojectionError << " score="
+				<< candidate.retrievalScore << " quality=" << GlobalVisualLocalizer::QualityName(candidate.quality);
+		}
+		Diagnostics::Record("visual-localization-candidates", candidateDetails.str());
+		Diagnostics::SaveImage(result.quality == VisualLocalizationQuality::Rejected
+			? "visual-rejected-minimap" : "visual-accepted-minimap", normalizedMinimap);
+		if (result.candidates.empty() || result.ambiguous || result.quality == VisualLocalizationQuality::Rejected) {
+			pendingVisualCandidate.reset();
+			coordinateRecovery.OnRecognitionFailure();
+			return false;
+		}
+		const auto& candidate = result.candidates.front();
+		if (result.quality == VisualLocalizationQuality::Strong) {
+			commitVisualPosition(candidate, true);
 			return true;
 		}
-		else if (map_ConsecutiveFailuresCount == 0) {
-			Diagnostics::Record("map-center", "homography rejected goodMatches=" + std::to_string(goodMatchs.size()) +
-				" cropKeypoints=" + std::to_string(mapCenterAreaFeatureData.imgKeypoints.size()) +
-				" candidateKeypoints=" + std::to_string(mapCenterPointNearKeypoints.size()));
-			Diagnostics::SaveImage("map-center-full", snapshot);
-			Diagnostics::SaveImage("map-center-crop", mapCenterAreaImgae);
+		if (pendingVisualCandidate.has_value() && pendingVisualCandidate->sceneId == candidate.sceneId &&
+			result.frameId > pendingVisualFrameId &&
+			std::hypot(pendingVisualCandidate->mapCenter.x - candidate.mapCenter.x,
+				pendingVisualCandidate->mapCenter.y - candidate.mapCenter.y) <= 12.0) {
+			commitVisualPosition(candidate, true);
+			return true;
+		}
+		pendingVisualCandidate = candidate;
+		pendingVisualFrameId = result.frameId;
+		return false;
+	};
+
+	auto submitRecovery = [&]() {
+		if (!minimapFeaturesReady || !GlobalVisualLocalizer::IsReady() ||
+			now - lastVisualSubmitAt < std::chrono::milliseconds(150)) return;
+		if (visualRequestInFlight.has_value() && visualRequestInFlight->first == coordinateUiGeneration) {
+			Diagnostics::Record("visual-localization-submit", "mode=global-coalesced frame=" +
+				std::to_string(snapshotFrameId));
+			return;
+		}
+		VisualLocalizationRequest visualRequest;
+		visualRequest.sessionId = coordinateSessionId;
+		visualRequest.uiGeneration = coordinateUiGeneration;
+		visualRequest.frameId = snapshotFrameId;
+		visualRequest.normalizedMinimap = normalizedMinimap;
+		visualRequest.minimapFeatures = minMapFeatureData;
+		visualRequest.ocrHints = latestOcrHints;
+		if (!GlobalVisualLocalizer::Submit(std::move(visualRequest))) return;
+		lastVisualSubmitAt = now;
+		visualRequestInFlight = std::make_pair(coordinateUiGeneration, snapshotFrameId);
+
+		Diagnostics::Record("visual-localization-submit", "mode=global frame=" + std::to_string(snapshotFrameId) +
+			" minimapKeypoints=" + std::to_string(minMapFeatureData.imgKeypoints.size()) +
+			" ocrHints=" + std::to_string(latestOcrHints.size()));
+		if (runLegacyLocalizationDiagnostics) {
+			CoordinateRecognitionRequest ocrRequest;
+			ocrRequest.sessionId = coordinateSessionId;
+			ocrRequest.uiGeneration = coordinateUiGeneration;
+			ocrRequest.frameId = snapshotFrameId;
+			ocrRequest.snapshot = snapshot;
+			ocrRequest.clientRect = rect;
+			if (playerCurrentSceneId != 0) ocrRequest.previousTrusted = identifyCoordinate;
+			ocrRequest.useTopHatRoute = (coordinateRecovery.FailedRecognitionBatches() % 2) == 1;
+			IdentifyWorldCoordinates::Submit(std::move(ocrRequest));
+		}
+	};
+
+	bool resumeAwaitingConfirmation = false;
+	auto tryResumeHint = [&]() -> bool {
+		if (!minimapFeaturesReady || !localizationResumeHint.has_value()) return false;
+		auto& hint = *localizationResumeHint;
+		if (hint.attemptedGeneration != coordinateUiGeneration) {
+			hint.attemptedGeneration = coordinateUiGeneration;
+			hint.attempts = 0;
+		}
+		if (hint.attempts >= 2) return false;
+		++hint.attempts;
+		VisualLocalizationCandidate candidate;
+		const auto start = std::chrono::steady_clock::now();
+		const bool matched = GlobalVisualLocalizer::TrackNearby(normalizedMinimap, minMapFeatureData,
+			hint.sceneId, hint.mapCenter, 256.0, candidate);
+		const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::steady_clock::now() - start).count();
+		Diagnostics::Record("visual-localization-resume", "attempt=" + std::to_string(hint.attempts) +
+			" scene=" + std::to_string(hint.sceneId) + " accepted=" + std::to_string(matched) +
+			" durationMs=" + std::to_string(elapsedMs));
+		if (!matched) return false;
+		const bool sameCandidate = pendingVisualCandidate.has_value() &&
+			pendingVisualCandidate->sceneId == candidate.sceneId &&
+			std::hypot(pendingVisualCandidate->mapCenter.x - candidate.mapCenter.x,
+				pendingVisualCandidate->mapCenter.y - candidate.mapCenter.y) <= 12.0;
+		if (candidate.quality == VisualLocalizationQuality::Strong || sameCandidate) {
+			commitVisualPosition(candidate, true);
+			Diagnostics::Record("visual-localization-resume", "accepted=true mode=nearby");
+			return true;
+		}
+		pendingVisualCandidate = candidate;
+		pendingVisualFrameId = snapshotFrameId;
+		resumeAwaitingConfirmation = true;
+		return false;
+	};
+
+	if (coordinateRecovery.ShouldRequestRecognition()) {
+		if (!coordinateRecoveryStartedAt.has_value()) coordinateRecoveryStartedAt = now;
+		if (acceptVisualResult()) {
+			outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
+			outMinMapRadius = minMapImg.rows / 2.0f;
+			co_return true;
+		}
+		if (tryResumeHint()) {
+			outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
+			outMinMapRadius = minMapImg.rows / 2.0f;
+			co_return true;
+		}
+		if (resumeAwaitingConfirmation) co_return false;
+		submitRecovery();
+		if (returnTrustedPosition()) co_return true;
+		if (coordinateRecovery.ShouldHideMarkers(now)) {
+			DrawItemOnMinMap::ClearNearItemsData();
+			DrawRouteOnMinMap::ClearRountsData();
+		}
+		co_return false;
+	}
+
+	if (coordinateRecovery.State() == CoordinateLockState::Uninitialized ||
+		coordinateRecovery.State() == CoordinateLockState::Hidden || playerCurrentSceneId == 0 ||
+		!minimapFeaturesReady) {
+		co_return false;
+	}
+
+	VisualLocalizationCandidate tracked;
+	const auto trackingStart = std::chrono::steady_clock::now();
+	const bool continuityAccepted = GlobalVisualLocalizer::TrackLocal(
+		normalizedMinimap, minMapFeatureData, playerCurrentSceneId, lastPlayerImgMapCoordinate, tracked);
+	Diagnostics::Record("visual-local-tracking-time", "durationMs=" + std::to_string(
+		std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - trackingStart).count()) +
+		" accepted=" + std::to_string(continuityAccepted));
+	if (continuityAccepted) {
+		commitVisualPosition(tracked, false);
+		outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
+		outMinMapRadius = minMapImg.rows / 2.0f;
+		co_return true;
+	}
+
+	const auto previousState = coordinateRecovery.State();
+	coordinateRecovery.OnContinuityFailure(now);
+	Diagnostics::Record("minimap-continuity", "failed state=" + std::string(CoordinateRecoveryController::StateName(
+		coordinateRecovery.State())) + " minimapKeypoints=" + std::to_string(minMapFeatureData.imgKeypoints.size()));
+	if (previousState != CoordinateLockState::Recovering) {
+		// A teleport looks exactly like an impossible local match: do not spend
+		// three more frames following the previous area.  Invalidate outstanding
+		// work, hide the old markers, and immediately request a global visual lock.
+		++coordinateUiGeneration;
+		pendingVisualCandidate.reset();
+		pendingVisualFrameId = 0;
+		localizationResumeHint.reset();
+		playerLocationLock.valid = false;
+		visualRequestInFlight.reset();
+		latestOcrHints.clear();
+		coordinateRecovery.RestartRecovery();
+		coordinateRecoveryStartedAt = now;
+		Notification::AddInfo(NotificationDatas("Visual tracking changed area; recovering position.", 3));
+		Diagnostics::Record("coordinate-recovery", "reason=first-local-tracking-failure mode=global");
+		submitRecovery();
+	}
+	DrawItemOnMinMap::ClearNearItemsData();
+	DrawRouteOnMinMap::ClearRountsData();
+	co_return false;
+}
+
+int App::ResolveMapViewportScene(const Coordinate& centerMapCoordinate) const {
+	if (!featureResources || !featureResources->visualIndexReady) return 0;
+	const int worldSceneId = Scene::SceneNameToId("World");
+	bool baseWorldMatch = false;
+	for (std::uint32_t index = 0; index < featureResources->visualIndex.tiles.size(); ++index) {
+		const auto& tile = featureResources->visualIndex.tiles[index];
+		if (centerMapCoordinate.x < tile.minX || centerMapCoordinate.x >= tile.maxX ||
+			centerMapCoordinate.y < tile.minY || centerMapCoordinate.y >= tile.maxY) continue;
+		if (index < featureResources->baseVisualTileCount) {
+			baseWorldMatch = true;
+			continue;
+		}
+		if (Scene::IsKnown(tile.sceneId)) return tile.sceneId;
+	}
+	return baseWorldMatch ? worldSceneId : 0;
+}
+
+void App::SuspendPlayerLocationForMapTransition() {
+	const auto now = CoordinateRecoveryController::Clock::now();
+	if (!playerLocationLock.valid && playerCurrentSceneId != 0 && lastPlayerImgMapCoordinate.IsValid()) {
+		playerLocationLock = { playerCurrentSceneId, lastPlayerImgMapCoordinate, now,
+			VisualLocalizationQuality::Marginal, coordinateUiGeneration, true };
+	}
+	coordinateRecovery.SetVisible(false, now);
+	coordinateRecoveryStartedAt.reset();
+	pendingVisualCandidate.reset();
+	pendingVisualFrameId = 0;
+	latestOcrHints.clear();
+	visualRequestInFlight.reset();
+	lastCoordinateVisible = false;
+	playerCurrentSceneId = 0;
+	lastPlayerImgMapCoordinate = {};
+	identifyCoordinate = {};
+	++coordinateUiGeneration;
+	DrawItemOnMinMap::ClearNearItemsData();
+	DrawRouteOnMinMap::ClearRountsData();
+	Diagnostics::Record("player-location-suspended", "reason=map-ui-transition lock=" +
+		std::to_string(playerLocationLock.valid) + " scene=" +
+		std::to_string(playerLocationLock.sceneId));
+}
+
+void App::BeginMinimapReacquisition() {
+	const auto now = CoordinateRecoveryController::Clock::now();
+	coordinateRecovery.Reset();
+	coordinateRecoveryStartedAt.reset();
+	pendingVisualCandidate.reset();
+	pendingVisualFrameId = 0;
+	latestOcrHints.clear();
+	lastVisualSubmitAt = {};
+	visualRequestInFlight.reset();
+	lastCoordinateVisible = false;
+	++coordinateUiGeneration;
+	if (playerLocationLock.valid) {
+		localizationResumeHint = LocalizationResumeHint{ playerLocationLock.sceneId,
+			playerLocationLock.mapCoordinate, now, 0, 0 };
+	}
+	else {
+		localizationResumeHint.reset();
+	}
+	DrawItemOnMinMap::ClearNearItemsData();
+	DrawRouteOnMinMap::ClearRountsData();
+	Diagnostics::Record("player-location-reacquire", "hint=" +
+		std::to_string(localizationResumeHint.has_value()) + " generation=" +
+		std::to_string(coordinateUiGeneration));
+}
+
+void App::BeginMapViewportSession() {
+	ResetMapViewport();
+	++mapViewportGeneration;
+	mapViewportRequestInFlight.reset();
+	lastMapViewportSubmitAt = {};
+	activeWorldSearchPrior.reset();
+	if (featureResources && playerLocationLock.valid &&
+		playerLocationLock.sceneId == Scene::SceneNameToId("World")) {
+		activeWorldSearchPrior = worldSearchPriorIndex.Build(*featureResources,
+			playerLocationLock.mapCoordinate, 512.0);
+	}
+	if (activeWorldSearchPrior.has_value() && activeWorldSearchPrior->valid) {
+		Diagnostics::Record("world-search-prior", "used=true area=" + activeWorldSearchPrior->areaName +
+			" tiles=" + std::to_string(activeWorldSearchPrior->candidateTileCount) + " center=" +
+			std::to_string(activeWorldSearchPrior->centerMapCoordinate.x) + "," +
+			std::to_string(activeWorldSearchPrior->centerMapCoordinate.y));
+	}
+	else {
+		Diagnostics::Record("world-search-prior", "used=false reason=no-confirmed-world-player-location");
+	}
+}
+
+bool App::SubmitMapViewportSearch(const Mat& currentSnapshot, MapViewportSearchScope scope,
+	const std::optional<WorldSearchPrior>& prior) {
+	if (!isOpenMap.load() || !MapViewportLocalizer::IsReady()) return false;
+    if (mapViewportRequestInFlight.has_value()) return false;
+    MapViewportLocalizationRequest request;
+    request.sessionId = coordinateSessionId;
+    request.uiGeneration = coordinateUiGeneration;
+	request.viewportGeneration = mapViewportGeneration;
+	request.frameId = snapshotFrameId;
+	request.scope = scope;
+	request.prior = prior;
+	if (scope != MapViewportSearchScope::Global && (!request.prior.has_value() || !request.prior->valid)) {
+		request.scope = MapViewportSearchScope::Global;
+		request.prior.reset();
+	}
+	const MapViewportSearchScope effectiveScope = request.scope;
+	const auto submittedPrior = request.prior;
+	request.mapCrop = ImageProcessing::CropToMapCenterArea(currentSnapshot, rect);
+	if (request.mapCrop.empty() || !MapViewportLocalizer::Submit(std::move(request))) return false;
+	mapViewportRequestInFlight = std::make_pair(mapViewportGeneration, snapshotFrameId);
+	lastMapViewportSubmitAt = std::chrono::steady_clock::now();
+	lastMapViewportScope = effectiveScope;
+	Diagnostics::Record("map-viewport-submit", "scope=" +
+		std::string(MapViewportLocalizer::ScopeName(effectiveScope)) + " generation=" +
+		std::to_string(mapViewportGeneration) + " frame=" + std::to_string(snapshotFrameId) +
+		" priorTiles=" + std::to_string(submittedPrior.has_value() ? submittedPrior->candidateTileCount : 0) +
+		" area=" + (submittedPrior.has_value() ? submittedPrior->areaName : std::string()));
+	return true;
+}
+
+void App::CommitMapViewportResult(const MapViewportLocalizationResult& result) {
+	const int sceneId = ResolveMapViewportScene(result.centerMapCoordinate);
+	if (sceneId == 0 || result.captureCorners.size() != 4) {
+		Diagnostics::Record("map-viewport-result", "accepted=false reason=scene-unresolved");
+		return;
+	}
+	{
+		std::scoped_lock lock(mapViewportMutex);
+		captrueCorners = result.captureCorners;
+		hasMapViewport = true;
+		mapViewportSceneId = sceneId;
+		mapViewportCenterImgMapCoordinate = result.centerMapCoordinate;
+		gameMapCenterCoordinateByMouseMonitoring = gameMapCenterPointImgMapCoord = result.centerMapCoordinate;
+		mapViewportPredictor.Confirm(sceneId, result.centerMapCoordinate, result.captureCorners);
+	}
+	existMapCenterPointCoordinate = true;
+	map_ConsecutiveFailuresCount = 0;
+	Diagnostics::Record("map-viewport-result", "accepted=true scope=" +
+		std::string(MapViewportLocalizer::ScopeName(result.scope)) + " scene=" + std::to_string(sceneId) +
+		" center=" + std::to_string(result.centerMapCoordinate.x) + "," +
+		std::to_string(result.centerMapCoordinate.y) + " matches=" +
+		std::to_string(result.goodMatchCount) + " durationMs=" + std::to_string(result.durationMilliseconds));
+}
+
+void App::ProcessMapViewportResult(const Mat& currentSnapshot) {
+    MapViewportLocalizationResult result;
+    if (!MapViewportLocalizer::TryTakeLatestResult(result)) return;
+    if (result.sessionId != coordinateSessionId) {
+        Diagnostics::Record("map-viewport-stale", "reason=session-mismatch session=" +
+            std::to_string(result.sessionId));
+        return;
+    }
+    if (mapViewportRequestInFlight.has_value() &&
+		mapViewportRequestInFlight->first == result.viewportGeneration &&
+		mapViewportRequestInFlight->second == result.frameId) {
+		mapViewportRequestInFlight.reset();
+	}
+	if (!isOpenMap.load() || result.viewportGeneration != mapViewportGeneration ||
+		result.uiGeneration != coordinateUiGeneration || result.frameId > snapshotFrameId) {
+		Diagnostics::Record("map-viewport-stale", "scope=" +
+			std::string(MapViewportLocalizer::ScopeName(result.scope)) + " frame=" +
+			std::to_string(result.frameId));
+		return;
+	}
+	if (result.accepted) {
+		CommitMapViewportResult(result);
+		return;
+	}
+	Diagnostics::Record("map-viewport-result", "accepted=false scope=" +
+		std::string(MapViewportLocalizer::ScopeName(result.scope)) + " matches=" +
+		std::to_string(result.goodMatchCount) + " cropKeypoints=" + std::to_string(result.cropKeypointCount) +
+		" durationMs=" + std::to_string(result.durationMilliseconds));
+	if (result.scope == MapViewportSearchScope::Local512 && activeWorldSearchPrior.has_value() && featureResources) {
+		auto expanded = worldSearchPriorIndex.Build(*featureResources,
+			activeWorldSearchPrior->centerMapCoordinate, 1024.0);
+		SubmitMapViewportSearch(currentSnapshot, MapViewportSearchScope::Local1024, expanded);
+	}
+	else if (result.scope != MapViewportSearchScope::Global) {
+		SubmitMapViewportSearch(currentSnapshot, MapViewportSearchScope::Global, std::nullopt);
+	}
+}
+
+void App::ResetMapViewport() {
+	std::scoped_lock lock(mapViewportMutex);
+	hasMapViewport = false;
+	mapViewportSceneId = 0;
+	mapViewportCenterImgMapCoordinate = {};
+	gameMapCenterPointImgMapCoord = {};
+	gameMapCenterCoordinateByMouseMonitoring = {};
+	existMapCenterPointCoordinate = false;
+	hasStableMapCenter = false;
+	pendingMapCenterConfirmations = 0;
+	map_ConsecutiveFailuresCount = 0;
+	captrueCorners = { cv::Point2f(0, 0), cv::Point2f(0, 0), cv::Point2f(0, 0), cv::Point2f(0, 0) };
+	mapViewportPredictor.Reset();
+	DrawItemOnGameMap::ClearNearItemsData();
+	DrawRouteOnMap::ClearRountsData();
+	Diagnostics::Record("map-viewport-reset", "reason=map-ui-transition");
+}
+
+bool App::GetGameMapCenterPointROC(const Mat& snapshot, Coordinate& outGameMapCenterPointROC,
+	Coordinate& outLastGameMapCenterPointROC, int& outSceneId, bool allowGlobalSearch) {
+	Mat mapCenterAreaImage = ImageProcessing::CropToMapCenterArea(snapshot, rect);
+	Ptr<xfeatures2d::SURF> surf = xfeatures2d::SURF::create(100, 4, 3, true, true);
+	ImageFeatureData mapCenterFeatureData = FeatureMatch::ExtractSurfFeatures(surf, mapCenterAreaImage);
+	if (mapCenterFeatureData.imgDescriptors.empty()) {
+		++map_ConsecutiveFailuresCount;
+		return false;
+	}
+
+	Coordinate centerMapCoordinate;
+	vector<Point2f> capturedCorners;
+	int goodMatchCount = 0;
+	std::string searchScope = "local";
+	bool hadMapViewport = false;
+	int previousViewportSceneId = 0;
+	Coordinate previousViewportCenter;
+	{
+		std::scoped_lock lock(mapViewportMutex);
+		hadMapViewport = hasMapViewport;
+		previousViewportSceneId = mapViewportSceneId;
+		previousViewportCenter = mapViewportCenterImgMapCoordinate;
+	}
+	auto tryMatch = [&](const ImageFeatureData& candidateFeatures) {
+		if (candidateFeatures.imgDescriptors.empty()) return false;
+		const auto goodMatches = FeatureMatch::FindGoodMatchesFLANN(
+			mapCenterFeatureData, candidateFeatures, 0.62f, 0.50f);
+		goodMatchCount = static_cast<int>(goodMatches.size());
+		if (goodMatchCount < 8) return false;
+		if (!MapCoordinate::GetMapCoordinateOfCenterGameMapPos(candidateFeatures, mapCenterFeatureData,
+			goodMatches, mapCenterAreaImage, centerMapCoordinate, capturedCorners) || capturedCorners.size() != 4) {
+			return false;
+		}
+		const double capturedWidth = cv::norm(capturedCorners[1] - capturedCorners[0]);
+		const double capturedHeight = cv::norm(capturedCorners[3] - capturedCorners[0]);
+		return std::isfinite(centerMapCoordinate.x) && std::isfinite(centerMapCoordinate.y) &&
+			std::isfinite(capturedWidth) && std::isfinite(capturedHeight) &&
+			capturedWidth >= 50.0 && capturedHeight >= 50.0;
+	};
+
+	bool located = false;
+	if (hadMapViewport) {
+		vector<KeyPoint> nearbyKeypoints;
+		Mat nearbyDescriptors;
+		FeatureFilter::FilterNearGoodKeypoints(featureResources->map.imgKeypoints,
+			featureResources->map.imgDescriptors, Point2f(previousViewportCenter.x,
+				previousViewportCenter.y), 700, 16, nearbyKeypoints, nearbyDescriptors);
+		if (!nearbyDescriptors.empty()) {
+			located = tryMatch(ImageFeatureData(nearbyKeypoints, nearbyDescriptors));
 		}
 	}
-	else if (map_ConsecutiveFailuresCount == 0) {
-		Diagnostics::Record("map-center", "map center crop descriptors=empty");
-		Diagnostics::SaveImage("map-center-full", snapshot);
-		Diagnostics::SaveImage("map-center-crop", mapCenterAreaImgae);
+
+	// A map viewport has a different scale from the minimap and must be able to
+	// bootstrap without a player location.  The slower global pass is therefore
+	// used only on first acquisition and after a local miss.  A pan/zoom keeps
+	// its predicted markers instead of starting an expensive global search.
+	const auto now = std::chrono::steady_clock::now();
+	if (!located && allowGlobalSearch && now - lastGlobalMapViewportSearchAt >= std::chrono::milliseconds(400)) {
+		lastGlobalMapViewportSearchAt = now;
+		searchScope = "global";
+		located = tryMatch(featureResources->map);
 	}
 
-	map_ConsecutiveFailuresCount++;
-	if (map_ConsecutiveFailuresCount > 10)
-		Notification::AddInfo(NotificationDatas("Please move the map to an area with obvious features or reopen the map.", 3));
+	if (!located) {
+		if (map_ConsecutiveFailuresCount++ == 0) {
+			Diagnostics::Record("map-viewport", "accepted=false scope=" +
+				std::string(allowGlobalSearch ? searchScope : "local-prediction") +
+				" goodMatches=" + std::to_string(goodMatchCount) +
+				" cropKeypoints=" + std::to_string(mapCenterFeatureData.imgKeypoints.size()));
+		}
+		if (map_ConsecutiveFailuresCount > 10) {
+			Notification::AddError(NotificationDatas("Please move the map to an area with obvious features or reopen the map.", 3));
+		}
+		return false;
+	}
 
-	return false;
+	const int sceneId = ResolveMapViewportScene(centerMapCoordinate);
+	if (sceneId == 0) {
+		++map_ConsecutiveFailuresCount;
+		Diagnostics::Record("map-viewport", "accepted=false reason=scene-unresolved scope=" + searchScope);
+		return false;
+	}
+
+	const bool sceneChanged = hadMapViewport && previousViewportSceneId != sceneId;
+	outGameMapCenterPointROC = RelativeCoordinates::ImgMapCoordToROC(centerMapCoordinate, sceneId);
+	outLastGameMapCenterPointROC = hadMapViewport && !sceneChanged
+		? RelativeCoordinates::ImgMapCoordToROC(previousViewportCenter, sceneId)
+		: outGameMapCenterPointROC;
+	outSceneId = sceneId;
+	if (sceneChanged) hasStableMapCenter = false;
+	{
+		std::scoped_lock lock(mapViewportMutex);
+		if (capturedCorners.size() == 4) captrueCorners = capturedCorners;
+		hasMapViewport = true;
+		mapViewportSceneId = sceneId;
+		mapViewportCenterImgMapCoordinate = centerMapCoordinate;
+		gameMapCenterCoordinateByMouseMonitoring = gameMapCenterPointImgMapCoord = centerMapCoordinate;
+	}
+	existMapCenterPointCoordinate = true;
+	map_ConsecutiveFailuresCount = 0;
+	Diagnostics::Record("map-viewport", "accepted=true scope=" + searchScope +
+		" scene=" + std::to_string(sceneId) + " goodMatches=" + std::to_string(goodMatchCount) +
+		" centerImg=" + std::to_string(centerMapCoordinate.x) + "," + std::to_string(centerMapCoordinate.y) +
+		" centerROC=" + std::to_string(outGameMapCenterPointROC.x) + "," + std::to_string(outGameMapCenterPointROC.y));
+	return true;
 }
 
 void App::Thread_GetItemMapScreenCoordinateByMouseMonitoring() {
 	POINT screenPos = { 0,0 };
-	POINT lastDragPos = {0,0};
-	bool isDragging = false;
-	POINT velocity = { 0,0 };
-	float friction = 0.95;
-	Coordinate mapCoordinatesOfMouseClickPos;
 
 	while (!allThreadStopFlag) {
-		if (IsWindowFocused(hwnd) && GetCursorPos(&screenPos)) {
-			bool leftButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
-			gameMapCoordinatesOfMousePos = MapCoordinate::CalculateMouseClickPositionMapCoordinate(hwnd, screenPos, App::gameMapCenterPointImgMapCoord, captrueCorners);
-
-			if (leftButtonDown) {
-				if (!isDragging) {
-					// 左键按下事件
-					isDragging = true;
-					lastDragPos = screenPos;
-					mapCoordinatesOfMouseClickPos = MapCoordinate::CalculateMouseClickPositionMapCoordinate(hwnd, screenPos, gameMapCenterCoordinateByMouseMonitoring, captrueCorners);
-				}
-				else {
-					// 拖拽过程
-					gameMapCenterCoordinateByMouseMonitoring = MapCoordinate::CalculateGameMapCenterCoordinateByMouseLocation(hwnd, screenPos, mapCoordinatesOfMouseClickPos, captrueCorners);
-					velocity = { lastDragPos.x - screenPos.x,lastDragPos.y - screenPos.y };
-					lastDragPos = screenPos;
-
-					mapNotMoving = false;
-					DrawItemOnGameMap::ClearNearItemsData();
-					DrawRouteOnMap::ClearRountsData();
-				}
+		if (isOpenMap.load() && IsWindowFocused(hwnd) && GetCursorPos(&screenPos)) {
+			const bool leftButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+			Coordinate viewportCenter;
+			std::vector<Point2f> corners;
+			{
+				std::scoped_lock lock(mapViewportMutex);
+				viewportCenter = mapViewportCenterImgMapCoordinate;
+				corners = captrueCorners;
 			}
-			else if (isDragging) {
-				// 左键松开事件
-				isDragging = false;
+			const Coordinate mouseMapCoordinate = MapCoordinate::CalculateMouseClickPositionMapCoordinate(
+				hwnd, screenPos, viewportCenter, corners);
+			{
+				std::scoped_lock lock(mapViewportMutex);
+				gameMapCoordinatesOfMousePos = mouseMapCoordinate;
 			}
-
-			if (!isDragging) {
-				MapCoordinate::CalculateInertialslidingCoordinate(hwnd, velocity, captrueCorners, gameMapCenterCoordinateByMouseMonitoring);
-				velocity.x *= friction;
-				velocity.y *= friction;
-				if (velocity.x < 0.001 && velocity.y < 0.001) {
-					mapNotMoving = true;
-				}
-				else {
-					mapNotMoving = false;
-					DrawItemOnGameMap::ClearNearItemsData();
-					DrawRouteOnMap::ClearRountsData();
-				}
-			}
+			// Mouse input is intentionally not used to invent a viewport center or
+			// inertial velocity.  The map image itself is the authority; this
+			// thread only keeps the debug mouse-coordinate readout up to date.
+			mapNotMoving = !leftButtonDown;
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}

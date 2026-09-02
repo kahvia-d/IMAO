@@ -145,25 +145,10 @@ CaptureSnapshot::TakeAsync(winrt::IDirect3DDevice const& device, winrt::Graphics
 
 
 winrt::IAsyncOperation<winrt::StorageFile> CaptureSnapshot::TakeSnapshotAsync() {
-    // Use what we're currently capturing
-    if (m_capture == nullptr)
-    {
-        co_return nullptr;
-    }
-    auto item = m_capture->CaptureItem();
-
-    // Take the snapshot
-    auto texture = co_await CaptureSnapshot::TakeAsync(m_device, item, winrt::DirectXPixelFormat::B8G8R8A8UIntNormalized);
-
-    // Encode the image
-    D3D11_TEXTURE2D_DESC desc = {};
-    texture->GetDesc(&desc);
-    auto bytes = util::CopyBytesFromTexture(texture);
-
-    Mat image(desc.Height, desc.Width, CV_8UC4, bytes.data());
-
-    Mat bgrImage;
-    cvtColor(image, bgrImage, cv::IMREAD_COLOR);
-
-    captureResult = bgrImage;
+    // Compatibility entry point: reuse the continuously running capture
+    // session instead of creating another frame pool for each snapshot.
+    Mat latest;
+    if (!WaitForFirstFrame(latest, std::chrono::milliseconds(1500))) co_return nullptr;
+    cvtColor(latest, captureResult, cv::COLOR_BGRA2BGR);
+    co_return nullptr;
 }

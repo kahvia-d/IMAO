@@ -54,7 +54,9 @@ int main() {
     //graphicsCapture = CaptureSnapshot(hwnd);
     bitBltCapture = BitBltCapture(hwnd);
 
-    App app(graphicsCapture, bitBltCapture, hwnd);
+    RECT clientRect{};
+    if (!GetUsableClientRect(hwnd, clientRect)) return 1;
+    App app(graphicsCapture, bitBltCapture, hwnd, clientRect);
     App* p_app = &app;
     LoadEditRouteData::Initi(p_app);
     ImGuiOverWindows imguioverwindows(hwnd, app);

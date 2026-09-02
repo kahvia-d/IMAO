@@ -26,6 +26,9 @@ public static class IMaoCoreAPI
     public static extern void Stop();
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void Shutdown();
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void EnabledMinMapShowItem(bool setValue);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]

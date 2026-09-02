@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "x64/Debug/Diagnostics/20260824-204005",
+  "sampleCount": 1,
+  "samples": [
+    {
+      "id": "dreamzhou-west-20260824-204005",
+      "session": "20260824-204005",
+      "kind": "live-smoke",
+      "image": "x64/Debug/Diagnostics/20260824-204005/5_visual-rejected-minimap.png",
+      "expected": {
+        "sceneId": 1,
+        "mapX": -7791.395,
+        "mapY": 1605.14,
+        "tolerance": 12.0,
+        "source": "kuro-tile-verified"
+      }
+    }
+  ]
+}

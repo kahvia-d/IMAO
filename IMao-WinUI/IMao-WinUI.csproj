@@ -85,22 +85,35 @@
         Condition="'@(KuroMapAssets)' != ''" />
 </Target>
 
-<Target Name="CopyDreamzhouCandidateAssets" AfterTargets="CopyFilesToOutputDirectory">
+<Target Name="CopyCandidateFeaturePackAssets" AfterTargets="CopyFilesToOutputDirectory">
   <ItemGroup>
-    <DreamzhouCandidateAssets Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\DreamzhouCandidate\**\*" />
+    <CandidateFeaturePackRegistry Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\candidate-packs.json" />
+    <CandidateFeaturePackAssets Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\*Candidate\*">
+      <PackDirectory>$([System.IO.Path]::GetFileName($([System.IO.Path]::GetDirectoryName('%(FullPath)'))))</PackDirectory>
+    </CandidateFeaturePackAssets>
   </ItemGroup>
-  <MakeDir Directories="$(TargetDir)Assets\FeaturesDatas\DreamzhouCandidate" Condition="Exists('$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\DreamzhouCandidate')" />
-  <Copy SourceFiles="@(DreamzhouCandidateAssets)"
-        DestinationFiles="@(DreamzhouCandidateAssets->'$(TargetDir)Assets\FeaturesDatas\DreamzhouCandidate\%(RecursiveDir)%(Filename)%(Extension)')"
+  <MakeDir Directories="$(TargetDir)Assets\FeaturesDatas" Condition="Exists('$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\candidate-packs.json')" />
+  <Copy SourceFiles="@(CandidateFeaturePackRegistry)"
+        DestinationFiles="@(CandidateFeaturePackRegistry->'$(TargetDir)Assets\FeaturesDatas\%(Filename)%(Extension)')"
         SkipUnchangedFiles="true"
-        Condition="'@(DreamzhouCandidateAssets)' != ''" />
+        Condition="'@(CandidateFeaturePackRegistry)' != ''" />
+  <Copy SourceFiles="@(CandidateFeaturePackAssets)"
+        DestinationFiles="@(CandidateFeaturePackAssets->'$(TargetDir)Assets\FeaturesDatas\%(PackDirectory)\%(Filename)%(Extension)')"
+        SkipUnchangedFiles="true"
+        Condition="'@(CandidateFeaturePackAssets)' != ''" />
 </Target>
 
 <Target Name="CopyKuroTileFeaturePackAssets" AfterTargets="CopyFilesToOutputDirectory">
   <ItemGroup>
+    <KuroTileFeaturePackRegistry Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\kuro-tile-packs.json" />
     <KuroTileFeaturePackAssets Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\KuroTilePacks\**\*" />
   </ItemGroup>
+  <MakeDir Directories="$(TargetDir)Assets\FeaturesDatas" Condition="Exists('$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\kuro-tile-packs.json')" />
   <MakeDir Directories="$(TargetDir)Assets\FeaturesDatas\KuroTilePacks" Condition="Exists('$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\KuroTilePacks')" />
+  <Copy SourceFiles="@(KuroTileFeaturePackRegistry)"
+        DestinationFiles="@(KuroTileFeaturePackRegistry->'$(TargetDir)Assets\FeaturesDatas\%(Filename)%(Extension)')"
+        SkipUnchangedFiles="true"
+        Condition="'@(KuroTileFeaturePackRegistry)' != ''" />
   <Copy SourceFiles="@(KuroTileFeaturePackAssets)"
         DestinationFiles="@(KuroTileFeaturePackAssets->'$(TargetDir)Assets\FeaturesDatas\KuroTilePacks\%(RecursiveDir)%(Filename)%(Extension)')"
         SkipUnchangedFiles="true"

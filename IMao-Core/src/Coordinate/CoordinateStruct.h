@@ -1,7 +1,23 @@
 ﻿#pragma once
 #include <iostream>
-#include<vector>
+#include <vector>
 #include <string>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <limits>
+#include <mutex>
+#include <unordered_map>
+#ifndef NOMINMAX
+#define NOMINMAX
+#define IMAO_COORDINATESTRUCT_UNDEF_NOMINMAX
+#endif
+#include <Windows.h>
+#ifdef IMAO_COORDINATESTRUCT_UNDEF_NOMINMAX
+#undef NOMINMAX
+#undef IMAO_COORDINATESTRUCT_UNDEF_NOMINMAX
+#endif
+#include <nlohmann/json.hpp>
 struct Coordinate {
     double x;
     double y;
@@ -47,27 +63,135 @@ struct LahaiOriginCoordinates {
     inline static double y = 13138;
 };
 
-//TODO:需要适配更多地图
+// A runtime scene is separate from Kuro's top-level state ID. Runtime IDs are
+// persisted in user routes; the Kuro ID names the upstream point and tile data.
+struct SceneDefinition {
+    int id;
+    const char* name;
+    int kuroStateId;
+    double originX;
+    double originY;
+    double scale;
+    bool requiresGameValidation;
+};
+
 struct Scene {
-    inline static std::vector<int> sceneIds = {1,2,3,4,5};
-    inline static std::vector<std::string> sceneNames = { "World","Tethys","Fabricatorium","Avinoleum","Lahai"};
-    
-    static std::string SceneIdToName(int sceneId) {
-        for (size_t i = 0; i < sceneIds.size(); i++) {
-            if (sceneIds[i] == sceneId) {
-                return sceneNames[i];
-            }
-        }
-        return std::string();
+    // New independent Kuro tile packs use their own map-space origin. A later
+    // four-anchor calibration only updates this table, never point data/routes.
+    inline static std::vector<SceneDefinition> definitions = {
+        { 1, "World",          8,  2474.0,  1957.0, 1.205, false },
+        { 2, "Tethys",      900,  8593.0,  1382.0, 1.205, false },
+        { 3, "Fabricatorium",905, 7437.0, 13783.0, 1.205, false },
+        { 4, "Avinoleum",  903,  2433.0,  9030.0, 1.205, false },
+        { 5, "Lahai",      906, 21662.0, 13138.0, 1.205, false },
+        { 6, "LowerVault", 902,     0.0,     0.0, 1.205, true  },
+        { 7, "Darkplain",  909,     0.0,     0.0, 1.205, true  },
+        { 8, "TimeRiftRuins", 910,  0.0,     0.0, 1.205, true  }
+    };
+    inline static const std::vector<int> sceneIds = { 1,2,3,4,5,6,7,8 };
+    inline static const std::vector<std::string> sceneNames = {
+        "World", "Tethys", "Fabricatorium", "Avinoleum", "Lahai",
+        "LowerVault", "Darkplain", "TimeRiftRuins"
+    };
+
+    // Calibration and release approval are deliberately external to the
+    // point snapshot.  This lets a failed new-region calibration keep its
+    // original point data without making its markers available at runtime.
+    inline static std::once_flag externalConfigLoadOnce;
+    inline static std::unordered_map<int, bool> runtimeApproval;
+
+    static std::filesystem::path AssetPath(const char* name) {
+        char buffer[MAX_PATH]{};
+        const DWORD length = GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+        if (length == 0 || length >= MAX_PATH) return {};
+        return std::filesystem::path(buffer).parent_path() / "Assets" / "KuroMap" / name;
     }
 
-    static int SceneNameToId(std::string sceneName) {
-        for (size_t i = 0; i < sceneNames.size(); i++) {
-            if (sceneNames[i] == sceneName) {
-                return sceneIds[i];
+    static void LoadExternalConfig() noexcept {
+        for (const auto& definition : definitions) {
+            runtimeApproval[definition.id] = !definition.requiresGameValidation;
+        }
+        try {
+            const auto calibrationPath = AssetPath("scene-calibrations.json");
+            if (std::filesystem::exists(calibrationPath)) {
+                std::ifstream input(calibrationPath);
+                const auto document = nlohmann::json::parse(input);
+                if (document.value("formatVersion", 0) == 1 && document.contains("scenes") && document.at("scenes").is_object()) {
+                    for (auto& definition : definitions) {
+                        const auto entry = document.at("scenes").find(definition.name);
+                        if (entry == document.at("scenes").end() || !entry->is_object() || !entry->value("passed", false)) continue;
+                        const auto& transform = entry->at("coordinateTransform");
+                        const double originX = transform.at("originX").get<double>();
+                        const double originY = transform.at("originY").get<double>();
+                        const double scale = transform.at("scale").get<double>();
+                        const double maxError = entry->value("maxErrorPixels", std::numeric_limits<double>::infinity());
+                        if (std::isfinite(originX) && std::isfinite(originY) && std::isfinite(scale) && scale > 0.0 &&
+                            std::isfinite(maxError) && maxError <= 8.0) {
+                            definition.originX = originX;
+                            definition.originY = originY;
+                            definition.scale = scale;
+                        }
+                    }
+                }
+            }
+
+            const auto validationPath = AssetPath("scene-validation.json");
+            if (std::filesystem::exists(validationPath)) {
+                std::ifstream input(validationPath);
+                const auto document = nlohmann::json::parse(input);
+                if (document.value("formatVersion", 0) == 1 && document.contains("scenes") && document.at("scenes").is_object()) {
+                    for (const auto& definition : definitions) {
+                        if (!definition.requiresGameValidation) continue;
+                        const auto entry = document.at("scenes").find(definition.name);
+                        runtimeApproval[definition.id] = entry != document.at("scenes").end() && entry->is_object() &&
+                            entry->value("approved", false);
+                    }
+                }
             }
         }
-        return -1;
+        catch (...) {
+            // Invalid or incomplete external metadata must leave new scenes
+            // unavailable; existing scenes retain their compiled settings.
+        }
+    }
+
+    static void EnsureExternalConfigLoaded() {
+        std::call_once(externalConfigLoadOnce, [] { LoadExternalConfig(); });
+    }
+
+    static const SceneDefinition* Find(int sceneId) {
+        EnsureExternalConfigLoaded();
+        for (const auto& definition : definitions) {
+            if (definition.id == sceneId) return &definition;
+        }
+        return nullptr;
+    }
+
+    static const SceneDefinition* Find(const std::string& sceneName) {
+        EnsureExternalConfigLoaded();
+        for (const auto& definition : definitions) {
+            if (sceneName == definition.name) return &definition;
+        }
+        return nullptr;
+    }
+
+    static bool IsKnown(int sceneId) { return Find(sceneId) != nullptr; }
+
+    static bool IsRuntimeApproved(int sceneId) {
+        const auto* definition = Find(sceneId);
+        if (definition == nullptr) return false;
+        const auto approval = runtimeApproval.find(sceneId);
+        return approval != runtimeApproval.end() && approval->second;
+    }
+
+    static std::string SceneIdToName(int sceneId) {
+        const auto* definition = Find(sceneId);
+        return definition == nullptr ? std::string() : definition->name;
+    }
+
+    static int SceneNameToId(const std::string& sceneName) {
+        const auto* definition = Find(sceneName);
+        return definition == nullptr ? -1 : definition->id;
     }
 };
 

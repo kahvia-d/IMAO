@@ -1,0 +1,330 @@
+{
+  "Kuro Map New States - 大地图-敌人": {
+    "310000750": {
+      "zh-CN": "梦魇·呜咔咔",
+      "en-US": "310000750"
+    },
+    "310000760": {
+      "zh-CN": "梦魇·侏侏鸵",
+      "en-US": "310000760"
+    },
+    "310000810": {
+      "zh-CN": "雷杖流民",
+      "en-US": "310000810"
+    },
+    "310000830": {
+      "zh-CN": "冰盈舞者",
+      "en-US": "310000830"
+    },
+    "310000840": {
+      "zh-CN": "影烁者",
+      "en-US": "310000840"
+    },
+    "320000480": {
+      "zh-CN": "梦魇·刺玫菇",
+      "en-US": "320000480"
+    },
+    "320000510": {
+      "zh-CN": "莳植机麋",
+      "en-US": "320000510"
+    },
+    "320000520": {
+      "zh-CN": "矿岩机麋",
+      "en-US": "320000520"
+    },
+    "320000530": {
+      "zh-CN": "重工铁蹄",
+      "en-US": "320000530"
+    },
+    "320000560": {
+      "zh-CN": "隐迹铁影",
+      "en-US": "320000560"
+    },
+    "320000570": {
+      "zh-CN": "霜鳞蜃甲",
+      "en-US": "320000570"
+    },
+    "320000580": {
+      "zh-CN": "风鳞蜃甲",
+      "en-US": "320000580"
+    },
+    "320000600": {
+      "zh-CN": "冠顶苍隼",
+      "en-US": "320000600"
+    },
+    "320000610": {
+      "zh-CN": "格洛犸图",
+      "en-US": "320000610"
+    },
+    "320000660": {
+      "zh-CN": "迷胧幻蛾",
+      "en-US": "320000660"
+    },
+    "SP_IconMonsterHead_035_UI": {
+      "zh-CN": "惊蛰猎手",
+      "en-US": "SP_IconMonsterHead_035_UI"
+    },
+    "SP_IconMonsterHead_105_UI": {
+      "zh-CN": "破霜猎手",
+      "en-US": "SP_IconMonsterHead_105_UI"
+    },
+    "SP_IconMonsterHead_185_UI": {
+      "zh-CN": "坚岩斗士",
+      "en-US": "SP_IconMonsterHead_185_UI"
+    },
+    "SP_IconMonsterHead_31040_UI": {
+      "zh-CN": "浮灵偶·海德",
+      "en-US": "SP_IconMonsterHead_31040_UI"
+    },
+    "SP_IconMonsterHead_31041_UI": {
+      "zh-CN": "浮灵偶·蕾弗",
+      "en-US": "SP_IconMonsterHead_31041_UI"
+    },
+    "SP_IconMonsterHead_31042_UI": {
+      "zh-CN": "浮灵偶·莱特",
+      "en-US": "SP_IconMonsterHead_31042_UI"
+    },
+    "SP_IconMonsterHead_31043_UI": {
+      "zh-CN": "幽翎火",
+      "en-US": "SP_IconMonsterHead_31043_UI"
+    },
+    "SP_IconMonsterHead_31044_UI": {
+      "zh-CN": "云海妖精",
+      "en-US": "SP_IconMonsterHead_31044_UI"
+    },
+    "SP_IconMonsterHead_31045_UI": {
+      "zh-CN": "魔术先生",
+      "en-US": "SP_IconMonsterHead_31045_UI"
+    },
+    "SP_IconMonsterHead_31046_UI": {
+      "zh-CN": "寂寞小姐",
+      "en-US": "SP_IconMonsterHead_31046_UI"
+    },
+    "SP_IconMonsterHead_31047_UI": {
+      "zh-CN": "工头布偶",
+      "en-US": "SP_IconMonsterHead_31047_UI"
+    },
+    "SP_IconMonsterHead_31048_UI": {
+      "zh-CN": "欺诈奇藏",
+      "en-US": "SP_IconMonsterHead_31048_UI"
+    },
+    "SP_IconMonsterHead_31049_UI": {
+      "zh-CN": "愚金幼岩",
+      "en-US": "SP_IconMonsterHead_31049_UI"
+    },
+    "SP_IconMonsterHead_31050_UI": {
+      "zh-CN": "釉变幼岩",
+      "en-US": "SP_IconMonsterHead_31050_UI"
+    },
+    "SP_IconMonsterHead_31051_UI": {
+      "zh-CN": "气动棱镜",
+      "en-US": "SP_IconMonsterHead_31051_UI"
+    },
+    "SP_IconMonsterHead_32024_UI": {
+      "zh-CN": "暗夜骑士",
+      "en-US": "SP_IconMonsterHead_32024_UI"
+    },
+    "SP_IconMonsterHead_32028_UI": {
+      "zh-CN": "浮灵偶",
+      "en-US": "SP_IconMonsterHead_32028_UI"
+    },
+    "SP_IconMonsterHead_32029_UI": {
+      "zh-CN": "琉璃刀伶",
+      "en-US": "SP_IconMonsterHead_32029_UI"
+    },
+    "SP_IconMonsterHead_32030_UI": {
+      "zh-CN": "巨布偶",
+      "en-US": "SP_IconMonsterHead_32030_UI"
+    },
+    "SP_IconMonsterHead_32031_UI": {
+      "zh-CN": "重塑雕像的拳砾",
+      "en-US": "SP_IconMonsterHead_32031_UI"
+    },
+    "SP_IconMonsterHead_32032_UI": {
+      "zh-CN": "飓力熊",
+      "en-US": "SP_IconMonsterHead_32032_UI"
+    }
+  },
+  "Kuro Map New States - 大地图-BOSS": {
+    "3330002": {
+      "zh-CN": "虚妄诞生之种",
+      "en-US": "3330002"
+    }
+  },
+  "Kuro Map New States - 大地图-NPC": {
+    "3330003": {
+      "zh-CN": "隧锚",
+      "en-US": "3330003"
+    },
+    "381037": {
+      "zh-CN": "青实归还之碑",
+      "en-US": "381037"
+    },
+    "SP_IconMap_Activity_HonamiStory_UI": {
+      "zh-CN": "作战准备",
+      "en-US": "SP_IconMap_Activity_HonamiStory_UI"
+    }
+  },
+  "Kuro Map New States - 大地图-地图探索": {
+    "42": {
+      "zh-CN": "日灵",
+      "en-US": "42"
+    },
+    "43": {
+      "zh-CN": "虚质磁暴区",
+      "en-US": "43"
+    },
+    "47": {
+      "zh-CN": "造路悬仪挑战赛道",
+      "en-US": "47"
+    },
+    "57": {
+      "zh-CN": "遗患清剿",
+      "en-US": "57"
+    },
+    "58": {
+      "zh-CN": "摩托-飞行赛道",
+      "en-US": "58"
+    },
+    "59": {
+      "zh-CN": "摩托-固定赛道",
+      "en-US": "59"
+    },
+    "60": {
+      "zh-CN": "摩托-特技赛道",
+      "en-US": "60"
+    },
+    "61": {
+      "zh-CN": "铸光仪",
+      "en-US": "61"
+    },
+    "62": {
+      "zh-CN": "虚质方块",
+      "en-US": "62"
+    },
+    "63": {
+      "zh-CN": "完美飞行日",
+      "en-US": "63"
+    },
+    "64": {
+      "zh-CN": "破碎黯原之心",
+      "en-US": "64"
+    },
+    "cbd": {
+      "zh-CN": "藏宝地",
+      "en-US": "cbd"
+    },
+    "CS_01": {
+      "zh-CN": "中枢信标",
+      "en-US": "CS_01"
+    },
+    "CS_02": {
+      "zh-CN": "小型信标",
+      "en-US": "CS_02"
+    },
+    "FCRK": {
+      "zh-CN": "分层入口",
+      "en-US": "FCRK"
+    },
+    "shtz·dlck": {
+      "zh-CN": "声骸挑战·刀伶操控",
+      "en-US": "shtz·dlck"
+    },
+    "xlzm": {
+      "zh-CN": "巡礼之梦",
+      "en-US": "xlzm"
+    },
+    "ylfy": {
+      "zh-CN": "音乐飞萤",
+      "en-US": "ylfy"
+    }
+  },
+  "Kuro Map New States - 大地图-采集物": {
+    "42601480": {
+      "zh-CN": "星之梦",
+      "en-US": "42601480"
+    },
+    "42601490": {
+      "zh-CN": "赤铃兰",
+      "en-US": "42601490"
+    },
+    "42601500": {
+      "zh-CN": "勿忘我",
+      "en-US": "42601500"
+    },
+    "T_IconC_042_UI": {
+      "zh-CN": "垂青橄榄",
+      "en-US": "T_IconC_042_UI"
+    },
+    "T_IconC_046_UI": {
+      "zh-CN": "云母釉岩",
+      "en-US": "T_IconC_046_UI"
+    },
+    "T_IconC_047_UI": {
+      "zh-CN": "愚惑金",
+      "en-US": "T_IconC_047_UI"
+    },
+    "T_IconC_060_UI": {
+      "zh-CN": "长夏花",
+      "en-US": "T_IconC_060_UI"
+    },
+    "T_IconC_SM_Gat_01B_UI": {
+      "zh-CN": "香苏",
+      "en-US": "T_IconC_SM_Gat_01B_UI"
+    },
+    "T_IconC_SM_Gat_25A_UI": {
+      "zh-CN": "香柠草",
+      "en-US": "T_IconC_SM_Gat_25A_UI"
+    }
+  },
+  "Kuro Map New States - 大地图-收集道具": {
+    "cx_01": {
+      "zh-CN": "潮汐之遗·绿",
+      "en-US": "cx_01"
+    },
+    "cx_02": {
+      "zh-CN": "潮汐之遗·紫",
+      "en-US": "cx_02"
+    },
+    "cx_03": {
+      "zh-CN": "潮汐之遗·金",
+      "en-US": "cx_03"
+    },
+    "qzx_01": {
+      "zh-CN": "朴素奇藏箱",
+      "en-US": "qzx_01"
+    },
+    "qzx_02": {
+      "zh-CN": "基准奇藏箱",
+      "en-US": "qzx_02"
+    },
+    "qzx_03": {
+      "zh-CN": "精密奇藏箱",
+      "en-US": "qzx_03"
+    },
+    "qzx_04": {
+      "zh-CN": "辉光奇藏箱",
+      "en-US": "qzx_04"
+    },
+    "zscj": {
+      "zh-CN": "终声残卷",
+      "en-US": "zscj"
+    }
+  },
+  "Kuro Map New States - 大地图-副本挑战": {
+    "IconMap_WYQ": {
+      "zh-CN": "无音区",
+      "en-US": "IconMap_WYQ"
+    },
+    "myjl": {
+      "zh-CN": "梦魇聚落",
+      "en-US": "myjl"
+    }
+  },
+  "Kuro Map New States - 大地图-强敌": {
+    "jlxw": {
+      "zh-CN": "飓力熊王",
+      "en-US": "jlxw"
+    }
+  }
+}

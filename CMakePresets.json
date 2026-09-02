@@ -17,7 +17,8 @@
       "binaryDir": "${sourceDir}/out/build/windows-x64-relwithdebinfo-diagnostics",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "IMAO_ENABLE_DIAGNOSTICS": "ON"
+        "IMAO_ENABLE_DIAGNOSTICS": "ON",
+        "IMAO_ALLOW_XML_FEATURE_FALLBACK": "ON"
       }
     }
   ],
@@ -41,6 +42,48 @@
       "configurePreset": "windows-x64-relwithdebinfo-diagnostics",
       "targets": [
         "KuroMapFeatureBuilder"
+      ]
+    },
+    {
+      "name": "windows-x64-release-feature-converter",
+      "configurePreset": "windows-x64-release",
+      "targets": [
+        "IMaoFeatureConverter"
+      ]
+    },
+    {
+      "name": "windows-x64-release-capture-assistant",
+      "configurePreset": "windows-x64-release",
+      "targets": [
+        "IMaoCaptureAssistant"
+      ]
+    },
+    {
+      "name": "windows-x64-release-visual-index-builder",
+      "configurePreset": "windows-x64-release",
+      "targets": [
+        "IMaoVisualIndexBuilder"
+      ]
+    },
+    {
+      "name": "windows-x64-release-optimization-tests",
+      "configurePreset": "windows-x64-release",
+      "targets": [
+        "IMaoOptimizationTests"
+      ]
+    },
+    {
+      "name": "windows-x64-release-visual-regression",
+      "configurePreset": "windows-x64-release",
+      "targets": [
+        "IMaoVisualRegression"
+      ]
+    },
+    {
+      "name": "windows-x64-release-coordinate-regression",
+      "configurePreset": "windows-x64-release",
+      "targets": [
+        "IMaoCoordinateRegression"
       ]
     }
   ]

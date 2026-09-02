@@ -1,83 +1,84 @@
-﻿#include "Notification.h"
+#include "Notification.h"
 #include "../ImGuiOverWindows.h"
+#include "../../Diagnostics/Diagnostics.h"
 
- std::vector<NotificationDatas> Notification::notifications;
- std::thread Notification::timerThread;
- bool Notification::timerStopFlag;
+#include <algorithm>
 
-static int location = 0;
-bool p_open;
-ImGuiIO& io = ImGui::GetIO();
-ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+std::vector<NotificationDatas> Notification::notifications;
+std::thread Notification::timerThread;
+std::atomic_bool Notification::timerStopFlag = false;
+std::mutex Notification::notificationsMutex;
+
+namespace {
+constexpr ImGuiWindowFlags kWindowFlags = ImGuiWindowFlags_NoDecoration |
+    ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
+    ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
+    ImGuiWindowFlags_NoMove;
+}
 
 void Notification::DrawInfo() {
-    if (notifications.size()==0) {
-        return;
-    }
-    
-    if (location >= 0)
+    // Informational messages are logged, never drawn over the minimap.
+    std::vector<NotificationDatas> errors;
     {
-        const float PAD = 5.0f;
-        const ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
-        ImVec2 work_size = viewport->WorkSize;
-
-        ImVec2 window_pos, window_pos_pivot;
-        window_pos.x = (location & 1) ? (work_pos.x + work_size.x - PAD) : (work_pos.x + PAD);
-        window_pos.y = (location & 2) ? (work_pos.y + work_size.y - PAD) : (work_pos.y + PAD);
-        window_pos_pivot.x = (location & 1) ? 1.0f : 0.0f;
-        window_pos_pivot.y = (location & 2) ? 1.0f : 0.0f;
-        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-        window_flags |= ImGuiWindowFlags_NoMove;
-    }
-    else if (location == -2)
-    {
-        // Center window
-        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        window_flags |= ImGuiWindowFlags_NoMove;
-    }
-
-    //ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-    if (ImGui::Begin("Simple Notifications", &p_open, window_flags))
-    {
-        for (int i = 0; i < notifications.size(); i++) {
-            if (notifications[i].timeDuration > 0) {
-                ImGui::TextUnformatted(notifications[i].content.c_str());
-                ImGui::SameLine();
-                ImGui::Text("(%ds)", notifications[i].timeDuration);
-                ImGui::Separator();
+        std::scoped_lock lock(notificationsMutex);
+        for (const auto& notification : notifications) {
+            if (notification.severity == NotificationSeverity::Error && notification.timeDuration > 0) {
+                errors.push_back(notification);
             }
-            else {
-                notifications.erase(notifications.begin() + i);
-            }
+        }
+    }
+    if (errors.empty()) return;
+
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    constexpr float kPadding = 16.0f;
+    const ImVec2 position(viewport->WorkPos.x + viewport->WorkSize.x - kPadding,
+        viewport->WorkPos.y + viewport->WorkSize.y - kPadding);
+    ImGui::SetNextWindowPos(position, ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+    bool open = true;
+    if (ImGui::Begin("IMao Errors", &open, kWindowFlags)) {
+        for (const auto& error : errors) {
+            ImGui::TextUnformatted(error.content.c_str());
+            ImGui::SameLine();
+            ImGui::Text("(%ds)", error.timeDuration);
+            ImGui::Separator();
         }
     }
     ImGui::End();
 }
 
-void Notification::AddInfo(NotificationDatas addNotificationDatas)
-{
-    for (auto& notification : notifications) {
-        if (notification.content == addNotificationDatas.content) {
-            notification.timeDuration = addNotificationDatas.timeDuration;
+void Notification::AddInfo(NotificationDatas notification) {
+    notification.severity = NotificationSeverity::Info;
+    Diagnostics::Record("notification-info", notification.content);
+}
+
+void Notification::AddError(NotificationDatas notification) {
+    notification.severity = NotificationSeverity::Error;
+    Diagnostics::Record("notification-error", notification.content);
+    std::scoped_lock lock(notificationsMutex);
+    for (auto& existing : notifications) {
+        if (existing.content == notification.content) {
+            existing.timeDuration = notification.timeDuration;
+            existing.severity = NotificationSeverity::Error;
             return;
         }
     }
-    notifications.push_back(addNotificationDatas);
+    notifications.push_back(std::move(notification));
 }
 
-
 void Notification::Timer() {
-    while (!timerStopFlag) {
+    while (!timerStopFlag.load()) {
         try {
-            for (auto& notification : notifications) {
-                notification.timeDuration -= 1;
+            {
+                std::scoped_lock lock(notificationsMutex);
+                for (auto& notification : notifications) --notification.timeDuration;
+                std::erase_if(notifications, [](const NotificationDatas& notification) {
+                    return notification.timeDuration <= 0;
+                });
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
-        catch (Exception ex) {
-            std::cout << "Notification Timer error:" << ex.what()<<std::endl;
+        catch (const std::exception& exception) {
+            Diagnostics::Record("notification-timer-error", exception.what());
         }
     }
 }
-

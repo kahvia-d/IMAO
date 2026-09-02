@@ -18,9 +18,9 @@ $routes = [ordered]@{
     '905' = [ordered]@{ runtime = 'Fabricatorium'; supported = $true;  reason = '' }
     '903' = [ordered]@{ runtime = 'Avinoleum';     supported = $true;  reason = '' }
     '906' = [ordered]@{ runtime = 'Lahai';         supported = $true;  reason = '' }
-    '902' = [ordered]@{ runtime = '';              supported = $false; reason = 'Pending: no coordinate transform, map base, or SURF feature set.' }
-    '909' = [ordered]@{ runtime = '';              supported = $false; reason = 'Pending: no coordinate transform, map base, or SURF feature set.' }
-    '910' = [ordered]@{ runtime = '';              supported = $false; reason = 'Pending: no coordinate transform, map base, or SURF feature set.' }
+    '902' = [ordered]@{ runtime = 'LowerVault';    supported = $true;  reason = '' }
+    '909' = [ordered]@{ runtime = 'Darkplain';     supported = $true;  reason = '' }
+    '910' = [ordered]@{ runtime = 'TimeRiftRuins'; supported = $true;  reason = '' }
 }
 $middleDot = [char]0x00B7
 $idAliases = @{ ("sx${middleDot}qq") = 'sx_qq'; ("sx${middleDot}lgn") = 'sx_lgn' }
@@ -240,7 +240,7 @@ try {
         $status = if ($state.supported) { 'Integrated' } else { $state.reason }
         $report += "| $($state.state) | $($state.runtime) | $($state.itemTypes) | $($state.points) | $status |"
     }
-    $report += @('', 'Point synchronization does not make a new map runtime-ready. States 902, 909, and 910 are archived only until coordinate transforms, base maps, and SURF feature sets are added.')
+    $report += @('', 'Point synchronization supplies runtime point data. New scenes remain release-gated until their independently verified Kuro tile feature pack and game validation evidence are present.')
     [IO.File]::WriteAllLines((Join-Path $generatedDir 'sync-report.md'), $report, [Text.UTF8Encoding]::new($false))
 
     $target = Join-Path $repoRoot 'Assets\KuroMap'
@@ -254,10 +254,18 @@ try {
         foreach ($stateId in $routes.Keys) {
             if (-not $routes[$stateId].supported) { continue }
             $runtimeName = $routes[$stateId].runtime
-            $runtimePath = Join-Path $repoRoot "IMao-Core\src\Resource\itemsData_$runtimeName.json"
-            Write-Utf8Json $runtimeItems[$runtimeName] $runtimePath
+            if ($runtimeName -in @('LowerVault', 'Darkplain', 'TimeRiftRuins')) {
+                # New scenes stay as external staged resources.  IMao-Core.rc
+                # cannot be safely changed by the sync process, while the
+                # runtime loader verifies this explicit publication path.
+                Write-Utf8Json $runtimeItems[$runtimeName] (Join-Path $target "runtime/itemsData_$runtimeName.json")
+            }
+            else {
+                $runtimePath = Join-Path $repoRoot "IMao-Core\src\Resource\itemsData_$runtimeName.json"
+                Write-Utf8Json $runtimeItems[$runtimeName] $runtimePath
+            }
         }
-        Write-Host "Applied snapshots, icons, names, reports, and five runtime data files."
+        Write-Host "Applied snapshots, icons, names, five embedded data files, and three externally staged new-scene data files."
     }
 }
 finally {

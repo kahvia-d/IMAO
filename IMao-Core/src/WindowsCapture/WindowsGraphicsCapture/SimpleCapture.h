@@ -6,6 +6,9 @@
 #include "..\..\Base\imgui_dx11\imgui.h"
 #include <wrl/client.h> 
 #include <d3d11.h> 
+#include <chrono>
+#include <condition_variable>
+#include <cstdint>
 class SimpleCapture
 {
 public:
@@ -45,6 +48,9 @@ public:
 
     void Close();
 
+    bool WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::milliseconds timeout,
+        std::uint64_t* frameSequence = nullptr);
+
     bool GetLatestFrame_Mat(cv::Mat& outputFrame) {
         std::lock_guard<std::mutex> lock(m_frameMutex);
         if (m_latestFrame.empty()) {
@@ -52,6 +58,11 @@ public:
         }
         m_latestFrame.copyTo(outputFrame);
         return true;
+    }
+
+    std::uint64_t LatestFrameSequence() const {
+        std::lock_guard<std::mutex> lock(m_frameMutex);
+        return m_frameSequence;
     }
 
     ImTextureID GetCapture_ImTextureID() {
@@ -121,6 +132,8 @@ private:
     std::mutex                                  m_imguiTexMutex;
     ImTextureID                                 m_imguiImTextureID;
 
-    cv::Mat m_latestFrame; 
-    std::mutex m_frameMutex; 
+    cv::Mat m_latestFrame;
+    mutable std::mutex m_frameMutex;
+    std::condition_variable m_frameCondition;
+    std::uint64_t m_frameSequence = 0;
 };

@@ -1,5 +1,6 @@
 ﻿#include "BitBltCapture.h"
 #include <iostream>
+#include <wil/resource.h>
 using namespace std;
 using namespace cv;
 
@@ -17,6 +18,7 @@ bool BitBltCapture::GetSnapshot_PrintWindow(Mat& snapshot) {
 	if (!hdcScreen) {
 		return false;
 	}
+	auto releaseScreen = wil::scope_exit([&] { ReleaseDC(hwnd, hdcScreen); });
 
 	// 创建兼容DC和位图
 	HDC hdcMemory = CreateCompatibleDC(hdcScreen);
@@ -25,19 +27,22 @@ bool BitBltCapture::GetSnapshot_PrintWindow(Mat& snapshot) {
 	if (!hdcMemory || !hBitmap) {
 		if (hBitmap) DeleteObject(hBitmap);
 		if (hdcMemory) DeleteDC(hdcMemory);
-		ReleaseDC(hwnd, hdcScreen);
 		return false;
 	}
+	auto deleteMemory = wil::scope_exit([&] { DeleteDC(hdcMemory); });
+	auto deleteBitmap = wil::scope_exit([&] { DeleteObject(hBitmap); });
 
 	// 选择位图到内存DC
 	HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, hBitmap);
-	bool success;
-	BOOL result = PrintWindow(hwnd, hdcMemory, 3);
-	if (result == 0) {
-		//cout << "PrintWindow 操作失败，错误码:" << GetLastError() << endl;
+	if (!hOldBitmap || hOldBitmap == HGDI_ERROR) {
 		return false;
 	}
-	else {
+	auto restoreSelection = wil::scope_exit([&] { SelectObject(hdcMemory, hOldBitmap); });
+	BOOL result = PrintWindow(hwnd, hdcMemory, 3);
+	if (result == 0) {
+		result = BitBlt(hdcMemory, 0, 0, width, height, hdcScreen, 0, 0, SRCCOPY | CAPTUREBLT);
+	}
+	if (result != 0) {
 		BITMAPINFOHEADER bi;
 		bi.biSize = sizeof(BITMAPINFOHEADER);
 		bi.biWidth = width;
@@ -53,14 +58,11 @@ bool BitBltCapture::GetSnapshot_PrintWindow(Mat& snapshot) {
 
 		cv::Mat image(height, width, CV_8UC4);
 
-		GetDIBits(hdcMemory, hBitmap, 0, height, image.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+		if (GetDIBits(hdcMemory, hBitmap, 0, height, image.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS) == 0) {
+			return false;
+		}
 
-		cvtColor(image, snapshot, cv::IMREAD_COLOR);
+		cvtColor(image, snapshot, cv::COLOR_BGRA2BGR);
 	}
-	// 清理资源
-	SelectObject(hdcMemory, hOldBitmap);
-	DeleteObject(hBitmap);
-	DeleteDC(hdcMemory);
-	ReleaseDC(hwnd, hdcScreen);
-	return true;
+	return result != 0;
 }
