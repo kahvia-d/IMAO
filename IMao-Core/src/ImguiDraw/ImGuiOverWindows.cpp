@@ -27,7 +27,7 @@ static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
-void CreateRenderTarget();
+bool CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 const float TARGET_FRAME_TIME = 1000.0f /20.0f;// 20 FPS（ms）
@@ -240,6 +240,10 @@ int ImGuiOverWindows::start()
         ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
         return 1;
     }
+    // CreateWindowEx sends WM_SIZE before the D3D device exists.  The swap
+    // chain was just created for that same client size, so treating that stale
+    // message as a resize can immediately invalidate the first back buffer.
+    g_ResizeWidth = g_ResizeHeight = 0;
 
     // Show the window
     ::ShowWindow(overWindowsHwnd, SW_SHOWDEFAULT);
@@ -317,10 +321,28 @@ int ImGuiOverWindows::start()
         // Handle window resize (we don't resize directly in the WM_SIZE handler)
         if (g_ResizeWidth != 0 && g_ResizeHeight != 0)
         {
-            CleanupRenderTarget();
-            g_pSwapChain->ResizeBuffers(0, g_ResizeWidth, g_ResizeHeight, DXGI_FORMAT_UNKNOWN, 0);
+            const UINT resizeWidth = g_ResizeWidth;
+            const UINT resizeHeight = g_ResizeHeight;
             g_ResizeWidth = g_ResizeHeight = 0;
-            CreateRenderTarget();
+            CleanupRenderTarget();
+            const HRESULT resizeResult = g_pSwapChain == nullptr ? E_POINTER :
+                g_pSwapChain->ResizeBuffers(0, resizeWidth, resizeHeight, DXGI_FORMAT_UNKNOWN, 0);
+            if (FAILED(resizeResult) || !CreateRenderTarget()) {
+                const HRESULT deviceReason = g_pd3dDevice == nullptr ? E_POINTER :
+                    g_pd3dDevice->GetDeviceRemovedReason();
+                Diagnostics::Record("overlay-resize-error", "resize=0x" +
+                    std::to_string(static_cast<unsigned long>(resizeResult)) + " device=0x" +
+                    std::to_string(static_cast<unsigned long>(deviceReason)) + " size=" +
+                    std::to_string(resizeWidth) + "x" + std::to_string(resizeHeight));
+                // A device reset during a resolution/DPI transition must only
+                // reset the transparent overlay, never bring down WinUI.
+                CleanupDeviceD3D();
+                if (!CreateDeviceD3D(overWindowsHwnd)) {
+                    Diagnostics::Record("overlay-resize-error", "action=disable-overlay-after-device-recreate-failed");
+                    stopFlag = true;
+                    break;
+                }
+            }
         }
 
         // Start the Dear ImGui frame
@@ -436,7 +458,10 @@ bool CreateDeviceD3D(HWND hWnd)
     if (res != S_OK)
         return false;
 
-    CreateRenderTarget();
+    if (!CreateRenderTarget()) {
+        CleanupDeviceD3D();
+        return false;
+    }
     return true;
 }
 
@@ -448,12 +473,16 @@ void CleanupDeviceD3D()
     if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = nullptr; }
 }
 
-void CreateRenderTarget()
+bool CreateRenderTarget()
 {
-    ID3D11Texture2D* pBackBuffer;
-    g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
-    g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &g_mainRenderTargetView);
+    if (g_pSwapChain == nullptr || g_pd3dDevice == nullptr) return false;
+    ID3D11Texture2D* pBackBuffer = nullptr;
+    const HRESULT backBufferResult = g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+    if (FAILED(backBufferResult) || pBackBuffer == nullptr) return false;
+    const HRESULT viewResult = g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr,
+        &g_mainRenderTargetView);
     pBackBuffer->Release();
+    return SUCCEEDED(viewResult) && g_mainRenderTargetView != nullptr;
 }
 
 void CleanupRenderTarget()
