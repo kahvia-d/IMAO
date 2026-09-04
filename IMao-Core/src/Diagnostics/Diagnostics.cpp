@@ -1,6 +1,7 @@
 #include "Diagnostics.h"
 
 #include "../util.h"
+#include "../Runtime/StructuredLogger.h"
 
 #include <chrono>
 #include <cctype>
@@ -12,11 +13,13 @@
 #include <opencv2/imgcodecs.hpp>
 #include <sstream>
 
+#include <atomic>
+
 namespace {
-#ifdef IMAO_ENABLE_DIAGNOSTICS
     std::mutex diagnosticsMutex;
     std::filesystem::path sessionDirectory;
     std::map<std::string, std::chrono::steady_clock::time_point> lastSavedAt;
+    std::atomic_bool captureEnabled = false;
     int savedImageCount = 0;
     // A live coordinate regression session needs at least 100 raw crops plus
     // both preprocessing variants. Keep the cap bounded while allowing that
@@ -58,7 +61,7 @@ namespace {
         }
 
         try {
-            sessionDirectory = std::filesystem::path(GetCurrentPath()) / "Diagnostics" / FileTimestamp();
+            sessionDirectory = StructuredLogger::DiagnosticsDirectory() / FileTimestamp();
             std::filesystem::create_directories(sessionDirectory);
             std::ofstream events(sessionDirectory / "events.log", std::ios::app);
             events << Timestamp() << "\tSESSION\tDiagnostics enabled.\n";
@@ -69,26 +72,31 @@ namespace {
             return false;
         }
     }
-#endif
 }
 
 void Diagnostics::Initialize() {
-#ifdef IMAO_ENABLE_DIAGNOSTICS
+    StructuredLogger::Initialize();
     std::scoped_lock lock(diagnosticsMutex);
-    EnsureInitializedLocked();
-#endif
+    // Event logs are always available through StructuredLogger.  Screenshots
+    // are intentionally opt-in so a normal release build does not retain game
+    // images until the user enables diagnostics.
+    if (captureEnabled.load()) EnsureInitializedLocked();
 }
 
 bool Diagnostics::Enabled() {
-#ifdef IMAO_ENABLE_DIAGNOSTICS
-    return true;
-#else
-    return false;
-#endif
+    return captureEnabled.load();
+}
+
+void Diagnostics::SetCaptureEnabled(bool enabled) {
+    captureEnabled = enabled;
+    if (!enabled) return;
+    std::scoped_lock lock(diagnosticsMutex);
+    if (sessionDirectory.empty()) EnsureInitializedLocked();
 }
 
 void Diagnostics::Record(const std::string& eventName, const std::string& details) {
-#ifdef IMAO_ENABLE_DIAGNOSTICS
+    StructuredLogger::Record("info", "core", eventName, details);
+    if (!captureEnabled.load()) return;
     std::scoped_lock lock(diagnosticsMutex);
     if (!EnsureInitializedLocked()) {
         return;
@@ -96,14 +104,10 @@ void Diagnostics::Record(const std::string& eventName, const std::string& detail
 
     std::ofstream events(sessionDirectory / "events.log", std::ios::app);
     events << Timestamp() << '\t' << eventName << '\t' << details << '\n';
-#else
-    (void)eventName;
-    (void)details;
-#endif
 }
 
 void Diagnostics::SaveImage(const std::string& tag, const cv::Mat& image) {
-#ifdef IMAO_ENABLE_DIAGNOSTICS
+    if (!captureEnabled.load()) return;
     if (image.empty()) {
         Record("image-skipped", tag + " image=empty");
         return;
@@ -132,20 +136,13 @@ void Diagnostics::SaveImage(const std::string& tag, const cv::Mat& image) {
         std::ofstream events(sessionDirectory / "events.log", std::ios::app);
         events << Timestamp() << "\timage-error\t" << tag << " " << exception.what() << '\n';
     }
-#else
-    (void)tag;
-    (void)image;
-#endif
 }
 
 std::string Diagnostics::SessionDirectory() {
-#ifdef IMAO_ENABLE_DIAGNOSTICS
+    if (!captureEnabled.load()) return {};
     std::scoped_lock lock(diagnosticsMutex);
     if (!EnsureInitializedLocked()) {
         return {};
     }
     return sessionDirectory.string();
-#else
-    return {};
-#endif
 }

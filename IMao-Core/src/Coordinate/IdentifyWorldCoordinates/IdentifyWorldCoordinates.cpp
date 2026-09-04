@@ -35,8 +35,13 @@ bool GetCoordinateRegion(const cv::Mat& snapshot, cv::Rect& region) {
     const double scaleX = static_cast<double>(snapshot.cols) / 1600.0;
     const double scaleY = static_cast<double>(snapshot.rows) / 900.0;
     const int left = std::clamp(static_cast<int>(std::lround(20.0 * scaleX)), 0, snapshot.cols);
-    const int top = std::clamp(static_cast<int>(std::lround(856.0 * scaleY)), 0, snapshot.rows);
-    const int right = std::clamp(static_cast<int>(std::lround(220.0 * scaleX)), left, snapshot.cols);
+    const int top = std::clamp(static_cast<int>(std::lround(865.0 * scaleY)), 0, snapshot.rows);
+    // The gameplay timestamp begins immediately after the coordinate readout
+    // on current clients.  Including it makes the recognizer return one long
+    // mixed string which the strict coordinate parser must reject.  Keep the
+    // crop inside the coordinate widget (the historical 160 px right edge),
+    // with the left padding retained for the leading minus sign.
+    const int right = std::clamp(static_cast<int>(std::lround(160.0 * scaleX)), left, snapshot.cols);
     const int bottom = std::clamp(static_cast<int>(std::lround(900.0 * scaleY)), top, snapshot.rows);
     region = cv::Rect(left, top, right - left, bottom - top);
     return region.width > 0 && region.height > 0;
@@ -54,18 +59,26 @@ std::vector<cv::Mat> PreprocessCoordinateRegion(const cv::Mat& source) {
     cv::Mat resized;
     cv::resize(gray, resized, cv::Size(std::min(scaledWidth, 312), 48), 0.0, 0.0, cv::INTER_CUBIC);
 
-    auto clahe = cv::createCLAHE(2.0, cv::Size(4, 2));
+    auto clahe = cv::createCLAHE(3.0, cv::Size(4, 2));
     cv::Mat enhanced;
     clahe->apply(resized, enhanced);
 
+    // Recent clients render the coordinate text in low-contrast blue-grey.
+    // Normalise before making binary variants so the recognizer does not lose
+    // the thin minus signs and comma separators against the HUD background.
+    cv::Mat contrast;
+    cv::normalize(enhanced, contrast, 0, 255, cv::NORM_MINMAX);
+    cv::Mat binary;
+    cv::threshold(contrast, binary, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+
     cv::Mat topHat;
     const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(15, 5));
-    cv::morphologyEx(enhanced, topHat, cv::MORPH_TOPHAT, kernel);
-    cv::Mat binary;
-    cv::threshold(topHat, binary, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    cv::morphologyEx(contrast, topHat, cv::MORPH_TOPHAT, kernel);
+    cv::Mat topHatBinary;
+    cv::threshold(topHat, topHatBinary, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
 
     std::vector<cv::Mat> variants;
-    for (const cv::Mat* image : { &enhanced, &binary }) {
+    for (const cv::Mat* image : { &contrast, &binary, &topHatBinary }) {
         cv::Mat color;
         cv::cvtColor(*image, color, cv::COLOR_GRAY2BGR);
         cv::copyMakeBorder(color, color, 0, 0, 4, 4, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
@@ -138,9 +151,10 @@ public:
         auto variants = PreprocessCoordinateRegion(crop);
         result.preprocessingMilliseconds = MillisecondsSince(preprocessingStart);
         Diagnostics::SaveImage("ocr-coordinate-crop", crop);
-        if (variants.size() == 2) {
+        if (variants.size() >= 3) {
             Diagnostics::SaveImage("ocr-coordinate-clahe", variants[0]);
-            Diagnostics::SaveImage("ocr-coordinate-tophat", variants[1]);
+            Diagnostics::SaveImage("ocr-coordinate-binary", variants[1]);
+            Diagnostics::SaveImage("ocr-coordinate-tophat", variants[2]);
         }
         if (variants.empty()) {
             result.status = CoordinateRecognitionStatus::NoCandidate;
@@ -164,8 +178,14 @@ public:
                 texts.push_back(std::move(variantTexts.front()));
                 scores.push_back(variantScores.front());
             };
-            const std::size_t routeIndex = request.useTopHatRoute && variants.size() > 1 ? 1 : 0;
-            runVariant(variants[routeIndex]);
+            // The low-contrast client coordinate text loses leading minus
+            // signs most often in the contrast/binary paths. The TopHat path
+            // is specifically shaped to preserve those thin glyphs. Runtime
+            // recognition runs one selected path per frame (rather than all
+            // three serially); the App still requires a second fresh frame
+            // before a coordinate can be published.
+            const std::size_t selectedRoute = request.useTopHatRoute && variants.size() >= 3 ? 2 : 0;
+            runVariant(variants[selectedRoute]);
         }
         result.inferenceMilliseconds = MillisecondsSince(inferenceStart);
 
@@ -185,7 +205,8 @@ public:
             ? CoordinateRecognitionStatus::NoCandidate
             : CoordinateRecognitionStatus::Ready;
 
-        std::string details = "preprocessMs=" + std::to_string(result.preprocessingMilliseconds) +
+        std::string details = "route=" + std::string(request.useTopHatRoute ? "tophat" : "contrast") +
+            " preprocessMs=" + std::to_string(result.preprocessingMilliseconds) +
             " inferenceMs=" + std::to_string(result.inferenceMilliseconds) +
             " parseMs=" + std::to_string(result.parsingMilliseconds) +
             " candidates=" + std::to_string(result.candidates.size());
@@ -392,6 +413,22 @@ CoordinateRecognitionResult IdentifyWorldCoordinates::RecognizeCropForDiagnostic
         return result;
     }
     return Runtime().RecognizeCrop(coordinateCrop, previousTrusted, useTopHatRoute);
+}
+
+CoordinateRecognitionResult IdentifyWorldCoordinates::RecognizeSnapshotForDiagnostics(
+    const cv::Mat& snapshot, std::optional<Coordinate> previousTrusted, bool useTopHatRoute) {
+    std::string error;
+    if (!AwaitReady(error)) {
+        CoordinateRecognitionResult result;
+        result.status = CoordinateRecognitionStatus::ModelUnavailable;
+        return result;
+    }
+    CoordinateRecognitionRequest request;
+    request.snapshot = snapshot;
+    request.clientRect = RECT{ 0, 0, snapshot.cols, snapshot.rows };
+    request.previousTrusted = previousTrusted;
+    request.useTopHatRoute = useTopHatRoute;
+    return Runtime().Recognize(request);
 }
 
 void IdentifyWorldCoordinates::Shutdown() {

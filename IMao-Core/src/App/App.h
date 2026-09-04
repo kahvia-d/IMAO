@@ -233,20 +233,45 @@ private:
 		int attempts = 0;
 	};
 	std::optional<LocalizationResumeHint> localizationResumeHint;
+	// A verified full-map viewport is not trusted as the player location by
+	// itself: the user may have panned the map.  It is nevertheless a valuable
+	// bounded search hint after the map closes, and must pass normal minimap
+	// geometry validation before it can publish markers.
+	std::optional<LocalizationResumeHint> viewportResumeHint;
 	std::optional<std::pair<std::uint64_t, std::uint64_t>> visualRequestInFlight;
 	std::uint64_t nextVisualRequestId = 1;
 	std::uint64_t activeVisualRequestId = 0;
 	std::uint64_t visualHintVersion = 0;
 	std::vector<VisualMapHint> latestOcrHints;
 	CoordinateRecoveryController::Clock::time_point lastVisualSubmitAt{};
+	// Updated only by a confirmed visual position. It lets the next minimap
+	// frame discard pixels that changed because of the heading wedge or the
+	// transparent game scene under the minimap.
+	cv::Mat trustedMinimapReference;
+	std::chrono::steady_clock::time_point lastMinimapFeatureReportAt{};
 	std::optional<std::uint64_t> ocrRequestInFlight;
 	std::uint64_t nextOcrRequestId = 1;
 	bool ocrAttemptedForRecovery = false;
-	bool ocrAssistEnabled = true;
+	CoordinateRecoveryController::Clock::time_point lastOcrSubmitAt{};
+	struct CoordinateTextFallbackCandidate {
+		Coordinate worldCoordinate;
+		float modelScore = 0.0f;
+		CoordinateRecoveryController::Clock::time_point observedAt{};
+		int confirmations = 0;
+	};
+	// Visual matching remains the primary source of truth.  This candidate is
+	// used only after repeated visual failures, and must be repeated by OCR in
+	// a second fresh frame before markers can be restored.
+	std::optional<CoordinateTextFallbackCandidate> coordinateTextFallbackCandidate;
+	// Small-map localization is deliberately image-only. Coordinate-text OCR is
+	// kept for the separate offline diagnostic tool, but never starts or submits
+	// from the runtime capture path.
+	bool ocrAssistEnabled = false;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
-	// initialized.  Once visual localization has established one stable lock,
-	// it is safe to warm OCR in the background for later recoveries.
+	// initialized.  It is warmed in the background after a visual lock, or
+	// after repeated visual failures when an out-of-coverage minimap needs the
+	// guarded coordinate-text fallback.
 	bool ocrPreloadStarted = false;
 	bool runLegacyLocalizationDiagnostics = false;
 	std::string localizationDiagnosticsMode = "visual";
@@ -291,7 +316,7 @@ private:
 	int GetCurrentSceneId(const Coordinate& identifyCoordinate, const Mat& minMapImg);
 	int ValidateCoordinateCandidate(const Coordinate& identifyCoordinate, const Mat& minMapImg,
 		const ImageFeatureData& minMapFeatureData, int preferredSceneId, bool searchAllScenes,
-		bool commitPosition);
+		bool commitPosition, std::size_t* outSupportingMatchCount = nullptr);
 	bool IsExistMinMap(cv::Mat& snapshot, const RECT& captureRect, int* goodMatchSize);
 	bool IsMapMoving(const Coordinate& gameMapcenterPointROC,const Coordinate& lastGameMapCenterPointROC);
 

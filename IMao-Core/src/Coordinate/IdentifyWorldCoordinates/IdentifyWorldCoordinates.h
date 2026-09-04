@@ -29,6 +29,10 @@ public:
     static bool TryTakeLatestResult(CoordinateRecognitionResult& result);
     static CoordinateRecognitionResult RecognizeCropForDiagnostics(const cv::Mat& coordinateCrop,
         std::optional<Coordinate> previousTrusted = std::nullopt, bool useTopHatRoute = false);
+    // Test support for a complete supported-resolution game capture.  Runtime
+    // requests use the same recognition path and coordinate crop.
+    static CoordinateRecognitionResult RecognizeSnapshotForDiagnostics(const cv::Mat& snapshot,
+        std::optional<Coordinate> previousTrusted = std::nullopt, bool useTopHatRoute = false);
     static void Shutdown();
 
     // Compatibility surface retained for existing callers. Normal runtime

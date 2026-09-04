@@ -27,11 +27,17 @@ struct VisualLocalizationCandidate {
     Coordinate mapCenter;
     double rotationDegrees = 0.0;
     double scale = 0.0;
+    int mutualMatchCount = 0;
     int inlierCount = 0;
     double inlierRatio = 0.0;
     double medianReprojectionError = 0.0;
     int coveredQuadrants = 0;
+    bool affineEstimated = false;
+    bool scaleWithinExpectedRange = false;
     double retrievalScore = 0.0;
+    // Only populated by the fixed-scale translation-vote fallback. Higher is
+    // better and represents the median descriptor agreement of its support.
+    double translationDescriptorScore = 0.0;
     bool ocrHintMatched = false;
     VisualLocalizationQuality quality = VisualLocalizationQuality::Rejected;
 };
@@ -59,10 +65,24 @@ struct VisualLocalizationResult {
     VisualLocalizationQuality quality = VisualLocalizationQuality::Rejected;
     bool ambiguous = false;
     std::vector<VisualLocalizationCandidate> candidates;
+    std::size_t coarseCandidateCount = 0;
+    int bestMutualMatchCount = 0;
+    int bestInlierCount = 0;
+    double bestObservedScale = 0.0;
+    bool bestAffineEstimated = false;
+    bool bestScaleWithinExpectedRange = false;
     double bestRetrievalScore = 0.0;
     double coarseMilliseconds = 0.0;
     double verificationMilliseconds = 0.0;
     double totalMilliseconds = 0.0;
+};
+
+struct MinimapFeatureDiagnostics {
+    int rawKeypointCount = 0;
+    int retainedKeypointCount = 0;
+    int dynamicMaskPercent = 0;
+    bool temporalMaskApplied = false;
+    cv::Mat featureMask;
 };
 
 class GlobalVisualLocalizer {
@@ -71,8 +91,12 @@ public:
     static void Shutdown();
     static bool IsReady();
 
+    // trustedReference is the normalized crop from the most recent confirmed
+    // player position. When it can be registered reliably, dynamic HUD and
+    // transparent-background pixels are removed from the feature mask.
     static bool PrepareMinimap(const cv::Mat& minimap, cv::Mat& normalized,
-        ImageFeatureData& features, double surfThreshold = 10.0);
+        ImageFeatureData& features, const cv::Mat* trustedReference = nullptr,
+        MinimapFeatureDiagnostics* diagnostics = nullptr, double surfThreshold = 60.0);
 
     static bool Submit(VisualLocalizationRequest request);
     static bool TryTakeLatestResult(VisualLocalizationResult& result);

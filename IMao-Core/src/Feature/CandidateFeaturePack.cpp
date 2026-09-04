@@ -12,6 +12,7 @@
 #include <limits>
 #include <nlohmann/json.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 #include <sstream>
 #include <vector>
 
@@ -116,6 +117,27 @@ cv::Mat MakeStableTerrainMask(const cv::Size& imageSize, int innerRadius, int ou
     cv::circle(mask, center, outerRadius, cv::Scalar(255), cv::FILLED);
     cv::circle(mask, center, innerRadius, cv::Scalar(0), cv::FILLED);
     return mask;
+}
+
+cv::Mat CropMinimapFromFullSnapshot(const cv::Mat& snapshot) {
+    // Keep field-reference packs aligned with the same 1600x900 HUD geometry
+    // used by ImageProcessing::CropToMinMapAreaImg. The source file remains
+    // hash-verified before this transformation, so an attached full screenshot
+    // is as auditable as the existing 184px reference fixtures.
+    const double horizontalFactor = static_cast<double>(snapshot.cols) / 1600.0;
+    const double verticalFactor = static_cast<double>(snapshot.rows) / 900.0;
+    const int left = cvRound(30.0 * horizontalFactor);
+    const int top = cvRound(23.0 * verticalFactor);
+    const int right = cvRound(184.0 * horizontalFactor);
+    const int bottom = cvRound(177.0 * verticalFactor);
+    const cv::Rect minimapRoi(left, top, right - left, bottom - top);
+    if (minimapRoi.width <= 0 || minimapRoi.height <= 0 || minimapRoi.x < 0 || minimapRoi.y < 0 ||
+        minimapRoi.x + minimapRoi.width > snapshot.cols || minimapRoi.y + minimapRoi.height > snapshot.rows) {
+        return {};
+    }
+    cv::Mat minimap = snapshot(minimapRoi).clone();
+    cv::resize(minimap, minimap, cv::Size(184, 184), 0.0, 0.0, cv::INTER_AREA);
+    return minimap;
 }
 
 ImageFeatureData ExtractMaskedRuntimeSurf(const cv::Mat& image, const cv::Mat& mask) {
@@ -264,17 +286,10 @@ CandidateFeaturePackStatus CandidateFeaturePack::LoadCandidate(const std::string
             const std::string expectedHash = ToLowerAscii(reference.at("sha256").get<std::string>());
             const int expectedWidth = reference.at("width").get<int>();
             const int expectedHeight = reference.at("height").get<int>();
+            const bool fullSnapshot = reference.value("fullSnapshot", false);
             if (!IsSafeRelativeFileName(imageFileName) || expectedHash.size() != 64 ||
                 expectedWidth <= 0 || expectedHeight <= 0) {
                 return Failure(std::move(status), "reference metadata is invalid");
-            }
-
-            const auto& maskSettings = entry.contains("mask") ? entry.at("mask") : manifest.at("mask");
-            const int innerRadius = maskSettings.at("innerRadius").get<int>();
-            const int outerRadius = maskSettings.at("outerRadius").get<int>();
-            if (innerRadius <= 0 || outerRadius <= innerRadius ||
-                outerRadius > std::min(expectedWidth, expectedHeight) / 2) {
-                return Failure(std::move(status), "mask settings are invalid");
             }
 
             const std::filesystem::path imagePath = packDirectory / imageFileName;
@@ -285,10 +300,24 @@ CandidateFeaturePackStatus CandidateFeaturePack::LoadCandidate(const std::string
                 return Failure(std::move(status), "reference image SHA-256 mismatch: " + imageFileName);
             }
 
-            const cv::Mat referenceImage = cv::imread(imagePath.string(), cv::IMREAD_COLOR);
+            cv::Mat referenceImage = cv::imread(imagePath.string(), cv::IMREAD_COLOR);
             if (referenceImage.empty() || referenceImage.cols != expectedWidth ||
                 referenceImage.rows != expectedHeight) {
                 return Failure(std::move(status), "reference image dimensions or decoding failed: " + imageFileName);
+            }
+            if (fullSnapshot) {
+                referenceImage = CropMinimapFromFullSnapshot(referenceImage);
+                if (referenceImage.empty()) {
+                    return Failure(std::move(status), "full-snapshot minimap crop failed: " + imageFileName);
+                }
+            }
+
+            const auto& maskSettings = entry.contains("mask") ? entry.at("mask") : manifest.at("mask");
+            const int innerRadius = maskSettings.at("innerRadius").get<int>();
+            const int outerRadius = maskSettings.at("outerRadius").get<int>();
+            if (innerRadius <= 0 || outerRadius <= innerRadius ||
+                outerRadius > std::min(referenceImage.cols, referenceImage.rows) / 2) {
+                return Failure(std::move(status), "mask settings are invalid");
             }
 
             const cv::Mat mask = MakeStableTerrainMask(referenceImage.size(), innerRadius, outerRadius);
@@ -315,7 +344,7 @@ CandidateFeaturePackStatus CandidateFeaturePack::LoadCandidate(const std::string
             const bool accepted = MapCoordinate::GetGoodPlayerImgMapCoordinateFromMatches(
                 referenceImage, selfMatches, referenceFeatures.imgKeypoints,
                 unmaskedReference.imgKeypoints, kSelfMatchTolerancePixels,
-                anchorMapCoordinate, recoveredCoordinate);
+                anchorMapCoordinate, recoveredCoordinate, nullptr);
             const double errorPixels = accepted
                 ? std::hypot(recoveredCoordinate.x - anchorMapCoordinate.x,
                     recoveredCoordinate.y - anchorMapCoordinate.y)

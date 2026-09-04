@@ -4,10 +4,12 @@
 #include "../CoordinateStruct.h"
 #include "../../Feature/Match/FeatureMatch.h"
 
+#include <cstddef>
+
 class MapCoordinate
 {
     public:
-       static bool GetGoodPlayerImgMapCoordinateFromMatches(const cv::Mat& minMapImage,const std::vector<cv::DMatch>& matches, const std::vector<cv::KeyPoint>& mapKeypoints, const std::vector<cv::KeyPoint>& minMapKeypoints, float maxDistance, const Coordinate& lastCoordinate, Coordinate& outPlayerMapCoordinate);
+       static bool GetGoodPlayerImgMapCoordinateFromMatches(const cv::Mat& minMapImage,const std::vector<cv::DMatch>& matches, const std::vector<cv::KeyPoint>& mapKeypoints, const std::vector<cv::KeyPoint>& minMapKeypoints, float maxDistance, const Coordinate& lastCoordinate, Coordinate& outPlayerMapCoordinate, std::size_t* outSupportingMatchCount = nullptr);
        static Coordinate PlayerWorldCoordToImgMapCoord(Coordinate WorldCoordinate);
 
        static Coordinate PlayerTethysCoordToImgMapCoord(Coordinate TethysCoordinate);

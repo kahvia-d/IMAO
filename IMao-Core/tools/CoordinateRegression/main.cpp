@@ -65,9 +65,13 @@ int wmain(int argumentCount, wchar_t** arguments) {
         if (const auto previous = previousBySession.find(sessionId); previous != previousBySession.end()) {
             previousTrusted = previous->second;
         }
-        const auto claheResult = IdentifyWorldCoordinates::RecognizeCropForDiagnostics(image, previousTrusted);
-        const auto topHatResult = IdentifyWorldCoordinates::RecognizeCropForDiagnostics(
-            image, previousTrusted, true);
+        const bool fullSnapshot = sample.value("fullSnapshot", false);
+        const auto claheResult = fullSnapshot
+            ? IdentifyWorldCoordinates::RecognizeSnapshotForDiagnostics(image, previousTrusted)
+            : IdentifyWorldCoordinates::RecognizeCropForDiagnostics(image, previousTrusted);
+        const auto topHatResult = fullSnapshot
+            ? IdentifyWorldCoordinates::RecognizeSnapshotForDiagnostics(image, previousTrusted, true)
+            : IdentifyWorldCoordinates::RecognizeCropForDiagnostics(image, previousTrusted, true);
         inferenceTimes.push_back(claheResult.inferenceMilliseconds);
         inferenceTimes.push_back(topHatResult.inferenceMilliseconds);
         std::vector<CoordinateCandidate> combinedCandidates;

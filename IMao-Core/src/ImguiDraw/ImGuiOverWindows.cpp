@@ -7,6 +7,7 @@
 #include "../util.h"
 #include "InteractiveInterface\Debug.h"
 #include "InteractiveInterface/Notification.h"
+#include "InteractiveInterface/RuntimeStatusBar.h"
 #include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "Routes/DrawRouteOnMap.h"
@@ -356,6 +357,7 @@ int ImGuiOverWindows::start()
             DrawItemOnGameMap::DrawItemsOnGameMap(GameRect, h_window);
             DrawRouteOnMap::DrawRoute(app);
             DrawRouteOnMinMap::DrawRoute(app);
+            RuntimeStatusBar::Draw(h_window);
             //DrawPiPWindows::DrawImgui();
             Notification::DrawInfo();
             //Debug::DebugWindow(io,app);
@@ -378,8 +380,9 @@ int ImGuiOverWindows::start()
         GetClientRect(h_window, &GameRect);
         POINT ClientD2D = { GameRect.left, GameRect.top };
         ClientToScreen(h_window, &ClientD2D);
-        GameRect.bottom = app.GetImguiWindowsHeight();
-        GameRect.right = app.GetImguiWindowsWidth();
+        // The status bar is centered at the top of the game client, so the
+        // transparent overlay must remain client-sized even while only the
+        // minimap is being drawn.  Marker coordinates already use GameRect.
 
         if (ClientD2D.x != g_LastGamePos.x || ClientD2D.y != g_LastGamePos.y ||
             GameRect.right != g_LastGameRect.right || GameRect.bottom != g_LastGameRect.bottom)

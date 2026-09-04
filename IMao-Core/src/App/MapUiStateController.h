@@ -9,7 +9,10 @@ enum class MapUiState {
 };
 
 struct MapUiEvidence {
-    bool compassVisible = false;
+    // A colour-only compass hit is deliberately not sufficient.  App sets
+    // this only after the candidate has persisted and the map canvas passed a
+    // structural verification.
+    bool bigMapConfirmed = false;
     bool minimapVisible = false;
 };
 
@@ -20,10 +23,10 @@ struct MapUiStateUpdate {
     bool changed = false;
 };
 
-// Keeps UI transitions separate from the raw per-frame feature checks.  A
-// transition must be observed twice. Explicit conflicting gameplay evidence
-// hides map overlays immediately, while three unknown frames are required so
-// a transient compass miss cannot flash the overlay.
+// Keeps UI transitions separate from raw per-frame feature checks. A stable
+// state requires two confirmed observations; suspected map UI must never hide
+// gameplay overlays on its own. Missing HUD evidence needs a longer, one
+// second confirmation window before it can clear minimap caches.
 class MapUiStateController {
 public:
     MapUiStateUpdate Update(const MapUiEvidence& evidence);

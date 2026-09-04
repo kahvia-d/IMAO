@@ -1,7 +1,7 @@
 #include "MapUiStateController.h"
 
 MapUiState MapUiStateController::Classify(const MapUiEvidence& evidence) {
-    if (evidence.compassVisible) return MapUiState::BigMap;
+    if (evidence.bigMapConfirmed) return MapUiState::BigMap;
     if (evidence.minimapVisible) return MapUiState::Gameplay;
     return MapUiState::Unknown;
 }
@@ -20,10 +20,11 @@ MapUiStateUpdate MapUiStateController::Update(const MapUiEvidence& evidence) {
         else {
             ++pendingFrames_;
         }
-        // A capture can lose the compass for one or two frames while the map
-        // itself remains visible.  Keep confirmed overlays through that short
-        // gap; explicit Gameplay evidence below still closes immediately.
-        if (state_ != MapUiState::Unknown && pendingFrames_ >= 3) {
+        // A capture can lose HUD features during an animation or one bad DXGI
+        // frame. Treat a missing minimap as an actual HUD disappearance only
+        // after a full second of evidence; otherwise cached markers remain
+        // available under the stale-position grace period.
+        if (state_ != MapUiState::Unknown && pendingFrames_ >= 10) {
             state_ = MapUiState::Unknown;
             update.current = state_;
             update.changed = true;
@@ -37,31 +38,6 @@ MapUiStateUpdate MapUiStateController::Update(const MapUiEvidence& evidence) {
     }
     else {
         ++pendingFrames_;
-    }
-
-    // A conflicting first frame hides the old overlay immediately while still
-    // recording which UI is being entered.  App can therefore preserve its
-    // player-location hint without treating an opening/closing animation as a
-    // teleport.
-    if (state_ == MapUiState::Gameplay && update.observed == MapUiState::BigMap) {
-        state_ = MapUiState::EnteringBigMap;
-        update.current = state_;
-        update.changed = true;
-        return update;
-    }
-    if (state_ == MapUiState::BigMap && update.observed == MapUiState::Gameplay) {
-        state_ = MapUiState::LeavingBigMap;
-        update.current = state_;
-        update.changed = true;
-        return update;
-    }
-
-    if ((state_ == MapUiState::EnteringBigMap && update.observed != MapUiState::BigMap) ||
-        (state_ == MapUiState::LeavingBigMap && update.observed != MapUiState::Gameplay)) {
-        state_ = MapUiState::Unknown;
-        update.current = state_;
-        update.changed = true;
-        return update;
     }
 
     if (pendingFrames_ >= 2 && state_ != update.observed) {

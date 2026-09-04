@@ -1,196 +1,118 @@
-﻿using IMao_WinUI.ViewModels;
+using IMao_WinUI.Helpers;
+using IMao_WinUI.Services;
+using IMao_WinUI.ViewModels;
 using Microsoft.UI.Xaml.Controls;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
 
 namespace IMao_WinUI.Views;
 
+class RouteName
+{
+    private readonly string routesFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedRoutes");
 
-class RouteName {
-
-    private String routesFolderPath;
-    public RouteName()
-    {
-        String appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        routesFolderPath = Path.Combine(appDirectory, "SavedRoutes");
-    }
-
-    public ObservableCollection<String> GetAllRouteFilesName()
-    {
-        String[] jsonStringPaths = GetJsonStringPaths();
-        if(jsonStringPaths != null && jsonStringPaths.Length != 0)
-        {
-            ObservableCollection <String> routes = new ObservableCollection<String>();
-            foreach (String jsonStringPath in jsonStringPaths){
-
-                String RouteName = Path.GetFileNameWithoutExtension(jsonStringPath);
-                routes.Add(RouteName);
-
-            }
-            return routes;
-        }
-
-        return new ObservableCollection<string> {"Empty"};
-    }
-
-    private String[] GetJsonStringPaths()
+    public ObservableCollection<string> GetAllRouteFilesName()
     {
         try
         {
-            String[] jsonFilePaths = Directory.GetFiles(routesFolderPath, "*.json");
-
-            return jsonFilePaths;
+            string[] paths = Directory.GetFiles(routesFolderPath, "*.json");
+            return paths.Length == 0
+                ? new ObservableCollection<string> { "Empty" }
+                : new ObservableCollection<string>(paths.Select(Path.GetFileNameWithoutExtension));
         }
-        catch(Exception ex)
+        catch (Exception exception)
         {
-            Console.WriteLine($"错误：{ex.Message}");
-            return new String[0];
+            Debug.WriteLine($"读取路线失败：{exception.Message}");
+            return new ObservableCollection<string> { "Empty" };
         }
-       
     }
 }
 
-
-
 public sealed partial class FunctionPage : Page
 {
-    private ObservableCollection<String> RouteNameCollection;
-    private RouteName routeName = new RouteName();
+    private readonly RouteName routeName = new();
+    private readonly CoreHostService coreHost;
 
-    public FunctionViewModel ViewModel
-    {
-        get;
-    }
+    public FunctionViewModel ViewModel { get; }
 
     public FunctionPage()
     {
         ViewModel = App.GetService<FunctionViewModel>();
+        coreHost = App.GetService<CoreHostService>();
         InitializeComponent();
-
         ComboBox_RouteDataName.ItemsSource = routeName.GetAllRouteFilesName();
+        ToggleSwitch_StatusBar.IsOn = RuntimePreferences.StatusBarEnabled;
     }
 
     private void UpdateMinMapItemDataCycle_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
-        IMaoCoreAPI.SetMinMapDataUpdateCycle((int)e.NewValue);
+        // WinUI raises ValueChanged while the control is being constructed, before
+        // the XAML value is applied.  Do not send that transient zero to CoreHost.
+        if (e.NewValue < 16 || e.NewValue > 1000) return;
+        _ = coreHost.ConfigureAsync(minMapUpdateCycle: (int)e.NewValue);
     }
 
     private void UpdateMapItemDataCycle_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
-        IMaoCoreAPI.SetMapDataUpdateCycle((int)e.NewValue);
+        // See the matching minimap handler above.
+        if (e.NewValue < 16 || e.NewValue > 1000) return;
+        _ = coreHost.ConfigureAsync(mapUpdateCycle: (int)e.NewValue);
     }
 
     private void ToggleSwitch_MapShowItem(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        ToggleSwitch toggleSwitch = sender as ToggleSwitch;
-        if (toggleSwitch != null)
-        {
-            if (toggleSwitch.IsOn == true)
-            { 
-                IMaoCoreAPI.EnabledMapShowItem(true);
-            }
-            else
-            {
-                IMaoCoreAPI.EnabledMapShowItem(false);
-            }
-        }
+        if (sender is ToggleSwitch toggle) _ = coreHost.ConfigureAsync(mapEnabled: toggle.IsOn);
     }
 
     private void ToggleSwitch_MinMapShowItem(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        ToggleSwitch toggleSwitch = sender as ToggleSwitch;
-        if (toggleSwitch != null)
-        {
-            if (toggleSwitch.IsOn == true)
-            {
-                IMaoCoreAPI.EnabledMinMapShowItem(true);
-            }
-            else
-            {
-                IMaoCoreAPI.EnabledMinMapShowItem(false);
-            }
-        }
+        if (sender is ToggleSwitch toggle) _ = coreHost.ConfigureAsync(minMapEnabled: toggle.IsOn);
     }
 
     private void ToggleSwitch_SetVisibleSavedPoints(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        ToggleSwitch toggleSwitch = sender as ToggleSwitch;
-        if (toggleSwitch != null)
-        {
-            if (toggleSwitch.IsOn == true)
-            {
-                IMaoCoreAPI.SetVisibleSavedPoints(true);
-            }
-            else
-            {
-                IMaoCoreAPI.SetVisibleSavedPoints(false);
-            }
-        }
+        if (sender is ToggleSwitch toggle) _ = coreHost.ConfigureAsync(savedPointsEnabled: toggle.IsOn);
+    }
+
+    private void ToggleSwitch_StatusBar_Toggled(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (sender is not ToggleSwitch toggle) return;
+        RuntimePreferences.StatusBarEnabled = toggle.IsOn;
+        _ = coreHost.ConfigureAsync(statusBarEnabled: toggle.IsOn);
     }
 
     private void Button_SavedRouteJsonName_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        String content = TextBox_SavedRouteJsonName.Text.ToString();
-        if (content != null && content != "") {
-            IMaoCoreAPI.SetSavedJsonRouteName(content);
-        }
+        string content = TextBox_SavedRouteJsonName.Text;
+        if (!String.IsNullOrWhiteSpace(content)) _ = coreHost.SetRouteNameAsync(content);
     }
 
     private void Button_OpenRoutesFolder_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         try
         {
-            string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-
-            string routesPath = Path.Combine(appDirectory, "SavedRoutes");
-
+            string routesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedRoutes");
             if (Directory.Exists(routesPath))
             {
-                Process.Start(new ProcessStartInfo(routesPath)
-                {
-                    UseShellExecute = true,  
-                    Verb = "open"         
-                });
+                Process.Start(new ProcessStartInfo(routesPath) { UseShellExecute = true, Verb = "open" });
             }
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            Console.WriteLine("Button_OpenRoutesFolder_Click:" + ex.Message);
+            Debug.WriteLine($"打开路线目录失败：{exception.Message}");
         }
     }
 
     private void Button_LoadRoutesData_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        try
-        {
-            string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-
-            string routesFolderPath = Path.Combine(appDirectory, "SavedRoutes");
-
-            if (Directory.Exists(routesFolderPath))
-            {
-                IMaoCoreAPI.LoadJsonRoute();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Button_LoadRoutesData_Click:" + ex.Message);
-        }
-
+        if (Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedRoutes"))) _ = coreHost.LoadRoutesAsync();
     }
 
     private void Button_LoadOneRouteData(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        string? routeName = ComboBox_RouteDataName.SelectedItem as string;
-        if(routeName != null && routeName != "Empty")
-        {
-            IMaoCoreAPI.LoadOneJsonRoute(routeName);
-        }
+        if (ComboBox_RouteDataName.SelectedItem is string selected && selected != "Empty") _ = coreHost.LoadRouteAsync(selected);
     }
 
-    private void ComboBox_RouteDataName_DropDownOpened(object sender, object e)
-    {
+    private void ComboBox_RouteDataName_DropDownOpened(object sender, object e) =>
         ComboBox_RouteDataName.ItemsSource = routeName.GetAllRouteFilesName();
-    }
 }

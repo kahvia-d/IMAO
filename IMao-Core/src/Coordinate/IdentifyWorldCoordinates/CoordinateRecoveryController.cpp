@@ -1,7 +1,7 @@
 #include "CoordinateRecoveryController.h"
 
 namespace {
-constexpr auto kTrustedPositionHold = std::chrono::seconds(2);
+constexpr auto kTrustedPositionHold = std::chrono::seconds(3);
 }
 
 void CoordinateRecoveryController::Reset() {
@@ -16,6 +16,12 @@ void CoordinateRecoveryController::Reset() {
 void CoordinateRecoveryController::RestartRecovery() {
     Reset();
     OnRecognitionFailure();
+}
+
+void CoordinateRecoveryController::StartRecoveryKeepingTrustedPosition() {
+    if (state_ == CoordinateLockState::Hidden) return;
+    state_ = CoordinateLockState::Recovering;
+    consecutiveFailures_ = 0;
 }
 
 void CoordinateRecoveryController::SetVisible(bool visible, Clock::time_point) {
@@ -68,6 +74,12 @@ bool CoordinateRecoveryController::ShouldHideMarkers(Clock::time_point now) cons
         return !CanUseTrustedPosition(now);
     }
     return false;
+}
+
+int CoordinateRecoveryController::TrustedAgeMilliseconds(Clock::time_point now) const {
+    if (!hasTrustedPosition_ || now < lastTrustedAt_) return 0;
+    return static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        now - lastTrustedAt_).count());
 }
 
 std::string_view CoordinateRecoveryController::StateName(CoordinateLockState state) {

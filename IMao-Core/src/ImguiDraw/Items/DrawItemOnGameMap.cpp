@@ -1,5 +1,6 @@
 ﻿#include "DrawItemOnGameMap.h"
 #include "../../Diagnostics/Diagnostics.h"
+#include "../../Runtime/RuntimeStatus.h"
 
 #include <chrono>
 #include <iomanip>
@@ -42,6 +43,7 @@ void DrawItemOnGameMap::UpdateCenterPointNearItemsData(const Coordinate& validGa
 	if (GetBasicDataBySenceId(senceId)) {
 		lock_guard<mutex> lock(PointNearItemsDataMutex);
 		centerPointNearItemsData = GetAndFilterItemsData(validGameMapcenterPointROC, captureCorners, rect);
+		RuntimeStatus::SetMapMarkerCount(static_cast<int>(centerPointNearItemsData.size()));
 		if (Diagnostics::Enabled()) {
 			static auto lastReport = chrono::steady_clock::time_point{};
 			static size_t lastMarkerCount = numeric_limits<size_t>::max();
@@ -63,6 +65,12 @@ void DrawItemOnGameMap::UpdateCenterPointNearItemsData(const Coordinate& validGa
 			}
 		}
 	}
+}
+
+void DrawItemOnGameMap::ClearNearItemsData() {
+	std::lock_guard<std::mutex> lock(PointNearItemsDataMutex);
+	centerPointNearItemsData.clear();
+	RuntimeStatus::SetMapMarkerCount(0);
 }
 
 bool DrawItemOnGameMap::GetBasicDataBySenceId(int senceId) {

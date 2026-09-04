@@ -14,6 +14,9 @@ param(
     [double]$TransformOriginY = 1957,
     [double]$TransformScale = 1.205,
     [string]$ReferencePath = '',
+    # Treat ReferencePath as a complete game screenshot and crop the minimap
+    # with the same geometry used by the runtime before field verification.
+    [switch]$ReferenceFullSnapshot,
     # Generates a hash-checked tile/feature package without a real minimap
     # reference. This is useful for broad coverage before field collection,
     # but manifests stay explicitly unverified and the normal test script
@@ -184,6 +187,7 @@ try {
         $builderArguments.VerifyReference = $referencePath
         $builderArguments.AnchorWorldX = $AnchorWorldX
         $builderArguments.AnchorWorldY = $AnchorWorldY
+        $builderArguments.ReferenceFullSnapshot = $ReferenceFullSnapshot
     }
     & (Join-Path $PSScriptRoot 'Build-KuroMapFeaturePack.ps1') @builderArguments
     if ($LASTEXITCODE -ne 0) { throw "Feature-pack builder failed with exit code $LASTEXITCODE." }
@@ -201,6 +205,9 @@ try {
     }
     else {
         $builderReport.referenceVerification
+    }
+    if (-not $SkipReferenceVerification) {
+        Write-Host "Reference verification: mapKeypoints=$($referenceVerification.mapKeypoints) minimapKeypoints=$($referenceVerification.minimapKeypoints) goodMatches=$($referenceVerification.goodMatches) nearAnchorMatches=$($referenceVerification.nearAnchorMatches) errorPixels=$($referenceVerification.errorPixels)"
     }
     $packManifest = [ordered]@{
         formatVersion = 1; packId = "$($PackId.ToLowerInvariant())-kurotiles"; scene = $Scene; sceneId = $sceneIds[$Scene]; resourceVersion = $resourceVersion
@@ -224,7 +231,7 @@ try {
         "- Tiles absent from the public source: $missingTileCount",
         "- SURF keypoints extracted: $($builderReport.extractedKeypoints)",
         "- SURF keypoints retained: $($builderReport.selectedKeypoints)",
-        "- Reference-map verification: passed=$($referenceVerification.passed); skipped=$($referenceVerification.skipped); error=$($referenceVerification.errorPixels) pixels",
+        "- Reference-map verification: passed=$($referenceVerification.passed); skipped=$(if ($null -ne $referenceVerification.PSObject.Properties['skipped']) { $referenceVerification.skipped } else { $false }); error=$($referenceVerification.errorPixels) pixels",
         "- Feature SHA-256: $($builderReport.featuresSha256)", '',
         'The tiles were downloaded from Kuro public static assets. An unverified coverage pack must be checked against a real minimap before accuracy is claimed.'
     )

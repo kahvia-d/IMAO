@@ -1,4 +1,5 @@
 ﻿using IMao_WinUI.Helpers;
+using IMao_WinUI.Services;
 using Microsoft.UI.Xaml;
 using Windows.UI.ViewManagement;
 
@@ -24,14 +25,13 @@ public sealed partial class MainWindow : WindowEx
         dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         settings = new UISettings();
         settings.ColorValuesChanged += Settings_ColorValuesChanged; // cannot use FrameworkElement.ActualThemeChanged event
-        //Dll初始化
-        IMaoCoreAPI.Initi();
+        _ = App.GetService<CoreHostService>().EnsureStartedAsync();
     }
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
         settings.ColorValuesChanged -= Settings_ColorValuesChanged;
-        IMaoCoreAPI.Shutdown();
+        _ = App.GetService<CoreHostService>().ShutdownAsync();
     }
 
     private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)

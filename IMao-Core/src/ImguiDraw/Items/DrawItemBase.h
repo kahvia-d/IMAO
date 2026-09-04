@@ -5,6 +5,7 @@
 #include "../ImGuiOverWindows.h"
 #include "../../Coordinate/CoordinateStruct.h"
 #include <thread>
+#include <atomic>
 #include <wrl/client.h>
 using json = nlohmann::json;
 
@@ -34,6 +35,7 @@ struct ItemTextureData {
 class DrawItemBase {
 public:
 	static void Initi();
+	static void Shutdown();
 	static void RenderPointCircle(ImTextureID texture, ImVec2 position, float radius, float transparency, ImColor circleColor);
 	static void AddItemDataFromJson(std::string itemId);
 	static void ClearItemData(std::string itemId);
@@ -71,6 +73,7 @@ private:
 	static bool FindItemJsonData(int sceneId, json*& itemJsonData, std::vector<ItemsDatas>*& itemsDatas_Storage);
 	//static json savedItemPoints;
 	static std::thread thread_ReadSavedPointsJson;
+	static std::atomic_bool savedPointsThreadStop;
     static std::string savedJsonPath;
 };
 

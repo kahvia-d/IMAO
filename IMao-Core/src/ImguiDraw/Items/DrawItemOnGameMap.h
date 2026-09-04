@@ -9,10 +9,7 @@ public:
 	static std::vector<ItemDatas> centerPointNearItemsData;
 	static void UpdateCenterPointNearItemsData(const Coordinate& validGameMapcenterPointROC,const std::vector<cv::Point2f>& captureCorners, const RECT& rect, int senceId);
 	static void DrawItemsOnGameMap(const RECT& rect, const HWND& hwnd);
-	static void ClearNearItemsData() {
-		std::lock_guard<std::mutex> lock(PointNearItemsDataMutex);
-		centerPointNearItemsData.clear();
-	}
+	static void ClearNearItemsData();
 	static void SetVisibleSavedPoints(bool value) {
 		visibleSavedPoints = value;
 	}

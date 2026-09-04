@@ -6,6 +6,7 @@
 #include "Processing/FeatureProcessing.h"
 #include "VisualIndex/MapVisualIndex.h"
 #include "../Diagnostics/Diagnostics.h"
+#include "../Runtime/RuntimeStatus.h"
 
 #include <algorithm>
 #include <chrono>
@@ -32,6 +33,10 @@ bool MergeVisualShard(MapVisualIndex& base, const MapVisualIndex& shard,
         error = "optional visual shard feature row offset overflow";
         return false;
     }
+    base.tiles.reserve(base.tiles.size() + shard.tiles.size());
+    base.histograms.reserve(base.histograms.size() + shard.histograms.size());
+    base.featureRows.reserve(base.featureRows.size() + shard.featureRows.size());
+    base.postings.reserve(base.postings.size() + shard.postings.size());
     for (const auto& source : shard.tiles) {
         auto tile = source;
         tile.histogramOffset += histogramBase;
@@ -45,12 +50,70 @@ bool MergeVisualShard(MapVisualIndex& base, const MapVisualIndex& shard,
         posting.tileIndex += tileBase;
         base.postings.push_back(posting);
     }
-    std::sort(base.postings.begin(), base.postings.end(), [](const auto& left, const auto& right) {
+    base.featureCount += shard.featureCount;
+    return true;
+}
+
+bool FinalizeMergedVisualIndex(MapVisualIndex& index, std::string& error) {
+    std::sort(index.postings.begin(), index.postings.end(), [](const auto& left, const auto& right) {
         if (left.wordId != right.wordId) return left.wordId < right.wordId;
         return left.tileIndex < right.tileIndex;
     });
-    base.featureCount += shard.featureCount;
-    return MapVisualIndexCodec::BuildPostingOffsets(base, error);
+    return MapVisualIndexCodec::BuildPostingOffsets(index, error);
+}
+
+// Repeated cv::vconcat calls reallocate and copy the large base map descriptor
+// matrix for every optional pack.  On lower-memory machines that causes paging
+// and makes a few small extension packs appear to hang the application.
+bool AppendFeatureBatch(ImageFeatureData& destination,
+    const std::vector<const ImageFeatureData*>& additions, std::string& error) {
+    if (additions.empty()) return true;
+    if (destination.imgKeypoints.empty() || destination.imgDescriptors.empty() ||
+        destination.imgDescriptors.rows != static_cast<int>(destination.imgKeypoints.size())) {
+        error = "base map feature data is incomplete";
+        return false;
+    }
+
+    std::size_t totalKeypoints = destination.imgKeypoints.size();
+    for (const auto* addition : additions) {
+        if (addition == nullptr || addition->imgKeypoints.empty() || addition->imgDescriptors.empty()) continue;
+        if (addition->imgDescriptors.rows != static_cast<int>(addition->imgKeypoints.size()) ||
+            addition->imgDescriptors.type() != destination.imgDescriptors.type() ||
+            addition->imgDescriptors.cols != destination.imgDescriptors.cols) {
+            error = "optional map feature descriptors are incompatible with the base map";
+            return false;
+        }
+        if (addition->imgKeypoints.size() >
+            std::numeric_limits<std::size_t>::max() - totalKeypoints) {
+            error = "optional map feature count overflow";
+            return false;
+        }
+        totalKeypoints += addition->imgKeypoints.size();
+    }
+    if (totalKeypoints > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        error = "optional map feature row count exceeds OpenCV limits";
+        return false;
+    }
+
+    ImageFeatureData merged;
+    merged.imgKeypoints.reserve(totalKeypoints);
+    merged.imgDescriptors.create(static_cast<int>(totalKeypoints), destination.imgDescriptors.cols,
+        destination.imgDescriptors.type());
+    int row = 0;
+    const auto append = [&merged, &row](const ImageFeatureData& source) {
+        merged.imgKeypoints.insert(merged.imgKeypoints.end(), source.imgKeypoints.begin(), source.imgKeypoints.end());
+        const auto nextRow = row + source.imgDescriptors.rows;
+        source.imgDescriptors.copyTo(merged.imgDescriptors.rowRange(row, nextRow));
+        row = nextRow;
+    };
+    append(destination);
+    for (const auto* addition : additions) {
+        if (addition != nullptr && !addition->imgKeypoints.empty() && !addition->imgDescriptors.empty()) {
+            append(*addition);
+        }
+    }
+    destination = std::move(merged);
+    return true;
 }
 }
 
@@ -126,6 +189,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         Diagnostics::Record("resource-load", "stage=map-features durationMs=" +
             std::to_string(ElapsedMilliseconds(mapStart)) + " keypoints=" +
             std::to_string(loaded->map.imgKeypoints.size()));
+        RuntimeStatus::SetMessage("基础地图特征已就绪，正在读取地图索引与图标资源");
         if (stopToken.stop_requested()) throw std::runtime_error("feature preload cancelled");
 
         const auto visualStart = std::chrono::steady_clock::now();
@@ -148,10 +212,23 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
             throw std::runtime_error("icon feature resources failed to load");
         }
 
+        RuntimeStatus::SetMessage("正在加载扩展地图特征包，请稍候");
+        const auto kuroLoadStart = std::chrono::steady_clock::now();
         const auto kuroPacks = KuroTileFeaturePack::LoadRegistered(featureRoot.string());
+        Diagnostics::Record("resource-load", "stage=kuro-feature-packs durationMs=" +
+            std::to_string(ElapsedMilliseconds(kuroLoadStart)) + " packs=" + std::to_string(kuroPacks.size()));
+        std::vector<const ImageFeatureData*> mapFeatureAdditions;
+        std::uint32_t mergedFeatureRows = static_cast<std::uint32_t>(loaded->map.imgKeypoints.size());
+        const auto approvedKuroPackCount = static_cast<std::size_t>(std::count_if(
+            kuroPacks.begin(), kuroPacks.end(), [](const auto& pack) { return pack.loaded && pack.runtimeApproved; }));
+        std::size_t loadedKuroPack = 0;
         for (const auto& kuro : kuroPacks) {
             if (kuro.loaded && kuro.runtimeApproved) {
-                const auto rowBase = static_cast<std::uint32_t>(loaded->map.imgKeypoints.size());
+                ++loadedKuroPack;
+                RuntimeStatus::SetMessage("正在整合扩展地图索引：" + kuro.directoryName + "（" +
+                    std::to_string(loadedKuroPack) + "/" + std::to_string(approvedKuroPackCount) + "）");
+                const auto kuroMergeStart = std::chrono::steady_clock::now();
+                const auto rowBase = mergedFeatureRows;
                 MapVisualIndex shard;
                 const auto firstShardTile = static_cast<std::uint32_t>(loaded->visualIndex.tiles.size());
                 std::string shardError;
@@ -168,8 +245,18 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                     loaded->kuroVisualShards.push_back({
                         kuro.sceneId, firstShardTile, static_cast<std::uint32_t>(shard.tiles.size()) });
                 }
-                CandidateFeaturePack::AppendFeatures(loaded->map, kuro.featureData);
+                if (kuro.featureData.imgKeypoints.size() >
+                    std::numeric_limits<std::uint32_t>::max() - mergedFeatureRows) {
+                    throw std::runtime_error("Kuro tile feature row count overflow");
+                }
+                mapFeatureAdditions.push_back(&kuro.featureData);
+                mergedFeatureRows += static_cast<std::uint32_t>(kuro.featureData.imgKeypoints.size());
                 CandidateFeaturePack::AppendFeatures(loaded->kuroTileFeatures, kuro.featureData);
+                Diagnostics::Record("kuro-tile-feature-index", "id=" + kuro.packId +
+                    " durationMs=" + std::to_string(ElapsedMilliseconds(kuroMergeStart)) +
+                    " visualIndexReady=" + std::to_string(shardReady) +
+                    " keypoints=" + std::to_string(kuro.featureData.imgKeypoints.size()) +
+                    " error=" + shardError);
             }
             Diagnostics::Record("kuro-tile-feature-pack", "id=" + kuro.packId +
                 " directory=" + kuro.directoryName + " scene=" + std::to_string(kuro.sceneId) +
@@ -179,26 +266,45 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 " error=" + kuro.error);
         }
 
+        RuntimeStatus::SetMessage("正在加载候选地图定位资源");
+        const auto candidateLoadStart = std::chrono::steady_clock::now();
         const auto candidates = CandidateFeaturePack::LoadRegisteredCandidates(featureRoot.string());
-        for (auto candidate : candidates) {
+        Diagnostics::Record("resource-load", "stage=candidate-feature-packs durationMs=" +
+            std::to_string(ElapsedMilliseconds(candidateLoadStart)) + " packs=" + std::to_string(candidates.size()));
+        std::size_t loadedCandidatePack = 0;
+        for (const auto& candidate : candidates) {
             if (candidate.loaded) {
-            const auto rowBase = static_cast<std::uint32_t>(loaded->map.imgKeypoints.size());
-            std::array<std::uint8_t, 32> sourceHash{};
-            MapVisualIndex shard;
-            std::string shardError;
-            const auto sourcePath = featureRoot / candidate.directoryName / "manifest.json";
-            const bool shardReady = loaded->visualIndexReady &&
-                FeatureBinaryCodec::Sha256File(sourcePath, sourceHash, shardError) &&
-                MapVisualIndexCodec::Load(featureRoot / candidate.directoryName / "visual-index.imx",
-                    sourceHash, static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size()),
-                    shard, shardError) &&
-                MergeVisualShard(loaded->visualIndex, shard, rowBase, shardError);
-            if (!shardReady) {
-                loaded->visualIndexReady = false;
-                visualError += " candidate shard " + candidate.packId + ": " + shardError;
-            }
-            CandidateFeaturePack::AppendFeatures(loaded->map, candidate.featureData);
-            CandidateFeaturePack::AppendFeatures(loaded->curatedCandidates, candidate.featureData);
+                ++loadedCandidatePack;
+                RuntimeStatus::SetMessage("正在整合候选地图索引：" + candidate.directoryName + "（" +
+                    std::to_string(loadedCandidatePack) + "/" + std::to_string(candidates.size()) + "）");
+                const auto candidateMergeStart = std::chrono::steady_clock::now();
+                const auto rowBase = mergedFeatureRows;
+                std::array<std::uint8_t, 32> sourceHash{};
+                MapVisualIndex shard;
+                std::string shardError;
+                const auto sourcePath = featureRoot / candidate.directoryName / "manifest.json";
+                const bool shardReady = loaded->visualIndexReady &&
+                    FeatureBinaryCodec::Sha256File(sourcePath, sourceHash, shardError) &&
+                    MapVisualIndexCodec::Load(featureRoot / candidate.directoryName / "visual-index.imx",
+                        sourceHash, static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size()),
+                        shard, shardError) &&
+                    MergeVisualShard(loaded->visualIndex, shard, rowBase, shardError);
+                if (!shardReady) {
+                    loaded->visualIndexReady = false;
+                    visualError += " candidate shard " + candidate.packId + ": " + shardError;
+                }
+                if (candidate.featureData.imgKeypoints.size() >
+                    std::numeric_limits<std::uint32_t>::max() - mergedFeatureRows) {
+                    throw std::runtime_error("candidate feature row count overflow");
+                }
+                mapFeatureAdditions.push_back(&candidate.featureData);
+                mergedFeatureRows += static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size());
+                CandidateFeaturePack::AppendFeatures(loaded->curatedCandidates, candidate.featureData);
+                Diagnostics::Record("candidate-feature-index", "id=" + candidate.packId +
+                    " durationMs=" + std::to_string(ElapsedMilliseconds(candidateMergeStart)) +
+                    " visualIndexReady=" + std::to_string(shardReady) +
+                    " keypoints=" + std::to_string(candidate.featureData.imgKeypoints.size()) +
+                    " error=" + shardError);
             }
             Diagnostics::Record("candidate-feature-pack", "id=" + candidate.packId +
                 " directory=" + candidate.directoryName + " loaded=" + std::to_string(candidate.loaded) +
@@ -207,17 +313,47 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 std::to_string(candidate.selfMatchAccepted) + " error=" + candidate.error);
         }
 
+        if (!mapFeatureAdditions.empty()) {
+            RuntimeStatus::SetMessage("正在一次性合并全部地图特征");
+            const auto mergeStart = std::chrono::steady_clock::now();
+            std::string mergeError;
+            if (!AppendFeatureBatch(loaded->map, mapFeatureAdditions, mergeError)) {
+                throw std::runtime_error("map feature merge failed: " + mergeError);
+            }
+            Diagnostics::Record("resource-load", "stage=map-feature-merge durationMs=" +
+                std::to_string(ElapsedMilliseconds(mergeStart)) + " additions=" +
+                std::to_string(mapFeatureAdditions.size()) + " keypoints=" +
+                std::to_string(loaded->map.imgKeypoints.size()));
+        }
+
+        if (loaded->visualIndexReady) {
+            RuntimeStatus::SetMessage("正在整理地图定位索引");
+            const auto finalizeStart = std::chrono::steady_clock::now();
+            std::string finalizeError;
+            if (!FinalizeMergedVisualIndex(loaded->visualIndex, finalizeError)) {
+                loaded->visualIndexReady = false;
+                visualError += " visual-index finalization: " + finalizeError;
+            }
+            Diagnostics::Record("resource-load", "stage=visual-index-finalize durationMs=" +
+                std::to_string(ElapsedMilliseconds(finalizeStart)) + " ready=" +
+                std::to_string(loaded->visualIndexReady) + " postings=" +
+                std::to_string(loaded->visualIndex.postings.size()) + " error=" + finalizeError);
+        }
+
         Diagnostics::Record("resource-load", "stage=visual-index durationMs=" +
             std::to_string(ElapsedMilliseconds(visualStart)) + " ready=" +
             std::to_string(loaded->visualIndexReady) + " tiles=" +
             std::to_string(loaded->visualIndex.tiles.size()) + " error=" + visualError);
+        RuntimeStatus::SetMessage("地图识别资源已就绪");
     }
     catch (const std::exception& exception) {
         failure = exception.what();
+        Diagnostics::Record("resource-load-failed", "stage=preload error=" + failure);
         loaded.reset();
     }
 
     const bool ready = loaded != nullptr;
+    const std::string failureForLog = failure;
     {
         std::scoped_lock lock(mutex_);
         resources_ = std::move(loaded);
@@ -226,6 +362,6 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
     }
     Diagnostics::Record("resource-load", "stage=all durationMs=" +
         std::to_string(ElapsedMilliseconds(totalStart)) + " ready=" +
-        std::to_string(ready));
+        std::to_string(ready) + " error=" + failureForLog);
     condition_.notify_all();
 }

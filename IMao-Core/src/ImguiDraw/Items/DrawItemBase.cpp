@@ -33,6 +33,7 @@ vector<ItemsDatas> DrawItemBase::itemsDatas_LowerVault_Storage;
 vector<ItemsDatas> DrawItemBase::itemsDatas_Darkplain_Storage;
 vector<ItemsDatas> DrawItemBase::itemsDatas_TimeRiftRuins_Storage;
 thread DrawItemBase::thread_ReadSavedPointsJson;
+std::atomic_bool DrawItemBase::savedPointsThreadStop = false;
 string DrawItemBase::savedJsonPath;
 
 static std::shared_mutex g_jsonMutex;          // 读写锁 
@@ -77,7 +78,15 @@ void DrawItemBase::Initi() {
         cerr << "  DrawItemBase::Initi:" << e.what() << endl;
     }
 
+    savedPointsThreadStop = false;
     thread_ReadSavedPointsJson = std::thread(&DrawItemBase::Thread_ReadSavedPointsJson);
+}
+
+void DrawItemBase::Shutdown() {
+    savedPointsThreadStop = true;
+    if (thread_ReadSavedPointsJson.joinable()) {
+        thread_ReadSavedPointsJson.join();
+    }
 }
 
 bool LoadJson(json& JsonData, const wchar_t* resourceName) {
@@ -429,7 +438,7 @@ vector<string> DrawItemBase::GetFilteredPoints(string scene,string nameId) {
 }
 
 void DrawItemBase::Thread_ReadSavedPointsJson() {
-    while (true) {
+    while (!savedPointsThreadStop.load()) {
         try {
             if (fs::exists(savedJsonPath)) {
                 auto t = fs::last_write_time(savedJsonPath);
@@ -444,6 +453,6 @@ void DrawItemBase::Thread_ReadSavedPointsJson() {
         catch (const exception& e) {
 			Notification::AddError(NotificationDatas("JSON reload failed.", 3));
         }
-        this_thread::sleep_for(chrono::milliseconds(250));
+        this_thread::sleep_for(chrono::milliseconds(50));
     }
 }

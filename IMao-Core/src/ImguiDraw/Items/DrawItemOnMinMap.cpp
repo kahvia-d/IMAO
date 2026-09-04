@@ -1,6 +1,7 @@
 ﻿#include "DrawItemOnMinMap.h"
 
 #include "../../Diagnostics/Diagnostics.h"
+#include "../../Runtime/RuntimeStatus.h"
 
 #include <chrono>
 #include <iomanip>
@@ -46,6 +47,7 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(HWND &hwnd,Coordinate & playerR
 void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & playerROC,float minMapRadius, int SceneId) {
     if(GetBasicDataBySenceId(SceneId)) {
         nearItemsDatas = GetAndFilterItemsData(w_Rect, playerROC, minMapRadius);
+		RuntimeStatus::SetMinimapMarkerCount(static_cast<int>(nearItemsDatas.size()));
         if (Diagnostics::Enabled()) {
             static auto lastReport = chrono::steady_clock::time_point{};
             const auto now = chrono::steady_clock::now();
@@ -59,6 +61,11 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & play
             }
         }
     }
+}
+
+void DrawItemOnMinMap::ClearNearItemsData() {
+	nearItemsDatas.clear();
+	RuntimeStatus::SetMinimapMarkerCount(0);
 }
 
 bool DrawItemOnMinMap::GetBasicDataBySenceId(int senceId) {

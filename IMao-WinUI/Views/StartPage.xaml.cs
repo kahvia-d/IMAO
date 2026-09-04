@@ -1,146 +1,160 @@
-﻿using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
+using IMao_WinUI.Services;
 using IMao_WinUI.StringItems;
 using IMao_WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using System.Diagnostics;
-using System.Drawing;
+
 namespace IMao_WinUI.Views;
 
 public sealed partial class StartPage : Page
 {
-    private bool isRunning = true;
-    public StartViewModel ViewModel
-    {
-        get;
-    }
+    private readonly CoreHostService coreHost;
+    private bool subscribed;
+
+    public StartViewModel ViewModel { get; }
 
     public StartPage()
     {
         ViewModel = App.GetService<StartViewModel>();
+        coreHost = App.GetService<CoreHostService>();
         InitializeComponent();
         ComboBox_GameServer.SelectedIndex = 0;
         ComboBox_CaptureMethod.SelectedIndex = 0;
+        Loaded += StartPage_Loaded;
+        Unloaded += StartPage_Unloaded;
         _ = InitializeAsync();
+    }
 
-        LocalItemFilter localItemFilter = new LocalItemFilter();
-        var filteredItemsDatas = localItemFilter.GetFilteredItemsDatas();
-
-        IMaoCoreAPI.EnabledMinMapShowItem(true);
-        IMaoCoreAPI.EnabledMapShowItem(true);
-        IMaoCoreAPI.SetMapDataUpdateCycle(80);
-        IMaoCoreAPI.SetMinMapDataUpdateCycle(80);
-
-        foreach (var filteredItemDatas in filteredItemsDatas)
+    private async void StartPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (!subscribed)
         {
-            if (filteredItemDatas.Status == 1)
-            {
-                IMaoCoreAPI.AddItem(filteredItemDatas.Name);
-            }
+            coreHost.StatusChanged += CoreHost_StatusChanged;
+            subscribed = true;
         }
+        await coreHost.EnsureStartedAsync();
+        await ApplyInitialConfigurationAsync();
+        UpdateCoreStatus(coreHost.Status);
+    }
+
+    private void StartPage_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (!subscribed) return;
+        coreHost.StatusChanged -= CoreHost_StatusChanged;
+        subscribed = false;
+    }
+
+    private async Task ApplyInitialConfigurationAsync()
+    {
+        LocalItemFilter localItemFilter = new();
+        string[] enabledItems = localItemFilter.GetFilteredItemsDatas()
+            .Where(item => item.Status == 1 && !String.IsNullOrWhiteSpace(item.Name))
+            .Select(item => item.Name!)
+            .ToArray();
+        await coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex,
+            mapUpdateCycle: 80, minMapUpdateCycle: 80, mapEnabled: true, minMapEnabled: true,
+            statusBarEnabled: RuntimePreferences.StatusBarEnabled);
+        if (enabledItems.Length > 0) await coreHost.SetItemsAsync(enabledItems);
     }
 
     private async Task InitializeAsync()
     {
         var isLatest = await CheckVersion.IsLatest();
-        if (!isLatest)
-        {
-            Start_InfoBar_NotLatestVersion.IsOpen = true;
-        }
-    }
-    private void ComboBox_CaptureMethod_Loaded(object sender, RoutedEventArgs e)
-    {
-       
+        if (!isLatest) Start_InfoBar_NotLatestVersion.IsOpen = true;
     }
 
-    private void ComboBox_GameServer_Loaded(object sender, RoutedEventArgs e)
-    {
-        
-    }
+    private void ComboBox_CaptureMethod_Loaded(object sender, RoutedEventArgs e) { }
+    private void ComboBox_GameServer_Loaded(object sender, RoutedEventArgs e) { }
 
     private async void Start_Button_Click(object sender, RoutedEventArgs e)
     {
-        Button button = (Button)sender;
-        StackPanel contentPanel = (StackPanel)button.Content;
-        FontIcon icon = (FontIcon)contentPanel.Children[0];
-        TextBlock textBlock = (TextBlock)contentPanel.Children[1];
-
-        if (isRunning)
+        if (coreHost.Status.IsRunning)
         {
-            ContentDialog dialog = new ContentDialog();
-
-            // XamlRoot must be set in the case of a ContentDialog running in a Desktop app
-            dialog.XamlRoot = this.XamlRoot;
-            dialog.Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style;
-            dialog.Title = "Suggestion";
-            dialog.PrimaryButtonText = "Confirm";
-            dialog.SecondaryButtonText = "I see";
-            dialog.DefaultButton = ContentDialogButton.Primary;
-            dialog.Content = new SuggestionDialog();
-            var result = await dialog.ShowAsync();
-
-            if (IMaoCoreAPI.Start()==0)
-            {
-                if (Start_ToggleSwitch_WindowOptimization.IsOn)
-                {
-                    BitBltRegistryHelper.SetDirectXUserGlobalSettings(); 
-                }
-                Start_InfoBar_FindNotTargetProcess.IsOpen = true;
-                Start_InfoBar_FindNotTargetProcess.Margin = new Thickness(0, 0, 0, 12);
-                return;
-            }
-            isRunning = !isRunning;
-            icon.Glyph = "\uE71A";
-            textBlock.Text = "Stop";
-            IMaoCoreAPI.SetCaptureWay(ComboBox_CaptureMethod.SelectedIndex);
-
-            if (!GameWindow.CheckGameWindowSize())
-            {
-                Start_InfoBar_IncorrectGameWindowSize.IsOpen = true;
-                Start_InfoBar_IncorrectGameWindowSize.Margin = new Thickness(0, 0, 0, 12);
-            }
+            Start_Button.IsEnabled = false;
+            await coreHost.StopRuntimeAsync();
+            return;
         }
-        else
+
+        ContentDialog dialog = new()
         {
-            isRunning = !isRunning;
-            icon.Glyph = "\uE768"; 
-            textBlock.Text = "Start";
-            IMaoCoreAPI.Stop();
+            XamlRoot = XamlRoot,
+            Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+            Title = "Suggestion",
+            PrimaryButtonText = "Confirm",
+            SecondaryButtonText = "I see",
+            DefaultButton = ContentDialogButton.Primary,
+            Content = new SuggestionDialog()
+        };
+        await dialog.ShowAsync();
+
+        if (Start_ToggleSwitch_WindowOptimization.IsOn) BitBltRegistryHelper.SetDirectXUserGlobalSettings();
+        if (!GameWindow.CheckGameWindowSize())
+        {
+            Start_InfoBar_IncorrectGameWindowSize.IsOpen = true;
+            Start_InfoBar_IncorrectGameWindowSize.Margin = new Thickness(0, 0, 0, 12);
+        }
+
+        Start_Button.IsEnabled = false;
+        await coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex);
+        await coreHost.StartRuntimeAsync();
+    }
+
+    private async void RestartCore_Click(object sender, RoutedEventArgs e)
+    {
+        await coreHost.RestartAsync();
+        await ApplyInitialConfigurationAsync();
+        UpdateCoreStatus(coreHost.Status);
+    }
+
+    private void CoreHost_StatusChanged(object? sender, Models.CoreRuntimeStatus status) => UpdateCoreStatus(status);
+
+    private void UpdateCoreStatus(Models.CoreRuntimeStatus status)
+    {
+        Start_TextBlock_CoreState.Text = status.DisplayState;
+        Start_TextBlock_CoreDetail.Text = status.Message;
+        Start_InfoBar_CoreStatus.Severity = status.CoreState switch
+        {
+            "faulted" => InfoBarSeverity.Error,
+            "recovering" or "waitingForGame" => InfoBarSeverity.Warning,
+            "running" => InfoBarSeverity.Success,
+            _ => InfoBarSeverity.Informational
+        };
+
+        bool isRunning = status.IsRunning;
+        bool isStarting = status.CoreState is "connecting" or "loading" or "startingOverlay" or "stopping";
+        Start_Button.IsEnabled = !isStarting;
+        Start_Button_Icon.Glyph = isRunning ? "\uE71A" : "\uE768";
+        Start_Button_Text.Text = isStarting ? "Starting..." : isRunning ? "Stop" : "Start";
+
+        if (status.CoreState == "waitingForGame")
+        {
+            Start_InfoBar_FindNotTargetProcess.IsOpen = true;
+            Start_InfoBar_FindNotTargetProcess.Margin = new Thickness(0, 0, 0, 12);
         }
     }
 
-
-    private void Start_InfoBar_FindNotTargetProcess_CloseButtonClick(InfoBar sender, object args)
-    {
+    private void Start_InfoBar_FindNotTargetProcess_CloseButtonClick(InfoBar sender, object args) =>
         Start_InfoBar_FindNotTargetProcess.Margin = new Thickness(0, 0, 0, 0);
-    }
 
-    private void Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick(InfoBar sender, object args)
-    {
+    private void Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick(InfoBar sender, object args) =>
         Start_InfoBar_IncorrectGameWindowSize.Margin = new Thickness(0, 0, 0, 0);
-    }
 
     private void Button_OpenPointsFolder_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-
-            string routesPath = Path.Combine(appDirectory, "SavedPoints");
-
+            string routesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedPoints");
             if (Directory.Exists(routesPath))
             {
-                Process.Start(new ProcessStartInfo(routesPath)
-                {
-                    UseShellExecute = true,
-                    Verb = "open"
-                });
+                Process.Start(new ProcessStartInfo(routesPath) { UseShellExecute = true, Verb = "open" });
             }
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            Console.WriteLine("Button_OpenPointsFolder_Click:" + ex.Message);
+            Debug.WriteLine($"Button_OpenPointsFolder_Click: {exception.Message}");
         }
     }
 }

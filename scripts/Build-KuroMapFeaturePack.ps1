@@ -9,6 +9,7 @@ param(
     [string]$VerifyReference,
     [Nullable[double]]$AnchorWorldX,
     [Nullable[double]]$AnchorWorldY,
+    [switch]$ReferenceFullSnapshot,
     [string]$PaddleLib = $env:IMAO_PADDLE_LIB,
     [string]$OpenCvDir = $env:IMAO_OPENCV_DIR
 )
@@ -76,6 +77,7 @@ try {
             if ($null -eq $AnchorWorldX -or $null -eq $AnchorWorldY) { throw 'Reference verification requires both anchor coordinates.' }
             $invariant = [Globalization.CultureInfo]::InvariantCulture
             $builderArguments += @('--verify-reference', $VerifyReference, '--anchor-x', [Convert]::ToString($AnchorWorldX, $invariant), '--anchor-y', [Convert]::ToString($AnchorWorldY, $invariant))
+            if ($ReferenceFullSnapshot) { $builderArguments += '--reference-full-snapshot' }
         }
         Write-Host 'Running KuroMapFeatureBuilder against the validated temporary tiles.'
         & $builder @builderArguments

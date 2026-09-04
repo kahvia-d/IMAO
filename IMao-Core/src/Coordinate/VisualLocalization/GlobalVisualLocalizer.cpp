@@ -27,23 +27,122 @@ constexpr double kMaximumScaleDeviation = 0.15;
 constexpr double kDuplicateCenterDistance = 24.0;
 constexpr double kOcrHintDistance = 160.0;
 constexpr double kOcrHintSearchRadius = 384.0;
+// These values must stay aligned with KuroMapFeatureBuilder::VerifyReference.
+// The public-map descriptor pack is built from an 80 px terrain ring with
+// SURF's 60 threshold.  A looser runtime detector produced a large number of
+// HUD/anti-aliasing descriptors that were absent from the pack, so retrieval
+// could miss an otherwise exact map tile before geometric verification began.
+constexpr int kMinimapTerrainRadius = 80;
+constexpr int kPlayerMarkerMaskRadius = 42;
+constexpr double kMinimumTemporalRegistrationResponse = 0.12;
+constexpr double kMaximumTemporalRegistrationShift = 16.0;
+constexpr int kDynamicDescriptorPadding = 11;
+constexpr double kMinimapSurfThreshold = 60.0;
+constexpr float kDescriptorRatioThreshold = 0.72f;
+constexpr float kDescriptorDistanceThreshold = 0.60f;
+// The public Kuro tiles and the in-game minimap share a known north-up scale.
+// A global affine fit is unnecessarily fragile when only a few terrain details
+// survive the minimap mask, so retain the stricter descriptor gate used by the
+// field verifier and vote directly for the map position implied by each match.
+constexpr float kTranslationVoteRatioThreshold = 0.65f;
+constexpr float kTranslationVoteDistanceThreshold = 0.50f;
+constexpr double kTranslationVoteRadius = 8.0;
+constexpr int kMinimumTranslationVotes = 3;
+
+cv::Mat ToGray(const cv::Mat& image) {
+    cv::Mat gray;
+    if (image.channels() == 1) gray = image;
+    else if (image.channels() == 4) cv::cvtColor(image, gray, cv::COLOR_BGRA2GRAY);
+    else cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+    return gray;
+}
 
 bool ExtractPreparedMinimapFeatures(const cv::Mat& normalized, ImageFeatureData& features,
-    double surfThreshold = 10.0) {
+    const cv::Mat* trustedReference, MinimapFeatureDiagnostics* diagnostics,
+    double surfThreshold = kMinimapSurfThreshold) {
     if (normalized.empty()) return false;
-    cv::Mat gray;
-    if (normalized.channels() == 1) gray = normalized;
-    else if (normalized.channels() == 4) cv::cvtColor(normalized, gray, cv::COLOR_BGRA2GRAY);
-    else cv::cvtColor(normalized, gray, cv::COLOR_BGR2GRAY);
-    cv::Mat mask(gray.size(), CV_8UC1, cv::Scalar(0));
+    if (diagnostics != nullptr) *diagnostics = {};
+    const cv::Mat gray = ToGray(normalized);
+    cv::Mat baseMask(gray.size(), CV_8UC1, cv::Scalar(0));
     const cv::Point center(gray.cols / 2, gray.rows / 2);
-    cv::circle(mask, center, 87, cv::Scalar(255), cv::FILLED);
-    cv::circle(mask, center, 16, cv::Scalar(0), cv::FILLED);
+    cv::circle(baseMask, center, kMinimapTerrainRadius, cv::Scalar(255), cv::FILLED);
+    // The player-arrow core and the start of the direction cone are dynamic.
+    // The remaining cone/background pixels are removed below when a recent
+    // trusted frame can be registered to this crop.
+    cv::circle(baseMask, center, kPlayerMarkerMaskRadius, cv::Scalar(0), cv::FILLED);
     auto surf = cv::xfeatures2d::SURF::create(surfThreshold, 8, 4, true, true);
-    std::vector<cv::KeyPoint> keypoints;
-    cv::Mat descriptors;
-    surf->detectAndCompute(gray, mask, keypoints, descriptors);
-    features = ImageFeatureData(keypoints, descriptors);
+    std::vector<cv::KeyPoint> rawKeypoints;
+    // Counting keypoints is intentionally cheaper than producing a second
+    // descriptor set. The latter is needed only for the rare fallback where
+    // the temporal mask rejected every usable feature.
+    surf->detect(gray, rawKeypoints, baseMask);
+    if (diagnostics != nullptr) diagnostics->rawKeypointCount = static_cast<int>(rawKeypoints.size());
+
+    cv::Mat mask = baseMask.clone();
+    if (trustedReference != nullptr && !trustedReference->empty() &&
+        trustedReference->size() == normalized.size()) {
+        const cv::Mat referenceGray = ToGray(*trustedReference);
+        cv::Mat referenceFloat;
+        cv::Mat currentFloat;
+        referenceGray.convertTo(referenceFloat, CV_32F);
+        gray.convertTo(currentFloat, CV_32F);
+        // Restrict phase correlation to the same static terrain annulus used
+        // for feature detection. A reliable small translation preserves map
+        // terrain while exposing the rotating cone and transparent backdrop.
+        referenceFloat.setTo(0.0f, baseMask == 0);
+        currentFloat.setTo(0.0f, baseMask == 0);
+        cv::Mat window;
+        cv::createHanningWindow(window, gray.size(), CV_32F);
+        double response = 0.0;
+        const cv::Point2d shift = cv::phaseCorrelate(referenceFloat, currentFloat, window, &response);
+        if (response >= kMinimumTemporalRegistrationResponse &&
+            cv::norm(shift) <= kMaximumTemporalRegistrationShift) {
+            cv::Mat alignedReference;
+            const cv::Mat transform = (cv::Mat_<double>(2, 3) << 1.0, 0.0, shift.x, 0.0, 1.0, shift.y);
+            cv::warpAffine(referenceGray, alignedReference, transform, gray.size(), cv::INTER_LINEAR,
+                cv::BORDER_REPLICATE);
+            cv::Mat difference;
+            cv::absdiff(gray, alignedReference, difference);
+            cv::Scalar mean;
+            cv::Scalar deviation;
+            cv::meanStdDev(difference, mean, deviation, baseMask);
+            const double threshold = std::clamp(mean[0] + deviation[0] * 1.25, 20.0, 80.0);
+            cv::Mat dynamicMask;
+            cv::threshold(difference, dynamicMask, threshold, 255, cv::THRESH_BINARY);
+            cv::bitwise_and(dynamicMask, baseMask, dynamicMask);
+            const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE,
+                cv::Size(kDynamicDescriptorPadding, kDynamicDescriptorPadding));
+            cv::dilate(dynamicMask, dynamicMask, kernel);
+            cv::bitwise_and(dynamicMask, baseMask, dynamicMask);
+            const int terrainPixels = cv::countNonZero(baseMask);
+            const int dynamicPixels = cv::countNonZero(dynamicMask);
+            if (diagnostics != nullptr) {
+                diagnostics->temporalMaskApplied = true;
+                diagnostics->dynamicMaskPercent = terrainPixels > 0
+                    ? static_cast<int>(std::lround(dynamicPixels * 100.0 / terrainPixels)) : 0;
+            }
+            mask.setTo(0, dynamicMask);
+        }
+    }
+
+    std::vector<cv::KeyPoint> retainedKeypoints;
+    cv::Mat retainedDescriptors;
+    surf->detectAndCompute(gray, mask, retainedKeypoints, retainedDescriptors);
+    // In a feature-sparse region, a temporal mask must not turn a usable map
+    // frame into an empty request. The fixed player mask remains safe.
+    if (retainedDescriptors.empty() && !rawKeypoints.empty()) {
+        mask = baseMask;
+        retainedKeypoints = rawKeypoints;
+        surf->compute(gray, retainedKeypoints, retainedDescriptors);
+        features = ImageFeatureData(retainedKeypoints, retainedDescriptors);
+    }
+    else {
+        features = ImageFeatureData(retainedKeypoints, retainedDescriptors);
+    }
+    if (diagnostics != nullptr) {
+        diagnostics->retainedKeypointCount = static_cast<int>(retainedKeypoints.size());
+        diagnostics->featureMask = mask;
+    }
     return !features.imgDescriptors.empty();
 }
 
@@ -70,6 +169,111 @@ bool TileMatchesHint(const MapVisualTile& tile, int resultSceneId,
     return false;
 }
 
+struct TranslationVote {
+    cv::Point2d mapCenter;
+    cv::Point2f minimapPoint;
+    float descriptorDistance = 0.0f;
+};
+
+double Median(std::vector<double> values) {
+    if (values.empty()) return 0.0;
+    std::sort(values.begin(), values.end());
+    const std::size_t middle = values.size() / 2;
+    return values.size() % 2 == 0
+        ? (values[middle - 1] + values[middle]) / 2.0
+        : values[middle];
+}
+
+VisualLocalizationCandidate BuildTranslationVoteCandidate(const std::vector<TranslationVote>& votes,
+    const cv::Size minimapSize, int sceneId, double retrievalScore, int mutualMatchCount) {
+    VisualLocalizationCandidate candidate;
+    candidate.sceneId = sceneId;
+    candidate.retrievalScore = retrievalScore;
+    candidate.mutualMatchCount = mutualMatchCount;
+    if (votes.size() < static_cast<std::size_t>(kMinimumTranslationVotes)) return candidate;
+
+    std::vector<std::size_t> bestSupport;
+    double bestDistanceSum = std::numeric_limits<double>::infinity();
+    for (std::size_t anchor = 0; anchor < votes.size(); ++anchor) {
+        std::vector<std::size_t> support;
+        double distanceSum = 0.0;
+        for (std::size_t index = 0; index < votes.size(); ++index) {
+            const double distance = std::hypot(votes[index].mapCenter.x - votes[anchor].mapCenter.x,
+                votes[index].mapCenter.y - votes[anchor].mapCenter.y);
+            if (distance > kTranslationVoteRadius) continue;
+            support.push_back(index);
+            distanceSum += distance;
+        }
+        if (support.size() > bestSupport.size() ||
+            (support.size() == bestSupport.size() && distanceSum < bestDistanceSum)) {
+            bestSupport = std::move(support);
+            bestDistanceSum = distanceSum;
+        }
+    }
+    if (bestSupport.size() < static_cast<std::size_t>(kMinimumTranslationVotes)) return candidate;
+
+    std::vector<double> centerXs;
+    std::vector<double> centerYs;
+    centerXs.reserve(bestSupport.size());
+    centerYs.reserve(bestSupport.size());
+    for (const auto index : bestSupport) {
+        centerXs.push_back(votes[index].mapCenter.x);
+        centerYs.push_back(votes[index].mapCenter.y);
+    }
+    candidate.mapCenter = { Median(std::move(centerXs)), Median(std::move(centerYs)) };
+
+    std::vector<double> residuals;
+    std::vector<double> descriptorDistances;
+    std::array<bool, 4> quadrants{};
+    const cv::Point2d minimapCenter(minimapSize.width / 2.0, minimapSize.height / 2.0);
+    for (const auto index : bestSupport) {
+        const auto& vote = votes[index];
+        const double residual = std::hypot(vote.mapCenter.x - candidate.mapCenter.x,
+            vote.mapCenter.y - candidate.mapCenter.y);
+        if (residual > kTranslationVoteRadius) continue;
+        residuals.push_back(residual);
+        descriptorDistances.push_back(vote.descriptorDistance);
+        const int quadrant = (vote.minimapPoint.x >= minimapCenter.x ? 1 : 0) +
+            (vote.minimapPoint.y >= minimapCenter.y ? 2 : 0);
+        quadrants[quadrant] = true;
+    }
+    if (residuals.size() < static_cast<std::size_t>(kMinimumTranslationVotes)) return VisualLocalizationCandidate{};
+
+    candidate.sceneId = sceneId;
+    candidate.retrievalScore = retrievalScore;
+    candidate.mutualMatchCount = mutualMatchCount;
+    candidate.inlierCount = static_cast<int>(residuals.size());
+    candidate.inlierRatio = static_cast<double>(candidate.inlierCount) / static_cast<double>(votes.size());
+    candidate.medianReprojectionError = Median(std::move(residuals));
+    candidate.translationDescriptorScore = 1.0 / (1.0 + Median(std::move(descriptorDistances)));
+    candidate.coveredQuadrants = static_cast<int>(std::count(quadrants.begin(), quadrants.end(), true));
+    candidate.scale = kExpectedScale;
+    candidate.scaleWithinExpectedRange = true;
+    // This is intentionally a fixed-scale translation estimate, not a failed
+    // affine estimate. App requires an independent next frame before using it.
+    candidate.affineEstimated = false;
+    candidate.quality = VisualLocalizationQuality::Marginal;
+    return candidate;
+}
+
+std::vector<VisualLocalizationCandidate> BuildTranslationVoteCandidates(std::vector<TranslationVote> votes,
+    const cv::Size minimapSize, int sceneId, double retrievalScore, int mutualMatchCount) {
+    std::vector<VisualLocalizationCandidate> candidates;
+    candidates.reserve(kMaximumCoarseCandidates);
+    while (votes.size() >= static_cast<std::size_t>(kMinimumTranslationVotes) &&
+        candidates.size() < kMaximumCoarseCandidates) {
+        auto candidate = BuildTranslationVoteCandidate(votes, minimapSize, sceneId,
+            retrievalScore, mutualMatchCount);
+        if (candidate.inlierCount < kMinimumTranslationVotes) break;
+        candidates.push_back(candidate);
+        votes.erase(std::remove_if(votes.begin(), votes.end(), [&](const auto& vote) {
+            return std::hypot(vote.mapCenter.x - candidate.mapCenter.x,
+                vote.mapCenter.y - candidate.mapCenter.y) <= kDuplicateCenterDistance;
+        }), votes.end());
+    }
+    return candidates;
+}
+
 int QualityRank(VisualLocalizationQuality quality) {
     return static_cast<int>(quality);
 }
@@ -79,6 +283,17 @@ bool BetterCandidate(const VisualLocalizationCandidate& left, const VisualLocali
         return QualityRank(left.quality) > QualityRank(right.quality);
     }
     if (left.ocrHintMatched != right.ocrHintMatched) return left.ocrHintMatched;
+    // A fixed-scale translation vote has no fitted degrees of freedom. Its
+    // residual is therefore the decisive evidence; descriptor score and vote
+    // count mainly reflect how many unrelated map features were considered.
+    if (!left.affineEstimated && !right.affineEstimated) {
+        if (left.medianReprojectionError != right.medianReprojectionError) {
+            return left.medianReprojectionError < right.medianReprojectionError;
+        }
+        if (left.translationDescriptorScore != right.translationDescriptorScore) {
+            return left.translationDescriptorScore > right.translationDescriptorScore;
+        }
+    }
     if (left.inlierCount != right.inlierCount) return left.inlierCount > right.inlierCount;
     if (left.inlierRatio != right.inlierRatio) return left.inlierRatio > right.inlierRatio;
     if (left.medianReprojectionError != right.medianReprojectionError) {
@@ -122,7 +337,13 @@ public:
             const auto matrix = cv::getRotationMatrix2D(center, correction, 1.0);
             cv::warpAffine(request.normalizedMinimap, rotated.normalizedMinimap, matrix,
                 request.normalizedMinimap.size(), cv::INTER_LINEAR, cv::BORDER_REFLECT_101);
-            if (!ExtractPreparedMinimapFeatures(rotated.normalizedMinimap, rotated.minimapFeatures)) continue;
+            // The trusted reference is intentionally not reused for a rotated
+            // fallback: it lives in the original screen orientation.  A
+            // temporal comparison against that image would classify the whole
+            // minimap as dynamic.  The fixed player/heading exclusion is
+            // still applied by the shared preprocessor.
+            if (!ExtractPreparedMinimapFeatures(rotated.normalizedMinimap, rotated.minimapFeatures,
+                    nullptr, nullptr)) continue;
             const auto coarseStart = std::chrono::steady_clock::now();
             const auto tiles = RetrieveTiles(rotated.minimapFeatures.imgDescriptors);
             rotationCoarseMilliseconds += ElapsedMilliseconds(coarseStart);
@@ -130,7 +351,11 @@ public:
             hypotheses.push_back({ score, correction, rotated });
             if (score >= 0.28 && score >= baseline.bestRetrievalScore * 1.35) {
                 auto recovered = LocateOnce(rotated);
-                if (recovered.quality != VisualLocalizationQuality::Rejected) {
+                // A rotated weak result is not evidence that the real minimap
+                // is rotated.  Only a strong full-geometry result may recover
+                // through this expensive fallback; fixed-scale translation
+                // votes are evaluated exclusively in the original orientation.
+                if (recovered.quality == VisualLocalizationQuality::Strong) {
                     for (auto& candidate : recovered.candidates) {
                         candidate.rotationDegrees -= correction;
                         while (candidate.rotationDegrees > 180.0) candidate.rotationDegrees -= 360.0;
@@ -157,7 +382,7 @@ public:
             if (verifiedHypotheses >= 3 || hypothesis.score < 0.15) break;
             ++verifiedHypotheses;
             auto recovered = LocateOnce(hypothesis.request);
-            if (recovered.quality != VisualLocalizationQuality::Rejected) {
+            if (recovered.quality == VisualLocalizationQuality::Strong) {
                 for (auto& candidate : recovered.candidates) {
                     candidate.rotationDegrees -= hypothesis.correction;
                     while (candidate.rotationDegrees > 180.0) candidate.rotationDegrees -= 360.0;
@@ -194,12 +419,23 @@ public:
         const auto coarseStart = std::chrono::steady_clock::now();
         const auto coarseCandidates = RetrieveTiles(request.minimapFeatures.imgDescriptors,
             request.requireOcrHint ? &request.ocrHints : nullptr);
+        result.coarseCandidateCount = coarseCandidates.size();
         if (!coarseCandidates.empty()) result.bestRetrievalScore = coarseCandidates.front().second;
         result.coarseMilliseconds = ElapsedMilliseconds(coarseStart);
 
         const auto verificationStart = std::chrono::steady_clock::now();
         std::vector<VisualLocalizationCandidate> candidates;
         candidates.reserve(coarseCandidates.size());
+        const auto recordVerification = [&](const VisualLocalizationCandidate& candidate) {
+            if (candidate.mutualMatchCount < result.bestMutualMatchCount ||
+                (candidate.mutualMatchCount == result.bestMutualMatchCount &&
+                    candidate.inlierCount < result.bestInlierCount)) return;
+            result.bestMutualMatchCount = candidate.mutualMatchCount;
+            result.bestInlierCount = candidate.inlierCount;
+            result.bestObservedScale = candidate.scale;
+            result.bestAffineEstimated = candidate.affineEstimated;
+            result.bestScaleWithinExpectedRange = candidate.scaleWithinExpectedRange;
+        };
         for (const auto& [tileIndex, score] : coarseCandidates) {
             const auto& tile = resources_->visualIndex.tiles[tileIndex];
             std::vector<std::uint32_t> rows;
@@ -226,7 +462,17 @@ public:
             }
             VisualLocalizationCandidate candidate = VerifyRows(rows, request.minimapFeatures,
                 request.normalizedMinimap.size(), resultSceneId, score, request.ocrHints);
-            if (candidate.inlierCount >= 4) candidates.push_back(candidate);
+            recordVerification(candidate);
+            const bool fixedScaleTranslation = candidate.quality == VisualLocalizationQuality::Marginal &&
+                !candidate.affineEstimated && candidate.inlierCount >= kMinimumTranslationVotes &&
+                candidate.coveredQuadrants >= 2;
+            // A candidate without an affine fit is a fixed-scale translation
+            // vote.  Do not let its raw inlier count bypass the independent
+            // terrain-support requirement: four (or more) descriptors from
+            // one translucent HUD corner can otherwise survive here and be
+            // confirmed by the next identical frame as a false location.
+            const bool geometricCandidate = candidate.affineEstimated && candidate.inlierCount >= 4;
+            if (geometricCandidate || fixedScaleTranslation) candidates.push_back(candidate);
         }
 
         // Public map additions can contain visual details that were absent from
@@ -235,7 +481,9 @@ public:
         // enough to reach verification at all.  When it found no geometric
         // candidate, make one bounded exact pass over optional World features.
         // This remains image-only: it does not use the game's coordinate text.
-        if (candidates.empty() && !resources_->kuroVisualShards.empty()) {
+        const bool hasStrongGeometricCandidate = std::any_of(candidates.begin(), candidates.end(),
+            [](const auto& candidate) { return candidate.quality == VisualLocalizationQuality::Strong; });
+        if (!hasStrongGeometricCandidate && !resources_->kuroVisualShards.empty()) {
             const int worldSceneId = Scene::SceneNameToId("World");
             for (const auto& shard : resources_->kuroVisualShards) {
                 if (shard.sceneId != worldSceneId || shard.tileCount == 0 ||
@@ -258,6 +506,18 @@ public:
                 if (worldRows.size() < 4) continue;
                 VisualLocalizationCandidate candidate = VerifyRows(worldRows, request.minimapFeatures,
                     request.normalizedMinimap.size(), worldSceneId, 0.0, request.ocrHints);
+                recordVerification(candidate);
+                for (auto translation : VerifyTranslationRows(worldRows, request.minimapFeatures,
+                    request.normalizedMinimap.size(), worldSceneId, 0.0)) {
+                    recordVerification(translation);
+                    // Three descriptors from one corner of a translucent HUD
+                    // can repeatedly vote for the same unrelated map point.
+                    // A translation-only candidate has no fitted geometry to
+                    // reject that coincidence, so require independent terrain
+                    // support on both sides of the minimap before it can enter
+                    // the publication/nearby-validation path.
+                    if (translation.coveredQuadrants >= 2) candidates.push_back(std::move(translation));
+                }
                 // A newly added public-map area can have fewer retained SURF
                 // features than the legacy map.  Four mutually consistent
                 // matches are useful only in this bounded fallback, and only
@@ -268,7 +528,11 @@ public:
                     candidate.inlierRatio >= 0.25 && candidate.coveredQuadrants >= 2 &&
                     candidate.medianReprojectionError <= 1.0;
                 if (lowDensityButStable) candidate.quality = VisualLocalizationQuality::Marginal;
-                if (candidate.inlierCount >= 4) candidates.push_back(std::move(candidate));
+                const bool fixedScaleTranslation = candidate.quality == VisualLocalizationQuality::Marginal &&
+                    !candidate.affineEstimated && candidate.inlierCount >= kMinimumTranslationVotes &&
+                    candidate.coveredQuadrants >= 2;
+                const bool geometricCandidate = candidate.affineEstimated && candidate.inlierCount >= 4;
+                if (geometricCandidate || fixedScaleTranslation) candidates.push_back(std::move(candidate));
             }
         }
         std::sort(candidates.begin(), candidates.end(), BetterCandidate);
@@ -287,9 +551,13 @@ public:
 
         if (!distinct.empty()) {
             result.quality = distinct.front().quality;
+            const bool fixedScaleRunnerUpIsClearlyLessPrecise = distinct.size() > 1 &&
+                !distinct.front().affineEstimated && !distinct[1].affineEstimated &&
+                distinct[1].medianReprojectionError > distinct.front().medianReprojectionError * 1.5;
             if (distinct.size() > 1 && distinct.front().inlierCount > 0 &&
                 Distance(distinct.front().mapCenter, distinct[1].mapCenter) > kDuplicateCenterDistance &&
-                distinct[1].inlierCount * 5 >= distinct.front().inlierCount * 4) {
+                distinct[1].inlierCount * 5 >= distinct.front().inlierCount * 4 &&
+                !fixedScaleRunnerUpIsClearlyLessPrecise) {
                 result.ambiguous = true;
                 result.quality = VisualLocalizationQuality::Rejected;
             }
@@ -322,8 +590,13 @@ public:
         rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
         if (rows.empty()) return false;
         output = VerifyRows(rows, minimapFeatures, minimapSize, sceneId, 0.0, {});
-        return output.inlierCount >= 6 && output.inlierRatio >= 0.20 &&
-            output.medianReprojectionError <= 4.0 && output.coveredQuadrants >= 2 &&
+        const bool acceptedGeometry = output.inlierCount >= 6 && output.inlierRatio >= 0.20 &&
+            output.medianReprojectionError <= 4.0 && output.coveredQuadrants >= 2;
+        const bool acceptedTranslation = output.quality == VisualLocalizationQuality::Marginal &&
+            !output.affineEstimated && output.inlierCount >= kMinimumTranslationVotes &&
+            output.coveredQuadrants >= 2 &&
+            output.medianReprojectionError <= kTranslationVoteRadius;
+        return (acceptedGeometry || acceptedTranslation) &&
             Distance(output.mapCenter, previousCenter) <= (searchRadius > 0.0 ? searchRadius : 30.0);
     }
 
@@ -388,6 +661,41 @@ private:
         return output;
     }
 
+    std::vector<VisualLocalizationCandidate> VerifyTranslationRows(
+        std::span<const std::uint32_t> featureRows, const ImageFeatureData& minimapFeatures,
+        const cv::Size minimapSize, int sceneId, double retrievalScore) const {
+        if (featureRows.size() < static_cast<std::size_t>(kMinimumTranslationVotes) ||
+            minimapFeatures.imgDescriptors.rows < kMinimumTranslationVotes) return {};
+        cv::Mat mapDescriptors(static_cast<int>(featureRows.size()),
+            resources_->map.imgDescriptors.cols, CV_32FC1);
+        std::vector<cv::KeyPoint> mapKeypoints;
+        mapKeypoints.reserve(featureRows.size());
+        for (std::size_t index = 0; index < featureRows.size(); ++index) {
+            const auto row = featureRows[index];
+            if (row >= resources_->map.imgKeypoints.size()) return {};
+            resources_->map.imgDescriptors.row(static_cast<int>(row)).copyTo(mapDescriptors.row(static_cast<int>(index)));
+            mapKeypoints.push_back(resources_->map.imgKeypoints[row]);
+        }
+        cv::BFMatcher matcher(cv::NORM_L2, false);
+        std::vector<std::vector<cv::DMatch>> forward;
+        matcher.knnMatch(mapDescriptors, minimapFeatures.imgDescriptors, forward, 2);
+        std::vector<TranslationVote> votes;
+        votes.reserve(forward.size());
+        for (const auto& pair : forward) {
+            if (pair.size() < 2 ||
+                pair[0].distance >= kTranslationVoteRatioThreshold * pair[1].distance ||
+                pair[0].distance >= kTranslationVoteDistanceThreshold) continue;
+            const auto& mapPoint = mapKeypoints[static_cast<std::size_t>(pair[0].queryIdx)].pt;
+            const auto& minimapPoint = minimapFeatures.imgKeypoints[static_cast<std::size_t>(pair[0].trainIdx)].pt;
+            votes.push_back({
+                { mapPoint.x - kExpectedScale * (minimapPoint.x - minimapSize.width / 2.0),
+                    mapPoint.y - kExpectedScale * (minimapPoint.y - minimapSize.height / 2.0) },
+                minimapPoint, pair[0].distance });
+        }
+        return BuildTranslationVoteCandidates(std::move(votes), minimapSize, sceneId,
+            retrievalScore, 0);
+    }
+
     VisualLocalizationCandidate VerifyRows(std::span<const std::uint32_t> featureRows,
         const ImageFeatureData& minimapFeatures, const cv::Size minimapSize, int sceneId,
         double retrievalScore, const std::vector<VisualMapHint>& hints) const {
@@ -413,14 +721,36 @@ private:
         matcher.knnMatch(mapDescriptors, minimapFeatures.imgDescriptors, forward, 2);
         matcher.knnMatch(minimapFeatures.imgDescriptors, mapDescriptors, reverse, 1);
         std::vector<cv::DMatch> matches;
+        std::vector<TranslationVote> translationVotes;
+        translationVotes.reserve(forward.size());
         for (const auto& pair : forward) {
-            if (pair.size() < 2 || pair[0].distance >= 0.65f * pair[1].distance || pair[0].distance > 0.5f) continue;
+            // The minimap palette/AA changed in recent game builds.  Relax the
+            // descriptor prefilter slightly, then retain the much stronger
+            // mutual-neighbour, RANSAC, scale, reprojection and quadrant tests
+            // below.  This recovers genuine terrain matches without accepting
+            // a one-off visual coincidence as a player position.
+            if (pair.size() < 2) continue;
+            if (pair[0].distance < kTranslationVoteRatioThreshold * pair[1].distance &&
+                pair[0].distance < kTranslationVoteDistanceThreshold) {
+                const auto& mapPoint = mapKeypoints[static_cast<std::size_t>(pair[0].queryIdx)].pt;
+                const auto& minimapPoint = minimapFeatures.imgKeypoints[static_cast<std::size_t>(pair[0].trainIdx)].pt;
+                translationVotes.push_back({
+                    { mapPoint.x - kExpectedScale * (minimapPoint.x - minimapSize.width / 2.0),
+                        mapPoint.y - kExpectedScale * (minimapPoint.y - minimapSize.height / 2.0) },
+                    minimapPoint, pair[0].distance });
+            }
+            if (pair[0].distance >= kDescriptorRatioThreshold * pair[1].distance ||
+                pair[0].distance > kDescriptorDistanceThreshold) continue;
             const auto minimapRow = pair[0].trainIdx;
             if (minimapRow < 0 || minimapRow >= reverse.size() || reverse[minimapRow].empty() ||
                 reverse[minimapRow][0].trainIdx != pair[0].queryIdx) continue;
             matches.push_back(pair[0]);
         }
-        if (matches.size() < 4) return candidate;
+        candidate.mutualMatchCount = static_cast<int>(matches.size());
+        const auto translationCandidate = BuildTranslationVoteCandidate(translationVotes, minimapSize,
+            sceneId, retrievalScore, candidate.mutualMatchCount);
+        if (matches.size() < 4) return translationCandidate.inlierCount >= kMinimumTranslationVotes
+            ? translationCandidate : candidate;
 
         std::vector<cv::Point2f> minimapPoints;
         std::vector<cv::Point2f> mapPoints;
@@ -433,7 +763,9 @@ private:
         cv::Mat inlierMask;
         const cv::Mat transform = cv::estimateAffinePartial2D(minimapPoints, mapPoints, inlierMask,
             cv::RANSAC, 3.0, 2000, 0.99, 10);
-        if (transform.empty() || transform.rows != 2 || transform.cols != 3) return candidate;
+        if (transform.empty() || transform.rows != 2 || transform.cols != 3) return translationCandidate.inlierCount >= kMinimumTranslationVotes
+            ? translationCandidate : candidate;
+        candidate.affineEstimated = true;
 
         const double a = transform.at<double>(0, 0);
         const double b = transform.at<double>(1, 0);
@@ -441,7 +773,9 @@ private:
         candidate.scale = scale;
         candidate.rotationDegrees = std::atan2(b, a) * 180.0 / CV_PI;
         if (!std::isfinite(scale) || scale < kExpectedScale * (1.0 - kMaximumScaleDeviation) ||
-            scale > kExpectedScale * (1.0 + kMaximumScaleDeviation)) return candidate;
+            scale > kExpectedScale * (1.0 + kMaximumScaleDeviation)) return translationCandidate.inlierCount >= kMinimumTranslationVotes
+            ? translationCandidate : candidate;
+        candidate.scaleWithinExpectedRange = true;
 
         const cv::Point2d center(minimapSize.width / 2.0, minimapSize.height / 2.0);
         candidate.mapCenter.x = transform.at<double>(0, 0) * center.x +
@@ -464,7 +798,8 @@ private:
             const int quadrant = (source.x >= center.x ? 1 : 0) + (source.y >= center.y ? 2 : 0);
             quadrants[quadrant] = true;
         }
-        if (errors.empty()) return candidate;
+        if (errors.empty()) return translationCandidate.inlierCount >= kMinimumTranslationVotes
+            ? translationCandidate : candidate;
         std::sort(errors.begin(), errors.end());
         candidate.medianReprojectionError = errors[errors.size() / 2];
         candidate.inlierRatio = static_cast<double>(candidate.inlierCount) / matches.size();
@@ -477,6 +812,8 @@ private:
             candidate.medianReprojectionError <= 4.5 && candidate.coveredQuadrants >= 2) {
             candidate.quality = VisualLocalizationQuality::Marginal;
         }
+        if (candidate.quality == VisualLocalizationQuality::Rejected &&
+            translationCandidate.inlierCount >= kMinimumTranslationVotes) return translationCandidate;
         for (const auto& hint : hints) {
             if (hint.sceneId == sceneId && Distance(candidate.mapCenter, hint.mapCoordinate) <= kOcrHintDistance) {
                 candidate.ocrHintMatched = true;
@@ -633,10 +970,11 @@ bool GlobalVisualLocalizer::IsReady() {
 }
 
 bool GlobalVisualLocalizer::PrepareMinimap(const cv::Mat& minimap, cv::Mat& normalized,
-    ImageFeatureData& features, double surfThreshold) {
+    ImageFeatureData& features, const cv::Mat* trustedReference,
+    MinimapFeatureDiagnostics* diagnostics, double surfThreshold) {
     if (minimap.empty()) return false;
     cv::resize(minimap, normalized, cv::Size(184, 184), 0.0, 0.0, cv::INTER_AREA);
-    return ExtractPreparedMinimapFeatures(normalized, features, surfThreshold);
+    return ExtractPreparedMinimapFeatures(normalized, features, trustedReference, diagnostics, surfThreshold);
 }
 
 bool GlobalVisualLocalizer::Submit(VisualLocalizationRequest request) {

@@ -15,6 +15,7 @@ public class PageService : IPageService
     public PageService()
     {
         Configure<StartViewModel, StartPage>();
+        Configure<DiagnosticsViewModel, DiagnosticsPage>();
         Configure<FunctionViewModel, FunctionPage>();
         Configure<FilterViewModel, FilterPage>();
         Configure<SettingsViewModel, SettingsPage>();

@@ -90,10 +90,10 @@ void TestRecoveryController() {
     Expect(controller.State() == CoordinateLockState::Suspect, "second failure should remain Suspect");
     controller.OnContinuityFailure(start);
     Expect(controller.State() == CoordinateLockState::Recovering, "third failure should enter Recovering");
-    Expect(controller.CanUseTrustedPosition(start + std::chrono::seconds(1)),
-        "trusted position should be held for less than two seconds");
-    Expect(controller.ShouldHideMarkers(start + std::chrono::milliseconds(2001)),
-        "markers should hide after the two second hold expires");
+    Expect(controller.CanUseTrustedPosition(start + std::chrono::milliseconds(2999)),
+        "trusted position should be retained for the three second stale-marker grace period");
+    Expect(controller.ShouldHideMarkers(start + std::chrono::milliseconds(3001)),
+        "markers should hide after the three second stale-marker grace period expires");
     controller.OnRecognitionFailure();
     controller.OnRecognitionFailure();
     controller.OnRecognitionFailure();
@@ -108,36 +108,50 @@ void TestRecoveryController() {
     Expect(controller.State() == CoordinateLockState::Recovering &&
         !controller.CanUseTrustedPosition(start),
         "teleport recovery should discard the old trusted position immediately");
+
+    controller.OnRecognitionSuccess(start);
+    controller.StartRecoveryKeepingTrustedPosition();
+    Expect(controller.State() == CoordinateLockState::Recovering &&
+        controller.CanUseTrustedPosition(start + std::chrono::seconds(2)),
+        "visual recovery should retain the trusted position instead of treating loss as a teleport");
 }
 
 void TestMapUiStateController() {
     MapUiStateController controller;
-    auto update = controller.Update({ true, false });
+    auto update = controller.Update({ false, true });
     Expect(update.current == MapUiState::Unknown,
-        "one compass frame should not open the map");
+        "one gameplay frame should not leave the unknown startup state");
+    update = controller.Update({ false, true });
+    Expect(update.current == MapUiState::Gameplay,
+        "two gameplay frames should confirm gameplay");
+
+    // A compass-colour candidate is deliberately represented as an
+    // unconfirmed evidence frame. It must not clear gameplay markers.
+    update = controller.Update({ false, true });
+    Expect(update.current == MapUiState::Gameplay,
+        "unconfirmed big-map candidate must retain gameplay state");
+    update = controller.Update({ true, false });
+    Expect(update.current == MapUiState::Gameplay,
+        "one structurally-confirmed frame should not open the map");
     update = controller.Update({ true, false });
     Expect(update.current == MapUiState::BigMap,
-        "two compass frames should confirm the big map");
+        "two structurally-confirmed frames should confirm the big map");
 
-    // Closing through Escape or a click does not have to produce M.  The first
-    // gameplay frame must already remove the confirmed map state and caches,
-    // while retaining a distinct transition state for the saved player hint.
+    // Closing through Escape or a click does not have to produce M. Gameplay
+    // must be observed twice before caches are handed back to minimap logic.
     update = controller.Update({ false, true });
-    Expect(update.current == MapUiState::LeavingBigMap && update.changed,
-        "a conflicting gameplay frame should hide big-map markers immediately");
+    Expect(update.current == MapUiState::BigMap,
+        "one gameplay frame should not close a confirmed big map");
     update = controller.Update({ false, true });
     Expect(update.current == MapUiState::Gameplay,
         "two gameplay frames should confirm a closed map");
 
-    update = controller.Update({ false, false });
+    for (int frame = 0; frame < 9; ++frame) update = controller.Update({ false, false });
     Expect(update.current == MapUiState::Gameplay,
-        "one Unknown map-UI frame should retain the last stable UI state");
-    update = controller.Update({ false, false });
-    Expect(update.current == MapUiState::Gameplay,
-        "two Unknown map-UI frames should retain the last stable UI state");
+        "brief missing minimap evidence must retain gameplay marker caches");
     update = controller.Update({ false, false });
     Expect(update.current == MapUiState::Unknown,
-        "three Unknown map-UI frames should clear the stale overlay state");
+        "only sustained missing minimap evidence should clear marker caches");
 }
 
 void TestMapCompassVisualDetector() {

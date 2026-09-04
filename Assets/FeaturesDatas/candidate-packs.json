@@ -1,7 +1,6 @@
 {
   "formatVersion": 1,
   "packs": [
-    "DreamzhouCandidate",
-    "XuanfangCandidate"
+    "DreamzhouCandidate"
   ]
 }

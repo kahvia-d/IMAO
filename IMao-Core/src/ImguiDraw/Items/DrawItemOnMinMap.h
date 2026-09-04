@@ -11,9 +11,7 @@ public:
 	static void UpdatePlayerNearItemsData(HWND& hwnd, Coordinate& playerROC, float minMapRadius, int SceneId);
 	static void UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate &playerROC, float minMapRadius, int SceneId);
 	static void SavePlayerNearItemPoint();
-	static void ClearNearItemsData() {
-		nearItemsDatas.clear();
-	}
+	static void ClearNearItemsData();
 
 private:
 	static std::vector<ItemDatas> nearItemsDatas;

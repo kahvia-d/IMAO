@@ -56,7 +56,7 @@ Coordinate CalculateMedianCoordinate(vector<Coordinate>& playerImgCoordinates) {
 }
 
 // 根据匹配结果和关键点计算出MapImage的坐标并筛选符合要求的
-bool MapCoordinate::GetGoodPlayerImgMapCoordinateFromMatches(const Mat& minMapImage,const vector<DMatch>& matches, const vector<KeyPoint>& mapKeypoints, const vector<KeyPoint>& minMapKeypoints, float maxDistance, const Coordinate& lastCoordinate, Coordinate& outPlayerMapCoordinate) {
+bool MapCoordinate::GetGoodPlayerImgMapCoordinateFromMatches(const Mat& minMapImage,const vector<DMatch>& matches, const vector<KeyPoint>& mapKeypoints, const vector<KeyPoint>& minMapKeypoints, float maxDistance, const Coordinate& lastCoordinate, Coordinate& outPlayerMapCoordinate, std::size_t* outSupportingMatchCount) {
     vector<Coordinate> playerMapCoordinates;
     for (const auto& match : matches) {
         Point2f sourcePoint = mapKeypoints[match.queryIdx].pt;
@@ -68,6 +68,7 @@ bool MapCoordinate::GetGoodPlayerImgMapCoordinateFromMatches(const Mat& minMapIm
     }
     playerMapCoordinates = FilterPlaerImgMapCoordinates(playerMapCoordinates, lastCoordinate,maxDistance);
 
+    if (outSupportingMatchCount != nullptr) *outSupportingMatchCount = playerMapCoordinates.size();
     if (playerMapCoordinates.size() == 0)
         return false;
 

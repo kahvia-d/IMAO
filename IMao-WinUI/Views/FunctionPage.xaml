@@ -67,7 +67,7 @@
                     <toolkit:SettingsCard.Description>
                         <TextBlock x:Uid="Function_Card_UpdateMapItemDataCycle_Description"/>
                     </toolkit:SettingsCard.Description>
-                    <Slider Width="120" Minimum="10" Maximum="120" StepFrequency="5"
+                    <Slider Width="120" Minimum="16" Maximum="120" StepFrequency="5"
 SmallChange="5" Value="80" Name="UpdateMapItemDataCycle" ValueChanged="UpdateMapItemDataCycle_ValueChanged" />
                 </toolkit:SettingsCard>
 
@@ -84,6 +84,13 @@ SmallChange="5" Value="80" Name="UpdateMapItemDataCycle" ValueChanged="UpdateMap
 
         
         
+        <toolkit:SettingsExpander Header="游戏内状态条" Description="在游戏顶部中间显示定位状态、标记数量和刷新耗时。" CornerRadius="8" Margin="{StaticResource ExpanderMargin}">
+            <toolkit:SettingsExpander.HeaderIcon>
+                <FontIcon Glyph="&#xE946;" />
+            </toolkit:SettingsExpander.HeaderIcon>
+            <ToggleSwitch x:Name="ToggleSwitch_StatusBar" IsOn="True" Toggled="ToggleSwitch_StatusBar_Toggled" />
+        </toolkit:SettingsExpander>
+
         <toolkit:SettingsExpander CornerRadius="8" Margin="{StaticResource ExpanderMargin}" x:Uid="Function_Expander_DarwRoutes">
             <toolkit:SettingsExpander.HeaderIcon>
                 <FontIcon Glyph="&#xEBE6;" />

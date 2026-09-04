@@ -1,7 +1,7 @@
 ﻿cmake_minimum_required(VERSION 3.14)
 project(IMao-Core CXX C)
 
-SET(DEMO_NAME "IMao-Core")
+SET(DEMO_NAME "IMao-CoreHost")
 
 if(NOT WIN32 OR NOT MSVC)
     message(FATAL_ERROR "IMao-Core requires the MSVC toolchain on Windows.")
@@ -38,6 +38,7 @@ SET(PADDLE_LIB "" CACHE PATH "Paddle Inference root (contains paddle/ and third_
 SET(OPENCV_DIR "" CACHE PATH "Directory containing OpenCVConfig.cmake")
 option(IMAO_ENABLE_DIAGNOSTICS "Write bounded runtime screenshots and event logs for map matching diagnostics" OFF)
 option(IMAO_ALLOW_XML_FEATURE_FALLBACK "Allow development builds to fall back to Map_features.yml" OFF)
+option(IMAO_GENERATE_LINK_MAP "Write a link map for native crash offset diagnosis" OFF)
 
 macro(safe_set_static_flag)
     foreach(flag_var
@@ -172,6 +173,10 @@ file(GLOB_RECURSE ResourceFiles
     "IMao-Core/src/*.rc"
     "IMao-Core/src/Resource/*.json"
 )
+list(FILTER CppFiles EXCLUDE REGEX "[/\\\\]CoreHost[/\\\\].*\\.cpp$")
+# Main.cpp is an old standalone debug entry point.  The production executable
+# uses CoreHostMain.cpp exclusively so it owns the pipe lifecycle.
+list(FILTER CppFiles EXCLUDE REGEX "[/\\\\]Main\\.cpp$")
 
 # rc.exe does not reliably report the JSON files referenced by IMao-Core.rc
 # as Ninja dependencies. Keep synchronized map snapshots from producing a
@@ -186,12 +191,9 @@ set_property(SOURCE "${CMAKE_SOURCE_DIR}/IMao-Core/src/IMao-Core.rc" APPEND PROP
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/IMao-Core/src PREFIX "" FILES ${CppFiles} ${HppFiles} ${ResourceFiles})
 
-add_library(${DEMO_NAME} SHARED 
+add_executable(${DEMO_NAME}
     ${CppFiles} ${HppFiles} ${ResourceFiles}
-)
-
-target_compile_definitions(${DEMO_NAME} PRIVATE 
-    IMAO_CORE_EXPORTS  
+    "${CMAKE_SOURCE_DIR}/IMao-Core/src/CoreHost/CoreHostMain.cpp"
 )
 
 if(IMAO_ENABLE_DIAGNOSTICS)
@@ -211,6 +213,10 @@ set_target_properties(${DEMO_NAME} PROPERTIES
 target_include_directories(${DEMO_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(${DEMO_NAME} ${DEPS})
+
+if(IMAO_GENERATE_LINK_MAP)
+    target_link_options(${DEMO_NAME} PRIVATE "/MAP:${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/IMao-CoreHost.map")
+endif()
 
 # Builds a small, reproducible helper for converting Kuro's public 1024px map
 # tiles directly into this project's World-coordinate SURF database.  Keeping
@@ -299,6 +305,7 @@ add_executable(IMaoVisualRegression
     IMao-Core/tools/VisualRegression/main.cpp
     IMao-Core/src/Coordinate/VisualLocalization/GlobalVisualLocalizer.cpp
     IMao-Core/src/Diagnostics/Diagnostics.cpp
+    IMao-Core/src/Runtime/StructuredLogger.cpp
     IMao-Core/src/Feature/VisualIndex/MapVisualIndex.cpp
     IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
     IMao-Core/src/Feature/Processing/FeatureProcessing.cpp
@@ -325,6 +332,7 @@ add_executable(IMaoCoordinateRegression
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
     IMao-Core/src/Diagnostics/Diagnostics.cpp
+    IMao-Core/src/Runtime/StructuredLogger.cpp
     IMao-Core/src/util.cpp
 )
 set_target_properties(IMaoCoordinateRegression PROPERTIES

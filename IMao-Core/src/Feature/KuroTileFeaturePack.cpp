@@ -165,6 +165,14 @@ KuroTileFeaturePackStatus KuroTileFeaturePack::LoadPack(const std::string& featu
         status.packId = manifest.value("packId", std::string());
         status.resourceVersion = manifest.value("resourceVersion", std::string());
         if (status.packId.empty() || status.resourceVersion.size() != 32) return Failure(std::move(status), "manifest identity is invalid");
+        // A tile pack without a field-verified minimap reference can be useful
+        // for offline coverage generation, but it must not enter global
+        // runtime localization. It otherwise contributes visually plausible
+        // yet uncalibrated locations that can defeat a verified World pack.
+        const auto& referenceVerification = manifest.value("referenceVerification", json::object());
+        if (!referenceVerification.value("passed", false)) {
+            return Failure(std::move(status), "field verification is missing or failed");
+        }
         const auto& features = manifest.at("features");
         const std::string fileName = features.at("file").get<std::string>();
         const std::string expectedHash = ToLowerAscii(features.at("sha256").get<std::string>());

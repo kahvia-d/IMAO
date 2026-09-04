@@ -10,6 +10,15 @@
     NavigationCacheMode="Enabled" >
 
     <StackPanel>
+        <InfoBar x:Name="Start_InfoBar_CoreStatus" CornerRadius="8" IsOpen="True" Severity="Informational" IsClosable="False" Margin="0,0,0,12">
+            <InfoBar.ActionButton>
+                <Button Content="重启核心" Click="RestartCore_Click" />
+            </InfoBar.ActionButton>
+            <StackPanel Spacing="2">
+                <TextBlock x:Name="Start_TextBlock_CoreState" Text="正在连接核心" FontWeight="SemiBold" />
+                <TextBlock x:Name="Start_TextBlock_CoreDetail" Text="正在准备诊断与状态服务" Opacity="0.78" TextWrapping="Wrap" />
+            </StackPanel>
+        </InfoBar>
         <InfoBar x:Name="Start_InfoBar_IncorrectGameWindowSize" x:Uid="Start_InfoBar_IncorrectGameWindowSize" CornerRadius="8" IsOpen="False" Severity="Warning"  
                  IsClosable="True" CloseButtonClick="Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick"/>
         
@@ -52,13 +61,13 @@
                 <TextBlock x:Uid="Start_Expander_Start_Description"/>
             </toolkit:SettingsExpander.Description>
 
-            <Button Click="Start_Button_Click" >
+            <Button x:Name="Start_Button" Click="Start_Button_Click" >
                 <Button.Content>
                     <StackPanel Orientation="Horizontal"
                             Spacing="8">
-                        <FontIcon FontSize="16"
+                        <FontIcon x:Name="Start_Button_Icon" FontSize="16"
                               Glyph="&#xE768;" />
-                        <TextBlock Text="Start" />
+                        <TextBlock x:Name="Start_Button_Text" Text="Start" />
                     </StackPanel>
                 </Button.Content>
             </Button>

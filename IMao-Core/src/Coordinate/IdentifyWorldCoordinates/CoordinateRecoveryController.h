@@ -19,6 +19,10 @@ public:
     // A discontinuity such as teleporting must discard the previously trusted
     // position before requesting a new global visual lock.
     void RestartRecovery();
+    // Local visual loss is not proof of a teleport. Start a global recovery
+    // while retaining the last confirmed position for the stale-marker grace
+    // period.
+    void StartRecoveryKeepingTrustedPosition();
     void SetVisible(bool visible, Clock::time_point now = Clock::now());
     void OnContinuitySuccess(Clock::time_point now = Clock::now());
     void OnContinuityFailure(Clock::time_point now = Clock::now());
@@ -29,6 +33,7 @@ public:
     bool ShouldRequestRecognition() const { return state_ == CoordinateLockState::Recovering; }
     bool CanUseTrustedPosition(Clock::time_point now = Clock::now()) const;
     bool ShouldHideMarkers(Clock::time_point now = Clock::now()) const;
+    int TrustedAgeMilliseconds(Clock::time_point now = Clock::now()) const;
     bool ShouldSearchAllScenes() const { return failedRecognitionBatches_ >= 3; }
     int ConsecutiveFailures() const { return consecutiveFailures_; }
     int FailedRecognitionBatches() const { return failedRecognitionBatches_; }

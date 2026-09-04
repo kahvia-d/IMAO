@@ -4,6 +4,7 @@ using System.Text.Json;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.StringItems;
 using IMao_WinUI.ViewModels;
+using IMao_WinUI.Services;
 using Microsoft.UI;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
@@ -83,12 +84,12 @@ public sealed partial class FilterPage : Page
             {
                 if ((bool)checkBox.IsChecked)
                 {
-                    IMaoCoreAPI.AddItem(itemId);
+                    _ = App.GetService<CoreHostService>().SetItemEnabledAsync(itemId, true);
                     localItemFilter.SetItmeFilterStatus(itemId, 1);
                 }
                 else
                 {
-                    IMaoCoreAPI.ClearItem(itemId);
+                    _ = App.GetService<CoreHostService>().SetItemEnabledAsync(itemId, false);
                     localItemFilter.SetItmeFilterStatus(itemId, 0);
                 }
             }

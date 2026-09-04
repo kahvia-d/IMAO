@@ -1,8 +1,10 @@
 #include "Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
+#include "Coordinate/locationCalculator/MapCoordinate.h"
 #include "Feature/CandidateFeaturePack.h"
 #include "Feature/KuroTileFeaturePack.h"
 #include "Feature/Processing/FeatureBinaryCodec.h"
 #include "Feature/VisualIndex/MapVisualIndex.h"
+#include "ImageProcessing/ImageProcessing.h"
 
 #include <nlohmann/json.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -132,6 +134,7 @@ nlohmann::json SerializeCandidate(const VisualLocalizationCandidate& candidate) 
         {"medianReprojectionError", candidate.medianReprojectionError},
         {"coveredQuadrants", candidate.coveredQuadrants},
         {"retrievalScore", candidate.retrievalScore},
+        {"translationDescriptorScore", candidate.translationDescriptorScore},
         {"ocrHintMatched", candidate.ocrHintMatched},
         {"quality", GlobalVisualLocalizer::QualityName(candidate.quality)}
     };
@@ -241,12 +244,41 @@ int wmain(int argumentCount, wchar_t** arguments) {
             ++missing;
             continue;
         }
-        const auto image = ApplyTransform(loadedImage, sample);
+        cv::Mat sampleImage = loadedImage;
+        if (sample.value("fullSnapshot", false)) {
+            Coordinate minimapBottomPoint;
+            const RECT clientRect{ 0, 0, sampleImage.cols, sampleImage.rows };
+            sampleImage = ImageProcessing::CropToMinMapAreaImg(sampleImage, clientRect, minimapBottomPoint);
+        }
+        const auto image = ApplyTransform(sampleImage, sample);
+        cv::Mat trustedReference;
+        if (sample.contains("trustedReferenceImage") && !sample.at("trustedReferenceImage").is_null()) {
+            const auto referencePath = repositoryRoot /
+                sample.at("trustedReferenceImage").get<std::string>();
+            cv::Mat referenceImage = cv::imread(referencePath.string(), cv::IMREAD_UNCHANGED);
+            if (!referenceImage.empty()) {
+                if (sample.value("trustedReferenceFullSnapshot", false)) {
+                    Coordinate minimapBottomPoint;
+                    const RECT clientRect{ 0, 0, referenceImage.cols, referenceImage.rows };
+                    referenceImage = ImageProcessing::CropToMinMapAreaImg(referenceImage, clientRect,
+                        minimapBottomPoint);
+                }
+                if (!referenceImage.empty()) {
+                    cv::resize(referenceImage, trustedReference, cv::Size(184, 184), 0.0, 0.0,
+                        cv::INTER_AREA);
+                }
+            }
+        }
         ++processed;
         cv::Mat normalized;
         ImageFeatureData features;
+        MinimapFeatureDiagnostics minimapDiagnostics;
         const auto preparationStart = std::chrono::steady_clock::now();
-        if (!GlobalVisualLocalizer::PrepareMinimap(image, normalized, features)) {
+        // A fixture can supply the previous trusted minimap frame, exercising
+        // the same dynamic-region rejection used by the runtime. Independent
+        // samples intentionally use the fixed player/heading exclusion only.
+        if (!GlobalVisualLocalizer::PrepareMinimap(image, normalized, features,
+                trustedReference.empty() ? nullptr : &trustedReference, &minimapDiagnostics)) {
             ++featureless;
             samples.push_back({
                 {"id", sample.at("id")}, {"image", sample.at("image")},
@@ -265,6 +297,15 @@ int wmain(int argumentCount, wchar_t** arguments) {
         request.frameId = frameId;
         request.normalizedMinimap = normalized;
         request.minimapFeatures = features;
+        if (sample.contains("worldHint") && !sample.at("worldHint").is_null()) {
+            const auto& worldHint = sample.at("worldHint");
+            const int hintSceneId = sample.value("hintSceneId", 1);
+            const Coordinate worldCoordinate{
+                worldHint.at("x").get<double>(), worldHint.at("y").get<double>() };
+            request.ocrHints.push_back({ hintSceneId,
+                MapCoordinate::IdentifyCoorToImgMapCoord(worldCoordinate, hintSceneId) });
+            request.requireOcrHint = true;
+        }
         if (!GlobalVisualLocalizer::Submit(std::move(request))) {
             std::cerr << "Visual request submission failed.\n";
             GlobalVisualLocalizer::Shutdown();
@@ -292,12 +333,15 @@ int wmain(int argumentCount, wchar_t** arguments) {
         if (result.ambiguous) ++ambiguous;
         double localTrackingMilliseconds = 0.0;
         bool localTrackingAccepted = false;
+        VisualLocalizationCandidate localTrackingCandidate;
         if (!result.ambiguous && !result.candidates.empty() &&
-            result.quality == VisualLocalizationQuality::Strong) {
-            VisualLocalizationCandidate tracked;
+            result.quality != VisualLocalizationQuality::Rejected) {
             const auto trackingStart = std::chrono::steady_clock::now();
-            localTrackingAccepted = GlobalVisualLocalizer::TrackLocal(normalized, features,
-                result.candidates.front().sceneId, result.candidates.front().mapCenter, tracked);
+            // App revalidates every global candidate before publication. Test
+            // the same nearby path, including fixed-scale translation votes.
+            localTrackingAccepted = GlobalVisualLocalizer::TrackNearby(normalized, features,
+                result.candidates.front().sceneId, result.candidates.front().mapCenter, 64.0,
+                localTrackingCandidate);
             localTrackingMilliseconds = std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - trackingStart).count();
             localTrackingTimes.push_back(localTrackingMilliseconds);
@@ -316,6 +360,14 @@ int wmain(int argumentCount, wchar_t** arguments) {
             expected.x = expectedJson.at("mapX").get<double>();
             expected.y = expectedJson.at("mapY").get<double>();
             tolerance = expectedJson.value("tolerance", 24.0);
+        }
+
+        double localTrackingErrorDistance = 0.0;
+        bool localTrackingCorrect = false;
+        if (hasExpected && localTrackingAccepted) {
+            localTrackingErrorDistance = Distance(localTrackingCandidate.mapCenter, expected);
+            localTrackingCorrect = localTrackingCandidate.sceneId == expectedScene &&
+                localTrackingErrorDistance <= tolerance;
         }
 
         const VisualLocalizationCandidate* published = nullptr;
@@ -397,11 +449,25 @@ int wmain(int argumentCount, wchar_t** arguments) {
             {"requiresSecondFrame", requiresSecondFrame}, {"correct", correct},
             {"errorDistance", errorDistance}, {"coarseMilliseconds", result.coarseMilliseconds},
             {"preparationMilliseconds", preparationMilliseconds},
+            {"minimapRawKeypoints", minimapDiagnostics.rawKeypointCount},
+            {"minimapRetainedKeypoints", minimapDiagnostics.retainedKeypointCount},
+            {"minimapDynamicMaskPercent", minimapDiagnostics.dynamicMaskPercent},
+            {"minimapTemporalMaskApplied", minimapDiagnostics.temporalMaskApplied},
             {"verificationMilliseconds", result.verificationMilliseconds},
+            {"coarseCandidateCount", result.coarseCandidateCount},
+            {"bestMutualMatchCount", result.bestMutualMatchCount},
+            {"bestInlierCount", result.bestInlierCount},
+            {"bestObservedScale", result.bestObservedScale},
+            {"bestAffineEstimated", result.bestAffineEstimated},
+            {"bestScaleWithinExpectedRange", result.bestScaleWithinExpectedRange},
             {"bestRetrievalScore", result.bestRetrievalScore},
             {"totalMilliseconds", result.totalMilliseconds},
             {"localTrackingMilliseconds", localTrackingMilliseconds},
-            {"localTrackingAccepted", localTrackingAccepted}, {"candidates", candidates}
+            {"localTrackingAccepted", localTrackingAccepted},
+            {"localTrackingMapX", localTrackingCandidate.mapCenter.x},
+            {"localTrackingMapY", localTrackingCandidate.mapCenter.y},
+            {"localTrackingErrorDistance", localTrackingErrorDistance},
+            {"localTrackingCorrect", localTrackingCorrect}, {"candidates", candidates}
         });
     }
     GlobalVisualLocalizer::Shutdown();
@@ -412,7 +478,14 @@ int wmain(int argumentCount, wchar_t** arguments) {
         ? static_cast<double>(strongCorrect) / labeledStrong : 0.0;
     const double rawStrongPrecision = labeledRawStrong > 0
         ? static_cast<double>(rawStrongCorrect) / labeledRawStrong : 0.0;
-    const bool acceptancePassed = falseAccepted == 0 && acceptedStrongPrecision >= 0.95 &&
+    // Publication is intentionally allowed for a Marginal candidate only
+    // after an independent second frame confirms it.  Evaluate the safety of
+    // that actual publication policy rather than requiring every accepted
+    // result to originate from a one-frame Strong estimate.
+    const double acceptedPrecision = labeledAccepted > 0
+        ? static_cast<double>(finalAcceptedCorrect) / labeledAccepted
+        : (labeled == 0 ? 1.0 : 0.0);
+    const bool acceptancePassed = falseAccepted == 0 && acceptedPrecision >= 0.95 &&
         acceptedGlobalP95 <= 250.0 && localTrackingP95 <= 50.0;
     const nlohmann::json report = {
         {"processed", processed}, {"missing", missing}, {"featureless", featureless},
@@ -422,6 +495,7 @@ int wmain(int argumentCount, wchar_t** arguments) {
         {"rawStrong", rawStrong}, {"labeledRawStrong", labeledRawStrong},
         {"rawStrongCorrect", rawStrongCorrect},
         {"rawStrongPrecision", rawStrongPrecision},
+        {"acceptedPrecision", acceptedPrecision},
         {"acceptancePassed", acceptancePassed},
         {"finalAccepted", finalAccepted}, {"labeledAccepted", labeledAccepted},
         {"unlabeledAccepted", unlabeledAccepted}, {"finalAcceptedCorrect", finalAcceptedCorrect},

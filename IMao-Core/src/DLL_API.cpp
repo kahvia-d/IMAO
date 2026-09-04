@@ -13,6 +13,8 @@
 #include "ImguiDraw/Items/DrawItemOnMinMap.h"
 #include "Diagnostics/Diagnostics.h"
 #include "Feature/RuntimeFeatureRepository.h"
+#include "Runtime/RuntimeStatus.h"
+#include "Runtime/StructuredLogger.h"
 #include "util.h"
 #include <condition_variable>
 #include <DbgHelp.h>
@@ -41,6 +43,18 @@ bool shutdownRequested = false;
 HWND requestedWindow = nullptr;
 std::once_flag drawItemsInitialized;
 
+std::string WideToUtf8(const std::wstring& value) {
+	if (value.empty()) return {};
+	const int count = WideCharToMultiByte(CP_UTF8, 0, value.data(), static_cast<int>(value.size()),
+		nullptr, 0, nullptr, nullptr);
+	std::string result(static_cast<size_t>(count), '\0');
+	if (count > 0) {
+		WideCharToMultiByte(CP_UTF8, 0, value.data(), static_cast<int>(value.size()),
+			result.data(), count, nullptr, nullptr);
+	}
+	return result;
+}
+
 // Native access violations bypass the managed WinUI exception handler.  Keep
 // the normal crash behavior, but leave a minidump next to the app so a repeat
 // fault can be mapped to the exact native call chain instead of only a DLL
@@ -51,24 +65,19 @@ LONG WINAPI WriteNativeCrashDump(EXCEPTION_POINTERS* exceptionPointers) {
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
 
-	wchar_t currentDirectory[MAX_PATH]{};
-	if (GetCurrentDirectoryW(MAX_PATH, currentDirectory) == 0) {
-		return EXCEPTION_CONTINUE_SEARCH;
-	}
-	wchar_t crashDirectory[MAX_PATH]{};
-	if (swprintf_s(crashDirectory, L"%s\\CrashReports", currentDirectory) < 0) {
-		return EXCEPTION_CONTINUE_SEARCH;
-	}
-	CreateDirectoryW(crashDirectory, nullptr);
+	const std::filesystem::path crashDirectory = StructuredLogger::CrashDirectory();
+	std::error_code directoryError;
+	std::filesystem::create_directories(crashDirectory, directoryError);
+	if (directoryError) return EXCEPTION_CONTINUE_SEARCH;
 
 	SYSTEMTIME now{};
 	GetLocalTime(&now);
-	wchar_t dumpPath[MAX_PATH]{};
-	if (swprintf_s(dumpPath, L"%s\\IMao-Core-%04u%02u%02u-%02u%02u%02u.dmp", crashDirectory,
-		now.wYear, now.wMonth, now.wDay, now.wHour, now.wMinute, now.wSecond) < 0) {
-		return EXCEPTION_CONTINUE_SEARCH;
-	}
-	const HANDLE file = CreateFileW(dumpPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+	const std::wstring dumpName = L"IMao-Core-" + std::to_wstring(now.wYear) + L"-" +
+		std::to_wstring(now.wMonth) + L"-" + std::to_wstring(now.wDay) + L"-" +
+		std::to_wstring(now.wHour) + L"-" + std::to_wstring(now.wMinute) + L"-" +
+		std::to_wstring(now.wSecond) + L".dmp";
+	const std::wstring dumpPath = (crashDirectory / dumpName).wstring();
+	const HANDLE file = CreateFileW(dumpPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
 		FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (file == INVALID_HANDLE_VALUE) {
 		return EXCEPTION_CONTINUE_SEARCH;
@@ -82,6 +91,7 @@ LONG WINAPI WriteNativeCrashDump(EXCEPTION_POINTERS* exceptionPointers) {
 			MiniDumpWithIndirectlyReferencedMemory),
 		exceptionPointers == nullptr ? nullptr : &exceptionInfo, nullptr, nullptr);
 	CloseHandle(file);
+	StructuredLogger::Record("fatal", "crash", "native-unhandled-exception", WideToUtf8(dumpPath));
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 }
@@ -130,6 +140,7 @@ void RuntimeMain(std::stop_token stopToken) {
 			hwnd = requestedWindow;
 			runtimeRunning = true;
 		}
+		RuntimeStatus::SetCoreState("startingOverlay", "正在初始化游戏叠加层");
 
 		RECT clientRect{};
 		if (!GetUsableClientRect(hwnd, clientRect)) {
@@ -138,6 +149,7 @@ void RuntimeMain(std::stop_token stopToken) {
 			std::scoped_lock lock(runtimeMutex);
 			runRequested = false;
 			runtimeRunning = false;
+			RuntimeStatus::SetCoreState("waitingForGame", "未找到可用的游戏窗口");
 			continue;
 		}
 
@@ -157,9 +169,11 @@ void RuntimeMain(std::stop_token stopToken) {
 		const bool started = currentApp->StartTasks();
 		if (!started) {
 			Notification::AddError(NotificationDatas("Startup failed. Please return to the visible game window and try again.", 5));
+			RuntimeStatus::SetCoreState("faulted", "叠加层启动失败，请回到可见的游戏窗口后重试");
 		}
 		else {
 			LoadEditRouteData::Initi(currentApp.get());
+			RuntimeStatus::SetCoreState("running", "核心正在运行");
 		}
 
 		{
@@ -184,6 +198,7 @@ void RuntimeMain(std::stop_token stopToken) {
 			std::scoped_lock lock(runtimeMutex);
 			runtimeRunning = false;
 		}
+		if (!shutdownRequested) RuntimeStatus::SetCoreState("ready", "核心已就绪");
 		if (stopToken.stop_requested()) return;
 	}
 }
@@ -191,6 +206,8 @@ void RuntimeMain(std::stop_token stopToken) {
 void Initi()
 {
     SetConsoleOutputCP(CP_UTF8);
+	if (g_hDllInstance == NULL) g_hDllInstance = GetModuleHandleW(nullptr);
+	StructuredLogger::Initialize();
 	SetUnhandledExceptionFilter(WriteNativeCrashDump);
 	std::scoped_lock lock(runtimeMutex);
 	if (runtimeInitialized) return;
@@ -198,12 +215,13 @@ void Initi()
 	Diagnostics::Initialize();
 	const auto assetRoot = std::filesystem::path(GetCurrentPath()) / "Assets";
 	RuntimeFeatureRepository::Instance().BeginPreload(assetRoot);
-	Diagnostics::Record("ocr-preload", "disabled=normal-runtime; enabled only by localization diagnostics mode");
+	Diagnostics::Record("ocr-preload", "deferred=until-app-ready background preload");
 	shutdownRequested = false;
 	runRequested = false;
 	runtimeRunning = false;
 	runtimeThread = std::jthread(RuntimeMain);
 	runtimeInitialized = true;
+	RuntimeStatus::SetCoreState("ready", "核心已就绪，等待游戏启动");
 }
 
 int Start() {
@@ -215,6 +233,7 @@ int Start() {
 		requestedWindow = gameWindow;
 		runRequested = true;
 		runtimeCondition.notify_all();
+		RuntimeStatus::SetCoreState("startingOverlay", "已找到游戏窗口，正在启动");
         return 1;
     }
     return 0;
@@ -224,6 +243,7 @@ void Stop(){
 	std::scoped_lock lock(runtimeMutex);
 	runRequested = false;
 	runtimeCondition.notify_all();
+	RuntimeStatus::SetCoreState("stopping", "正在停止核心");
 }
 
 void Shutdown() {
@@ -238,6 +258,7 @@ void Shutdown() {
 		runtimeCondition.notify_all();
 	}
 	if (thread.joinable()) thread.join();
+	DrawItemBase::Shutdown();
 	MapViewportLocalizer::Shutdown();
 	GlobalVisualLocalizer::Shutdown();
 	IdentifyWorldCoordinates::Shutdown();
@@ -249,6 +270,7 @@ void Shutdown() {
 		shutdownRequested = false;
 		requestedWindow = nullptr;
 	}
+	RuntimeStatus::SetCoreState("stopped", "核心已停止");
 }
 
 void EnabledMinMapShowItem(bool setValue)
