@@ -67,7 +67,7 @@ function Invoke-VisualStudioCommand([string]$CommandLine) {
     $process.WaitForExit()
     if (Test-Path -LiteralPath $logPath) {
         Get-Content -LiteralPath $logPath
-        Remove-Item -LiteralPath $logPath -Force
+        Remove-Item -LiteralPath $logPath -Force -ErrorAction SilentlyContinue
     }
     if ($process.ExitCode -ne 0) { throw "Command failed with exit code $($process.ExitCode): $CommandLine" }
 }
@@ -77,7 +77,7 @@ $configure = '"' + $cmake + '" -S "' + $Source + '" -B "' + $BuildDirectory + '"
     '-DBUILD_SHARED_LIBS=ON -DBUILD_opencv_world=ON -DOPENCV_ENABLE_NONFREE=ON ' +
     '-DBUILD_LIST=core,imgproc,imgcodecs,features2d,flann,calib3d,xfeatures2d ' +
     '-DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_opencv_apps=OFF -DBUILD_opencv_highgui=OFF -DBUILD_opencv_videoio=OFF -DOPENCV_PYTHON_SKIP_DETECTION=ON -DOPENCV_SKIP_FEATURES2D_DOWNLOADING=ON ' +
-    '-DWITH_FFMPEG=OFF -DWITH_IPP=OFF -DWITH_ITT=OFF -DWITH_OPENCL=OFF'
+    '-DWITH_FFMPEG=OFF -DWITH_IPP=OFF -DWITH_ITT=OFF -DWITH_OPENCL=OFF -DWITH_AVIF=OFF'
 
 Invoke-VisualStudioCommand $configure
 if ($ConfigureOnly) {

@@ -1,0 +1,216 @@
+{
+  "recoverySequence": true,
+  "requireSearchProgression": true,
+  "provenance": {
+    "independentGroundTruth": false,
+    "captureSession": "20260907-211625",
+    "captureInterval": "2026-09-07 21:16:27 to 21:16:45 Asia/Shanghai",
+    "referenceSource": "Runtime big-map logs and same-image nearby geometric cross-check; Docs/MinimapRetrievalAudit_20260907.md",
+    "scope": "Incident recovery and coordinate consistency only. No independent ground-truth accuracy claim. No OCR or world hint is supplied to the no-hint global search."
+  },
+  "samples": [
+    {
+      "id": "1_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/1_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "ab3b7eac03e814bfc205d62463e21515a8bd48b2dbc3f962047c08b0907d69f2",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12924.797203463904,
+        "mapY": 8574.180907462849,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustDeferPublication": true,
+      "mustContinueSearch": true
+    },
+    {
+      "id": "5_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/5_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "019a3f18f5ff691448de5abf75af65178b99757ac97ccea82a7737eb37484b6c",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12924.925447504003,
+        "mapY": 8574.058317919398,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustPublish": true
+    },
+    {
+      "id": "9_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/9_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "6c7a3db4fbf107fc7bb0a323d41c4c75dc694ccb3e8398c729a5dca920bef8a9",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12924.69026630811,
+        "mapY": 8574.188825158419,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustTrack": true,
+      "mustPublish": true
+    },
+    {
+      "id": "13_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/13_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "1945f5754ca63e3f98d6e10a124491f2c5112fa628064953236fb2fb63b0878b",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12924.415138697172,
+        "mapY": 8577.7071319166,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustTrack": true,
+      "mustPublish": true
+    },
+    {
+      "id": "16_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/16_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "e1573ce72c13f5dd044ab5f3ed4cf21f1e176b85777b879bc710170a1c82c143",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12928.651860768323,
+        "mapY": 8596.091594619784,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustTrack": true,
+      "mustPublish": true
+    },
+    {
+      "id": "19_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/19_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "a96441342ac0313e252a5f95f7f84ae9143023344753a256ab08cae6f3c7b1e6",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12934.551328232252,
+        "mapY": 8613.49796339191,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustTrack": true,
+      "mustPublish": true
+    },
+    {
+      "id": "23_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/23_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "580f2a059f8091b6e85a37f1d86d8bce59ac17a0257b7d228b6ad5ebc9eda077",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12943.669147107556,
+        "mapY": 8626.917749601387,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustTrack": true,
+      "mustPublish": true
+    },
+    {
+      "id": "27_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/27_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "0b4d23d1e437500b359b6d142ecbe207f256b8ae72c95da7ee9ee7837654b105",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12944.06054501603,
+        "mapY": 8628.697104155812,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustTrack": true,
+      "mustPublish": true
+    },
+    {
+      "id": "30_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/30_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "249ecf14954eb6e9716eda13062322306a1e97f65bc21fd38d0586a9d5d0eb05",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12944.020351917416,
+        "mapY": 8628.794124797128,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustTrack": true,
+      "mustPublish": true
+    },
+    {
+      "id": "34_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/34_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "14a0e2207cec3b166e6f251aecaf9de99ba8f67d7417bc32f06cef521b79242e",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12944.034226218104,
+        "mapY": 8628.711607239255,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustTrack": true,
+      "mustPublish": true
+    },
+    {
+      "id": "cross-area-negative-blank",
+      "image": "Tests/VisualLocalization/20260907-cross-area/1_minimap-feature-source.png",
+      "session": "cross-area-negative-blank",
+      "transform": {
+        "blank": true
+      },
+      "maxRecoveryFrames": 8,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 5000,
+      "mustReject": true
+    },
+    {
+      "id": "cross-area-negative-noise",
+      "image": "Tests/VisualLocalization/20260907-cross-area/1_minimap-feature-source.png",
+      "session": "cross-area-negative-noise",
+      "transform": {
+        "noise": true
+      },
+      "maxRecoveryFrames": 8,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 5000,
+      "mustReject": true
+    }
+  ]
+}

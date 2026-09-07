@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -183,7 +183,7 @@
     <value>自动关闭Windows11窗口优化以支持BitBlt</value>
   </data>
   <data name="Start_Card_WindowOptimization_Description.Text" xml:space="preserve">
-    <value>修改设置后重启游戏生效。</value>
+    <value>仅遇到 BitBlt 黑屏时尝试。开启后会修改 Windows 全局窗口优化设置。</value>
   </data>
   <data name="Function_Expander_MinMapShowItem.Header" xml:space="preserve">
     <value>小地图导航</value>

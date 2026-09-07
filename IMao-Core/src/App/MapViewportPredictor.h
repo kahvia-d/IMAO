@@ -30,11 +30,23 @@ public:
         MapViewportPrediction& prediction, int* inlierCount = nullptr,
         double* scale = nullptr);
     bool GetPrediction(MapViewportPrediction& prediction) const;
+    // ObserveFrame's return value reports motion, not validity: a verified
+    // stationary frame is anchored even when ObserveFrame returns false.
+    bool IsCurrentFrameAnchored() const { return currentFrameAnchored_; }
+    static bool TryBridgePrediction(const cv::Mat& requestCrop, const cv::Mat& currentCrop,
+        const MapViewportPrediction& requestPrediction, MapViewportPrediction& currentPrediction,
+        int* inlierCount = nullptr, double* scale = nullptr);
+    static bool CanConfirmAfterBridge(const cv::Mat& pendingCrop, const cv::Mat& currentCrop,
+        const MapViewportPrediction& pendingPrediction, const MapViewportPrediction& currentPrediction,
+        double centerTolerance, double scaleRatioTolerance);
 
 private:
     bool hasPrediction_ = false;
+    bool currentFrameAnchored_ = false;
     std::uint64_t revision_ = 0;
     int trackingFailures_ = 0;
     MapViewportPrediction prediction_;
+    MapViewportPrediction referencePrediction_;
     cv::Mat previousFrame_;
+    cv::Mat latestFrame_;
 };

@@ -24,8 +24,8 @@ public:
     static std::filesystem::path LogDirectory();
     static std::filesystem::path CrashDirectory();
     static std::filesystem::path DiagnosticsDirectory();
+    static std::filesystem::path ApplicationDataDirectory();
 
 private:
-    static std::filesystem::path ApplicationDataDirectory();
     static void PruneLocked();
 };

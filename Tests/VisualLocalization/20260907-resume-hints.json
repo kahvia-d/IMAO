@@ -1,0 +1,87 @@
+{
+  "recoverySequence": true,
+  "requireSearchProgression": false,
+  "provenance": {
+    "independentGroundTruth": false,
+    "captureSession": "20260907-211625",
+    "captureInterval": "2026-09-07 21:16:27 to 21:16:45 Asia/Shanghai",
+    "referenceSource": "Runtime big-map logs and same-image nearby geometric cross-check; Docs/MinimapRetrievalAudit_20260907.md",
+    "scope": "Recent viewport is an explicit search hint for the shared runtime resume policy only. The no-hint global-retrieval regression lives in 20260907-cross-area.json. Coordinates are consistency references, not independent accuracy labels."
+  },
+  "resumeHints": {
+    "trusted": {
+      "sceneId": 1,
+      "mapX": 6479.59,
+      "mapY": 3256.37,
+      "ageMilliseconds": 99000
+    },
+    "viewport": {
+      "sceneId": 1,
+      "mapX": 12926.75,
+      "mapY": 8576.61,
+      "ageMilliseconds": 18000
+    }
+  },
+  "samples": [
+    {
+      "id": "1_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/1_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "ab3b7eac03e814bfc205d62463e21515a8bd48b2dbc3f962047c08b0907d69f2",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12924.797203463904,
+        "mapY": 8574.180907462849,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 3,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustDeferPublication": true,
+      "expectedHintSources": [
+        "trusted-minimap",
+        "trusted-minimap",
+        "recent-map-viewport"
+      ]
+    },
+    {
+      "id": "5_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/5_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "019a3f18f5ff691448de5abf75af65178b99757ac97ccea82a7737eb37484b6c",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12924.925447504003,
+        "mapY": 8574.058317919398,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 1,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustPublish": true,
+      "expectedHintSources": [
+        "recent-map-viewport"
+      ]
+    },
+    {
+      "id": "9_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260907-cross-area/9_minimap-feature-source.png",
+      "session": "20260907-base-map-recovery",
+      "sourceSha256": "6c7a3db4fbf107fc7bb0a323d41c4c75dc694ccb3e8398c729a5dca920bef8a9",
+      "consistencyExpected": {
+        "sceneId": 1,
+        "mapX": 12924.69026630811,
+        "mapY": 8574.188825158419,
+        "tolerance": 12.0
+      },
+      "maxRecoveryFrames": 24,
+      "maxSearchMilliseconds": 500,
+      "maxRecoveryMilliseconds": 10000,
+      "mustRecover": true,
+      "mustTrack": true,
+      "mustPublish": true
+    }
+  ]
+}

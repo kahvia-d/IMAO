@@ -9,7 +9,7 @@ namespace IMao_WinUI.Views;
 
 class RouteName
 {
-    private readonly string routesFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedRoutes");
+    private readonly string routesFolderPath = UserDataPaths.SavedRoutes;
 
     public ObservableCollection<string> GetAllRouteFilesName()
     {
@@ -32,6 +32,7 @@ public sealed partial class FunctionPage : Page
 {
     private readonly RouteName routeName = new();
     private readonly CoreHostService coreHost;
+    private bool restoringConfiguration = true;
 
     public FunctionViewModel ViewModel { get; }
 
@@ -41,44 +42,60 @@ public sealed partial class FunctionPage : Page
         coreHost = App.GetService<CoreHostService>();
         InitializeComponent();
         ComboBox_RouteDataName.ItemsSource = routeName.GetAllRouteFilesName();
-        ToggleSwitch_StatusBar.IsOn = RuntimePreferences.StatusBarEnabled;
+        RestoreConfiguration();
+        Loaded += (_, _) => RestoreConfiguration();
     }
 
-    private void UpdateMinMapItemDataCycle_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    private void RestoreConfiguration()
     {
-        // WinUI raises ValueChanged while the control is being constructed, before
-        // the XAML value is applied.  Do not send that transient zero to CoreHost.
+        restoringConfiguration = true;
+        var value = coreHost.Configuration;
+        UpdateMinMapItemDataCycle.Value = value.MinMapUpdateCycle;
+        UpdateMapItemDataCycle.Value = value.MapUpdateCycle;
+        Setting_MinMapShowItem.IsOn = value.MinMapEnabled;
+        Setting_MapShowItem.IsOn = value.MapEnabled;
+        Setting_SetVisibleSavedPoints.IsOn = value.SavedPointsEnabled;
+        ToggleSwitch_StatusBar.IsOn = value.StatusBarEnabled;
+        restoringConfiguration = false;
+    }
+
+    private async Task ConfigureAsync(Func<Task<bool>> update)
+    {
+        if (restoringConfiguration) return;
+        await update();
+        RestoreConfiguration();
+    }
+
+    private async void UpdateMinMapItemDataCycle_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
         if (e.NewValue < 16 || e.NewValue > 1000) return;
-        _ = coreHost.ConfigureAsync(minMapUpdateCycle: (int)e.NewValue);
+        await ConfigureAsync(() => coreHost.ConfigureAsync(minMapUpdateCycle: (int)e.NewValue));
     }
 
-    private void UpdateMapItemDataCycle_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    private async void UpdateMapItemDataCycle_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
-        // See the matching minimap handler above.
         if (e.NewValue < 16 || e.NewValue > 1000) return;
-        _ = coreHost.ConfigureAsync(mapUpdateCycle: (int)e.NewValue);
+        await ConfigureAsync(() => coreHost.ConfigureAsync(mapUpdateCycle: (int)e.NewValue));
     }
 
-    private void ToggleSwitch_MapShowItem(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    private async void ToggleSwitch_MapShowItem(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        if (sender is ToggleSwitch toggle) _ = coreHost.ConfigureAsync(mapEnabled: toggle.IsOn);
+        if (sender is ToggleSwitch toggle) await ConfigureAsync(() => coreHost.ConfigureAsync(mapEnabled: toggle.IsOn));
     }
 
-    private void ToggleSwitch_MinMapShowItem(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    private async void ToggleSwitch_MinMapShowItem(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        if (sender is ToggleSwitch toggle) _ = coreHost.ConfigureAsync(minMapEnabled: toggle.IsOn);
+        if (sender is ToggleSwitch toggle) await ConfigureAsync(() => coreHost.ConfigureAsync(minMapEnabled: toggle.IsOn));
     }
 
-    private void ToggleSwitch_SetVisibleSavedPoints(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    private async void ToggleSwitch_SetVisibleSavedPoints(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        if (sender is ToggleSwitch toggle) _ = coreHost.ConfigureAsync(savedPointsEnabled: toggle.IsOn);
+        if (sender is ToggleSwitch toggle) await ConfigureAsync(() => coreHost.ConfigureAsync(savedPointsEnabled: toggle.IsOn));
     }
 
-    private void ToggleSwitch_StatusBar_Toggled(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    private async void ToggleSwitch_StatusBar_Toggled(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        if (sender is not ToggleSwitch toggle) return;
-        RuntimePreferences.StatusBarEnabled = toggle.IsOn;
-        _ = coreHost.ConfigureAsync(statusBarEnabled: toggle.IsOn);
+        if (sender is ToggleSwitch toggle) await ConfigureAsync(() => coreHost.ConfigureAsync(statusBarEnabled: toggle.IsOn));
     }
 
     private void Button_SavedRouteJsonName_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -91,7 +108,7 @@ public sealed partial class FunctionPage : Page
     {
         try
         {
-            string routesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedRoutes");
+            string routesPath = UserDataPaths.SavedRoutes;
             if (Directory.Exists(routesPath))
             {
                 Process.Start(new ProcessStartInfo(routesPath) { UseShellExecute = true, Verb = "open" });
@@ -105,7 +122,7 @@ public sealed partial class FunctionPage : Page
 
     private void Button_LoadRoutesData_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        if (Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedRoutes"))) _ = coreHost.LoadRoutesAsync();
+        if (Directory.Exists(UserDataPaths.SavedRoutes)) _ = coreHost.LoadRoutesAsync();
     }
 
     private void Button_LoadOneRouteData(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

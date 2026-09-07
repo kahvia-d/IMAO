@@ -9,3 +9,5 @@ Assets/FeaturesDatas/**/visual-index.imx filter=lfs diff=lfs merge=lfs -text
 Assets/FeaturesDatas/KuroTilePacks/**/features.yml filter=lfs diff=lfs merge=lfs -text
 Assets/FeaturesDatas/KuroTilePacks/**/features.imf filter=lfs diff=lfs merge=lfs -text
 Assets/FeaturesDatas/KuroTilePacks/**/features.imf.manifest.json filter=lfs diff=lfs merge=lfs -text
+# Candidate index headers hash their source manifest. Keep checkout bytes stable.
+Assets/FeaturesDatas/**/manifest.json text eol=lf

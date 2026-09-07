@@ -1,4 +1,6 @@
-﻿#include "ImGuiOverWindows.h"
+#include <wil/resource.h>
+#include "ImGuiOverWindows.h"
+#include "../App/App.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../Base/stb_image.h"
 #include <iostream>
@@ -10,13 +12,24 @@
 #include "InteractiveInterface/RuntimeStatusBar.h"
 #include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
+#include "../Runtime/ImageAnchoredOverlay.h"
+#include "../Runtime/FramePacer.h"
 #include "Routes/DrawRouteOnMap.h"
 #include "Routes/DrawRouteOnMinMap.h"
 
 #include <chrono>
 #include <sstream>
 
-HWND ImGuiOverWindows::overWindowsHwnd;
+std::atomic<HWND> ImGuiOverWindows::overWindowsHwnd{nullptr};
+
+ImGuiOverWindows::ImGuiOverWindows(HWND window, App& app) : h_window(window), app(app) {
+    imguiThread = std::thread([this] {
+        try { start(); }
+        catch (const std::exception& error) { Diagnostics::Record("overlay-thread-error", error.what()); }
+        catch (...) { Diagnostics::Record("overlay-thread-error", "unknown exception"); }
+        finished = true;
+    });
+}
 // Data
 static ID3D11Device* g_pd3dDevice = nullptr;
 static ID3D11DeviceContext* g_pd3dDeviceContext = nullptr;
@@ -31,7 +44,7 @@ void CleanupDeviceD3D();
 bool CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-const float TARGET_FRAME_TIME = 1000.0f /20.0f;// 20 FPS（ms）
+constexpr auto kOverlayFramePeriod = std::chrono::microseconds(16667); // 60 Hz presentation
 static RECT g_LastGameRect = { 0, 0, 0, 0 };
 static POINT g_LastGamePos = { 0, 0 };
 
@@ -231,14 +244,22 @@ int ImGuiOverWindows::start()
     // Create application window
     //ImGui_ImplWin32_EnableDpiAwareness();
     WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
-    ::RegisterClassExW(&wc);
-     overWindowsHwnd = ::CreateWindowExW(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT| WS_EX_TOOLWINDOW, wc.lpszClassName, L"Dear ImGui DirectX11 Example", WS_POPUP, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    bool platformReady = false, rendererReady = false, contextReady = false;
+    const auto cleanup = wil::scope_exit([&] {
+        if (rendererReady) ImGui_ImplDX11_Shutdown();
+        if (platformReady) ImGui_ImplWin32_Shutdown();
+        if (contextReady) ImGui::DestroyContext();
+        CleanupDeviceD3D();
+        if (overWindowsHwnd) ::DestroyWindow(overWindowsHwnd);
+        overWindowsHwnd = nullptr;
+        ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+    });
+    if (!::RegisterClassExW(&wc)) return 1;
+     overWindowsHwnd = ::CreateWindowExW(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW, wc.lpszClassName, L"Dear ImGui DirectX11 Example", WS_POPUP, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
     // Initialize Direct3D
     if (!CreateDeviceD3D(overWindowsHwnd))
     {
-        CleanupDeviceD3D();
-        ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
         return 1;
     }
     // CreateWindowEx sends WM_SIZE before the D3D device exists.  The swap
@@ -247,12 +268,13 @@ int ImGuiOverWindows::start()
     g_ResizeWidth = g_ResizeHeight = 0;
 
     // Show the window
-    ::ShowWindow(overWindowsHwnd, SW_SHOWDEFAULT);
+    ::ShowWindow(overWindowsHwnd, SW_SHOWNOACTIVATE);
     ::UpdateWindow(overWindowsHwnd);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    contextReady = true;
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -262,8 +284,10 @@ int ImGuiOverWindows::start()
     
 
     // Setup Platform/Renderer backends
-    ImGui_ImplWin32_Init(overWindowsHwnd);
-    ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
+    platformReady = ImGui_ImplWin32_Init(overWindowsHwnd);
+    if (!platformReady) return 1;
+    rendererReady = ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
+    if (!rendererReady) stopFlag = true;
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -291,13 +315,19 @@ int ImGuiOverWindows::start()
     //DrawPiPWindows::Initi();
     //std::vector<ID3D11ShaderResourceView*> texturesToRelease; // 用于存储需要释放的纹理
     // Main loop
+    ImageAnchoredOverlay mapMotion(false), minimapMotion(true);
+    FramePacer framePacer;
+    auto motionReportAt = std::chrono::steady_clock::now();
+    std::uint64_t renderedFrames = 0, observedFrames = 0, lastObservedFrame = 0;
+    std::uint64_t capturedFrames = 0, lastCapturedFrame = 0;
+    std::uint64_t attachedFrames = 0, trackingMisses = 0;
     while (!stopFlag)
     {
         // 记录帧开始时间
-        auto frameStart = std::chrono::high_resolution_clock::now();
+        auto frameStart = std::chrono::steady_clock::now();
 
-        RECT GameRect;
-        GetClientRect(h_window, &GameRect);
+        RECT GameRect{};
+        if (!GetClientRect(h_window, &GameRect)) break;
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         MSG msg;
@@ -337,12 +367,16 @@ int ImGuiOverWindows::start()
                     std::to_string(resizeWidth) + "x" + std::to_string(resizeHeight));
                 // A device reset during a resolution/DPI transition must only
                 // reset the transparent overlay, never bring down WinUI.
+                if (rendererReady) ImGui_ImplDX11_Shutdown();
+                rendererReady = false;
                 CleanupDeviceD3D();
                 if (!CreateDeviceD3D(overWindowsHwnd)) {
                     Diagnostics::Record("overlay-resize-error", "action=disable-overlay-after-device-recreate-failed");
                     stopFlag = true;
                     break;
                 }
+                rendererReady = ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
+                if (!rendererReady) { stopFlag = true; break; }
             }
         }
 
@@ -353,10 +387,59 @@ int ImGuiOverWindows::start()
 
         // Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         {
-            DrawItemOnMinMap::DrawItemsOnMinMap(GameRect);
-            DrawItemOnGameMap::DrawItemsOnGameMap(GameRect, h_window);
-            DrawRouteOnMap::DrawRoute(app);
-            DrawRouteOnMinMap::DrawRoute(app);
+            const auto frame = app.ReadOverlayFrame();
+            const auto capture = app.ReadCapturedFrame();
+            const auto visibility = app.ReadOverlayVisibility();
+            ++renderedFrames;
+            if (frame->frameId != lastObservedFrame) { ++observedFrames; lastObservedFrame = frame->frameId; }
+            if (capture->frameId != lastCapturedFrame) { ++capturedFrames; lastCapturedFrame = capture->frameId; }
+            if (frameStart - motionReportAt >= std::chrono::seconds(2)) {
+                const double seconds = std::chrono::duration<double>(frameStart - motionReportAt).count();
+                Diagnostics::Record("overlay-motion", "renderFps=" + std::to_string(renderedFrames / seconds) +
+                    " sourceFps=" + std::to_string(observedFrames / seconds) +
+                    " captureFps=" + std::to_string(capturedFrames / seconds) + " mode=image-anchored" +
+                    " attachedFps=" + std::to_string(attachedFrames / seconds) +
+                    " trackingMisses=" + std::to_string(trackingMisses) +
+                    " captureAgeMs=" + std::to_string(capture->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
+                        frameStart - capture->capturedAt).count() : -1) +
+                    " sourceAgeMs=" + std::to_string(frame->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
+                        frameStart - frame->capturedAt).count() : -1));
+                motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
+                attachedFrames = trackingMisses = 0;
+            }
+            bool drewMap = false, drewMinimap = false;
+            bool mapEligible = false, minimapEligible = false;
+            PresentedOverlayFrame presented{frame, {}, false, false, frameStart};
+            if (frame->Fresh() && frame->focused && IsWindowFocused(h_window) &&
+                frame->clientRect.right == GameRect.right && frame->clientRect.bottom == GameRect.bottom) {
+                if (frame->mapVisible && visibility->AllowsMap(frame->frameId)) {
+                    mapEligible = true;
+                    OverlayScreenTransform motion;
+                    if (mapMotion.Update(frame, *capture, motion)) {
+                        DrawItemOnGameMap::DrawItemsOnGameMap(GameRect, h_window, frame->mapMarkers, motion);
+                        DrawRouteOnMap::DrawRoute(frame->mapRoutes, frame->viewportScene, motion);
+                        drewMap = true;
+                        presented.motion = motion;
+                        ++attachedFrames;
+                    } else ++trackingMisses;
+                }
+                else if (frame->minimapVisible && visibility->AllowsMinimap(frame->frameId)) {
+                    minimapEligible = true;
+                    OverlayScreenTransform motion;
+                    if (minimapMotion.Update(frame, *capture, motion)) {
+                        DrawItemOnMinMap::DrawItemsOnMinMap(GameRect, frame->minimapMarkers, motion);
+                        DrawRouteOnMinMap::DrawRoute(frame->minimapRoutes, frame->playerScene, motion);
+                        drewMinimap = true;
+                        presented.motion = motion;
+                        ++attachedFrames;
+                    } else ++trackingMisses;
+                }
+            }
+            if (!mapEligible) mapMotion.Reset();
+            if (!minimapEligible) minimapMotion.Reset();
+            presented.mapVisible = drewMap;
+            presented.minimapVisible = drewMinimap;
+            app.PublishPresentedOverlay(std::move(presented));
             RuntimeStatusBar::Draw(h_window);
             //DrawPiPWindows::DrawImgui();
             Notification::DrawInfo();
@@ -375,6 +458,11 @@ int ImGuiOverWindows::start()
         HRESULT hr = g_pSwapChain->Present(0, 0);
         g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
         RecordOverlayFrameDiagnostics(overWindowsHwnd, hr);
+        if (FAILED(hr)) {
+            Diagnostics::Record("overlay-device-error", "presentation failed; session restart required");
+            stopFlag = true;
+            break;
+        }
 
         //刷新窗口
         GetClientRect(h_window, &GameRect);
@@ -399,17 +487,8 @@ int ImGuiOverWindows::start()
             g_LastGameRect = GameRect;
         }
 
-        // 计算已用时间
-        auto frameEnd = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<float, std::milli> frameDuration = frameEnd - frameStart;
-
-        if (frameDuration.count() < TARGET_FRAME_TIME)
-        {
-            auto sleepTime = std::chrono::milliseconds(
-                (int)(TARGET_FRAME_TIME - frameDuration.count())
-            );
-            std::this_thread::sleep_for(sleepTime);
-        }
+        // Keep fractional milliseconds and include rendering cost in pacing.
+        framePacer.WaitUntil(frameStart + kOverlayFramePeriod);
 
         // 在渲染周期结束后释放纹理
        //for (auto texture : texturesToRelease) {
@@ -417,15 +496,6 @@ int ImGuiOverWindows::start()
        //}
        //texturesToRelease.clear();
     }
-
-    // Cleanup
-    ImGui_ImplDX11_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
-
-    CleanupDeviceD3D();
-    ::DestroyWindow(overWindowsHwnd);
-    ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
 
     return 0;
 }
@@ -470,6 +540,8 @@ bool CreateDeviceD3D(HWND hWnd)
 
 void CleanupDeviceD3D()
 {
+    // Cached views belong to this D3D device and cannot survive a recreation.
+    DrawItemBase::itemsTextureData.clear();
     CleanupRenderTarget();
     if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = nullptr; }
     if (g_pd3dDeviceContext) { g_pd3dDeviceContext->Release(); g_pd3dDeviceContext = nullptr; }

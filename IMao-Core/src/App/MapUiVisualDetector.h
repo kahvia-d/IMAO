@@ -18,4 +18,6 @@ struct MapCompassDetection {
 class MapUiVisualDetector {
 public:
     static MapCompassDetection DetectBigMapCompass(const cv::Mat& snapshot, const RECT& clientRect);
+    // Independent UI evidence, usable before any player coordinate is known.
+    static bool DetectBigMapControls(const cv::Mat& snapshot, const RECT& clientRect);
 };

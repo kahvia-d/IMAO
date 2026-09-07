@@ -64,6 +64,16 @@ struct VisualLocalizationResult {
     std::uint64_t hintVersion = 0;
     VisualLocalizationQuality quality = VisualLocalizationQuality::Rejected;
     bool ambiguous = false;
+    bool searchIncomplete = false;
+    double recoveryAngle = 0.0;
+    double attemptedRecoveryAngle = 0.0;
+    // Recovery visits later ranked regions on subsequent frames. Counts refer
+    // to the unrotated query, even when an optional rotation is interrupted.
+    std::size_t coarseSearchOffset = 0;
+    std::size_t totalCoarseCandidates = 0;
+    std::size_t verifiedCoarseCandidates = 0;
+    std::size_t nextCoarseSearchOffset = 0;
+    bool usedCandidateHint = false;
     std::vector<VisualLocalizationCandidate> candidates;
     std::size_t coarseCandidateCount = 0;
     int bestMutualMatchCount = 0;
@@ -100,15 +110,19 @@ public:
 
     static bool Submit(VisualLocalizationRequest request);
     static bool TryTakeLatestResult(VisualLocalizationResult& result);
+    static void CancelPending();
 
     static VisualLocalizationResult LocateForDiagnostics(
         std::shared_ptr<const RuntimeFeatureResources> resources,
         const VisualLocalizationRequest& request);
 
+    // Freeze a scale calibrated by an independently verified acquisition for
+    // the whole local-tracking interval; do not update it from each local fit.
     static bool TrackLocal(const cv::Mat& normalizedMinimap,
         const ImageFeatureData& minimapFeatures, int sceneId,
         const Coordinate& previousMapCenter,
-        VisualLocalizationCandidate& result);
+        VisualLocalizationCandidate& result,
+        double fixedTerrainScale = 194.0 / 184.0);
 
     // Revalidates a recently known area after returning from a full-screen UI.
     // Unlike TrackLocal this may inspect neighbouring map tiles, but it never

@@ -1,5 +1,9 @@
-﻿cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.14)
+# Embedded resources have explicit dependencies below. cmcldeps would bypass
+# the localized compiler-output adapter used by C++ compilation.
+set(CMAKE_NINJA_CMCLDEPS_RC 0)
 project(IMao-Core CXX C)
+include(cmake/DetectMsvcIncludes.cmake)
 
 SET(DEMO_NAME "IMao-CoreHost")
 
@@ -33,6 +37,7 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 SET(PADDLE_LIB "" CACHE PATH "Paddle Inference root (contains paddle/ and third_party/)")
 SET(OPENCV_DIR "" CACHE PATH "Directory containing OpenCVConfig.cmake")
@@ -147,7 +152,7 @@ if (EXISTS "${PADDLE_LIB}/third_party/install/yaml-cpp/lib")
   set(DEPS ${DEPS} yaml-cpp)
 endif()
 
-file(GLOB_RECURSE CppFiles 
+file(GLOB_RECURSE CppFiles CONFIGURE_DEPENDS
     "IMao-Core/src/*.cpp"
     "IMao-Core/src/App/*.cpp"
     "IMao-Core/src/Base/*.cpp"
@@ -158,7 +163,7 @@ file(GLOB_RECURSE CppFiles
     "IMao-Core/src/WindowsCapture/*.cpp"
 )
 
-file(GLOB_RECURSE HppFiles 
+file(GLOB_RECURSE HppFiles CONFIGURE_DEPENDS
     "IMao-Core/src/*.h"
     "IMao-Core/src/App/*.h"
     "IMao-Core/src/Base/*.h"
@@ -169,7 +174,7 @@ file(GLOB_RECURSE HppFiles
     "IMao-Core/src/WindowsCapture/*.h"
 )
 
-file(GLOB_RECURSE ResourceFiles
+file(GLOB_RECURSE ResourceFiles CONFIGURE_DEPENDS
     "IMao-Core/src/*.rc"
     "IMao-Core/src/Resource/*.json"
 )
@@ -188,6 +193,9 @@ set_property(SOURCE "${CMAKE_SOURCE_DIR}/IMao-Core/src/IMao-Core.rc" APPEND PROP
     "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Avinoleum.json"
     "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Lahai.json"
 )
+file(GLOB_RECURSE EmbeddedResourceInputs CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/*")
+set_property(SOURCE "${CMAKE_SOURCE_DIR}/IMao-Core/src/IMao-Core.rc" APPEND PROPERTY OBJECT_DEPENDS
+    "${CMAKE_SOURCE_DIR}/IMao-Core/src/resource.h" ${EmbeddedResourceInputs})
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/IMao-Core/src PREFIX "" FILES ${CppFiles} ${HppFiles} ${ResourceFiles})
 
@@ -282,6 +290,7 @@ target_link_libraries(IMaoVisualIndexBuilder PRIVATE ${OpenCV_LIBS} bcrypt.lib w
 
 add_executable(IMaoOptimizationTests
     IMao-Core/tests/OptimizationTests.cpp
+    IMao-Core/src/App/ScreenMotionTracker.cpp
     IMao-Core/src/App/MapUiStateController.cpp
     IMao-Core/src/App/MapUiVisualDetector.cpp
     IMao-Core/src/App/MapViewportPredictor.cpp
@@ -303,6 +312,7 @@ add_test(NAME IMaoOptimizationTests COMMAND IMaoOptimizationTests)
 
 add_executable(IMaoVisualRegression
     IMao-Core/tools/VisualRegression/main.cpp
+    IMao-Core/src/App/MapViewportLocalizer.cpp
     IMao-Core/src/Coordinate/VisualLocalization/GlobalVisualLocalizer.cpp
     IMao-Core/src/Diagnostics/Diagnostics.cpp
     IMao-Core/src/Runtime/StructuredLogger.cpp

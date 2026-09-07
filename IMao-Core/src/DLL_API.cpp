@@ -1,4 +1,4 @@
-﻿#include "DLL_API.h"
+#include "DLL_API.h"
 #include <iostream>
 #include"App/App.h"
 #include "ImguiDraw/Items/DrawItemBase.h"
@@ -42,6 +42,19 @@ bool runtimeRunning = false;
 bool shutdownRequested = false;
 HWND requestedWindow = nullptr;
 std::once_flag drawItemsInitialized;
+
+// Session ownership also covers partial startup and exception unwinding. Route
+// recording and drawing stop before their App pointer can be destroyed.
+struct OverlaySession {
+    std::unique_ptr<App> app;
+    std::unique_ptr<ImGuiOverWindows> overlay;
+    ~OverlaySession() {
+        LoadEditRouteData::StopThread();
+        if (overlay) overlay->Stop();
+        if (app) app->StopTasks();
+        Notification::Stop();
+    }
+};
 
 std::string WideToUtf8(const std::wstring& value) {
 	if (value.empty()) return {};
@@ -153,23 +166,29 @@ void RuntimeMain(std::stop_token stopToken) {
 			continue;
 		}
 
+        bool started = false;
+        try {
 		optional<BitBltCapture> bitBltCapture;
 		optional<CaptureSnapshot> graphicsCapture;
 		if (CaptureWay.load() == 0) bitBltCapture.emplace(hwnd);
 		else graphicsCapture.emplace(hwnd);
 
-		Notification::Start();
-		auto currentApp = make_unique<App>(graphicsCapture, bitBltCapture, hwnd, clientRect);
+        OverlaySession session;
+        Notification::Start();
+        session.app = make_unique<App>(graphicsCapture, bitBltCapture, hwnd, clientRect);
+        auto& currentApp = session.app;
 		App::SetUpdateMapDataCycleTime(mapDataUpdateCycle.load());
 		App::SetUpdateMinMapDataCycleTime(minMapDataUpdateCycle.load());
 		App::SetEnabledMapShowItem(enabledMapShowItem.load());
 		App::SetEnabledMinMapShowItem(enabledMinMapShowItem.load());
-		ImGuiOverWindows imguioverwindows(hwnd, *currentApp);
+        session.overlay = make_unique<ImGuiOverWindows>(hwnd, *currentApp);
 
-		const bool started = currentApp->StartTasks();
+        started = currentApp->StartTasks();
 		if (!started) {
-			Notification::AddError(NotificationDatas("Startup failed. Please return to the visible game window and try again.", 5));
-			RuntimeStatus::SetCoreState("faulted", "叠加层启动失败，请回到可见的游戏窗口后重试");
+			if (RuntimeStatus::Snapshot().coreState != "faulted") {
+				RuntimeStatus::SetCoreState("faulted", "叠加层启动失败，请回到可见的游戏窗口后重试");
+			}
+			Notification::AddError(NotificationDatas(RuntimeStatus::Snapshot().message, 10));
 		}
 		else {
 			LoadEditRouteData::Initi(currentApp.get());
@@ -178,27 +197,30 @@ void RuntimeMain(std::stop_token stopToken) {
 
 		{
 			std::unique_lock lock(runtimeMutex);
-			runtimeCondition.wait(lock, [&] {
-				return stopToken.stop_requested() || shutdownRequested || !runRequested || !started;
-			});
+            while (!stopToken.stop_requested() && !shutdownRequested && runRequested && started && !currentApp->HasStopped() && !session.overlay->HasStopped())
+                runtimeCondition.wait_for(lock, std::chrono::milliseconds(100));
+            if (started && runRequested && (currentApp->HasStopped() || session.overlay->HasStopped()) && !shutdownRequested &&
+                RuntimeStatus::Snapshot().coreState != "faulted")
+                RuntimeStatus::SetCoreState("faulted", "运行任务意外停止，请检查游戏窗口后重试");
 			runRequested = false;
 		}
 
-		imguioverwindows.Stop();
-		Notification::Stop();
-		if (started) {
-			currentApp->StopTasks();
-			LoadEditRouteData::StopThread();
-		}
-		currentApp.reset();
-		DrawItemOnGameMap::ClearNearItemsData();
-		DrawItemOnMinMap::ClearNearItemsData();
+        } catch (const std::exception& exception) {
+            Diagnostics::Record("runtime-session-error", exception.what());
+            RuntimeStatus::SetCoreState("faulted", "运行会话异常，已停止并释放资源");
+        } catch (...) {
+            Diagnostics::Record("runtime-session-error", "unknown exception");
+            RuntimeStatus::SetCoreState("faulted", "运行会话异常，已停止并释放资源");
+        }
+        DrawItemOnGameMap::ClearNearItemsData();
+        DrawItemOnMinMap::ClearNearItemsData();
 
 		{
 			std::scoped_lock lock(runtimeMutex);
 			runtimeRunning = false;
+            runRequested = false;
 		}
-		if (!shutdownRequested) RuntimeStatus::SetCoreState("ready", "核心已就绪");
+		if (!stopToken.stop_requested() && started && RuntimeStatus::Snapshot().coreState != "faulted") RuntimeStatus::SetCoreState("ready", "核心已就绪");
 		if (stopToken.stop_requested()) return;
 	}
 }
@@ -211,6 +233,7 @@ void Initi()
 	SetUnhandledExceptionFilter(WriteNativeCrashDump);
 	std::scoped_lock lock(runtimeMutex);
 	if (runtimeInitialized) return;
+	LoadEditRouteData::PrepareStorage();
 	std::call_once(drawItemsInitialized, [] { DrawItemBase::Initi(); });
 	Diagnostics::Initialize();
 	const auto assetRoot = std::filesystem::path(GetCurrentPath()) / "Assets";
@@ -228,6 +251,7 @@ int Start() {
     const HWND gameWindow = GetWindowHandleByProcessName(L"Client-Win64-Shipping.exe");
     RECT clientRect{};
 	std::scoped_lock lock(runtimeMutex);
+    if (runtimeInitialized && !shutdownRequested && (runtimeRunning || runRequested)) return 1;
     if (runtimeInitialized && gameWindow && GetUsableClientRect(gameWindow, clientRect) &&
 		!runtimeRunning && !runRequested && !shutdownRequested) {
 		requestedWindow = gameWindow;
@@ -243,7 +267,7 @@ void Stop(){
 	std::scoped_lock lock(runtimeMutex);
 	runRequested = false;
 	runtimeCondition.notify_all();
-	RuntimeStatus::SetCoreState("stopping", "正在停止核心");
+	RuntimeStatus::SetCoreState(runtimeRunning ? "stopping" : "ready", runtimeRunning ? "正在停止核心" : "核心已就绪");
 }
 
 void Shutdown() {
@@ -317,6 +341,5 @@ void LoadOneJsonRoute(const char* routeName) {
 }
 
 void LoadJsonRoute() {
-    LoadEditRouteData::ClearRoutesDatas();
     LoadEditRouteData::LoadRoutesDatasFromLocal(true,"");
 }

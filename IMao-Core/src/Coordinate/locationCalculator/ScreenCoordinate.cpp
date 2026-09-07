@@ -4,14 +4,7 @@
 using namespace cv;
 using namespace std;
 Coordinate ScreenCoordinate::MinMapCircleCenterScreenCoordinate(const RECT &w_Rect) {
-    double w_width = w_Rect.right;  
-    double w_height = w_Rect.bottom;
-
-    Coordinate MinMapCenter;
-    MinMapCenter.x = GameWindowsScreenData::MinMapCenter.x * (w_width / GameWindowsScreenData::w_width);
-    MinMapCenter.y = GameWindowsScreenData::MinMapCenter.y * (w_height / GameWindowsScreenData::w_height);
-
-    return MinMapCenter;
+    return GetMinimapProjectionGeometry(w_Rect).center;
 }
 
 //水平缩放因子*x，垂直缩放因子*y
@@ -72,45 +65,20 @@ RectangularAreaScreenLocation ScreenCoordinate::SpecifyScreenCoordinate(const HW
 //已知item相对世界原点的坐标  玩家相对世界原点的坐标 小地图中心点在屏幕的坐标，那么item的屏幕坐标为
 //item相对玩家的坐标.x * 小地图相对地图的缩放比例 + 小地图中心点在屏幕的坐标.x
 //小地图中心点在屏幕的坐标.y - item相对玩家的坐标.y * 小地图相对地图的缩放比例
-//小地图相对地图的缩放比例 =  1 - (1.25 - (w / 1600))
+//缩放比例与实际整数裁剪和本次识别校准的地形比例保持一致。
 
-Coordinate ScreenCoordinate::ItemScreenCoordinateOnMinMap(const HWND& hwnd,const Coordinate& itemRC,const Coordinate& playerRC) {
-    double HorizontalFactor = 0;//水平缩放因子
-    double VerticaFactor = 0;//垂直缩放因子
-    CalculateWindowScalingFactors(hwnd, HorizontalFactor, VerticaFactor);
-    Coordinate MinMapCenterScreen(HorizontalFactor * GameWindowsScreenData::MinMapCenter.x, VerticaFactor * GameWindowsScreenData::MinMapCenter.y);
-
-
-    RECT rect;
-    GetClientRect(hwnd, &rect);
-    double scaleFactorFromMapToMinMap = 1 - (GameWindowsScreenData::ScaleFactorFromMinMapToMap - (rect.right / 1600.0f));
-
-
-    Coordinate itemRelativeCoordinateToPlayerRwoc = RelativeCoordinates::GetRelativeCoordinates(itemRC, playerRC);
-
-
-    Coordinate itemScreenCoordiante(itemRelativeCoordinateToPlayerRwoc.x * scaleFactorFromMapToMinMap + MinMapCenterScreen.x,MinMapCenterScreen.y - itemRelativeCoordinateToPlayerRwoc.y * scaleFactorFromMapToMinMap);
-
-    return itemScreenCoordiante;
-  
+Coordinate ScreenCoordinate::ItemScreenCoordinateOnMinMap(const HWND& hwnd, const Coordinate& itemROC,
+    const Coordinate& playerROC, double terrainScale) {
+    RECT rect{};
+    if (!GetClientRect(hwnd, &rect)) return {};
+    return ItemScreenCoordinateOnMinMap(rect, itemROC, playerROC, terrainScale);
 }
 
-
-Coordinate ScreenCoordinate::ItemScreenCoordinateOnMinMap(const RECT& rect, const Coordinate& itemROC, const Coordinate& playerROC) {
-    double HorizontalFactor = 0;//水平缩放因子
-    double VerticaFactor = 0;//垂直缩放因子
-    CalculateWindowScalingFactors(rect, HorizontalFactor, VerticaFactor);
-    Coordinate MinMapCenterScreen(HorizontalFactor * GameWindowsScreenData::MinMapCenter.x, VerticaFactor * GameWindowsScreenData::MinMapCenter.y);
-
-    double scaleFactorFromMapToMinMap = 1 - (GameWindowsScreenData::ScaleFactorFromMinMapToMap - (rect.right / 1600.0f));
-
-    Coordinate itemRelativeCoordinateToPlayerRwoc = RelativeCoordinates::GetRelativeCoordinates(itemROC, playerROC);
-
-
-    Coordinate itemScreenCoordianteOnMinMap(itemRelativeCoordinateToPlayerRwoc.x * scaleFactorFromMapToMinMap + MinMapCenterScreen.x, MinMapCenterScreen.y - itemRelativeCoordinateToPlayerRwoc.y * scaleFactorFromMapToMinMap);
-
-    return itemScreenCoordianteOnMinMap;
-
+Coordinate ScreenCoordinate::ItemScreenCoordinateOnMinMap(const RECT& rect, const Coordinate& itemROC,
+    const Coordinate& playerROC, double terrainScale) {
+    const auto geometry = GetMinimapProjectionGeometry(rect, terrainScale);
+    return {geometry.center.x + (itemROC.x - playerROC.x) * geometry.pixelsPerMapUnit,
+        geometry.center.y - (itemROC.y - playerROC.y) * geometry.pixelsPerMapUnit};
 }
 
 

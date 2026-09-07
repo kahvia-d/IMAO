@@ -51,12 +51,15 @@ public:
     bool WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::milliseconds timeout,
         std::uint64_t* frameSequence = nullptr);
 
-    bool GetLatestFrame_Mat(cv::Mat& outputFrame) {
+    bool GetLatestFrame_Mat(cv::Mat& outputFrame, std::uint64_t* frameSequence = nullptr,
+        std::chrono::steady_clock::time_point* capturedAt = nullptr) {
         std::lock_guard<std::mutex> lock(m_frameMutex);
         if (m_latestFrame.empty()) {
             return false;
         }
         m_latestFrame.copyTo(outputFrame);
+        if (frameSequence != nullptr) *frameSequence = m_frameSequence;
+        if (capturedAt != nullptr) *capturedAt = m_frameCapturedAt;
         return true;
     }
 
@@ -136,4 +139,5 @@ private:
     mutable std::mutex m_frameMutex;
     std::condition_variable m_frameCondition;
     std::uint64_t m_frameSequence = 0;
+    std::chrono::steady_clock::time_point m_frameCapturedAt{};
 };

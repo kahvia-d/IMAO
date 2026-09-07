@@ -1,0 +1,190 @@
+{
+  "samples": [
+    {
+      "id": "1_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/1_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "5_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/5_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "9_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/9_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "13_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/13_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "16_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/16_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "19_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/19_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "22_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/22_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "26_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/26_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "29_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/29_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "34_minimap-feature-source",
+      "image": "Tests/VisualLocalization/20260906-regression/34_minimap-feature-source.png",
+      "session": "20260906-210857"
+    },
+    {
+      "id": "reference-west",
+      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--7690---176-full.png",
+      "fullSnapshot": true,
+      "expected": {
+        "mapY": 1744.92,
+        "sceneId": 1,
+        "tolerance": 12,
+        "mapX": -6792.45
+      },
+      "session": "reference-west"
+    },
+    {
+      "id": "reference-west-confirmation",
+      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--7690---176-full.png",
+      "fullSnapshot": true,
+      "expected": {
+        "mapY": 1744.92,
+        "sceneId": 1,
+        "tolerance": 12,
+        "mapX": -6792.45
+      },
+      "session": "reference-west",
+      "mustPublish": true
+    },
+    {
+      "id": "reference-east",
+      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--6725--919.png",
+      "expected": {
+        "mapY": 849.605,
+        "sceneId": 1,
+        "tolerance": 12,
+        "mapX": -5629.625000000001
+      },
+      "session": "reference-east"
+    },
+    {
+      "id": "reference-east-confirmation",
+      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--6725--919.png",
+      "expected": {
+        "mapY": 849.605,
+        "sceneId": 1,
+        "tolerance": 12,
+        "mapX": -5629.625000000001
+      },
+      "session": "reference-east",
+      "mustPublish": true
+    },
+    {
+      "id": "20260906-153705-1_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-1_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-4_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-4_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-8_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-8_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-11_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-11_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-15_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-15_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-18_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-18_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-21_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-21_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-24_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-24_minimap-feature-source.png",
+      "mustReject": true,
+      "note": "Big-map title captured during Gameplay-to-BigMap confirmation; not a minimap.",
+      "maxSearchMilliseconds": 500
+    },
+    {
+      "id": "20260906-153705-29_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-29_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-32_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-32_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-34_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-34_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-37_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-37_minimap-feature-source.png"
+    },
+    {
+      "id": "20260906-153705-40_minimap-feature-source",
+      "session": "20260906-153705",
+      "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-40_minimap-feature-source.png"
+    },
+    {
+      "id": "negative-blank",
+      "session": "negative-blank",
+      "image": "Tests/VisualLocalization/20260906-regression/1_minimap-feature-source.png",
+      "mustReject": true,
+      "transform": {
+        "blank": true
+      },
+      "maxSearchMilliseconds": 500
+    },
+    {
+      "id": "negative-noise",
+      "session": "negative-noise",
+      "image": "Tests/VisualLocalization/20260906-regression/1_minimap-feature-source.png",
+      "mustReject": true,
+      "transform": {
+        "noise": true
+      },
+      "maxSearchMilliseconds": 500
+    }
+  ]
+}

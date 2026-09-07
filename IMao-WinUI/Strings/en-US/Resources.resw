@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -183,7 +183,7 @@
     <value>Automatically close Windows 11 window optimization to support BitBlt.</value>
   </data>
   <data name="Start_Card_WindowOptimization_Description.Text" xml:space="preserve">
-    <value>After modifying the settings, restart the game and take effect.</value>
+    <value>Try only for a black BitBlt capture. Enabling this changes the global Windows window optimization setting.</value>
   </data>
   <data name="Function_Expander_MinMapShowItem.Header" xml:space="preserve">
     <value>Min map navigation</value>

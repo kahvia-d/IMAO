@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 #include "..\ImageProcessing\ImageProcessing.h"
 #include "..\Feature\Match\FeatureMatch.h"
 #include "..\WindowsCapture\WindowsGraphicsCapture\CaptureSnapshot.h"
 #include "..\util.h"
 #include "..\Coordinate\CoordinateStruct.h"
 #include "..\Coordinate\locationCalculator\MapCoordinate.h"
+#include "../Coordinate/locationCalculator/MinimapProjectionGeometry.h"
 #include "..\WindowsCapture\BitBltCapture\BitBltCapture.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\IdentifyWorldCoordinates.h"
 #include "..\Diagnostics\Diagnostics.h"
@@ -13,13 +14,17 @@
 #include "..\Coordinate\VisualLocalization\GlobalVisualLocalizer.h"
 #include "MapUiStateController.h"
 #include "MapUiVisualDetector.h"
+#include "OverlayVisibilityPolicy.h"
 #include "MapViewportLocalizer.h"
 #include "MapViewportPredictor.h"
+#include "MinimapResumePolicy.h"
 #include "WorldSearchPrior.h"
 
 #include <chrono>
 #include <mutex>
 #include <optional>
+#include "../Runtime/SnapshotChannel.h"
+#include "../Runtime/FrameState.h"
 
 
 class App
@@ -51,7 +56,8 @@ public:
 			allThreadStopFlag = true;
 			return false;
 		}
-		mouseMonitoringThread = std::thread(&App::Thread_GetItemMapScreenCoordinateByMouseMonitoring, this);
+        try {
+		captureThread = std::thread(&App::Thread_Capture, this);
 		detectGameStateThread = std::thread(&App::Thread_DetectGameState, this);
 		keyMonitoringThread = std::thread(&App::Thread_KeyMonitoring_SavePlayerNearItemPoint, this);
 
@@ -69,14 +75,24 @@ public:
 				allThreadStopFlag = true;
 			}
 		});
+        } catch (const std::exception& exception) {
+            Diagnostics::Record("app-worker-start-error", exception.what());
+            StopTasks();
+            return false;
+        }
 		return true;
 	}
 
 	void StopTasks() {
 		allThreadStopFlag = true;
+        overlayFrames.Publish({});
+        overlayVisibility.Publish({});
+        capturedFrames.Publish({});
+        GlobalVisualLocalizer::CancelPending();
+        MapViewportLocalizer::CancelPending();
 
 		if (mainThread.joinable()) mainThread.join();
-		if (mouseMonitoringThread.joinable()) mouseMonitoringThread.join();
+        if (captureThread.joinable()) captureThread.join();
 		if (detectGameStateThread.joinable()) detectGameStateThread.join();
 		if (keyMonitoringThread.joinable()) keyMonitoringThread.join();
 
@@ -85,35 +101,45 @@ public:
 		nearPlayerMapDescriptors.release();
 	}
 
+    bool HasStopped() const { return allThreadStopFlag.load(); }
+    std::shared_ptr<const OverlayFrame> ReadOverlayFrame() const { return overlayFrames.Read(); }
+    std::shared_ptr<const CapturedFrame> ReadCapturedFrame() const { return capturedFrames.Read(); }
+    std::shared_ptr<const OverlayVisibilityFrame> ReadOverlayVisibility() const { return overlayVisibility.Read(); }
+    void PublishPresentedOverlay(PresentedOverlayFrame frame) { presentedOverlay.Publish(std::move(frame)); }
+
 	Coordinate GetlastPlayerCoordinate() {
-		return lastPlayerImgMapCoordinate;
+		return overlayFrames.Read()->playerCoordinate;
 	}
 
 	Coordinate GetCenterPointCoordinate() {
+		std::scoped_lock lock(mapViewportMutex);
 		return gameMapCenterPointImgMapCoord;
 	}
 
 	int GetGoodMatchSize_IconTask() {
-		return GoodMatchSize_IconTask;
+		return GoodMatchSize_IconTask.load();
 	}
 
 	int GetGoodMatchSize_IconWavePlateCrystal() {
-		return GoodMatchSize_IconWavePlateCrystal;
+		return GoodMatchSize_IconWavePlateCrystal.load();
 	}
 
 	Coordinate GetMapCenterCoordinateByMouseMonitoring() {
+		std::scoped_lock lock(mapViewportMutex);
 		return gameMapCenterCoordinateByMouseMonitoring;
 	}
 
-	Coordinate GetMapCoordinatesOfMousePos() {
-		return gameMapCoordinatesOfMousePos;
-	}
+	bool TryGetRoutePoint(Coordinate& point, int& sceneId);
+
+	Coordinate GetMapCoordinatesOfMousePos();
 
 	std::vector<cv::Point2f> GetCaptrueCorners() {
+		std::scoped_lock lock(mapViewportMutex);
 		return captrueCorners;
 	}
 
 	void SetMapCenterCoordinateByMouseMonitoring(Coordinate coordinate) {
+		std::scoped_lock lock(mapViewportMutex);
 		gameMapCenterCoordinateByMouseMonitoring = coordinate;
 	}
 
@@ -126,10 +152,11 @@ public:
 	}
 
 	int GetPlayerCurrentSceneId() {
-		return playerCurrentSceneId;
+		return overlayFrames.Read()->playerScene;
 	}
 
 	int GetMapViewportSceneId() {
+		std::scoped_lock lock(mapViewportMutex);
 		return mapViewportSceneId;
 	}
 
@@ -169,28 +196,25 @@ private:
 	Coordinate identifyCoordinate = { 0,0 };
 	int playerCurrentSceneId = 0;
 
-	Mat gameSnapshot;
-	std::mutex gameSnapshotMutex;
+    SnapshotChannel<CapturedFrame> capturedFrames;
+    std::thread captureThread;
+    SnapshotChannel<OverlayFrame> overlayFrames;
+    SnapshotChannel<PresentedOverlayFrame> presentedOverlay;
+    SnapshotChannel<OverlayVisibilityFrame> overlayVisibility;
 
 	std::shared_ptr<const RuntimeFeatureResources> featureResources;
-	int GoodMatchSize_IconTask = 0;
-	int GoodMatchSize_IconWavePlateCrystal = 0;
+	std::atomic_int GoodMatchSize_IconTask = 0;
+	std::atomic_int GoodMatchSize_IconWavePlateCrystal = 0;
 	std::thread detectGameStateThread;
 
 	std::vector<cv::KeyPoint> nearPlayerMapKeypoints;
 	cv::Mat nearPlayerMapDescriptors;
 	Coordinate lastPlayerImgMapCoordinate;
 	Coordinate gameMapCenterPointImgMapCoord;
-	bool existMapCenterPointCoordinate = false;
 	int mapViewportSceneId = 0;
 	Coordinate mapViewportCenterImgMapCoordinate;
 	bool hasMapViewport = false;
-	std::chrono::steady_clock::time_point lastGlobalMapViewportSearchAt{};
 	std::chrono::steady_clock::time_point lastMapLocalVerificationAt{};
-	int map_ConsecutiveFailuresCount = 0;
-	bool hasStableMapCenter = false;
-	Coordinate pendingMapCenterROC;
-	int pendingMapCenterConfirmations = 0;
 
 	std::optional<CaptureSnapshot> graphicsCapture;
 	std::optional<BitBltCapture> bitBltCapture;
@@ -211,11 +235,12 @@ private:
 	const std::uint64_t coordinateSessionId;
 	std::uint64_t coordinateUiGeneration = 1;
 	std::uint64_t snapshotFrameId = 0;
+	std::chrono::steady_clock::time_point snapshotCapturedAt{};
 	bool lastCoordinateVisible = false;
 	CoordinateRecoveryController coordinateRecovery;
 	std::optional<CoordinateRecoveryController::Clock::time_point> coordinateRecoveryStartedAt;
-	std::optional<VisualLocalizationCandidate> pendingVisualCandidate;
-	std::uint64_t pendingVisualFrameId = 0;
+	MinimapVisualConfirmation globalVisualConfirmation;
+	MinimapResumePolicy minimapResumePolicy;
 	struct PlayerLocationLock {
 		int sceneId = 0;
 		Coordinate mapCoordinate;
@@ -225,19 +250,11 @@ private:
 		bool valid = false;
 	};
 	PlayerLocationLock playerLocationLock;
-	struct LocalizationResumeHint {
-		int sceneId = 0;
-		Coordinate mapCenter;
-		CoordinateRecoveryController::Clock::time_point savedAt{};
-		std::uint64_t attemptedGeneration = 0;
-		int attempts = 0;
-	};
-	std::optional<LocalizationResumeHint> localizationResumeHint;
-	// A verified full-map viewport is not trusted as the player location by
-	// itself: the user may have panned the map.  It is nevertheless a valuable
-	// bounded search hint after the map closes, and must pass normal minimap
-	// geometry validation before it can publish markers.
-	std::optional<LocalizationResumeHint> viewportResumeHint;
+    double minimapTerrainScale = kNominalMinimapTerrainScale;
+	// A viewport is a search range only; it never publishes player coordinates.
+	std::optional<MinimapResumeHint> viewportResumeHint;
+	std::uint64_t observedMapViewportRevision = 0;
+	void PrepareMinimapResumeHints(CoordinateRecoveryController::Clock::time_point now);
 	std::optional<std::pair<std::uint64_t, std::uint64_t>> visualRequestInFlight;
 	std::uint64_t nextVisualRequestId = 1;
 	std::uint64_t activeVisualRequestId = 0;
@@ -281,48 +298,55 @@ private:
 	std::optional<std::pair<std::uint64_t, std::uint64_t>> mapViewportRequestInFlight;
 	std::uint64_t nextMapViewportRequestId = 1;
 	std::uint64_t activeMapViewportRequestId = 0;
+	std::uint64_t mapViewportAbsoluteRevision = 0;
+	struct MapViewportRequestFrame {
+		std::uint64_t requestId = 0;
+		std::uint64_t frameId = 0;
+		std::uint64_t viewportRevision = 0;
+		RECT clientRect{};
+		cv::Mat mapCrop;
+	};
+	std::optional<MapViewportRequestFrame> mapViewportRequestFrame;
 	struct PendingMapViewportAnchor {
 		MapViewportLocalizationResult result;
 		int sceneId = 0;
-		std::uint64_t viewportRevision = 0;
+		std::uint64_t requestFrameId = 0;
+		cv::Mat mapCrop;
 	};
 	std::optional<PendingMapViewportAnchor> pendingMapViewportAnchor;
 	std::chrono::steady_clock::time_point lastMapViewportSubmitAt{};
+	std::chrono::steady_clock::time_point mapViewportRequestCapturedAt{};
 	MapViewportSearchScope lastMapViewportScope = MapViewportSearchScope::Global;
 
-	std::thread mouseMonitoringThread;
 	std::mutex mapViewportMutex;
 	MapViewportPredictor mapViewportPredictor;
 	Coordinate gameMapCenterCoordinateByMouseMonitoring;
-	Coordinate gameMapCoordinatesOfMousePos;
-	float inertiaStep = 1;
-	float scaleFactor = 1;
+	std::atomic<float> inertiaStep = 1;
+	std::atomic<float> scaleFactor = 1;
 	std::vector<cv::Point2f> captrueCorners{ cv::Point2f(0,0),cv::Point2f(0,0),cv::Point2f(0,0) ,cv::Point2f(0,0) };
-	std::atomic_bool mapNotMoving = true;
 
 	std::thread keyMonitoringThread;
 
 	Coordinate minMapBottomPoint;
-	float imguiWindowsHeight;
-	float imguiWindowsWidth;
+	std::atomic<float> imguiWindowsHeight{0};
+	std::atomic<float> imguiWindowsWidth{0};
 
 private:
-	winrt::IAsyncAction GetMatSnapshot(bool isTaketAsync, cv::Mat& result);
+	winrt::IAsyncAction GetMatSnapshot(bool isTaketAsync, cv::Mat& result, uint64_t* frameSequence = nullptr,
+        const RECT* captureRect = nullptr, std::chrono::steady_clock::time_point* capturedAt = nullptr);
+    void Thread_Capture();
+    void PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPrediction& viewport);
 	winrt::IAsyncAction Start();
 	void Thread_DetectGameState();
 	bool Init();
 	bool IsOpenMap(const cv::Mat& snapshot, const RECT& captureRect, int* goodMatchSize, bool useMapFeatureFallback);
 	bool IsBigMapCompass(const cv::Mat& snapshot, const RECT& captureRect, int* goodMatchSize);
-	int GetCurrentSceneId(const Coordinate& identifyCoordinate, const Mat& minMapImg);
 	int ValidateCoordinateCandidate(const Coordinate& identifyCoordinate, const Mat& minMapImg,
 		const ImageFeatureData& minMapFeatureData, int preferredSceneId, bool searchAllScenes,
 		bool commitPosition, std::size_t* outSupportingMatchCount = nullptr);
-	bool IsExistMinMap(cv::Mat& snapshot, const RECT& captureRect, int* goodMatchSize);
-	bool IsMapMoving(const Coordinate& gameMapcenterPointROC,const Coordinate& lastGameMapCenterPointROC);
+	bool IsExistMinMap(const cv::Mat& snapshot, const RECT& captureRect, int* goodMatchSize);
 
 	winrt::IAsyncOperation<bool> GetMinMapPlayerROC(const Mat& snapshot, Coordinate& outPlayerROC, float& outMinMapRadius);
-	bool GetGameMapCenterPointROC(const Mat& snapshot, Coordinate& gameMapCenterPointROC,
-		Coordinate& lastGameMapCenterPointROC, int& outSceneId, bool allowGlobalSearch = true);
 	int ResolveMapViewportScene(const Coordinate& centerMapCoordinate) const;
 	void SuspendPlayerLocationForMapTransition();
 	void BeginMinimapReacquisition();
@@ -330,9 +354,9 @@ private:
 	void ProcessMapViewportResult(const cv::Mat& currentSnapshot);
 	bool SubmitMapViewportSearch(const cv::Mat& currentSnapshot, MapViewportSearchScope scope,
 		const std::optional<WorldSearchPrior>& prior);
-	void CommitMapViewportResult(const MapViewportLocalizationResult& result);
+	void CommitMapViewportResult(const MapViewportLocalizationResult& result,
+		std::chrono::steady_clock::time_point anchoredAt);
 	void ResetMapViewport();
-	void Thread_GetItemMapScreenCoordinateByMouseMonitoring();
 	void Thread_KeyMonitoring_SavePlayerNearItemPoint();
 };
 

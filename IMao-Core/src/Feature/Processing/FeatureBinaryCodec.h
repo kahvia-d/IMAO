@@ -41,5 +41,9 @@ public:
     static bool Sha256File(const std::filesystem::path& path,
         std::array<std::uint8_t, 32>& output, std::string& error);
 
+    // Only CRLF is normalized. All other bytes remain part of the source hash.
+    static bool Sha256LfTextFile(const std::filesystem::path& path,
+        std::array<std::uint8_t, 32>& output, std::string& error);
+
     static std::string Sha256Hex(const std::array<std::uint8_t, 32>& hash);
 };

@@ -66,8 +66,8 @@
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" >
-                <Frame x:Name="NavigationFrame" Margin="{StaticResource NavigationViewPageContentMargin}"/>
+            <ScrollViewer x:Name="PageScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Frame x:Name="NavigationFrame" Navigated="NavigationFrame_Navigated" Margin="{StaticResource NavigationViewPageContentMargin}"/>
             </ScrollViewer>
 
         </NavigationView>

@@ -24,9 +24,10 @@ struct MapUiStateUpdate {
 };
 
 // Keeps UI transitions separate from raw per-frame feature checks. A stable
-// state requires two confirmed observations; suspected map UI must never hide
-// gameplay overlays on its own. Missing HUD evidence needs a longer, one
-// second confirmation window before it can clear minimap caches.
+// state requires two confirmed observations. Missing HUD evidence keeps the
+// localization session for ten observations, so an animation does not destroy
+// useful position hints. OverlayVisibilityPolicy independently hides markers
+// on the first missing observation instead of waiting for this debounce.
 class MapUiStateController {
 public:
     MapUiStateUpdate Update(const MapUiEvidence& evidence);

@@ -3,7 +3,7 @@
   "packId": "dreamzhou-kurotiles",
   "scene": "World",
   "resourceVersion": "E62CEAC5F80745288BF76C7AD5F731C3",
-  "generatedAtUtc": "2026-08-24T13:38:52.1774490Z",
+  "generatedAtUtc": "2026-08-24T13:38:52.177449Z",
   "source": {
     "static": "https://web-static.kurobbs.com",
     "state": 8,
@@ -324,26 +324,27 @@
     "minY": -672.7826538085938
   },
   "referenceVerification": {
-    "errorPixels": 4.167533628184416,
+    "errorPixels": 3.640201824457009,
     "expectedMapCoordinate": {
       "x": -5629.625000000001,
       "y": 849.605
     },
-    "goodMatches": 2,
-    "mapKeypoints": 70,
+    "goodMatches": 35,
+    "mapKeypoints": 751,
     "minimapKeypoints": 122,
-    "nearAnchorMatches": 2,
+    "nearAnchorMatches": 25,
     "passed": true,
     "reference": "reference--6725--919.png",
     "resultMapCoordinate": {
-      "x": -5631.4709624000225,
-      "y": 845.8685900439386
+      "x": -5630.755818408468,
+      "y": 846.1448960926222
     }
   },
   "features": {
     "file": "features.yml",
-    "sha256": "553cdd13d2ece6b49a82b977a60cda7b13a16e52136c16ed2eb51ba72bdaf584",
-    "keypointCount": 14961,
+    "sha256": "e7c3414fd03ca44f52c183cf59e85583fd5582891de99523fb0217190f63c64f",
+    "keypointCount": 63131,
     "extractedKeypointCount": 63131
-  }
+  },
+  "featureSelection": "all-surf-observations-v2"
 }

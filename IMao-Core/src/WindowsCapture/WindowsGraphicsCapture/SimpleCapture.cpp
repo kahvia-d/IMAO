@@ -256,6 +256,7 @@ void SimpleCapture::OnFrameArrived(winrt::Direct3D11CaptureFramePool const& send
             {
                 std::lock_guard<std::mutex> lock(m_frameMutex);
                 m_latestFrame = std::move(ownedFrame);
+                m_frameCapturedAt = std::chrono::steady_clock::now();
                 ++m_frameSequence;
             }
             m_frameCondition.notify_all();
@@ -335,7 +336,7 @@ ImTextureID SimpleCapture::GetImTextureFromMat(const cv::Mat& inputMat)
             if (FAILED(hr) || !tex) {
                 return NULL;
             }
-            m_imguiTexture.copy_from(tex); // winrt::com_ptr takes ownership
+            m_imguiTexture.attach(tex); // CreateTexture2D already returns an owned reference.
 
             D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
             srvDesc.Format = desc.Format;
@@ -349,7 +350,7 @@ ImTextureID SimpleCapture::GetImTextureFromMat(const cv::Mat& inputMat)
                 m_imguiTexture = nullptr;
                 return NULL;
             }
-            m_imguiSRV.copy_from(srv);
+            m_imguiSRV.attach(srv);
 
             m_imguiTexWidth = width;
             m_imguiTexHeight = height;
@@ -368,5 +369,5 @@ ImTextureID SimpleCapture::GetImTextureFromMat(const cv::Mat& inputMat)
     catch (const std::exception& e) {
         std::cout << "SimpleCapture::GetImTextureFromMat: " << e.what() << std::endl;
     }
-
+    return ImTextureID{};
 }

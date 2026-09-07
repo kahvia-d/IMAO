@@ -1,0 +1,90 @@
+{
+  "viewport": true,
+  "samples": [
+    {
+      "expected": {
+        "tolerance": 5,
+        "mapY": 1152.7,
+        "mapX": -6323.58
+      },
+      "image": "Tests/VisualLocalization/20260906-regression/bigmap.png",
+      "id": "bigmap-native"
+    },
+    {
+      "expected": {
+        "tolerance": 5,
+        "mapY": 1152.7,
+        "mapX": -6323.58
+      },
+      "transform": {
+        "brightnessAlpha": 0.85
+      },
+      "image": "Tests/VisualLocalization/20260906-regression/bigmap.png",
+      "id": "bigmap-dim"
+    },
+    {
+      "mustReject": true,
+      "transform": {
+        "blank": true
+      },
+      "image": "Tests/VisualLocalization/20260906-regression/bigmap.png",
+      "id": "bigmap-blank"
+    },
+    {
+      "mustReject": true,
+      "transform": {
+        "noise": true
+      },
+      "image": "Tests/VisualLocalization/20260906-regression/bigmap.png",
+      "id": "bigmap-noise"
+    },
+    {
+      "id": "bigmap-resolution-0.5",
+      "image": "Tests/VisualLocalization/20260906-regression/bigmap.png",
+      "transform": {
+        "resolutionScale": 0.5
+      },
+      "expected": {
+        "mapY": 1152.7,
+        "tolerance": 5,
+        "mapX": -6323.58
+      }
+    },
+    {
+      "id": "bigmap-resolution-0.625",
+      "image": "Tests/VisualLocalization/20260906-regression/bigmap.png",
+      "transform": {
+        "resolutionScale": 0.625
+      },
+      "expected": {
+        "mapY": 1152.7,
+        "tolerance": 5,
+        "mapX": -6323.58
+      }
+    },
+    {
+      "id": "bigmap-resolution-0.75",
+      "image": "Tests/VisualLocalization/20260906-regression/bigmap.png",
+      "transform": {
+        "resolutionScale": 0.75
+      },
+      "expected": {
+        "mapY": 1152.7,
+        "tolerance": 5,
+        "mapX": -6323.58
+      }
+    },
+    {
+      "id": "bigmap-resolution-1.25",
+      "image": "Tests/VisualLocalization/20260906-regression/bigmap.png",
+      "transform": {
+        "resolutionScale": 1.25
+      },
+      "expected": {
+        "mapY": 1152.7,
+        "tolerance": 5,
+        "mapX": -6323.58
+      }
+    }
+  ]
+}

@@ -395,6 +395,23 @@ bool MapVisualIndexCodec::Save(const std::filesystem::path& path, const MapVisua
     }
 }
 
+bool MapVisualIndexCodec::LoadManifestShard(const std::filesystem::path& path,
+    const std::filesystem::path& manifest, std::uint32_t expectedFeatureCount,
+    MapVisualIndex& output, std::string& error) {
+    std::array<std::uint8_t, 32> rawHash{}, lfHash{};
+    if (!FeatureBinaryCodec::Sha256File(manifest, rawHash, error)) return false;
+    if (Load(path, rawHash, expectedFeatureCount, output, error)) return true;
+    const auto rawError = error;
+    // Older indexes were generated from LF manifests before Git converted the
+    // checkout to CRLF. Re-run the full codec validation with LF bytes; never
+    // bypass source, payload, feature-count, or vocabulary validation.
+    if (!FeatureBinaryCodec::Sha256LfTextFile(manifest, lfHash, error)) return false;
+    if (lfHash != rawHash && Load(path, lfHash, expectedFeatureCount, output, error)) return true;
+    if (lfHash == rawHash) error = rawError;
+    error = manifest.string() + ": " + error;
+    return false;
+}
+
 bool MapVisualIndexCodec::Load(const std::filesystem::path& path,
     const std::array<std::uint8_t, 32>& expectedImfSha256, std::uint32_t expectedFeatureCount,
     MapVisualIndex& output, std::string& error, MapVisualIndexHeader* returnedHeader) {
@@ -418,14 +435,23 @@ bool MapVisualIndexCodec::Load(const std::filesystem::path& path,
             error = "visual index magic or header is invalid";
             return false;
         }
+        if (header.sourceImfSha256 != expectedImfSha256) {
+            error = "visual index source SHA-256 mismatch: " + path.string();
+            return false;
+        }
+        if (header.featureCount != expectedFeatureCount) {
+            error = "visual index feature count mismatch: " + path.string() +
+                " expected=" + std::to_string(expectedFeatureCount) +
+                " actual=" + std::to_string(header.featureCount);
+            return false;
+        }
         if (header.version != MapVisualIndexHeader::CurrentVersion ||
             header.headerLength != MapVisualIndexHeader::SerializedSize ||
             header.endianMarker != MapVisualIndexHeader::LittleEndianMarker ||
             header.wordCount != MapVisualIndex::WordCount ||
             header.descriptorColumns != MapVisualIndex::DescriptorColumns ||
-            header.tileSize != MapVisualIndex::TileSize || header.tileStride != MapVisualIndex::TileStride ||
-            header.featureCount != expectedFeatureCount || header.sourceImfSha256 != expectedImfSha256) {
-            error = "visual index version, geometry, feature count, or source IMF hash does not match";
+            header.tileSize != MapVisualIndex::TileSize || header.tileStride != MapVisualIndex::TileStride) {
+            error = "visual index version or geometry does not match: " + path.string();
             return false;
         }
         if (header.tileCount == 0 || header.tileCount > kMaximumTiles ||

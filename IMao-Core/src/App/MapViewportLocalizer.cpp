@@ -1,7 +1,13 @@
+#include <atomic>
+#include <functional>
+#include "../Feature/Match/ExactDescriptorMatcher.h"
 #include "MapViewportLocalizer.h"
+#include "MapViewportGeometry.h"
+#include "../Feature/Match/UniqueMapFeatures.h"
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/features2d.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/xfeatures2d.hpp>
 
 #include <algorithm>
@@ -77,8 +83,11 @@ ImageFeatureData SelectWorldCandidates(const RuntimeFeatureResources& resources,
         }
     }
     ImageFeatureData candidates;
+    UniqueMapFeatures unique;
     for (std::size_t row = 0; row < selected.size(); ++row) {
         if (!selected[row]) continue;
+        if (!unique.Insert(resources.map.imgKeypoints[row],
+                resources.map.imgDescriptors.row(static_cast<int>(row)))) continue;
         candidates.imgKeypoints.push_back(resources.map.imgKeypoints[row]);
         candidates.imgDescriptors.push_back(resources.map.imgDescriptors.row(static_cast<int>(row)));
     }
@@ -125,8 +134,7 @@ bool TryMatch(const ImageFeatureData& cropFeatures, const cv::Mat& crop,
     if (cropPoints.size() < 12) return false;
 
     cv::Mat inlierMask;
-    const cv::Mat homography = cv::findHomography(cropPoints, mapPoints, cv::RANSAC, 3.0,
-        inlierMask, 2000, 0.995);
+    const cv::Mat homography = FitMapViewportTransform(cropPoints, mapPoints, inlierMask);
     if (homography.empty() || inlierMask.empty()) return false;
     result.inlierCount = cv::countNonZero(inlierMask);
     result.inlierRatio = static_cast<double>(result.inlierCount) / cropPoints.size();
@@ -150,7 +158,8 @@ bool TryMatch(const ImageFeatureData& cropFeatures, const cv::Mat& crop,
     std::sort(errors.begin(), errors.end());
     result.medianReprojectionError = errors.empty() ? 0.0 : errors[errors.size() / 2];
     result.coveredQuadrants = static_cast<int>(std::count(quadrants.begin(), quadrants.end(), true));
-    if (result.coveredQuadrants < 3 || result.medianReprojectionError > 3.0) return false;
+    if (!HasMapViewportSupport(cropPoints, inlierMask, crop.size()) ||
+        result.medianReprojectionError > 3.0) return false;
 
     std::vector<cv::Point2f> cropCorners = {
         { 0.0f, 0.0f }, { static_cast<float>(crop.cols), 0.0f },
@@ -188,15 +197,25 @@ public:
         // competing with capture/OCR/resource startup immediately after the
         // Start button is pressed.
         globalWorldIndexAttempted_ = false;
-        ready_ = true;
-        worker_ = std::jthread([this](std::stop_token token) { Worker(token); });
-        return true;
+        try {
+            worker_ = std::jthread([this](std::stop_token token) { Worker(token); });
+            ready_ = true;
+            error.clear();
+            return true;
+        } catch (const std::exception& exception) {
+            ready_ = false;
+            resources_.reset();
+            error = exception.what();
+            return false;
+        }
     }
 
     void Shutdown() {
         std::jthread worker;
         {
             std::scoped_lock lock(mutex_);
+            ready_ = false;
+            ++epoch_;
             if (worker_.joinable()) worker_.request_stop();
             condition_.notify_all();
             worker = std::move(worker_);
@@ -221,12 +240,18 @@ public:
     bool Submit(MapViewportLocalizationRequest request) {
         std::scoped_lock lock(mutex_);
         if (!ready_) return false;
-        // The newest screenshot is the only useful queued request.  A running
-        // request is allowed to finish, but its generation/frame is checked by
-        // App before it can affect the viewport.
+        // Superseded work stops at the next checkpoint. An OpenCV index build
+        // itself is indivisible; its eventual result is still guarded by epoch.
+        ++epoch_;
+        result_.reset();
         request_ = std::move(request);
         condition_.notify_one();
         return true;
+    }
+
+    void CancelPending() {
+        std::scoped_lock lock(mutex_);
+        ++epoch_; request_.reset(); result_.reset();
     }
 
     bool Take(MapViewportLocalizationResult& result) {
@@ -238,7 +263,7 @@ public:
     }
 
 private:
-    MapViewportLocalizationResult Locate(const MapViewportLocalizationRequest& request) {
+    MapViewportLocalizationResult Locate(const MapViewportLocalizationRequest& request, const std::function<bool()>& interrupted) {
         MapViewportLocalizationResult result;
         result.sessionId = request.sessionId;
         result.uiGeneration = request.uiGeneration;
@@ -254,6 +279,7 @@ private:
         }
 
         try {
+            if (interrupted()) throw SearchInterrupted{};
             auto surf = cv::xfeatures2d::SURF::create(100, 4, 3, true, true);
             const ImageFeatureData cropFeatures = FeatureMatch::ExtractSurfFeatures(surf, request.mapCrop);
             result.cropKeypointCount = static_cast<int>(cropFeatures.imgKeypoints.size());
@@ -262,6 +288,7 @@ private:
                 return result;
             }
 
+            if (interrupted()) throw SearchInterrupted{};
             const ImageFeatureData* candidates = nullptr;
             std::vector<cv::DMatch> goodMatches;
             if (request.scope == MapViewportSearchScope::Global) {
@@ -269,6 +296,7 @@ private:
                     result.durationMilliseconds = ElapsedMilliseconds(start);
                     return result;
                 }
+                if (interrupted()) throw SearchInterrupted{};
                 candidates = &globalWorldCandidates_;
                 if (!globalWorldMatcher_) {
                     result.durationMilliseconds = ElapsedMilliseconds(start);
@@ -289,6 +317,7 @@ private:
                     result.durationMilliseconds = ElapsedMilliseconds(start);
                     return result;
                 }
+                if (interrupted()) throw SearchInterrupted{};
                 candidates = &cache->candidates;
                 std::vector<std::vector<cv::DMatch>> pairs;
                 cache->matcher->knnMatch(cropFeatures.imgDescriptors, pairs, 2);
@@ -296,6 +325,39 @@ private:
             }
             result.accepted = candidates != nullptr && TryMatch(cropFeatures, request.mapCrop,
                 *candidates, goodMatches, result);
+            // A zoomed-out map loses descriptor agreement at the native crop
+            // scale. Retry only global recovery, keeping normal tracking cheap.
+            // Convert feature positions back to the original crop before fitting
+            // so marker projection and support checks retain their coordinates.
+            if (!result.accepted && candidates != nullptr &&
+                request.scope == MapViewportSearchScope::Global) {
+                for (const double factor : { 1.5, 2.0, 0.75 }) {
+                    if (interrupted()) throw SearchInterrupted{};
+                    cv::Mat resized;
+                    cv::resize(request.mapCrop, resized, {}, factor, factor,
+                        factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
+                    auto features = FeatureMatch::ExtractSurfFeatures(surf, resized);
+                    if (features.imgDescriptors.empty()) continue;
+                    const double sx = static_cast<double>(resized.cols) / request.mapCrop.cols;
+                    const double sy = static_cast<double>(resized.rows) / request.mapCrop.rows;
+                    for (auto& point : features.imgKeypoints) {
+                        point.pt.x = static_cast<float>((point.pt.x + 0.5) / sx - 0.5);
+                        point.pt.y = static_cast<float>((point.pt.y + 0.5) / sy - 0.5);
+                    }
+                    std::vector<std::vector<cv::DMatch>> pairs;
+                    globalWorldMatcher_->knnMatch(features.imgDescriptors, pairs, 2);
+                    auto attempt = result;
+                    attempt.goodMatchCount = attempt.inlierCount = attempt.coveredQuadrants = 0;
+                    attempt.inlierRatio = attempt.medianReprojectionError = 0.0;
+                    attempt.cropKeypointCount = static_cast<int>(features.imgKeypoints.size());
+                    attempt.accepted = TryMatch(features, request.mapCrop, *candidates,
+                        FilterGoodMatches(pairs), attempt);
+                    if (attempt.accepted || attempt.inlierCount > result.inlierCount ||
+                        (attempt.inlierCount == result.inlierCount && attempt.goodMatchCount > result.goodMatchCount))
+                        result = std::move(attempt);
+                    if (result.accepted) break;
+                }
+            }
         }
         catch (const cv::Exception&) {
             result.accepted = false;
@@ -370,17 +432,19 @@ private:
     void Worker(std::stop_token token) {
         while (!token.stop_requested()) {
             MapViewportLocalizationRequest request;
+            uint64_t epoch = 0;
             {
                 std::unique_lock lock(mutex_);
                 condition_.wait(lock, [&] { return token.stop_requested() || request_.has_value(); });
                 if (token.stop_requested()) return;
+                epoch = epoch_.load();
                 request = std::move(*request_);
                 request_.reset();
             }
-            auto result = Locate(request);
+            auto result = Locate(request, [&] { return token.stop_requested() || epoch_.load() != epoch; });
             {
                 std::scoped_lock lock(mutex_);
-                result_ = std::move(result);
+                if (!token.stop_requested() && epoch_.load() == epoch) result_ = std::move(result);
             }
         }
     }
@@ -388,6 +452,7 @@ private:
     mutable std::mutex mutex_;
     std::condition_variable condition_;
     std::jthread worker_;
+    std::atomic_uint64_t epoch_{0};
     bool ready_ = false;
     std::shared_ptr<const RuntimeFeatureResources> resources_;
     ImageFeatureData globalWorldCandidates_;
@@ -433,3 +498,5 @@ const char* MapViewportLocalizer::ScopeName(MapViewportSearchScope scope) {
     }
     return "unknown";
 }
+
+void MapViewportLocalizer::CancelPending() { Runtime().CancelPending(); }

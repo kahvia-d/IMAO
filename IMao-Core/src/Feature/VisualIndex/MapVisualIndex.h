@@ -82,6 +82,10 @@ struct MapVisualIndexHeader {
 
 class MapVisualIndexCodec {
 public:
+    // Accept the original file bytes or CRLF-to-LF checkout conversion only.
+    static bool LoadManifestShard(const std::filesystem::path& path,
+        const std::filesystem::path& manifest, std::uint32_t expectedFeatureCount,
+        MapVisualIndex& output, std::string& error);
     static bool Save(const std::filesystem::path& path, const MapVisualIndex& index,
         std::string& error, MapVisualIndexHeader* header = nullptr);
 

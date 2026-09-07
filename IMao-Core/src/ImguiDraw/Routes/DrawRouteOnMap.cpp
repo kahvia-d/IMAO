@@ -1,4 +1,4 @@
-﻿#include "DrawRouteOnMap.h"
+#include "DrawRouteOnMap.h"
 #include "../../Coordinate/locationCalculator/ScreenCoordinate.h"
 
 using namespace std;
@@ -10,11 +10,12 @@ void DrawRouteOnMap::GetRoutePointsScreen(const Coordinate& validGameMapcenterPo
 	DrawRouteOnMap::ClearRountsData();
 	lock_guard<mutex> lock(routeMutex);
 
-	for (const auto& routeDatas : LoadEditRouteData::routesDatas) {
+	for (const auto& routeDatas : LoadEditRouteData::GetRoutesSnapshot()) {
+		if (routeDatas.senceId != senceId) continue;
 		vector<Coordinate> routePointsScreen;
 		for (const auto routePointROC : routeDatas.routePointsROC) {
 			Coordinate routePointScreen = ScreenCoordinate::ItemScreenCoordinateOnMap(validGameMapcenterPointROC, routePointROC, captureCorners, rect);
-			if (routePointScreen.x < rect.right + 50 and routePointScreen.y > -50 and routePointScreen.y < rect.bottom + 50 and routePointScreen.y > -50) {
+			if (routePointScreen.x < rect.right + 50 and routePointScreen.x > -50 and routePointScreen.y < rect.bottom + 50 and routePointScreen.y > -50) {
 				routePointsScreen.push_back(routePointScreen);
 			}
 		}
@@ -25,26 +26,29 @@ void DrawRouteOnMap::GetRoutePointsScreen(const Coordinate& validGameMapcenterPo
 	}
 }
 
-void DrawRouteOnMap::DrawRoute(App& app) {
-	lock_guard<mutex> lock(routeMutex);
+void DrawRouteOnMap::DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion) {
 
-	if (DrawRouteOnMap::routesDatas.empty())
+	if (frame.empty())
 		return;
 
-	for (const auto& routeDatas : routesDatas) {
-		const auto screenPoints = routeDatas.routePointsScreenCoord;
+	for (const auto& routeDatas : frame) {
+		const auto& screenPoints = routeDatas.routePointsScreenCoord;
 
-		if (routeDatas.senceId != app.GetMapViewportSceneId()) {
+		if (routeDatas.senceId != sceneId) {
 			continue;
 		}
 			
 		auto draw = ImGui::GetBackgroundDrawList();
 		for (int i = 0; i < screenPoints.size() - 1; i++) {
-			ImVec2 p1 = ImVec2(screenPoints[i].x, screenPoints[i].y);
-			ImVec2 p2 = ImVec2(screenPoints[i + 1].x, screenPoints[i + 1].y);
+			const auto first = motion.Apply(screenPoints[i]);
+			const auto second = motion.Apply(screenPoints[i + 1]);
+			ImVec2 p1 = ImVec2(first.x, first.y);
+			ImVec2 p2 = ImVec2(second.x, second.y);
 			ImU32 color = IM_COL32(255, 0, 0, 255);
 
 			draw->AddLine(p1, p2, color, 1.5);
 		}
 	}
 }
+
+std::vector<RouteDatas> DrawRouteOnMap::Snapshot() { std::scoped_lock lock(routeMutex); return routesDatas; }

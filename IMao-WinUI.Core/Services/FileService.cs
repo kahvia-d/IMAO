@@ -14,7 +14,13 @@ public class FileService : IFileService
         if (File.Exists(path))
         {
             var json = File.ReadAllText(path);
-            return JsonConvert.DeserializeObject<T>(json);
+            try { return JsonConvert.DeserializeObject<T>(json); }
+            catch (JsonException)
+            {
+                // Preserve the damaged bytes before falling back to defaults.
+                File.Copy(path, path + ".corrupt-" + Guid.NewGuid().ToString("N"));
+                return default;
+            }
         }
 
         return default;
@@ -28,7 +34,7 @@ public class FileService : IFileService
         }
 
         var fileContent = JsonConvert.SerializeObject(content);
-        File.WriteAllText(Path.Combine(folderPath, fileName), fileContent, Encoding.UTF8);
+        Helpers.AtomicFile.WriteAllText(Path.Combine(folderPath, fileName), fileContent);
     }
 
     public void Delete(string folderPath, string fileName)

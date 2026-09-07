@@ -1,4 +1,4 @@
-﻿#include "DrawItemOnGameMap.h"
+#include "DrawItemOnGameMap.h"
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/RuntimeStatus.h"
 
@@ -33,15 +33,15 @@ string DescribeMarkerSample(const vector<ItemDatas>& markers) {
 }
 
 vector<ItemDatas> DrawItemOnGameMap::centerPointNearItemsData;
-bool DrawItemOnGameMap::visibleSavedPoints = true;
+std::atomic_bool DrawItemOnGameMap::visibleSavedPoints = true;
 mutex DrawItemOnGameMap::PointNearItemsDataMutex;
 
 string DrawItemOnGameMap::senceName = "World";
-vector<ItemsDatas>* DrawItemOnGameMap::itemsDatas_StoragePtr = nullptr;
+std::shared_ptr<const vector<ItemsDatas>> DrawItemOnGameMap::itemsDatas_StoragePtr;
 
 void DrawItemOnGameMap::UpdateCenterPointNearItemsData(const Coordinate& validGameMapcenterPointROC, const vector<Point2f>& captureCorners, const RECT& rect, int senceId) {
+	lock_guard<mutex> lock(PointNearItemsDataMutex);
 	if (GetBasicDataBySenceId(senceId)) {
-		lock_guard<mutex> lock(PointNearItemsDataMutex);
 		centerPointNearItemsData = GetAndFilterItemsData(validGameMapcenterPointROC, captureCorners, rect);
 		RuntimeStatus::SetMapMarkerCount(static_cast<int>(centerPointNearItemsData.size()));
 		if (Diagnostics::Enabled()) {
@@ -74,8 +74,7 @@ void DrawItemOnGameMap::ClearNearItemsData() {
 }
 
 bool DrawItemOnGameMap::GetBasicDataBySenceId(int senceId) {
-	json* ignored = nullptr;
-	if (!DrawItemBase::GetSceneItemsData(senceId, ignored, itemsDatas_StoragePtr)) return false;
+	itemsDatas_StoragePtr = DrawItemBase::GetSceneItemsSnapshot(senceId);
 	senceName = Scene::SceneIdToName(senceId);
 	return !senceName.empty();
 }
@@ -86,7 +85,7 @@ vector<ItemDatas> DrawItemOnGameMap::GetAndFilterItemsData(const Coordinate& gam
 		vector<string> filteredPoints = DrawItemBase::GetFilteredPoints(senceName, itemsDatas.nameId);
 		for (const auto& itemDatas : itemsDatas.itemsDatas) {
 			Coordinate itemScreen = ScreenCoordinate::ItemScreenCoordinateOnMap(gameMapcenterPointRC, itemDatas.itemMapROC, captureCorners, rect);
-			if (itemScreen.x < rect.right && itemScreen.x >= 0 && itemScreen.y < rect.bottom && itemScreen.y >= 0) {
+			if (itemScreen.x < rect.right + 64 && itemScreen.x >= -64 && itemScreen.y < rect.bottom + 64 && itemScreen.y >= -64) {
 				bool isSaved = false;
 				for (const auto& filteredPoint : filteredPoints) {
 					if (filteredPoint == itemDatas.itemId) {
@@ -94,7 +93,9 @@ vector<ItemDatas> DrawItemOnGameMap::GetAndFilterItemsData(const Coordinate& gam
 						break;
 					}
 				}
-				ItemDatas tempItemData = { itemDatas.itemId,itemDatas.nameId, itemScreen, itemDatas.itemMapROC, isSaved };
+				ItemDatas tempItemData = itemDatas;
+                    tempItemData.screenCoordiante = itemScreen;
+                    tempItemData.isSaved = isSaved;
 				filterItemsData.push_back(tempItemData);
 			}
 		}
@@ -105,12 +106,9 @@ vector<ItemDatas> DrawItemOnGameMap::GetAndFilterItemsData(const Coordinate& gam
 
 bool wasRightButtonDown = false;
 bool rightButtonDown = false;
-void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd) {
-	if (centerPointNearItemsData.empty()) {
-		return;
-	}
-	lock_guard<mutex> lock(PointNearItemsDataMutex);
-	vector<ItemDatas>& itemsDatas = centerPointNearItemsData;
+void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
+	if (frame.markers.empty()) return;
+	const auto& itemsDatas = frame.markers;
 	int texturesReady = 0;
 	int texturesMissing = 0;
 	for (const auto& itemDatas : itemsDatas) {
@@ -145,7 +143,8 @@ void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd) {
 		if (ret) {
 			texturesReady++;
 			float radius = (rect.right * 0.0135f) / 2;
-			ImVec2 screenPosition(itemDatas.screenCoordiante.x, itemDatas.screenCoordiante.y);
+			const auto position = motion.Apply(itemDatas.screenCoordiante);
+			ImVec2 screenPosition(position.x, position.y);
 			//ImVec2 mousePos = ImGui::GetMousePos();
 			POINT mousePos;
 			GetCursorPos(&mousePos);
@@ -168,10 +167,10 @@ void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd) {
 			rightButtonDown = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
 			if (rightButtonDown and !wasRightButtonDown) {
 				if (itemDatas.isSaved) {
-					DrawItemBase::RemoveSavedItemPoint(senceName, itemDatas);
+					DrawItemBase::RemoveSavedItemPoint(frame.sceneName, itemDatas);
 				}
 				else {
-					DrawItemBase::SaveItemPoint(senceName, itemDatas);
+					DrawItemBase::SaveItemPoint(frame.sceneName, itemDatas);
 				}
 			}	
 		}
@@ -191,3 +190,10 @@ void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd) {
 	}
 	wasRightButtonDown = rightButtonDown;
 }
+
+bool DrawItemOnGameMap::HasVisibleItems() {
+    std::scoped_lock lock(PointNearItemsDataMutex);
+    return !centerPointNearItemsData.empty();
+}
+
+ItemMarkerFrame DrawItemOnGameMap::Snapshot() { std::scoped_lock lock(PointNearItemsDataMutex); return {senceName, centerPointNearItemsData, {}}; }

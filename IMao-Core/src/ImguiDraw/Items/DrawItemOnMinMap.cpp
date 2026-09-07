@@ -1,4 +1,5 @@
-﻿#include "DrawItemOnMinMap.h"
+#include "DrawItemOnMinMap.h"
+#include "../../util.h"
 
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/RuntimeStatus.h"
@@ -33,20 +34,23 @@ string DescribeMarkerSample(const vector<ItemDatas>& markers) {
 }
 
 vector<ItemDatas> DrawItemOnMinMap::nearItemsDatas;
+std::mutex DrawItemOnMinMap::markerMutex;
 Coordinate minMapCenterPoint;
+double minMapClipRadius = 0.0;
 string DrawItemOnMinMap::senceName = "World";
-vector<ItemsDatas>* DrawItemOnMinMap::itemsDatas_StoragePtr = nullptr;
+std::shared_ptr<const vector<ItemsDatas>> DrawItemOnMinMap::itemsDatas_StoragePtr;
 
-void DrawItemOnMinMap::UpdatePlayerNearItemsData(HWND &hwnd,Coordinate & playerROC, float minMapRadius,int SceneId) {
-	RECT w_Rect;
-	GetClientRect(hwnd, &w_Rect);
-    if(GetBasicDataBySenceId(SceneId))
-        nearItemsDatas = GetAndFilterItemsData(w_Rect, playerROC,minMapRadius);
+void DrawItemOnMinMap::UpdatePlayerNearItemsData(HWND& hwnd, Coordinate& playerROC, float minMapRadius, int SceneId, double terrainScale) {
+    RECT rect{};
+    if (GetClientRect(hwnd, &rect)) UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, SceneId, terrainScale);
 }
 
-void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & playerROC,float minMapRadius, int SceneId) {
+void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & playerROC,float minMapRadius, int SceneId, double terrainScale) {
+    std::scoped_lock lock(markerMutex);
+    minMapClipRadius = minMapRadius;
+    minMapCenterPoint = ScreenCoordinate::MinMapCircleCenterScreenCoordinate(w_Rect);
     if(GetBasicDataBySenceId(SceneId)) {
-        nearItemsDatas = GetAndFilterItemsData(w_Rect, playerROC, minMapRadius);
+        nearItemsDatas = GetAndFilterItemsData(w_Rect, playerROC, minMapRadius, terrainScale);
 		RuntimeStatus::SetMinimapMarkerCount(static_cast<int>(nearItemsDatas.size()));
         if (Diagnostics::Enabled()) {
             static auto lastReport = chrono::steady_clock::time_point{};
@@ -64,27 +68,27 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & play
 }
 
 void DrawItemOnMinMap::ClearNearItemsData() {
+    std::scoped_lock lock(markerMutex);
 	nearItemsDatas.clear();
 	RuntimeStatus::SetMinimapMarkerCount(0);
 }
 
 bool DrawItemOnMinMap::GetBasicDataBySenceId(int senceId) {
-	json* ignored = nullptr;
-	if (!DrawItemBase::GetSceneItemsData(senceId, ignored, itemsDatas_StoragePtr)) return false;
+	itemsDatas_StoragePtr = DrawItemBase::GetSceneItemsSnapshot(senceId);
 	senceName = Scene::SceneIdToName(senceId);
 	return !senceName.empty();
 }
 
-vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, const Coordinate& playerROC, float minMapRadius) {
+vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, const Coordinate& playerROC, float minMapRadius, double terrainScale) {
     vector<ItemDatas> nearFilterItemsData;
     for (const auto& itemsData : *itemsDatas_StoragePtr) {
         vector<string> filteredPoints = DrawItemBase::GetFilteredPoints(senceName, itemsData.nameId);
         for (const auto& itemDatas : itemsData.itemsDatas) {
-            if (abs(playerROC.x - itemDatas.itemMapROC.x) < 100 && abs(playerROC.y - itemDatas.itemMapROC.y) < 100) {
-                Coordinate itemScreen = ScreenCoordinate::ItemScreenCoordinateOnMinMap(rect, itemDatas.itemMapROC, playerROC);
+            if (abs(playerROC.x - itemDatas.itemMapROC.x) < 120 && abs(playerROC.y - itemDatas.itemMapROC.y) < 120) {
+                Coordinate itemScreen = ScreenCoordinate::ItemScreenCoordinateOnMinMap(rect, itemDatas.itemMapROC, playerROC, terrainScale);
                 minMapCenterPoint = ScreenCoordinate::MinMapCircleCenterScreenCoordinate(rect);
                 float twoPointDistance = CalculatePointDistance(itemScreen, minMapCenterPoint);
-                if (twoPointDistance <= minMapRadius) {
+                if (twoPointDistance <= minMapRadius + 16.0f) {
                     bool isSaved = false;
                     for (const auto& filteredPoint : filteredPoints) {
                         if (filteredPoint == itemDatas.itemId) {
@@ -92,7 +96,9 @@ vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, cons
                             break;
                         }
                     }
-                    ItemDatas tempItemData = { itemDatas.itemId ,itemDatas.nameId ,itemScreen,itemDatas.itemMapROC,isSaved };
+                    ItemDatas tempItemData = itemDatas;
+                    tempItemData.screenCoordiante = itemScreen;
+                    tempItemData.isSaved = isSaved;
                     nearFilterItemsData.push_back(tempItemData);
                 }
             }
@@ -101,24 +107,27 @@ vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, cons
     return nearFilterItemsData;
 }
 
-void DrawItemOnMinMap::SavePlayerNearItemPoint() {
-    if (nearItemsDatas.empty()) {
+void DrawItemOnMinMap::SavePlayerNearItemPoint(const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
+    if (frame.markers.empty()) {
         return;
     }
-    vector<ItemDatas> itemsDatas = nearItemsDatas;
+    const auto& itemsDatas = frame.markers;
     for (const auto& itemDatas : itemsDatas) {
-        if (!itemDatas.isSaved and abs(minMapCenterPoint.x - itemDatas.screenCoordiante.x) < 10 and abs(minMapCenterPoint.y - itemDatas.screenCoordiante.y)< 10){
-            DrawItemBase::SaveItemPoint(senceName, itemDatas);
+        const auto position = motion.Apply(itemDatas.screenCoordiante);
+        if (!itemDatas.isSaved and abs(frame.center.x - position.x) < 10 and abs(frame.center.y - position.y)< 10){
+            DrawItemBase::SaveItemPoint(frame.sceneName, itemDatas);
         }
     }
 }
 
-void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect) {
-    if (nearItemsDatas.empty()) {
+void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
+    if (frame.markers.empty()) {
         return;
     }
-    vector<ItemDatas> itemsData = nearItemsDatas;
+    const auto& itemsData = frame.markers;
     for (const auto& itemData : itemsData) {
+        const auto position = motion.Apply(itemData.screenCoordiante);
+        if (frame.radius > 0.0 && std::hypot(position.x - frame.center.x, position.y - frame.center.y) > frame.radius) continue;
         int image_width1;
         int image_height1;
         bool ret = false;
@@ -151,8 +160,10 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect) {
        
         if (ret) {
             float radius = (rect.right * 0.012f) / 2;
-            ImVec2 screenPosition(itemData.screenCoordiante.x , itemData.screenCoordiante.y );
+            ImVec2 screenPosition(position.x, position.y);
             DrawItemBase::RenderPointCircle(reinterpret_cast<ImTextureID>(texture.Get()), screenPosition, radius, 0.9f, ImColor(0.91f, 0.68f, 0.36f, 0.8f));
         }
     }
 }
+
+ItemMarkerFrame DrawItemOnMinMap::Snapshot() { std::scoped_lock lock(markerMutex); return {senceName, nearItemsDatas, minMapCenterPoint, minMapClipRadius}; }

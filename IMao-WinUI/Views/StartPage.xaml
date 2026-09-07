@@ -1,4 +1,4 @@
-﻿<Page
+<Page
     x:Class="IMao_WinUI.Views.StartPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -81,7 +81,7 @@
                         <TextBlock x:Uid="Start_Card_CaptureMethod_Description" />
                     </toolkit:SettingsCard.Description>
 
-                    <ComboBox x:Name="ComboBox_CaptureMethod"  Loaded="ComboBox_CaptureMethod_Loaded">
+                    <ComboBox x:Name="ComboBox_CaptureMethod" SelectionChanged="CaptureMethod_SelectionChanged"  Loaded="ComboBox_CaptureMethod_Loaded">
                         <x:String>BitBlt</x:String>
                         <x:String>WindowsGraphicsCapture</x:String>
                     </ComboBox>
@@ -112,7 +112,7 @@
                         <TextBlock x:Uid="Start_Card_WindowOptimization_Description"/>
                     </toolkit:SettingsCard.Description>
 
-                    <ToggleSwitch x:Name="Start_ToggleSwitch_WindowOptimization" IsOn="True"/>
+                    <ToggleSwitch x:Name="Start_ToggleSwitch_WindowOptimization" IsOn="False"/>
                 </toolkit:SettingsCard>
             </toolkit:SettingsExpander.Items>
         </toolkit:SettingsExpander>

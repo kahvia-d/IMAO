@@ -1,6 +1,7 @@
 #include "MapUiVisualDetector.h"
 
 #include <algorithm>
+#include <cmath>
 #include <opencv2/imgproc.hpp>
 
 namespace {
@@ -52,4 +53,67 @@ MapCompassDetection MapUiVisualDetector::DetectBigMapCompass(const cv::Mat& snap
     // anti-aliasing while remaining well below the observed map signature.
     result.visible = result.cropPixels > 0 && result.goldPixels * 100 >= result.cropPixels * 3;
     return result;
+}
+
+bool MapUiVisualDetector::DetectBigMapControls(const cv::Mat& snapshot, const RECT& clientRect) {
+    if (snapshot.empty() || (snapshot.channels() != 3 && snapshot.channels() != 4) ||
+        snapshot.depth() != CV_8U || snapshot.cols != clientRect.right - clientRect.left ||
+        snapshot.rows != clientRect.bottom - clientRect.top) return false;
+
+    // Normalize only the narrow zoom-control strip, keeping this probe cheap
+    // enough to run on the state thread. The two circular +/- buttons are
+    // fixed UI, independent of map texture, panning, zoom, and player position.
+    const cv::Rect strip(cvRound(snapshot.cols * 1480.0 / kReferenceWidth),
+        cvRound(snapshot.rows * 235.0 / kReferenceHeight),
+        cvRound(snapshot.cols * 60.0 / kReferenceWidth),
+        cvRound(snapshot.rows * 410.0 / kReferenceHeight));
+    if ((strip & cv::Rect(0, 0, snapshot.cols, snapshot.rows)) != strip) return false;
+    cv::Mat normalized;
+    cv::resize(snapshot(strip), normalized, {60, 410}, 0, 0, cv::INTER_AREA);
+    cv::Mat bgr;
+    if (normalized.channels() == 4) cv::cvtColor(normalized, bgr, cv::COLOR_BGRA2BGR);
+    else bgr = normalized;
+    cv::Mat white(bgr.size(), CV_8UC1, cv::Scalar(0));
+    cv::Mat pale(bgr.size(), CV_8UC1, cv::Scalar(0));
+    for (int y = 0; y < bgr.rows; ++y) {
+        for (int x = 0; x < bgr.cols; ++x) {
+            const auto pixel = bgr.at<cv::Vec3b>(y, x);
+            const int low = std::min({pixel[0], pixel[1], pixel[2]});
+            const int high = std::max({pixel[0], pixel[1], pixel[2]});
+            white.at<uchar>(y, x) = low >= 155 && high - low <= 65 ? 255 : 0;
+            // The thin ring is translucent, unlike the bright +/- glyph.
+            pale.at<uchar>(y, x) = low >= 90 && high - low <= 65 ? 255 : 0;
+        }
+    }
+    const auto brightNear = [&white](int x, int y) {
+        return cv::countNonZero(white(cv::Rect(x - 1, y - 1, 3, 3))) > 0;
+    };
+    const auto button = [&](int expectedY, bool plus, int& foundX) {
+        for (int y = expectedY - 6; y <= expectedY + 6; ++y) {
+            for (int x = 23; x <= 35; ++x) {
+                int horizontal = 0, vertical = 0, ring = 0, darkCorners = 0;
+                for (int d = -5; d <= 5; ++d) {
+                    horizontal += brightNear(x + d, y);
+                    if (std::abs(d) >= 3) vertical += brightNear(x, y + d);
+                }
+                if (horizontal < 10 || (plus ? vertical < 5 : vertical > 2)) continue;
+                for (int sector = 0; sector < 16; ++sector) {
+                    const double angle = sector * CV_PI / 8;
+                    const int ringX = x + cvRound(10 * std::cos(angle));
+                    const int ringY = y + cvRound(10 * std::sin(angle));
+                    ring += cv::countNonZero(pale(cv::Rect(ringX - 1, ringY - 1, 3, 3))) > 0;
+                }
+                for (int dx : {-4, 4}) for (int dy : {-4, 4}) {
+                    darkCorners += !brightNear(x + dx, y + dy);
+                }
+                if (ring >= 12 && darkCorners >= 3) {
+                    foundX = x;
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    int plusX = 0, minusX = 0;
+    return button(30, true, plusX) && button(380, false, minusX) && std::abs(plusX - minusX) <= 3;
 }

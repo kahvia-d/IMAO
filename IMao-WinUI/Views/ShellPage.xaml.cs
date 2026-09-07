@@ -44,6 +44,14 @@ public sealed partial class ShellPage : Page
         KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.GoBack));
     }
 
+    private void NavigationFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    {
+        // Pages with their own scrolling surface need a bounded viewport for virtualization.
+        bool ownsScroll = e.Content is FilterPage or DiagnosticsPage;
+        PageScrollViewer.VerticalScrollBarVisibility = ownsScroll ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        PageScrollViewer.VerticalScrollMode = ownsScroll ? ScrollMode.Disabled : ScrollMode.Auto;
+    }
+
     private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
     {
         App.AppTitlebar = AppTitleBarText as UIElement;

@@ -13,6 +13,7 @@ public sealed partial class StartPage : Page
 {
     private readonly CoreHostService coreHost;
     private bool subscribed;
+    private bool restoringConfiguration = true;
 
     public StartViewModel ViewModel { get; }
 
@@ -22,10 +23,11 @@ public sealed partial class StartPage : Page
         coreHost = App.GetService<CoreHostService>();
         InitializeComponent();
         ComboBox_GameServer.SelectedIndex = 0;
-        ComboBox_CaptureMethod.SelectedIndex = 0;
+        ComboBox_CaptureMethod.SelectedIndex = coreHost.Configuration.CaptureWay;
+        restoringConfiguration = false;
         Loaded += StartPage_Loaded;
         Unloaded += StartPage_Unloaded;
-        _ = InitializeAsync();
+
     }
 
     private async void StartPage_Loaded(object sender, RoutedEventArgs e)
@@ -36,7 +38,7 @@ public sealed partial class StartPage : Page
             subscribed = true;
         }
         await coreHost.EnsureStartedAsync();
-        await ApplyInitialConfigurationAsync();
+        RestoreConfiguration();
         UpdateCoreStatus(coreHost.Status);
     }
 
@@ -47,23 +49,18 @@ public sealed partial class StartPage : Page
         subscribed = false;
     }
 
-    private async Task ApplyInitialConfigurationAsync()
+    private void RestoreConfiguration()
     {
-        LocalItemFilter localItemFilter = new();
-        string[] enabledItems = localItemFilter.GetFilteredItemsDatas()
-            .Where(item => item.Status == 1 && !String.IsNullOrWhiteSpace(item.Name))
-            .Select(item => item.Name!)
-            .ToArray();
-        await coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex,
-            mapUpdateCycle: 80, minMapUpdateCycle: 80, mapEnabled: true, minMapEnabled: true,
-            statusBarEnabled: RuntimePreferences.StatusBarEnabled);
-        if (enabledItems.Length > 0) await coreHost.SetItemsAsync(enabledItems);
+        restoringConfiguration = true;
+        ComboBox_CaptureMethod.SelectedIndex = coreHost.Configuration.CaptureWay;
+        restoringConfiguration = false;
     }
 
-    private async Task InitializeAsync()
+    private async void CaptureMethod_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        var isLatest = await CheckVersion.IsLatest();
-        if (!isLatest) Start_InfoBar_NotLatestVersion.IsOpen = true;
+        if (restoringConfiguration || ComboBox_CaptureMethod.SelectedIndex < 0) return;
+        await coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex);
+        RestoreConfiguration();
     }
 
     private void ComboBox_CaptureMethod_Loaded(object sender, RoutedEventArgs e) { }
@@ -78,19 +75,12 @@ public sealed partial class StartPage : Page
             return;
         }
 
-        ContentDialog dialog = new()
+        if (Start_ToggleSwitch_WindowOptimization.IsOn &&
+            !BitBltRegistryHelper.TryDisableSwapEffectUpgrade(out var graphicsError))
         {
-            XamlRoot = XamlRoot,
-            Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
-            Title = "Suggestion",
-            PrimaryButtonText = "Confirm",
-            SecondaryButtonText = "I see",
-            DefaultButton = ContentDialogButton.Primary,
-            Content = new SuggestionDialog()
-        };
-        await dialog.ShowAsync();
-
-        if (Start_ToggleSwitch_WindowOptimization.IsOn) BitBltRegistryHelper.SetDirectXUserGlobalSettings();
+            coreHost.ReportUserError("无法修改 Windows 窗口优化设置：" + graphicsError);
+            return;
+        }
         if (!GameWindow.CheckGameWindowSize())
         {
             Start_InfoBar_IncorrectGameWindowSize.IsOpen = true;
@@ -98,14 +88,15 @@ public sealed partial class StartPage : Page
         }
 
         Start_Button.IsEnabled = false;
-        await coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex);
-        await coreHost.StartRuntimeAsync();
+        if (await coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex))
+            await coreHost.StartRuntimeAsync();
+        else UpdateCoreStatus(coreHost.Status);
     }
 
     private async void RestartCore_Click(object sender, RoutedEventArgs e)
     {
         await coreHost.RestartAsync();
-        await ApplyInitialConfigurationAsync();
+        RestoreConfiguration();
         UpdateCoreStatus(coreHost.Status);
     }
 
@@ -126,6 +117,7 @@ public sealed partial class StartPage : Page
         bool isRunning = status.IsRunning;
         bool isStarting = status.CoreState is "connecting" or "loading" or "startingOverlay" or "stopping";
         Start_Button.IsEnabled = !isStarting;
+        ComboBox_CaptureMethod.IsEnabled = !isRunning && !isStarting;
         Start_Button_Icon.Glyph = isRunning ? "\uE71A" : "\uE768";
         Start_Button_Text.Text = isStarting ? "Starting..." : isRunning ? "Stop" : "Start";
 
@@ -146,7 +138,7 @@ public sealed partial class StartPage : Page
     {
         try
         {
-            string routesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedPoints");
+            string routesPath = UserDataPaths.SavedPoints;
             if (Directory.Exists(routesPath))
             {
                 Process.Start(new ProcessStartInfo(routesPath) { UseShellExecute = true, Verb = "open" });

@@ -1,4 +1,10 @@
 *build*/
+!tools/KuroMapFeatureBuilder/
+tools/KuroMapFeatureBuilder/*
+!tools/KuroMapFeatureBuilder/main.cpp
+!IMao-Core/tools/VisualIndexBuilder/
+IMao-Core/tools/VisualIndexBuilder/*
+!IMao-Core/tools/VisualIndexBuilder/main.cpp
 x64/
 Debug/
 bin/

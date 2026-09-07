@@ -58,6 +58,7 @@ class MapViewportLocalizer {
 public:
     static bool Initialize(std::shared_ptr<const RuntimeFeatureResources> resources, std::string& error);
     static void Shutdown();
+    static void CancelPending();
     static bool IsReady();
     static bool Submit(MapViewportLocalizationRequest request);
     static bool TryTakeLatestResult(MapViewportLocalizationResult& result);

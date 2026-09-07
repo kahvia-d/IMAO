@@ -2,6 +2,9 @@
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/StructuredLogger.h"
+#include "../Feature/RuntimeFeatureRepository.h"
+#include "../Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
+#include "../App/MapViewportLocalizer.h"
 
 #include <Windows.h>
 
@@ -73,25 +76,24 @@ public:
     bool Send(const json& value) {
         const std::string payload = value.dump() + "\n";
         std::scoped_lock lock(writeMutex);
-        if (handle == INVALID_HANDLE_VALUE) return false;
         DWORD written = 0;
-        if (!WriteFile(handle, payload.data(), static_cast<DWORD>(payload.size()), &written, nullptr) || written != payload.size()) {
-            return false;
-        }
-        return true;
+        return Transfer(true, const_cast<char*>(payload.data()), static_cast<DWORD>(payload.size()), written, 2000) && written == payload.size();
     }
 
     bool ReadLine(std::string& line) {
-        line.clear();
-        char character{};
         for (;;) {
-            DWORD received = 0;
-            if (!ReadFile(handle, &character, 1, &received, nullptr) || received == 0) return false;
-            if (character == '\n') return true;
-            if (character != '\r') {
-                line.push_back(character);
-                if (line.size() > 1024 * 1024) return false;
+            const auto newline = incoming.find('\n');
+            if (newline != std::string::npos) {
+                line = incoming.substr(0, newline);
+                incoming.erase(0, newline + 1);
+                if (!line.empty() && line.back() == '\r') line.pop_back();
+                return true;
             }
+            char chunk[4096];
+            DWORD received = 0;
+            if (!Transfer(false, chunk, sizeof(chunk), received, INFINITE) || received == 0) return false;
+            incoming.append(chunk, received);
+            if (incoming.size() > 1024 * 1024) return false;
         }
     }
 
@@ -103,7 +105,29 @@ public:
         handle = INVALID_HANDLE_VALUE;
     }
 
+    void Disconnect() { DisconnectNamedPipe(handle); }
+
 private:
+    bool Transfer(bool writing, void* buffer, DWORD size, DWORD& transferred, DWORD timeout) {
+        if (handle == INVALID_HANDLE_VALUE) return false;
+        OVERLAPPED operation{};
+        operation.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        if (!operation.hEvent) return false;
+        const BOOL started = writing ? WriteFile(handle, buffer, size, &transferred, &operation)
+                                     : ReadFile(handle, buffer, size, &transferred, &operation);
+        bool succeeded = started != FALSE;
+        if (!started && GetLastError() == ERROR_IO_PENDING) {
+            if (WaitForSingleObject(operation.hEvent, timeout) != WAIT_OBJECT_0) {
+                CancelIoEx(handle, &operation);
+                // Drain cancellation before the stack OVERLAPPED and buffer disappear.
+                GetOverlappedResult(handle, &operation, &transferred, TRUE);
+            }
+            else succeeded = GetOverlappedResult(handle, &operation, &transferred, FALSE) != FALSE;
+        }
+        CloseHandle(operation.hEvent);
+        return succeeded;
+    }
+    std::string incoming;
     HANDLE handle = INVALID_HANDLE_VALUE;
     std::mutex writeMutex;
 };
@@ -201,7 +225,7 @@ private:
                     events.pop_front();
                 }
             }
-            if (!connection.Send(next)) return;
+            if (!connection.Send(next)) { connection.Disconnect(); return; }
         }
     }
 
@@ -222,25 +246,31 @@ void SendAck(PipeEventDispatcher& events, const json& command, bool accepted, st
 }
 
 bool ApplyConfigure(const json& command) {
-    if (command.contains("captureWay")) {
-        const int value = command.at("captureWay").get<int>();
-        if (value != 0 && value != 1) throw std::invalid_argument("captureWay 必须是 0 或 1");
-        SetCaptureWay(value);
-    }
-    if (command.contains("mapUpdateCycle")) {
-        const int value = command.at("mapUpdateCycle").get<int>();
-        if (value < 16 || value > 1000) throw std::invalid_argument("mapUpdateCycle 超出 16-1000 ms 范围");
-        SetMapDataUpdateCycle(value);
-    }
-    if (command.contains("minMapUpdateCycle")) {
-        const int value = command.at("minMapUpdateCycle").get<int>();
-        if (value < 16 || value > 1000) throw std::invalid_argument("minMapUpdateCycle 超出 16-1000 ms 范围");
-        SetMinMapDataUpdateCycle(value);
-    }
-    if (command.contains("mapEnabled")) EnabledMapShowItem(command.at("mapEnabled").get<bool>());
-    if (command.contains("minMapEnabled")) EnabledMinMapShowItem(command.at("minMapEnabled").get<bool>());
-    if (command.contains("savedPointsEnabled")) SetVisibleSavedPoints(command.at("savedPointsEnabled").get<bool>());
-    if (command.contains("statusBarEnabled")) RuntimeStatus::SetStatusBarEnabled(command.at("statusBarEnabled").get<bool>());
+    // Validate the complete command before applying any field.
+    auto integer = [&](const char* key, int minimum, int maximum) -> std::optional<int> {
+        if (!command.contains(key)) return std::nullopt;
+        if (!command.at(key).is_number_integer()) throw std::invalid_argument(std::string(key) + " 必须是整数");
+        const auto value = command.at(key).get<int64_t>();
+        if (value < minimum || value > maximum) throw std::invalid_argument(std::string(key) + " 超出允许范围");
+        return static_cast<int>(value);
+    };
+    auto boolean = [&](const char* key) -> std::optional<bool> {
+        return command.contains(key) ? std::optional<bool>(command.at(key).get<bool>()) : std::nullopt;
+    };
+    const auto capture = integer("captureWay", 0, 1);
+    const auto mapCycle = integer("mapUpdateCycle", 16, 1000);
+    const auto miniCycle = integer("minMapUpdateCycle", 16, 1000);
+    const auto map = boolean("mapEnabled");
+    const auto mini = boolean("minMapEnabled");
+    const auto saved = boolean("savedPointsEnabled");
+    const auto bar = boolean("statusBarEnabled");
+    if (capture) SetCaptureWay(*capture);
+    if (mapCycle) SetMapDataUpdateCycle(*mapCycle);
+    if (miniCycle) SetMinMapDataUpdateCycle(*miniCycle);
+    if (map) EnabledMapShowItem(*map);
+    if (mini) EnabledMinMapShowItem(*mini);
+    if (saved) SetVisibleSavedPoints(*saved);
+    if (bar) RuntimeStatus::SetStatusBarEnabled(*bar);
     return true;
 }
 
@@ -360,6 +390,22 @@ void TerminateHandler() noexcept {
 
 int main(int argc, char** argv) {
     try {
+    // Exercise the exact shipped resource loader without requiring a game
+    // window or a WinUI/IPC client. Useful after staging and in regression CI.
+    if (argc == 3 && std::string(argv[1]) == "--check-resources") {
+        std::string error;
+        auto& repository = RuntimeFeatureRepository::Instance();
+        repository.BeginPreload(std::filesystem::absolute(Utf8ToWide(argv[2])));
+        const auto resources = repository.AwaitReady(error);
+        const bool visualReady = resources && GlobalVisualLocalizer::Initialize(resources, error);
+        const bool viewportReady = visualReady && MapViewportLocalizer::Initialize(resources, error);
+        std::cout << json({{"resourcesReady", resources != nullptr}, {"visualReady", visualReady},
+            {"viewportReady", viewportReady}, {"error", error}}).dump() << std::endl;
+        MapViewportLocalizer::Shutdown();
+        GlobalVisualLocalizer::Shutdown();
+        repository.Shutdown();
+        return visualReady && viewportReady ? 0 : 1;
+    }
     const auto pipeName = ParsePipeName(argc, argv);
     if (!pipeName.has_value() || pipeName->empty()) {
         std::cerr << "IMao-CoreHost requires --pipe <name>" << std::endl;
@@ -374,7 +420,7 @@ int main(int argc, char** argv) {
     Initi();
 
     const std::wstring fullPipeName = L"\\\\.\\pipe\\" + *pipeName;
-    const HANDLE handle = CreateNamedPipeW(fullPipeName.c_str(), PIPE_ACCESS_DUPLEX,
+    const HANDLE handle = CreateNamedPipeW(fullPipeName.c_str(), PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
         1, 64 * 1024, 64 * 1024, 0, nullptr);
     if (handle == INVALID_HANDLE_VALUE) {
@@ -383,7 +429,26 @@ int main(int argc, char** argv) {
         return 3;
     }
 
-    const BOOL connected = ConnectNamedPipe(handle, nullptr) ? TRUE : GetLastError() == ERROR_PIPE_CONNECTED;
+    OVERLAPPED connect{};
+    connect.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    bool connected = false;
+    if (connect.hEvent) {
+        connected = ConnectNamedPipe(handle, &connect) != FALSE;
+        if (!connected) {
+            const DWORD error = GetLastError();
+            if (error == ERROR_PIPE_CONNECTED) connected = true;
+            else if (error == ERROR_IO_PENDING) {
+                DWORD transferred = 0;
+                if (WaitForSingleObject(connect.hEvent, 10000) == WAIT_OBJECT_0)
+                    connected = GetOverlappedResult(handle, &connect, &transferred, FALSE) != FALSE;
+                else {
+                    CancelIoEx(handle, &connect);
+                    GetOverlappedResult(handle, &connect, &transferred, TRUE);
+                }
+            }
+        }
+        CloseHandle(connect.hEvent);
+    }
     if (!connected) {
         StructuredLogger::Record("error", "host", "named-pipe-connect-failed", std::to_string(GetLastError()));
         CloseHandle(handle);
@@ -425,7 +490,6 @@ int main(int argc, char** argv) {
     if (!shouldExit) {
         RuntimeStatus::SetCoreState("stopping", "控制界面已断开，正在停止核心");
         Stop();
-        std::this_thread::sleep_for(std::chrono::seconds(5));
         Shutdown();
     }
     StructuredLogger::Record("info", "host", "corehost-stopped");

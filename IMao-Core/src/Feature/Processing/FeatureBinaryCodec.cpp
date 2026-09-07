@@ -388,6 +388,42 @@ bool FeatureBinaryCodec::Sha256File(const std::filesystem::path& path,
     }
 }
 
+bool FeatureBinaryCodec::Sha256LfTextFile(const std::filesystem::path& path,
+    std::array<std::uint8_t, 32>& output, std::string& error) {
+    try {
+        std::ifstream input(path, std::ios::binary);
+        if (!input) {
+            error = "text source cannot be opened: " + path.string();
+            return false;
+        }
+        // Candidate manifests are small; bound allocation for invalid inputs.
+        constexpr std::size_t maxManifestBytes = 4 * 1024 * 1024;
+        std::vector<std::uint8_t> bytes;
+        char value;
+        while (input.get(value)) {
+            if (bytes.size() >= maxManifestBytes) {
+                error = "text source exceeds manifest size limit: " + path.string();
+                return false;
+            }
+            if (value == '\n' && !bytes.empty() && bytes.back() == '\r') bytes.pop_back();
+            bytes.push_back(static_cast<std::uint8_t>(value));
+        }
+        if (!input.eof()) {
+            error = "text source read failed: " + path.string();
+            return false;
+        }
+        Sha256State hash;
+        hash.Update(bytes.data(), bytes.size());
+        output = hash.Finish();
+        error.clear();
+        return true;
+    }
+    catch (const std::exception& exception) {
+        error = exception.what();
+        return false;
+    }
+}
+
 std::string FeatureBinaryCodec::Sha256Hex(const std::array<std::uint8_t, 32>& hash) {
     std::ostringstream result;
     result << std::hex << std::setfill('0');

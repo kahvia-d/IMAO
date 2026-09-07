@@ -1,28 +1,21 @@
-﻿#pragma once
+#pragma once
 #include "vector"
 #include "../../Coordinate/CoordinateStruct.h"
 #include "../../util.h"
-#include "../../App/App.h"
+#include "../../Domain/MapData.h"
+#include <atomic>
+#include <mutex>
+class App;
 #include <string>
 #include <thread>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
-struct RouteDatas
-{
-	std::string name;
-	int senceId;
-	std::vector<Coordinate> routePointsROC;
-	std::vector<Coordinate> routePointsScreenCoord;
-	RouteDatas(std::string name,int senceId, std::vector<Coordinate> routePointsROC = std::vector<Coordinate>(), std::vector<Coordinate> routePointsScreenCoord = std::vector<Coordinate>()) : name(name), senceId(senceId), routePointsROC(routePointsROC), routePointsScreenCoord(routePointsScreenCoord) {};
-};
-
-
-
 class LoadEditRouteData {
 public:
-	static std::vector<RouteDatas> routesDatas;
+	static std::vector<RouteDatas> GetRoutesSnapshot();
+	static void PrepareStorage();
 	static void Initi(App* app);
 	static void AddRouteDatas(std::string name, int senceId, const Coordinate& ROC_a, const Coordinate& ROC_b);
 	static void SetRouteJsonName(const std::string& setName);
@@ -34,13 +27,17 @@ public:
 
 	static void StopThread() {
 		threadStopFlag = true;
-		Thread.join();
+		if (Thread.joinable()) Thread.join();
+		app = nullptr;
 	}
 
 	static void ClearRoutesDatas() {
+		std::scoped_lock lock(dataMutex);
 		routesDatas.clear();
 	}
 private:
+	static std::vector<RouteDatas> routesDatas;
+	static std::mutex dataMutex;
 	static void StartThread() {
 		threadStopFlag = false;
 		Thread = std::thread(&LoadEditRouteData::Thread_KeyMonitoring_AddRouteDatas_ByMousePos);
@@ -48,6 +45,6 @@ private:
 
 	static App* app;
 	static std::thread Thread;
-	static bool threadStopFlag;
+	static std::atomic_bool threadStopFlag;
 	static std::string routeJsonName;
 };

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "RelativeCoordinates.h"
+#include "MinimapProjectionGeometry.h"
 #include "Windows.h"
 #include<vector>
 #include "opencv2/opencv.hpp"
@@ -21,8 +22,8 @@ public:
 	static RectangularAreaScreenLocation MinMapScreenCoordinate(HWND& w_hwnd);
 	static RectangularAreaScreenLocation SpecifyScreenCoordinate(const RECT& w_Rect, std::vector<Coordinate> specifyAreaScreenData);
 	static RectangularAreaScreenLocation SpecifyScreenCoordinate(const HWND& hwnd, std::vector<Coordinate> specifyAreaScreenData);
-	static Coordinate ItemScreenCoordinateOnMinMap(const HWND& hwnd, const Coordinate& itemRC, const Coordinate& playerRC);
-	static Coordinate ItemScreenCoordinateOnMinMap(const RECT& rect, const Coordinate& itemRC, const Coordinate& playerRC);
+	static Coordinate ItemScreenCoordinateOnMinMap(const HWND& hwnd, const Coordinate& itemRC, const Coordinate& playerRC, double terrainScale = kNominalMinimapTerrainScale);
+	static Coordinate ItemScreenCoordinateOnMinMap(const RECT& rect, const Coordinate& itemRC, const Coordinate& playerRC, double terrainScale = kNominalMinimapTerrainScale);
 	static Coordinate ItemScreenCoordinateOnMap(const Coordinate& gameMapCenterPointImgMapROC, const Coordinate& itemROC, const std::vector<cv::Point2f>& captureCorners, const RECT& w_rect);
 };
 

@@ -1,4 +1,4 @@
-﻿using IMao_WinUI.Contracts.Services;
+using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Core.Contracts.Services;
 using IMao_WinUI.Core.Helpers;
 using IMao_WinUI.Helpers;
@@ -26,6 +26,7 @@ public class LocalSettingsService : ILocalSettingsService
     private IDictionary<string, object> _settings;
 
     private bool _isInitialized;
+    private readonly SemaphoreSlim settingsLock = new(1, 1);
 
     public LocalSettingsService(IFileService fileService, IOptions<LocalSettingsOptions> options)
     {
@@ -59,12 +60,13 @@ public class LocalSettingsService : ILocalSettingsService
         }
         else
         {
-            await InitializeAsync();
-
-            if (_settings != null && _settings.TryGetValue(key, out var obj))
+            await settingsLock.WaitAsync();
+            try
             {
-                return await Json.ToObjectAsync<T>((string)obj);
+                await InitializeAsync();
+                if (_settings.TryGetValue(key, out var obj)) return await Json.ToObjectAsync<T>((string)obj);
             }
+            finally { settingsLock.Release(); }
         }
 
         return default;
@@ -78,11 +80,15 @@ public class LocalSettingsService : ILocalSettingsService
         }
         else
         {
-            await InitializeAsync();
-
-            _settings[key] = await Json.StringifyAsync(value);
-
-            await Task.Run(() => _fileService.Save(_applicationDataFolder, _localsettingsFile, _settings));
+            await settingsLock.WaitAsync();
+            try
+            {
+                await InitializeAsync();
+                var next = new Dictionary<string, object>(_settings) { [key] = await Json.StringifyAsync(value) };
+                await Task.Run(() => _fileService.Save(_applicationDataFolder, _localsettingsFile, next));
+                _settings = next;
+            }
+            finally { settingsLock.Release(); }
         }
     }
 }

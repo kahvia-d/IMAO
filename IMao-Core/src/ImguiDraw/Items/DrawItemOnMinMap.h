@@ -1,4 +1,5 @@
-﻿#pragma once
+#pragma once
+#include "../../Runtime/OverlayMotion.h"
 #include "vector"
 #include "../../Coordinate/locationCalculator/ScreenCoordinate.h"
 #include "DrawItemBase.h"
@@ -7,17 +8,19 @@
 class DrawItemOnMinMap
 {
 public:
-	static void DrawItemsOnMinMap(const RECT& rect);
-	static void UpdatePlayerNearItemsData(HWND& hwnd, Coordinate& playerROC, float minMapRadius, int SceneId);
-	static void UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate &playerROC, float minMapRadius, int SceneId);
-	static void SavePlayerNearItemPoint();
+	static void DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion = {});
+	static void UpdatePlayerNearItemsData(HWND& hwnd, Coordinate& playerROC, float minMapRadius, int SceneId, double terrainScale = kNominalMinimapTerrainScale);
+	static void UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate &playerROC, float minMapRadius, int SceneId, double terrainScale = kNominalMinimapTerrainScale);
+	static void SavePlayerNearItemPoint(const ItemMarkerFrame& frame, const OverlayScreenTransform& motion = {});
+    static ItemMarkerFrame Snapshot();
 	static void ClearNearItemsData();
 
 private:
+	static std::mutex markerMutex;
 	static std::vector<ItemDatas> nearItemsDatas;
 	static std::string senceName;
-	static std::vector<ItemsDatas>* itemsDatas_StoragePtr;
+	static std::shared_ptr<const std::vector<ItemsDatas>> itemsDatas_StoragePtr;
 
-	static std::vector<ItemDatas> GetAndFilterItemsData(const RECT& rect, const Coordinate& playerROC, float minMapRadius);
+	static std::vector<ItemDatas> GetAndFilterItemsData(const RECT& rect, const Coordinate& playerROC, float minMapRadius, double terrainScale);
 	static bool GetBasicDataBySenceId(int senceId);
 };

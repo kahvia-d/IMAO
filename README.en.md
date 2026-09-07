@@ -3,6 +3,8 @@
 #### Introduction
 An interactive map overlaying the game window that uses image matching technology to synchronize player locations in real-time, reducing the frequency with which players switch back and forth between the game and map tools during exploration.
 
+This project continues development of [IMao-Wuthering-Waves](https://github.com/Yepin2022/IMao-Wuthering-Waves), using game map and point data from the [Kurobbs community map](https://www.kurobbs.com/mc/map/). See the [2026-09-07 project audit](Docs/ProjectAudit_20260907.md) for fixes, supported scope, and remaining validation work.
+
 #### Function Demonstration
 <details>
   <summary>Minimap Navigation</summary>
@@ -22,7 +24,7 @@ An interactive map overlaying the game window that uses image matching technolog
 
 #### Usage Instructions
 1. Prepare the operating environment: [.NET 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) and [Microsoft Visual C++ 2015-2022 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
-2. Go to [Releases](https://github.com/Yepin2022/IMao-Wuthering-Waves/releases) to download the latest version. Extract the files and run IMao-WinUI.exe.
+2. Build the current version using the [build guide](Docs/Build_zh-Hans.md), then run IMao-WinUI.exe from the output directory. The original upstream releases do not include this project's subsequent fixes.
 3. Open the game and adjust its resolution to 16:9.
 4. After ensuring that the coordinates in the lower-left corner of the game are clearly displayed, click the start button. Wait for the information in the lower-right corner to disappear, which means the correct coordinates have been successfully recognized. Then, enable the required functions on the function page.
 

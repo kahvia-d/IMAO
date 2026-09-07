@@ -1,0 +1,39 @@
+[CmdletBinding()]
+param([switch]$SkipBuild, [switch]$SkipHost, [string]$OutputDirectory, [ValidateRange(1, 64)][int]$Parallel = 4)
+$ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Enter-DevEnvironment.ps1')
+$taskRepo = Split-Path -Parent $PSScriptRoot
+$taskOutput = if ([string]::IsNullOrWhiteSpace($OutputDirectory)) { Join-Path $taskRepo 'out\system-audit' } else { [IO.Path]::GetFullPath($OutputDirectory, $taskRepo) }
+$taskManagedOutput = Join-Path $taskOutput 'managed-runtime'
+New-Item -ItemType Directory -Force -Path $taskOutput | Out-Null
+$taskVswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
+$taskCmake = & $taskVswhere -latest -products * -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' | Select-Object -First 1
+$taskVcvars = & $taskVswhere -latest -products * -find 'VC\Auxiliary\Build\vcvars64.bat' | Select-Object -First 1
+function Invoke-TestCommand([string]$Command, [string]$LogName) {
+    $log = Join-Path $taskOutput $LogName
+    $info = [Diagnostics.ProcessStartInfo]::new()
+    $info.FileName = "$env:SystemRoot\System32\cmd.exe"
+    $info.Arguments = '/d /c call "' + $taskVcvars + '" >nul && (' + $Command + ') > "' + $log + '" 2>&1'
+    $info.UseShellExecute = $false
+    $info.CreateNoWindow = $true
+    $info.WorkingDirectory = $taskRepo
+    [void]$info.EnvironmentVariables.Remove('Path')
+    [void]$info.EnvironmentVariables.Remove('PATH')
+    $info.EnvironmentVariables['PATH'] = [Environment]::GetEnvironmentVariable('Path', 'Process')
+    $info.EnvironmentVariables['LOCALAPPDATA'] = Join-Path $taskOutput 'local-app-data'
+    $info.EnvironmentVariables['CMAKE_BUILD_PARALLEL_LEVEL'] = [string]$Parallel
+    $process = [Diagnostics.Process]::Start($info)
+    $process.WaitForExit()
+    $code = $process.ExitCode
+    $process.Dispose()
+    Get-Content -LiteralPath $log -Tail 8
+    if ($code -ne 0) { throw "$LogName failed with exit code $code; see $log" }
+}
+if (-not $SkipBuild) {
+    Invoke-TestCommand ('"' + $taskCmake + '" --build out\build\windows-x64-release --target IMao-CoreHost IMaoOptimizationTests IMaoVisualRegression --parallel ' + $Parallel) 'native-build.log'
+    Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" build Tests\ManagedRuntime\ManagedRuntime.csproj -c Release --output "' + $taskManagedOutput + '" --source "' + $env:NUGET_PACKAGES + '" -p:NuGetAudit=false') 'managed-build.log'
+}
+Invoke-TestCommand 'x64\Release\IMaoOptimizationTests.exe' 'native-tests.log'
+$taskHostArgument = if ($SkipHost) { '' } else { ' "' + (Join-Path $taskRepo 'x64\Release') + '"' }
+Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" "' + (Join-Path $taskManagedOutput 'ManagedRuntime.dll') + '"' + $taskHostArgument) 'managed-tests.log'
+Write-Host "Runtime tests passed. Evidence: $taskOutput" -ForegroundColor Green

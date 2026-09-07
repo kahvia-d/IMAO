@@ -91,26 +91,27 @@
     "minY": -79.44761657714844
   },
   "referenceVerification": {
-    "errorPixels": 2.782073481865515,
+    "errorPixels": 2.756477240429371,
     "expectedMapCoordinate": {
       "x": -6792.450000000001,
       "y": 1744.92
     },
-    "goodMatches": 6,
-    "mapKeypoints": 119,
+    "goodMatches": 21,
+    "mapKeypoints": 611,
     "minimapKeypoints": 114,
-    "nearAnchorMatches": 4,
+    "nearAnchorMatches": 13,
     "passed": true,
-    "reference": "Wuthering Waves Screenshot 2026.09.05 - 00.00.19.20.png",
+    "reference": "reference--7690---176-full.png",
     "resultMapCoordinate": {
-      "x": -6794.090786768043,
-      "y": 1742.6732798037322
+      "x": -6794.0668635990305,
+      "y": 1742.6875307663627
     }
   },
   "features": {
     "file": "features.yml",
-    "sha256": "8fc233f5fa6569f30441f6789d685c5612ceb3548a98b0a4a8ef52c19fedac90",
-    "keypointCount": 6543,
+    "sha256": "c4b9d5ade0be9a9b79bcba42ab66f99a38cfee8a2b92ad3d0863539ef0e866a6",
+    "keypointCount": 30520,
     "extractedKeypointCount": 30520
-  }
+  },
+  "featureSelection": "all-surf-observations-v2"
 }

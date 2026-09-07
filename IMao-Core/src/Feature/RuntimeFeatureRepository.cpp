@@ -279,14 +279,12 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                     std::to_string(loadedCandidatePack) + "/" + std::to_string(candidates.size()) + "）");
                 const auto candidateMergeStart = std::chrono::steady_clock::now();
                 const auto rowBase = mergedFeatureRows;
-                std::array<std::uint8_t, 32> sourceHash{};
                 MapVisualIndex shard;
                 std::string shardError;
                 const auto sourcePath = featureRoot / candidate.directoryName / "manifest.json";
                 const bool shardReady = loaded->visualIndexReady &&
-                    FeatureBinaryCodec::Sha256File(sourcePath, sourceHash, shardError) &&
-                    MapVisualIndexCodec::Load(featureRoot / candidate.directoryName / "visual-index.imx",
-                        sourceHash, static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size()),
+                    MapVisualIndexCodec::LoadManifestShard(featureRoot / candidate.directoryName / "visual-index.imx",
+                        sourcePath, static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size()),
                         shard, shardError) &&
                     MergeVisualShard(loaded->visualIndex, shard, rowBase, shardError);
                 if (!shardReady) {
@@ -344,6 +342,9 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
             std::to_string(ElapsedMilliseconds(visualStart)) + " ready=" +
             std::to_string(loaded->visualIndexReady) + " tiles=" +
             std::to_string(loaded->visualIndex.tiles.size()) + " error=" + visualError);
+        if (!loaded->visualIndexReady) {
+            throw std::runtime_error("地图视觉索引不可用：" + visualError);
+        }
         RuntimeStatus::SetMessage("地图识别资源已就绪");
     }
     catch (const std::exception& exception) {

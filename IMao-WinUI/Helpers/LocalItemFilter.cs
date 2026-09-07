@@ -1,37 +1,17 @@
-﻿using IMao_WinUI.Core.Helpers;
-using ServiceStack;
-using ServiceStack.Script;
-using System;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http.Json;
-using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Nodes;
+using IMao_WinUI.Core.Helpers;
 
 namespace IMao_WinUI.Helpers;
 
 class FilterItemDatas
 {
-    public String? Name { get; set; }
+    public string? Name { get; set; }
     public int Status { get; set; }
-
-    public FilterItemDatas(String? name, int status)
-    {
-        Name = name;
-        Status = status;
-    }
+    public FilterItemDatas(string? name, int status) { Name = name; Status = status; }
 }
 
 class LocalItemFilter
 {
-    // These were the items enabled by the original standalone launcher.  The
-    // WinUI version delegates the selection to FilteredItemsData.json, but a
-    // clean install has no such file and used to start with no map markers at
-    // all.  Keep the legacy selection as the first-run default; entries in
-    // the local file below always take precedence over this list.
     private static readonly string[] DefaultEnabledItemIds =
     {
         "sx", "qzx_01", "qzx_02", "qzx_03", "T_IconC_046_UI",
@@ -45,150 +25,70 @@ class LocalItemFilter
         "T_IconC_043_UI", "T_IconC_044_UI", "T_IconC_045_UI", "T_IconC_054_UI"
     };
 
-    private String filterJsonFileName = new String("FilteredItemsData.json");
-    private JsonDocument? filterJsonData;
-    private bool isParseSuccess = false;
-    private String filterJsonFath;
+    private static readonly object gate = new();
+    private readonly string path;
+    private readonly string legacyPath;
+    public string LastError { get; private set; } = string.Empty;
 
-    public LocalItemFilter()
+    public LocalItemFilter(string? path = null, string? legacyPath = null)
     {
-        isParseSuccess = ParseFilterJsonFile();
+        this.path = path ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "IMao-WinUI", "FilteredItemsData.json");
+        this.legacyPath = legacyPath ?? Path.Combine(AppContext.BaseDirectory, "FilteredItemsData.json");
     }
 
-    private String GetRunningDirectory()
+    private Dictionary<string, Dictionary<string, int>> Read()
     {
-        try
-        {
-            String? executablePath = Assembly.GetEntryAssembly()?.Location;
-
-            if(executablePath == null)
-            {
-                executablePath = Assembly.GetExecutingAssembly().Location;
-            }
-
-            String? directory = Path.GetDirectoryName(executablePath);
-
-            return directory ?? String.Empty;
-        }
-        catch (Exception ex)
-        {
-            return String.Empty;
-        }
-    }
-
-    private bool ParseFilterJsonFile()
-    {
-        String? runningDirectory = GetRunningDirectory();
-
-        if (runningDirectory == null)
-        {
-            return false;
-        }
-
-        try
-        {
-            filterJsonFath = runningDirectory + "\\" + filterJsonFileName;
-
-            if (!File.Exists(filterJsonFath)){ return false; }
-
-            String? filterJsonString = File.ReadAllText(filterJsonFath);
-
-            if (filterJsonString == null)
-            {
-                return false;
-            }
-            
-            filterJsonData = JsonDocument.Parse(filterJsonString);
-            return true;
-
-        }catch(Exception){ return false; }
+        string source = File.Exists(path) ? path : legacyPath;
+        if (!File.Exists(source)) return new();
+        return JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, int>>>(File.ReadAllText(source))
+            ?? throw new JsonException("筛选设置不是有效对象");
     }
 
     public List<FilterItemDatas> GetFilteredItemsDatas()
     {
-        List<FilterItemDatas> filterItemsDatas = DefaultEnabledItemIds
-            .Select(itemId => new FilterItemDatas(itemId, 1))
-            .ToList();
-
-        try
+        lock (gate)
         {
-            // A missing settings file means this is the first run.  Returning
-            // the legacy defaults makes markers visible immediately.  Once a
-            // user changes a checkbox, the saved value below overrides only
-            // that item and leaves all other defaults intact.
-            if (!isParseSuccess || filterJsonData == null) { return filterItemsDatas; }
-
-            foreach (var category in filterJsonData.RootElement.EnumerateObject())//Status
+            var result = DefaultEnabledItemIds.ToDictionary(id => id, _ => 1, StringComparer.Ordinal);
+            try
             {
-                foreach (var filteredItem in category.Value.EnumerateObject())
-                {
-                    String filteredItemName = filteredItem.Name;
-                    String filteredItemValue = filteredItem.Value.ToString();
-                    int filteredItemStatus = filteredItemValue.ToInt();
-                    FilterItemDatas? existingItem = filterItemsDatas
-                        .FirstOrDefault(item => item.Name == filteredItemName);
-
-                    if (existingItem != null)
-                    {
-                        existingItem.Status = filteredItemStatus;
-                    }
-                    else
-                    {
-                        filterItemsDatas.Add(new FilterItemDatas(filteredItemName, filteredItemStatus));
-                    }
-                }
+                var document = Read();
+                if (document.TryGetValue("Status", out var statuses) && statuses is not null)
+                    foreach (var item in statuses) result[item.Key] = item.Value;
+                LastError = string.Empty;
             }
-            return filterItemsDatas;
-
-        }
-        catch (Exception) {
-
-            return filterItemsDatas; 
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+            {
+                LastError = "无法读取筛选设置：" + exception.Message;
+            }
+            return result.Select(item => new FilterItemDatas(item.Key, item.Value)).ToList();
         }
     }
 
+    public bool SetItmeFilterStatus(string itemName, int statusValue)
+        => SetItemsStatus(new[] { itemName }, statusValue);
 
-    public void SetItmeFilterStatus(String itemName,int statusValue)
+    public bool SetItemsStatus(IEnumerable<string> itemNames, int statusValue)
     {
-        try
+        var names = itemNames.Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.Ordinal).ToArray();
+        if (names.Length == 0) return true;
+        lock (gate)
         {
-            String updateJsonString;
-
-            if (isParseSuccess)
+            try
             {
-                JsonObject? rootObj = JsonNode.Parse(filterJsonData.RootElement.GetRawText())?.AsObject();
-
-                JsonObject? statusObj = rootObj["Status"]?.AsObject();
-
-                if (statusObj == null)
-                {
-                    rootObj["Status"] = new JsonObject();
-
-                    statusObj = rootObj["Status"]!.AsObject();
-                }
-
-                statusObj[itemName] = statusValue;
-
-                updateJsonString = rootObj.ToJsonString();
-                filterJsonData = JsonDocument.Parse(updateJsonString);
+                var document = Read();
+                if (!document.TryGetValue("Status", out var statuses) || statuses is null)
+                    document["Status"] = statuses = new();
+                foreach (var name in names) statuses[name] = statusValue;
+                AtomicFile.WriteAllText(path, JsonSerializer.Serialize(document));
+                LastError = string.Empty;
+                return true;
             }
-            else
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
             {
-                JsonObject newRoot = new JsonObject
-                {
-                    ["Status"] = new JsonObject()
-                };
-
-                JsonObject statusObj = newRoot["Status"]!.AsObject();
-                statusObj[itemName] = statusValue;
-
-                updateJsonString = newRoot.ToJsonString();
-                filterJsonData = JsonDocument.Parse(updateJsonString);
-                isParseSuccess = true;
+                LastError = "无法保存筛选设置：" + exception.Message;
+                return false;
             }
-           
-            File.WriteAllText(filterJsonFath, updateJsonString);
         }
-        catch (Exception) { return; }
     }
 }

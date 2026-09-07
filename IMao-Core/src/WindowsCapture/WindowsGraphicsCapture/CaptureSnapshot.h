@@ -41,10 +41,9 @@ public:
         return m_capture != nullptr && m_capture->WaitForFirstFrame(output, timeout, frameSequence);
     }
 
-    bool GetLatestFrame(Mat& output, std::uint64_t* frameSequence = nullptr) {
-        if (m_capture == nullptr || !m_capture->GetLatestFrame_Mat(output)) return false;
-        if (frameSequence != nullptr) *frameSequence = m_capture->LatestFrameSequence();
-        return true;
+    bool GetLatestFrame(Mat& output, std::uint64_t* frameSequence = nullptr,
+        std::chrono::steady_clock::time_point* capturedAt = nullptr) {
+        return m_capture != nullptr && m_capture->GetLatestFrame_Mat(output, frameSequence, capturedAt);
     }
 
     CaptureSnapshot(HWND hwnd) {

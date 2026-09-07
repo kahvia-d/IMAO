@@ -22,8 +22,8 @@ MapUiStateUpdate MapUiStateController::Update(const MapUiEvidence& evidence) {
         }
         // A capture can lose HUD features during an animation or one bad DXGI
         // frame. Treat a missing minimap as an actual HUD disappearance only
-        // after a full second of evidence; otherwise cached markers remain
-        // available under the stale-position grace period.
+        // after ten observations. This protects localization state only;
+        // current-frame visibility independently suppresses cached markers.
         if (state_ != MapUiState::Unknown && pendingFrames_ >= 10) {
             state_ = MapUiState::Unknown;
             update.current = state_;

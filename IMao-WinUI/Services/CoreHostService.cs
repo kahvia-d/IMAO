@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using IMao_WinUI.Models;
+using IMao_WinUI.Helpers;
 using Microsoft.UI.Dispatching;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO.Pipes;
@@ -9,145 +11,158 @@ using System.Text.Json;
 
 namespace IMao_WinUI.Services;
 
-// Owns the native host process and presents its small JSON-lines protocol to
-// WinUI.  The UI never loads native matching code into its own process.
 public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
 {
     private const int ProtocolVersion = 1;
     private readonly SemaphoreSlim lifecycleLock = new(1, 1);
-    private readonly SemaphoreSlim writeLock = new(1, 1);
     private readonly DispatcherQueue? dispatcherQueue = DispatcherQueue.GetForCurrentThread();
     private readonly JsonSerializerOptions jsonOptions = new() { PropertyNameCaseInsensitive = true };
-    private NamedPipeClientStream? pipe;
-    private StreamReader? reader;
-    private StreamWriter? writer;
-    private Process? hostProcess;
-    private Task? readerTask;
-    private bool expectedShutdown;
+    private volatile Session? active;
+    private bool disposed;
+    private readonly string hostDirectory;
 
-    [ObservableProperty]
-    private CoreRuntimeStatus status = new();
+    private readonly RuntimeConfigurationStore configuration;
+    private readonly LocalItemFilter filters;
+    public RuntimeConfiguration Configuration => configuration.Read();
 
-    [ObservableProperty]
-    private bool isConnected;
+    public CoreHostService() : this(AppContext.BaseDirectory,
+        new RuntimeConfigurationStore(Path.Combine(UserDataPaths.Root, "runtime-preferences.json")), new LocalItemFilter()) { }
+    internal CoreHostService(string hostDirectory, RuntimeConfigurationStore configuration, LocalItemFilter filters)
+    {
+        this.hostDirectory = hostDirectory;
+        this.configuration = configuration;
+        this.filters = filters;
+    }
 
-    [ObservableProperty]
-    private string lastFault = string.Empty;
+    // A reader belongs to one process and never reads fields of its successor.
+    private sealed class Session
+    {
+        public required Process Process { get; init; }
+        public required NamedPipeClientStream Pipe { get; init; }
+        public StreamReader? Reader { get; set; }
+        public StreamWriter? Writer { get; set; }
+        public Task? ReaderTask { get; set; }
+        public CancellationTokenSource Stop { get; } = new();
+        public ConcurrentDictionary<string, TaskCompletionSource<bool>> Pending { get; } = new();
+    }
 
+    [ObservableProperty] private CoreRuntimeStatus status = new();
+    [ObservableProperty] private bool isConnected;
+    [ObservableProperty] private string lastFault = string.Empty;
     public ObservableCollection<CoreLogEntry> RecentLogs { get; } = new();
-
     public event EventHandler<CoreRuntimeStatus>? StatusChanged;
-
-    public string LogDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IMao-WinUI", "Logs");
-
-    public string CrashDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IMao-WinUI", "CrashReports");
+    public string LogDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IMao-WinUI", "Logs");
+    public string CrashDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IMao-WinUI", "CrashReports");
 
     public async Task EnsureStartedAsync(CancellationToken cancellationToken = default)
     {
-        if (pipe?.IsConnected == true) return;
         await lifecycleLock.WaitAsync(cancellationToken);
+        try { await EnsureStartedLockedAsync(cancellationToken); }
+        finally { lifecycleLock.Release(); }
+    }
+
+    private async Task<Session?> EnsureStartedLockedAsync(CancellationToken cancellationToken)
+    {
+        if (disposed) return null;
+        if (active is { } current && !current.Stop.IsCancellationRequested && current.Pipe.IsConnected && current.ReaderTask?.IsCompleted != true)
+            return current;
+        await CloseLockedAsync();
+        SetConnectionState("connecting", "正在启动 CoreHost");
+        string path = Path.Combine(hostDirectory, "IMao-CoreHost.exe");
+        if (!File.Exists(path)) { SetFault($"找不到 CoreHost：{path}"); return null; }
+        string pipeName = $"IMao.CoreHost.{Environment.ProcessId}.{Guid.NewGuid():N}";
+        var session = new Session
+        {
+            Process = new Process { StartInfo = new ProcessStartInfo
+            {
+                FileName = path, Arguments = $"--pipe {pipeName}", WorkingDirectory = hostDirectory,
+                UseShellExecute = false, CreateNoWindow = true
+            } },
+            Pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
+        };
+        active = session;
         try
         {
-            if (pipe?.IsConnected == true) return;
-            expectedShutdown = false;
-            SetConnectionState("connecting", "正在启动 CoreHost");
-
-            string hostPath = Path.Combine(AppContext.BaseDirectory, "IMao-CoreHost.exe");
-            if (!File.Exists(hostPath))
-            {
-                SetFault($"找不到 CoreHost：{hostPath}");
-                return;
-            }
-
-            string pipeName = $"IMao.CoreHost.{Environment.ProcessId}.{Guid.NewGuid():N}";
-            hostProcess = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = hostPath,
-                    Arguments = $"--pipe {pipeName}",
-                    WorkingDirectory = AppContext.BaseDirectory,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                },
-                EnableRaisingEvents = true
-            };
-            hostProcess.Exited += HostProcess_Exited;
-            if (!hostProcess.Start())
-            {
-                SetFault("无法启动 CoreHost");
-                return;
-            }
-
-            NamedPipeClientStream? candidate = null;
-            Exception? lastConnectError = null;
-            for (int attempt = 0; attempt < 25 && !cancellationToken.IsCancellationRequested; attempt++)
-            {
-                candidate?.Dispose();
-                candidate = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut,
-                    PipeOptions.Asynchronous | PipeOptions.WriteThrough);
-                try
-                {
-                    await candidate.ConnectAsync(200, cancellationToken);
-                    break;
-                }
-                catch (Exception exception) when (exception is TimeoutException or IOException)
-                {
-                    lastConnectError = exception;
-                }
-            }
-            if (candidate?.IsConnected != true)
-            {
-                candidate?.Dispose();
-                if (hostProcess is { HasExited: false }) hostProcess.Kill(entireProcessTree: true);
-                hostProcess?.Dispose();
-                hostProcess = null;
-                SetFault($"无法连接 CoreHost：{lastConnectError?.Message ?? "超时"}");
-                return;
-            }
-
-            pipe = candidate;
-            reader = new StreamReader(pipe, new UTF8Encoding(false), false, 64 * 1024, leaveOpen: true);
-            writer = new StreamWriter(pipe, new UTF8Encoding(false), 64 * 1024, leaveOpen: true) { AutoFlush = true };
-            IsConnected = true;
-            readerTask = ReadEventsAsync();
-            await SendRawAsync(new Dictionary<string, object?>
-            {
-                ["version"] = ProtocolVersion,
-                ["type"] = "hello",
-                ["requestId"] = Guid.NewGuid().ToString("N")
-            }, cancellationToken);
+            if (!session.Process.Start()) throw new IOException("无法启动 CoreHost");
+            await session.Pipe.ConnectAsync(5000, cancellationToken);
+            session.Reader = new StreamReader(session.Pipe, new UTF8Encoding(false), false, 64 * 1024, leaveOpen: true);
+            session.Writer = new StreamWriter(session.Pipe, new UTF8Encoding(false), 64 * 1024, leaveOpen: true);
+            OnUi(() => { IsConnected = true; LastFault = string.Empty; });
+            session.ReaderTask = ReadEventsAsync(session);
+            if (!await SendLockedAsync(session, "hello", null, cancellationToken))
+                throw new IOException("核心握手被拒绝");
+            if (!await SendLockedAsync(session, "configure", Configuration.ToPayload(), cancellationToken))
+                throw new IOException("核心无法恢复已保存配置");
+            var enabled = filters.GetFilteredItemsDatas().Where(item => item.Status == 1 && !string.IsNullOrWhiteSpace(item.Name))
+                .Select(item => item.Name!).ToArray();
+            if (!await SendLockedAsync(session, "setItems", new() { ["add"] = enabled }, cancellationToken))
+                throw new IOException("核心无法恢复筛选状态");
+            if (configuration.LoadError.Length > 0) ReportUserError(configuration.LoadError);
+            if (filters.LastError.Length > 0) ReportUserError(filters.LastError);
+            return session;
         }
-        finally
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            lifecycleLock.Release();
+            await CloseLockedAsync();
+            SetConnectionState("stopped", "核心启动已取消");
+            throw;
+        }
+        catch (Exception exception)
+        {
+            await CloseLockedAsync();
+            SetFault($"无法启动或连接 CoreHost：{exception.Message}");
+            return null;
         }
     }
 
     public Task StartRuntimeAsync(CancellationToken cancellationToken = default) => SendCommandAsync("start", null, cancellationToken);
     public Task StopRuntimeAsync(CancellationToken cancellationToken = default) => SendCommandAsync("stop", null, cancellationToken);
 
-    public Task ConfigureAsync(int? captureWay = null, int? mapUpdateCycle = null, int? minMapUpdateCycle = null,
+    public async Task<bool> ConfigureAsync(int? captureWay = null, int? mapUpdateCycle = null, int? minMapUpdateCycle = null,
         bool? mapEnabled = null, bool? minMapEnabled = null, bool? savedPointsEnabled = null,
         bool? statusBarEnabled = null, CancellationToken cancellationToken = default)
     {
-        var values = new Dictionary<string, object?>();
-        if (captureWay.HasValue) values["captureWay"] = captureWay.Value;
-        if (mapUpdateCycle.HasValue) values["mapUpdateCycle"] = mapUpdateCycle.Value;
-        if (minMapUpdateCycle.HasValue) values["minMapUpdateCycle"] = minMapUpdateCycle.Value;
-        if (mapEnabled.HasValue) values["mapEnabled"] = mapEnabled.Value;
-        if (minMapEnabled.HasValue) values["minMapEnabled"] = minMapEnabled.Value;
-        if (savedPointsEnabled.HasValue) values["savedPointsEnabled"] = savedPointsEnabled.Value;
-        if (statusBarEnabled.HasValue) values["statusBarEnabled"] = statusBarEnabled.Value;
-        return SendCommandAsync("configure", values, cancellationToken);
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            // Persist the desired state before sending it. A disconnected core restores it on reconnect.
+            RuntimeConfiguration next;
+            try
+            {
+                next = configuration.Update(old => old with
+                {
+                    CaptureWay = captureWay ?? old.CaptureWay, MapUpdateCycle = mapUpdateCycle ?? old.MapUpdateCycle,
+                    MinMapUpdateCycle = minMapUpdateCycle ?? old.MinMapUpdateCycle,
+                    MapEnabled = mapEnabled ?? old.MapEnabled, MinMapEnabled = minMapEnabled ?? old.MinMapEnabled,
+                    SavedPointsEnabled = savedPointsEnabled ?? old.SavedPointsEnabled,
+                    StatusBarEnabled = statusBarEnabled ?? old.StatusBarEnabled
+                });
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                ReportUserError("无法保存运行配置：" + exception.Message);
+                return false;
+            }
+            var session = await EnsureStartedLockedAsync(cancellationToken);
+            return session is not null && await SendLockedAsync(session, "configure", next.ToPayload(), cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception exception)
+        {
+            await CloseLockedAsync();
+            SetFault("CoreHost 配置同步失败：" + exception.Message);
+            return false;
+        }
+        finally { lifecycleLock.Release(); }
     }
 
     public Task SetItemEnabledAsync(string itemId, bool enabled, CancellationToken cancellationToken = default) =>
+        SetItemsEnabledAsync(new[] { itemId }, enabled, cancellationToken);
+
+    public Task SetItemsEnabledAsync(IEnumerable<string> itemIds, bool enabled, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setItems", new Dictionary<string, object?>
         {
-            [enabled ? "add" : "remove"] = new[] { itemId }
+            [enabled ? "add" : "remove"] = itemIds.Distinct(StringComparer.Ordinal).ToArray()
         }, cancellationToken);
 
     public Task SetItemsAsync(IEnumerable<string> enabledItemIds, CancellationToken cancellationToken = default) =>
@@ -165,176 +180,187 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
 
     public async Task RestartAsync(CancellationToken cancellationToken = default)
     {
-        await ShutdownAsync();
-        await EnsureStartedAsync(cancellationToken);
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            await CloseLockedAsync();
+            await EnsureStartedLockedAsync(cancellationToken);
+        }
+        finally { lifecycleLock.Release(); }
     }
 
     public async Task ShutdownAsync()
     {
-        expectedShutdown = true;
+        await lifecycleLock.WaitAsync();
         try
         {
-            if (pipe?.IsConnected == true)
-            {
-                await SendRawAsync(new Dictionary<string, object?>
-                {
-                    ["version"] = ProtocolVersion,
-                    ["type"] = "shutdown",
-                    ["requestId"] = Guid.NewGuid().ToString("N")
-                }, CancellationToken.None);
-            }
+            await CloseLockedAsync();
+            SetConnectionState("stopped", "核心已停止");
         }
-        catch (Exception)
-        {
-            // The host may already have faulted; closing the child is still safe.
-        }
-        await DisposeConnectionAsync();
-        if (hostProcess is { HasExited: false })
-        {
-            if (!hostProcess.WaitForExit(2000)) hostProcess.Kill(entireProcessTree: true);
-        }
-        hostProcess?.Dispose();
-        hostProcess = null;
-        SetConnectionState("stopped", "核心已停止");
+        finally { lifecycleLock.Release(); }
     }
 
     private async Task SendCommandAsync(string type, Dictionary<string, object?>? payload, CancellationToken cancellationToken)
     {
-        await EnsureStartedAsync(cancellationToken);
-        if (pipe?.IsConnected != true)
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
         {
-            SetFault("CoreHost 未连接");
-            return;
+            Session? session = await EnsureStartedLockedAsync(cancellationToken);
+            if (session is not null) await SendLockedAsync(session, type, payload, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception exception)
+        {
+            await CloseLockedAsync();
+            SetFault($"CoreHost 通信失败：{exception.Message}");
+        }
+        finally { lifecycleLock.Release(); }
+    }
+
+    private async Task<bool> SendLockedAsync(Session session, string type, Dictionary<string, object?>? payload, CancellationToken cancellationToken)
+    {
+        string id = Guid.NewGuid().ToString("N");
         var command = payload ?? new Dictionary<string, object?>();
         command["version"] = ProtocolVersion;
         command["type"] = type;
-        command["requestId"] = Guid.NewGuid().ToString("N");
-        await SendRawAsync(command, cancellationToken);
-    }
-
-    private async Task SendRawAsync(object command, CancellationToken cancellationToken)
-    {
-        StreamWriter? activeWriter = writer;
-        if (activeWriter is null) throw new IOException("CoreHost 管道未连接");
-        await writeLock.WaitAsync(cancellationToken);
+        command["requestId"] = id;
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.Pending[id] = completion;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, session.Stop.Token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(10));
         try
         {
-            await activeWriter.WriteLineAsync(JsonSerializer.Serialize(command, jsonOptions));
-            await activeWriter.FlushAsync(cancellationToken);
+            await session.Writer!.WriteLineAsync(JsonSerializer.Serialize(command, jsonOptions).AsMemory(), timeout.Token);
+            await session.Writer.FlushAsync(timeout.Token);
+            return await completion.Task.WaitAsync(timeout.Token);
         }
-        finally
-        {
-            writeLock.Release();
-        }
+        finally { session.Pending.TryRemove(id, out _); }
     }
 
-    private async Task ReadEventsAsync()
+    private async Task ReadEventsAsync(Session session)
     {
         try
         {
-            while (reader is not null)
+            while (!session.Stop.IsCancellationRequested)
             {
-                string? line = await reader.ReadLineAsync();
+                string? line = await session.Reader!.ReadLineAsync(session.Stop.Token).ConfigureAwait(false);
                 if (line is null) break;
-                using JsonDocument document = JsonDocument.Parse(line);
+                if (line.Length > 1024 * 1024) throw new IOException("核心消息过长");
+                using var document = JsonDocument.Parse(line);
                 JsonElement root = document.RootElement;
-                string type = root.TryGetProperty("type", out JsonElement typeValue) ? typeValue.GetString() ?? string.Empty : string.Empty;
-                if (type == "status")
+                if (!root.TryGetProperty("version", out var version) || version.GetInt32() != ProtocolVersion)
+                    throw new IOException("核心协议版本不兼容");
+                string type = root.GetProperty("type").GetString() ?? string.Empty;
+                if (!ReferenceEquals(active, session)) return;
+                if (type == "ack")
                 {
-                    CoreRuntimeStatus? next = JsonSerializer.Deserialize<CoreRuntimeStatus>(line, jsonOptions);
-                    if (next is not null) SetStatus(next);
+                    bool accepted = root.GetProperty("accepted").GetBoolean();
+                    string id = root.GetProperty("requestId").GetString() ?? string.Empty;
+                    if (!accepted)
+                    {
+                        string message = root.GetProperty("message").GetString() ?? "核心拒绝了操作";
+                        OnSessionUi(session, () => ReportUserError(message));
+                    }
+                    if (session.Pending.TryRemove(id, out var completion)) completion.TrySetResult(accepted);
+                }
+                else if (type == "status")
+                {
+                    var next = JsonSerializer.Deserialize<CoreRuntimeStatus>(line, jsonOptions);
+                    if (next is not null) OnSessionUi(session, () => ApplyStatus(next));
                 }
                 else if (type == "log")
                 {
-                    CoreLogEntry? entry = JsonSerializer.Deserialize<CoreLogEntry>(line, jsonOptions);
-                    if (entry is not null) AddLog(entry);
+                    var entry = JsonSerializer.Deserialize<CoreLogEntry>(line, jsonOptions);
+                    if (entry is not null) OnSessionUi(session, () => AppendLog(entry));
                 }
                 else if (type == "fault")
                 {
-                    string message = root.TryGetProperty("message", out JsonElement messageValue) ? messageValue.GetString() ?? "核心故障" : "核心故障";
-                    SetFault(message);
+                    string message = root.GetProperty("message").GetString() ?? "核心故障";
+                    OnSessionUi(session, () => ApplyFault(message));
                 }
             }
+            if (!session.Stop.IsCancellationRequested)
+                OnSessionUi(session, () => ApplyFault("CoreHost 已断开，请查看日志后手动重启"));
         }
-        catch (Exception exception) when (!expectedShutdown)
+        catch (Exception exception)
         {
-            SetFault($"CoreHost 通信中断：{exception.Message}");
+            if (!session.Stop.IsCancellationRequested)
+                OnSessionUi(session, () => ApplyFault($"CoreHost 通信中断：{exception.Message}"));
         }
         finally
         {
-            if (!expectedShutdown) SetFault("CoreHost 已断开，请查看日志后手动重启");
-            OnUi(() => IsConnected = false);
+            foreach (var pending in session.Pending.Values) pending.TrySetException(new IOException("CoreHost 已断开"));
+            OnSessionUi(session, () => IsConnected = false);
         }
     }
 
-    private void HostProcess_Exited(object? sender, EventArgs args)
+    private async Task CloseLockedAsync()
     {
-        if (!expectedShutdown)
+        Session? session = active;
+        if (session is null) return;
+        active = null;
+        session.Stop.Cancel();
+        // Closing the pipe cancels blocked reads/writes and makes the host shut down.
+        session.Pipe.Dispose();
+        if (session.ReaderTask is not null) await session.ReaderTask.ConfigureAwait(false);
+        try { session.Writer?.Dispose(); } catch (IOException) { } catch (ObjectDisposedException) { }
+        session.Reader?.Dispose();
+        try
         {
-            int exitCode = hostProcess?.ExitCode ?? -1;
-            SetFault($"CoreHost 已退出（代码 {exitCode}），请查看崩溃报告后手动重启");
+            if (!session.Process.HasExited)
+            {
+                using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                try { await session.Process.WaitForExitAsync(deadline.Token).ConfigureAwait(false); }
+                catch (OperationCanceledException)
+                {
+                    session.Process.Kill(entireProcessTree: true);
+                    await session.Process.WaitForExitAsync().ConfigureAwait(false);
+                }
+            }
         }
+        catch (InvalidOperationException) { } // Process.Start may have failed.
+        finally { session.Process.Dispose(); session.Stop.Dispose(); }
+        OnUi(() => IsConnected = false);
     }
 
-    private void SetStatus(CoreRuntimeStatus value) => OnUi(() =>
-    {
-        Status = value;
-        LastFault = value.CoreState == "faulted" ? value.Message : LastFault;
-        StatusChanged?.Invoke(this, value);
-    });
-
-    private void SetConnectionState(string state, string message) => SetStatus(new CoreRuntimeStatus
-    {
-        CoreState = state,
-        Message = message,
-        StatusBarEnabled = Status.StatusBarEnabled
-    });
-
-    private void SetFault(string message) => OnUi(() =>
+    public void ReportUserError(string message) => OnUi(() =>
     {
         LastFault = message;
-        Status = new CoreRuntimeStatus { CoreState = "faulted", Message = message, StatusBarEnabled = Status.StatusBarEnabled };
-        StatusChanged?.Invoke(this, Status);
+        AppendLog(new CoreLogEntry { Timestamp = DateTimeOffset.Now.ToString("O"), Severity = "error", Category = "ui", Message = message });
     });
 
-    private void AddLog(CoreLogEntry entry) => OnUi(() =>
+    private void ApplyStatus(CoreRuntimeStatus value)
+    {
+        Status = value;
+        if (value.CoreState == "faulted") LastFault = value.Message;
+        StatusChanged?.Invoke(this, value);
+    }
+    private void SetConnectionState(string state, string message) => OnUi(() => ApplyStatus(new CoreRuntimeStatus
+    { CoreState = state, Message = message, StatusBarEnabled = Status.StatusBarEnabled }));
+    private void ApplyFault(string message)
+    {
+        LastFault = message;
+        ApplyStatus(new CoreRuntimeStatus { CoreState = "faulted", Message = message, StatusBarEnabled = Status.StatusBarEnabled });
+    }
+    private void SetFault(string message) => OnUi(() => ApplyFault(message));
+    private void AppendLog(CoreLogEntry entry)
     {
         RecentLogs.Add(entry);
         while (RecentLogs.Count > 200) RecentLogs.RemoveAt(0);
+    }
+    private void OnSessionUi(Session session, Action action) => OnUi(() =>
+    {
+        if (ReferenceEquals(active, session) && !session.Stop.IsCancellationRequested) action();
     });
-
     private void OnUi(Action action)
     {
         if (dispatcherQueue is null || dispatcherQueue.HasThreadAccess) action();
         else dispatcherQueue.TryEnqueue(() => action());
     }
-
-    private async Task DisposeConnectionAsync()
-    {
-        await writeLock.WaitAsync();
-        try
-        {
-            writer?.Dispose();
-            reader?.Dispose();
-            pipe?.Dispose();
-            writer = null;
-            reader = null;
-            pipe = null;
-        }
-        finally
-        {
-            writeLock.Release();
-        }
-        if (readerTask is not null) await Task.WhenAny(readerTask, Task.Delay(500));
-        readerTask = null;
-        OnUi(() => IsConnected = false);
-    }
-
     public async ValueTask DisposeAsync()
     {
-        await ShutdownAsync();
-        lifecycleLock.Dispose();
-        writeLock.Dispose();
+        await lifecycleLock.WaitAsync();
+        try { disposed = true; await CloseLockedAsync(); }
+        finally { lifecycleLock.Release(); }
     }
 }

@@ -3,7 +3,9 @@ param(
     [string]$PaddleLib = $env:IMAO_PADDLE_LIB,
     [string]$OpenCvDir = $env:IMAO_OPENCV_DIR,
     [string]$Dotnet = $env:IMAO_DOTNET,
-    [switch]$ConfigureOnly
+    [switch]$ConfigureOnly,
+    [switch]$FreshConfigure,
+    [ValidateRange(1, 64)][int]$Parallel = 2
 )
 
 $ErrorActionPreference = 'Stop'
@@ -72,16 +74,36 @@ function Invoke-VisualStudioCommand([string]$CommandLine) {
 
 Push-Location $repoRoot
 try {
-    # Recreate only CMake's generated configuration so the compiler and STL
-    # always come from the same (latest) Visual Studio instance selected above.
-    Invoke-VisualStudioCommand ('"' + $cmake + '" --fresh --preset windows-x64-release "-DPADDLE_LIB=' + $PaddleLib + '" "-DOPENCV_DIR=' + $OpenCvDir + '"')
+    # --fresh removes CMakeFiles, including compiled objects. Preserve normal
+    # incremental builds, but discard incompatible objects after a toolchain change.
+    $toolchainOutput = @(Invoke-VisualStudioCommand 'where cl && set VCToolsVersion && set WindowsSDKVersion')
+    $toolchainIdentity = ($toolchainOutput -join "`n").Trim()
+    $buildDirectory = Join-Path $repoRoot 'out\build\windows-x64-release'
+    $toolchainStamp = Join-Path $buildDirectory '.imao-toolchain.txt'
+    $cachePath = Join-Path $buildDirectory 'CMakeCache.txt'
+    $needsFresh = [bool]$FreshConfigure
+    if (Test-Path -LiteralPath $toolchainStamp) {
+        $needsFresh = $needsFresh -or ((Get-Content -LiteralPath $toolchainStamp -Raw).Trim() -cne $toolchainIdentity)
+    }
+    if (Test-Path -LiteralPath $cachePath) {
+        $compilerEntry = Select-String -LiteralPath $cachePath -Pattern '^CMAKE_CXX_COMPILER:(?:FILEPATH|STRING)=(.+)$' | Select-Object -First 1
+        $activeCompiler = $toolchainOutput | Where-Object { $_ -match '(?i)cl\.exe$' } | Select-Object -First 1
+        if (-not $compilerEntry -or -not $activeCompiler) { $needsFresh = $true }
+        else {
+            $cachedCompiler = [IO.Path]::GetFullPath($compilerEntry.Matches[0].Groups[1].Value)
+            $needsFresh = $needsFresh -or -not $cachedCompiler.Equals([IO.Path]::GetFullPath($activeCompiler), [StringComparison]::OrdinalIgnoreCase)
+        }
+    }
+    $configureArguments = if ($needsFresh) { '--fresh --preset' } else { '--preset' }
+    Invoke-VisualStudioCommand ('"' + $cmake + '" ' + $configureArguments + ' windows-x64-release "-DPADDLE_LIB=' + $PaddleLib + '" "-DOPENCV_DIR=' + $OpenCvDir + '"')
+    Set-Content -LiteralPath $toolchainStamp -Value $toolchainIdentity -Encoding utf8
 
     if ($ConfigureOnly) {
         Write-Host 'CMake configuration completed.' -ForegroundColor Green
         exit 0
     }
 
-    Invoke-VisualStudioCommand ('"' + $cmake + '" --build --preset windows-x64-release-core')
+    Invoke-VisualStudioCommand ('"' + $cmake + '" --build --preset windows-x64-release-core --parallel ' + $Parallel)
     Invoke-VisualStudioCommand ('"' + $Dotnet + '" build "IMao-WinUI\IMao-WinUI.csproj" --configuration Release -p:Platform=x64 --packages "' + $nugetPackages + '"')
 
     $outputDirectory = Join-Path $repoRoot 'x64\Release'
@@ -91,8 +113,8 @@ try {
 
     & $cmake "-DIMAO_SOURCE_ASSETS=$(Join-Path $repoRoot 'Assets')" "-DIMAO_DESTINATION_ROOT=$outputDirectory" '-DIMAO_CONFIGURATION=Release' '-P' (Join-Path $repoRoot 'cmake\StageAssets.cmake')
     if ($LASTEXITCODE -ne 0) { throw 'Release asset staging failed.' }
-    $coreDll = Join-Path $repoRoot 'x64\Release\IMao-Core.dll'
-    if (-not (Test-Path -LiteralPath $coreDll)) { throw "Missing C++ build output: $coreDll" }
+    $coreHost = Join-Path $outputDirectory 'IMao-CoreHost.exe'
+    if (-not (Test-Path -LiteralPath $coreHost)) { throw "Missing C++ build output: $coreHost" }
     $binaryFeatures = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_features.imf'
     $visualIndex = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_visual_index.imx'
     $xmlFeatures = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_features.yml'
@@ -136,6 +158,7 @@ try {
     if ($null -eq $opencvRuntime) { throw 'Unable to find an opencv_world*.dll below OPENCV_DIR.' }
     Copy-Item -LiteralPath $opencvRuntime.FullName -Destination $outputDirectory -Force
 
+    Invoke-VisualStudioCommand ('"' + $coreHost + '" --check-resources "' + (Join-Path $outputDirectory 'Assets') + '"')
     Write-Host "Build completed: $outputDirectory" -ForegroundColor Green
 }
 finally {

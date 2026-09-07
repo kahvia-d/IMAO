@@ -1,6 +1,6 @@
 # 可复现构建（Windows x64）
 
-本项目由 WinUI 3（C#）前端和 `IMao-Core.dll`（C++）组成。构建入口均在
+本项目由 WinUI 3（C#）前端和独立的 `IMao-CoreHost.exe`（C++）组成，通过命名管道通信。构建入口均在
 `scripts/` 中；不要依赖 CMake GUI 的手工配置。
 
 ## 版本基线
@@ -43,6 +43,18 @@ Paddle 使用官方 3.0.0 的 Windows CPU/AVX/MKL C++ 包；解压后将其根�
 `tools/dotnet-sdk-8.0.424/`。
 
 ## 首次构建
+
+依赖按上述默认目录准备后，可在每个新的 PowerShell 会话中加载仓库环境：
+
+```powershell
+. .\scripts\Enter-DevEnvironment.ps1
+.\scripts\Test-BuildPrerequisites.ps1
+.\scripts\Build-IMao.ps1
+```
+
+环境加载脚本仅设置当前进程的变量，不修改系统 PATH；不会自动下载依赖。
+
+后续构建默认复用中间文件；检测到 MSVC 工具集或 Windows SDK 变化时才清理。需要主动清理配置与目标文件时使用 `Build-IMao.ps1 -FreshConfigure`。运行回归可使用 `Test-Runtime.ps1 -OutputDirectory .\out\runtime-tests`；该脚本默认 4 个编译任务，内存较少时加 `-Parallel 2`。
 
 ```powershell
 git lfs install
@@ -118,7 +130,30 @@ Release 必须同时含 `Map_features.imf`、基础 `Map_visual_index.imx` 与�
 MSBuild 失败。它还会把 .NET 首次运行状态与 NuGet 缓存隔离到被忽略的
 `third_party/`。请优先调用脚本，而不是在普通终端中直接执行 CMake。
 
-## 当前机器盘点（2026-08-23）
+## 当前验证（2026-09-07）
+
+`C:\Dcode\WWMAP-TOOLS` 的 Release CoreHost 与 WinUI 已构建成功，资源就绪检查三项全部通过。
+原生优化测试、90 项托管运行测试、大小地图回放及后台任务取消回归均通过。
+此前缺失的两个工具源码现在已存在，旧记录中的 CMake 生成阻塞已不再发生。
+正式入口默认增量构建，本次验证未重编译未变化的核心目标文件。
+测试范围、性能对比和仍需游戏内验证的项目见 [核心重构记录](Refactor_20260907.md)。
+
+## 历史机器盘点
+
+### 2026-09-05 新工作区验证
+
+在 `C:\Dcode\WWMAP-TOOLS` 已配置 .NET SDK 8.0.424、Windows SDK
+10.0.26100.0、Paddle Inference 3.0.0 和 OpenCV 4.11.0（nonfree/SURF）。
+环境预检、Git LFS 指针检查、OpenCV 构建和 WinUI Release 编译通过；
+WinUI 编译有 26 个现有警告、0 个错误。
+
+完整原生构建仍被当前 Git 检出缺少的两个源文件阻塞：
+`tools/KuroMapFeatureBuilder/main.cpp` 和
+`IMao-Core/tools/VisualIndexBuilder/main.cpp`。CMake 在生成阶段失败，
+因此尚未验证完整运行目录。两条路径均匹配 `.gitignore` 中的 `*build*/`
+规则；需要从原开发工作区恢复真实源码并纳入版本控制。
+
+以下为旧工作区的历史记录：
 
 已检测到 VS 2022 Build Tools 17.14.3、MSVC 14.44、Windows SDK 10.0.26100.0、
 VS 自带 CMake/Ninja 和 Git LFS 3.5.1；本工作区已准备好仓库内 .NET 8.0.424 SDK、

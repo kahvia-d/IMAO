@@ -1,4 +1,4 @@
-﻿#include "DrawItemBase.h"
+#include "DrawItemBase.h"
 #include <fstream>
 #include "../../DLL_API.h"
 #include "../../util.h"
@@ -10,6 +10,10 @@
 #include <shared_mutex>
 #include <unordered_map>
 #include <mutex>
+#include "../../Runtime/SceneItemStore.h"
+#include "../../Runtime/AtomicFile.h"
+#include "../../Runtime/StructuredLogger.h"
+#include "../../Coordinate/KuroMapCoordinates.h"
 
 using namespace std;
 namespace fs = filesystem;
@@ -24,38 +28,17 @@ json DrawItemBase::itemsJsonData_Darkplain;
 json DrawItemBase::itemsJsonData_TimeRiftRuins;
 
 vector<ItemTextureData> DrawItemBase::itemsTextureData;
-vector<ItemsDatas> DrawItemBase::itemsDatas_World_Storage;
-vector<ItemsDatas> DrawItemBase::itemsDatas_Tethys_Storage;
-vector<ItemsDatas> DrawItemBase::itemsDatas_Fabricatorium_Storage;
-vector<ItemsDatas> DrawItemBase::itemsDatas_Avinoleum_Storage;
-vector<ItemsDatas> DrawItemBase::itemsDatas_Lahai_Storage;
-vector<ItemsDatas> DrawItemBase::itemsDatas_LowerVault_Storage;
-vector<ItemsDatas> DrawItemBase::itemsDatas_Darkplain_Storage;
-vector<ItemsDatas> DrawItemBase::itemsDatas_TimeRiftRuins_Storage;
+static SceneItemStore<ItemsDatas> selectedItems;
 thread DrawItemBase::thread_ReadSavedPointsJson;
 std::atomic_bool DrawItemBase::savedPointsThreadStop = false;
-string DrawItemBase::savedJsonPath;
+std::filesystem::path DrawItemBase::savedJsonPath;
 
 static std::shared_mutex g_jsonMutex;          // 读写锁 
 static std::filesystem::file_time_type g_lastTime; // 上一次修改时间 
 static bool LoadExternalKuroRuntimeJson(json& jsonData, const char* sceneName);
 
-Coordinate KuroLocationToIdentifyCoordinate(const json& location, int sceneId) {
-    const double rawX = location.at("x").get<double>();
-    const double rawY = location.at("y").get<double>();
-    const int countryId = location.value("countryId", 0);
-    const int stateId = location.value("stateId", 0);
-
-    // Most legacy World records use centi-units.  Black Shores records from
-    // state 8 are already expressed in the game's coordinate units (for
-    // example, the nearby 3200,1700 point at a player position of about
-    // 3078,1341).  Dividing these compact records by 100 moves their markers
-    // several thousand map pixels away.
-    const bool compactWorldCoordinate = sceneId == Scene::SceneNameToId("World") &&
-        stateId == 8 && countryId == 1 &&
-        std::max(std::abs(rawX), std::abs(rawY)) <= 10'000.0;
-    if (compactWorldCoordinate) return Coordinate(rawX, rawY);
-    return Coordinate(rawX / 100.0, rawY / 100.0);
+Coordinate KuroLocationToIdentifyCoordinate(const json& location) {
+    return KuroPositionToGameCoordinates(location.at("x").get<double>(), location.at("y").get<double>());
 }
 
 json& DrawItemBase::GetSavedItemPoints() {
@@ -65,17 +48,26 @@ json& DrawItemBase::GetSavedItemPoints() {
 
 void DrawItemBase::Initi() {
     DrawItemBase::LoadItemsjson();
-    savedJsonPath = GetCurrentPath() + "\\SavedPoints\\account_1.json";
-
-    try {
-        fs::path folderPath(GetCurrentPath() + "\\SavedPoints");
-
-        if (!fs::exists(folderPath)) {
-            fs::create_directories(folderPath);
+    savedJsonPath = StructuredLogger::ApplicationDataDirectory() / "SavedPoints" / "account_1.json";
+    fs::create_directories(savedJsonPath.parent_path());
+    const auto legacy = fs::path(GetCurrentPath()) / "SavedPoints" / "account_1.json";
+    if (!fs::exists(savedJsonPath) && fs::exists(legacy)) fs::copy_file(legacy, savedJsonPath);
+    // Load before accepting any write; the watcher only handles subsequent edits.
+    if (fs::exists(savedJsonPath)) {
+        try {
+            ifstream input(savedJsonPath);
+            json next = json::parse(input);
+            if (!next.is_object()) throw std::runtime_error("Saved points must be an object");
+            GetSavedItemPoints() = std::move(next);
         }
-    }
-    catch (const exception& e) {
-        cerr << "  DrawItemBase::Initi:" << e.what() << endl;
+        catch (const std::exception& exception) {
+            auto backup = savedJsonPath;
+            backup += ".corrupt-" + std::to_string(GetTickCount64());
+            fs::copy_file(savedJsonPath, backup);
+            StructuredLogger::Record("error", "storage", "saved-points-corrupt", exception.what());
+            GetSavedItemPoints() = json::object();
+        }
+        g_lastTime = fs::last_write_time(savedJsonPath);
     }
 
     savedPointsThreadStop = false;
@@ -113,6 +105,7 @@ bool LoadJson(json& JsonData, const wchar_t* resourceName) {
     try {
         std::string jsonStr(static_cast<const char*>(pResData), resSize);
         JsonData = json::parse(jsonStr);
+        return JsonData.is_array();
     }
     catch (const json::parse_error& e) {
         std::cout << "JSON parsing error:" << e.what() << std::endl;
@@ -121,11 +114,12 @@ bool LoadJson(json& JsonData, const wchar_t* resourceName) {
 }
 
 void DrawItemBase::LoadItemsjson() {
-    LoadJson(itemsJsonData_Tethys, L"ITEMSJSON_Tethys");
-    LoadJson(itemsJsonData_World, L"ITEMSJSON_World");
-    LoadJson(itemsJsonData_Fabricatorium, L"ITEMSJSON_Fabricatorium");
-	LoadJson(itemsJsonData_Avinoleum, L"ITEMSJSON_Avinoleum");
-	LoadJson(itemsJsonData_Lahai, L"ITEMSJSON_Lahai");
+    if (!LoadJson(itemsJsonData_Tethys, L"ITEMSJSON_Tethys") ||
+        !LoadJson(itemsJsonData_World, L"ITEMSJSON_World") ||
+        !LoadJson(itemsJsonData_Fabricatorium, L"ITEMSJSON_Fabricatorium") ||
+        !LoadJson(itemsJsonData_Avinoleum, L"ITEMSJSON_Avinoleum") ||
+        !LoadJson(itemsJsonData_Lahai, L"ITEMSJSON_Lahai"))
+        throw std::runtime_error("Required map item resources are missing or invalid");
 	LoadExternalKuroRuntimeJson(itemsJsonData_LowerVault, "LowerVault");
 	LoadExternalKuroRuntimeJson(itemsJsonData_Darkplain, "Darkplain");
 	LoadExternalKuroRuntimeJson(itemsJsonData_TimeRiftRuins, "TimeRiftRuins");
@@ -152,47 +146,15 @@ static bool LoadExternalKuroRuntimeJson(json& jsonData, const char* sceneName) {
 }
 
 bool DrawItemBase::IsValidItemNameId(string itemNameId) {
-    for (const auto& itemsDatas : itemsDatas_World_Storage) {
-        if (itemsDatas.nameId == itemNameId) {
-            return true;
-        }
+    for (const int scene : Scene::sceneIds) {
+        const auto snapshot = selectedItems.Read(scene);
+        for (const auto& group : *snapshot) if (group.nameId == itemNameId) return true;
     }
-
-    for (const auto& itemsDatas : itemsDatas_Tethys_Storage) {
-        if (itemsDatas.nameId == itemNameId) {
-            return true;
-        }
-    }
-
-    for (const auto& itemsDatas : itemsDatas_Fabricatorium_Storage) {
-        if (itemsDatas.nameId == itemNameId) {
-            return true;
-        }
-    }
-
-    for (const auto& itemsDatas : itemsDatas_Avinoleum_Storage) {
-        if (itemsDatas.nameId == itemNameId) {
-            return true;
-        }
-    }
-
-	for (const auto& itemsDatas : itemsDatas_Lahai_Storage) {
-        if (itemsDatas.nameId == itemNameId) {
-            return true;
-	}
-
-	for (const auto& itemsDatas : itemsDatas_LowerVault_Storage) {
-		if (itemsDatas.nameId == itemNameId) return true;
-	}
-	for (const auto& itemsDatas : itemsDatas_Darkplain_Storage) {
-		if (itemsDatas.nameId == itemNameId) return true;
-	}
-	for (const auto& itemsDatas : itemsDatas_TimeRiftRuins_Storage) {
-		if (itemsDatas.nameId == itemNameId) return true;
-	}
-    }
-
     return false;
+}
+
+std::shared_ptr<const std::vector<ItemsDatas>> DrawItemBase::GetSceneItemsSnapshot(int sceneId) {
+    return selectedItems.Read(sceneId);
 }
 
 string DrawItemBase::GetExternalIconPath(const string& itemNameId) {
@@ -236,82 +198,52 @@ string DrawItemBase::GetExternalIconPath(const string& itemNameId) {
     return icon == iconPaths.end() ? string() : icon->second;
 }
 
-bool DrawItemBase::FindItemJsonData(int sceneId, json*& itemJsonData, vector<ItemsDatas>*& itemsDatas_Storage) {
-    if (sceneId == 1) {
-        itemJsonData = &itemsJsonData_World;
-        itemsDatas_Storage = &itemsDatas_World_Storage;
-        return true;
+bool DrawItemBase::FindItemJsonData(int sceneId, json*& data) {
+    switch (sceneId) {
+    case 1: data = &itemsJsonData_World; break;
+    case 2: data = &itemsJsonData_Tethys; break;
+    case 3: data = &itemsJsonData_Fabricatorium; break;
+    case 4: data = &itemsJsonData_Avinoleum; break;
+    case 5: data = &itemsJsonData_Lahai; break;
+    case 6: data = &itemsJsonData_LowerVault; break;
+    case 7: data = &itemsJsonData_Darkplain; break;
+    case 8: data = &itemsJsonData_TimeRiftRuins; break;
+    default: data = nullptr; return false;
     }
-
-    if (sceneId == 2) {
-        itemJsonData = &itemsJsonData_Tethys;
-        itemsDatas_Storage = &itemsDatas_Tethys_Storage;
-        return true;
-    }
-
-    if (sceneId == 3) {
-        itemJsonData = &itemsJsonData_Fabricatorium;
-        itemsDatas_Storage = &itemsDatas_Fabricatorium_Storage;
-        return true;
-    }
-
-    if (sceneId == 4) {
-        itemJsonData = &itemsJsonData_Avinoleum;
-        itemsDatas_Storage = &itemsDatas_Avinoleum_Storage;
-        return true;
-    }
-
-	if (sceneId == 5) {
-        itemJsonData = &itemsJsonData_Lahai;
-        itemsDatas_Storage = &itemsDatas_Lahai_Storage;
-        return true;
-	}
-	if (sceneId == 6) {
-		itemJsonData = &itemsJsonData_LowerVault;
-		itemsDatas_Storage = &itemsDatas_LowerVault_Storage;
-		return true;
-	}
-	if (sceneId == 7) {
-		itemJsonData = &itemsJsonData_Darkplain;
-		itemsDatas_Storage = &itemsDatas_Darkplain_Storage;
-		return true;
-	}
-	if (sceneId == 8) {
-		itemJsonData = &itemsJsonData_TimeRiftRuins;
-		itemsDatas_Storage = &itemsDatas_TimeRiftRuins_Storage;
-		return true;
-	}
-
-    return false;
-}
-
-bool DrawItemBase::GetSceneItemsData(int sceneId, json*& itemJsonData, vector<ItemsDatas>*& itemsDatasStorage) {
-	return FindItemJsonData(sceneId, itemJsonData, itemsDatasStorage);
+    return true;
 }
 
 void DrawItemBase::AddItemDataFromJson(string itemId) {
     try {
         json* itemsJsonDataPtr = nullptr;
-        vector<ItemsDatas>* itemsDatas_StoragePtr = nullptr;
+
 
         for (const auto& sceneId : Scene::sceneIds) {
             vector<ItemDatas> itemsDatas;
            
-            if (!FindItemJsonData(sceneId, itemsJsonDataPtr, itemsDatas_StoragePtr))
+            if (!FindItemJsonData(sceneId, itemsJsonDataPtr))
                 return;
 
             for (const auto& [item_id, item_info] : (*itemsJsonDataPtr).items()) {
                     string nameId = item_info["id"].get<string>();
                 if (nameId == itemId) {
                     for (const auto& location : item_info["location"]) {
-                        const Coordinate identifyCoordinate = KuroLocationToIdentifyCoordinate(location, sceneId);
+                        const Coordinate identifyCoordinate = KuroLocationToIdentifyCoordinate(location);
                         Coordinate itemMapROC = RelativeCoordinates::IdentifyCoordToROC(identifyCoordinate, sceneId);
    
                         string s = location["id"].get<string>();
                         ItemDatas tempItemDatas = { s ,nameId,Coordinate(0,0),itemMapROC ,false };
+                        tempItemDatas.layer.stateId = location.value("stateId", 0);
+                        tempItemDatas.layer.countryId = location.value("countryId", 0);
+                        const auto metadata = [&](const char* key) {
+                            if (!location.contains(key) || location.at(key).is_null()) return std::string{};
+                            return location.at(key).is_string() ? location.at(key).get<std::string>() : location.at(key).dump();
+                        };
+                        tempItemDatas.layer.floorId = metadata("floorId");
+                        tempItemDatas.layer.level = metadata("level");
                         itemsDatas.push_back(tempItemDatas);
                     }
-                   (*itemsDatas_StoragePtr).push_back(ItemsDatas(nameId, itemsDatas));
+                   selectedItems.Add(sceneId, ItemsDatas(nameId, std::move(itemsDatas)));
                 }
             }
 
@@ -324,44 +256,8 @@ void DrawItemBase::AddItemDataFromJson(string itemId) {
 }
 
 void DrawItemBase::ClearItemData(string itemId) {
-    for (int i = 0; i < itemsDatas_World_Storage.size();i++) {
-        if (itemsDatas_World_Storage[i].nameId == itemId) {
-            itemsDatas_World_Storage.erase(itemsDatas_World_Storage.begin() + i);
-            break;
-        }
-    }
-
-    for (int i = 0; i < itemsDatas_Tethys_Storage.size(); i++) {
-        if (itemsDatas_Tethys_Storage[i].nameId == itemId) {
-            itemsDatas_Tethys_Storage.erase(itemsDatas_Tethys_Storage.begin() + i);
-            break;
-        }
-    }
-
-    for (int i = 0; i < itemsDatas_Avinoleum_Storage.size(); i++) {
-        if (itemsDatas_Avinoleum_Storage[i].nameId == itemId) {
-            itemsDatas_Avinoleum_Storage.erase(itemsDatas_Avinoleum_Storage.begin() + i);
-            break;
-        }
-    }
-
-	for (int i = 0; i < itemsDatas_Lahai_Storage.size(); i++) {
-        if (itemsDatas_Lahai_Storage[i].nameId == itemId) {
-            itemsDatas_Lahai_Storage.erase(itemsDatas_Lahai_Storage.begin() + i);
-            break;
-		}
-	}
-	for (int i = 0; i < itemsDatas_LowerVault_Storage.size(); i++) {
-		if (itemsDatas_LowerVault_Storage[i].nameId == itemId) { itemsDatas_LowerVault_Storage.erase(itemsDatas_LowerVault_Storage.begin() + i); break; }
-	}
-	for (int i = 0; i < itemsDatas_Darkplain_Storage.size(); i++) {
-		if (itemsDatas_Darkplain_Storage[i].nameId == itemId) { itemsDatas_Darkplain_Storage.erase(itemsDatas_Darkplain_Storage.begin() + i); break; }
-	}
-	for (int i = 0; i < itemsDatas_TimeRiftRuins_Storage.size(); i++) {
-		if (itemsDatas_TimeRiftRuins_Storage[i].nameId == itemId) { itemsDatas_TimeRiftRuins_Storage.erase(itemsDatas_TimeRiftRuins_Storage.begin() + i); break; }
-	}
+    selectedItems.Remove(itemId);
 }
-
 
 void DrawItemBase::RenderPointCircle(ImTextureID texture, ImVec2 position,float radius,float transparency, ImColor circleColor) {
     auto draw = ImGui::GetBackgroundDrawList();
@@ -375,15 +271,16 @@ void DrawItemBase::RenderPointCircle(ImTextureID texture, ImVec2 position,float 
 void DrawItemBase::SaveItemPoint(string scene, ItemDatas itemDatas) {
     try {
         unique_lock lock(g_jsonMutex);
-        auto& j = GetSavedItemPoints();
+        auto j = GetSavedItemPoints();
 
-        j[scene][itemDatas.nameId].push_back({ {"id", itemDatas.itemId} });
+        auto& points = j[scene][itemDatas.nameId];
+        if (points.is_array() && std::any_of(points.begin(), points.end(), [&](const json& point) {
+            return point.value("id", "") == itemDatas.itemId;
+        })) return;
+        points.push_back({ {"id", itemDatas.itemId} });
 
-        {   
-            ofstream out_file(savedJsonPath);
-            out_file << j.dump(4);
-        }
-
+        WriteTextAtomically(fs::path(savedJsonPath), j.dump(4));
+        GetSavedItemPoints() = std::move(j);
         g_lastTime = filesystem::last_write_time(savedJsonPath);
     }
     catch (const exception& e) {
@@ -394,7 +291,7 @@ void DrawItemBase::SaveItemPoint(string scene, ItemDatas itemDatas) {
 void DrawItemBase::RemoveSavedItemPoint(string scene, ItemDatas itemDatas) {
     try {
         unique_lock lock(g_jsonMutex);// 独占写 
-        auto& j = GetSavedItemPoints();
+        auto j = GetSavedItemPoints();
 
         auto& item_array = j[scene][itemDatas.nameId];
         for (auto it = item_array.begin(); it != item_array.end(); ++it) {
@@ -403,9 +300,8 @@ void DrawItemBase::RemoveSavedItemPoint(string scene, ItemDatas itemDatas) {
                 break;
             }
         }
-        ofstream out_file(savedJsonPath);
-
-        out_file << j.dump(4);
+        WriteTextAtomically(fs::path(savedJsonPath), j.dump(4));
+        GetSavedItemPoints() = std::move(j);
         g_lastTime = filesystem::last_write_time(savedJsonPath);
     }catch (const exception& e) {
 		Notification::AddError(NotificationDatas("DrawItemBase::RemoveSavedItemPoint: " + string(e.what()), 5));
@@ -440,12 +336,15 @@ vector<string> DrawItemBase::GetFilteredPoints(string scene,string nameId) {
 void DrawItemBase::Thread_ReadSavedPointsJson() {
     while (!savedPointsThreadStop.load()) {
         try {
+            unique_lock lock(g_jsonMutex);
             if (fs::exists(savedJsonPath)) {
                 auto t = fs::last_write_time(savedJsonPath);
                 if (t != g_lastTime) {  // 只有变化才读 
-                    unique_lock lock(g_jsonMutex);
                     ifstream file(savedJsonPath);
-                    file >> GetSavedItemPoints();
+                    json next;
+                    file >> next;
+                    if (!next.is_object()) throw std::runtime_error("Saved points must be an object");
+                    GetSavedItemPoints() = std::move(next);
                     g_lastTime = t;
                 }
             }
