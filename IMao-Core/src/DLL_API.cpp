@@ -1,4 +1,5 @@
 #include "DLL_API.h"
+#include "Runtime/RoutePlanningService.h"
 #include <iostream>
 #include"App/App.h"
 #include "ImguiDraw/Items/DrawItemBase.h"
@@ -41,6 +42,7 @@ bool runRequested = false;
 bool runtimeRunning = false;
 bool shutdownRequested = false;
 HWND requestedWindow = nullptr;
+DWORD requestedProcessId = 0;
 std::once_flag drawItemsInitialized;
 
 // Session ownership also covers partial startup and exception unwinding. Route
@@ -52,6 +54,7 @@ struct OverlaySession {
         LoadEditRouteData::StopThread();
         if (overlay) overlay->Stop();
         if (app) app->StopTasks();
+        RoutePlanningService::SessionStopped();
         Notification::Stop();
     }
 };
@@ -255,12 +258,42 @@ int Start() {
     if (runtimeInitialized && gameWindow && GetUsableClientRect(gameWindow, clientRect) &&
 		!runtimeRunning && !runRequested && !shutdownRequested) {
 		requestedWindow = gameWindow;
+        GetWindowThreadProcessId(gameWindow, &requestedProcessId);
 		runRequested = true;
 		runtimeCondition.notify_all();
 		RuntimeStatus::SetCoreState("startingOverlay", "已找到游戏窗口，正在启动");
         return 1;
     }
     return 0;
+}
+
+bool TryGetGameWindowClientBounds(RECT* bounds) {
+    if (!bounds) return false;
+    *bounds = {};
+    std::scoped_lock lock(runtimeMutex);
+    const HWND window = requestedWindow;
+    DWORD processId = 0;
+    if (!runtimeInitialized || shutdownRequested || !runRequested || !window || !IsWindow(window) ||
+        !IsWindowVisible(window) || IsIconic(window) || !GetWindowThreadProcessId(window, &processId) ||
+        !requestedProcessId || processId != requestedProcessId) return false;
+
+    // The IPC caller may have a different DPI context. Ask for physical client
+    // coordinates explicitly, and restore its context before returning.
+    using SetThreadContext = DPI_AWARENESS_CONTEXT(WINAPI*)(DPI_AWARENESS_CONTEXT);
+    const auto setContext = reinterpret_cast<SetThreadContext>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetThreadDpiAwarenessContext"));
+    if (!setContext) return false;
+    const auto previousContext = setContext(reinterpret_cast<DPI_AWARENESS_CONTEXT>(static_cast<INT_PTR>(-4)));
+    if (!previousContext) return false;
+    struct RestoreContext {
+        SetThreadContext set; DPI_AWARENESS_CONTEXT previous;
+        ~RestoreContext() { set(previous); }
+    } restore{setContext, previousContext};
+    RECT client{};
+    if (!GetClientRect(window, &client) || client.right <= client.left || client.bottom <= client.top) return false;
+    POINT first{client.left, client.top}, last{client.right, client.bottom};
+    if (!ClientToScreen(window, &first) || !ClientToScreen(window, &last) || last.x <= first.x || last.y <= first.y) return false;
+    *bounds = {first.x, first.y, last.x, last.y};
+    return true;
 }
 
 void Stop(){
@@ -293,6 +326,7 @@ void Shutdown() {
 		runtimeRunning = false;
 		shutdownRequested = false;
 		requestedWindow = nullptr;
+        requestedProcessId = 0;
 	}
 	RuntimeStatus::SetCoreState("stopped", "核心已停止");
 }

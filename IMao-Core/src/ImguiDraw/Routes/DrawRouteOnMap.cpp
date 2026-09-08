@@ -1,5 +1,8 @@
 #include "DrawRouteOnMap.h"
 #include "../../Coordinate/locationCalculator/ScreenCoordinate.h"
+#include "../../Runtime/RouteGeometry.h"
+#include "../../Runtime/RoutePlanningService.h"
+#include "../Items/DrawItemBase.h"
 
 using namespace std;
 using namespace cv;
@@ -15,9 +18,9 @@ void DrawRouteOnMap::GetRoutePointsScreen(const Coordinate& validGameMapcenterPo
 		vector<Coordinate> routePointsScreen;
 		for (const auto routePointROC : routeDatas.routePointsROC) {
 			Coordinate routePointScreen = ScreenCoordinate::ItemScreenCoordinateOnMap(validGameMapcenterPointROC, routePointROC, captureCorners, rect);
-			if (routePointScreen.x < rect.right + 50 and routePointScreen.x > -50 and routePointScreen.y < rect.bottom + 50 and routePointScreen.y > -50) {
-				routePointsScreen.push_back(routePointScreen);
-			}
+			// Keep the original topology. Clip each segment only after applying
+			// the image motion used for this particular displayed frame.
+			routePointsScreen.push_back(routePointScreen);
 		}
 
 		if (routePointsScreen.size() >= 2) {
@@ -26,12 +29,18 @@ void DrawRouteOnMap::GetRoutePointsScreen(const Coordinate& validGameMapcenterPo
 	}
 }
 
-void DrawRouteOnMap::DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion) {
+void DrawRouteOnMap::DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion, const RECT& clipRect) {
 
 	if (frame.empty())
 		return;
 
+	const auto size = ImGui::GetIO().DisplaySize;
+	const double right = clipRect.right > clipRect.left ? clipRect.right : size.x;
+	const double bottom = clipRect.bottom > clipRect.top ? clipRect.bottom : size.y;
+	const auto visibility = RoutePlanningService::DrawingVisibility();
 	for (const auto& routeDatas : frame) {
+		if (!visibility.Allows(routeDatas)) continue;
+		if (routeDatas.automatic && routeDatas.profileId != DrawItemBase::MarkerProfile()) continue;
 		const auto& screenPoints = routeDatas.routePointsScreenCoord;
 
 		if (routeDatas.senceId != sceneId) {
@@ -39,14 +48,24 @@ void DrawRouteOnMap::DrawRoute(const std::vector<RouteDatas>& frame, int sceneId
 		}
 			
 		auto draw = ImGui::GetBackgroundDrawList();
-		for (int i = 0; i < screenPoints.size() - 1; i++) {
+		for (std::size_t i = 0; i + 1 < screenPoints.size(); ++i) {
 			const auto first = motion.Apply(screenPoints[i]);
 			const auto second = motion.Apply(screenPoints[i + 1]);
-			ImVec2 p1 = ImVec2(first.x, first.y);
-			ImVec2 p2 = ImVec2(second.x, second.y);
-			ImU32 color = IM_COL32(255, 0, 0, 255);
-
-			draw->AddLine(p1, p2, color, 1.5);
+			const auto segment = AutoRoute::ClipRectangle(first, second, 0.0, 0.0, right, bottom);
+			if (!segment) continue;
+			ImVec2 p1(static_cast<float>(segment->first.x), static_cast<float>(segment->first.y));
+			ImVec2 p2(static_cast<float>(segment->second.x), static_cast<float>(segment->second.y));
+			const ImU32 color = !routeDatas.automatic ? IM_COL32(255, 0, 0, 255) : routeDatas.preview ?
+				IM_COL32(102, 201, 222, 190) : routeDatas.emphasized ? IM_COL32(255, 193, 73, 255) : IM_COL32(81, 168, 209, 210);
+			const float thickness = routeDatas.emphasized ? 3.5f : routeDatas.automatic ? 2.0f : 1.5f;
+			if (routeDatas.automatic && routeDatas.preview) {
+				const float length = std::hypot(p2.x - p1.x, p2.y - p1.y);
+				for (float d = 0; d < length; d += 14.0f) {
+					const float end = std::min(d + 8.0f, length);
+					draw->AddLine(ImVec2(p1.x + (p2.x - p1.x) * d / length, p1.y + (p2.y - p1.y) * d / length),
+						ImVec2(p1.x + (p2.x - p1.x) * end / length, p1.y + (p2.y - p1.y) * end / length), color, thickness);
+				}
+			} else draw->AddLine(p1, p2, color, thickness);
 		}
 	}
 }

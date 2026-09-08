@@ -10,7 +10,7 @@ class DrawRouteOnMap{
 public:
 
 	static void GetRoutePointsScreen(const Coordinate& validGameMapcenterPointROC, const std::vector<cv::Point2f>& captureCorners, const RECT& rect, int senceId);
-	static void DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion = {});
+	static void DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion = {}, const RECT& clipRect = {});
     static std::vector<RouteDatas> Snapshot();
 	static void ClearRountsData() {
 		std::lock_guard<std::mutex> lock(routeMutex);

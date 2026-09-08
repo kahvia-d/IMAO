@@ -79,6 +79,13 @@
       ]
     },
     {
+      "name": "windows-x64-release-route-planning-tests",
+      "configurePreset": "windows-x64-release",
+      "targets": [
+        "IMaoRoutePlanningTests"
+      ]
+    },
+    {
       "name": "windows-x64-release-visual-regression",
       "configurePreset": "windows-x64-release",
       "targets": [

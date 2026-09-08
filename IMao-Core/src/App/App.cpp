@@ -14,6 +14,8 @@
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/FramePacer.h"
+#include "../Runtime/RoutePlanningService.h"
+#include "../Runtime/RuntimeHotkeys.h"
 #include "MinimapHudEvidence.h"
 
 #include <cctype>
@@ -32,6 +34,15 @@ std::atomic_bool App::enabledMinMapShowItem = false;
 namespace {
 constexpr double kViewportPredictionCenterTolerance = 36.0;
 constexpr double kViewportPredictionScaleRatioTolerance = 0.15;
+
+AutoRoute::Start PlanningStart(int sceneId, const Coordinate& mapCoordinate,
+    std::chrono::steady_clock::time_point confirmed, std::uint64_t generation, bool valid) {
+    const auto age = std::chrono::steady_clock::now() - confirmed;
+    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch() - age).count();
+    return {sceneId, RelativeCoordinates::ImgMapCoordToROC(mapCoordinate, sceneId),
+        "playerSnapshot", timestamp, generation, valid && Scene::IsKnown(sceneId)};
+}
 
 Coordinate ImgMapToWorldCoordinate(const Coordinate& mapCoordinate, int sceneId) {
 	const auto* scene = Scene::Find(sceneId);
@@ -455,7 +466,7 @@ void App::Thread_DetectGameState() {
         const bool liveCapture = !captured->image.empty() && captured->frameId != 0 &&
             std::chrono::steady_clock::now() - captured->capturedAt < captured->maximumAge;
         if (!liveCapture || captured->frameId == lastObservedFrame) {
-            isWindowFocused = IsWindowFocused(hwnd) || IsWindowFocused(ImGuiOverWindows::overWindowsHwnd);
+            isWindowFocused = DrawItemBase::IsMarkerDisplayContext(hwnd) || IsWindowFocused(ImGuiOverWindows::overWindowsHwnd);
             if (!isWindowFocused.load()) {
                 // A paused capture must not preserve a visible snapshot across
                 // focus loss. Only a new observed game frame may restore it.
@@ -478,8 +489,9 @@ void App::Thread_DetectGameState() {
         int minimapMatchCount = 0, mapMatchCount = 0;
 		const bool mapKeyPressed = (GetAsyncKeyState(0x4D) & 1) != 0;
 		const bool manualMapCheckPressed = Diagnostics::Enabled() && (GetAsyncKeyState(VK_F10) & 1) != 0;
-		const bool focused = IsWindowFocused(hwnd);
-		if ((mapKeyPressed || manualMapCheckPressed) && focused) {
+		const bool gameFocused = DrawItemBase::IsMarkerGameFocused(hwnd);
+		const bool focused = DrawItemBase::IsMarkerDisplayContext(hwnd);
+		if ((mapKeyPressed || manualMapCheckPressed) && gameFocused) {
 			Diagnostics::Record("map-keypress", manualMapCheckPressed
 				? "F10 detected; requesting an immediate visual map check"
 				: "M detected; requesting an immediate visual map check");
@@ -623,7 +635,7 @@ void App::Thread_DetectGameState() {
 			}
 		}
 
-		isWindowFocused = focused || IsWindowFocused(ImGuiOverWindows::overWindowsHwnd);
+		isWindowFocused = DrawItemBase::IsMarkerDisplayContext(hwnd) || IsWindowFocused(ImGuiOverWindows::overWindowsHwnd);
 		}
 		catch (const cv::Exception& exception) {
 			visibilityPolicy.Reset(); overlayVisibility.Publish({});
@@ -898,6 +910,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		trustedMinimapReference = normalizedMinimap.clone();
 		playerLocationLock = { candidate.sceneId, candidate.mapCenter, now, candidate.quality,
 			coordinateUiGeneration, true };
+        RoutePlanningService::UpdatePlayer(PlanningStart(candidate.sceneId, candidate.mapCenter, now, coordinateUiGeneration, true));
 		coordinateTextFallbackCandidate.reset();
 		if (ocrAssistEnabled && !ocrPreloadStarted) {
 			const auto ocrModelDirectory = std::filesystem::path(GetCurrentPath()) /
@@ -941,6 +954,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		globalVisualConfirmation.Reset();
 		playerLocationLock = { worldSceneId, mapCoordinate, now, VisualLocalizationQuality::Marginal,
 			coordinateUiGeneration, true };
+        RoutePlanningService::UpdatePlayer(PlanningStart(worldSceneId, mapCoordinate, now, coordinateUiGeneration, true));
 		minimapResumePolicy.Reset();
 		coordinateTextFallbackCandidate.reset();
 		coordinateRecovery.OnRecognitionSuccess(now);
@@ -1471,6 +1485,9 @@ int App::ResolveMapViewportScene(const Coordinate& centerMapCoordinate) const {
 void App::SuspendPlayerLocationForMapTransition() {
     GlobalVisualLocalizer::CancelPending();
 	const auto now = CoordinateRecoveryController::Clock::now();
+    RoutePlanningService::CaptureMapStart(PlanningStart(playerLocationLock.sceneId, playerLocationLock.mapCoordinate,
+        playerLocationLock.confirmedAt, playerLocationLock.generation,
+        playerLocationLock.valid && coordinateRecovery.CanUseTrustedPosition(now)));
 	coordinateRecovery.SetVisible(false, now);
 	coordinateRecoveryStartedAt.reset();
 	globalVisualConfirmation.Reset();
@@ -1829,22 +1846,26 @@ bool App::TryGetRoutePoint(Coordinate& point, int& sceneId) {
     return std::isfinite(point.x) && std::isfinite(point.y);
 }
 
-//TODO:需用户可自定义快捷键
 void App::Thread_KeyMonitoring_SavePlayerNearItemPoint() {
-	const int monitoredKey = 0x5A; //Z
-	bool keyWasPressed = false; 
+	int monitoredKey = RuntimeHotkeys::Snapshot().nearestCompletionKey;
+	bool keyWasPressed = monitoredKey > 0 && isKeyPressed(monitoredKey);
 	while (!allThreadStopFlag) {
+        const auto configuredKey = RuntimeHotkeys::Snapshot().nearestCompletionKey;
+        const bool keyIsPressed = configuredKey > 0 && isKeyPressed(configuredKey);
+        if (configuredKey != monitoredKey) {
+            monitoredKey = configuredKey; keyWasPressed = keyIsPressed;
+            Sleep(50); continue;
+        }
         const auto presented = presentedOverlay.Read();
         const auto frame = presented->source;
-		bool keyIsPressed = presented->Fresh() && presented->minimapVisible &&
-            overlayVisibility.Read()->AllowsMinimap(frame->frameId) && IsWindowFocused(hwnd) && isKeyPressed(monitoredKey);
-		if (keyIsPressed && !keyWasPressed) {
-			keyWasPressed = true;
+        const bool plainKey = !(GetAsyncKeyState(VK_SHIFT) & 0x8000) && !(GetAsyncKeyState(VK_CONTROL) & 0x8000) &&
+            !(GetAsyncKeyState(VK_MENU) & 0x8000) && !(GetAsyncKeyState(VK_LWIN) & 0x8000) && !(GetAsyncKeyState(VK_RWIN) & 0x8000);
+		if (keyIsPressed && !keyWasPressed && !RuntimeHotkeyPressOwnership::BlocksPolling(configuredKey) &&
+            plainKey && presented->Fresh() && presented->minimapVisible &&
+            overlayVisibility.Read()->AllowsMinimap(frame->frameId) && DrawItemBase::IsMarkerGameFocused(hwnd)) {
 			DrawItemOnMinMap::SavePlayerNearItemPoint(frame->minimapMarkers, presented->motion);
 		}
-		else if (!keyIsPressed && keyWasPressed) {
-			keyWasPressed = false;
-		}
+        keyWasPressed = keyIsPressed;
 		Sleep(50);
 	}
 }
@@ -1895,5 +1916,33 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
     }
     frame.mapMarkers = DrawItemOnGameMap::Snapshot(); frame.minimapMarkers = DrawItemOnMinMap::Snapshot();
     frame.mapRoutes = DrawRouteOnMap::Snapshot(); frame.minimapRoutes = DrawRouteOnMinMap::Snapshot();
+    RoutePlanningService::SetPlayerAvailable(frame.minimapVisible && frame.minimapMotion.reliable && frame.focused);
+    const auto routeView = RoutePlanningService::View();
+    const auto appendRoute = [&](const AutoRoute::Plan& plan, bool preview) {
+        const bool onMap = frame.mapVisible && plan.sceneId == frame.viewportScene;
+        const bool onMini = !preview && frame.minimapVisible && plan.sceneId == frame.playerScene && routeView.navigating;
+        if (!onMap && !onMini) return;
+        const auto centerROC = onMap ? RelativeCoordinates::ImgMapCoordToROC(viewport.centerMapCoordinate, viewport.sceneId) :
+            RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
+        Coordinate previous = onMini ? centerROC : !preview && routeView.mapStart.valid && routeView.mapStart.sceneId == plan.sceneId ?
+            routeView.mapStart.roc : plan.start.roc;
+        bool first = true;
+        for (const auto& stop : plan.stops) {
+            const auto key = AutoRoute::Key(stop);
+            if (!preview && (routeView.completed.contains(key) || plan.skipped.contains(key))) continue;
+            const auto project = [&](const Coordinate& roc) {
+                return onMap ? ScreenCoordinate::ItemScreenCoordinateOnMap(centerROC, roc, viewport.captureCorners, captured.clientRect) :
+                    ScreenCoordinate::ItemScreenCoordinateOnMinMap(captured.clientRect, roc, centerROC, minimapTerrainScale);
+            };
+            RouteDatas segment(plan.name, plan.sceneId, {previous, stop.itemMapROC}, {project(previous), project(stop.itemMapROC)});
+            segment.automatic = true; segment.preview = preview; segment.emphasized = !preview && first;
+            segment.profileId = plan.profileId;
+            segment.routePlanId = plan.id;
+            (onMap ? frame.mapRoutes : frame.minimapRoutes).push_back(std::move(segment));
+            previous = stop.itemMapROC; first = false;
+        }
+    };
+    if (routeView.active) appendRoute(*routeView.active, false);
+    if (routeView.enabled && routeView.preview) appendRoute(*routeView.preview, true);
     overlayFrames.Publish(std::move(frame));
 }

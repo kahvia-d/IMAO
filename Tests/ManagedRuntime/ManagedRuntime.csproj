@@ -18,6 +18,11 @@
     <Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="MapFilterCatalog.cs" />
     <Compile Include="../../IMao-WinUI/Helpers/UserDataPaths.cs" Link="UserDataPaths.cs" />
     <Compile Include="../../IMao-WinUI/Services/CoreHostService.cs" Link="CoreHostService.cs" />
+    <Compile Include="../../IMao-WinUI/Services/LocalMarkerProfileSelection.cs" Link="LocalMarkerProfileSelection.cs" />
+    <Compile Include="../../IMao-WinUI/Models/MarkerDetail.cs" Link="MarkerDetail.cs" />
+    <Compile Include="../../IMao-WinUI/Models/MarkerGuideSession.cs" Link="MarkerGuideSession.cs" />
+    <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="RoutePlanningState.cs" />
+    <Compile Include="../../IMao-WinUI/Services/MarkerDetailService.cs" Link="MarkerDetailService.cs" />
     <Compile Include="../../IMao-WinUI/Helpers/LocalItemFilter.cs" Link="LocalItemFilter.cs" />
     <Compile Include="../../IMao-WinUI/Contracts/Services/ILocalSettingsService.cs" Link="ILocalSettingsService.cs" />
     <Compile Include="../../IMao-WinUI/Models/LocalSettingsOptions.cs" Link="LocalSettingsOptions.cs" />

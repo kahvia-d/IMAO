@@ -310,6 +310,20 @@ target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} bcrypt.lib wi
 enable_testing()
 add_test(NAME IMaoOptimizationTests COMMAND IMaoOptimizationTests)
 
+add_executable(IMaoMarkerTests IMao-Core/tests/MarkerTests.cpp)
+target_include_directories(IMaoMarkerTests PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
+set_target_properties(IMaoMarkerTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoMarkerTests COMMAND IMaoMarkerTests)
+
+add_executable(IMaoRoutePlanningTests IMao-Core/tests/RoutePlanningTests.cpp)
+target_include_directories(IMaoRoutePlanningTests PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
+set_target_properties(IMaoRoutePlanningTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoRoutePlanningTests COMMAND IMaoRoutePlanningTests)
+
 add_executable(IMaoVisualRegression
     IMao-Core/tools/VisualRegression/main.cpp
     IMao-Core/src/App/MapViewportLocalizer.cpp

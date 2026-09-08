@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>GuideWindowRuntime</RootNamespace>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <EnableDefaultPriItems>true</EnableDefaultPriItems>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <OutputPath>../../out/guide-window-runtime/</OutputPath>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+    <Manifest Include="$(ApplicationManifest)" />
+    <Compile Include="../../IMao-WinUI/Views/MarkerGuideWindow.cs" Link="Production/MarkerGuideWindow.cs" />
+    <Compile Include="../../IMao-WinUI/Services/MarkerGuideCoordinator.cs" Link="Production/MarkerGuideCoordinator.cs" />
+    <Compile Include="../../IMao-WinUI/Models/MarkerDetail.cs" Link="Production/MarkerDetail.cs" />
+    <Compile Include="../../IMao-WinUI/Models/MarkerGuideSession.cs" Link="Production/MarkerGuideSession.cs" />
+    <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="Production/RoutePlanningState.cs" />
+    <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GuidePlacement.cs" Link="Production/GuidePlacement.cs" />
+  </ItemGroup>
+</Project>

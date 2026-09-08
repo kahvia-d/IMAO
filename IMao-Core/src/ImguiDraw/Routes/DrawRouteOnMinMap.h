@@ -16,7 +16,7 @@ public:
 		routesDatas.clear();
 	}
 
-	static void DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion = {});
+	static void DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion = {}, Coordinate clipCenter = {}, double clipRadius = 0.0);
     static std::vector<RouteDatas> Snapshot();
 private:
 	static std::vector<RouteDatas> routesDatas;

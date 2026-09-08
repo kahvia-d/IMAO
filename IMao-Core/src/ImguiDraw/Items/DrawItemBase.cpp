@@ -12,6 +12,10 @@
 #include <mutex>
 #include "../../Runtime/SceneItemStore.h"
 #include "../../Runtime/AtomicFile.h"
+#include "../../Runtime/MarkerCompletionStore.h"
+#include "../../Runtime/RoutePlanningService.h"
+#include "../../Runtime/MarkerGuideProtocol.h"
+#include <functional>
 #include "../../Runtime/StructuredLogger.h"
 #include "../../Coordinate/KuroMapCoordinates.h"
 
@@ -33,8 +37,17 @@ thread DrawItemBase::thread_ReadSavedPointsJson;
 std::atomic_bool DrawItemBase::savedPointsThreadStop = false;
 std::filesystem::path DrawItemBase::savedJsonPath;
 
-static std::shared_mutex g_jsonMutex;          // 读写锁 
-static std::filesystem::file_time_type g_lastTime; // 上一次修改时间 
+static std::unique_ptr<MarkerCompletionStore> markerStore;
+static std::mutex markerEventMutex;
+static std::function<void(const json&)> markerEventCallback;
+static std::mutex markerGuideMutex;
+static HWND markerGuideWindow = nullptr;
+static json markerGuideRegistration = json::object();
+static std::unordered_map<std::string, json> markerIdentities;
+static std::mutex markerCandidatesMutex;
+static json markerCandidates = json::array();
+static std::string candidatesProfile, candidatesScene;
+static std::uint64_t candidatesRevision = 0;
 static bool LoadExternalKuroRuntimeJson(json& jsonData, const char* sceneName);
 
 Coordinate KuroLocationToIdentifyCoordinate(const json& location) {
@@ -48,37 +61,34 @@ json& DrawItemBase::GetSavedItemPoints() {
 
 void DrawItemBase::Initi() {
     DrawItemBase::LoadItemsjson();
-    savedJsonPath = StructuredLogger::ApplicationDataDirectory() / "SavedPoints" / "account_1.json";
-    fs::create_directories(savedJsonPath.parent_path());
+    const auto directory = StructuredLogger::ApplicationDataDirectory() / "SavedPoints";
+    fs::create_directories(directory);
     const auto legacy = fs::path(GetCurrentPath()) / "SavedPoints" / "account_1.json";
-    if (!fs::exists(savedJsonPath) && fs::exists(legacy)) fs::copy_file(legacy, savedJsonPath);
-    // Load before accepting any write; the watcher only handles subsequent edits.
-    if (fs::exists(savedJsonPath)) {
-        try {
-            ifstream input(savedJsonPath);
-            json next = json::parse(input);
-            if (!next.is_object()) throw std::runtime_error("Saved points must be an object");
-            GetSavedItemPoints() = std::move(next);
+    if (!fs::exists(directory / "account_1.json") && fs::exists(legacy)) fs::copy_file(legacy, directory / "account_1.json");
+    markerStore = std::make_unique<MarkerCompletionStore>(directory);
+    markerIdentities.clear();
+    for (const auto sceneId : Scene::sceneIds) {
+        json* source = nullptr;
+        if (!FindItemJsonData(sceneId, source) || !source || !source->is_array()) continue;
+        const auto scene = Scene::SceneIdToName(sceneId);
+        for (const auto& category : *source) {
+            for (const auto& location : category.value("location", json::array())) {
+                if (!location.contains("id") || !location.at("id").is_string()) continue;
+                const auto id = location.at("id").get<std::string>();
+                const int state = location.value("stateId", MarkerCompletionStore::SceneState(scene));
+                markerIdentities[std::to_string(state) + ":" + id] = {{"sceneName", scene},
+                    {"nameId", category.value("id", "")}, {"stateId", state}, {"pointId", id}};
+            }
         }
-        catch (const std::exception& exception) {
-            auto backup = savedJsonPath;
-            backup += ".corrupt-" + std::to_string(GetTickCount64());
-            fs::copy_file(savedJsonPath, backup);
-            StructuredLogger::Record("error", "storage", "saved-points-corrupt", exception.what());
-            GetSavedItemPoints() = json::object();
-        }
-        g_lastTime = fs::last_write_time(savedJsonPath);
     }
-
-    savedPointsThreadStop = false;
-    thread_ReadSavedPointsJson = std::thread(&DrawItemBase::Thread_ReadSavedPointsJson);
+    RoutePlanningService::Initialize();
 }
 
 void DrawItemBase::Shutdown() {
-    savedPointsThreadStop = true;
-    if (thread_ReadSavedPointsJson.joinable()) {
-        thread_ReadSavedPointsJson.join();
-    }
+    RoutePlanningService::Shutdown();
+    SetMarkerEventCallback({});
+    SetGuideWindow(nullptr);
+    markerStore.reset();
 }
 
 bool LoadJson(json& JsonData, const wchar_t* resourceName) {
@@ -233,7 +243,8 @@ void DrawItemBase::AddItemDataFromJson(string itemId) {
    
                         string s = location["id"].get<string>();
                         ItemDatas tempItemDatas = { s ,nameId,Coordinate(0,0),itemMapROC ,false };
-                        tempItemDatas.layer.stateId = location.value("stateId", 0);
+                        tempItemDatas.layer.stateId = location.value("stateId", Scene::Find(sceneId)->kuroStateId);
+                        if (tempItemDatas.layer.stateId <= 0) tempItemDatas.layer.stateId = Scene::Find(sceneId)->kuroStateId;
                         tempItemDatas.layer.countryId = location.value("countryId", 0);
                         const auto metadata = [&](const char* key) {
                             if (!location.contains(key) || location.at(key).is_null()) return std::string{};
@@ -269,89 +280,151 @@ void DrawItemBase::RenderPointCircle(ImTextureID texture, ImVec2 position,float 
 }
 
 void DrawItemBase::SaveItemPoint(string scene, ItemDatas itemDatas) {
-    try {
-        unique_lock lock(g_jsonMutex);
-        auto j = GetSavedItemPoints();
-
-        auto& points = j[scene][itemDatas.nameId];
-        if (points.is_array() && std::any_of(points.begin(), points.end(), [&](const json& point) {
-            return point.value("id", "") == itemDatas.itemId;
-        })) return;
-        points.push_back({ {"id", itemDatas.itemId} });
-
-        WriteTextAtomically(fs::path(savedJsonPath), j.dump(4));
-        GetSavedItemPoints() = std::move(j);
-        g_lastTime = filesystem::last_write_time(savedJsonPath);
-    }
-    catch (const exception& e) {
-		Notification::AddError(NotificationDatas("DrawItemBase::SaveItemPoint: " + string(e.what()), 5));
-    }
+    const auto result = HandleMarkerCommand({{"type", "markerSetCompletion"}, {"sceneName", scene},
+        {"profileId", MarkerProfile()},
+        {"nameId", itemDatas.nameId}, {"pointId", itemDatas.itemId},
+        {"stateId", itemDatas.layer.stateId > 0 ? itemDatas.layer.stateId : MarkerCompletionStore::SceneState(scene)}, {"completed", true}});
+    if (!result.value("accepted", false)) Notification::AddError(NotificationDatas("保存标记失败：" + result.value("message", ""), 5));
 }
 
 void DrawItemBase::RemoveSavedItemPoint(string scene, ItemDatas itemDatas) {
-    try {
-        unique_lock lock(g_jsonMutex);// 独占写 
-        auto j = GetSavedItemPoints();
-
-        auto& item_array = j[scene][itemDatas.nameId];
-        for (auto it = item_array.begin(); it != item_array.end(); ++it) {
-            if (it->at("id") == itemDatas.itemId) {
-                item_array.erase(it);
-                break;
-            }
-        }
-        WriteTextAtomically(fs::path(savedJsonPath), j.dump(4));
-        GetSavedItemPoints() = std::move(j);
-        g_lastTime = filesystem::last_write_time(savedJsonPath);
-    }catch (const exception& e) {
-		Notification::AddError(NotificationDatas("DrawItemBase::RemoveSavedItemPoint: " + string(e.what()), 5));
-    }
+    const auto result = HandleMarkerCommand({{"type", "markerSetCompletion"}, {"sceneName", scene},
+        {"profileId", MarkerProfile()},
+        {"nameId", itemDatas.nameId}, {"pointId", itemDatas.itemId},
+        {"stateId", itemDatas.layer.stateId > 0 ? itemDatas.layer.stateId : MarkerCompletionStore::SceneState(scene)}, {"completed", false}});
+    if (!result.value("accepted", false)) Notification::AddError(NotificationDatas("保存标记失败：" + result.value("message", ""), 5));
 }
 
-vector<string> DrawItemBase::GetFilteredPoints(string scene,string nameId) {
-    vector<string> out;
-    try {
-        shared_lock lock(g_jsonMutex);
-        const auto& j = GetSavedItemPoints();
-
-        if (!j.contains(scene) ||
-            !j[scene].is_object() ||
-            !j[scene].contains(nameId) ||
-            !j[scene][nameId].is_array()) {
-            return out;
-        }
-
-        for (const auto& item : j[scene][nameId]) {
-            if (item.contains("id") && item["id"].is_string()) {
-                out.emplace_back(item["id"].get<string>());
-            }
-        }
-    }
-    catch (const exception& e) {
-        cerr << "GetFilteredPoints exception: " << e.what() << '\n';
-    }
-    return out;
+vector<string> DrawItemBase::GetFilteredPoints(string scene, string nameId) {
+    return markerStore ? markerStore->CompletedIds(scene, nameId) : vector<string>{};
 }
 
-void DrawItemBase::Thread_ReadSavedPointsJson() {
-    while (!savedPointsThreadStop.load()) {
-        try {
-            unique_lock lock(g_jsonMutex);
-            if (fs::exists(savedJsonPath)) {
-                auto t = fs::last_write_time(savedJsonPath);
-                if (t != g_lastTime) {  // 只有变化才读 
-                    ifstream file(savedJsonPath);
-                    json next;
-                    file >> next;
-                    if (!next.is_object()) throw std::runtime_error("Saved points must be an object");
-                    GetSavedItemPoints() = std::move(next);
-                    g_lastTime = t;
-                }
-            }
-        }
-        catch (const exception& e) {
-			Notification::AddError(NotificationDatas("JSON reload failed.", 3));
-        }
-        this_thread::sleep_for(chrono::milliseconds(50));
+bool DrawItemBase::IsPointCompleted(const string& scene, const ItemDatas& item) {
+    return markerStore && markerStore->Completed(scene, item.nameId, item.itemId);
+}
+
+std::string DrawItemBase::MarkerProfile() { return markerStore ? markerStore->Profile() : "local"; }
+
+json DrawItemBase::HandleMarkerCommand(const json& command) {
+    if (!markerStore) return {{"accepted", false}, {"message", "marker-store-unavailable"}, {"data", json::object()}};
+    auto normalized = command;
+    const auto type = command.value("type", "");
+    // Validate before saving so a malformed correlation field cannot result in
+    // a successful write followed by a failed response.
+    const auto guideContext = type == "markerSetCompletion" ? MarkerGuideProtocol::CompletionContext(command) : json::object();
+    if (type == "markerGetCandidates") {
+        std::scoped_lock lock(markerCandidatesMutex);
+        if (command.value("profileId", "") != candidatesProfile || candidatesProfile != MarkerProfile() ||
+            command.value("selectionRevision", std::uint64_t{}) != candidatesRevision)
+            return {{"accepted", false}, {"message", "selection-expired"}, {"data", json::object()}};
+        const auto offset = command.value("offset", std::size_t{});
+        const auto limit = std::min<std::size_t>(100, command.value("limit", std::size_t{100}));
+        json page = json::array();
+        for (auto index = offset; index < markerCandidates.size() && index < offset + limit; ++index) page.push_back(markerCandidates[index]);
+        return {{"accepted", true}, {"message", ""}, {"data", {{"candidates", page}, {"profileId", candidatesProfile},
+            {"selectionRevision", candidatesRevision}, {"total", markerCandidates.size()}, {"hasMore", offset + page.size() < markerCandidates.size()}}}};
     }
+    if (type == "markerSetCompletion" && command.contains("stateId") && command.contains("pointId")) {
+        const auto key = std::to_string(command.at("stateId").get<int>()) + ":" + command.at("pointId").get<std::string>();
+        const auto identity = markerIdentities.find(key);
+        if (identity == markerIdentities.end()) return {{"accepted", false}, {"message", "unknown-public-point"}, {"data", json::object()}};
+        for (const auto& [name, value] : identity->second.items()) normalized[name] = value;
+    }
+    if ((type == "markerApplyRemote" || type == "markerInitializeSync") && !normalized.contains("points")) {
+        const int state = command.at("stateId").get<int>();
+        normalized["points"] = json::array();
+        for (const auto& [key, identity] : markerIdentities)
+            if (identity.at("stateId") == state) normalized["points"].push_back(identity);
+    }
+    auto result = markerStore->Execute(normalized);
+    if (result.value("accepted", false)) {
+        if (type == "markerSetCompletion" || type == "markerApplyRemote" || type == "markerInitializeSync" ||
+            type == "markerResolveConflict" || type == "markerCopyLocalProgress") {
+            json event = {{"type", "markerCompletionChanged"}, {"profileId", markerStore->Profile()},
+                {"source", type == "markerSetCompletion" || type == "markerCopyLocalProgress" ? "local" : "cloud"},
+                {"revision", result.at("data").value("revision", std::uint64_t{})}};
+            if (result.at("data").contains("point")) event["point"] = result.at("data").at("point");
+            for (const auto& [name, value] : guideContext.items()) event[name] = value;
+            PublishMarkerEvent(std::move(event));
+        } else if (type == "markerSelectProfile") {
+            ClearMarkerCandidates();
+            PublishMarkerEvent({{"type", "markerSelectionCleared"}});
+            PublishMarkerEvent({{"type", "markerProfileChanged"}, {"profileId", markerStore->Profile()}});
+        }
+    }
+    return result;
+}
+
+void DrawItemBase::SetMarkerEventCallback(std::function<void(const json&)> callback) {
+    std::scoped_lock lock(markerEventMutex);
+    markerEventCallback = std::move(callback);
+}
+
+void DrawItemBase::PublishMarkerEvent(json event) {
+    const auto type = event.value("type", "");
+    if (type == "markerCompletionChanged" || type == "markerProfileChanged") RoutePlanningService::OnMarkerChanged();
+    std::function<void(const json&)> callback;
+    { std::scoped_lock lock(markerEventMutex); callback = markerEventCallback; }
+    if (callback) callback(event);
+}
+
+void DrawItemBase::PublishMarkerCandidates(const std::string& profileId, const std::string& sceneName, json candidates) {
+    json event;
+    {
+        std::scoped_lock lock(markerCandidatesMutex);
+        markerCandidates = std::move(candidates);
+        candidatesProfile = profileId; candidatesScene = sceneName; ++candidatesRevision;
+        json page = json::array();
+        for (std::size_t index = 0; index < std::min<std::size_t>(100, markerCandidates.size()); ++index) page.push_back(markerCandidates[index]);
+        event = {{"type", "markerCandidates"}, {"intent", "complete"}, {"profileId", profileId},
+            {"candidates", page}, {"selectionRevision", candidatesRevision}, {"total", markerCandidates.size()}, {"hasMore", page.size() < markerCandidates.size()}};
+    }
+    PublishMarkerEvent(std::move(event));
+}
+void DrawItemBase::ClearMarkerCandidates() {
+    bool changed;
+    {
+        std::scoped_lock lock(markerCandidatesMutex);
+        changed = !markerCandidates.empty(); markerCandidates = json::array();
+        candidatesProfile.clear(); candidatesScene.clear(); ++candidatesRevision;
+    }
+    if (changed) PublishMarkerEvent({{"type", "markerSelectionCleared"}});
+}
+void DrawItemBase::UpdateMarkerContext(const std::string& sceneName) {
+    bool changed;
+    { std::scoped_lock lock(markerCandidatesMutex); changed = !candidatesScene.empty() && candidatesScene != sceneName; }
+    if (changed) ClearMarkerCandidates();
+}
+
+void DrawItemBase::SelectMarker(const std::string& scene, const ItemDatas& item, POINT desktopPosition, const std::string& profileId) {
+    const auto profile = profileId.empty() ? MarkerProfile() : profileId;
+    if (profile != MarkerProfile()) return;
+    PublishMarkerEvent({{"type", "markerSelected"}, {"profileId", profile}, {"sceneName", scene},
+        {"pointId", item.itemId}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
+        {"countryId", item.layer.countryId}, {"floorId", item.layer.floorId}, {"level", item.layer.level},
+        {"completed", IsPointCompleted(scene, item)}, {"screenX", desktopPosition.x}, {"screenY", desktopPosition.y}});
+}
+
+void DrawItemBase::SetGuideWindow(HWND window, const json& registration) {
+    std::scoped_lock lock(markerGuideMutex);
+    markerGuideWindow = window;
+    markerGuideRegistration = window ? registration : json::object();
+    if (window) markerGuideRegistration["hwnd"] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window));
+}
+json DrawItemBase::FocusedGuideWindow() {
+    const auto registration = VisibleGuideWindow();
+    if (registration.empty()) return registration;
+    const auto window = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(registration.at("hwnd").get<std::uint64_t>()));
+    return GetForegroundWindow() == window ? registration : json::object();
+}
+json DrawItemBase::VisibleGuideWindow() {
+    std::scoped_lock lock(markerGuideMutex);
+    return markerGuideWindow && IsWindow(markerGuideWindow) && IsWindowVisible(markerGuideWindow) && !IsIconic(markerGuideWindow)
+        ? markerGuideRegistration : json::object();
+}
+bool DrawItemBase::IsMarkerGameFocused(HWND game) { return game && GetForegroundWindow() == game; }
+bool DrawItemBase::IsMarkerDisplayContext(HWND game) {
+    const auto foreground = GetForegroundWindow();
+    if (game && foreground == game) return true;
+    return !FocusedGuideWindow().empty();
 }

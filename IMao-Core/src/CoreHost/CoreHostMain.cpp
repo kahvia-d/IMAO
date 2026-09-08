@@ -5,6 +5,10 @@
 #include "../Feature/RuntimeFeatureRepository.h"
 #include "../Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
 #include "../App/MapViewportLocalizer.h"
+#include "../ImguiDraw/Items/DrawItemBase.h"
+#include "../Runtime/RoutePlanningService.h"
+#include "../Runtime/RuntimeHotkeys.h"
+#include "../Runtime/MarkerGuideProtocol.h"
 
 #include <Windows.h>
 
@@ -26,6 +30,7 @@ using json = nlohmann::json;
 
 namespace {
 constexpr int kProtocolVersion = 1;
+DWORD controllerProcessId = 0;
 
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
@@ -199,6 +204,14 @@ public:
         wake.notify_one();
     }
 
+    void PublishRoutePlanning(json event) {
+        {
+            std::scoped_lock lock(mutex);
+            latestRoutePlanning = std::move(event);
+        }
+        wake.notify_one();
+    }
+
     void Stop() {
         if (!writer.joinable()) return;
         writer.request_stop();
@@ -213,16 +226,20 @@ private:
             {
                 std::unique_lock lock(mutex);
                 wake.wait(lock, [&] {
-                    return stopToken.stop_requested() || latestStatus.has_value() || !events.empty();
+                    return stopToken.stop_requested() || latestStatus.has_value() || latestRoutePlanning.has_value() || !events.empty();
                 });
                 if (stopToken.stop_requested()) return;
                 if (latestStatus.has_value()) {
                     next = std::move(*latestStatus);
                     latestStatus.reset();
                 }
-                else {
+                else if (!events.empty()) {
                     next = std::move(events.front());
                     events.pop_front();
+                }
+                else {
+                    next = std::move(*latestRoutePlanning);
+                    latestRoutePlanning.reset();
                 }
             }
             if (!connection.Send(next)) { connection.Disconnect(); return; }
@@ -234,14 +251,17 @@ private:
     std::mutex mutex;
     std::condition_variable wake;
     std::optional<json> latestStatus;
+    std::optional<json> latestRoutePlanning;
     std::deque<json> events;
     std::jthread writer;
 };
 
-void SendAck(PipeEventDispatcher& events, const json& command, bool accepted, std::string message) {
+void SendAck(PipeEventDispatcher& events, const json& command, bool accepted, std::string message,
+    const json& data = json::object()) {
     events.PublishEvent({
         { "version", kProtocolVersion }, { "type", "ack" },
-        { "requestId", command.value("requestId", "") }, { "accepted", accepted }, { "message", std::move(message) }
+        { "requestId", command.value("requestId", "") }, { "accepted", accepted }, { "message", std::move(message) },
+        { "data", data }
     });
 }
 
@@ -264,6 +284,7 @@ bool ApplyConfigure(const json& command) {
     const auto mini = boolean("minMapEnabled");
     const auto saved = boolean("savedPointsEnabled");
     const auto bar = boolean("statusBarEnabled");
+    const auto hotkeys = RuntimeHotkeys::ValidateConfiguration(command);
     if (capture) SetCaptureWay(*capture);
     if (mapCycle) SetMapDataUpdateCycle(*mapCycle);
     if (miniCycle) SetMinMapDataUpdateCycle(*miniCycle);
@@ -271,6 +292,7 @@ bool ApplyConfigure(const json& command) {
     if (mini) EnabledMinMapShowItem(*mini);
     if (saved) SetVisibleSavedPoints(*saved);
     if (bar) RuntimeStatus::SetStatusBarEnabled(*bar);
+    RuntimeHotkeys::Apply(hotkeys);
     return true;
 }
 
@@ -284,6 +306,45 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
         if (type == "hello") {
             SendAck(events, command, true, "CoreHost 已连接");
             events.PublishStatus(StatusEvent());
+            return true;
+        }
+        if (type == "routePlanning") {
+            const auto result = RoutePlanningService::Command(command);
+            SendAck(events, command, result.value("accepted", false), result.value("message", ""),
+                result.value("data", json::object()));
+            return true;
+        }
+        if (type.starts_with("marker")) {
+            try {
+                json result;
+                if (type == "markerSetGuideWindow") {
+                    const auto registration = MarkerGuideProtocol::Registration(command, DrawItemBase::MarkerProfile());
+                    const auto value = registration.at("hwnd").get<uint64_t>();
+                    const auto window = reinterpret_cast<HWND>(static_cast<uintptr_t>(value));
+                    if (static_cast<uint64_t>(reinterpret_cast<uintptr_t>(window)) != value)
+                        throw std::invalid_argument("攻略窗口句柄超出范围");
+                    DWORD owner = 0;
+                    if (window && (!IsWindow(window) || !GetWindowThreadProcessId(window, &owner) ||
+                        owner != controllerProcessId || controllerProcessId == 0))
+                        throw std::invalid_argument("攻略窗口不属于当前控制界面");
+                    DrawItemBase::SetGuideWindow(window, registration);
+                    result = {{"accepted", true}, {"data", json::object()}};
+                } else if (type == "markerGetGameWindowBounds") {
+                    RECT bounds{};
+                    json data = {{"available", false}};
+                    if (TryGetGameWindowClientBounds(&bounds)) data = {{"available", true},
+                        {"left", bounds.left}, {"top", bounds.top}, {"right", bounds.right}, {"bottom", bounds.bottom}};
+                    result = {{"accepted", true}, {"data", std::move(data)}};
+                } else if (type == "markerGetRouteGuide") result = RoutePlanningService::GuideTarget(command);
+                else result = DrawItemBase::HandleMarkerCommand(command);
+                events.PublishEvent({{"version", kProtocolVersion}, {"type", "markerResult"},
+                    {"requestId", command.value("requestId", "")}, {"accepted", result.value("accepted", true)},
+                    {"message", result.value("message", "")}, {"data", result.value("data", json::object())}});
+            } catch (const std::exception& exception) {
+                events.PublishEvent({{"version", kProtocolVersion}, {"type", "markerResult"},
+                    {"requestId", command.value("requestId", "")}, {"accepted", false},
+                    {"message", exception.what()}, {"data", json::object()}});
+            }
             return true;
         }
         if (type == "configure") {
@@ -457,7 +518,18 @@ int main(int argc, char** argv) {
     }
 
     PipeConnection connection(handle);
+    GetNamedPipeClientProcessId(handle, &controllerProcessId);
     PipeEventDispatcher events(connection);
+    DrawItemBase::SetMarkerEventCallback([&events](const json& value) {
+        json event = value;
+        event["version"] = kProtocolVersion;
+        events.PublishEvent(std::move(event));
+    });
+    RoutePlanningService::SetEventCallback([&events](const json& value) {
+        json event = value;
+        event["version"] = kProtocolVersion;
+        events.PublishRoutePlanning(std::move(event));
+    });
     std::atomic_bool reporterStop = false;
     StructuredLogger::SetObserver([&events](const StructuredLogEvent& event) {
         events.PublishEvent(LogEvent(event));
@@ -485,6 +557,9 @@ int main(int argc, char** argv) {
     reporterStop = true;
     reporter.request_stop();
     if (reporter.joinable()) reporter.join();
+    DrawItemBase::SetMarkerEventCallback({});
+    RoutePlanningService::SetEventCallback({});
+    DrawItemBase::SetGuideWindow(nullptr);
     StructuredLogger::SetObserver({});
     events.Stop();
     if (!shouldExit) {

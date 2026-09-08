@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param([switch]$SkipBuild, [switch]$SkipHost, [string]$OutputDirectory, [ValidateRange(1, 64)][int]$Parallel = 4)
+param([switch]$SkipBuild, [switch]$SkipHost, [string]$OutputDirectory,
+    [string]$NativeBuildDirectory = 'out\build\windows-x64-release',
+    [ValidateRange(1, 64)][int]$Parallel = 4)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Enter-DevEnvironment.ps1')
 $taskRepo = Split-Path -Parent $PSScriptRoot
@@ -30,10 +32,16 @@ function Invoke-TestCommand([string]$Command, [string]$LogName) {
     if ($code -ne 0) { throw "$LogName failed with exit code $code; see $log" }
 }
 if (-not $SkipBuild) {
-    Invoke-TestCommand ('"' + $taskCmake + '" --build out\build\windows-x64-release --target IMao-CoreHost IMaoOptimizationTests IMaoVisualRegression --parallel ' + $Parallel) 'native-build.log'
+    Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests IMaoRoutePlanningTests IMaoVisualRegression --parallel ' + $Parallel) 'native-build.log'
     Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" build Tests\ManagedRuntime\ManagedRuntime.csproj -c Release --output "' + $taskManagedOutput + '" --source "' + $env:NUGET_PACKAGES + '" -p:NuGetAudit=false') 'managed-build.log'
 }
 Invoke-TestCommand 'x64\Release\IMaoOptimizationTests.exe' 'native-tests.log'
+Invoke-TestCommand 'x64\Release\IMaoMarkerTests.exe' 'marker-tests.log'
+if (-not $SkipBuild -or (Test-Path -LiteralPath (Join-Path $taskRepo 'x64\Release\IMaoRoutePlanningTests.exe'))) {
+    Invoke-TestCommand 'x64\Release\IMaoRoutePlanningTests.exe' 'route-planning-tests.log'
+} else {
+    Write-Host 'Skipped route planning tests: -SkipBuild used and IMaoRoutePlanningTests.exe is not built. Build preset windows-x64-release-route-planning-tests to enable this check.' -ForegroundColor Yellow
+}
 $taskHostArgument = if ($SkipHost) { '' } else { ' "' + (Join-Path $taskRepo 'x64\Release') + '"' }
 Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" "' + (Join-Path $taskManagedOutput 'ManagedRuntime.dll') + '"' + $taskHostArgument) 'managed-tests.log'
 Write-Host "Runtime tests passed. Evidence: $taskOutput" -ForegroundColor Green

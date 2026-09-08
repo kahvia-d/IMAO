@@ -6,6 +6,7 @@
 #include "../../Coordinate/CoordinateStruct.h"
 #include <thread>
 #include <atomic>
+#include <functional>
 #include <wrl/client.h>
 using json = nlohmann::json;
 
@@ -35,6 +36,20 @@ public:
 	// require adding a new Windows resource for every upstream update.
 	static std::string GetExternalIconPath(const std::string& itemNameId);
 	static std::vector<std::string> GetFilteredPoints(std::string scene, std::string nameId);
+    static bool IsPointCompleted(const std::string& scene, const ItemDatas& item);
+    static json HandleMarkerCommand(const json& command);
+    static void SetMarkerEventCallback(std::function<void(const json&)> callback);
+    static void PublishMarkerEvent(json event);
+    static void PublishMarkerCandidates(const std::string& profileId, const std::string& sceneName, json candidates);
+    static void UpdateMarkerContext(const std::string& sceneName);
+    static void ClearMarkerCandidates();
+    static void SelectMarker(const std::string& scene, const ItemDatas& item, POINT desktopPosition, const std::string& profileId = "");
+    static void SetGuideWindow(HWND window, const json& registration = json::object());
+    static json FocusedGuideWindow();
+    static json VisibleGuideWindow();
+    static bool IsMarkerDisplayContext(HWND game);
+    static bool IsMarkerGameFocused(HWND game);
+    static std::string MarkerProfile();
 
 	static std::vector<ItemTextureData> itemsTextureData;
 	static json itemsJsonData_World;

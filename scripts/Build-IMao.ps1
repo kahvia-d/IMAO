@@ -105,6 +105,7 @@ try {
 
     Invoke-VisualStudioCommand ('"' + $cmake + '" --build --preset windows-x64-release-core --parallel ' + $Parallel)
     Invoke-VisualStudioCommand ('"' + $Dotnet + '" build "IMao-WinUI\IMao-WinUI.csproj" --configuration Release -p:Platform=x64 --packages "' + $nugetPackages + '"')
+    & (Join-Path $PSScriptRoot 'Test-WinUINavigation.ps1') -Platform x64 -Configuration Release
 
     $outputDirectory = Join-Path $repoRoot 'x64\Release'
     if (-not (Test-Path -LiteralPath $outputDirectory)) {

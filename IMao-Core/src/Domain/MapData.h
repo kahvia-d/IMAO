@@ -32,6 +32,11 @@ struct RouteDatas
 	int senceId;
 	std::vector<Coordinate> routePointsROC;
 	std::vector<Coordinate> routePointsScreenCoord;
+    bool automatic = false;
+    bool emphasized = false;
+    bool preview = false;
+    std::string profileId;
+	std::string routePlanId;
 	RouteDatas(std::string name,int senceId, std::vector<Coordinate> routePointsROC = std::vector<Coordinate>(), std::vector<Coordinate> routePointsScreenCoord = std::vector<Coordinate>()) : name(name), senceId(senceId), routePointsROC(routePointsROC), routePointsScreenCoord(routePointsScreenCoord) {};
 };
 
@@ -43,4 +48,5 @@ struct ItemMarkerFrame {
     std::vector<ItemDatas> markers;
     Coordinate center;
     double radius = 0.0;
+    std::string profileId = "local";
 };

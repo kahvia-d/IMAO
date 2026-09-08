@@ -64,6 +64,8 @@ public partial class App : Application
             services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
             services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
             services.AddSingleton<CoreHostService>();
+            services.AddSingleton<MarkerDetailService>();
+            services.AddSingleton<MarkerGuideCoordinator>();
             services.AddTransient<INavigationViewService, NavigationViewService>();
 
             services.AddSingleton<IActivationService, ActivationService>();
@@ -84,6 +86,8 @@ public partial class App : Application
             services.AddTransient<StartPage>();
             services.AddTransient<DiagnosticsViewModel>();
             services.AddTransient<DiagnosticsPage>();
+            services.AddTransient<UsageGuideViewModel>();
+            services.AddTransient<UsageGuidePage>();
             services.AddTransient<ShellPage>();
             services.AddTransient<ShellViewModel>();
 
@@ -119,6 +123,7 @@ public partial class App : Application
 
         //App.GetService<IAppNotificationService>().Show(string.Format("AppNotificationSamplePayload".GetLocalized(), AppContext.BaseDirectory));
 
+        _ = GetService<MarkerGuideCoordinator>();
         await App.GetService<IActivationService>().ActivateAsync(args);
     }
 }

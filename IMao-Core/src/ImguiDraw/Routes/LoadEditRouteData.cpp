@@ -8,6 +8,8 @@
 #include "../../Runtime/AtomicFile.h"
 #include "../../Runtime/UserFileName.h"
 #include "../../Runtime/StructuredLogger.h"
+#include "../../Runtime/RoutePlanningService.h"
+#include "../../Runtime/RuntimeHotkeys.h"
 #include "../InteractiveInterface/Notification.h"
 using namespace std;
 using namespace cv;
@@ -82,8 +84,8 @@ void LoadEditRouteData::SetRouteJsonName(const string& setName) {
 }
 
 void LoadEditRouteData::Thread_KeyMonitoring_AddRouteDatas_ByMousePos() {
-	const int monitoredKey = 0x51; //Q
-	bool keyWasPressed = false;
+	int previousKey = RuntimeHotkeys::Snapshot().manualRouteKey;
+	bool keyWasPressed = previousKey > 0 && isKeyPressed(previousKey);
 
 	int state = 0;//0 准备 1 完成 
 	Coordinate a_ROC; Coordinate b_ROC;
@@ -91,18 +93,34 @@ void LoadEditRouteData::Thread_KeyMonitoring_AddRouteDatas_ByMousePos() {
 	while (!threadStopFlag) {
 		if (app == nullptr) return;
 
-        Coordinate ROC;
-        int senceId = 0;
-        if (!app->TryGetRoutePoint(ROC, senceId)) {
+        const int monitoredKey = RuntimeHotkeys::Snapshot().manualRouteKey;
+        const bool physicalDown = monitoredKey > 0 && isKeyPressed(monitoredKey);
+        if (monitoredKey != previousKey) {
+            state = 0; previousKey = monitoredKey;
+            keyWasPressed = physicalDown;
+        }
+        const bool freshPress = physicalDown && !keyWasPressed;
+        keyWasPressed = physicalDown;
+
+        // Route planning owns its own draft and undo history. Legacy Q must
+        // not append a separate hand-drawn segment during the same session.
+        if (monitoredKey == 0 || RoutePlanningService::PlanningMode()) {
             state = 0;
-            keyWasPressed = false;
             Sleep(60);
             continue;
         }
 
-		bool keyIsPressed = isKeyPressed(monitoredKey);
-		if (keyIsPressed && !keyWasPressed) {
-			keyWasPressed = true;
+        Coordinate ROC;
+        int senceId = 0;
+        if (!app->TryGetRoutePoint(ROC, senceId)) {
+            state = 0;
+            Sleep(60);
+            continue;
+        }
+
+		const bool modifiers = (GetAsyncKeyState(VK_CONTROL) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000) ||
+            (GetAsyncKeyState(VK_SHIFT) & 0x8000) || (GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000);
+		if (freshPress && !modifiers) {
 
 			if (state == 0 || firstScene != senceId) {
 				firstScene = senceId;
@@ -117,9 +135,6 @@ void LoadEditRouteData::Thread_KeyMonitoring_AddRouteDatas_ByMousePos() {
 				WriteRoutesDatas(name, Scene::SceneIdToName(senceId), a_ROC, b_ROC);
 				state = 0;
 			}
-		}
-		else if (!keyIsPressed && keyWasPressed) {
-			keyWasPressed = false;
 		}
 		Sleep(60);
 	}

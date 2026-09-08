@@ -20,6 +20,10 @@ Directory.CreateDirectory(root);
 try
 {
     MapFilterCatalogTests.Run(root, Check);
+    LocalMarkerProfileTests.Run(root, Check);
+    RoutePlanningTests.Run(Check);
+    await MarkerGuideSessionTests.RunAsync(Check);
+    await MarkerDetailTests.RunAsync(root, Check);
     var options = Options.Create(new LocalSettingsOptions { ApplicationDataFolder = root, LocalSettingsFile = "settings.json" });
     var settings = new LocalSettingsService(new FileService(), options);
     await Task.WhenAll(Enumerable.Range(0, 64).Select(i => settings.SaveSettingAsync("key" + i, i)));
@@ -83,6 +87,8 @@ try
 
     if (args.Length > 0)
     {
+        await MarkerIpcTests.RunAsync(Path.GetFullPath(args[0]), root, Check);
+        await RoutePlanningTests.RunIpcAsync(Path.GetFullPath(args[0]), root, Check);
         await using var core = new CoreHostService(Path.GetFullPath(args[0]), new RuntimeConfigurationStore(Path.Combine(root, "runtime.json")), new LocalItemFilter(Path.Combine(root, "host-filters.json"), legacy));
         await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => core.EnsureStartedAsync()));
         Check(core.IsConnected, "concurrent startup connects one session");

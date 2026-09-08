@@ -1,4 +1,5 @@
 #include "DrawItemOnGameMap.h"
+#include "DrawMarkerInteraction.h"
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/RuntimeStatus.h"
 
@@ -104,91 +105,8 @@ vector<ItemDatas> DrawItemOnGameMap::GetAndFilterItemsData(const Coordinate& gam
 }
 
 
-bool wasRightButtonDown = false;
-bool rightButtonDown = false;
-void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect,const HWND& hwnd, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
-	if (frame.markers.empty()) return;
-	const auto& itemsDatas = frame.markers;
-	int texturesReady = 0;
-	int texturesMissing = 0;
-	for (const auto& itemDatas : itemsDatas) {
-		int image_width1;
-		int image_height1;
-		bool ret = false;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture = nullptr;
-
-		for (const auto& itemTextureData : DrawItemBase::itemsTextureData) {
-			if (itemDatas.nameId == itemTextureData.nameId) {
-				texture = itemTextureData.texture;
-				ret = true;
-				break;
-			}
-		}
-
-		if (texture == nullptr && !itemDatas.nameId.empty()) {
-			if (DrawItemBase::IsValidItemNameId(itemDatas.nameId)) {
-				const string externalIcon = DrawItemBase::GetExternalIconPath(itemDatas.nameId);
-				if (!externalIcon.empty()) {
-					ret = ImGuiOverWindows::LoadTextureFromPath(externalIcon.c_str(), &texture, &image_width1, &image_height1);
-				}
-				if (!ret) {
-					std::wstring temp = L"IDB_PNG_" + std::wstring(itemDatas.nameId.begin(), itemDatas.nameId.end());
-					ret = ImGuiOverWindows::LoadTextureFromResource(temp.c_str(), &texture, &image_width1, &image_height1);
-				}
-				if (ret) {
-					DrawItemBase::itemsTextureData.push_back(ItemTextureData(itemDatas.nameId, texture));
-				}
-			}
-		}
-		if (ret) {
-			texturesReady++;
-			float radius = (rect.right * 0.0135f) / 2;
-			const auto position = motion.Apply(itemDatas.screenCoordiante);
-			ImVec2 screenPosition(position.x, position.y);
-			//ImVec2 mousePos = ImGui::GetMousePos();
-			POINT mousePos;
-			GetCursorPos(&mousePos);
-			ScreenToClient(hwnd, &mousePos);
-			ImVec2 diffSize = ImVec2(screenPosition.x - mousePos.x, screenPosition.y - mousePos.y);
-
-			if (diffSize.x * diffSize.x + diffSize.y * diffSize.y > radius * radius) {
-				if (itemDatas.isSaved) {
-					if (visibleSavedPoints)
-						DrawItemBase::RenderPointCircle(reinterpret_cast<ImTextureID>(texture.Get()), screenPosition, radius, 0.5f, ImColor(1.0f, 1.0f, 1.0f, 0.5f));
-				}
-				else {
-					DrawItemBase::RenderPointCircle(reinterpret_cast<ImTextureID>(texture.Get()), screenPosition, radius, 1.0f, ImColor(1.0f, 1.0f, 1.0f, 1.0f));
-				}
-				continue;
-			}
-
-			radius += 3;
-			DrawItemBase::RenderPointCircle(reinterpret_cast<ImTextureID>(texture.Get()), screenPosition, radius, 1.0f, ImColor(0.11f, 0.69f, 0.11f, 1.0f));
-			rightButtonDown = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
-			if (rightButtonDown and !wasRightButtonDown) {
-				if (itemDatas.isSaved) {
-					DrawItemBase::RemoveSavedItemPoint(frame.sceneName, itemDatas);
-				}
-				else {
-					DrawItemBase::SaveItemPoint(frame.sceneName, itemDatas);
-				}
-			}	
-		}
-		else {
-			texturesMissing++;
-		}
-	}
-	if (Diagnostics::Enabled()) {
-		static auto lastReport = chrono::steady_clock::time_point{};
-		const auto now = chrono::steady_clock::now();
-		if (now - lastReport >= chrono::seconds(2)) {
-			Diagnostics::Record("marker-draw", "candidates=" + to_string(itemsDatas.size()) +
-				" texturesReady=" + to_string(texturesReady) +
-				" texturesMissing=" + to_string(texturesMissing));
-			lastReport = now;
-		}
-	}
-	wasRightButtonDown = rightButtonDown;
+void DrawItemOnGameMap::DrawItemsOnGameMap(const RECT& rect, const HWND& hwnd, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion, const PresentedOverlayFrame* presented) {
+    DrawMarkerInteraction::DrawMap(rect, hwnd, frame, motion, visibleSavedPoints.load(), presented);
 }
 
 bool DrawItemOnGameMap::HasVisibleItems() {
@@ -196,4 +114,4 @@ bool DrawItemOnGameMap::HasVisibleItems() {
     return !centerPointNearItemsData.empty();
 }
 
-ItemMarkerFrame DrawItemOnGameMap::Snapshot() { std::scoped_lock lock(PointNearItemsDataMutex); return {senceName, centerPointNearItemsData, {}}; }
+ItemMarkerFrame DrawItemOnGameMap::Snapshot() { std::scoped_lock lock(PointNearItemsDataMutex); return {senceName, centerPointNearItemsData, {}, 0.0, DrawItemBase::MarkerProfile()}; }

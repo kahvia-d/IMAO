@@ -10,6 +10,7 @@ extern "C" _declspec(dllexport) void SetMapDataUpdateCycle(int cycleTime);
 extern "C" _declspec(dllexport) void SetCaptureWay(int setValue);
 extern "C" _declspec(dllexport) void Initi();
 extern "C" _declspec(dllexport) int Start();
+extern "C" _declspec(dllexport) bool TryGetGameWindowClientBounds(RECT* bounds);
 extern "C" _declspec(dllexport) void Stop();
 extern "C" _declspec(dllexport) void Shutdown();
 extern "C" _declspec(dllexport) void EnabledMinMapShowItem(bool setValue);

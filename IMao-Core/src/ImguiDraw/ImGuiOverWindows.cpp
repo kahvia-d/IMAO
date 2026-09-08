@@ -6,6 +6,7 @@
 #include <iostream>
 #include "../ImguiDraw/Items/DrawItemOnMinMap.h"
 #include "../ImguiDraw/Items/DrawItemOnGameMap.h"
+#include "../ImguiDraw/Items/DrawMarkerInteraction.h"
 #include "../util.h"
 #include "InteractiveInterface\Debug.h"
 #include "InteractiveInterface/Notification.h"
@@ -246,6 +247,7 @@ int ImGuiOverWindows::start()
     WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
     bool platformReady = false, rendererReady = false, contextReady = false;
     const auto cleanup = wil::scope_exit([&] {
+        DrawMarkerInteraction::Shutdown();
         if (rendererReady) ImGui_ImplDX11_Shutdown();
         if (platformReady) ImGui_ImplWin32_Shutdown();
         if (contextReady) ImGui::DestroyContext();
@@ -315,6 +317,7 @@ int ImGuiOverWindows::start()
     //DrawPiPWindows::Initi();
     //std::vector<ID3D11ShaderResourceView*> texturesToRelease; // 用于存储需要释放的纹理
     // Main loop
+    DrawMarkerInteraction::Initialize(h_window);
     ImageAnchoredOverlay mapMotion(false), minimapMotion(true);
     FramePacer framePacer;
     auto motionReportAt = std::chrono::steady_clock::now();
@@ -340,6 +343,7 @@ int ImGuiOverWindows::start()
         }
         if (stopFlag)
             break;
+        DrawMarkerInteraction::BeginFrame();
 
         // Handle window being minimized or screen locked
         //if (g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
@@ -410,14 +414,16 @@ int ImGuiOverWindows::start()
             bool drewMap = false, drewMinimap = false;
             bool mapEligible = false, minimapEligible = false;
             PresentedOverlayFrame presented{frame, {}, false, false, frameStart};
-            if (frame->Fresh() && frame->focused && IsWindowFocused(h_window) &&
+            if (frame->Fresh() && frame->focused && DrawItemBase::IsMarkerDisplayContext(h_window) &&
                 frame->clientRect.right == GameRect.right && frame->clientRect.bottom == GameRect.bottom) {
                 if (frame->mapVisible && visibility->AllowsMap(frame->frameId)) {
                     mapEligible = true;
                     OverlayScreenTransform motion;
                     if (mapMotion.Update(frame, *capture, motion)) {
-                        DrawItemOnGameMap::DrawItemsOnGameMap(GameRect, h_window, frame->mapMarkers, motion);
-                        DrawRouteOnMap::DrawRoute(frame->mapRoutes, frame->viewportScene, motion);
+                        presented.motion = motion;
+                        presented.mapVisible = true;
+                        DrawRouteOnMap::DrawRoute(frame->mapRoutes, frame->viewportScene, motion, GameRect);
+                        DrawItemOnGameMap::DrawItemsOnGameMap(GameRect, h_window, frame->mapMarkers, motion, &presented);
                         drewMap = true;
                         presented.motion = motion;
                         ++attachedFrames;
@@ -427,8 +433,9 @@ int ImGuiOverWindows::start()
                     minimapEligible = true;
                     OverlayScreenTransform motion;
                     if (minimapMotion.Update(frame, *capture, motion)) {
+                        DrawRouteOnMinMap::DrawRoute(frame->minimapRoutes, frame->playerScene, motion,
+                            frame->minimapMarkers.center, frame->minimapMarkers.radius);
                         DrawItemOnMinMap::DrawItemsOnMinMap(GameRect, frame->minimapMarkers, motion);
-                        DrawRouteOnMinMap::DrawRoute(frame->minimapRoutes, frame->playerScene, motion);
                         drewMinimap = true;
                         presented.motion = motion;
                         ++attachedFrames;
@@ -436,6 +443,8 @@ int ImGuiOverWindows::start()
                 }
             }
             if (!mapEligible) mapMotion.Reset();
+            if (!drewMap) DrawMarkerInteraction::Clear();
+            if (!drewMap && !drewMinimap) DrawItemBase::ClearMarkerCandidates();
             if (!minimapEligible) minimapMotion.Reset();
             presented.mapVisible = drewMap;
             presented.minimapVisible = drewMinimap;

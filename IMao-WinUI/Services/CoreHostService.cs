@@ -20,18 +20,29 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     private volatile Session? active;
     private bool disposed;
     private readonly string hostDirectory;
+    private string desiredMarkerProfile = "local";
+    private readonly string markerProfileWarning;
+    public event EventHandler<JsonElement>? MarkerEvent;
+    public event EventHandler<RoutePlanningState>? RoutePlanningChanged;
+    public RoutePlanningState RoutePlanning { get; private set; } = new();
 
     private readonly RuntimeConfigurationStore configuration;
     private readonly LocalItemFilter filters;
     public RuntimeConfiguration Configuration => configuration.Read();
 
     public CoreHostService() : this(AppContext.BaseDirectory,
-        new RuntimeConfigurationStore(Path.Combine(UserDataPaths.Root, "runtime-preferences.json")), new LocalItemFilter()) { }
-    internal CoreHostService(string hostDirectory, RuntimeConfigurationStore configuration, LocalItemFilter filters)
+        new RuntimeConfigurationStore(Path.Combine(UserDataPaths.Root, "runtime-preferences.json")), new LocalItemFilter(),
+        new LocalMarkerProfileSelection(Path.Combine(UserDataPaths.Root, "kuromap-accounts.json"))) { }
+    internal CoreHostService(string hostDirectory, RuntimeConfigurationStore configuration, LocalItemFilter filters,
+        LocalMarkerProfileSelection? profileSelection = null)
     {
         this.hostDirectory = hostDirectory;
         this.configuration = configuration;
         this.filters = filters;
+        // Older versions stored the selected on-disk progress profile in account metadata.
+        // Continue that same local file; no login, credential access, or cloud connection is needed.
+        desiredMarkerProfile = profileSelection?.ProfileId ?? "local";
+        markerProfileWarning = profileSelection?.Warning ?? "";
     }
 
     // A reader belongs to one process and never reads fields of its successor.
@@ -44,6 +55,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         public Task? ReaderTask { get; set; }
         public CancellationTokenSource Stop { get; } = new();
         public ConcurrentDictionary<string, TaskCompletionSource<bool>> Pending { get; } = new();
+        public ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> MarkerPending { get; } = new();
+        public ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> RoutePending { get; } = new();
     }
 
     [ObservableProperty] private CoreRuntimeStatus status = new();
@@ -87,18 +100,21 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             await session.Pipe.ConnectAsync(5000, cancellationToken);
             session.Reader = new StreamReader(session.Pipe, new UTF8Encoding(false), false, 64 * 1024, leaveOpen: true);
             session.Writer = new StreamWriter(session.Pipe, new UTF8Encoding(false), 64 * 1024, leaveOpen: true);
-            OnUi(() => { IsConnected = true; LastFault = string.Empty; });
+            OnSessionUi(session, () => { IsConnected = true; LastFault = string.Empty; ApplyRoutePlanning(new(), reset: true); });
             session.ReaderTask = ReadEventsAsync(session);
             if (!await SendLockedAsync(session, "hello", null, cancellationToken))
                 throw new IOException("核心握手被拒绝");
             if (!await SendLockedAsync(session, "configure", Configuration.ToPayload(), cancellationToken))
                 throw new IOException("核心无法恢复已保存配置");
+            if (desiredMarkerProfile != "local")
+                await SendMarkerLockedAsync(session, "markerSelectProfile", new { profileId = desiredMarkerProfile }, cancellationToken);
             var enabled = filters.GetFilteredItemsDatas().Where(item => item.Status == 1 && !string.IsNullOrWhiteSpace(item.Name))
                 .Select(item => item.Name!).ToArray();
             if (!await SendLockedAsync(session, "setItems", new() { ["add"] = enabled }, cancellationToken))
                 throw new IOException("核心无法恢复筛选状态");
             if (configuration.LoadError.Length > 0) ReportUserError(configuration.LoadError);
             if (filters.LastError.Length > 0) ReportUserError(filters.LastError);
+            if (markerProfileWarning.Length > 0) ReportUserError(markerProfileWarning);
             return session;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -118,9 +134,47 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public Task StartRuntimeAsync(CancellationToken cancellationToken = default) => SendCommandAsync("start", null, cancellationToken);
     public Task StopRuntimeAsync(CancellationToken cancellationToken = default) => SendCommandAsync("stop", null, cancellationToken);
 
+    public async Task<JsonElement> ExecuteMarkerAsync(string operation, object arguments, CancellationToken cancellationToken = default)
+    {
+        if (!operation.StartsWith("marker", StringComparison.Ordinal)) throw new ArgumentException("无效点位命令");
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            var session = await EnsureStartedLockedAsync(cancellationToken)
+                ?? throw new IOException("核心尚未连接");
+            var data = await SendMarkerLockedAsync(session, operation, arguments, cancellationToken);
+            if (operation == "markerSelectProfile")
+                desiredMarkerProfile = JsonSerializer.SerializeToElement(arguments).GetProperty("profileId").GetString() ?? "local";
+            return data;
+        }
+        finally { lifecycleLock.Release(); }
+    }
+
+    private async Task<JsonElement> SendMarkerLockedAsync(Session session, string operation, object arguments, CancellationToken cancellationToken)
+    {
+        string id = Guid.NewGuid().ToString("N");
+        var command = JsonSerializer.Deserialize<Dictionary<string, object?>>(JsonSerializer.Serialize(arguments)) ?? new();
+        command["type"] = operation;
+        command["version"] = ProtocolVersion;
+        command["requestId"] = id;
+        var completion = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.MarkerPending[id] = completion;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, session.Stop.Token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(15));
+        try
+        {
+            await session.Writer!.WriteLineAsync(JsonSerializer.Serialize(command).AsMemory(), timeout.Token);
+            await session.Writer.FlushAsync(timeout.Token);
+            return await completion.Task.WaitAsync(timeout.Token);
+        }
+        finally { session.MarkerPending.TryRemove(id, out _); }
+    }
+
     public async Task<bool> ConfigureAsync(int? captureWay = null, int? mapUpdateCycle = null, int? minMapUpdateCycle = null,
         bool? mapEnabled = null, bool? minMapEnabled = null, bool? savedPointsEnabled = null,
-        bool? statusBarEnabled = null, CancellationToken cancellationToken = default)
+        bool? statusBarEnabled = null, CancellationToken cancellationToken = default,
+        int? nearestCompletionKey = null, int? manualRouteKey = null, int? currentTargetGuideKey = null,
+        int? guidePreviousImageKey = null, int? guideNextImageKey = null)
     {
         await lifecycleLock.WaitAsync(cancellationToken);
         try
@@ -135,8 +189,14 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     MinMapUpdateCycle = minMapUpdateCycle ?? old.MinMapUpdateCycle,
                     MapEnabled = mapEnabled ?? old.MapEnabled, MinMapEnabled = minMapEnabled ?? old.MinMapEnabled,
                     SavedPointsEnabled = savedPointsEnabled ?? old.SavedPointsEnabled,
-                    StatusBarEnabled = statusBarEnabled ?? old.StatusBarEnabled
+                    StatusBarEnabled = statusBarEnabled ?? old.StatusBarEnabled,
+                    NearestCompletionKey = nearestCompletionKey ?? old.NearestCompletionKey,
+                    ManualRouteKey = manualRouteKey ?? old.ManualRouteKey,
+                    CurrentTargetGuideKey = currentTargetGuideKey ?? old.CurrentTargetGuideKey,
+                    GuidePreviousImageKey = guidePreviousImageKey ?? old.GuidePreviousImageKey,
+                    GuideNextImageKey = guideNextImageKey ?? old.GuideNextImageKey
                 });
+                OnUi(() => OnPropertyChanged(nameof(Configuration)));
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             {
@@ -177,6 +237,37 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public Task LoadRoutesAsync(CancellationToken cancellationToken = default) => SendCommandAsync("loadRoutes", null, cancellationToken);
     public Task LoadRouteAsync(string routeName, CancellationToken cancellationToken = default) =>
         SendCommandAsync("loadRoute", new Dictionary<string, object?> { ["routeName"] = routeName }, cancellationToken);
+
+    public async Task<RoutePlanningState> ExecuteRoutePlanningAsync(string action, object? arguments = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(action)) throw new ArgumentException("缺少路线操作", nameof(action));
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            var session = await EnsureStartedLockedAsync(cancellationToken) ?? throw new IOException("核心尚未连接");
+            string id = Guid.NewGuid().ToString("N");
+            var command = arguments is null ? new Dictionary<string, object?>() :
+                JsonSerializer.Deserialize<Dictionary<string, object?>>(JsonSerializer.Serialize(arguments)) ?? new();
+            command["type"] = "routePlanning";
+            command["action"] = action;
+            command["version"] = ProtocolVersion;
+            command["requestId"] = id;
+            var completion = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+            session.RoutePending[id] = completion;
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, session.Stop.Token);
+            timeout.CancelAfter(TimeSpan.FromSeconds(15));
+            try
+            {
+                await session.Writer!.WriteLineAsync(JsonSerializer.Serialize(command).AsMemory(), timeout.Token);
+                await session.Writer.FlushAsync(timeout.Token);
+                var data = await completion.Task.WaitAsync(timeout.Token);
+                return RoutePlanningState.FromJson(data);
+            }
+            finally { session.RoutePending.TryRemove(id, out _); }
+        }
+        finally { lifecycleLock.Release(); }
+    }
 
     public async Task RestartAsync(CancellationToken cancellationToken = default)
     {
@@ -252,16 +343,47 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     throw new IOException("核心协议版本不兼容");
                 string type = root.GetProperty("type").GetString() ?? string.Empty;
                 if (!ReferenceEquals(active, session)) return;
-                if (type == "ack")
+                if (type == "markerResult")
+                {
+                    string id = root.GetProperty("requestId").GetString() ?? string.Empty;
+                    if (session.MarkerPending.TryRemove(id, out var pending))
+                    {
+                        if (root.GetProperty("accepted").GetBoolean()) pending.TrySetResult(root.GetProperty("data").Clone());
+                        else pending.TrySetException(new InvalidOperationException(root.GetProperty("message").GetString() ?? "点位操作失败"));
+                    }
+                }
+                else if (type.StartsWith("marker", StringComparison.Ordinal))
+                {
+                    var value = root.Clone();
+                    OnSessionUi(session, () => MarkerEvent?.Invoke(this, value));
+                }
+                else if (type == "ack")
                 {
                     bool accepted = root.GetProperty("accepted").GetBoolean();
                     string id = root.GetProperty("requestId").GetString() ?? string.Empty;
+                    if (session.RoutePending.TryRemove(id, out var routeCompletion))
+                    {
+                        if (accepted)
+                        {
+                            var data = root.GetProperty("data").Clone();
+                            var next = RoutePlanningState.FromJson(data);
+                            OnSessionUi(session, () => ApplyRoutePlanning(next));
+                            routeCompletion.TrySetResult(data);
+                        }
+                        else routeCompletion.TrySetException(new InvalidOperationException(
+                            root.GetProperty("message").GetString() ?? "路线操作失败"));
+                    }
                     if (!accepted)
                     {
                         string message = root.GetProperty("message").GetString() ?? "核心拒绝了操作";
                         OnSessionUi(session, () => ReportUserError(message));
                     }
                     if (session.Pending.TryRemove(id, out var completion)) completion.TrySetResult(accepted);
+                }
+                else if (type == "routePlanningChanged")
+                {
+                    var next = RoutePlanningState.FromJson(root.GetProperty("data"));
+                    OnSessionUi(session, () => ApplyRoutePlanning(next));
                 }
                 else if (type == "status")
                 {
@@ -290,6 +412,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         finally
         {
             foreach (var pending in session.Pending.Values) pending.TrySetException(new IOException("CoreHost 已断开"));
+            foreach (var pending in session.MarkerPending.Values) pending.TrySetException(new IOException("CoreHost 已断开"));
+            foreach (var pending in session.RoutePending.Values) pending.TrySetException(new IOException("CoreHost 已断开"));
             OnSessionUi(session, () => IsConnected = false);
         }
     }
@@ -334,6 +458,13 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         Status = value;
         if (value.CoreState == "faulted") LastFault = value.Message;
         StatusChanged?.Invoke(this, value);
+    }
+    private void ApplyRoutePlanning(RoutePlanningState value, bool reset = false)
+    {
+        if (!reset && value.Revision < RoutePlanning.Revision) return;
+        RoutePlanning = value;
+        OnPropertyChanged(nameof(RoutePlanning));
+        RoutePlanningChanged?.Invoke(this, value);
     }
     private void SetConnectionState(string state, string message) => OnUi(() => ApplyStatus(new CoreRuntimeStatus
     { CoreState = state, Message = message, StatusBarEnabled = Status.StatusBarEnabled }));

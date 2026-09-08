@@ -1,4 +1,8 @@
 #include "DrawItemOnMinMap.h"
+#include "../../Runtime/RuntimeHotkeys.h"
+#include "../../Runtime/RoutePlanningService.h"
+#include "DrawMarkerInteraction.h"
+#include "../../Runtime/MarkerLayout.h"
 #include "../../util.h"
 
 #include "../../Diagnostics/Diagnostics.h"
@@ -108,62 +112,58 @@ vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, cons
 }
 
 void DrawItemOnMinMap::SavePlayerNearItemPoint(const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
-    if (frame.markers.empty()) {
-        return;
+    if (frame.profileId != DrawItemBase::MarkerProfile()) return;
+    std::vector<const ItemDatas*> candidates;
+    for (const auto& item : frame.markers) {
+        const auto position = motion.Apply(item.screenCoordiante);
+        if (!DrawItemBase::IsPointCompleted(frame.sceneName, item) &&
+            std::hypot(frame.center.x - position.x, frame.center.y - position.y) < 10.0) candidates.push_back(&item);
     }
-    const auto& itemsDatas = frame.markers;
-    for (const auto& itemDatas : itemsDatas) {
-        const auto position = motion.Apply(itemDatas.screenCoordiante);
-        if (!itemDatas.isSaved and abs(frame.center.x - position.x) < 10 and abs(frame.center.y - position.y)< 10){
-            DrawItemBase::SaveItemPoint(frame.sceneName, itemDatas);
+    std::sort(candidates.begin(), candidates.end(), [](const auto* a, const auto* b) { return a->itemId < b->itemId; });
+    if (candidates.size() == 1) {
+        const auto& item = *candidates.front();
+        DrawItemBase::HandleMarkerCommand({{"type", "markerSetCompletion"}, {"profileId", frame.profileId},
+            {"sceneName", frame.sceneName}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
+            {"pointId", item.itemId}, {"completed", true}});
+    } else if (!candidates.empty()) {
+        json choices = json::array();
+        POINT cursor{}; GetCursorPos(&cursor);
+        for (const auto* item : candidates) {
+            choices.push_back({{"profileId", frame.profileId}, {"sceneName", frame.sceneName}, {"nameId", item->nameId},
+                {"pointId", item->itemId}, {"stateId", item->layer.stateId}, {"countryId", item->layer.countryId},
+                {"floorId", item->layer.floorId}, {"level", item->layer.level}, {"completed", false},
+                {"screenX", cursor.x}, {"screenY", cursor.y}});
         }
+        DrawItemBase::PublishMarkerCandidates(frame.profileId, frame.sceneName, std::move(choices));
     }
 }
 
 void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
-    if (frame.markers.empty()) {
-        return;
-    }
-    const auto& itemsData = frame.markers;
-    for (const auto& itemData : itemsData) {
-        const auto position = motion.Apply(itemData.screenCoordiante);
+    DrawItemBase::UpdateMarkerContext(frame.sceneName);
+    if (frame.profileId != DrawItemBase::MarkerProfile()) return;
+    const float radius = std::max(8.0f, rect.right * 0.012f / 2);
+    std::vector<MarkerLayoutPoint> points;
+    for (std::size_t index = 0; index < frame.markers.size(); ++index) {
+        const auto& item = frame.markers[index];
+        if (DrawItemBase::IsPointCompleted(frame.sceneName, item)) continue;
+        const auto position = motion.Apply(item.screenCoordiante);
         if (frame.radius > 0.0 && std::hypot(position.x - frame.center.x, position.y - frame.center.y) > frame.radius) continue;
-        int image_width1;
-        int image_height1;
-        bool ret = false;
-        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture = nullptr;
-
-        if (itemData.isSaved)
-            continue;
-
-        for (const auto& itemTextureData : DrawItemBase::itemsTextureData) {
-            if (itemData.nameId == itemTextureData.nameId) {
-                texture = itemTextureData.texture;
-                ret = true;
-                break;
-            }
-        }
-
-        if (texture == nullptr && !itemData.nameId.empty()) {
-            const string externalIcon = DrawItemBase::GetExternalIconPath(itemData.nameId);
-            if (!externalIcon.empty()) {
-                ret = ImGuiOverWindows::LoadTextureFromPath(externalIcon.c_str(), &texture, &image_width1, &image_height1);
-            }
-            if (!ret) {
-                std::wstring temp = L"IDB_PNG_" + std::wstring(itemData.nameId.begin(), itemData.nameId.end());
-                ret = ImGuiOverWindows::LoadTextureFromResource(temp.c_str(), &texture, &image_width1, &image_height1);
-            }
-            if (ret) {
-                DrawItemBase::itemsTextureData.push_back(ItemTextureData(itemData.nameId, texture));
-            }
-        }
-       
-        if (ret) {
-            float radius = (rect.right * 0.012f) / 2;
-            ImVec2 screenPosition(position.x, position.y);
-            DrawItemBase::RenderPointCircle(reinterpret_cast<ImTextureID>(texture.Get()), screenPosition, radius, 0.9f, ImColor(0.91f, 0.68f, 0.36f, 0.8f));
-        }
+        points.push_back({std::to_string(item.layer.stateId) + ":" + item.itemId, position.x, position.y, index});
+    }
+    for (const auto& group : BuildMarkerLayout(std::move(points), radius * 2 + 2))
+        DrawMarkerInteraction::DrawIcon(frame.markers[group.anchor.sourceIndex],
+            ImVec2(static_cast<float>(group.anchor.x), static_cast<float>(group.anchor.y)), radius, false, false, group.members.size());
+    const auto route = RoutePlanningService::View();
+    if (route.active && route.profileId == frame.profileId && route.currentTargetIndex >= 0) {
+        const int key = RuntimeHotkeys::Snapshot().currentTargetGuideKey;
+        const auto label = key > 0 ? RuntimeHotkeys::Label(key) + "  当前目标攻略" : std::string("大地图工具条：当前目标攻略");
+        const auto size = ImGui::CalcTextSize(label.c_str());
+        const float x = static_cast<float>(std::clamp(frame.center.x - size.x / 2, 4.0, std::max(4.0, rect.right - size.x - 4.0)));
+        const float y = static_cast<float>(std::clamp(frame.center.y + frame.radius + 7, 4.0, std::max(4.0, rect.bottom - size.y - 4.0)));
+        auto* draw = ImGui::GetBackgroundDrawList();
+        draw->AddRectFilled(ImVec2(x - 4, y - 3), ImVec2(x + size.x + 4, y + size.y + 3), IM_COL32(20, 31, 43, 205), 4);
+        draw->AddText(ImVec2(x, y), IM_COL32(218, 236, 249, 255), label.c_str());
     }
 }
 
-ItemMarkerFrame DrawItemOnMinMap::Snapshot() { std::scoped_lock lock(markerMutex); return {senceName, nearItemsDatas, minMapCenterPoint, minMapClipRadius}; }
+ItemMarkerFrame DrawItemOnMinMap::Snapshot() { std::scoped_lock lock(markerMutex); return {senceName, nearItemsDatas, minMapCenterPoint, minMapClipRadius, DrawItemBase::MarkerProfile()}; }
