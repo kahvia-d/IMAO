@@ -6,9 +6,18 @@
 #include "../../Runtime/StructuredLogger.h"
 #include "../../Runtime/RoutePlanningService.h"
 #include "../../Runtime/RouteGeometry.h"
+#include "../../Runtime/RouteViewportCandidates.h"
 #include "../../Runtime/PlanningEscapeKey.h"
 #include "../../Runtime/RuntimeHotkeys.h"
 #include "../../Runtime/MarkerGuideProtocol.h"
+#include "../../Runtime/RouteGamepadBridge.h"
+#include "../../Runtime/RouteGamepadControls.h"
+#include "../../Runtime/GamepadContext.h"
+#include "../../Runtime/GamepadCursorTargets.h"
+#include "../../Runtime/GamepadCursorGeometry.h"
+#include "../../Runtime/MapToolsBridge.h"
+#include "../InteractiveInterface/RuntimeStatusBar.h"
+#include <cfloat>
 #include "../../Coordinate/locationCalculator/RelativeCoordinates.h"
 #include <chrono>
 #include <array>
@@ -16,6 +25,7 @@
 #include <limits>
 #include <set>
 #include <unordered_map>
+#include <utility>
 
 namespace {
 using Clock = std::chrono::steady_clock;
@@ -54,7 +64,7 @@ struct Click {
     std::string profile, routeId, routeTarget;
     int scene = 0;
     std::uint64_t generation = 0;
-    bool planning = false;
+    bool planning = false, gamepad = false;
 };
 std::deque<Click> clicks;
 std::string context, expanded, selected, hoverGroup;
@@ -73,10 +83,13 @@ struct PlanningBinding {
     std::string profile, tool;
     int scene = 0;
     std::uint64_t generation = 0, revision = 0;
+    std::uint64_t toolsSession = 0, toolsInputRevision = 0, toolsLayoutRevision = 0;
+    std::uint64_t filterRevision = 0;
     bool enabled = false, valid = false;
     std::vector<ItemDatas> candidates;
     std::vector<Coordinate> positions;
     std::unordered_set<std::string> selectedKeys;
+    MarkerHitRegion panel;
 };
 PlanningBinding planningBinding;
 struct PlanningGesture {
@@ -91,6 +104,38 @@ struct PlanningGesture {
 PlanningGesture gesture;
 std::optional<PlanningGesture> pendingGesture;
 std::string planningNotice;
+std::optional<bool> autoReplanPending;
+Clock::time_point autoReplanRequestedAt{};
+std::uint64_t routeGamepadSession = 0;
+RouteGamepadControls routeGamepadControls;
+bool routeGamepadCursorMode = false;
+Coordinate routeGamepadCursor;
+std::string routeGamepadSelected, routeGamepadToolbarSignature, routeGamepadRequestedTool;
+std::uint64_t toolsSession = 0, toolsInputRevision = 0;
+RouteGamepadControls toolsControls;
+Coordinate toolsCursor;
+bool toolsCursorVisible = false;
+
+bool ToolsFocused() { return game && MapToolsBridge::Shared().FocusedHost(game, DrawItemBase::MarkerProfile()); }
+bool ToolsCanvasFocused() {
+    const auto state = MapToolsBridge::Shared().Read(DrawItemBase::MarkerProfile());
+    return state.canvasReady && ToolsFocused() && state.sessionId == planningBinding.toolsSession &&
+        state.inputRevision == planningBinding.toolsInputRevision && state.layoutRevision == planningBinding.toolsLayoutRevision;
+}
+MarkerHitRegion ToolsPanel(const MapToolsBridge::State& state, POINT origin) {
+    if (!state.registered) return {};
+    RECT actual{};
+    const auto host = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(state.hostHwnd));
+    if (!IsWindowVisible(host) || !GetWindowRect(host, &actual)) return {};
+    // Exclude both the last reported animation geometry and current physical
+    // HWND. No draw/click may slip through a moving tools window.
+    if (state.bounds.right > state.bounds.left) UnionRect(&actual, &actual, &state.bounds);
+    return {static_cast<double>(actual.left - origin.x), static_cast<double>(actual.top - origin.y),
+        static_cast<double>(actual.right - origin.x), static_cast<double>(actual.bottom - origin.y), {}};
+}
+
+bool RouteGamepadFocused() { return RouteGamepadBridge::Shared().FocusedHost(game); }
+void CancelRouteGamepad(const std::string& reason);
 
 Coordinate MapImageToScreen(const PlanningBinding& binding, const Coordinate& point) {
     const auto& source = *binding.presented.source;
@@ -108,7 +153,12 @@ bool SamePlanningView(const PlanningBinding& frozen, const PlanningBinding& curr
     if (!frozen.valid || !current.valid || !current.enabled || !current.presented.Fresh() ||
         frozen.profile != current.profile || frozen.scene != current.scene || frozen.generation != current.generation ||
         frozen.revision != current.revision || frozen.origin.x != current.origin.x || frozen.origin.y != current.origin.y ||
+        frozen.tool != current.tool || frozen.filterRevision != current.filterRevision ||
+        current.filterRevision != DrawItemBase::MarkerFilterRevision() || frozen.toolsSession != current.toolsSession ||
+        frozen.toolsInputRevision != current.toolsInputRevision || frozen.toolsLayoutRevision != current.toolsLayoutRevision ||
         frozen.rect.right != current.rect.right || frozen.rect.bottom != current.rect.bottom ||
+        frozen.panel.left != current.panel.left || frozen.panel.top != current.panel.top ||
+        frozen.panel.right != current.panel.right || frozen.panel.bottom != current.panel.bottom ||
         frozen.presented.source->mapMotion.generation != current.presented.source->mapMotion.generation) return false;
     // New source frames are expected during a long gesture. Only a real change
     // to the displayed projection invalidates its frozen point positions.
@@ -191,8 +241,12 @@ const std::string& DisplayName(const std::string& id) {
 }
 
 std::string Hit(double x, double y) {
-    for (auto entry = regions.rbegin(); entry != regions.rend(); ++entry)
-        if (entry->Contains(x, y)) return entry->key;
+    for (auto entry = regions.rbegin(); entry != regions.rend(); ++entry) {
+        if (!entry->Contains(x, y)) continue;
+        if (entry->key == "maptools:open" && std::hypot(x - (entry->left + entry->right) / 2,
+            y - (entry->top + entry->bottom) / 2) > (entry->right - entry->left) / 2) continue;
+        return entry->key;
+    }
     return {};
 }
 LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
@@ -270,8 +324,9 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
 LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
     if (code < 0) return CallNextHookEx(mouseHook, code, message, value);
     const auto& info = *reinterpret_cast<MSLLHOOKSTRUCT*>(value);
-    const bool focused = DrawItemBase::IsMarkerGameFocused(game);
-    if (!focused) { leftCapture.cancelled = true; rightCapture.cancelled = true; CancelGesture(); }
+    const bool gameFocused = DrawItemBase::IsMarkerGameFocused(game);
+    const bool focused = gameFocused || ToolsCanvasFocused();
+    if (!focused && !RouteGamepadFocused()) { leftCapture.cancelled = true; rightCapture.cancelled = true; CancelGesture(); }
     if (message == WM_MOUSEMOVE) {
         for (auto* capture : {&leftCapture, &rightCapture}) if (capture->owned) capture->tracker.Move(info.pt.x, info.pt.y);
         // Own down/up, but let Windows move the cursor. Suppressing low-level
@@ -292,9 +347,12 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
         if (!focused || !mapInteractive || Clock::now() - regionsAt > std::chrono::milliseconds(100))
             return CallNextHookEx(mouseHook, code, message, value);
         const auto target = Hit(info.pt.x, info.pt.y);
+        if (planningBinding.panel.Contains(info.pt.x - planningBinding.origin.x, info.pt.y - planningBinding.origin.y))
+            return CallNextHookEx(mouseHook, code, message, value);
         const bool shiftBox = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
         const auto tool = shiftBox ? std::string("box") : planningBinding.tool;
         const bool backgroundGesture = !right && planningBinding.enabled && planningBinding.valid &&
+            (!planningBinding.toolsSession || ToolsCanvasFocused()) &&
             planningBinding.presented.Fresh() && !target.starts_with("route:") && target != "panel" &&
             !target.starts_with("page:") && (target.empty() || target.starts_with("p:") || target.starts_with("g:") || tool == "start" || shiftBox) &&
             (tool == "box" || tool == "lasso" || tool == "start") &&
@@ -313,6 +371,9 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
             gesture.path.push_back(gesture.current);
             return 1;
         }
+        // Only the planning canvas accepts mouse input while the real tools
+        // window owns focus. Ordinary marker writes retain the strict game gate.
+        if (!gameFocused) return CallNextHookEx(mouseHook, code, message, value);
         // Moving the map must work even when the drag starts on an overlay
         // marker. Point selection belongs to the box/lasso tools in this mode.
         if (!right && planningBinding.enabled && tool == "pan" &&
@@ -329,6 +390,10 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
         capture->routeId = displayedRouteId; capture->routeTarget = displayedRouteTarget;
         capture->scene = planningBinding.scene; capture->generation = planningBinding.generation;
         capture->planning = planningBinding.enabled;
+        if (target == "maptools:open") {
+            capture->generation = GamepadContextSnapshot::Shared().Read(displayedProfile).generation;
+            capture->planning = false;
+        }
         capture->tracker.Down(target, info.pt.x, info.pt.y);
         return 1;
     }
@@ -371,111 +436,146 @@ void AddRegion(double x, double y, double halfWidth, double halfHeight, POINT or
     if (right > left && bottom > top) regions.push_back({left + origin.x, top + origin.y, right + origin.x, bottom + origin.y, key});
 }
 
-MarkerHitRegion PlanningPanel(const RoutePlanningView& view, const RECT& rect) {
-    const float width = std::max(300.0f, std::min(1060.0f, static_cast<float>(rect.right) - 32.0f));
-    if (view.enabled) return {16, 70, std::min(16.0 + width, static_cast<double>(rect.right)), std::min(213.0, static_cast<double>(rect.bottom)), {}};
-    if (view.active) return {16, 70, std::min(16.0 + width, static_cast<double>(rect.right)), std::min(164.0, static_cast<double>(rect.bottom)), {}};
-    float entryWidth = ImGui::CalcTextSize(view.selected.empty() ? "路线规划" : "继续选点").x + 22;
-    if (!view.selected.empty()) entryWidth += ImGui::CalcTextSize("新建路线").x + 28;
-    return {16, 70, std::min(16.0 + entryWidth, static_cast<double>(rect.right)), std::min(99.0, static_cast<double>(rect.bottom)), {}};
+struct ToolbarButton {
+    std::string label, key;
+    bool active = false, enabled = true;
+    int group = 0;
+};
+struct ToolbarUi {
+    OverlayPanel::Layout layout;
+    std::vector<ToolbarButton> buttons;
+    std::string caption, hint, notice;
+};
+ToolbarUi BuildPlanningToolbar(const RoutePlanningView& view, const RECT& rect) {
+    ToolbarUi ui;
+    const float scale = RuntimeStatusBar::Scale();
+    const auto add = [&](std::string label, std::string key, bool active = false, bool enabled = true, int group = 0) {
+        ui.buttons.push_back({std::move(label), std::move(key), active, enabled, group});
+    };
+    const auto realtime = [&](int group) {
+        add(view.autoReplanEnabled ? "实时规划：开" : "实时规划：关",
+            view.autoReplanEnabled ? "route:autoReplan:off" : "route:autoReplan:on", view.autoReplanEnabled, !autoReplanPending.has_value(), group);
+    };
+    const auto guideKey = RuntimeHotkeys::Snapshot().currentTargetGuideKey;
+    const auto guide = std::string("目标攻略") + (guideKey > 0 ? " [" + RuntimeHotkeys::Label(guideKey) + "]" : "");
+    if (!view.enabled && !view.active) {
+        add(view.selected.empty() ? "路线规划" : "继续选点", view.selected.empty() ? "route:new" : "route:tool:pan", true);
+        if (!view.selected.empty()) add("新建路线", "route:new");
+    } else if (!view.enabled) {
+        ui.caption = "路线导航";
+        if (view.currentTargetIndex >= 0 && view.currentTargetIndex < static_cast<int>(view.active->stops.size())) {
+            const auto& target = view.active->stops[view.currentTargetIndex];
+            ui.caption += "  ·  " + std::to_string(view.currentTargetIndex + 1) + " / " + std::to_string(view.active->stops.size()) +
+                "  " + DisplayName(target.nameId);
+        }
+        ui.caption += view.navigationStatus == "paused" ? "  ·  已暂停" :
+            view.navigationStatus == "finished" ? "  ·  已结束" : "  ·  指引中";
+        if (view.navigationStatus == "navigating" || view.navigationStatus == "waitingForLocation") add("暂停", "route:pause");
+        else add("继续指引", "route:resume", true, view.currentTargetIndex >= 0);
+        add(guide, "route:guide", false, view.currentTargetIndex >= 0);
+        add("跳过目标", "route:skip", false, view.currentTargetIndex >= 0);
+        add("撤销跳过", "route:undoSkip", false, !view.active->skipped.empty());
+        realtime(0);
+        add("重新规划", "route:replan", false, !view.computing, 1);
+        add("编辑选点", "route:tool:pan", false, true, 1);
+        add("新建路线", "route:new", false, true, 1);
+        add("退出导航", "route:stop", false, true, 1);
+        ui.notice = !planningNotice.empty() ? planningNotice : view.message;
+        if (view.autoReplanComputing) ui.notice = "正在根据当前位置调整路线…";
+        if (ui.notice.empty()) ui.notice = view.autoReplanEnabled ? "实时规划已开启 · 接近目标不会自动标记完成" : "LB 聚焦工具栏 · 左摇杆选择 · A 确认 · B 返回游戏";
+    } else {
+        ui.caption = "路线规划  ·  已选 " + std::to_string(view.selected.size()) + " / " + std::to_string(AutoRoute::MaxTargets);
+        if (view.hiddenCount) ui.caption += "  ·  " + std::to_string(view.hiddenCount) + " 个在视野外";
+        if (view.computing) ui.caption += "  ·  正在计算";
+        add("移动地图", "route:tool:pan", view.tool == "pan");
+        add("矩形框选", "route:tool:box", view.tool == "box");
+        add("自由套索", "route:tool:lasso", view.tool == "lasso");
+        add("指定起点", "route:tool:start", view.tool == "start");
+        add("加入当前视野", "route:addVisible");
+        add("撤销", "route:undo");
+        add("清空", "route:clear", false, !view.selected.empty());
+        add("生成预览", "route:generate", true, !view.computing && view.start.valid && !view.selected.empty(), 1);
+        add("开始指引", "route:activate", true, !view.computing && view.preview.has_value(), 1);
+        add("退出选点", "route:end", false, true, 1);
+        if (view.active) {
+            add(guide, "route:guide", false, view.currentTargetIndex >= 0, 2);
+            if (view.navigationStatus == "navigating" || view.navigationStatus == "waitingForLocation")
+                add("暂停", "route:pause", false, true, 2);
+            else add("继续指引", "route:resume", false, view.currentTargetIndex >= 0, 2);
+            add("跳过目标", "route:skip", false, view.currentTargetIndex >= 0, 2);
+            add("撤销跳过", "route:undoSkip", false, !view.active->skipped.empty(), 2);
+            add("重新规划", "route:replan", false, !view.computing, 2);
+            realtime(2);
+            add("退出导航", "route:stop", false, true, 2);
+        }
+        ui.hint = RouteGamepadFocused() ? (view.tool == "pan" ? "左摇杆选择 · A 确认 · B 返回游戏" : "左摇杆移动光标 · 按住 A 绘制，松开提交 · B 取消") :
+            view.tool == "start" ? "点击地图指定起点 · Esc 取消" : view.tool == "pan" ?
+            "拖动空白处移动地图 · Shift + 左键框选 · 点击点位切换选中" : "按住左键绘制选区 · 松开追加点位 · Esc 取消";
+        ui.notice = !planningNotice.empty() ? planningNotice : view.message;
+        if (ui.notice.empty()) ui.notice = view.start.valid ? (view.start.source == "manual" ? "起点：手动指定" : "起点：打开地图前最后确认的位置") :
+            "起点未知，请指定起点或返回游戏完成定位";
+    }
+    const auto returning = RouteGamepadBridge::Shared().ReturnDisplay(game, view.profileId);
+    if (returning.visible) {
+        ui.notice = returning.Message();
+        if (!ui.hint.empty()) ui.hint = "路线操作已停止 · B 仅用于重试返回游戏";
+        for (auto& button : ui.buttons) button.enabled = false;
+    }
+    std::vector<OverlayPanel::ButtonMeasure> measures;
+    for (const auto& button : ui.buttons)
+        measures.push_back({RuntimeStatusBar::UiFont()->CalcTextSizeA(18 * scale, FLT_MAX, 0, button.label.c_str()).x + 26 * scale, button.group});
+    ui.layout = OverlayPanel::Pack(static_cast<float>(rect.right), RuntimeStatusBar::ToolbarTop(), scale, measures,
+        !ui.caption.empty(), (!ui.hint.empty() ? 1 : 0) + (!ui.notice.empty() ? 1 : 0), static_cast<float>(rect.bottom));
+    return ui;
 }
-
-void DrawPlanningToolbar(const RoutePlanningView& view, const RECT& rect, POINT origin) {
+MarkerHitRegion PlanningPanel(const RoutePlanningView& view, const RECT& rect) {
+    const auto box = BuildPlanningToolbar(view, rect).layout.panel;
+    return {box.left, box.top, box.right, box.bottom, {}};
+}
+std::string ToolbarText(const std::string& text, float size, float width) {
+    auto* font = RuntimeStatusBar::UiFont();
+    // Button measurement adds padding before layout, then subtracts it here.
+    // Float round-off must not truncate a label that was measured to fit.
+    if (font->CalcTextSizeA(size, FLT_MAX, 0, text.c_str()).x <= width + 0.25f) return text;
+    const char* end = text.c_str();
+    const float ellipsis = font->CalcTextSizeA(size, FLT_MAX, 0, "…").x;
+    font->CalcTextSizeA(size, std::max(1.0f, width - ellipsis), 0, text.c_str(), nullptr, &end);
+    return std::string(text.c_str(), end) + "…";
+}
+void DrawPlanningToolbar(const RoutePlanningView& view, const ToolbarUi& ui, const RECT& rect, POINT origin) {
     displayedRouteId = view.active ? view.active->id : std::string{};
     displayedRouteTarget = view.active && view.currentTargetIndex >= 0 && view.currentTargetIndex < static_cast<int>(view.active->stops.size())
         ? AutoRoute::Key(view.active->stops[view.currentTargetIndex]) : std::string{};
+    const auto& panel = ui.layout.panel; const float s = ui.layout.scale;
     auto* draw = ImGui::GetBackgroundDrawList();
-    struct ClientClip {
-        ImDrawList* draw;
-        ClientClip(ImDrawList* value, const RECT& rect) : draw(value) { draw->PushClipRect(ImVec2(0, 0), ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)), true); }
-        ~ClientClip() { draw->PopClipRect(); }
-    } clientClip(draw, rect);
-    const float left = 16.0f, top = 70.0f;
-    const float width = std::max(300.0f, std::min(1060.0f, static_cast<float>(rect.right) - 32.0f));
-    const int guideKey = RuntimeHotkeys::Snapshot().currentTargetGuideKey;
-    const auto guideLabel = std::string("当前目标攻略 [") + (guideKey > 0 ? RuntimeHotkeys::Label(guideKey) : "按键已禁用") + "]";
-    const auto button = [&](float& x, float y, const char* label, const std::string& key, bool active = false, bool enabled = true) {
-        const float buttonWidth = ImGui::CalcTextSize(label).x + 22.0f;
-        const ImVec2 a(x, y), b(x + buttonWidth, y + 29.0f);
-        draw->AddRectFilled(a, b, !enabled ? IM_COL32(46, 49, 57, 225) : active ? IM_COL32(30, 109, 89, 245) : IM_COL32(48, 63, 81, 245), 5);
-        draw->AddText(ImVec2(x + 11, y + 6), enabled ? IM_COL32_WHITE : IM_COL32(138, 148, 160, 255), label);
-        const double regionLeft = std::max(0.0, static_cast<double>(x)), regionTop = std::max(0.0, static_cast<double>(y));
-        const double regionRight = std::min(static_cast<double>(rect.right), static_cast<double>(x + buttonWidth));
-        const double regionBottom = std::min(static_cast<double>(rect.bottom), static_cast<double>(y + 29.0f));
-        if (regionRight > regionLeft && regionBottom > regionTop)
-            AddRegion((regionLeft + regionRight) / 2, (regionTop + regionBottom) / 2, (regionRight - regionLeft) / 2,
-                (regionBottom - regionTop) / 2, origin, enabled ? key : "route:disabled");
-        x += buttonWidth + 6.0f;
+    draw->PushClipRect(ImVec2(0, 0), ImVec2(static_cast<float>(rect.right), static_cast<float>(rect.bottom)), true);
+    draw->AddRectFilled(ImVec2(panel.left, panel.top + 4 * s), ImVec2(panel.right, panel.bottom + 4 * s), IM_COL32(0, 0, 0, 80), 12 * s);
+    draw->AddRectFilled(ImVec2(panel.left, panel.top), ImVec2(panel.right, panel.bottom), IM_COL32(16, 21, 29, 245), 12 * s);
+    draw->AddRect(ImVec2(panel.left, panel.top), ImVec2(panel.right, panel.bottom), IM_COL32(60, 81, 98, 235), 12 * s);
+    AddRegion((panel.left + panel.right) / 2, (panel.top + panel.bottom) / 2, panel.Width() / 2, panel.Height() / 2, origin, "route:panel");
+    const auto text = [&](const std::string& value, float x, float y, float size, ImU32 color, float width) {
+        const auto fitted = ToolbarText(value, size, width);
+        draw->AddText(RuntimeStatusBar::UiFont(), size, ImVec2(x, y), color, fitted.c_str());
     };
-    if (!view.enabled) {
-        if (!view.active) {
-            float x = left;
-            button(x, top, view.selected.empty() ? "路线规划" : "继续选点", view.selected.empty() ? "route:new" : "route:tool:pan");
-            if (!view.selected.empty()) button(x, top, "新建路线", "route:new");
-            return;
-        }
-        draw->AddRectFilled(ImVec2(left, top), ImVec2(left + width, top + 94), IM_COL32(19, 26, 35, 240), 9);
-        AddRegion(left + width / 2, top + 47, width / 2, 47, origin, "route:panel");
-        std::string caption = "路线指引";
-        if (view.currentTargetIndex >= 0 && view.currentTargetIndex < static_cast<int>(view.active->stops.size())) {
-            const auto& target = view.active->stops[view.currentTargetIndex];
-            caption += "   当前 " + std::to_string(view.currentTargetIndex + 1) + "/" + std::to_string(view.active->stops.size()) + "  " + DisplayName(target.nameId);
-        }
-        caption += view.navigationStatus == "waitingForLocation" ? "   关闭地图后等待定位" :
-            view.navigationStatus == "paused" ? "   已暂停" : view.navigationStatus == "finished" ? "   已结束" : "   指引中";
-        draw->AddText(ImVec2(left + 12, top + 10), IM_COL32(221, 236, 249, 255), caption.c_str());
-        float x = left + 12;
-        if (view.navigationStatus == "navigating" || view.navigationStatus == "waitingForLocation") button(x, top + 34, "暂停", "route:pause");
-        else button(x, top + 34, "继续指引", "route:resume", false, view.currentTargetIndex >= 0);
-        button(x, top + 34, guideLabel.c_str(), "route:guide", false, view.currentTargetIndex >= 0);
-        button(x, top + 34, "退出导航", "route:stop");
-        button(x, top + 34, "跳过目标", "route:skip", false, view.currentTargetIndex >= 0);
-        button(x, top + 34, "撤销跳过", "route:undoSkip", false, !view.active->skipped.empty());
-        button(x, top + 34, "重新规划", "route:replan", false, !view.computing);
-        button(x, top + 34, "编辑选点", "route:tool:pan");
-        button(x, top + 34, "新建路线", "route:new");
-        const auto notice = !planningNotice.empty() ? planningNotice : view.message;
-        draw->PushClipRect(ImVec2(left + 12, top + 69), ImVec2(left + width - 12, top + 91), true);
-        draw->AddText(ImVec2(left + 12, top + 72), IM_COL32(178, 202, 224, 255), notice.c_str());
-        draw->PopClipRect();
-        return;
+    if (!ui.caption.empty()) text(ui.caption, panel.left + 14 * s, ui.layout.captionTop, 20 * s, IM_COL32(232, 241, 247, 255), panel.Width() - 28 * s);
+    for (std::size_t index = 0; index < ui.buttons.size(); ++index) {
+        const auto& button = ui.buttons[index]; const auto& box = ui.layout.buttons[index];
+        const auto background = !button.enabled ? IM_COL32(30, 37, 46, 255) : button.active ? IM_COL32(29, 67, 76, 255) : IM_COL32(37, 49, 64, 255);
+        draw->AddRectFilled(ImVec2(box.left, box.top), ImVec2(box.right, box.bottom), background, 7 * s);
+        if (button.active && button.enabled)
+            draw->AddRect(ImVec2(box.left, box.top), ImVec2(box.right, box.bottom), IM_COL32(79, 150, 165, 255), 7 * s);
+        text(button.label, box.left + 13 * s, box.top + 10 * s, 18 * s,
+            !button.enabled ? IM_COL32(127, 141, 155, 255) : button.active ? IM_COL32(150, 239, 248, 255) : IM_COL32(226, 235, 243, 255),
+            box.Width() - 26 * s);
+        AddRegion((box.left + box.right) / 2, (box.top + box.bottom) / 2, box.Width() / 2, box.Height() / 2, origin,
+            button.enabled ? button.key : "route:disabled");
     }
-    draw->AddRectFilled(ImVec2(left, top), ImVec2(left + width, top + 143), IM_COL32(19, 26, 35, 240), 9);
-    AddRegion(left + width / 2, top + 71.5, width / 2, 71.5, origin, "route:panel");
-    std::string caption = "路线规划   已选 " + std::to_string(view.selected.size()) + " / " + std::to_string(AutoRoute::MaxTargets);
-    if (view.hiddenCount) caption += "   当前未显示 " + std::to_string(view.hiddenCount);
-    if (view.computing) caption += "   正在计算…";
-    draw->AddText(ImVec2(left + 12, top + 9), IM_COL32(221, 236, 249, 255), caption.c_str());
-    if (view.active) {
-        float exitX = left + width - ImGui::CalcTextSize("退出导航").x - 34.0f;
-        button(exitX, top + 3, "退出导航", "route:stop");
+    float footer = ui.layout.footerTop;
+    if (!ui.hint.empty()) {
+        text(ui.hint, panel.left + 14 * s, footer, 15 * s, IM_COL32(166, 184, 200, 255), panel.Width() - 28 * s);
+        footer += 22 * s;
     }
-    float x = left + 12;
-    button(x, top + 32, "移动地图", "route:tool:pan", view.tool == "pan");
-    button(x, top + 32, "矩形框选", "route:tool:box", view.tool == "box");
-    button(x, top + 32, "自由套索", "route:tool:lasso", view.tool == "lasso");
-    button(x, top + 32, "加入当前视野", "route:addVisible");
-    button(x, top + 32, "撤销", "route:undo");
-    button(x, top + 32, "清空", "route:clear", false, !view.selected.empty());
-    button(x, top + 32, "指定起点", "route:tool:start", view.tool == "start");
-    x = left + 12;
-    button(x, top + 68, "生成预览", "route:generate", false, !view.computing && view.start.valid && !view.selected.empty());
-    button(x, top + 68, "开始指引", "route:activate", false, !view.computing && view.preview.has_value());
-    if (view.active) button(x, top + 68, guideLabel.c_str(), "route:guide", false, view.currentTargetIndex >= 0);
-    if (view.navigationStatus == "navigating" || view.navigationStatus == "waitingForLocation") button(x, top + 68, "暂停", "route:pause");
-    else button(x, top + 68, "继续指引", "route:resume", false, view.active.has_value());
-    button(x, top + 68, "跳过目标", "route:skip", false, view.active.has_value() && view.currentTargetIndex >= 0);
-    button(x, top + 68, "撤销跳过", "route:undoSkip", false, view.active.has_value() && !view.active->skipped.empty());
-    button(x, top + 68, "重新规划", "route:replan", false, !view.computing && view.active.has_value());
-    button(x, top + 68, "退出选点", "route:end");
-    const std::string hint = view.tool == "start" ? "点击地图指定起点；Esc 取消本次操作" :
-        view.tool == "pan" ? "拖动空白处移动地图；Shift + 左键拖动框选；点击点位切换选中" :
-        "左键拖动追加点位；套索松开自动闭合；Esc 取消本次圈选";
-    draw->AddText(ImVec2(left + 12, top + 106), IM_COL32(178, 202, 224, 255), hint.c_str());
-    std::string state = !planningNotice.empty() ? planningNotice : view.message;
-    if (state.empty()) state = view.start.valid ? (view.start.source == "manual" ? "起点：手动指定" : "起点：打开地图前最后确认的位置") : "尚无可用起点，请点击“指定起点”";
-    draw->PushClipRect(ImVec2(left + 12, top + 122), ImVec2(left + width - 12, top + 142), true);
-    draw->AddText(ImVec2(left + 12, top + 124), IM_COL32(217, 194, 141, 255), state.c_str());
+    if (!ui.notice.empty()) text(ui.notice, panel.left + 14 * s, footer, 15 * s, IM_COL32(153, 210, 222, 255), panel.Width() - 28 * s);
     draw->PopClipRect();
 }
 
@@ -528,20 +628,249 @@ void DrawGesturePreview(const RECT& rect) {
     draw->AddText(position, IM_COL32_WHITE, label.c_str());
 }
 
+void FinishToolsCanvas(std::uint64_t session, const std::string& message) {
+    if (!session) return;
+    auto& bridge = MapToolsBridge::Shared();
+    const auto state = bridge.Read(DrawItemBase::MarkerProfile());
+    if (!state.registered || state.sessionId != session) return;
+    bridge.FinishCanvas(session, message);
+    toolsControls.Reset(); toolsCursorVisible = false;
+    const auto current = RoutePlanningService::View();
+    if (current.enabled && current.profileId == state.profileId && current.tool != "pan")
+        RoutePlanningService::Command({{"action", "tool"}, {"tool", "pan"}, {"profileId", current.profileId},
+            {"expectedSceneId", current.sceneId}, {"expectedGeneration", current.generation}, {"expectedRevision", current.revision}});
+    DrawItemBase::PublishMarkerEvent({{"type", "markerMapToolsCanvasChanged"}, {"data", MapToolsBridge::Json(bridge.Read(state.profileId))}});
+}
+
 void CommitPendingGesture() {
     if (!pendingGesture) return;
     auto pending = std::move(*pendingGesture); pendingGesture.reset();
-    if (!SamePlanningView(pending.binding, planningBinding)) { planningNotice = "地图或选择已变化，本次圈选已取消"; return; }
+    if (!SamePlanningView(pending.binding, planningBinding) ||
+        (pending.binding.toolsSession && !ToolsCanvasFocused())) {
+        planningNotice = "地图或选择已变化，本次圈选已取消";
+        FinishToolsCanvas(pending.binding.toolsSession, planningNotice); return;
+    }
     if (pending.tool == "start") {
         const auto roc = RelativeCoordinates::ImgMapCoordToROC(ScreenToMapImage(pending.binding, pending.current), pending.binding.scene);
         PlanningResult(RoutePlanningService::SetManualStart(pending.binding.scene, roc, PlanningContext(pending.binding)));
+        FinishToolsCanvas(pending.binding.toolsSession, planningNotice);
         return;
     }
     const auto polygon = GesturePolygon(pending);
-    if (polygon.empty()) return;
+    if (polygon.empty()) { FinishToolsCanvas(pending.binding.toolsSession, "圈选范围过小，未添加点位"); return; }
     std::vector<ItemDatas> additions;
     for (const auto i : GestureMatches(pending, polygon)) additions.push_back(pending.binding.candidates[i]);
     if (!additions.empty()) PlanningResult(RoutePlanningService::AddPoints(additions, PlanningContext(pending.binding)));
+    FinishToolsCanvas(pending.binding.toolsSession, planningNotice);
+}
+
+void ProcessMapTools(const RECT& rect, POINT origin) {
+    auto& bridge = MapToolsBridge::Shared();
+    auto state = bridge.Read(displayedProfile);
+    const auto route = RoutePlanningService::View();
+    bridge.PublishFrame(planningBinding.valid && state.registered && planningBinding.enabled &&
+        route.enabled && route.tool == state.canvasTool && state.canvasTool == planningBinding.tool);
+    state = bridge.Read(displayedProfile);
+    if (!state.registered) { toolsSession = 0; toolsCursorVisible = false; return; }
+    if (toolsSession != state.sessionId || toolsInputRevision != state.inputRevision) {
+        CancelGesture(); gesture = {}; clicks.clear(); toolsControls.Reset(); toolsCursorVisible = false;
+        if (toolsSession != state.sessionId) toolsCursor = {rect.right / 2.0, rect.bottom / 2.0};
+        toolsSession = state.sessionId; toolsInputRevision = state.inputRevision;
+    }
+    if (!state.canvasReady || !ToolsCanvasFocused()) return;
+    for (const auto& sample : bridge.Drain(state.sessionId)) {
+        if (!ToolsCanvasFocused() || Clock::now() - sample.receivedAt >= std::chrono::milliseconds(200)) {
+            CancelGesture(); gesture = {}; toolsControls.Reset(); return;
+        }
+        toolsCursorVisible = toolsCursorVisible || sample.buttons || sample.otherInput ||
+            std::abs(sample.leftX) >= .35 || std::abs(sample.leftY) >= .35;
+        const auto stamp = std::chrono::duration_cast<std::chrono::milliseconds>(sample.receivedAt.time_since_epoch()).count();
+        const auto update = toolsControls.Update(sample.buttons, sample.leftX, sample.leftY, sample.otherInput,
+            true, planningBinding.tool == "start", stamp);
+        if (update.cancelDraw) { CancelGesture(); gesture = {}; }
+        if (update.exit) { CancelGesture(); gesture = {}; FinishToolsCanvas(state.sessionId, "已返回路线工具"); return; }
+        const double speed = std::max(220.0, rect.right * .30);
+        toolsCursor.x = std::clamp(toolsCursor.x + update.dx * speed, 0.0, static_cast<double>(rect.right));
+        toolsCursor.y = std::clamp(toolsCursor.y + update.dy * speed, 0.0, static_cast<double>(rect.bottom));
+        if (update.beginDraw && !planningBinding.panel.Contains(toolsCursor.x, toolsCursor.y)) {
+            gesture = {}; gesture.active = true; gesture.tool = planningBinding.tool; gesture.binding = planningBinding;
+            gesture.current = toolsCursor; gesture.path.push_back(toolsCursor);
+        }
+        if (gesture.active) UpdateGesture({static_cast<LONG>(origin.x + toolsCursor.x), static_cast<LONG>(origin.y + toolsCursor.y)});
+        if (update.commitDraw) {
+            if (gesture.active && !gesture.cancelled && SamePlanningView(gesture.binding, planningBinding) && ToolsCanvasFocused()) {
+                pendingGesture = std::move(gesture); gesture = {}; CommitPendingGesture();
+            } else { CancelGesture(); gesture = {}; FinishToolsCanvas(state.sessionId, "地图画面已变化，本次圈选已取消"); }
+            return;
+        }
+    }
+    bridge.SetDrawing(state.sessionId, gesture.active && !gesture.cancelled, planningNotice);
+    if (toolsCursorVisible) {
+        auto* draw = ImGui::GetForegroundDrawList();
+        const ImVec2 point(static_cast<float>(toolsCursor.x), static_cast<float>(toolsCursor.y));
+        draw->AddCircle(point, 10, IM_COL32(99, 216, 232, 255), 0, 2);
+        draw->AddLine(ImVec2(point.x - 16, point.y), ImVec2(point.x + 16, point.y), IM_COL32_WHITE, 1);
+        draw->AddLine(ImVec2(point.x, point.y - 16), ImVec2(point.x, point.y + 16), IM_COL32_WHITE, 1);
+    }
+}
+
+void CancelRouteGamepad(const std::string& reason) {
+    RouteGamepadBridge::Shared().End(routeGamepadSession, reason);
+    if (routeGamepadSession) { CancelGesture(); gesture = {}; clicks.clear(); }
+    routeGamepadControls.Reset(); routeGamepadCursorMode = false; routeGamepadRequestedTool.clear();
+}
+
+std::vector<MarkerHitRegion> RouteGamepadButtons() {
+    std::vector<MarkerHitRegion> buttons;
+    for (const auto& region : regions) if (region.key.starts_with("route:") &&
+        region.key != "route:panel" && region.key != "route:disabled" && region.key != "route:addGroup") buttons.push_back(region);
+    return buttons;
+}
+void NavigateRouteToolbar(const std::vector<MarkerHitRegion>& buttons, int direction) {
+    if (buttons.empty()) return;
+    const auto current = std::find_if(buttons.begin(), buttons.end(), [](const auto& value) { return value.key == routeGamepadSelected; });
+    if (current == buttons.end()) { routeGamepadSelected = buttons.front().key; return; }
+    const double x = (current->left + current->right) / 2, y = (current->top + current->bottom) / 2;
+    double best = std::numeric_limits<double>::max();
+    for (const auto& next : buttons) {
+        const double dx = (next.left + next.right) / 2 - x, dy = (next.top + next.bottom) / 2 - y;
+        const bool horizontal = std::abs(direction) == 1;
+        const double primary = horizontal ? dx * direction : dy * (direction / 2);
+        if (primary <= 1) continue;
+        const double cross = horizontal ? std::abs(dy) : std::abs(dx);
+        const double score = primary + cross * 5;
+        if (score < best) { best = score; routeGamepadSelected = next.key; }
+    }
+}
+void ProcessRouteGamepad(const RECT& rect, POINT origin, bool suppressFrameInput = false) {
+    auto& bridge = RouteGamepadBridge::Shared();
+    // Ended input may retain a short display-only lease while Windows hands
+    // focus back. Such pixels must not prepare a new actionable toolbar frame.
+    if (bridge.ReturnDisplay(game, displayedProfile).visible) return;
+    const auto context = GamepadContextSnapshot::Shared().Read(displayedProfile);
+    bridge.PublishFrame(planningBinding.valid && context.bigMap && context.observable,
+        displayedProfile, context.generation);
+    auto state = bridge.Read();
+    if (state.phase == "ended") {
+        if (routeGamepadSession) { CancelGesture(); gesture = {}; routeGamepadSession = 0; }
+        return;
+    }
+    if (!state.active) return;
+    if (!RouteGamepadFocused()) { CancelRouteGamepad("输入窗口已失焦，已取消本次操作"); return; }
+    if (state.phase == "handoff") {
+        for (const auto& sample : bridge.Drain(routeGamepadSession)) {
+            const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(sample.receivedAt.time_since_epoch()).count();
+            const auto update = routeGamepadControls.Update(sample.buttons, sample.leftX, sample.leftY, sample.otherInput, false, false, now);
+            if (update.exit) { CancelRouteGamepad("已取消打开攻略"); return; }
+        }
+        ImGui::GetForegroundDrawList()->AddText(ImVec2(20, static_cast<float>(rect.bottom - 34)),
+            IM_COL32(255, 230, 155, 255), "正在打开当前目标攻略 · B 取消并退出");
+        return;
+    }
+    if (routeGamepadSession != state.sessionId) {
+        CancelGesture(); gesture = {}; clicks.clear();
+        routeGamepadSession = state.sessionId; routeGamepadControls.Reset(); routeGamepadCursorMode = false;
+        routeGamepadCursor = {rect.right / 2.0, rect.bottom / 2.0};
+        routeGamepadSelected.clear(); routeGamepadToolbarSignature.clear(); routeGamepadRequestedTool.clear();
+    }
+    const auto buttons = RouteGamepadButtons();
+    if (buttons.empty()) { CancelRouteGamepad("当前没有可用的路线按钮"); return; }
+    std::string signature;
+    for (const auto& button : buttons) signature += button.key + "|";
+    if (signature != routeGamepadToolbarSignature) {
+        if (gesture.active) { CancelGesture(); gesture = {}; }
+        routeGamepadControls.Reset(); routeGamepadToolbarSignature = signature;
+    }
+    if (std::none_of(buttons.begin(), buttons.end(), [](const auto& value) { return value.key == routeGamepadSelected; }))
+        routeGamepadSelected = buttons.front().key;
+    if (suppressFrameInput) {
+        // Layout is UI state, not loss of the actual game/map/input host. Keep
+        // that session alive, but require neutral input before another action.
+        bridge.DiscardPendingInput(routeGamepadSession); routeGamepadControls.Reset();
+        CancelGesture(); gesture = {}; routeGamepadCursorMode = false; routeGamepadRequestedTool.clear();
+    }
+    const auto frameSamples = suppressFrameInput ? std::vector<RouteGamepadBridge::Sample>{} : bridge.Drain(routeGamepadSession);
+    for (const auto& sample : frameSamples) {
+        if (!RouteGamepadFocused() || Clock::now() - sample.receivedAt > std::chrono::milliseconds(200)) {
+            CancelRouteGamepad("焦点或输入时效已变化，已取消本次操作"); return;
+        }
+        const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(sample.receivedAt.time_since_epoch()).count();
+        const auto update = routeGamepadControls.Update(sample.buttons, sample.leftX, sample.leftY, sample.otherInput,
+            routeGamepadCursorMode, planningBinding.tool == "start", now);
+        if (update.cancelDraw) { CancelGesture(); gesture = {}; }
+        if (update.exit) { CancelRouteGamepad("已退出路线工具栏"); return; }
+        if (update.direction) NavigateRouteToolbar(buttons, update.direction);
+        if (update.activate && !routeGamepadCursorMode) {
+            const auto selected = std::find_if(buttons.begin(), buttons.end(), [](const auto& value) { return value.key == routeGamepadSelected; });
+            if (selected != buttons.end()) {
+                const POINT center{static_cast<LONG>((selected->left + selected->right) / 2), static_cast<LONG>((selected->top + selected->bottom) / 2)};
+                if (selected->key == "route:guide") {
+                    const auto route = RoutePlanningService::View();
+                    if (route.profileId != displayedProfile || !route.active || route.active->id != displayedRouteId ||
+                        route.currentTargetIndex < 0 || route.currentTargetIndex >= static_cast<int>(route.active->stops.size()) ||
+                        AutoRoute::Key(route.active->stops[route.currentTargetIndex]) != displayedRouteTarget) {
+                        planningNotice = "当前目标已变化，请重新选择"; break;
+                    }
+                    bridge.Update(routeGamepadSession, "handoff", routeGamepadSelected, planningBinding.tool, false, "正在打开当前目标攻略");
+                    routeGamepadControls.Reset();
+                    DrawItemBase::PublishMarkerEvent({{"type", "markerGuideShortcut"}, {"gamepad", true},
+                        {"profileId", displayedProfile}, {"gameHwnd", state.gameHwnd}, {"sourceHwnd", state.hostHwnd},
+                        {"contextGeneration", state.contextGeneration}, {"routeId", displayedRouteId}, {"key", displayedRouteTarget},
+                        {"screenX", center.x}, {"screenY", center.y}});
+                    return;
+                }
+                clicks.push_back({selected->key, false, center, displayedProfile, displayedRouteId, displayedRouteTarget,
+                    planningBinding.scene, planningBinding.generation, planningBinding.enabled, true});
+                if (selected->key == "route:tool:box" || selected->key == "route:tool:lasso" || selected->key == "route:tool:start")
+                    routeGamepadRequestedTool = selected->key.substr(11);
+                else if (selected->key == "route:tool:pan" && planningBinding.enabled)
+                    routeGamepadRequestedTool = "pan";
+            }
+            break; // Toolbar commands may replace its buttons/revision; next frame rebinds.
+        }
+        if (!routeGamepadCursorMode) continue;
+        const double speed = std::max(220.0, rect.right * .30);
+        routeGamepadCursor.x = std::clamp(routeGamepadCursor.x + update.dx * speed, 0.0, static_cast<double>(rect.right));
+        routeGamepadCursor.y = std::clamp(routeGamepadCursor.y + update.dy * speed, 0.0, static_cast<double>(rect.bottom));
+        if (update.beginDraw) {
+            gesture = {}; gesture.active = true; gesture.tool = planningBinding.tool; gesture.binding = planningBinding;
+            gesture.current = routeGamepadCursor; gesture.path.push_back(routeGamepadCursor);
+        }
+        if (gesture.active) UpdateGesture({static_cast<LONG>(origin.x + routeGamepadCursor.x), static_cast<LONG>(origin.y + routeGamepadCursor.y)});
+        if (update.commitDraw) {
+            if (gesture.active && !gesture.cancelled && SamePlanningView(gesture.binding, planningBinding) && RouteGamepadFocused()) {
+                pendingGesture = std::move(gesture); gesture = {}; CommitPendingGesture();
+                // Adding a selection advances the draft generation. Returning to
+                // pan must bind to that result, never reuse the pre-commit epoch.
+                const auto notice = planningNotice;
+                const auto committed = RoutePlanningService::View();
+                if (committed.profileId == displayedProfile && committed.sceneId == planningBinding.scene &&
+                    committed.enabled && committed.tool != "pan" && RouteGamepadFocused()) {
+                    const auto result = RoutePlanningService::Command({{"profileId", committed.profileId},
+                        {"expectedSceneId", committed.sceneId}, {"expectedGeneration", committed.generation},
+                        {"expectedRevision", committed.revision}, {"action", "tool"}, {"tool", "pan"}});
+                    PlanningResult(result);
+                    if (result.value("accepted", false) && !notice.empty()) planningNotice = notice;
+                }
+                routeGamepadCursorMode = false; routeGamepadControls.Reset();
+            } else { CancelGesture(); gesture = {}; planningNotice = "地图画面已变化，本次圈选已取消"; }
+            break;
+        }
+    }
+    bridge.Update(routeGamepadSession, routeGamepadCursorMode ? "cursor" : "toolbar", routeGamepadSelected,
+        planningBinding.tool, gesture.active && !gesture.cancelled, planningNotice);
+    auto* draw = ImGui::GetForegroundDrawList();
+    if (routeGamepadCursorMode) {
+        const ImVec2 point(static_cast<float>(routeGamepadCursor.x), static_cast<float>(routeGamepadCursor.y));
+        draw->AddCircle(point, 10, IM_COL32(99, 216, 232, 255), 0, 2);
+        draw->AddLine(ImVec2(point.x - 16, point.y), ImVec2(point.x + 16, point.y), IM_COL32_WHITE, 1);
+        draw->AddLine(ImVec2(point.x, point.y - 16), ImVec2(point.x, point.y + 16), IM_COL32_WHITE, 1);
+    } else for (const auto& button : buttons) if (button.key == routeGamepadSelected)
+        draw->AddRect(ImVec2(static_cast<float>(button.left - origin.x - 2), static_cast<float>(button.top - origin.y - 2)),
+            ImVec2(static_cast<float>(button.right - origin.x + 2), static_cast<float>(button.bottom - origin.y + 2)), IM_COL32(99, 216, 232, 255), 6, 0, 3);
+    const char* hint = routeGamepadCursorMode ? "左摇杆移动光标 · 按住 A 圈选，松开提交 · B 退出" : "左摇杆 / 方向键选择 · A 确认 · B 退出";
+    draw->AddText(RuntimeStatusBar::UiFont(), 18 * RuntimeStatusBar::Scale(),
+        ImVec2(20, static_cast<float>(rect.bottom - 34 * RuntimeStatusBar::Scale())), IM_COL32(150, 239, 248, 255), hint);
 }
 }
 
@@ -565,6 +894,7 @@ void DrawMarkerInteraction::Initialize(HWND gameWindow) {
     }
 }
 void DrawMarkerInteraction::Shutdown() {
+    MapToolsBridge::Shared().Unregister(0);
     Clear();
     if (mouseHook) UnhookWindowsHookEx(mouseHook);
     if (keyboardHook) UnhookWindowsHookEx(keyboardHook);
@@ -578,6 +908,21 @@ void DrawMarkerInteraction::Shutdown() {
 void DrawMarkerInteraction::BeginFrame() {
     // Sample every frame, including blank areas; mouse activation itself comes
     // only from hook-owned clicks, never from a click that reached the game.
+    for (auto click = clicks.begin(); click != clicks.end();) {
+        if (click->target != "maptools:open") { ++click; continue; }
+        const auto current = GamepadContextSnapshot::Shared().Read(DrawItemBase::MarkerProfile());
+        if (!click->right && click->profile == current.profileId && click->generation == current.generation && current.running && current.bigMap &&
+            current.observable && DrawItemBase::IsMarkerGameFocused(game))
+            DrawItemBase::PublishMarkerEvent({{"type", "markerMapToolsRequested"}, {"profileId", current.profileId},
+                {"gameHwnd", current.gameHwnd}, {"contextGeneration", current.generation},
+                {"screenX", click->position.x}, {"screenY", click->position.y}});
+        click = clicks.erase(click);
+    }
+    const auto tools = MapToolsBridge::Shared().Read(DrawItemBase::MarkerProfile());
+    if (toolsSession && (!tools.registered || tools.sessionId != toolsSession || tools.inputRevision != toolsInputRevision)) {
+        CancelGesture(); gesture = {}; leftCapture.cancelled = true; rightCapture.cancelled = true;
+        toolsControls.Reset(); toolsCursorVisible = false;
+    }
     while (!guideRequests.empty()) {
         auto event = std::move(guideRequests.front()); guideRequests.pop_front();
         // Focus and identity were captured on the owned key-down. The UI
@@ -601,14 +946,57 @@ void DrawMarkerInteraction::BeginFrame() {
     ordinaryEscapeRequested = false;
     dismissRequested = false;
     escapeWasDown = escape;
-    if (!DrawItemBase::IsMarkerGameFocused(game)) { clicks.clear(); leftCapture.cancelled = true; rightCapture.cancelled = true; CancelGesture(); }
+    const auto gamepad = RouteGamepadBridge::Shared().Read();
+    if (gamepad.active && !RouteGamepadFocused()) CancelRouteGamepad("输入窗口已失焦，已取消本次操作");
+    if (!DrawItemBase::IsMarkerGameFocused(game) && !ToolsFocused()) {
+        leftCapture.cancelled = true; rightCapture.cancelled = true;
+        if (!RouteGamepadFocused()) { clicks.clear(); CancelGesture(); }
+    }
 }
 void DrawMarkerInteraction::Clear() {
+    GamepadCursorTargets::Shared().Clear();
+    GamepadCursorGeometry::Shared().Clear();
+    MapToolsBridge::Shared().PublishFrame(false);
+    RouteGamepadBridge::Shared().PublishFrame(false, {}, 0);
+    CancelRouteGamepad("地图画面不可用，已取消本次操作");
+    routeGamepadSession = 0;
+    autoReplanPending.reset();
     mapInteractive = false; regions.clear(); clicks.clear();
-    leftCapture.cancelled = true; rightCapture.cancelled = true;
+    const auto current = GamepadContextSnapshot::Shared().Read(DrawItemBase::MarkerProfile());
+    for (auto* capture : {&leftCapture, &rightCapture})
+        if (!(capture->owned && capture->target == "maptools:open" && capture->generation == current.generation &&
+            current.bigMap && current.observable && DrawItemBase::IsMarkerGameFocused(game))) capture->cancelled = true;
     CancelGesture(); planningBinding.valid = false;
     RoutePlanningService::MapUnavailable();
     ClearSelection(); context.clear();
+}
+
+void DrawMarkerInteraction::DrawMapToolsLauncher(const RECT& rect, HWND gameWindow) {
+    const auto profile = DrawItemBase::MarkerProfile();
+    const auto state = MapToolsBridge::Shared().Read(profile);
+    if (state.registered) return; // The WinUI window is the only expanded UI.
+    const auto current = GamepadContextSnapshot::Shared().Read(profile);
+    if (!current.running || !current.observable || !current.bigMap || !DrawItemBase::IsMarkerGameFocused(gameWindow)) return;
+    const double scale = std::max(1.0, GetDpiForWindow(gameWindow) / 96.0);
+    const double radius = 28 * scale, x = rect.right / 2.0, y = rect.bottom - (24 + 28) * scale;
+    if (x < radius || y < radius) return;
+    POINT origin{}; ClientToScreen(gameWindow, &origin);
+    auto* draw = ImGui::GetForegroundDrawList();
+    const ImVec2 center(static_cast<float>(x), static_cast<float>(y));
+    draw->AddCircleFilled(ImVec2(center.x, center.y + static_cast<float>(3 * scale)), static_cast<float>(radius), IM_COL32(0, 0, 0, 80));
+    draw->AddCircleFilled(center, static_cast<float>(radius), IM_COL32(21, 34, 44, 248));
+    draw->AddCircle(center, static_cast<float>(radius), IM_COL32(105, 220, 231, 230), 0, static_cast<float>(1.5 * scale));
+    // A simple sliders glyph avoids font-dependent icon substitution.
+    for (int row = -1; row <= 1; ++row) {
+        const float lineY = center.y + static_cast<float>(row * 8 * scale);
+        draw->AddLine(ImVec2(center.x - static_cast<float>(11 * scale), lineY),
+            ImVec2(center.x + static_cast<float>(11 * scale), lineY), IM_COL32(211, 239, 245, 255), static_cast<float>(2 * scale));
+        draw->AddCircleFilled(ImVec2(center.x + static_cast<float>((row == 0 ? 5 : -5) * scale), lineY),
+            static_cast<float>(3 * scale), IM_COL32(105, 220, 231, 255));
+    }
+    hitClientRect = rect; displayedProfile = profile;
+    AddRegion(x, y, radius, radius, origin, "maptools:open");
+    mapInteractive = mouseHook != nullptr; regionsAt = Clock::now();
 }
 
 void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted, bool completed, std::size_t count) {
@@ -655,29 +1043,39 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     POINT cursor{}; GetCursorPos(&cursor);
     const double mouseX = cursor.x - origin.x, mouseY = cursor.y - origin.y;
     const auto previousPlanning = RoutePlanningService::View();
-    const auto planningPanel = PlanningPanel(previousPlanning, rect);
-    std::vector<ItemDatas> eligible;
-    std::vector<Coordinate> eligiblePositions;
-    std::unordered_set<std::string> eligibleKeys;
+    if (autoReplanPending) {
+        if (*autoReplanPending == previousPlanning.autoReplanEnabled) {
+            autoReplanPending.reset(); planningNotice = previousPlanning.autoReplanEnabled ? "实时规划已开启" : "实时规划已关闭";
+        } else if (Clock::now() - autoReplanRequestedAt > std::chrono::seconds(3)) {
+            autoReplanPending.reset(); planningNotice = "实时规划设置未生效，请重试";
+        }
+    }
+    const auto mapTools = MapToolsBridge::Shared().Read(frame.profileId);
+    const auto observedPanel = ToolsPanel(mapTools, origin);
+    AutoRoute::ViewportCandidates eligible;
     if (previousPlanning.enabled || previousPlanning.active) for (const auto& item : frame.markers) {
         const auto position = motion.Apply(item.screenCoordiante);
-        if (!std::isfinite(position.x) || !std::isfinite(position.y) || position.x < 0 || position.y < 0 ||
-            position.x > rect.right || position.y > rect.bottom || planningPanel.Contains(position.x, position.y) ||
-            DrawItemBase::IsPointCompleted(frame.sceneName, item)) continue;
-        if (eligibleKeys.insert(AutoRoute::Key(item)).second) { eligible.push_back(item); eligiblePositions.push_back(position); }
+        eligible.Add(item, position, rect.right, rect.bottom,
+            DrawItemBase::IsPointCompleted(frame.sceneName, item), observedPanel.Contains(position.x, position.y));
     }
     const int sceneId = Scene::SceneNameToId(frame.sceneName);
-    RoutePlanningService::ObserveMap(sceneId, eligible);
+    RoutePlanningService::ObserveMap(sceneId, eligible.inViewport);
     auto planning = RoutePlanningService::View();
     PlanningBinding currentBinding;
     currentBinding.origin = origin; currentBinding.rect = rect; currentBinding.profile = frame.profileId;
-    currentBinding.scene = sceneId; currentBinding.tool = planning.tool; currentBinding.enabled = planning.enabled;
+    currentBinding.scene = sceneId; currentBinding.tool = mapTools.registered ? mapTools.canvasTool : "pan";
+    currentBinding.enabled = planning.enabled;
+    currentBinding.toolsSession = mapTools.registered ? mapTools.sessionId : 0;
+    currentBinding.toolsInputRevision = mapTools.inputRevision;
+    currentBinding.toolsLayoutRevision = mapTools.layoutRevision;
+    currentBinding.filterRevision = frame.filterRevision;
     currentBinding.generation = planning.generation; currentBinding.revision = planning.revision;
-    currentBinding.candidates = std::move(eligible); currentBinding.positions = std::move(eligiblePositions);
+    currentBinding.panel = observedPanel;
+    currentBinding.candidates = std::move(eligible.onCanvas); currentBinding.positions = std::move(eligible.canvasPositions);
     for (const auto& item : planning.selected) currentBinding.selectedKeys.insert(AutoRoute::Key(item));
     if (presented && presented->source) {
         currentBinding.presented = *presented;
-        currentBinding.valid = presented->Fresh() && presented->mapVisible &&
+        currentBinding.valid = presented->Fresh() && presented->mapVisible && frame.filterRevision == DrawItemBase::MarkerFilterRevision() &&
             presented->source->viewportScene == sceneId && presented->source->mapMotion.pixelsPerUnit > 0 &&
             std::isfinite(presented->motion.scale) && presented->motion.scale > 0 &&
             presented->source->clientRect.right == rect.right && presented->source->clientRect.bottom == rect.bottom &&
@@ -689,8 +1087,11 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     }
     CommitPendingGesture();
     planning = RoutePlanningService::View();
+    // The tools window bounds exclude direct canvas input and drawn icons,
+    // but do not reduce the map viewport used by bulk route selection.
+    const auto planningPanel = observedPanel;
     planningBinding.generation = planning.generation; planningBinding.revision = planning.revision;
-    planningBinding.enabled = planning.enabled; planningBinding.tool = planning.tool;
+    planningBinding.enabled = planning.enabled;
     planningBinding.selectedKeys.clear();
     for (const auto& item : planning.selected) planningBinding.selectedKeys.insert(AutoRoute::Key(item));
     std::vector<MarkerLayoutPoint> points;
@@ -708,6 +1109,44 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     if (!selected.empty() && !visible.contains(selected)) ClearSelection();
     for (const auto& member : expandedMembers) if (!visible.contains(member)) { ClearSelection(); break; }
     auto groups = BuildMarkerLayout(std::move(points), radius * 2 + 4);
+    GamepadCursorGeometry::Frame cursorGeometry;
+    auto& cursorFrame = cursorGeometry.evidence;
+    cursorFrame.binding.context = GamepadContextSnapshot::Shared().Read(frame.profileId);
+    cursorFrame.binding.filterRevision = frame.filterRevision;
+    cursorFrame.binding.clientRect = rect; cursorFrame.binding.origin = origin;
+    if (presented && presented->source && presented->capture) {
+        cursorGeometry.capture = presented->capture;
+        const auto& source = *presented->source;
+        const auto& capture = *presented->capture;
+        cursorFrame.sourceFrameId = source.frameId; cursorFrame.captureFrameId = capture.frameId;
+        cursorFrame.sourceAt = source.capturedAt; cursorFrame.captureAt = capture.capturedAt;
+        cursorFrame.presentedAt = presented->presentedAt;
+        cursorFrame.sourceMaximumAge = source.maximumAge; cursorFrame.captureMaximumAge = capture.maximumAge;
+        cursorFrame.binding.motionGeneration = source.mapMotion.generation;
+        cursorFrame.binding.pixelsPerUnit = source.mapMotion.pixelsPerUnit * motion.scale;
+        DWORD processId = 0;
+        cursorFrame.frameValid = presented->Fresh() && presented->mapVisible && source.mapMotion.reliable &&
+            source.viewportScene == sceneId && cursorFrame.binding.context.sceneName == frame.sceneName &&
+            cursorFrame.binding.context.gameHwnd == static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(gameWindow)) &&
+            GetWindowThreadProcessId(gameWindow, &processId) && processId == cursorFrame.binding.context.gameProcessId &&
+            DrawItemBase::IsMarkerDisplayContext(gameWindow) && frame.filterRevision == DrawItemBase::MarkerFilterRevision() &&
+            source.clientRect.right == rect.right && source.clientRect.bottom == rect.bottom &&
+            capture.clientRect.right == rect.right && capture.clientRect.bottom == rect.bottom &&
+            capture.image.cols == rect.right && capture.image.rows == rect.bottom &&
+            std::isfinite(motion.scale) && motion.scale > 0;
+    }
+    // A registered foreground panel can cover game-capture pixels. Do not offer
+    // markers hidden behind that real window even though capture still sees them.
+    if (planningPanel.right > planningPanel.left && planningPanel.bottom > planningPanel.top)
+        cursorGeometry.occlusions.push_back({static_cast<LONG>(planningPanel.left),static_cast<LONG>(planningPanel.top),
+            static_cast<LONG>(planningPanel.right),static_cast<LONG>(planningPanel.bottom)});
+    const auto visibleGuide = DrawItemBase::VisibleGuideWindow();
+    if (!visibleGuide.empty()) {
+        const auto guide = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(visibleGuide.at("hwnd").get<std::uint64_t>()));
+        RECT bounds{};
+        if (GetWindowRect(guide, &bounds)) cursorGeometry.occlusions.push_back(
+            {bounds.left-origin.x,bounds.top-origin.y,bounds.right-origin.x,bounds.bottom-origin.y});
+    }
     regions.clear();
     DrawGesturePreview(rect);
     std::unordered_map<std::string, std::vector<std::string>> groupMembers;
@@ -731,6 +1170,13 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         });
         DrawIcon(item, anchor, radius, hover || (planning.enabled ? selectedCount > 0 : selected == group.anchor.key),
             DrawItemBase::IsPointCompleted(frame.sceneName, item), group.members.size());
+        GamepadCursorGeometry::Footprint groupFootprint;
+        groupFootprint.position = {anchor.x,anchor.y}; groupFootprint.radius = radius;
+        for (const auto& member : group.members) {
+            const auto& grouped = frame.markers[member.sourceIndex];
+            if (!DrawItemBase::IsPointCompleted(frame.sceneName,grouped)) groupFootprint.members.push_back(grouped);
+        }
+        cursorGeometry.footprints.push_back(std::move(groupFootprint));
         if (planning.enabled && selectedCount > 0) {
             const auto label = group.members.size() > 1 ? std::to_string(selectedCount) + "/" + std::to_string(group.members.size()) : std::string("已选");
             const auto size = ImGui::CalcTextSize(label.c_str());
@@ -767,6 +1213,10 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         const float top = std::clamp(expandedAnchor.y - 24, 8.0f, std::max(8.0f, rect.bottom - 340.0f));
         if (list) {
             const float height = static_cast<float>(end - begin) * 35 + 42 + (planning.enabled ? 34.0f : 0.0f);
+            GamepadCursorGeometry::Footprint cover;
+            cover.cover = cover.rectangle = true;
+            cover.left=left; cover.top=top; cover.right=left+240; cover.bottom=top+height;
+            cursorGeometry.footprints.push_back(std::move(cover));
             draw->AddRectFilled(ImVec2(left, top), ImVec2(left + 240, top + height), IM_COL32(25, 31, 42, 245), 8);
             AddRegion(left + 120, top + height / 2, 120, height / 2, origin, "panel");
         }
@@ -784,6 +1234,12 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
                 std::hypot(mouseX - position.x, mouseY - position.y) <= radius + 3;
             DrawIcon(item, position, radius, memberHover || (planning.enabled ? planningBinding.selectedKeys.contains(id) : selected == id),
                 DrawItemBase::IsPointCompleted(frame.sceneName, item));
+            GamepadCursorGeometry::Footprint memberFootprint;
+            memberFootprint.position={position.x,position.y}; memberFootprint.radius=radius;
+            memberFootprint.rectangle=list; memberFootprint.left=left+3; memberFootprint.right=left+237;
+            memberFootprint.top=position.y-16; memberFootprint.bottom=position.y+16;
+            if (!DrawItemBase::IsPointCompleted(frame.sceneName,item)) memberFootprint.members.push_back(item);
+            cursorGeometry.footprints.push_back(std::move(memberFootprint));
             displayed[id] = position;
             if (list) {
                 const std::string label = DisplayName(item.nameId) + (item.layer.level.empty() ? "" : "  [" + item.layer.level + "]");
@@ -857,17 +1313,28 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             }
         }
     }
-    DrawPlanningToolbar(planning, rect, origin);
-    mapInteractive = mouseHook && DrawItemBase::IsMarkerGameFocused(gameWindow);
+    GamepadCursorGeometry::Shared().Publish(std::move(cursorGeometry));
+    mapInteractive = (mouseHook && DrawItemBase::IsMarkerGameFocused(gameWindow)) || ToolsFocused();
     regionsAt = now;
     if (!mapInteractive) { clicks.clear(); regions.clear(); }
+    ProcessMapTools(rect, origin);
     while (!clicks.empty()) {
         const auto click = clicks.front(); clicks.pop_front();
+        if (click.gamepad && (!RouteGamepadFocused() || !planningBinding.valid || !planningBinding.presented.Fresh())) {
+            CancelRouteGamepad("焦点或地图画面已变化，操作未执行"); break;
+        }
         if (click.profile != DrawItemBase::MarkerProfile()) continue;
         if (click.target.starts_with("route:")) {
             if (click.right || click.target == "route:panel" || click.target == "route:disabled") continue;
             CancelGesture();
-            if (click.target == "route:addGroup") {
+            if (click.target.starts_with("route:autoReplan:")) {
+                const bool enabled = click.target == "route:autoReplan:on";
+                if (autoReplanPending) continue;
+                autoReplanPending = enabled; autoReplanRequestedAt = Clock::now();
+                DrawItemBase::PublishMarkerEvent({{"type", "markerAutoReplanRequested"}, {"profileId", click.profile},
+                    {"enabled", enabled}, {"expectedEnabled", !enabled}});
+                planningNotice = "正在保存实时规划设置…";
+            } else if (click.target == "route:addGroup") {
                 std::vector<ItemDatas> additions;
                 for (const auto& key : expandedMembers) {
                     const auto found = visible.find(key);
@@ -903,13 +1370,25 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             if (click.planning || RoutePlanningService::PlanningMode()) {
                 // Both mouse buttons stay out of guide/completion commands in
                 // planning mode. Selection remains a separate reversible set.
-                if (click.planning && !click.right) PlanningResult(RoutePlanningService::TogglePoint(item, PlanningContext(click)));
+                if (click.planning && !click.right) {
+                    if (planningBinding.toolsSession && !ToolsCanvasFocused()) continue;
+                    PlanningResult(RoutePlanningService::TogglePoint(item, PlanningContext(click)));
+                    FinishToolsCanvas(planningBinding.toolsSession, planningNotice);
+                }
             } else if (click.right) {
                 const auto result = DrawItemBase::HandleMarkerCommand({{"type", "markerSetCompletion"}, {"profileId", click.profile},
                     {"sceneName", frame.sceneName}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
                     {"pointId", item.itemId}, {"completed", !DrawItemBase::IsPointCompleted(frame.sceneName, item)}});
                 if (!result.value("accepted", false)) StructuredLogger::Record("error", "markers", "completion-save-failed", result.value("message", ""));
             } else DrawItemBase::SelectMarker(frame.sceneName, item, click.position, click.profile);
+        }
+    }
+    if (!routeGamepadRequestedTool.empty()) {
+        const auto tool = std::exchange(routeGamepadRequestedTool, {});
+        const auto current = RoutePlanningService::View();
+        if (current.enabled && current.tool == tool && RouteGamepadFocused()) {
+            if (tool == "pan") CancelRouteGamepad("已返回游戏，可移动地图后再按 LB 进入");
+            else { routeGamepadCursorMode = true; routeGamepadControls.Reset(); }
         }
     }
 }

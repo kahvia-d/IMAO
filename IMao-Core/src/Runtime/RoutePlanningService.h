@@ -1,5 +1,6 @@
 #pragma once
 #include "RoutePlanningModel.h"
+#include "AutoReplanPolicy.h"
 #include <functional>
 #include <optional>
 #include <unordered_set>
@@ -17,6 +18,10 @@ struct RoutePlanningView {
     std::optional<AutoRoute::Plan> preview, active;
     int currentTargetIndex = -1;
     std::size_t hiddenCount = 0;
+    bool autoReplanEnabled = false, autoReplanComputing = false;
+    std::string autoReplanStatus = "disabled";
+    std::uint64_t orderRevision = 0;
+    std::optional<ItemDatas> previousTarget;
 };
 
 // Core owns selection, solver jobs and progress. UI/renderers consume snapshots.
@@ -37,6 +42,9 @@ public:
     static void CaptureMapStart(const AutoRoute::Start& start);
     static void UpdatePlayer(const AutoRoute::Start& position);
     static void SetPlayerAvailable(bool available);
+    static void SetAutoReplanEnabled(bool enabled);
+    static void ObservePlayer(const AutoRoute::PlayerObservation& observation);
+    static void ObserveProximity(const AutoRoute::ProximityObservation& observation);
     static void OnMarkerChanged();
     static nlohmann::json AddPoints(const std::vector<ItemDatas>& points, const nlohmann::json& context = nlohmann::json::object());
     static nlohmann::json TogglePoint(const ItemDatas& point, const nlohmann::json& context = nlohmann::json::object());

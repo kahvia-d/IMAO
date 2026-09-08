@@ -1,0 +1,75 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="IMaoCanvasBrush" Color="#10151D" />
+    <SolidColorBrush x:Key="IMaoSurfaceBrush" Color="#19222E" />
+    <SolidColorBrush x:Key="IMaoRaisedSurfaceBrush" Color="#222F3E" />
+    <SolidColorBrush x:Key="IMaoAccentBrush" Color="#63D8E8" />
+    <SolidColorBrush x:Key="IMaoTextBrush" Color="#E7F0F7" />
+    <SolidColorBrush x:Key="IMaoSecondaryTextBrush" Color="#9DACBD" />
+    <SolidColorBrush x:Key="IMaoBorderBrush" Color="#304052" />
+    <SolidColorBrush x:Key="IMaoSuccessBrush" Color="#8DD9B0" />
+    <SolidColorBrush x:Key="IMaoWarningBrush" Color="#E8BD78" />
+    <SolidColorBrush x:Key="IMaoDangerBrush" Color="#F19A9A" />
+    <Color x:Key="SystemAccentColor">#63D8E8</Color>
+    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#63D8E8" />
+    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#50C5D5" />
+    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#63D8E8" />
+    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#10151D" />
+    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="#10151D" />
+    <SolidColorBrush x:Key="InfoBarInformationalSeverityIconBackground" Color="#63D8E8" />
+    <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#63D8E8" />
+    <SolidColorBrush x:Key="ListViewItemSelectionIndicatorBrush" Color="#63D8E8" />
+    <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPointerOverBrush" Color="#82E5F1" />
+    <SolidColorBrush x:Key="ListViewItemSelectionIndicatorPressedBrush" Color="#49BCCA" />
+    <SolidColorBrush x:Key="AccentButtonBackground" Color="#63D8E8" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#82E5F1" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#49BCCA" />
+    <SolidColorBrush x:Key="AccentButtonForeground" Color="#10151D" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#10151D" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#10151D" />
+    <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#63D8E8" />
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#82E5F1" />
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#49BCCA" />
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#63D8E8" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#10151D" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#10151D" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#10151D" />
+    <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked" Color="#63D8E8" />
+    <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeChecked" Color="#63D8E8" />
+    <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked" Color="#10151D" />
+    <Style x:Key="IMaoPageTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="28" /><Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource IMaoTextBrush}" /><Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="IMaoSectionTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="18" /><Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource IMaoTextBrush}" /><Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="IMaoBodyTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="15" /><Setter Property="Foreground" Value="{StaticResource IMaoTextBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="IMaoSecondaryTextStyle" TargetType="TextBlock" BasedOn="{StaticResource IMaoBodyTextStyle}">
+        <Setter Property="Foreground" Value="{StaticResource IMaoSecondaryTextBrush}" />
+    </Style>
+    <Style x:Key="IMaoEyebrowStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11" /><Setter Property="CharacterSpacing" Value="150" />
+        <Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{StaticResource IMaoAccentBrush}" />
+    </Style>
+    <Style x:Key="IMaoCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource IMaoSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource IMaoBorderBrush}" /><Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" /><Setter Property="Padding" Value="20" />
+    </Style>
+    <Style x:Key="IMaoSecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="Padding" Value="14,9" /><Setter Property="CornerRadius" Value="8" />
+        <Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style x:Key="IMaoPrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+        <Setter Property="Padding" Value="18,11" /><Setter Property="CornerRadius" Value="8" />
+        <Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="FontSize" Value="15" />
+    </Style>
+    <Style TargetType="Page">
+        <Setter Property="FontSize" Value="15" /><Setter Property="Foreground" Value="{StaticResource IMaoTextBrush}" />
+        <Setter Property="Background" Value="{StaticResource IMaoCanvasBrush}" />
+    </Style>
+</ResourceDictionary>

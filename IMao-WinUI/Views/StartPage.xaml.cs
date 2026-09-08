@@ -1,11 +1,10 @@
+using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
+using IMao_WinUI.Models;
 using IMao_WinUI.Services;
-using IMao_WinUI.StringItems;
 using IMao_WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
-using System.Diagnostics;
 
 namespace IMao_WinUI.Views;
 
@@ -13,140 +12,108 @@ public sealed partial class StartPage : Page
 {
     private readonly CoreHostService coreHost;
     private bool subscribed;
-    private bool restoringConfiguration = true;
-
     public StartViewModel ViewModel { get; }
-
     public StartPage()
     {
         ViewModel = App.GetService<StartViewModel>();
         coreHost = App.GetService<CoreHostService>();
         InitializeComponent();
-        ComboBox_GameServer.SelectedIndex = 0;
-        ComboBox_CaptureMethod.SelectedIndex = coreHost.Configuration.CaptureWay;
-        restoringConfiguration = false;
         Loaded += StartPage_Loaded;
         Unloaded += StartPage_Unloaded;
-
     }
-
     private async void StartPage_Loaded(object sender, RoutedEventArgs e)
     {
         if (!subscribed)
         {
             coreHost.StatusChanged += CoreHost_StatusChanged;
+            coreHost.RoutePlanningChanged += CoreHost_RoutePlanningChanged;
             subscribed = true;
         }
-        await coreHost.EnsureStartedAsync();
-        RestoreConfiguration();
         UpdateCoreStatus(coreHost.Status);
+        RenderRoute(coreHost.RoutePlanning);
+        await coreHost.EnsureStartedAsync();
+        if (IsLoaded) UpdateCoreStatus(coreHost.Status);
     }
-
     private void StartPage_Unloaded(object sender, RoutedEventArgs e)
     {
         if (!subscribed) return;
         coreHost.StatusChanged -= CoreHost_StatusChanged;
+        coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
         subscribed = false;
     }
-
-    private void RestoreConfiguration()
-    {
-        restoringConfiguration = true;
-        ComboBox_CaptureMethod.SelectedIndex = coreHost.Configuration.CaptureWay;
-        restoringConfiguration = false;
-    }
-
-    private async void CaptureMethod_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (restoringConfiguration || ComboBox_CaptureMethod.SelectedIndex < 0) return;
-        await coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex);
-        RestoreConfiguration();
-    }
-
-    private void ComboBox_CaptureMethod_Loaded(object sender, RoutedEventArgs e) { }
-    private void ComboBox_GameServer_Loaded(object sender, RoutedEventArgs e) { }
-
     private async void Start_Button_Click(object sender, RoutedEventArgs e)
     {
-        if (coreHost.Status.IsRunning)
-        {
-            Start_Button.IsEnabled = false;
-            await coreHost.StopRuntimeAsync();
-            return;
-        }
-
-        if (Start_ToggleSwitch_WindowOptimization.IsOn &&
-            !BitBltRegistryHelper.TryDisableSwapEffectUpgrade(out var graphicsError))
-        {
-            coreHost.ReportUserError("无法修改 Windows 窗口优化设置：" + graphicsError);
-            return;
-        }
-        if (!GameWindow.CheckGameWindowSize())
-        {
-            Start_InfoBar_IncorrectGameWindowSize.IsOpen = true;
-            Start_InfoBar_IncorrectGameWindowSize.Margin = new Thickness(0, 0, 0, 12);
-        }
-
         Start_Button.IsEnabled = false;
-        if (await coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex))
-            await coreHost.StartRuntimeAsync();
-        else UpdateCoreStatus(coreHost.Status);
+        try
+        {
+            if (coreHost.Status.IsRunning) await coreHost.StopRuntimeAsync();
+            else
+            {
+                if (!GameWindow.CheckGameWindowSize())
+                {
+                    Start_InfoBar_IncorrectGameWindowSize.IsOpen = true;
+                    Start_InfoBar_IncorrectGameWindowSize.Visibility = Visibility.Visible;
+                }
+                await coreHost.StartRuntimeAsync();
+            }
+        }
+        finally { if (IsLoaded) UpdateCoreStatus(coreHost.Status); }
     }
-
     private async void RestartCore_Click(object sender, RoutedEventArgs e)
     {
         await coreHost.RestartAsync();
-        RestoreConfiguration();
-        UpdateCoreStatus(coreHost.Status);
+        if (IsLoaded) UpdateCoreStatus(coreHost.Status);
     }
-
-    private void CoreHost_StatusChanged(object? sender, Models.CoreRuntimeStatus status) => UpdateCoreStatus(status);
-
-    private void UpdateCoreStatus(Models.CoreRuntimeStatus status)
+    private void CoreHost_StatusChanged(object? sender, CoreRuntimeStatus status) => UpdateCoreStatus(status);
+    private void CoreHost_RoutePlanningChanged(object? sender, RoutePlanningState state) => RenderRoute(state);
+    private void UpdateCoreStatus(CoreRuntimeStatus status)
     {
         Start_TextBlock_CoreState.Text = status.DisplayState;
         Start_TextBlock_CoreDetail.Text = status.Message;
-        Start_InfoBar_CoreStatus.Severity = status.CoreState switch
+        bool busy = status.CoreState is "connecting" or "loading" or "startingOverlay" or "stopping";
+        Start_Button.IsEnabled = !busy;
+        Start_Button_Icon.Glyph = status.IsRunning ? "\uE71A" : "\uE768";
+        Start_Button_Text.Text = busy ? (status.CoreState == "stopping" ? "正在停止…" : "正在准备…") : status.IsRunning ? "停止探索" : "开始探索";
+        Start_InfoBar_FindNotTargetProcess.IsOpen = status.CoreState == "waitingForGame";
+        Start_InfoBar_FindNotTargetProcess.Visibility = Start_InfoBar_FindNotTargetProcess.IsOpen ? Visibility.Visible : Visibility.Collapsed;
+        OverviewLocationSummary.Text = !status.IsRunning ? "地图定位 · 尚未开始" : "地图定位 · " + (status.Localization switch
         {
-            "faulted" => InfoBarSeverity.Error,
-            "recovering" or "waitingForGame" => InfoBarSeverity.Warning,
-            "running" => InfoBarSeverity.Success,
-            _ => InfoBarSeverity.Informational
-        };
-
-        bool isRunning = status.IsRunning;
-        bool isStarting = status.CoreState is "connecting" or "loading" or "startingOverlay" or "stopping";
-        Start_Button.IsEnabled = !isStarting;
-        ComboBox_CaptureMethod.IsEnabled = !isRunning && !isStarting;
-        Start_Button_Icon.Glyph = isRunning ? "\uE71A" : "\uE768";
-        Start_Button_Text.Text = isStarting ? "Starting..." : isRunning ? "Stop" : "Start";
-
-        if (status.CoreState == "waitingForGame")
-        {
-            Start_InfoBar_FindNotTargetProcess.IsOpen = true;
-            Start_InfoBar_FindNotTargetProcess.Margin = new Thickness(0, 0, 0, 12);
-        }
+            "waiting" => "等待地图画面", "tracking" => "已定位", "lost" => "等待重新定位",
+            "recovering" => "正在恢复定位", "mapLocating" => "正在识别大地图", "mapTracking" => "大地图已定位",
+            "stale" => "等待画面更新", "stable" => "定位稳定", _ => "等待有效位置"
+        });
+        OverviewMarkerSummary.Text = status.IsRunning
+            ? $"小地图 {status.MinimapMarkers} 个点位  ·  大地图 {status.MapMarkers} 个点位"
+            : "启动后显示当前地图点位数量。";
     }
-
-    private void Start_InfoBar_FindNotTargetProcess_CloseButtonClick(InfoBar sender, object args) =>
-        Start_InfoBar_FindNotTargetProcess.Margin = new Thickness(0, 0, 0, 0);
-
-    private void Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick(InfoBar sender, object args) =>
-        Start_InfoBar_IncorrectGameWindowSize.Margin = new Thickness(0, 0, 0, 0);
-
-    private void Button_OpenPointsFolder_Click(object sender, RoutedEventArgs e)
+    private void RenderRoute(RoutePlanningState state)
     {
-        try
+        if (state.Active is not { } route)
         {
-            string routesPath = UserDataPaths.SavedPoints;
-            if (Directory.Exists(routesPath))
-            {
-                Process.Start(new ProcessStartInfo(routesPath) { UseShellExecute = true, Verb = "open" });
-            }
+            OverviewRouteTitle.Text = "还没有活动路线";
+            OverviewRouteDetail.Text = "先筛选感兴趣的点位，再到路线页选择本次目标。";
+            OverviewRouteTarget.Text = "";
+            OverviewRouteTarget.Visibility = Visibility.Collapsed;
         }
-        catch (Exception exception)
+        else
         {
-            Debug.WriteLine($"Button_OpenPointsFolder_Click: {exception.Message}");
+            OverviewRouteTitle.Text = string.IsNullOrWhiteSpace(route.Name) ? "当前探索路线" : route.Name;
+            OverviewRouteDetail.Text = $"{state.NavigationLabel}  ·  已完成 {route.Stops.Count(stop => stop.Completed)} / {route.Stops.Length}  ·  {route.SceneName}";
+            OverviewRouteTarget.Text = state.CurrentTarget is { } target ? $"下一站  {target.DisplayName}" : "当前没有待前往的目标";
+            OverviewRouteTarget.Visibility = Visibility.Visible;
         }
+        OverviewReplanStatus.Text = state.AutoReplanLabel;
     }
+    private void Navigate_Click(object sender, RoutedEventArgs e)
+    {
+        var type = ((sender as Button)?.Tag as string) switch
+        {
+            "filter" => typeof(FilterViewModel), "routes" => typeof(FunctionViewModel),
+            "settings" => typeof(SettingsViewModel), "diagnostics" => typeof(DiagnosticsViewModel),
+            _ => typeof(UsageGuideViewModel)
+        };
+        App.GetService<INavigationService>().NavigateTo(type.FullName!);
+    }
+    private void Start_InfoBar_FindNotTargetProcess_CloseButtonClick(InfoBar sender, object args) => sender.Visibility = Visibility.Collapsed;
+    private void Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick(InfoBar sender, object args) => sender.Visibility = Visibility.Collapsed;
 }

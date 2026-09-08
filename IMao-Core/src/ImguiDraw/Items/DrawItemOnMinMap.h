@@ -11,7 +11,9 @@ public:
 	static void DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion = {});
 	static void UpdatePlayerNearItemsData(HWND& hwnd, Coordinate& playerROC, float minMapRadius, int SceneId, double terrainScale = kNominalMinimapTerrainScale);
 	static void UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate &playerROC, float minMapRadius, int SceneId, double terrainScale = kNominalMinimapTerrainScale);
-	static void SavePlayerNearItemPoint(const ItemMarkerFrame& frame, const OverlayScreenTransform& motion = {});
+	static void SavePlayerNearItemPoint(const ItemMarkerFrame& frame, const OverlayScreenTransform& motion = {},
+        bool gamepad = false, std::uint64_t gameHwnd = 0);
+    static void HandlePlayerNearbyAction(bool guide, bool gamepad, std::uint64_t gameHwnd);
     static ItemMarkerFrame Snapshot();
 	static void ClearNearItemsData();
 

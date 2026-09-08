@@ -17,6 +17,9 @@
 #include "../../Runtime/MarkerGuideProtocol.h"
 #include <functional>
 #include "../../Runtime/StructuredLogger.h"
+#include "../../Runtime/RouteGamepadBridge.h"
+#include "../../Runtime/MapToolsBridge.h"
+#include "../../Runtime/GamepadContext.h"
 #include "../../Coordinate/KuroMapCoordinates.h"
 
 using namespace std;
@@ -48,6 +51,11 @@ static std::mutex markerCandidatesMutex;
 static json markerCandidates = json::array();
 static std::string candidatesProfile, candidatesScene;
 static std::uint64_t candidatesRevision = 0;
+static std::optional<NearbySelection::Session> nearbySelection;
+static json nearbySelectionResult;
+static std::atomic_uint64_t markerFilterRevision{1};
+static std::mutex nearbyOperationMutex;
+static std::uint64_t markerGuideRegistrationRevision = 0;
 static bool LoadExternalKuroRuntimeJson(json& jsonData, const char* sceneName);
 
 Coordinate KuroLocationToIdentifyCoordinate(const json& location) {
@@ -254,7 +262,9 @@ void DrawItemBase::AddItemDataFromJson(string itemId) {
                         tempItemDatas.layer.level = metadata("level");
                         itemsDatas.push_back(tempItemDatas);
                     }
+                   std::scoped_lock filterLock(nearbyOperationMutex);
                    selectedItems.Add(sceneId, ItemsDatas(nameId, std::move(itemsDatas)));
+                   ++markerFilterRevision;
                 }
             }
 
@@ -267,7 +277,9 @@ void DrawItemBase::AddItemDataFromJson(string itemId) {
 }
 
 void DrawItemBase::ClearItemData(string itemId) {
+    std::scoped_lock filterLock(nearbyOperationMutex);
     selectedItems.Remove(itemId);
+    ++markerFilterRevision;
 }
 
 void DrawItemBase::RenderPointCircle(ImTextureID texture, ImVec2 position,float radius,float transparency, ImColor circleColor) {
@@ -304,9 +316,110 @@ bool DrawItemBase::IsPointCompleted(const string& scene, const ItemDatas& item) 
 }
 
 std::string DrawItemBase::MarkerProfile() { return markerStore ? markerStore->Profile() : "local"; }
+std::uint64_t DrawItemBase::MarkerFilterRevision() { return markerFilterRevision.load(); }
+
+json DrawItemBase::CompleteNearbySingle(const NearbySelection::Observation& initial) {
+    std::scoped_lock operationLock(nearbyOperationMutex);
+    const auto reject = [](const std::string& reason) {
+        StructuredLogger::Record("info", "gamepad", "nearby-single-rejected", reason);
+        return json{{"accepted", false}, {"message", reason}, {"data", json::object()}};
+    };
+    if (initial.profileId != MarkerProfile()) return reject("nearby-context-changed");
+    auto current = GamepadContextSnapshot::Shared().ReadNearby(initial.profileId);
+    // A repeated frame is not permission to repeat a write. Refresh durable
+    // completion under the same operation lock used for chooser/filter changes.
+    std::erase_if(current.candidates, [&](const auto& item) { return IsPointCompleted(current.sceneName, item.item); });
+    const auto failure = NearbySelection::ValidateSingleCompletion(initial, current, MarkerFilterRevision());
+    if (!failure.empty()) return reject(failure);
+    const auto game = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(current.gameHwnd));
+    DWORD pid = 0;
+    if (!IsMarkerGameFocused(game) || !IsWindowVisible(game) || IsIconic(game) ||
+        !GetWindowThreadProcessId(game, &pid) || pid != current.gameProcessId) return reject("nearby-game-changed");
+    const auto selected = std::find_if(current.candidates.begin(), current.candidates.end(),
+        [](const auto& item) { return NearbySelection::Includes(item, NearbySelection::Intent::Complete); });
+    const auto& item = selected->item;
+    return HandleMarkerCommand({{"type", "markerSetCompletion"}, {"profileId", current.profileId},
+        {"sceneName", current.sceneName}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
+        {"pointId", item.itemId}, {"completed", true}});
+}
+
+static json HandleNearbyCommand(const json& command) {
+    const auto type = command.value("type", "");
+    std::scoped_lock operationLock(nearbyOperationMutex);
+    std::scoped_lock candidatesLock(markerCandidatesMutex);
+    const auto reject = [&](const std::string& reason) {
+        StructuredLogger::Record("info", "gamepad", "nearby-submit-rejected", type + " reason=" + reason);
+        return json{{"accepted", false}, {"message", reason}, {"data", json::object()}};
+    };
+    if (!nearbySelection) return reject("selection-expired");
+    auto& selection = *nearbySelection;
+    const auto profile = command.value("profileId", "");
+    if (command.value("selectionRevision", std::uint64_t{}) != selection.revision ||
+        profile != selection.source.profileId || profile != DrawItemBase::MarkerProfile()) return reject("selection-expired");
+    const auto requestedWindow = MarkerGuideProtocol::Integer(command.at("chooserHwnd"), false);
+    const auto requestedGeneration = MarkerGuideProtocol::Integer(command.at("chooserGeneration"), false);
+    const auto window = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(requestedWindow));
+    std::scoped_lock guideLock(markerGuideMutex);
+    if (window != markerGuideWindow || !IsWindow(window)) return reject("nearby-window-changed");
+    const auto current = GamepadContextSnapshot::Shared().ReadNearby(profile);
+    const auto game = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(selection.source.gameHwnd));
+    DWORD pid = 0;
+    if (!IsWindow(game) || !IsWindowVisible(game) || IsIconic(game) || !GetWindowThreadProcessId(game, &pid) ||
+        pid != selection.source.gameProcessId || current.session != selection.source.session ||
+        current.gameHwnd != selection.source.gameHwnd || current.gameProcessId != pid)
+        return reject("nearby-game-changed");
+    if (type == "markerBindNearbyCandidates") {
+        if (selection.chooserHwnd && (selection.chooserHwnd != requestedWindow ||
+            selection.chooserGeneration != requestedGeneration || selection.registrationRevision != markerGuideRegistrationRevision))
+            return reject("nearby-window-changed");
+        selection.chooserHwnd = requestedWindow; selection.chooserGeneration = requestedGeneration;
+        selection.registrationRevision = markerGuideRegistrationRevision;
+        StructuredLogger::Record("info", "gamepad", "nearby-chooser-bound", "revision=" + std::to_string(selection.revision));
+        return {{"accepted", true}, {"data", json::object()}};
+    }
+    if (selection.chooserHwnd != requestedWindow || selection.chooserGeneration != requestedGeneration ||
+        selection.registrationRevision != markerGuideRegistrationRevision || GetForegroundWindow() != window ||
+        !IsWindowVisible(window) || IsIconic(window)) return reject("nearby-window-changed");
+    const auto intent = type == "markerCompleteNearbyCandidate" ? NearbySelection::Intent::Complete : NearbySelection::Intent::Guide;
+    if (selection.intent != intent) return reject("nearby-intent-mismatch");
+    const auto key = std::to_string(command.at("stateId").get<int>()) + ":" + command.at("pointId").get<std::string>();
+    // A response may be lost after persistence. Repeating the exact completed
+    // request returns its saved response without touching another point.
+    if (selection.consumed) {
+        if (selection.consumedKey == key) return nearbySelectionResult;
+        return reject("selection-already-consumed");
+    }
+    const auto failure = selection.Validate(current, DrawItemBase::MarkerFilterRevision(),
+        command.at("selectionRevision").get<std::uint64_t>(), profile, command.value("sceneName", ""), key);
+    if (!failure.empty()) return reject(failure);
+    const auto candidate = std::find_if(current.candidates.begin(), current.candidates.end(),
+        [&](const auto& item) { return NearbySelection::Key(item.item) == key; });
+    if (candidate == current.candidates.end() || DrawItemBase::IsPointCompleted(current.sceneName, candidate->item))
+        return reject("nearby-point-already-completed");
+    if (GetForegroundWindow() != window) return reject("nearby-window-changed");
+    const auto& item = candidate->item;
+    json point{{"profileId", profile}, {"sceneName", current.sceneName}, {"nameId", item.nameId},
+        {"pointId", item.itemId}, {"stateId", item.layer.stateId}, {"countryId", item.layer.countryId},
+        {"floorId", item.layer.floorId}, {"level", item.layer.level}, {"completed", false}};
+    json result;
+    if (intent == NearbySelection::Intent::Guide) result = {{"accepted", true}, {"data", {{"selection", point}}}};
+    else {
+        point["type"] = "markerSetCompletion"; point["completed"] = true;
+        result = DrawItemBase::HandleMarkerCommand(point);
+    }
+    if (intent == NearbySelection::Intent::Complete && result.value("accepted", false)) {
+        selection.consumed = true; selection.consumedKey = key; nearbySelectionResult = result;
+    }
+    StructuredLogger::Record("info", "gamepad", "nearby-submit-result", type + " revision=" +
+        std::to_string(selection.revision) + " point=" + key + " accepted=" + std::to_string(result.value("accepted", false)));
+    return result;
+}
 
 json DrawItemBase::HandleMarkerCommand(const json& command) {
     if (!markerStore) return {{"accepted", false}, {"message", "marker-store-unavailable"}, {"data", json::object()}};
+    const auto nearbyType = command.value("type", "");
+    if (nearbyType == "markerBindNearbyCandidates" || nearbyType == "markerResolveNearbyCandidate" ||
+        nearbyType == "markerCompleteNearbyCandidate") return HandleNearbyCommand(command);
     auto normalized = command;
     const auto type = command.value("type", "");
     // Validate before saving so a malformed correlation field cannot result in
@@ -322,7 +435,8 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
         json page = json::array();
         for (auto index = offset; index < markerCandidates.size() && index < offset + limit; ++index) page.push_back(markerCandidates[index]);
         return {{"accepted", true}, {"message", ""}, {"data", {{"candidates", page}, {"profileId", candidatesProfile},
-            {"selectionRevision", candidatesRevision}, {"total", markerCandidates.size()}, {"hasMore", offset + page.size() < markerCandidates.size()}}}};
+            {"selectionRevision", candidatesRevision}, {"intent", nearbySelection && nearbySelection->intent == NearbySelection::Intent::Guide ? "guide" : "complete"},
+            {"total", markerCandidates.size()}, {"hasMore", offset + page.size() < markerCandidates.size()}}}};
     }
     if (type == "markerSetCompletion" && command.contains("stateId") && command.contains("pointId")) {
         const auto key = std::to_string(command.at("stateId").get<int>()) + ":" + command.at("pointId").get<std::string>();
@@ -347,7 +461,7 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
             for (const auto& [name, value] : guideContext.items()) event[name] = value;
             PublishMarkerEvent(std::move(event));
         } else if (type == "markerSelectProfile") {
-            ClearMarkerCandidates();
+            ClearMarkerCandidates(true);
             PublishMarkerEvent({{"type", "markerSelectionCleared"}});
             PublishMarkerEvent({{"type", "markerProfileChanged"}, {"profileId", markerStore->Profile()}});
         }
@@ -368,23 +482,64 @@ void DrawItemBase::PublishMarkerEvent(json event) {
     if (callback) callback(event);
 }
 
-void DrawItemBase::PublishMarkerCandidates(const std::string& profileId, const std::string& sceneName, json candidates) {
+void DrawItemBase::PublishMarkerCandidates(const std::string& profileId, const std::string& sceneName, json candidates,
+    bool gamepad, std::uint64_t gameHwnd) {
     json event;
     {
         std::scoped_lock lock(markerCandidatesMutex);
+        nearbySelection.reset(); nearbySelectionResult = nullptr;
         markerCandidates = std::move(candidates);
         candidatesProfile = profileId; candidatesScene = sceneName; ++candidatesRevision;
         json page = json::array();
         for (std::size_t index = 0; index < std::min<std::size_t>(100, markerCandidates.size()); ++index) page.push_back(markerCandidates[index]);
         event = {{"type", "markerCandidates"}, {"intent", "complete"}, {"profileId", profileId},
             {"candidates", page}, {"selectionRevision", candidatesRevision}, {"total", markerCandidates.size()}, {"hasMore", page.size() < markerCandidates.size()}};
+        if (gamepad) { event["gamepad"] = true; event["gameHwnd"] = gameHwnd; }
     }
     PublishMarkerEvent(std::move(event));
 }
-void DrawItemBase::ClearMarkerCandidates() {
+void DrawItemBase::PublishNearbyCandidates(NearbySelection::Observation observation, NearbySelection::Intent intent, bool gamepad) {
+    json event;
+    {
+        std::scoped_lock lock(markerCandidatesMutex);
+        markerCandidates = json::array();
+        POINT cursor{}; GetCursorPos(&cursor);
+        for (const auto& candidate : observation.candidates) {
+            if (!NearbySelection::Includes(candidate, intent)) continue;
+            const auto& item = candidate.item;
+            markerCandidates.push_back({{"profileId", observation.profileId}, {"sceneName", observation.sceneName},
+                {"nameId", item.nameId}, {"pointId", item.itemId}, {"stateId", item.layer.stateId},
+                {"countryId", item.layer.countryId}, {"floorId", item.layer.floorId}, {"level", item.layer.level},
+                {"completed", false}, {"screenX", cursor.x}, {"screenY", cursor.y}});
+        }
+        candidatesProfile = observation.profileId; candidatesScene = observation.sceneName; ++candidatesRevision;
+        nearbySelection = NearbySelection::Session{std::move(observation), intent, candidatesRevision};
+        nearbySelectionResult = nullptr;
+        json page = json::array();
+        for (std::size_t i = 0; i < std::min<std::size_t>(100, markerCandidates.size()); ++i) page.push_back(markerCandidates[i]);
+        event = {{"type", "markerCandidates"}, {"intent", intent == NearbySelection::Intent::Complete ? "complete" : "guide"},
+            {"nearbySession", nearbySelection->source.session}, {"profileId", candidatesProfile}, {"sceneName", candidatesScene},
+            {"selectionRevision", candidatesRevision}, {"candidates", page}, {"total", markerCandidates.size()},
+            {"hasMore", page.size() < markerCandidates.size()}, {"gamepad", gamepad}, {"gameHwnd", nearbySelection->source.gameHwnd}};
+    }
+    StructuredLogger::Record("info", "gamepad", "nearby-candidates", "intent=" + event.at("intent").get<std::string>() +
+        " revision=" + std::to_string(event.at("selectionRevision").get<std::uint64_t>()) +
+        " count=" + std::to_string(event.at("total").get<std::size_t>()));
+    PublishMarkerEvent(std::move(event));
+}
+void DrawItemBase::NotifyNearby(const std::string& message, const std::string& outcome) {
+    StructuredLogger::Record("info", "gamepad", "nearby-result", outcome);
+    Notification::AddInfo(NotificationDatas(message, 4));
+    PublishMarkerEvent({{"type", "markerNearbyNotice"}, {"message", message}, {"outcome", outcome}});
+}
+void DrawItemBase::ClearMarkerCandidates(bool force) {
     bool changed;
     {
         std::scoped_lock lock(markerCandidatesMutex);
+        // Overlay visibility cleanup must not expire a user's reading time.
+        // Submit independently requires the registered window and a fresh fix.
+        if (nearbySelection && !force) return;
+        nearbySelection.reset(); nearbySelectionResult = nullptr;
         changed = !markerCandidates.empty(); markerCandidates = json::array();
         candidatesProfile.clear(); candidatesScene.clear(); ++candidatesRevision;
     }
@@ -393,7 +548,7 @@ void DrawItemBase::ClearMarkerCandidates() {
 void DrawItemBase::UpdateMarkerContext(const std::string& sceneName) {
     bool changed;
     { std::scoped_lock lock(markerCandidatesMutex); changed = !candidatesScene.empty() && candidatesScene != sceneName; }
-    if (changed) ClearMarkerCandidates();
+    if (changed) ClearMarkerCandidates(true);
 }
 
 void DrawItemBase::SelectMarker(const std::string& scene, const ItemDatas& item, POINT desktopPosition, const std::string& profileId) {
@@ -408,6 +563,7 @@ void DrawItemBase::SelectMarker(const std::string& scene, const ItemDatas& item,
 void DrawItemBase::SetGuideWindow(HWND window, const json& registration) {
     std::scoped_lock lock(markerGuideMutex);
     markerGuideWindow = window;
+    ++markerGuideRegistrationRevision;
     markerGuideRegistration = window ? registration : json::object();
     if (window) markerGuideRegistration["hwnd"] = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window));
 }
@@ -426,5 +582,8 @@ bool DrawItemBase::IsMarkerGameFocused(HWND game) { return game && GetForeground
 bool DrawItemBase::IsMarkerDisplayContext(HWND game) {
     const auto foreground = GetForegroundWindow();
     if (game && foreground == game) return true;
+    if (MapToolsBridge::Shared().FocusedHost(game, MarkerProfile())) return true;
+    if (RouteGamepadBridge::Shared().FocusedHost(game)) return true;
+    if (RouteGamepadBridge::Shared().ReturnDisplay(game, MarkerProfile()).visible) return true;
     return !FocusedGuideWindow().empty();
 }

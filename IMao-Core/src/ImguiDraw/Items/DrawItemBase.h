@@ -11,6 +11,7 @@
 using json = nlohmann::json;
 
 #include "../../Domain/MapData.h"
+#include "../../Runtime/NearbySelection.h"
 
 struct ItemTextureData {
 	std::string nameId;
@@ -40,9 +41,14 @@ public:
     static json HandleMarkerCommand(const json& command);
     static void SetMarkerEventCallback(std::function<void(const json&)> callback);
     static void PublishMarkerEvent(json event);
-    static void PublishMarkerCandidates(const std::string& profileId, const std::string& sceneName, json candidates);
+    static void PublishMarkerCandidates(const std::string& profileId, const std::string& sceneName, json candidates,
+        bool gamepad = false, std::uint64_t gameHwnd = 0);
+    static void PublishNearbyCandidates(NearbySelection::Observation observation, NearbySelection::Intent intent, bool gamepad);
+    static json CompleteNearbySingle(const NearbySelection::Observation& initial);
+    static std::uint64_t MarkerFilterRevision();
+    static void NotifyNearby(const std::string& message, const std::string& outcome);
     static void UpdateMarkerContext(const std::string& sceneName);
-    static void ClearMarkerCandidates();
+    static void ClearMarkerCandidates(bool force = false);
     static void SelectMarker(const std::string& scene, const ItemDatas& item, POINT desktopPosition, const std::string& profileId = "");
     static void SetGuideWindow(HWND window, const json& registration = json::object());
     static json FocusedGuideWindow();

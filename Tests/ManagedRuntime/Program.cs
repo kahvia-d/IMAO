@@ -22,6 +22,8 @@ try
     MapFilterCatalogTests.Run(root, Check);
     LocalMarkerProfileTests.Run(root, Check);
     RoutePlanningTests.Run(Check);
+    GamepadInputTests.Run(root, Check);
+    GamepadDiagnosticTests.Run(root, Check);
     await MarkerGuideSessionTests.RunAsync(Check);
     await MarkerDetailTests.RunAsync(root, Check);
     var options = Options.Create(new LocalSettingsOptions { ApplicationDataFolder = root, LocalSettingsFile = "settings.json" });
@@ -73,6 +75,11 @@ try
     File.WriteAllText(configPath, "{\"StatusBarEnabled\":false}");
     var config = new RuntimeConfigurationStore(configPath);
     Check(!config.Read().StatusBarEnabled && config.Read().MapUpdateCycle == 80, "legacy runtime preferences migrate with default new fields");
+    Check(!config.Read().AutoReplanEnabled, "existing navigation remains manual after preference migration");
+    config.Update(old => old with { AutoReplanEnabled = true });
+    Check(new RuntimeConfigurationStore(configPath).Read().AutoReplanEnabled &&
+        config.Read().ToPayload()["autoReplanEnabled"] is true,
+        "real-time route preference survives reload and uses the shared core configuration field");
     await Task.WhenAll(Task.Run(() => config.Update(old => old with { MapEnabled = false })),
         Task.Run(() => config.Update(old => old with { MapUpdateCycle = 95 })));
     var savedConfig = new RuntimeConfigurationStore(configPath).Read();
@@ -96,6 +103,13 @@ try
         Check(core.LastFault.Length > 0 && core.Status.CoreState != "faulted", "rejected command is visible without faulting runtime");
         await core.ConfigureAsync(mapUpdateCycle: 95, mapEnabled: false, statusBarEnabled: false);
         Check(core.Configuration.MapUpdateCycle == 95 && !core.Configuration.MapEnabled, "service owns persisted runtime configuration");
+        Check(await core.ConfigureAsync(autoReplanEnabled: true), "real-time planning configuration is acknowledged by the native core");
+        Check((await core.ExecuteRoutePlanningAsync("state")).AutoReplanEnabled && core.Configuration.AutoReplanEnabled,
+            "native route state and durable frontend preference agree after enabling real-time planning");
+        Check(!await core.ConfigureAsync(autoReplanEnabled: false, expectedAutoReplanEnabled: false) && core.Configuration.AutoReplanEnabled,
+            "stale toolbar toggle cannot overwrite a newer real-time planning setting");
+        Check(!await core.ConfigureAsync(autoReplanEnabled: false, expectedAutoReplanProfile: "another-profile") && core.Configuration.AutoReplanEnabled,
+            "toolbar request from a previous profile cannot change the active preference");
         await core.StopRuntimeAsync();
         Check(core.IsConnected, "stop while idle retains the connection");
         await core.SetRouteNameAsync("../escape");
@@ -117,6 +131,8 @@ try
         await Task.WhenAll(core.RestartAsync(), core.ConfigureAsync(minMapUpdateCycle: 90));
         Check(!core.Configuration.MapEnabled && core.Configuration.MapUpdateCycle == 95 && core.Configuration.MinMapUpdateCycle == 90, "restart preserves and merges configuration");
         Check(core.IsConnected, "restart and configuration are serialized");
+        Check(core.Configuration.AutoReplanEnabled && (await core.ExecuteRoutePlanningAsync("state")).AutoReplanEnabled,
+            "real-time preference survives core restart and configuration merge");
         await Task.WhenAll(core.ShutdownAsync(), core.ShutdownAsync());
         Check(!core.IsConnected, "repeated shutdown completes");
         await core.EnsureStartedAsync();

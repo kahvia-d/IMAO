@@ -1,4 +1,4 @@
-﻿using IMao_WinUI.Contracts.Services;
+using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.ViewModels;
 
@@ -50,6 +50,7 @@ public sealed partial class ShellPage : Page
         bool ownsScroll = e.Content is FilterPage or DiagnosticsPage;
         PageScrollViewer.VerticalScrollBarVisibility = ownsScroll ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
         PageScrollViewer.VerticalScrollMode = ownsScroll ? ScrollMode.Disabled : ScrollMode.Auto;
+        PageScrollViewer.ChangeView(0, 0, null, disableAnimation: true);
     }
 
     private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
@@ -59,13 +60,8 @@ public sealed partial class ShellPage : Page
 
     private void NavigationViewControl_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
     {
-        AppTitleBar.Margin = new Thickness()
-        {
-            Left = sender.CompactPaneLength * (sender.DisplayMode == NavigationViewDisplayMode.Minimal ? 2 : 1),
-            Top = AppTitleBar.Margin.Top,
-            Right = AppTitleBar.Margin.Right,
-            Bottom = AppTitleBar.Margin.Bottom
-        };
+        // Title bar has a separate grid row and does not shift with the adaptive pane.
+        AppTitleBar.Margin = new Thickness(0);
     }
 
     private static KeyboardAccelerator BuildKeyboardAccelerator(VirtualKey key, VirtualKeyModifiers? modifiers = null)

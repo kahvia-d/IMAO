@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion><SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>MapToolsRuntime</RootNamespace><Platforms>x64</Platforms><PlatformTarget>x64</PlatformTarget><RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><UseWinUI>true</UseWinUI><WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained><SelfContained>true</SelfContained><EnableMsixTooling>true</EnableMsixTooling>
+    <EnableDefaultPriItems>true</EnableDefaultPriItems><AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath><AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <OutputPath>../../out/map-tools-runtime/</OutputPath><ApplicationManifest>app.manifest</ApplicationManifest><DefaultLanguage>zh-CN</DefaultLanguage>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.250402" />
+    <Manifest Include="$(ApplicationManifest)" />
+    <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
+    <Page Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml" Link="Views/Controls/FilterControl.xaml" />
+    <Compile Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml.cs" Link="Production/FilterControl.xaml.cs" />
+    <Compile Include="../../IMao-WinUI/Views/MapToolsWindow.cs" Link="Production/MapToolsWindow.cs" />
+    <Compile Include="../../IMao-WinUI/Services/MapToolsController.cs" Link="Production/MapToolsController.cs" />
+    <Compile Include="../../IMao-WinUI/Services/IMapToolsController.cs" Link="Production/IMapToolsController.cs" />
+    <Compile Include="../../IMao-WinUI/Services/FilterSelectionService.cs" Link="Production/FilterSelectionService.cs" />
+    <Compile Include="../../IMao-WinUI/Services/GamepadWindowActivation.cs" Link="Production/GamepadWindowActivation.cs" />
+    <Compile Include="../../IMao-WinUI/Services/GamepadWindowReturn.cs" Link="Production/GamepadWindowReturn.cs" />
+    <Compile Include="../../IMao-WinUI/Services/GamepadWindowVisibility.cs" Link="Production/GamepadWindowVisibility.cs" />
+    <Compile Include="../../IMao-WinUI/Services/GamepadWindowChrome.cs" Link="Production/GamepadWindowChrome.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="Production/GamepadInput.cs" />
+    <Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="Production/MapFilterCatalog.cs" />
+    <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="Production/RoutePlanningState.cs" />
+    <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" />
+    <Compile Include="../../IMao-WinUI/Models/CoreRuntimeStatus.cs" Link="Production/CoreRuntimeStatus.cs" />
+  </ItemGroup>
+</Project>

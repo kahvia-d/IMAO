@@ -25,6 +25,7 @@
 #include <optional>
 #include "../Runtime/SnapshotChannel.h"
 #include "../Runtime/FrameState.h"
+#include "../Runtime/GamepadContext.h"
 
 
 class App
@@ -57,6 +58,10 @@ public:
 			return false;
 		}
         try {
+		DWORD gameProcessId = 0;
+		GetWindowThreadProcessId(hwnd, &gameProcessId);
+		GamepadContextSnapshot::Shared().Begin(coordinateSessionId,
+			static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(hwnd)), gameProcessId);
 		captureThread = std::thread(&App::Thread_Capture, this);
 		detectGameStateThread = std::thread(&App::Thread_DetectGameState, this);
 		keyMonitoringThread = std::thread(&App::Thread_KeyMonitoring_SavePlayerNearItemPoint, this);
@@ -85,6 +90,7 @@ public:
 
 	void StopTasks() {
 		allThreadStopFlag = true;
+        GamepadContextSnapshot::Shared().End(coordinateSessionId);
         overlayFrames.Publish({});
         overlayVisibility.Publish({});
         capturedFrames.Publish({});
@@ -105,7 +111,7 @@ public:
     std::shared_ptr<const OverlayFrame> ReadOverlayFrame() const { return overlayFrames.Read(); }
     std::shared_ptr<const CapturedFrame> ReadCapturedFrame() const { return capturedFrames.Read(); }
     std::shared_ptr<const OverlayVisibilityFrame> ReadOverlayVisibility() const { return overlayVisibility.Read(); }
-    void PublishPresentedOverlay(PresentedOverlayFrame frame) { presentedOverlay.Publish(std::move(frame)); }
+    void PublishPresentedOverlay(PresentedOverlayFrame frame);
 
 	Coordinate GetlastPlayerCoordinate() {
 		return overlayFrames.Read()->playerCoordinate;
@@ -250,6 +256,9 @@ private:
 		bool valid = false;
 	};
 	PlayerLocationLock playerLocationLock;
+    std::uint64_t routeFixSequence = 0, routeFixContinuity = 0;
+    std::chrono::steady_clock::time_point routeFixCapturedAt{};
+    bool routeVisualFix = false;
     double minimapTerrainScale = kNominalMinimapTerrainScale;
 	// A viewport is a search range only; it never publishes player coordinates.
 	std::optional<MinimapResumeHint> viewportResumeHint;

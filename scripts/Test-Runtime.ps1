@@ -32,11 +32,15 @@ function Invoke-TestCommand([string]$Command, [string]$LogName) {
     if ($code -ne 0) { throw "$LogName failed with exit code $code; see $log" }
 }
 if (-not $SkipBuild) {
-    Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests IMaoRoutePlanningTests IMaoVisualRegression --parallel ' + $Parallel) 'native-build.log'
+    Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests IMaoRoutePlanningTests IMaoRoutePlanningServiceTests IMaoVisualRegression --parallel ' + $Parallel) 'native-build.log'
     Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" build Tests\ManagedRuntime\ManagedRuntime.csproj -c Release --output "' + $taskManagedOutput + '" --source "' + $env:NUGET_PACKAGES + '" -p:NuGetAudit=false') 'managed-build.log'
 }
 Invoke-TestCommand 'x64\Release\IMaoOptimizationTests.exe' 'native-tests.log'
 Invoke-TestCommand 'x64\Release\IMaoMarkerTests.exe' 'marker-tests.log'
+if (Test-Path -LiteralPath (Join-Path $taskRepo 'out\auto-replan-native\IMaoRoutePlanningServiceTests.exe')) {
+    Invoke-TestCommand ('out\auto-replan-native\IMaoRoutePlanningServiceTests.exe "' + (Join-Path $taskOutput 'route-service-data') + '"') 'route-service-tests.log'
+    Invoke-TestCommand ('out\auto-replan-native\IMaoRoutePlanningServiceTests.exe "' + (Join-Path $taskOutput 'route-service-failure-data') + '" save-failure') 'route-service-failure-tests.log'
+}
 if (-not $SkipBuild -or (Test-Path -LiteralPath (Join-Path $taskRepo 'x64\Release\IMaoRoutePlanningTests.exe'))) {
     Invoke-TestCommand 'x64\Release\IMaoRoutePlanningTests.exe' 'route-planning-tests.log'
 } else {

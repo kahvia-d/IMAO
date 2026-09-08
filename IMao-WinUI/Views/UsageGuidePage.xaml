@@ -1,56 +1,44 @@
-<Page
-    x:Class="IMao_WinUI.Views.UsageGuidePage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    NavigationCacheMode="Enabled">
-    <StackPanel Spacing="16">
-        <TextBlock Text="使用指南" Style="{StaticResource TitleTextBlockStyle}" />
-        <TextBlock Text="先在启动页连接游戏，并在筛选页勾选要显示的点位类型。地图识别成功后，即可查看攻略、记录完成状态和规划路线。" TextWrapping="Wrap" />
-        <Expander Header="如何打开当前点的攻略浮窗" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="10">
-                <TextBlock Text="自动路线当前目标：在功能页的自动路径规划中，点击“查看当前目标攻略”。游戏大地图的路线工具条也提供攻略按钮。" TextWrapping="Wrap" />
-                <TextBlock x:Name="GuideShortcutDescription" TextWrapping="Wrap" FontWeight="SemiBold" />
-                <TextBlock x:Name="GuideCompletionShortcutDescription" TextWrapping="Wrap" />
-                <TextBlock x:Name="GuideImageShortcutDescription" TextWrapping="Wrap" />
-                <TextBlock Text="普通地图点位：退出自动路线选点后，在游戏大地图上左键点击具体标记。重叠标记先展开，再点击其中一个点。右键会切换完成状态；选点模式中的左键用于增删目标。" TextWrapping="Wrap" />
-                <TextBlock Text="攻略浮窗不显示系统标题栏，窗口内提供关闭入口。可翻页、放大图片和确认当前展示的点完成；完成成功保存后自动关闭，保存失败时保留窗口和错误提示。完成快捷键不会撤销已有完成记录。" TextWrapping="Wrap" />
-                <Button Content="前往自动路线与攻略入口" Click="OpenFunctions_Click" HorizontalAlignment="Left" />
-            </StackPanel>
-        </Expander>
-        <Expander Header="自动路线：选点、导航、退出与删除" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="10">
-                <TextBlock Text="1. 在功能页点击“新建自动路线”，回到游戏打开大地图。选择“矩形框选”或“自由套索”拖拽追加目标，也可“加入当前视野”。每条路线最多 500 点，默认排除已完成点。" TextWrapping="Wrap" />
-                <TextBlock Text="2. 使用“移动地图”拖图、缩放；已选目标继续保留。套索松开后自动闭合，选多了可撤销或逐点移除。起点默认取玩家位置，缺少可信定位时使用“指定起点”。" TextWrapping="Wrap" />
-                <TextBlock Text="3. 点击“生成路线”检查访问顺序，再点击“开始导航”。重新选点或生成预览期间，原活动路线继续保留，直到启用新预览。路线按平面距离排序，需要自己绕路、攀爬和进入洞穴。" TextWrapping="Wrap" />
-                <TextBlock Text="4. 到达后手动确认当前目标完成，或“跳过当前目标”。只有完成状态成功保存才会推进；跳过只影响这条路线，可撤销。重新优化剩余顺序需要点击“从当前位置重算”。" TextWrapping="Wrap" />
-                <TextBlock Text="5. “暂停”停止动态指引，大地图仍显示静态路线，之后可“继续”；“退出导航”隐藏这条自动路线并清除活动选择，重启不会再恢复它，已保存文件仍可手动加载。“退出选点”仅结束选择目标的操作。" TextWrapping="Wrap" />
-                <TextBlock Text="6. 保存的路线可在下拉列表中加载，加载及重启恢复后需手动继续。选择路线并点击“删除选中路线”，确认名称后删除；如果该路线正在导航，也会退出导航，点位完成记录保留。" TextWrapping="Wrap" />
-            </StackPanel>
-        </Expander>
-        <Expander Header="快捷键与自定义" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="12">
-                <TextBlock x:Name="CurrentBindings" TextWrapping="Wrap" />
-                <TextBlock Text="在下面选择按键并一次保存。可选单个字母、数字、功能键、PageUp 或 PageDown，也可禁用；启用的按键不能重复。M 用于地图状态辅助，F10 用于诊断截图，不能分配；Esc 和 Shift 的选点操作固定。" TextWrapping="Wrap" />
-                <ComboBox x:Name="NearestCompletionKey" Header="完成点位（小地图附近点／攻略浮窗当前点）" HorizontalAlignment="Stretch" />
-                <ComboBox x:Name="ManualRouteKey" Header="记录手绘线段端点（大地图）" HorizontalAlignment="Stretch" />
-                <ComboBox x:Name="CurrentTargetGuideKey" Header="打开／关闭攻略浮窗" HorizontalAlignment="Stretch" />
-                <ComboBox x:Name="GuidePreviousImageKey" Header="攻略图片：上一张（默认 PageUp）" HorizontalAlignment="Stretch" />
-                <ComboBox x:Name="GuideNextImageKey" Header="攻略图片：下一张（默认 PageDown）" HorizontalAlignment="Stretch" />
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button x:Name="SaveShortcuts" Content="保存快捷键" Click="SaveShortcuts_Click" />
-                    <Button x:Name="ResetShortcuts" Content="恢复默认快捷键" Click="ResetShortcuts_Click" />
-                </StackPanel>
-                <InfoBar x:Name="ShortcutMessage" IsOpen="False" IsClosable="True" />
-                <TextBlock Text="自定义快捷键只接受单键，同时按 Ctrl、Alt、Shift 或 Win 不会触发该工具动作。游戏窗口获得焦点时，附近点完成和手绘路线需要对应地图的有效定位；攻略浮窗获得焦点时，完成键只作用于浮窗当前点，攻略键用于关闭浮窗。攻略显示期间，游戏或攻略窗口获得焦点都可用上一张、下一张按键翻页；攻略隐藏时不会接管翻页按键。手绘快捷键在自动路线选点时暂停。自定义不会修改游戏自身的按键设置，请选择不会干扰游戏操作的按键。" TextWrapping="Wrap" />
-            </StackPanel>
-        </Expander>
-        <Expander Header="固定鼠标操作与取消操作" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="10">
-                <TextBlock Text="Shift + 左键拖拽：自动路线选点期间临时使用矩形框选，可以从标记上开始拖拽。" TextWrapping="Wrap" />
-                <TextBlock Text="Esc：有未完成选区时取消这次手势；没有手势时返回移动地图。离开规划交互后，Esc 交由游戏处理。" TextWrapping="Wrap" />
-                <TextBlock Text="滚轮：交由游戏缩放地图。失焦、定位失效或地图变换时，尚未提交的选区会取消，已选目标继续保留。" TextWrapping="Wrap" />
-                <TextBlock Text="普通点位右键：仅切换明确选中的那个点的完成状态。自动路线选点期间，右键不会批量完成目标。" TextWrapping="Wrap" />
-            </StackPanel>
-        </Expander>
-    </StackPanel>
+<Page x:Class="IMao_WinUI.Views.UsageGuidePage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="using:CommunityToolkit.WinUI.Controls" NavigationCacheMode="Enabled">
+ <StackPanel Spacing="22">
+  <StackPanel Spacing="5"><TextBlock Text="FIELD GUIDE" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="帮助" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="从第一次连接，到完成一条自己的探索路线。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
+  <Border Style="{StaticResource IMaoCardStyle}"><StackPanel Spacing="14">
+   <TextBlock Text="开始探索，只需三步" Style="{StaticResource IMaoSectionTitleStyle}" />
+   <TextBlock Text="01   连接游戏" Style="{StaticResource IMaoBodyTextStyle}" /><TextBlock Text="在概览页启动叠加，进入普通探索画面，等待小地图位置确认。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+   <TextBlock Text="02   选择想找的点" Style="{StaticResource IMaoBodyTextStyle}" /><TextBlock Text="在点位筛选页按类型、角色或武器查找。勾选自动保存，不影响已完成记录。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+   <TextBlock Text="03   按路线逐个收集" Style="{StaticResource IMaoBodyTextStyle}" /><TextBlock Text="打开游戏大地图选点，生成预览后开始导航。到达目标后确认完成，或打开攻略查看图片。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+   <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10"><Button Content="前往路线" Click="OpenFunctions_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" /><Button Content="操作设置" Click="OpenSettings_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" /></controls:WrapPanel>
+  </StackPanel></Border>
+  <Expander Header="手柄速查" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12">
+   <TextBlock Text="游戏大地图" Style="{StaticResource IMaoSectionTitleStyle}" />
+   <TextBlock Text="LB · 地图工具台     RB · 点位助手&#x0a;将游戏白色光标圈对准标记后按 RB；圈内点优先显示，A 查看详情，详情页按住 X 0.6 秒完成所选点。&#x0a;左摇杆 / 方向键 · 选择     A · 确认     B · 逐级返回，根层返回游戏&#x0a;框选或套索：左摇杆移动光标，按住 A 拖动，松开提交。筛选搜索文字使用键盘输入。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="普通探索与攻略" Style="{StaticResource IMaoSectionTitleStyle}" />
+   <TextBlock Text="先按 LB，再按 B · 完成附近点     先按 LB，再按 X · 打开附近攻略&#x0a;组合键全部松开后执行一次；完成范围内有多个点时，先选择，再按 A 完成所选点。附近攻略只查询当前筛选中的未完成点。&#x0a;攻略内 LB / RB · 翻图     右摇杆 · 滚动     A · 放大     B · 返回&#x0a;详情页按住 X 0.6 秒，只完成当前展示的点。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="进入工具后先松开按键；断连后需释放再重新操作。组合键是否与游戏其他状态冲突仍以实际游戏响应为准。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+  </StackPanel></Expander>
+  <Expander Header="攻略与点位完成" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12">
+   <TextBlock x:Name="GuideShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock x:Name="GuideCompletionShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock x:Name="GuideImageShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="普通大地图左键点击具体标记查看攻略；重叠点先展开，再选其中一个。右键切换该点完成状态。选点模式中的左键增删路线目标，不能批量完成。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+   <TextBlock Text="完成成功保存后关闭攻略，失败时保留窗口与错误提示。完成快捷键不会撤销已经完成的记录。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+  </StackPanel></Expander>
+  <Expander Header="路线：选点、预览与导航" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12">
+   <TextBlock Text="选点：新建自动路线后，在游戏大地图框选、套索或加入当前视野，最多 500 个目标。选多了可撤销或逐点移除；缺少可靠位置时可指定起点。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="预览：生成后查看访问顺序，再开始导航。新预览不会替换现有活动路线，直到你启用它。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="导航：确认完成后推进当前目标；跳过只改变这条路线，可以撤销。偏离后可手动重算，也可在路线页开启自动重排。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="暂停保留静态路线，继续后恢复指引；退出导航结束活动选择，保存的路线文件仍在。加载路线后需手动继续。删除路线不删除点位完成记录。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="路线按平面距离组织，不能代替游戏中的绕路、攀爬或洞穴入口判断。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+  </StackPanel></Expander>
+  <Expander Header="鼠标与取消操作" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12">
+   <TextBlock Text="Shift＋左键拖拽：临时矩形框选，可从标记上开始。&#x0a;Esc：先取消未完成选区，没有选区时返回移动地图。&#x0a;滚轮：交给游戏缩放地图。失焦或地图变换会取消未提交选区，已选目标保留。" Style="{StaticResource IMaoBodyTextStyle}" />
+  </StackPanel></Expander>
+  <Border Style="{StaticResource IMaoCardStyle}"><StackPanel Spacing="12">
+   <TextBlock Text="关于 IMao" Style="{StaticResource IMaoSectionTitleStyle}" /><TextBlock x:Name="VersionLabel" Style="{StaticResource IMaoSecondaryTextStyle}" />
+   <TextBlock Text="鸣潮地图探索辅助工具。地图、路线和完成进度在清晰的操作下协作，最终行动由你决定。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock x:Uid="SettingsPage_ProjectIntroduction" Style="{StaticResource IMaoSecondaryTextStyle}" />
+   <TextBlock Text="使用 OpenCV、PaddleOCR、Win32CaptureSample、ImGui、nlohmann/json、CommunityToolkit 与 WinUI。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+   <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><HyperlinkButton Content="项目源码" NavigateUri="https://github.com/Yepin2022/IMao-Wuthering-Waves" /><HyperlinkButton Content="版本发布" NavigateUri="https://github.com/Yepin2022/IMao-Wuthering-Waves/releases" /></controls:WrapPanel>
+  </StackPanel></Border>
+ </StackPanel>
 </Page>

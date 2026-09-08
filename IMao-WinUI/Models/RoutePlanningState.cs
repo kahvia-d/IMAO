@@ -12,6 +12,11 @@ public sealed record RoutePlanningState
     public bool Enabled { get; init; }
     public string Tool { get; init; } = "pan";
     public bool Computing { get; init; }
+    public bool AutoReplanEnabled { get; init; }
+    public bool AutoReplanComputing { get; init; }
+    public string AutoReplanStatus { get; init; } = "disabled";
+    public ulong OrderRevision { get; init; }
+    public RouteStop? PreviousTarget { get; init; }
     public ulong Revision { get; init; }
     public ulong Generation { get; init; }
     public string Message { get; init; } = "打开游戏大地图后开始选点。";
@@ -34,6 +39,18 @@ public sealed record RoutePlanningState
         "navigating" => "导航中",
         "finished" => "路线目标已处理完毕",
         _ => "已暂停"
+    };
+
+    public string AutoReplanLabel => !AutoReplanEnabled ? "实时规划已关闭" : AutoReplanComputing ? "正在调整路线" : AutoReplanStatus switch
+    {
+        "waitingForLocation" => "等待可靠定位",
+        "paused" => "实时规划已暂停",
+        "saveFailed" => "保存失败，保留原路线",
+        "nearTarget" => "已接近当前目标",
+        "editing" => "选点期间暂停实时规划",
+        "confirmingTarget" => "正在确认更合适的目标",
+        "cooldown" => "继续前往新目标",
+        _ => "实时规划已开启"
     };
 }
 

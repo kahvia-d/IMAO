@@ -22,16 +22,31 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <DefaultLanguage>en-US</DefaultLanguage>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GamepadSourceRoot Condition="'$(GamepadUseBaseline)' != 'true'">../../IMao-WinUI/Services</GamepadSourceRoot>
+    <GamepadSourceRoot Condition="'$(GamepadUseBaseline)' == 'true'">../../out/gamepad-cross-process-baseline</GamepadSourceRoot>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
     <Manifest Include="$(ApplicationManifest)" />
+    <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
     <Compile Include="../../IMao-WinUI/Views/MarkerGuideWindow.cs" Link="Production/MarkerGuideWindow.cs" />
-    <Compile Include="../../IMao-WinUI/Services/MarkerGuideCoordinator.cs" Link="Production/MarkerGuideCoordinator.cs" />
+    <Compile Include="../../IMao-WinUI/Views/GamepadAssistantWindow.cs" Link="Production/GamepadAssistantWindow.cs" />
+    <Compile Include="$(GamepadSourceRoot)/MarkerGuideCoordinator.cs" Link="Production/MarkerGuideCoordinator.cs" />
+    <Compile Include="../../IMao-WinUI/Services/XInputControllerReader.cs" Link="Production/XInputControllerReader.cs" />
+    <Compile Include="$(GamepadSourceRoot)/GamepadInputService.cs" Link="Production/GamepadInputService.cs" />
+    <Compile Include="../../IMao-WinUI/Services/IMapToolsController.cs" Link="Production/IMapToolsController.cs" Condition="Exists('../../IMao-WinUI/Services/IMapToolsController.cs')" />
+    <Compile Include="../../IMao-WinUI/Services/GamepadWindowActivation.cs" Link="Production/GamepadWindowActivation.cs" Condition="Exists('../../IMao-WinUI/Services/GamepadWindowActivation.cs')" />
+    <Compile Include="../../IMao-WinUI/Services/GamepadWindowVisibility.cs" Link="Production/GamepadWindowVisibility.cs" />
+    <Compile Include="../../IMao-WinUI/Services/GamepadWindowChrome.cs" Link="Production/GamepadWindowChrome.cs" />
+    <Compile Include="../../IMao-WinUI/Services/GamepadWindowReturn.cs" Link="Production/GamepadWindowReturn.cs" />
+    <Compile Include="../../IMao-WinUI/Services/RouteGamepadController.cs" Link="Production/RouteGamepadController.cs" Condition="Exists('../../IMao-WinUI/Services/RouteGamepadController.cs')" />
+    <Compile Include="../../IMao-WinUI/Views/RouteGamepadInputHost.cs" Link="Production/RouteGamepadInputHost.cs" Condition="Exists('../../IMao-WinUI/Views/RouteGamepadInputHost.cs')" />
     <Compile Include="../../IMao-WinUI/Models/MarkerDetail.cs" Link="Production/MarkerDetail.cs" />
     <Compile Include="../../IMao-WinUI/Models/MarkerGuideSession.cs" Link="Production/MarkerGuideSession.cs" />
     <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="Production/RoutePlanningState.cs" />
     <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="Production/GamepadInput.cs" />
+    <Compile Include="../../IMao-WinUI/Models/CoreRuntimeStatus.cs" Link="Production/CoreRuntimeStatus.cs" />
     <Compile Include="../../IMao-WinUI/Models/GuidePlacement.cs" Link="Production/GuidePlacement.cs" />
   </ItemGroup>
 </Project>

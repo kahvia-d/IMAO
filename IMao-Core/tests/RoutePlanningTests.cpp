@@ -1,4 +1,5 @@
 #include "Runtime/RoutePlanningModel.h"
+#include "Runtime/AutoReplanPolicy.h"
 #include "Runtime/RouteGeometry.h"
 #include "Runtime/RoutePlanStore.h"
 #include "Runtime/PlanningEscapeKey.h"
@@ -559,6 +560,84 @@ void MarkerGuideProtocolTests() {
         }
     }
 }
+void AutoReplanTests() {
+    using namespace std::chrono_literals;
+    const auto now=AutoRoute::ReplanClock::time_point{}+10s;
+    AutoRoute::StablePlayer stable;
+    AutoRoute::PlayerObservation p{"local",1,1,1,1,{0,0},now,now,true,true};
+    stable.Observe(p,now);
+    for(int i=0;i<20;++i)stable.Observe(p,now+100ms);
+    Expect(!stable.Ready(now+100ms),"repeated presentations cannot fabricate independent localization confirmations");
+    p.fixSequence=2;p.fixCapturedAt=p.latestCaptureAt=now+100ms;stable.Observe(p,now+100ms);
+    p.fixSequence=3;p.fixCapturedAt=p.latestCaptureAt=now+200ms;stable.Observe(p,now+200ms);
+    Expect(stable.Ready(now+200ms),"three independent visual fixes spanning 200ms permit evaluation while moving");
+    Expect(!stable.Ready(now+451ms),"freshness also requires a current capture, not just a retained player fix");
+    p.visual=false;stable.Observe(p,now+200ms);
+    Expect(!stable.Ready(now+200ms),"OCR-only fixes cannot trigger automatic target changes");
+    p.visual=true;p.continuityGeneration=2;stable.Observe(p,now+200ms);
+    Expect(!stable.Ready(now+200ms),"reacquisition resets confirmation history");
+    stable.Reset();p.visual=true;p.continuityGeneration=3;
+    for(int i=0;i<4;++i){p.fixSequence=i+1;p.fixCapturedAt=p.latestCaptureAt=now+i*80ms;stable.Observe(p,p.fixCapturedAt);
+        Expect(stable.Ready(p.fixCapturedAt)==(i==3),"default 80ms capture cadence becomes stable on frame four at 240ms");}
+    p.latestCaptureAt=now+1000ms;
+    Expect(!p.Fresh(now+1000ms),"new screenshots cannot renew an old position timestamp");
+
+    AutoRoute::NearbyConfirmation proximity;
+    AutoRoute::ProximityObservation q{"local","route","1:new",1,3,1,1,now,now,9.99,true};
+    Expect(!proximity.Observe(q,now),"entering the 10px radius does not instantly erase the comparison");
+    q.presentedAt=now+100ms;
+    Expect(!proximity.Observe(q,now+100ms),"presenting one captured frame repeatedly cannot count as sustained arrival");
+    for(int i=1;i<=4;++i){q.sourceFrameId=i+1;q.capturedAt=q.presentedAt=now+i*100ms;
+        Expect(!proximity.Observe(q,q.capturedAt),"comparison stays before 500ms of distinct nearby frames");}
+    q.sourceFrameId=6;q.capturedAt=q.presentedAt=now+500ms;
+    Expect(proximity.Observe(q,q.capturedAt),"500ms of consecutive reliable nearby captures clears only the hint");
+    q.distancePixels=10;q.sourceFrameId=7;q.capturedAt=q.presentedAt=now+600ms;
+    Expect(!proximity.Observe(q,q.capturedAt)&&!proximity.nearby,"10px itself is outside the original strict completion radius");
+    q.distancePixels=1;q.sourceFrameId=8;q.capturedAt=q.presentedAt=now+700ms;proximity.Observe(q,q.capturedAt);
+    q.sourceFrameId=9;q.capturedAt=q.presentedAt=now+1000ms;
+    Expect(!proximity.Observe(q,q.capturedAt),"a capture gap longer than 250ms restarts arrival confirmation");
+    q.valid=false;Expect(!proximity.Observe(q,q.capturedAt)&&!proximity.nearby,"lost localization is never arrival");
+    Expect(Near(AutoRoute::TargetDistancePixels({15,0},{0,0},{100,100},1,{1,{-10,0}}),5),
+        "nearby projection transforms the target but keeps the HUD player center fixed");
+    Expect(Near(AutoRoute::TargetDistancePixels({3,4},{0,0},{100,100},2,{}),10),
+        "unfiltered target coordinates use the same captured pixels-per-unit geometry");
+    std::string candidate;AutoRoute::ReplanClock::time_point candidateSince{};
+    Expect(AutoRoute::CheckTargetSwitch("new",true,9.99,now,{},candidate,candidateSince)=="nearTarget"&&candidate.empty(),
+        "a single fresh nearby observation immediately protects the current target from automatic replacement");
+    Expect(AutoRoute::CheckTargetSwitch("new",true,10,now,{},candidate,candidateSince)=="confirmingTarget"&&
+        AutoRoute::CheckTargetSwitch("new",true,10,now+1999ms,{},candidate,candidateSince)=="confirmingTarget"&&
+        AutoRoute::CheckTargetSwitch("new",true,10,now+2s,{},candidate,candidateSince).empty(),
+        "target switches require two agreeing plans separated by at least two seconds");
+    Expect(AutoRoute::CheckTargetSwitch("other",true,10,now+3s,now,candidate,candidateSince)=="cooldown",
+        "target changes respect the eight-second switch cooldown");
+    Expect(AutoRoute::CheckTargetSwitch("new",false,10,now+8s,{},candidate,candidateSince)=="waitingForLocation"&&candidate.empty(),
+        "missing current proximity evidence discards a pending target switch");
+
+    AutoRoute::Plan original;original.id="preserved";original.name="named route";original.sceneId=1;original.profileId="local";original.start=Origin();
+    const auto first=Target("first",100,0),second=Target("second",0,0),done=Target("done",300,0),skipped=Target("skip",400,0);
+    original.stops={first,done,skipped,second};original.skipped={AutoRoute::Key(skipped)};original.skipHistory={AutoRoute::Key(skipped)};
+    const std::unordered_set<std::string> completed{AutoRoute::Key(done)};
+    const auto remaining=AutoRoute::Remaining(original,completed);
+    const std::vector<ItemDatas> reordered{second,first};
+    Expect(Near(AutoRoute::TargetSpacing(remaining),100),"spacing is derived from real map coordinates without assuming metres");
+    Expect(AutoRoute::Worthwhile({0,0},remaining,reordered,100)&&!AutoRoute::Worthwhile({100,0},remaining,reordered,100),
+        "both old and new orders are compared from exactly the same current player position");
+    const auto merged=AutoRoute::MergeRemaining(original,completed,reordered);
+    Expect(merged.id==original.id&&merged.name==original.name&&merged.skipped==original.skipped&&merged.skipHistory==original.skipHistory&&
+        Keys(merged.stops)==std::vector<std::string>{AutoRoute::Key(second),AutoRoute::Key(done),AutoRoute::Key(skipped),AutoRoute::Key(first)},
+        "replanning preserves all point identities and processed slots including skipped undo history");
+    Rejects([&]{AutoRoute::MergeRemaining(original,completed,{second,second});},"duplicate replacement targets are rejected as a whole");
+    Rejects([&]{AutoRoute::MergeRemaining(original,completed,{second});},"replanning cannot silently remove an unfinished target");
+    Expect(AutoRoute::TargetSpacing({Target("a",0,0),Target("b",0,0)})==0,
+        "co-located distinct IDs do not fabricate a distance scale");
+    AutoRoute::DrawVisibility visible{"local","preserved","",true};visible.orderRevision=8;visible.comparisonVisible=true;
+    RouteDatas segment("route",1);segment.automatic=true;segment.profileId="local";segment.routePlanId="preserved";segment.orderRevision=7;
+    Expect(!visible.Allows(segment),"same route ID cannot reuse geometry from an older automatic order");
+    segment.orderRevision=8;segment.previousTarget=true;
+    Expect(visible.Allows(segment,true),"current comparison geometry may render while navigating");
+    visible.comparisonVisible=false;
+    Expect(!visible.Allows(segment,true),"cached dashed segments disappear immediately after comparison is cleared");
+}
 void Benchmark() {
     std::vector<double> elapsed;
     const auto start = Origin();
@@ -578,7 +657,7 @@ void Benchmark() {
 }
 }
 int main() {
-    try { SolverTests(); GeometryTests(); StoreTests(); EscapeOwnershipTests(); DrawingVisibilityTests(); HotkeyPressOwnershipTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
+    try { SolverTests(); GeometryTests(); StoreTests(); EscapeOwnershipTests(); DrawingVisibilityTests(); AutoReplanTests(); HotkeyPressOwnershipTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
     catch (const std::exception& error) { ++failures; std::cerr << "UNEXPECTED: " << error.what() << '\n'; }
     if (failures) { std::cerr << failures << " route planning test(s) failed\n"; return 1; }
     std::cout << "Route planning tests passed\n";

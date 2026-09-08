@@ -12,6 +12,7 @@ using namespace std;
 
 namespace {
 constexpr size_t kDiagnosticMarkerSampleLimit = 32;
+std::uint64_t mapFilterRevision = 0; // Guarded with PointNearItemsDataMutex.
 
 string DescribeMarkerSample(const vector<ItemDatas>& markers) {
 	ostringstream stream;
@@ -75,6 +76,7 @@ void DrawItemOnGameMap::ClearNearItemsData() {
 }
 
 bool DrawItemOnGameMap::GetBasicDataBySenceId(int senceId) {
+	mapFilterRevision = DrawItemBase::MarkerFilterRevision();
 	itemsDatas_StoragePtr = DrawItemBase::GetSceneItemsSnapshot(senceId);
 	senceName = Scene::SceneIdToName(senceId);
 	return !senceName.empty();
@@ -114,4 +116,4 @@ bool DrawItemOnGameMap::HasVisibleItems() {
     return !centerPointNearItemsData.empty();
 }
 
-ItemMarkerFrame DrawItemOnGameMap::Snapshot() { std::scoped_lock lock(PointNearItemsDataMutex); return {senceName, centerPointNearItemsData, {}, 0.0, DrawItemBase::MarkerProfile()}; }
+ItemMarkerFrame DrawItemOnGameMap::Snapshot() { std::scoped_lock lock(PointNearItemsDataMutex); return {senceName, centerPointNearItemsData, {}, 0.0, DrawItemBase::MarkerProfile(), mapFilterRevision}; }

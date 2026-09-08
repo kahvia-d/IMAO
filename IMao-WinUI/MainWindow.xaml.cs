@@ -1,6 +1,9 @@
-﻿using IMao_WinUI.Helpers;
+using IMao_WinUI.Helpers;
 using IMao_WinUI.Services;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Windowing;
+using System.Runtime.InteropServices;
+using Windows.Graphics;
 using Windows.UI.ViewManagement;
 
 namespace IMao_WinUI;
@@ -38,10 +41,28 @@ public sealed partial class MainWindow : WindowEx
     {
         if (_isFirstActivation && args.WindowActivationState == WindowActivationState.CodeActivated)
         {
-            this.CenterOnScreen();
             _isFirstActivation = false;
+            FitToCurrentWorkArea();
         }
     }
+
+    private void FitToCurrentWorkArea()
+    {
+        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest);
+        if (area is null || area.WorkArea.Width <= 0 || area.WorkArea.Height <= 0) return;
+        var work = area.WorkArea;
+        uint dpi = GetDpiForWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
+        double scale = dpi == 0 ? 1 : dpi / 96d;
+        // WindowEx sizes are logical DIPs; AppWindow and monitor work areas use physical pixels.
+        MinWidth = Math.Min(800, work.Width / scale);
+        MinHeight = Math.Min(500, work.Height / scale);
+        if (AppWindow.Presenter is OverlappedPresenter { State: not OverlappedPresenterState.Restored }) return;
+        var current = new RectInt32(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height);
+        AppWindow.MoveAndResize(MainWindowPlacement.Fit(current, work));
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr window);
 
     // this handles updating the caption button colors correctly when indows system theme is changed
     // while the app is open

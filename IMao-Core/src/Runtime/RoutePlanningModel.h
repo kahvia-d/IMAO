@@ -36,11 +36,14 @@ struct SolveResult {
 struct DrawVisibility {
     std::string profileId, activeId, previewId;
     bool navigating = false;
+    std::uint64_t orderRevision = 0;
+    bool comparisonVisible = false;
     bool Allows(const RouteDatas& route, bool minimap = false) const {
         if (!route.automatic) return true;
         if (route.profileId != profileId || route.routePlanId.empty()) return false;
         if (route.preview) return !minimap && route.routePlanId == previewId;
-        return route.routePlanId == activeId && (!minimap || navigating);
+        return route.routePlanId == activeId && route.orderRevision == orderRevision &&
+            (!route.previousTarget || comparisonVisible) && (!minimap || navigating);
     }
 };
 

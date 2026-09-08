@@ -1,3 +1,4 @@
+param([switch]$GamepadBaseline)
 $ErrorActionPreference = 'Stop'
 $guideRepo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 . (Join-Path $guideRepo 'scripts\Enter-DevEnvironment.ps1')
@@ -12,7 +13,8 @@ $guideLog = Join-Path $guideRepo 'out\guide-window-harness-build.log'
 $guideInfo = [Diagnostics.ProcessStartInfo]::new()
 $guideInfo.FileName = "$env:SystemRoot\System32\cmd.exe"
 $guideInfo.Arguments = '/d /c call "' + $guideVcvars + '" >nul && "' + $guideMsbuild +
-    '" Tests\GuideWindowRuntime\GuideWindowRuntime.csproj /t:Build /p:Configuration=Release /p:Platform=x64 /p:NuGetAudit=false /m > "' + $guideLog + '" 2>&1'
+    '" Tests\GuideWindowRuntime\GuideWindowRuntime.csproj /t:Build /p:Configuration=Release /p:Platform=x64 /p:NuGetAudit=false' +
+    $(if ($GamepadBaseline) { ' /p:GamepadUseBaseline=true' } else { '' }) + ' /m > "' + $guideLog + '" 2>&1'
 $guideInfo.UseShellExecute = $false
 $guideInfo.CreateNoWindow = $true
 $guideInfo.WorkingDirectory = $guideRepo

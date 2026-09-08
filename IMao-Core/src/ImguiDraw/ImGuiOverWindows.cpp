@@ -11,10 +11,15 @@
 #include "InteractiveInterface\Debug.h"
 #include "InteractiveInterface/Notification.h"
 #include "InteractiveInterface/RuntimeStatusBar.h"
+#include "UiFontGlyphs.h"
+#include <filesystem>
 #include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/ImageAnchoredOverlay.h"
 #include "../Runtime/FramePacer.h"
+#include "../Runtime/OverlayWindowBounds.h"
+#include "../Runtime/OverlayBackBufferSize.h"
+#include "../Runtime/MapToolsBridge.h"
 #include "Routes/DrawRouteOnMap.h"
 #include "Routes/DrawRouteOnMinMap.h"
 
@@ -46,8 +51,6 @@ bool CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 constexpr auto kOverlayFramePeriod = std::chrono::microseconds(16667); // 60 Hz presentation
-static RECT g_LastGameRect = { 0, 0, 0, 0 };
-static POINT g_LastGamePos = { 0, 0 };
 
 namespace {
 constexpr auto kOverlayDiagnosticsInterval = std::chrono::seconds(2);
@@ -59,7 +62,8 @@ std::string DescribeRect(const RECT& rect) {
     return details.str();
 }
 
-void RecordOverlayFrameDiagnostics(HWND overlayWindow, HRESULT presentResult) {
+void RecordOverlayFrameDiagnostics(HWND overlayWindow, HRESULT presentResult,
+    const OverlayBackBufferSize::Snapshot& buffer) {
     if (!Diagnostics::Enabled()) return;
 
     const auto now = std::chrono::steady_clock::now();
@@ -77,6 +81,9 @@ void RecordOverlayFrameDiagnostics(HWND overlayWindow, HRESULT presentResult) {
         << " layered=" << ((extendedStyle & WS_EX_LAYERED) != 0)
         << " transparent=" << ((extendedStyle & WS_EX_TRANSPARENT) != 0)
         << " rect=" << (rectAvailable ? DescribeRect(overlayRect) : std::string("unavailable"))
+        << " client=" << buffer.clientWidth << 'x' << buffer.clientHeight
+        << " backbuffer=" << buffer.bufferWidth << 'x' << buffer.bufferHeight
+        << " bufferMatched=" << buffer.Matches()
         << " predecessor=" << (::GetWindow(overlayWindow, GW_HWNDPREV) != nullptr);
     Diagnostics::Record("overlay-frame", details.str());
 }
@@ -257,7 +264,19 @@ int ImGuiOverWindows::start()
         ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
     });
     if (!::RegisterClassExW(&wc)) return 1;
-     overWindowsHwnd = ::CreateWindowExW(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW, wc.lpszClassName, L"Dear ImGui DirectX11 Example", WS_POPUP, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    RECT initialClient{}; POINT initialOrigin{};
+    if (!GetClientRect(h_window, &initialClient) || !ClientToScreen(h_window, &initialOrigin) ||
+        initialClient.right <= 0 || initialClient.bottom <= 0) return 1;
+    // Every overlay session starts at the real physical game bounds. A cache
+    // from the previous HWND must never size the new swap chain or viewport.
+    g_ResizeWidth = g_ResizeHeight = 0; g_SwapChainOccluded = false;
+    g_LastOverlayDiagnosticsAt = {};
+    overWindowsHwnd = ::CreateWindowExW(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
+        wc.lpszClassName, L"IMao Map Overlay", WS_POPUP, initialOrigin.x, initialOrigin.y,
+        initialClient.right, initialClient.bottom, nullptr, nullptr, wc.hInstance, nullptr);
+    if (!overWindowsHwnd) return 1;
+    Diagnostics::Record("overlay-window-created", "origin=" + std::to_string(initialOrigin.x) + "," +
+        std::to_string(initialOrigin.y) + " size=" + std::to_string(initialClient.right) + "x" + std::to_string(initialClient.bottom));
 
     // Initialize Direct3D
     if (!CreateDeviceD3D(overWindowsHwnd))
@@ -279,7 +298,9 @@ int ImGuiOverWindows::start()
     contextReady = true;
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    // WinUI owns the single controller reader and dispatches contextual actions.
+    // The click-through drawing surface must not navigate from game presses.
+    io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -309,6 +330,18 @@ int ImGuiOverWindows::start()
     if (!font) {
        font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\msyh.ttc", 15.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
     }
+    ImFontGlyphRangesBuilder uiGlyphs;
+    uiGlyphs.AddRanges(io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+    uiGlyphs.AddText(IMaoUiGlyphs);
+    for (const auto* categories : {&DrawItemBase::itemsJsonData_World, &DrawItemBase::itemsJsonData_Tethys,
+        &DrawItemBase::itemsJsonData_Fabricatorium, &DrawItemBase::itemsJsonData_Avinoleum, &DrawItemBase::itemsJsonData_Lahai,
+        &DrawItemBase::itemsJsonData_LowerVault, &DrawItemBase::itemsJsonData_Darkplain, &DrawItemBase::itemsJsonData_TimeRiftRuins})
+        if (categories->is_array()) for (const auto& category : *categories)
+            uiGlyphs.AddText(category.value("name", std::string{}).c_str());
+    ImVector<ImWchar> uiRanges; uiGlyphs.BuildRanges(&uiRanges);
+    ImFontConfig uiConfig; uiConfig.OversampleH = uiConfig.OversampleV = 1;
+    const auto uiPath = std::filesystem::exists(FontsPath) ? FontsPath : "c:\\Windows\\Fonts\\msyh.ttc";
+    RuntimeStatusBar::SetUiFont(io.Fonts->AddFontFromFileTTF(uiPath.c_str(), 40.0f, &uiConfig, uiRanges.Data));
     //IM_ASSERT(font != nullptr);
 
     //设置透明窗口
@@ -343,6 +376,22 @@ int ImGuiOverWindows::start()
         }
         if (stopFlag)
             break;
+        RECT physicalGame{};
+        if (GameRect.right > 0 && GameRect.bottom > 0) {
+            // Correct position/size BEFORE NewFrame and ResizeBuffers. Verify
+            // the HWND each frame, so a failed move is retried, never cached.
+            if (!OverlayWindowBounds::GameClient(h_window, physicalGame) || !OverlayWindowBounds::Synchronize(overWindowsHwnd, physicalGame)) {
+                Diagnostics::Record("overlay-window-position-error", std::to_string(GetLastError()));
+                framePacer.WaitUntil(frameStart + kOverlayFramePeriod); continue;
+            }
+        }
+        const auto toolsWindow = MapToolsBridge::Shared().Read(DrawItemBase::MarkerProfile());
+        const auto toolsHwnd = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(toolsWindow.hostHwnd));
+        if (toolsWindow.registered && toolsWindow.gameHwnd == reinterpret_cast<std::uintptr_t>(h_window) &&
+            IsWindowVisible(toolsHwnd) && (GetWindowLongPtrW(toolsHwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) &&
+            (GetForegroundWindow() == toolsHwnd || GetForegroundWindow() == h_window) &&
+            GetWindow(toolsHwnd, GW_HWNDNEXT) != overWindowsHwnd)
+            SetWindowPos(overWindowsHwnd, toolsHwnd, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         DrawMarkerInteraction::BeginFrame();
 
         // Handle window being minimized or screen locked
@@ -353,24 +402,29 @@ int ImGuiOverWindows::start()
         //}
         //g_SwapChainOccluded = false;
 
-        // Handle window resize (we don't resize directly in the WM_SIZE handler)
-        if (g_ResizeWidth != 0 && g_ResizeHeight != 0)
-        {
-            const UINT resizeWidth = g_ResizeWidth;
-            const UINT resizeHeight = g_ResizeHeight;
-            g_ResizeWidth = g_ResizeHeight = 0;
+        // Validate the real backbuffer every frame, even without WM_SIZE and
+        // on the first frame of a same-size replacement overlay HWND.
+        const auto bufferSize = OverlayBackBufferSize::Ensure(overWindowsHwnd, g_pSwapChain, [] {
+            if (g_pd3dDeviceContext) g_pd3dDeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
             CleanupRenderTarget();
-            const HRESULT resizeResult = g_pSwapChain == nullptr ? E_POINTER :
-                g_pSwapChain->ResizeBuffers(0, resizeWidth, resizeHeight, DXGI_FORMAT_UNKNOWN, 0);
-            if (FAILED(resizeResult) || !CreateRenderTarget()) {
-                const HRESULT deviceReason = g_pd3dDevice == nullptr ? E_POINTER :
-                    g_pd3dDevice->GetDeviceRemovedReason();
-                Diagnostics::Record("overlay-resize-error", "resize=0x" +
-                    std::to_string(static_cast<unsigned long>(resizeResult)) + " device=0x" +
-                    std::to_string(static_cast<unsigned long>(deviceReason)) + " size=" +
-                    std::to_string(resizeWidth) + "x" + std::to_string(resizeHeight));
-                // A device reset during a resolution/DPI transition must only
-                // reset the transparent overlay, never bring down WinUI.
+        });
+        g_ResizeWidth = g_ResizeHeight = 0; // Notifications never serve as size truth.
+        const bool targetReady = bufferSize.Ready() && (g_mainRenderTargetView || CreateRenderTarget());
+        if (!targetReady) {
+            const HRESULT deviceReason = g_pd3dDevice == nullptr ? E_POINTER : g_pd3dDevice->GetDeviceRemovedReason();
+            const auto now = std::chrono::steady_clock::now();
+            if (now - g_LastOverlayDiagnosticsAt >= kOverlayDiagnosticsInterval) {
+                g_LastOverlayDiagnosticsAt = now;
+                Diagnostics::Record("overlay-backbuffer-pending", "read=" +
+                    std::to_string(static_cast<long>(bufferSize.after.result)) + " resize=" +
+                    std::to_string(static_cast<long>(bufferSize.resizeResult)) + " device=" +
+                    std::to_string(static_cast<long>(deviceReason)) + " client=" +
+                    std::to_string(bufferSize.after.clientWidth) + "x" + std::to_string(bufferSize.after.clientHeight) +
+                    " buffer=" + std::to_string(bufferSize.after.bufferWidth) + "x" + std::to_string(bufferSize.after.bufferHeight));
+            }
+            if (FAILED(deviceReason)) {
+                // Preserve device-loss recovery; ordinary resize failures keep
+                // this session alive and are checked again on the next frame.
                 if (rendererReady) ImGui_ImplDX11_Shutdown();
                 rendererReady = false;
                 CleanupDeviceD3D();
@@ -382,12 +436,21 @@ int ImGuiOverWindows::start()
                 rendererReady = ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
                 if (!rendererReady) { stopFlag = true; break; }
             }
+            // Recreated devices must also pass readback before any NewFrame.
+            framePacer.WaitUntil(frameStart + kOverlayFramePeriod);
+            continue;
         }
+
+        // Input/layout and frame eligibility use the verified rendering surface,
+        // not the game-client snapshot taken before processing window messages.
+        GameRect = {0, 0, static_cast<LONG>(bufferSize.after.clientWidth),
+            static_cast<LONG>(bufferSize.after.clientHeight)};
 
         // Start the Dear ImGui frame
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
+        RuntimeStatusBar::Prepare(h_window);
 
         // Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         {
@@ -414,6 +477,7 @@ int ImGuiOverWindows::start()
             bool drewMap = false, drewMinimap = false;
             bool mapEligible = false, minimapEligible = false;
             PresentedOverlayFrame presented{frame, {}, false, false, frameStart};
+            presented.capture = capture;
             if (frame->Fresh() && frame->focused && DrawItemBase::IsMarkerDisplayContext(h_window) &&
                 frame->clientRect.right == GameRect.right && frame->clientRect.bottom == GameRect.bottom) {
                 if (frame->mapVisible && visibility->AllowsMap(frame->frameId)) {
@@ -444,6 +508,7 @@ int ImGuiOverWindows::start()
             }
             if (!mapEligible) mapMotion.Reset();
             if (!drewMap) DrawMarkerInteraction::Clear();
+            DrawMarkerInteraction::DrawMapToolsLauncher(GameRect, h_window);
             if (!drewMap && !drewMinimap) DrawItemBase::ClearMarkerCandidates();
             if (!minimapEligible) minimapMotion.Reset();
             presented.mapVisible = drewMap;
@@ -466,34 +531,11 @@ int ImGuiOverWindows::start()
         // Present
         HRESULT hr = g_pSwapChain->Present(0, 0);
         g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
-        RecordOverlayFrameDiagnostics(overWindowsHwnd, hr);
+        RecordOverlayFrameDiagnostics(overWindowsHwnd, hr, bufferSize.after);
         if (FAILED(hr)) {
             Diagnostics::Record("overlay-device-error", "presentation failed; session restart required");
             stopFlag = true;
             break;
-        }
-
-        //刷新窗口
-        GetClientRect(h_window, &GameRect);
-        POINT ClientD2D = { GameRect.left, GameRect.top };
-        ClientToScreen(h_window, &ClientD2D);
-        // The status bar is centered at the top of the game client, so the
-        // transparent overlay must remain client-sized even while only the
-        // minimap is being drawn.  Marker coordinates already use GameRect.
-
-        if (ClientD2D.x != g_LastGamePos.x || ClientD2D.y != g_LastGamePos.y ||
-            GameRect.right != g_LastGameRect.right || GameRect.bottom != g_LastGameRect.bottom)
-        {
-            // Opening the game's map changes the overlay from the minimap-sized
-            // surface to a full client-sized surface.  Reassert the topmost
-            // position during that transition: newer game UI surfaces can
-            // otherwise cover this transparent window even though marker
-            // rendering continues successfully in the native thread.
-            SetWindowPos(overWindowsHwnd, HWND_TOPMOST,
-                ClientD2D.x, ClientD2D.y, GameRect.right, GameRect.bottom,
-                SWP_NOACTIVATE | SWP_SHOWWINDOW);
-            g_LastGamePos = ClientD2D;
-            g_LastGameRect = GameRect;
         }
 
         // Keep fractional milliseconds and include rendering cost in pacing.

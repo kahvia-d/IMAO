@@ -204,6 +204,11 @@ add_executable(${DEMO_NAME}
     "${CMAKE_SOURCE_DIR}/IMao-Core/src/CoreHost/CoreHostMain.cpp"
 )
 
+# WinUI owns controller polling. Keep the bundled ImGui backend from reading
+# the same physical controller outside the contextual command router.
+set_property(SOURCE "${CMAKE_SOURCE_DIR}/IMao-Core/src/Base/imgui_dx11/imgui_impl_win32.cpp"
+    APPEND PROPERTY COMPILE_DEFINITIONS IMGUI_IMPL_WIN32_DISABLE_GAMEPAD)
+
 if(IMAO_ENABLE_DIAGNOSTICS)
     target_compile_definitions(${DEMO_NAME} PRIVATE IMAO_ENABLE_DIAGNOSTICS=1)
 endif()
@@ -323,6 +328,19 @@ target_include_directories(IMaoRoutePlanningTests PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
 set_target_properties(IMaoRoutePlanningTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoRoutePlanningTests COMMAND IMaoRoutePlanningTests)
+
+# Exercise the actual worker, command handling and atomic store with isolated
+# marker data. This test-only macro is never enabled on the production host.
+add_executable(IMaoRoutePlanningServiceTests EXCLUDE_FROM_ALL
+    IMao-Core/tests/RoutePlanningServiceTests.cpp
+    IMao-Core/src/Runtime/RoutePlanningService.cpp)
+target_compile_definitions(IMaoRoutePlanningServiceTests PRIVATE IMAO_ROUTE_SERVICE_TEST)
+target_include_directories(IMaoRoutePlanningServiceTests PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
+target_link_libraries(IMaoRoutePlanningServiceTests PRIVATE bcrypt.lib user32.lib)
+set_target_properties(IMaoRoutePlanningServiceTests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out/auto-replan-native/$<0:>)
 
 add_executable(IMaoVisualRegression
     IMao-Core/tools/VisualRegression/main.cpp

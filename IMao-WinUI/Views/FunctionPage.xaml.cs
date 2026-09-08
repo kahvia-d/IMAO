@@ -21,7 +21,7 @@ class RouteName
             string[] paths = Directory.GetFiles(routesFolderPath, "*.json");
             return paths.Length == 0
                 ? new ObservableCollection<string> { "Empty" }
-                : new ObservableCollection<string>(paths.Select(Path.GetFileNameWithoutExtension));
+                : new ObservableCollection<string>(paths.Select(path => Path.GetFileNameWithoutExtension(path)!));
         }
         catch (Exception exception)
         {
@@ -39,6 +39,7 @@ public sealed partial class FunctionPage : Page
     private CancellationTokenSource? routePageLifetime;
     private RoutePlanningState renderedRouteState = new();
     private bool deletingRoute;
+    private bool savingAutoReplan;
 
     public FunctionViewModel ViewModel { get; }
 
@@ -57,62 +58,40 @@ public sealed partial class FunctionPage : Page
     {
         restoringConfiguration = true;
         var value = coreHost.Configuration;
-        UpdateMinMapItemDataCycle.Value = value.MinMapUpdateCycle;
-        UpdateMapItemDataCycle.Value = value.MapUpdateCycle;
-        Setting_MinMapShowItem.IsOn = value.MinMapEnabled;
-        Setting_MapShowItem.IsOn = value.MapEnabled;
-        Setting_SetVisibleSavedPoints.IsOn = value.SavedPointsEnabled;
-        ToggleSwitch_StatusBar.IsOn = value.StatusBarEnabled;
-        NearestCompletionKeyDisplay.Text = RuntimeConfiguration.HotkeyName(value.NearestCompletionKey);
-        NearestCompletionDescription.Text = value.NearestCompletionKey == 0 ? "附近点完成快捷键已禁用，可在使用指南中设置。" :
-            $"按 {RuntimeConfiguration.HotkeyName(value.NearestCompletionKey)} 完成小地图中心附近唯一的未完成点；多个候选时先选择具体点。";
+        AutoReplanToggle.IsOn = value.AutoReplanEnabled;
         ManualRouteKeyDisplay.Text = RuntimeConfiguration.HotkeyName(value.ManualRouteKey);
-        ManualRouteDescription.Text = value.ManualRouteKey == 0 ? "手绘路线快捷键已禁用，可在使用指南中设置。" :
+        ManualRouteDescription.Text = value.ManualRouteKey == 0 ? "手绘路线快捷键已禁用，可在设置中调整。" :
             $"大地图上按 {RuntimeConfiguration.HotkeyName(value.ManualRouteKey)} 记录鼠标位置 A，再按一次记录 B 并保存线段。自动路线选点期间暂停手绘。";
         AutoRouteGuide.Content = value.CurrentTargetGuideKey == 0 ? "查看当前目标攻略" :
             $"查看当前目标攻略（{RuntimeConfiguration.HotkeyName(value.CurrentTargetGuideKey)}）";
         restoringConfiguration = false;
     }
 
-    private async Task ConfigureAsync(Func<Task<bool>> update)
+    private async void AutoReplan_Toggled(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        if (restoringConfiguration) return;
-        await update();
-        RestoreConfiguration();
+        if (restoringConfiguration || savingAutoReplan || !IsLoaded) return;
+        savingAutoReplan = true;
+        AutoReplanToggle.IsEnabled = false;
+        bool requested = AutoReplanToggle.IsOn;
+        try
+        {
+            bool applied = await coreHost.ConfigureAsync(autoReplanEnabled: requested);
+            if (!applied)
+            {
+                AutoRouteMessage.Severity = InfoBarSeverity.Warning;
+                AutoRouteMessage.Message = (coreHost.Configuration.AutoReplanEnabled == requested
+                    ? "实时规划设置已保存，但尚未应用：" : "实时规划设置未能保存：") + coreHost.LastFault;
+                AutoRouteMessage.IsOpen = true;
+            }
+        }
+        catch (Exception exception)
+        {
+            AutoRouteMessage.Severity = InfoBarSeverity.Error;
+            AutoRouteMessage.Message = "无法保存实时规划设置：" + exception.Message;
+            AutoRouteMessage.IsOpen = true;
+        }
+        finally { savingAutoReplan = false; RestoreConfiguration(); AutoReplanToggle.IsEnabled = true; }
     }
-
-    private async void UpdateMinMapItemDataCycle_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
-    {
-        if (e.NewValue < 16 || e.NewValue > 1000) return;
-        await ConfigureAsync(() => coreHost.ConfigureAsync(minMapUpdateCycle: (int)e.NewValue));
-    }
-
-    private async void UpdateMapItemDataCycle_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
-    {
-        if (e.NewValue < 16 || e.NewValue > 1000) return;
-        await ConfigureAsync(() => coreHost.ConfigureAsync(mapUpdateCycle: (int)e.NewValue));
-    }
-
-    private async void ToggleSwitch_MapShowItem(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is ToggleSwitch toggle) await ConfigureAsync(() => coreHost.ConfigureAsync(mapEnabled: toggle.IsOn));
-    }
-
-    private async void ToggleSwitch_MinMapShowItem(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is ToggleSwitch toggle) await ConfigureAsync(() => coreHost.ConfigureAsync(minMapEnabled: toggle.IsOn));
-    }
-
-    private async void ToggleSwitch_SetVisibleSavedPoints(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is ToggleSwitch toggle) await ConfigureAsync(() => coreHost.ConfigureAsync(savedPointsEnabled: toggle.IsOn));
-    }
-
-    private async void ToggleSwitch_StatusBar_Toggled(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is ToggleSwitch toggle) await ConfigureAsync(() => coreHost.ConfigureAsync(statusBarEnabled: toggle.IsOn));
-    }
-
     private void Button_SavedRouteJsonName_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         string content = TextBox_SavedRouteJsonName.Text;
@@ -156,6 +135,8 @@ public sealed partial class FunctionPage : Page
         routePageLifetime = new();
         coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
         coreHost.RoutePlanningChanged += CoreHost_RoutePlanningChanged;
+        coreHost.PropertyChanged -= CoreHost_ConfigurationChanged;
+        coreHost.PropertyChanged += CoreHost_ConfigurationChanged;
         RenderRouteState(coreHost.RoutePlanning);
         await RouteCommandAsync("state");
     }
@@ -163,6 +144,7 @@ public sealed partial class FunctionPage : Page
     private void FunctionPage_Unloaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
+        coreHost.PropertyChanged -= CoreHost_ConfigurationChanged;
         routePageLifetime?.Cancel();
         routePageLifetime?.Dispose();
         routePageLifetime = null;
@@ -170,9 +152,15 @@ public sealed partial class FunctionPage : Page
 
     private void CoreHost_RoutePlanningChanged(object? sender, RoutePlanningState state) => RenderRouteState(state);
 
+    private void CoreHost_ConfigurationChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(CoreHostService.Configuration) && !savingAutoReplan) RestoreConfiguration();
+    }
+
     private void RenderRouteState(RoutePlanningState state)
     {
         renderedRouteState = state;
+        AutoReplanStateText.Text = state.AutoReplanLabel;
         AutoRouteMessage.Severity = InfoBarSeverity.Informational;
         AutoRouteMessage.Message = state.Message;
         AutoRouteMessage.IsOpen = !string.IsNullOrWhiteSpace(state.Message);

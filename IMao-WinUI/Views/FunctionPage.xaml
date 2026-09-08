@@ -1,239 +1,77 @@
-<Page
-    x:Class="IMao_WinUI.Views.FunctionPage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
-    NavigationCacheMode="Enabled"
-    mc:Ignorable="d">
-
-
-    <StackPanel x:Name="ContentArea">
-        <InfoBar x:Uid="Function_InfoBar_Statement" CornerRadius="8" IsOpen="True" IsIconVisible="True" IsClosable="False" Margin="{StaticResource InfoBarMargin}" />
-        
-        
-        <toolkit:SettingsExpander CornerRadius="8" Margin="{StaticResource ExpanderMargin}" x:Uid="Function_Expander_MinMapShowItem" >
-            <toolkit:SettingsExpander.HeaderIcon>
-                <FontIcon Glyph="&#xECAF;" />
-            </toolkit:SettingsExpander.HeaderIcon>
-
-            <toolkit:SettingsExpander.Description>
-                <TextBlock x:Uid="Function_Expander_MinMapShowItem_Description"/>
-            </toolkit:SettingsExpander.Description>
-
-            <ToggleSwitch x:Name="Setting_MinMapShowItem" AutomationProperties.Name="ToggleSwitch_MinMapShowItem" IsOn="True" Toggled="ToggleSwitch_MinMapShowItem"/>
-
-            <toolkit:SettingsExpander.Items>
-                <toolkit:SettingsCard
-                          x:Name="Function_Card_UpdateMinMapItemDataCycle"
-                          x:Uid="Function_Card_UpdateMinMapItemDataCycle">
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Uid="Function_Card_UpdateMinMapItemDataCycle_Description" />
-                    </toolkit:SettingsCard.Description>
-                    <Slider Width="120" Minimum="16" Maximum="1000" StepFrequency="1"
- SmallChange="10" Value="80" Name="UpdateMinMapItemDataCycle" ValueChanged="UpdateMinMapItemDataCycle_ValueChanged"/>
-                </toolkit:SettingsCard>
-
-                <toolkit:SettingsCard
-                          x:Name="Function_Card_SavePointKey"
-                          x:Uid="Function_Card_SavePointKey">
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Name="NearestCompletionDescription" TextWrapping="Wrap" />
-                    </toolkit:SettingsCard.Description>
-                    <TextBox x:Name="NearestCompletionKeyDisplay" AutomationProperties.Name="附近点完成快捷键" IsEnabled="False" TextAlignment="Center"/>
-                </toolkit:SettingsCard>
-            </toolkit:SettingsExpander.Items>
-        </toolkit:SettingsExpander>
-
-
-        
-        <toolkit:SettingsExpander CornerRadius="8" Margin="{StaticResource ExpanderMargin}" x:Uid="Function_Expander_MapShowItem">
-            <toolkit:SettingsExpander.HeaderIcon>
-                <FontIcon Glyph="&#xECAF;" />
-            </toolkit:SettingsExpander.HeaderIcon>
-
-            <toolkit:SettingsExpander.Description>
-                <TextBlock x:Uid="Function_Expander_MapShowItem_Description"/>
-            </toolkit:SettingsExpander.Description>
-
-            <ToggleSwitch x:Name="Setting_MapShowItem" AutomationProperties.Name="ToggleSwitch_MapShowItem" IsOn="True" Toggled="ToggleSwitch_MapShowItem"/>
-
-            <toolkit:SettingsExpander.Items>
-                <toolkit:SettingsCard
-                        x:Uid="Function_Card_UpdateMapItemDataCycle"
-                        x:Name="Function_Card_UpdateMapItemDataCycle"
-                        IsEnabled="True">
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Uid="Function_Card_UpdateMapItemDataCycle_Description"/>
-                    </toolkit:SettingsCard.Description>
-                    <Slider Width="120" Minimum="16" Maximum="1000" StepFrequency="1"
-SmallChange="5" Value="80" Name="UpdateMapItemDataCycle" ValueChanged="UpdateMapItemDataCycle_ValueChanged" />
-                </toolkit:SettingsCard>
-
-                <toolkit:SettingsCard
-                    x:Uid="Function_Card_SetVisibleSavedPoints"
-                    x:Name="Function_Card_SetVisibleSavedPoints">
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Uid="Function_Card_SetVisibleSavedPoints_Description"/>
-                    </toolkit:SettingsCard.Description>
-                    <ToggleSwitch x:Name="Setting_SetVisibleSavedPoints" AutomationProperties.Name="ToggleSwitch_SetVisibleSavedPoints" Toggled="ToggleSwitch_SetVisibleSavedPoints" IsOn="True"/>
-                </toolkit:SettingsCard>
-            </toolkit:SettingsExpander.Items>
-        </toolkit:SettingsExpander>
-
-        
-        
-        <toolkit:SettingsExpander Header="游戏内状态条" Description="在游戏顶部中间显示定位状态、标记数量和刷新耗时。" CornerRadius="8" Margin="{StaticResource ExpanderMargin}">
-            <toolkit:SettingsExpander.HeaderIcon>
-                <FontIcon Glyph="&#xE946;" />
-            </toolkit:SettingsExpander.HeaderIcon>
-            <ToggleSwitch x:Name="ToggleSwitch_StatusBar" IsOn="True" Toggled="ToggleSwitch_StatusBar_Toggled" />
-        </toolkit:SettingsExpander>
-
-        <Expander Header="自动路径规划" IsExpanded="True" HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Stretch" Margin="{StaticResource ExpanderMargin}">
-            <StackPanel Spacing="12">
-                <TextBlock Text="按当前勾选类型选择未完成点，每条路线最多 500 个目标。路线按平面直线距离排序，请自行绕路、攀爬和进入洞穴。"
-                           TextWrapping="Wrap" />
-                <Button Content="使用指南与快捷键设置" Click="UsageGuide_Click" HorizontalAlignment="Left" />
-                <InfoBar x:Name="AutoRouteMessage" IsOpen="True" IsClosable="False" Severity="Informational"
-                         Message="打开游戏大地图后开始选点。" />
-                <ContentControl x:Name="AutoRouteActions" HorizontalContentAlignment="Stretch">
-                <StackPanel Spacing="8">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="新建自动路线" Tag="new" Click="AutoRouteAction_Click" />
-                        <Button Content="退出选点" Tag="end" Click="AutoRouteAction_Click" />
-                    </StackPanel>
-                    <TextBlock x:Name="AutoRouteSelectionSummary" Text="已选 0 / 500" TextWrapping="Wrap" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="移动地图" Tag="pan" Click="AutoRouteTool_Click" />
-                        <Button Content="矩形框选" Tag="box" Click="AutoRouteTool_Click" />
-                        <Button Content="自由套索" Tag="lasso" Click="AutoRouteTool_Click" />
-                        <Button Content="指定起点" Tag="start" Click="AutoRouteTool_Click" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="加入当前视野" Tag="addVisible" Click="AutoRouteAction_Click" />
-                        <Button Content="撤销选点" Tag="undo" Click="AutoRouteAction_Click" />
-                        <Button Content="清空选点" Tag="clear" Click="AutoRouteAction_Click" />
-                        <Button Content="生成路线" x:Name="AutoRouteGenerate" Tag="generate" Click="AutoRouteAction_Click" />
-                    </StackPanel>
-                    <TextBlock x:Name="AutoRouteStartSummary" Text="起点：尚未获取" TextWrapping="Wrap" />
-                    <ProgressBar x:Name="AutoRouteProgress" IsIndeterminate="True" Visibility="Collapsed" />
-                    <Expander Header="已选目标（可逐点移除）" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                        <ListView x:Name="AutoRouteSelectedStops" MaxHeight="240" SelectionMode="None">
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                        <Button Grid.Column="1" Content="移除" Tag="{Binding Key}" Click="AutoRouteRemove_Click" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
+<Page x:Class="IMao_WinUI.Views.FunctionPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="using:CommunityToolkit.WinUI.Controls">
+    <StackPanel x:Name="ContentArea" Spacing="22">
+        <StackPanel Spacing="5"><TextBlock Text="ROUTE STUDIO" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="路线" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="选择目标，预览顺序，再开始探索。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
+        <InfoBar x:Name="AutoRouteMessage" IsOpen="False" IsClosable="True" />
+        <ContentControl x:Name="AutoRouteActions" HorizontalContentAlignment="Stretch">
+        <StackPanel Spacing="18">
+            <Border Style="{StaticResource IMaoCardStyle}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="01  选择目标" Style="{StaticResource IMaoSectionTitleStyle}" />
+                    <TextBlock Text="打开游戏大地图后开始选点。筛选决定可见点位，选点决定这次路线要去哪里。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                        <Button Content="开始选点" Tag="new" Click="AutoRouteAction_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+                        <Button Content="结束选点" Tag="end" Click="AutoRouteAction_Click" />
+                        <Button Content="加入可见点" Tag="addVisible" Click="AutoRouteAction_Click" />
+                        <Button Content="撤销" Tag="undo" Click="AutoRouteAction_Click" />
+                        <Button Content="清空" Tag="clear" Click="AutoRouteAction_Click" />
+                    </controls:WrapPanel>
+                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                        <Button Content="移动地图" Tag="pan" Click="AutoRouteTool_Click" /><Button Content="矩形框选" Tag="box" Click="AutoRouteTool_Click" /><Button Content="自由套索" Tag="lasso" Click="AutoRouteTool_Click" /><Button Content="指定起点" Tag="start" Click="AutoRouteTool_Click" />
+                    </controls:WrapPanel>
+                    <TextBlock x:Name="AutoRouteSelectionSummary" Style="{StaticResource IMaoBodyTextStyle}" />
+                    <TextBlock x:Name="AutoRouteStartSummary" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Header="查看已选点位">
+                        <ListView x:Name="AutoRouteSelectedStops" MaxHeight="250" SelectionMode="None" HorizontalContentAlignment="Stretch">
+                            <ListView.ItemTemplate><DataTemplate><Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding ListLabel}" TextWrapping="Wrap" VerticalAlignment="Center" /><Button Grid.Column="1" Content="移除" Tag="{Binding Key}" Click="AutoRouteRemove_Click" /></Grid></DataTemplate></ListView.ItemTemplate>
                         </ListView>
                     </Expander>
-                    <TextBlock x:Name="AutoRoutePreviewSummary" Text="尚未生成预览" TextWrapping="Wrap" />
-                    <Expander Header="预览访问顺序" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                        <ListView x:Name="AutoRoutePreviewStops" MaxHeight="240" SelectionMode="None" DisplayMemberPath="ListLabel" />
-                    </Expander>
-                    <Button x:Name="AutoRouteActivate" Content="开始导航" Tag="activate" Click="AutoRouteAction_Click" HorizontalAlignment="Left" />
-                    <TextBlock x:Name="AutoRouteActiveSummary" Text="当前没有活动路线" TextWrapping="Wrap" />
-                    <TextBlock x:Name="AutoRouteCurrentTarget" Text="当前目标：无" TextWrapping="Wrap" FontWeight="SemiBold" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="暂停" Tag="pause" Click="AutoRouteAction_Click" />
-                        <Button Content="继续" Tag="resume" Click="AutoRouteAction_Click" />
-                        <Button x:Name="AutoRouteStop" Content="退出导航" Tag="stop" Click="AutoRouteAction_Click" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button x:Name="AutoRouteGuide" Content="查看当前目标攻略" Tag="guide" Click="AutoRouteAction_Click" />
-                        <Button Content="确认当前目标完成" Tag="complete" Click="AutoRouteAction_Click" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="跳过当前目标" Tag="skip" Click="AutoRouteAction_Click" />
-                        <Button Content="撤销跳过" Tag="undoSkip" Click="AutoRouteAction_Click" />
-                        <Button Content="从当前位置重算" Tag="replan" Click="AutoRouteAction_Click" />
-                    </StackPanel>
-                    <Expander Header="活动路线访问顺序" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                        <ListView x:Name="AutoRouteActiveStops" MaxHeight="240" SelectionMode="None" DisplayMemberPath="ListLabel" />
-                    </Expander>
-                    <TextBox x:Name="AutoRouteName" Header="路线名称" PlaceholderText="自动路线" MaxLength="80" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="保存活动路线" Tag="active" Click="AutoRouteSave_Click" />
-                        <Button Content="保存预览" Tag="preview" Click="AutoRouteSave_Click" />
-                    </StackPanel>
-                    <ComboBox x:Name="AutoRouteSavedRoutes" Header="已保存的自动路线" PlaceholderText="选择路线"
-                              DisplayMemberPath="Label" HorizontalAlignment="Stretch" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="加载并暂停" Click="AutoRouteLoad_Click" />
-                        <Button Content="删除选中路线" Click="AutoRouteDelete_Click" />
-                        <Button Content="刷新列表" Tag="list" Click="AutoRouteAction_Click" />
-                    </StackPanel>
                 </StackPanel>
-                </ContentControl>
+            </Border>
+            <Border Style="{StaticResource IMaoCardStyle}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="02  预览路线" Style="{StaticResource IMaoSectionTitleStyle}" />
+                    <TextBlock x:Name="AutoRoutePreviewSummary" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    <ProgressBar x:Name="AutoRouteProgress" IsIndeterminate="True" Visibility="Collapsed" />
+                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button x:Name="AutoRouteGenerate" Content="生成路线预览" Tag="generate" Click="AutoRouteAction_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" /><Button x:Name="AutoRouteActivate" Content="开始导航" Tag="activate" Click="AutoRouteAction_Click" /></controls:WrapPanel>
+                    <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Header="查看预览顺序"><ListView x:Name="AutoRoutePreviewStops" MaxHeight="250" SelectionMode="None"><ListView.ItemTemplate><DataTemplate><TextBlock Text="{Binding ListLabel}" TextWrapping="Wrap" /></DataTemplate></ListView.ItemTemplate></ListView></Expander>
+                    <TextBlock Text="按平面距离排列目标；不代表可通行路径，也不包含爬升或绕行距离。预览不会替换当前导航。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource IMaoCardStyle}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="03  当前导航" Style="{StaticResource IMaoSectionTitleStyle}" />
+                    <TextBlock x:Name="AutoRouteActiveSummary" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    <Border Background="{StaticResource IMaoRaisedSurfaceBrush}" CornerRadius="8" Padding="14"><TextBlock x:Name="AutoRouteCurrentTarget" Style="{StaticResource IMaoBodyTextStyle}" /></Border>
+                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button x:Name="AutoRouteGuide" Content="查看当前目标攻略" Tag="guide" Click="AutoRouteAction_Click" /><Button Content="完成当前目标" Tag="complete" Click="AutoRouteAction_Click" /><Button Content="跳过当前目标" Tag="skip" Click="AutoRouteAction_Click" /></controls:WrapPanel>
+                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="暂停" Tag="pause" Click="AutoRouteAction_Click" /><Button Content="继续" Tag="resume" Click="AutoRouteAction_Click" /><Button Content="撤销跳过" Tag="undoSkip" Click="AutoRouteAction_Click" /><Button Content="重新规划" Tag="replan" Click="AutoRouteAction_Click" /><Button x:Name="AutoRouteStop" Content="停止导航" Tag="stop" Click="AutoRouteAction_Click" /></controls:WrapPanel>
+                    <ToggleSwitch x:Name="AutoReplanToggle" Header="实时规划剩余路线" Toggled="AutoReplan_Toggled" />
+                    <TextBlock x:Name="AutoReplanStateText" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    <TextBlock Text="开启后根据当前位置调整剩余目标；靠近当前目标时保持稳定，暂停或选点时停止调整。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Header="查看活动路线"><ListView x:Name="AutoRouteActiveStops" MaxHeight="250" SelectionMode="None"><ListView.ItemTemplate><DataTemplate><TextBlock Text="{Binding ListLabel}" TextWrapping="Wrap" /></DataTemplate></ListView.ItemTemplate></ListView></Expander>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource IMaoCardStyle}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="路线收藏" Style="{StaticResource IMaoSectionTitleStyle}" />
+                    <TextBox x:Name="AutoRouteName" Header="路线名称" PlaceholderText="给这次探索起个名字" MaxWidth="450" HorizontalAlignment="Stretch" />
+                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="保存预览路线" Tag="preview" Click="AutoRouteSave_Click" /><Button Content="保存活动路线" Tag="active" Click="AutoRouteSave_Click" /></controls:WrapPanel>
+                    <ComboBox x:Name="AutoRouteSavedRoutes" Header="已保存的路线" DisplayMemberPath="Label" HorizontalAlignment="Stretch" />
+                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="载入路线" Click="AutoRouteLoad_Click" /><Button Content="刷新列表" Tag="list" Click="AutoRouteAction_Click" /><Button Content="删除所选路线" Click="AutoRouteDelete_Click" /></controls:WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+        </ContentControl>
+        <Expander Header="手绘路线" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+            <StackPanel Spacing="14">
+                <TextBlock Text="记录地图上的线段，保留你自己的探索路径。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock x:Name="ManualRouteKeyDisplay" Foreground="{StaticResource IMaoAccentBrush}" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock x:Name="ManualRouteDescription" Style="{StaticResource IMaoBodyTextStyle}" />
+                <TextBox x:Name="TextBox_SavedRouteJsonName" Header="手绘路线名称" MaxWidth="450" HorizontalAlignment="Stretch" />
+                <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="设置保存名称" Click="Button_SavedRouteJsonName_Click" /><Button Content="打开路线目录" Click="Button_OpenRoutesFolder_Click" /><Button Content="加载全部手绘路线" Click="Button_LoadRoutesData_Click" /></controls:WrapPanel>
+                <ComboBox x:Name="ComboBox_RouteDataName" Header="已保存的手绘路线" HorizontalAlignment="Stretch" DropDownOpened="ComboBox_RouteDataName_DropDownOpened" />
+                <Button Content="加载所选手绘路线" Click="Button_LoadOneRouteData" />
             </StackPanel>
         </Expander>
-
-        <toolkit:SettingsExpander CornerRadius="8" Margin="{StaticResource ExpanderMargin}" x:Uid="Function_Expander_DarwRoutes">
-            <toolkit:SettingsExpander.HeaderIcon>
-                <FontIcon Glyph="&#xEBE6;" />
-            </toolkit:SettingsExpander.HeaderIcon>
-
-            <toolkit:SettingsExpander.Description>
-                <TextBlock x:Uid="Function_Expander_DarwRoutes_Description"/>
-            </toolkit:SettingsExpander.Description>
-
-            <toolkit:SettingsExpander.Items>
-                
-                <toolkit:SettingsCard x:Uid="Function_Card_IsEnabledEditRoute" x:Name="Function_Card_IsEnabledEditRoute">
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Name="ManualRouteDescription" TextWrapping="Wrap"/>
-                    </toolkit:SettingsCard.Description>
-                    <TextBox x:Name="ManualRouteKeyDisplay" AutomationProperties.Name="手绘路线快捷键" IsEnabled="False" TextAlignment="Center"/>
-                </toolkit:SettingsCard>
-
-                <toolkit:SettingsCard x:Uid="Function_Card_SetSavedRouteJsonName" x:Name="Function_Card_SetSavedRouteJsonName">
-
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock Text="每次完成手绘线段后，会使用此名称保存路线文件。" TextWrapping="Wrap"/>
-                    </toolkit:SettingsCard.Description>
-
-                    <StackPanel Orientation="Horizontal">
-                        <TextBox AutomationProperties.Name="TextBox_SavedRouteJsonName"  x:Name="TextBox_SavedRouteJsonName" Text="Routes" Margin="0,0,8,0"/>
-                        <Button Click="Button_SavedRouteJsonName_Click">Set</Button>
-                    </StackPanel>
-                </toolkit:SettingsCard>
-
-                <toolkit:SettingsCard x:Uid="Functions_Card_LoadOneRouteData" x:Name="Functions_Card_LoadOneRouteData">
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Uid="Function_Card_LoadOneRoutesData_Description"/>
-                    </toolkit:SettingsCard.Description>
-
-                    <StackPanel Orientation="Horizontal">
-                        <Button x:Uid="Button_LoadOneRouteData"  Click="Button_LoadOneRouteData" Margin="0,0,8,0"/>
-                        <ComboBox x:Name="ComboBox_RouteDataName" DropDownOpened="ComboBox_RouteDataName_DropDownOpened" PlaceholderText="Pick a route" Width="130">
-                        </ComboBox>
-                    </StackPanel>
-                    
-                </toolkit:SettingsCard>
-
-                <toolkit:SettingsCard x:Uid="Function_Card_LoadAllRoutesData" x:Name="Function_Card_LoadAllRoutesData">
-
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Uid="Function_Card_LoadAllRoutesData_Description"/>
-                    </toolkit:SettingsCard.Description>
-
-                    <StackPanel Orientation="Horizontal">
-                        <Button x:Uid="Button_OpenRoutesFolder" Click="Button_OpenRoutesFolder_Click" Margin="0,0,8,0"/>
-                        <Button x:Uid="Button_LoadRoutesData" Click="Button_LoadRoutesData_Click"/>
-                    </StackPanel>
-
-                </toolkit:SettingsCard>
-                
-            </toolkit:SettingsExpander.Items>
-        </toolkit:SettingsExpander>
-        
-        
+        <Button Content="查看操作帮助" Click="UsageGuide_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
     </StackPanel>
 </Page>
-

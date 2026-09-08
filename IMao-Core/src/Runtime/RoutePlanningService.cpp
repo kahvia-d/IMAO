@@ -1,7 +1,11 @@
 #include "RoutePlanningService.h"
 #include "RoutePlanStore.h"
+#ifdef IMAO_ROUTE_SERVICE_TEST
+#include "../../tests/RoutePlanningServiceTestHost.h"
+#else
 #include "StructuredLogger.h"
 #include "../ImguiDraw/Items/DrawItemBase.h"
+#endif
 #include "../Coordinate/KuroMapCoordinates.h"
 #include "../Coordinate/locationCalculator/RelativeCoordinates.h"
 #include <bcrypt.h>
@@ -32,7 +36,8 @@ struct Job {
 struct Runtime {
     std::mutex mutex,eventMutex;
     std::condition_variable wake;
-    std::thread worker;
+    std::thread worker, autoWorker;
+    std::condition_variable autoWake;
     bool ready=false,stopping=false,enabled=false,computing=false,pendingNew=false,runRequested=false,playerAvailable=false;
     std::atomic_uint64_t epoch{1};
     std::uint64_t revision=1;
@@ -52,6 +57,19 @@ struct Runtime {
     std::function<void(const Json&)> callback;
     Clock::time_point lastVisibilityEvent{};
     bool visibilityEventPending=false;
+    bool autoEnabled=false, autoComputing=false, autoDirty=true;
+    std::string autoStatus="disabled", candidateTarget;
+    std::atomic_uint64_t autoEpoch{1};
+    std::uint64_t orderRevision=0;
+    AutoRoute::StablePlayer stablePlayer;
+    AutoRoute::ProximityObservation proximity;
+    AutoRoute::NearbyConfirmation nearConfirmation;
+    std::optional<ItemDatas> previousTarget;
+    Clock::time_point lastAutoSolve{}, lastTargetSwitch{}, candidateSince{};
+    Coordinate lastAutoPosition;
+    bool hasAutoPosition=false;
+    std::unordered_set<std::string> spacingKeys;
+    double spacing=0;
 };
 Runtime& R(){static Runtime state;return state;}
 bool Finite(const Coordinate& p){return std::isfinite(p.x)&&std::isfinite(p.y);}
@@ -64,9 +82,15 @@ std::string NewId(){
     for(std::size_t i=0;i<bytes.size();++i){if(i==4||i==6||i==8||i==10)id+='-';id+=hex[bytes[i]>>4];id+=hex[bytes[i]&15];}
     return id;
 }
-void InvalidateLocked(){auto& r=R();++r.epoch;r.pending.reset();r.computing=false;++r.revision;}
+void InvalidateAutoLocked(bool clearComparison=false){
+    auto& r=R();++r.autoEpoch;r.autoDirty=true;r.autoComputing=false;r.candidateTarget.clear();r.candidateSince={};
+    if(clearComparison){r.previousTarget.reset();r.nearConfirmation.Reset();r.proximity={};++r.orderRevision;}
+    r.autoWake.notify_all();
+}
+void InvalidateLocked(){auto& r=R();++r.epoch;r.pending.reset();r.computing=false;++r.revision;InvalidateAutoLocked();}
 void StopNavigationLocked(){
     auto& r=R();InvalidateLocked();r.active.reset();r.skipHistory.clear();r.runRequested=false;
+    InvalidateAutoLocked(true);
     r.enabled=false;r.pendingNew=false;r.tool="pan";
     for(auto& [scene,draft]:r.drafts)draft.preview.reset();
 }
@@ -105,7 +129,8 @@ Json PlanJsonLocked(const AutoRoute::Plan& plan){
     Json stops=Json::array();Coordinate previous=plan.start.roc;double length=0;
     for(std::size_t i=0;i<plan.stops.size();++i){const auto& item=plan.stops[i];
         stops.push_back(StopJsonLocked(item,static_cast<int>(i+1),plan.skipped.contains(AutoRoute::Key(item))));
-        length+=std::hypot(item.itemMapROC.x-previous.x,item.itemMapROC.y-previous.y);previous=item.itemMapROC;}
+        if(!R().completed.contains(AutoRoute::Key(item))&&!plan.skipped.contains(AutoRoute::Key(item))){
+            length+=std::hypot(item.itemMapROC.x-previous.x,item.itemMapROC.y-previous.y);previous=item.itemMapROC;}}
     return {{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},{"sceneId",plan.sceneId},
         {"sceneName",Scene::SceneIdToName(plan.sceneId)},{"start",AutoRoute::StartJson(plan.start)},
         {"stops",std::move(stops)},{"planarLength",length}};
@@ -126,6 +151,8 @@ Json SnapshotLocked(){
         {"start",AutoRoute::StartJson(start)},{"selected",std::move(selected)},{"preview",std::move(preview)},
         {"active",r.active?PlanJsonLocked(*r.active):Json(nullptr)},{"navigationStatus",NavigationLocked()},
         {"currentTarget",target>=0?StopJsonLocked(r.active->stops[target],target+1):Json(nullptr)},
+        {"autoReplanEnabled",r.autoEnabled},{"autoReplanComputing",r.autoComputing},{"autoReplanStatus",r.autoStatus},
+        {"orderRevision",r.orderRevision},{"previousTarget",r.previousTarget?StopJsonLocked(*r.previousTarget):Json(nullptr)},
         {"savedRoutes",r.saved}};
 }
 void Emit(){
@@ -138,6 +165,7 @@ void Emit(){
 void SyncProfileLocked(){
     auto& r=R();const auto profile=DrawItemBase::MarkerProfile();if(profile==r.profile)return;
     InvalidateLocked();r.profile=profile;r.enabled=false;r.pendingNew=false;r.drafts.clear();r.active.reset();r.skipHistory.clear();
+    InvalidateAutoLocked(true);r.stablePlayer.Reset();r.hasAutoPosition=false;
     r.runRequested=false;r.completed.clear();r.message.clear();r.tool="pan";
     try {r.saved=r.store->List(profile);r.active=r.store->LoadActive(profile,ResolveLocked);
         if(r.active){r.skipHistory=r.active->skipHistory;r.message="已恢复自动路线，点击继续导航";}}
@@ -201,6 +229,112 @@ void Worker(){
         }
     }
 }
+std::string AutoGateLocked(Clock::time_point now){
+    const auto& r=R();
+    if(!r.autoEnabled)return "disabled";
+    if(!r.active||!r.runRequested||TargetIndexLocked()<0)return "paused";
+    if(r.enabled||r.computing||r.pending||r.observedScene)return "editing";
+    const auto& p=r.stablePlayer.last;
+    if(!r.playerAvailable||!r.stablePlayer.Ready(now)||p.profileId!=r.profile||p.sceneId!=r.active->sceneId)return "waitingForLocation";
+    return "ready";
+}
+bool ProximityValidLocked(Clock::time_point now){
+    const auto& r=R();const auto& p=r.proximity;const int target=TargetIndexLocked();
+    return p.valid&&r.active&&target>=0&&p.profileId==r.profile&&p.routeId==r.active->id&&
+        p.orderRevision==r.orderRevision&&p.targetKey==AutoRoute::Key(r.active->stops[target])&&
+        p.sceneId==r.active->sceneId&&p.sessionId==r.stablePlayer.last.sessionId&&
+        now>=p.capturedAt&&now-p.capturedAt<=AutoRoute::CaptureLifetime&&now>=p.presentedAt&&
+        now-p.presentedAt<std::chrono::milliseconds(100)&&std::isfinite(p.distancePixels);
+}
+void AutoWorker(){
+    auto& r=R();
+    for(;;){
+        AutoRoute::Plan original;std::unordered_set<std::string> completed;
+        AutoRoute::PlayerObservation player;std::vector<ItemDatas> remaining;
+        std::uint64_t epoch=0,orderRevision=0;double spacing=0;bool calculate=false,statusChanged=false;
+        {
+            std::unique_lock lock(r.mutex);r.autoWake.wait_for(lock,std::chrono::milliseconds(500));
+            if(r.stopping)return;
+            const auto now=Clock::now();const auto gate=AutoGateLocked(now);
+            const auto setStatus=[&](const std::string& value){if(r.autoStatus!=value){r.autoStatus=value;statusChanged=true;}};
+            if(gate!="ready"){
+                setStatus(gate);r.candidateTarget.clear();r.candidateSince={};
+                if(gate=="waitingForLocation")r.autoDirty=true;
+            }else{
+                remaining=AutoRoute::Remaining(*r.active,r.completed);
+                std::unordered_set<std::string> spacingKeys;for(const auto& item:remaining)spacingKeys.insert(AutoRoute::Key(item));
+                if(spacingKeys!=r.spacingKeys){r.spacing=AutoRoute::TargetSpacing(remaining);r.spacingKeys=std::move(spacingKeys);}
+                spacing=r.spacing;
+                const auto& p=r.stablePlayer.last;
+                const bool moved=!r.hasAutoPosition||std::hypot(p.roc.x-r.lastAutoPosition.x,p.roc.y-r.lastAutoPosition.y)>=spacing*.10;
+                const bool due=r.lastAutoSolve==Clock::time_point{}||now-r.lastAutoSolve>=AutoRoute::ReplanPeriod;
+                setStatus(ProximityValidLocked(now)&&r.proximity.distancePixels<AutoRoute::NearbyPixels?"nearTarget":
+                    !r.candidateTarget.empty()?"confirmingTarget":r.lastTargetSwitch!=Clock::time_point{}&&
+                    now-r.lastTargetSwitch<AutoRoute::TargetSwitchCooldown?"cooldown":"ready");
+                if(remaining.size()>=2&&spacing>0&&due&&(r.autoDirty||moved||!r.candidateTarget.empty())){
+                    player=p;original=*r.active;completed=r.completed;epoch=r.autoEpoch.load();orderRevision=r.orderRevision;
+                    r.lastAutoSolve=now;r.lastAutoPosition=p.roc;r.hasAutoPosition=true;r.autoDirty=false;
+                    r.autoComputing=true;setStatus("computing");calculate=true;
+                }
+            }
+        }
+        if(statusChanged)Emit();
+        if(!calculate)continue;
+        const auto began=Clock::now();
+        try{
+            AutoRoute::Start start{player.sceneId,player.roc,"autoPlayerFix",0,player.continuityGeneration,true};
+            const auto result=AutoRoute::Solve(start,remaining,[&]{return r.autoEpoch.load()!=epoch;});
+            std::string outcome="cancelled";double oldLength=0,newLength=0;
+            {
+                std::scoped_lock lock(r.mutex);const auto now=Clock::now();
+                if(r.autoEpoch.load()!=epoch)continue;
+                r.autoComputing=false;r.autoStatus="ready";
+                const auto& latest=r.stablePlayer.last;
+                const bool identity=AutoGateLocked(now)=="ready"&&r.active&&r.active->id==original.id&&r.profile==original.profileId&&
+                    r.orderRevision==orderRevision&&r.completed==completed&&r.active->skipped==original.skipped&&
+                    latest.sessionId==player.sessionId&&latest.continuityGeneration==player.continuityGeneration;
+                // Completion storage is authoritative even before its asynchronous event reaches us.
+                const bool completionUnchanged=std::all_of(original.stops.begin(),original.stops.end(),[&](const auto& item){
+                    return CompletedNow(original.sceneId,item)==completed.contains(AutoRoute::Key(item));});
+                if(result.cancelled||!identity||!completionUnchanged){r.autoDirty=true;r.candidateTarget.clear();r.candidateSince={};}
+                else if(std::hypot(latest.roc.x-player.roc.x,latest.roc.y-player.roc.y)>spacing*.10){
+                    r.autoDirty=true;r.candidateTarget.clear();r.candidateSince={};outcome="player-moved";
+                }else if(!AutoRoute::Worthwhile(latest.roc,remaining,result.stops,spacing)){
+                    r.candidateTarget.clear();r.candidateSince={};outcome="insufficient-gain";
+                }else{
+                    oldLength=AutoRoute::Length(latest.roc,remaining);newLength=AutoRoute::Length(latest.roc,result.stops);
+                    const bool switches=AutoRoute::Key(remaining.front())!=AutoRoute::Key(result.stops.front());
+                    bool apply=true;
+                    if(switches){
+                        const auto wait=AutoRoute::CheckTargetSwitch(AutoRoute::Key(result.stops.front()),ProximityValidLocked(now),
+                            r.proximity.distancePixels,now,r.lastTargetSwitch,r.candidateTarget,r.candidateSince);
+                        if(!wait.empty()){r.autoStatus=wait;apply=false;
+                            if(wait=="waitingForLocation"||wait=="cooldown")r.autoDirty=true;}
+                    }
+                    if(apply){
+                        auto next=AutoRoute::MergeRemaining(original,completed,result.stops);
+                        next.start=start;next.start.roc=latest.roc;
+                        next.start.confirmedUnixMs=std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::system_clock::now().time_since_epoch()-(now-latest.fixCapturedAt)).count();
+                        r.store->Save(next,false); // Save before publishing: failure keeps the old route usable.
+                        if(switches){r.previousTarget=remaining.front();r.lastTargetSwitch=now;r.nearConfirmation.Reset();}
+                        r.active=std::move(next);++r.orderRevision;++r.revision;r.proximity={};
+                        r.candidateTarget.clear();r.candidateSince={};r.autoStatus="ready";
+                        r.message=switches?"已根据当前位置调整目标；灰色虚线指向原目标":"已优化剩余访问顺序";
+                        outcome="applied";
+                    }else outcome=r.autoStatus;
+                }
+            }
+            StructuredLogger::Record("info","routes","auto-route-replanned","outcome="+outcome+
+                " targets="+std::to_string(remaining.size())+" oldLength="+std::to_string(oldLength)+" newLength="+std::to_string(newLength)+
+                " elapsedMs="+std::to_string(std::chrono::duration<double,std::milli>(Clock::now()-began).count()));
+            Emit();
+        }catch(const std::exception& e){
+            {std::scoped_lock lock(r.mutex);if(r.autoEpoch.load()!=epoch)continue;r.autoComputing=false;r.autoStatus="saveFailed";
+                r.autoDirty=true;r.message=std::string("实时重排未生效，原路线保留：")+e.what();++r.revision;}Emit();
+        }
+    }
+}
 void BuildCatalogLocked(){
     auto& r=R();const std::array<const Json*,8> sources={&DrawItemBase::itemsJsonData_World,&DrawItemBase::itemsJsonData_Tethys,
         &DrawItemBase::itemsJsonData_Fabricatorium,&DrawItemBase::itemsJsonData_Avinoleum,&DrawItemBase::itemsJsonData_Lahai,
@@ -227,10 +361,12 @@ void RoutePlanningService::Initialize(){
         r.store=std::make_unique<AutoRoute::RoutePlanStore>(StructuredLogger::ApplicationDataDirectory()/"SavedRoutes"/"Auto");
         BuildCatalogLocked();r.stopping=false;r.ready=true;SyncProfileLocked();}
     r.worker=std::thread(Worker);
+    r.autoWorker=std::thread(AutoWorker);
 }
 void RoutePlanningService::Shutdown(){
-    auto& r=R();{std::scoped_lock lock(r.mutex);if(!r.ready)return;r.stopping=true;InvalidateLocked();r.wake.notify_all();}
+    auto& r=R();{std::scoped_lock lock(r.mutex);if(!r.ready)return;r.stopping=true;InvalidateLocked();r.wake.notify_all();r.autoWake.notify_all();}
     if(r.worker.joinable())r.worker.join();
+    if(r.autoWorker.joinable())r.autoWorker.join();
     {std::scoped_lock lock(r.mutex);r.ready=false;r.enabled=false;r.runRequested=false;}SetEventCallback({});
 }
 void RoutePlanningService::SetEventCallback(std::function<void(const Json&)> callback){std::scoped_lock lock(R().eventMutex);R().callback=std::move(callback);}
@@ -265,6 +401,8 @@ RoutePlanningView RoutePlanningService::View(){
     v.enabled=r.enabled;v.computing=r.computing;v.profileId=r.profile;v.tool=r.tool;v.message=r.message;v.sceneId=r.scene;
     v.revision=r.revision;v.generation=r.epoch.load();v.hiddenCount=HiddenLocked();v.active=r.active;v.completed=r.completed;
     v.mapStart=r.mapStart;
+    v.autoReplanEnabled=r.autoEnabled;v.autoReplanComputing=r.autoComputing;v.autoReplanStatus=r.autoStatus;
+    v.orderRevision=r.orderRevision;v.previousTarget=r.previousTarget;
     v.currentTargetIndex=TargetIndexLocked();v.navigationStatus=NavigationLocked();v.navigating=v.navigationStatus=="navigating";
     const auto it=r.drafts.find(r.scene);if(it!=r.drafts.end()){v.selected=it->second.selected;v.start=it->second.start;v.preview=it->second.preview;}return v;
 }
@@ -272,6 +410,9 @@ AutoRoute::DrawVisibility RoutePlanningService::DrawingVisibility(){
     auto& r=R();std::scoped_lock lock(r.mutex);
     AutoRoute::DrawVisibility result;result.profileId=r.profile;
     if(r.active)result.activeId=r.active->id;
+    result.orderRevision=r.orderRevision;
+    result.comparisonVisible=r.autoEnabled&&r.runRequested&&r.previousTarget.has_value()&&
+        (r.observedScene? r.mapStart.valid&&r.active&&r.mapStart.sceneId==r.active->sceneId : r.stablePlayer.last.Fresh(Clock::now()));
     const auto draft=r.drafts.find(r.scene);
     if(r.enabled&&draft!=r.drafts.end()&&draft->second.preview)result.previewId=draft->second.preview->id;
     result.navigating=NavigationLocked()=="navigating";return result;
@@ -297,6 +438,7 @@ void RoutePlanningService::ObserveMap(int scene,const std::vector<ItemDatas>& vi
 }
 void RoutePlanningService::SessionStopped(){
     auto& r=R();{std::scoped_lock lock(r.mutex);if(!r.ready)return;
+        InvalidateAutoLocked(true);r.stablePlayer.Reset();r.hasAutoPosition=false;
         InvalidateLocked();r.playerAvailable=false;r.player={};r.mapStart={};r.observedScene=0;r.visible.clear();r.visibleKeys.clear();
         for(auto& [scene,draft]:r.drafts)if(draft.start.source!="manual"&&!draft.preview)draft.start={};
         r.message="游戏定位已停止，路线保留";}Emit();
@@ -307,6 +449,7 @@ void RoutePlanningService::MapUnavailable(){
 }
 void RoutePlanningService::CaptureMapStart(const AutoRoute::Start& start){
     auto& r=R();{std::scoped_lock lock(r.mutex);r.mapStart=start;r.playerAvailable=false;
+        r.stablePlayer.Reset();r.proximity={};r.nearConfirmation.Reset();
         InvalidateLocked();
         // A generated preview has an explicit fixed start. Only unsolved drafts
         // adopt the new map-entry position; the active route is never rewritten.
@@ -322,8 +465,41 @@ void RoutePlanningService::SetPlayerAvailable(bool available){
     auto& r=R();bool changed;{std::scoped_lock lock(r.mutex);const auto before=NavigationLocked();r.playerAvailable=available&&r.player.valid;
         changed=before!=NavigationLocked();if(changed)++r.revision;}if(changed)Emit();
 }
+void RoutePlanningService::SetAutoReplanEnabled(bool enabled){
+    auto& r=R();bool changed=false;{std::scoped_lock lock(r.mutex);
+        if(r.autoEnabled!=enabled){r.autoEnabled=enabled;InvalidateAutoLocked(!enabled);r.hasAutoPosition=false;
+            r.autoStatus=enabled?"waitingForLocation":"disabled";++r.revision;changed=true;}}
+    if(changed)Emit();
+}
+void RoutePlanningService::ObservePlayer(const AutoRoute::PlayerObservation& observation){
+    auto& r=R();std::scoped_lock lock(r.mutex);if(!r.ready)return;
+    auto next=observation;if(next.profileId!=r.profile)next.valid=false;
+    const auto prior=r.stablePlayer.last;const bool had=r.stablePlayer.count>0;
+    r.stablePlayer.Observe(next,Clock::now());
+    if(had&&(!r.stablePlayer.count||prior.sessionId!=next.sessionId||prior.sceneId!=next.sceneId||
+        prior.continuityGeneration!=next.continuityGeneration)){
+        InvalidateAutoLocked();r.proximity={};r.nearConfirmation.Reset();
+    }
+}
+void RoutePlanningService::ObserveProximity(const AutoRoute::ProximityObservation& observation){
+    auto& r=R();bool changed=false;{std::scoped_lock lock(r.mutex);if(!r.ready)return;
+        // An observation for a superseded target cannot erase or replace its successor's evidence.
+        const int target=TargetIndexLocked();
+        if(!r.active||target<0||observation.profileId!=r.profile||observation.routeId!=r.active->id||
+            observation.orderRevision!=r.orderRevision||observation.targetKey!=AutoRoute::Key(r.active->stops[target]))return;
+        r.proximity=observation;const auto now=Clock::now();
+        r.proximity.valid=r.proximity.valid&&r.stablePlayer.last.Fresh(now)&&ProximityValidLocked(now);
+        if(r.nearConfirmation.Observe(r.proximity,now)&&r.previousTarget){
+            r.previousTarget.reset();++r.orderRevision;++r.revision;r.proximity={};r.nearConfirmation.Reset();changed=true;
+        }
+    }if(changed)Emit();
+}
 void RoutePlanningService::OnMarkerChanged(){
-    auto& r=R();{std::scoped_lock lock(r.mutex);if(!r.ready)return;const auto old=TargetIndexLocked();SyncProfileLocked();RefreshCompletedLocked();
+    auto& r=R();{std::scoped_lock lock(r.mutex);if(!r.ready)return;const auto old=TargetIndexLocked();
+        const auto priorCompleted=r.completed;SyncProfileLocked();RefreshCompletedLocked();
+        const bool activeProgressChanged=r.active&&std::any_of(r.active->stops.begin(),r.active->stops.end(),[&](const auto& p){
+            const auto key=AutoRoute::Key(p);return priorCompleted.contains(key)!=r.completed.contains(key);});
+        if(activeProgressChanged)InvalidateAutoLocked(true);
         if(r.computing){InvalidateLocked();r.message="目标完成状态已变化，请重新生成路线";}
         const auto next=TargetIndexLocked();if(next>=0&&(old<0||next<old))r.message="已恢复前面的目标，按原顺序继续";
         ++r.revision;}Emit();
@@ -379,6 +555,7 @@ Json RoutePlanningService::Command(const Json& command){
             auto& draft=DraftLocked();if(!draft.preview)throw std::runtime_error("请先生成路线预览");
             InvalidateLocked();
             RefreshCompletedLocked();r.store->Save(*draft.preview,true);r.active=*draft.preview;r.skipHistory.clear();r.runRequested=true;r.enabled=false;r.tool="pan";
+            InvalidateAutoLocked(true);r.hasAutoPosition=false;
             draft.preview.reset();
             r.saved=r.store->List(r.profile);r.message="自动路线已保存并开始导航";
         }else if(action=="stop"){
@@ -398,7 +575,7 @@ Json RoutePlanningService::Command(const Json& command){
             else for(auto& [scene,draft]:r.drafts)if(draft.preview&&AutoRoute::SameRouteId(draft.preview->id,id)){draft.preview.reset();InvalidateLocked();}
             RefreshCompletedLocked();r.saved=r.store->List(r.profile);
             r.message=removingActive?"路线已删除并退出导航，点位完成记录保留":"路线已删除，点位完成记录保留";
-        }else if(action=="pause"){r.runRequested=false;r.message="导航已暂停；如需隐藏并结束路线，请退出导航";}
+        }else if(action=="pause"){r.runRequested=false;InvalidateAutoLocked();r.message="导航已暂停；如需隐藏并结束路线，请退出导航";}
         else if(action=="resume"){
             if(!r.active)throw std::runtime_error("请先加载或生成路线");InvalidateLocked();r.runRequested=true;r.enabled=false;r.tool="pan";r.message="已继续导航";
         }else if(action=="skip"||action=="undoSkip"){
@@ -407,6 +584,7 @@ Json RoutePlanningService::Command(const Json& command){
             else {if(r.skipHistory.empty())throw std::runtime_error("没有可以撤销的跳过操作");key=r.skipHistory.back();next.skipped.erase(key);}
             next.skipHistory=r.skipHistory;if(action=="skip")next.skipHistory.push_back(key);else next.skipHistory.pop_back();
             r.store->Save(next,false);r.active=std::move(next);
+            InvalidateAutoLocked(true);
             if(action=="skip")r.skipHistory.push_back(key);else r.skipHistory.pop_back();
             r.message=action=="skip"?"已跳过当前目标，完成记录未修改":"已撤销跳过，按原顺序继续";
         }else if(action=="guide"){
@@ -434,6 +612,7 @@ Json RoutePlanningService::Command(const Json& command){
         }else if(action=="load"){
             const auto next=r.store->Load(r.profile,command.at("routeId").get<std::string>(),ResolveLocked);
             r.store->Save(next,true);InvalidateLocked();r.active=next;r.runRequested=false;r.skipHistory=next.skipHistory;r.enabled=false;r.tool="pan";
+            InvalidateAutoLocked(true);r.hasAutoPosition=false;
             for(auto& [scene,draft]:r.drafts)if(draft.preview&&draft.preview->id==next.id)draft.preview.reset();
             RefreshCompletedLocked();r.message="路线已加载，点击继续导航";
         }else if(action=="list"){r.saved=r.store->List(r.profile);}

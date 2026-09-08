@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows10.0.26100.0</TargetFramework><TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion><SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion><RootNamespace>MainWindowRuntime</RootNamespace><Platforms>x64</Platforms><PlatformTarget>x64</PlatformTarget><RuntimeIdentifier>win-x64</RuntimeIdentifier><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><UseWinUI>true</UseWinUI><WindowsPackageType>None</WindowsPackageType><WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained><SelfContained>true</SelfContained><EnableMsixTooling>true</EnableMsixTooling><EnableDefaultPriItems>true</EnableDefaultPriItems><AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath><AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath><OutputPath>../../out/main-window-runtime/</OutputPath><ApplicationManifest>app.manifest</ApplicationManifest><DefaultLanguage>zh-CN</DefaultLanguage></PropertyGroup>
+<ItemGroup><PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" /><PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" /><PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.250402" /><Manifest Include="$(ApplicationManifest)" /></ItemGroup>
+<ItemGroup>
+<Page Include="../../IMao-WinUI/Views/*Page.xaml" Link="Views/%(Filename)%(Extension)" />
+<Compile Include="../../IMao-WinUI/Views/*Page.xaml.cs" Link="Views/%(Filename)%(Extension)" />
+<Page Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml" Link="Views/Controls/FilterControl.xaml" />
+<Compile Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml.cs" Link="Views/Controls/FilterControl.xaml.cs" />
+<Compile Include="../../IMao-WinUI/Services/FilterSelectionService.cs" Link="Production/FilterSelectionService.cs" />
+<Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
+<Page Include="../../IMao-WinUI/Styles/Thickness.xaml" Link="Styles/Thickness.xaml" />
+<Compile Include="../../IMao-WinUI/ViewModels/*ViewModel.cs" Exclude="../../IMao-WinUI/ViewModels/SettingsViewModel.cs" Link="Production/%(Filename)%(Extension)" />
+<Compile Include="../../IMao-WinUI/Contracts/Services/INavigation*.cs" Link="Production/%(Filename)%(Extension)" />
+<Compile Include="../../IMao-WinUI/Contracts/Services/IPageService.cs" Link="Production/IPageService.cs" />
+<Compile Include="../../IMao-WinUI/Contracts/ViewModels/INavigationAware.cs" Link="Production/INavigationAware.cs" />
+<Compile Include="../../IMao-WinUI/Services/NavigationService.cs" Link="Production/NavigationService.cs" /><Compile Include="../../IMao-WinUI/Services/NavigationViewService.cs" Link="Production/NavigationViewService.cs" /><Compile Include="../../IMao-WinUI/Services/PageService.cs" Link="Production/PageService.cs" />
+<Compile Include="../../IMao-WinUI/Helpers/NavigationHelper.cs" Link="Production/NavigationHelper.cs" /><Compile Include="../../IMao-WinUI/Helpers/FrameExtensions.cs" Link="Production/FrameExtensions.cs" />
+<Compile Include="../../IMao-WinUI/Helpers/MainWindowPlacement.cs" Link="Production/MainWindowPlacement.cs" />
+<Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" /><Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="Production/GamepadInput.cs" /><Compile Include="../../IMao-WinUI/Models/CoreRuntimeStatus.cs" Link="Production/CoreRuntimeStatus.cs" /><Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="Production/RoutePlanningState.cs" /><Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="Production/MapFilterCatalog.cs" />
+<PRIResource Include="../../IMao-WinUI/Strings/zh-CN/Resources.resw" Link="Strings/zh-CN/Resources.resw" />
+<Content Include="../../IMao-WinUI/Assets/WindowIcon.ico" Link="Assets/WindowIcon.ico" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup></Project>

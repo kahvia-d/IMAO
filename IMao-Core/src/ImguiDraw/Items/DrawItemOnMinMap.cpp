@@ -7,6 +7,7 @@
 
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/RuntimeStatus.h"
+#include "../../Runtime/GamepadContext.h"
 
 #include <chrono>
 #include <iomanip>
@@ -41,6 +42,7 @@ vector<ItemDatas> DrawItemOnMinMap::nearItemsDatas;
 std::mutex DrawItemOnMinMap::markerMutex;
 Coordinate minMapCenterPoint;
 double minMapClipRadius = 0.0;
+std::uint64_t minMapFilterRevision = 0;
 string DrawItemOnMinMap::senceName = "World";
 std::shared_ptr<const vector<ItemsDatas>> DrawItemOnMinMap::itemsDatas_StoragePtr;
 
@@ -51,6 +53,7 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(HWND& hwnd, Coordinate& playerR
 
 void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & playerROC,float minMapRadius, int SceneId, double terrainScale) {
     std::scoped_lock lock(markerMutex);
+    minMapFilterRevision = DrawItemBase::MarkerFilterRevision();
     minMapClipRadius = minMapRadius;
     minMapCenterPoint = ScreenCoordinate::MinMapCircleCenterScreenCoordinate(w_Rect);
     if(GetBasicDataBySenceId(SceneId)) {
@@ -88,7 +91,7 @@ vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, cons
     for (const auto& itemsData : *itemsDatas_StoragePtr) {
         vector<string> filteredPoints = DrawItemBase::GetFilteredPoints(senceName, itemsData.nameId);
         for (const auto& itemDatas : itemsData.itemsDatas) {
-            if (abs(playerROC.x - itemDatas.itemMapROC.x) < 120 && abs(playerROC.y - itemDatas.itemMapROC.y) < 120) {
+            if (abs(playerROC.x - itemDatas.itemMapROC.x) <= 120 && abs(playerROC.y - itemDatas.itemMapROC.y) <= 120) {
                 Coordinate itemScreen = ScreenCoordinate::ItemScreenCoordinateOnMinMap(rect, itemDatas.itemMapROC, playerROC, terrainScale);
                 minMapCenterPoint = ScreenCoordinate::MinMapCircleCenterScreenCoordinate(rect);
                 float twoPointDistance = CalculatePointDistance(itemScreen, minMapCenterPoint);
@@ -111,31 +114,42 @@ vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, cons
     return nearFilterItemsData;
 }
 
-void DrawItemOnMinMap::SavePlayerNearItemPoint(const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
+void DrawItemOnMinMap::SavePlayerNearItemPoint(const ItemMarkerFrame& frame, const OverlayScreenTransform& motion,
+    bool gamepad, std::uint64_t gameHwnd) {
     if (frame.profileId != DrawItemBase::MarkerProfile()) return;
-    std::vector<const ItemDatas*> candidates;
-    for (const auto& item : frame.markers) {
-        const auto position = motion.Apply(item.screenCoordiante);
-        if (!DrawItemBase::IsPointCompleted(frame.sceneName, item) &&
-            std::hypot(frame.center.x - position.x, frame.center.y - position.y) < 10.0) candidates.push_back(&item);
+    HandlePlayerNearbyAction(false, gamepad, gameHwnd);
+}
+
+void DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamepad, std::uint64_t gameHwnd) {
+    auto observation = GamepadContextSnapshot::Shared().ReadNearby(DrawItemBase::MarkerProfile());
+    const auto game = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(observation.gameHwnd));
+    DWORD pid = 0;
+    if (!observation.available || (gameHwnd && observation.gameHwnd != gameHwnd) ||
+        !DrawItemBase::IsMarkerGameFocused(game) || !IsWindowVisible(game) || IsIconic(game) ||
+        !GetWindowThreadProcessId(game, &pid) || pid != observation.gameProcessId ||
+        observation.filterRevision != DrawItemBase::MarkerFilterRevision()) {
+        DrawItemBase::NotifyNearby("当前位置暂不可用，请等小地图定位恢复后重试。", "position-unavailable"); return;
     }
-    std::sort(candidates.begin(), candidates.end(), [](const auto* a, const auto* b) { return a->itemId < b->itemId; });
-    if (candidates.size() == 1) {
-        const auto& item = *candidates.front();
-        DrawItemBase::HandleMarkerCommand({{"type", "markerSetCompletion"}, {"profileId", frame.profileId},
-            {"sceneName", frame.sceneName}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
-            {"pointId", item.itemId}, {"completed", true}});
-    } else if (!candidates.empty()) {
-        json choices = json::array();
-        POINT cursor{}; GetCursorPos(&cursor);
-        for (const auto* item : candidates) {
-            choices.push_back({{"profileId", frame.profileId}, {"sceneName", frame.sceneName}, {"nameId", item->nameId},
-                {"pointId", item->itemId}, {"stateId", item->layer.stateId}, {"countryId", item->layer.countryId},
-                {"floorId", item->layer.floorId}, {"level", item->layer.level}, {"completed", false},
-                {"screenX", cursor.x}, {"screenY", cursor.y}});
-        }
-        DrawItemBase::PublishMarkerCandidates(frame.profileId, frame.sceneName, std::move(choices));
+    const auto intent = guide ? NearbySelection::Intent::Guide : NearbySelection::Intent::Complete;
+    std::erase_if(observation.candidates, [&](const auto& candidate) {
+        return !NearbySelection::Includes(candidate, intent) || DrawItemBase::IsPointCompleted(observation.sceneName, candidate.item);
+    });
+    if (observation.candidates.empty()) {
+        DrawItemBase::NotifyNearby(guide ? "小地图附近没有符合当前筛选的未完成点位。" :
+            "完成范围内没有符合当前筛选的未完成点位。", guide ? "guide-empty" : "complete-empty"); return;
     }
+    if (!guide && observation.candidates.size() == 1) {
+        const auto& item = observation.candidates.front().item;
+        // Resolve again while holding the candidate/filter operation lock. A
+        // newly overlapping point must never inherit the original single choice.
+        const auto result = DrawItemBase::CompleteNearbySingle(observation);
+        const auto reason = result.value("message", "");
+        DrawItemBase::NotifyNearby(result.value("accepted", false) ? "已完成当前附近点位。" :
+            reason.starts_with("nearby-") ? "附近点位或位置已变化，请重新操作。" : "点位未保存，请重试。",
+            "complete-single point=" + NearbySelection::Key(item) + " accepted=" + std::to_string(result.value("accepted", false)) + " reason=" + reason);
+        return;
+    }
+    DrawItemBase::PublishNearbyCandidates(std::move(observation), intent, gamepad);
 }
 
 void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
@@ -166,4 +180,4 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
     }
 }
 
-ItemMarkerFrame DrawItemOnMinMap::Snapshot() { std::scoped_lock lock(markerMutex); return {senceName, nearItemsDatas, minMapCenterPoint, minMapClipRadius, DrawItemBase::MarkerProfile()}; }
+ItemMarkerFrame DrawItemOnMinMap::Snapshot() { std::scoped_lock lock(markerMutex); return {senceName, nearItemsDatas, minMapCenterPoint, minMapClipRadius, DrawItemBase::MarkerProfile(), minMapFilterRevision}; }

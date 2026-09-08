@@ -54,6 +54,7 @@ internal static class MarkerIpcTests
                     Point(local, FirstPoint).GetProperty("completed").GetBoolean(),
                     "real host migrates legacy completion into the independent local profile");
                 check(File.ReadAllText(legacyPath) == legacyBytes, "marker migration preserves the original legacy file");
+                await VerifyGamepadWithoutMapAsync(core, local, check);
 
                 await Call(core, "markerSelectProfile", new { profileId = Profile });
                 var empty = await Call(core, "markerGetSnapshot", new { profileId = Profile });
@@ -140,6 +141,33 @@ internal static class MarkerIpcTests
         CoreHostService NewCore() => new(Path.GetFullPath(hostDirectory),
             new RuntimeConfigurationStore(Path.Combine(directory, "runtime.json")), new LocalItemFilter(filterPath, filterLegacy),
             new LocalMarkerProfileSelection(profileSelectionPath));
+    }
+
+    private static async Task VerifyGamepadWithoutMapAsync(CoreHostService core, JsonElement originalSnapshot, Action<bool, string> check)
+    {
+        // This host has only completed its handshake. Never start runtime capture or interact with a game.
+        var context = await Call(core, "markerGetGamepadContext", new { });
+        check(!context.GetProperty("available").GetBoolean() && !context.GetProperty("bigMap").GetBoolean() &&
+            !context.GetProperty("gameplay").GetBoolean() && !context.GetProperty("nearbyAvailable").GetBoolean() &&
+            !context.GetProperty("gameFocused").GetBoolean() && context.GetProperty("gameHwnd").GetUInt64() == 0 &&
+            Text(context, "profileId") == "local" && Text(context, "sceneName").Length == 0,
+            "idle real host provides unavailable gamepad context without a game window or invented player position");
+        ulong generation = context.GetProperty("contextGeneration").GetUInt64();
+        check(generation > 0 && await RejectedAsync(() => Call(core, "markerGetGamepadTargets", new
+            { profileId = "local", contextGeneration = generation })) && core.IsConnected,
+            "real host refuses gamepad targets when no map is observed even with its current context generation");
+        foreach (string status in new[] { "returning", "failed" })
+        {
+            var display = await Call(core, "markerRouteGamepadReturnStatus", new { sessionId = 999999UL, status });
+            check(!display.GetProperty("visible").GetBoolean(),
+                "return display cannot invent a host lease or input session from an unknown session ID");
+        }
+        check(await RejectedAsync(() => Call(core, "markerRouteGamepadReturnStatus", new
+            { sessionId = 999999UL, status = "toolbar" })) && core.IsConnected,
+            "return display protocol cannot upgrade a stopped session into toolbar input");
+        var after = await Call(core, "markerGetSnapshot", new { profileId = "local" });
+        check(after.GetRawText() == originalSnapshot.GetRawText(),
+            "gamepad context reads and rejected target requests preserve point completion and profile revisions");
     }
 
     private static async Task VerifyGuideProtocolRejectionsAsync(CoreHostService core, string savedPoints, Action<bool, string> check)

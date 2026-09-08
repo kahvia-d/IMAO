@@ -9,17 +9,25 @@ public sealed record RuntimeConfiguration
     public bool MinMapEnabled { get; init; } = true;
     public bool SavedPointsEnabled { get; init; } = true;
     public bool StatusBarEnabled { get; init; } = true;
+    public bool AutoReplanEnabled { get; init; }
     public int NearestCompletionKey { get; init; } = 90;
     public int ManualRouteKey { get; init; } = 81;
     public int CurrentTargetGuideKey { get; init; } = 119;
     public int GuidePreviousImageKey { get; init; } = 33;
     public int GuideNextImageKey { get; init; } = 34;
+    public bool GamepadEnabled { get; init; }
+    public int GamepadControllerIndex { get; init; } = -1;
+    public GamepadButtons GamepadEntryButton { get; init; } = GamepadButtons.LB;
 
     public void Validate()
     {
         if (CaptureWay is < 0 or > 1) throw new ArgumentException("截图方式无效");
         if (MapUpdateCycle is < 16 or > 1000 || MinMapUpdateCycle is < 16 or > 1000)
             throw new ArgumentException("刷新间隔必须在 16–1000 毫秒之间");
+        if (GamepadControllerIndex is < -1 or > 3)
+            throw new ArgumentException("手柄编号必须为自动选择或 1–4");
+        if (GamepadEntryButton is not (GamepadButtons.LB or GamepadButtons.RB))
+            throw new ArgumentException("手柄助手入口仅支持 LB 或 RB");
         var keys = new[] { NearestCompletionKey, ManualRouteKey, CurrentTargetGuideKey, GuidePreviousImageKey, GuideNextImageKey };
         if (keys.Any(key => !IsSupportedHotkey(key)))
             throw new ArgumentException("快捷键支持字母、数字、F1–F12、PageUp、PageDown 或禁用；M 用于地图状态辅助，F10 用于诊断截图，不能分配。");
@@ -46,7 +54,8 @@ public sealed record RuntimeConfiguration
         ["captureWay"] = CaptureWay, ["mapUpdateCycle"] = MapUpdateCycle,
         ["minMapUpdateCycle"] = MinMapUpdateCycle, ["mapEnabled"] = MapEnabled,
         ["minMapEnabled"] = MinMapEnabled, ["savedPointsEnabled"] = SavedPointsEnabled,
-        ["statusBarEnabled"] = StatusBarEnabled, ["nearestCompletionKey"] = NearestCompletionKey,
+        ["statusBarEnabled"] = StatusBarEnabled, ["autoReplanEnabled"] = AutoReplanEnabled,
+        ["nearestCompletionKey"] = NearestCompletionKey,
         ["manualRouteKey"] = ManualRouteKey, ["currentTargetGuideKey"] = CurrentTargetGuideKey,
         ["guidePreviousImageKey"] = GuidePreviousImageKey, ["guideNextImageKey"] = GuideNextImageKey
     };

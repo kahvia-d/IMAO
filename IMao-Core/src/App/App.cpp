@@ -1,4 +1,5 @@
 #include "App.h"
+#include "../Runtime/GamepadWorldActions.h"
 #include "..\Coordinate\locationCalculator\RelativeCoordinates.h"
 #include "../Coordinate/VisualLocalization/RecoveryPolicy.h"
 #include "..\Coordinate\locationCalculator\ScreenCoordinate.h"
@@ -440,17 +441,25 @@ void App::Thread_DetectGameState() {
     OverlayVisibilityPolicy visibilityPolicy;
     MinimapHudEvidence minimapHudEvidence;
     bool rawCompassEvidence = false, rawControlEvidence = false, rawMinimapEvidence = false, templateHudEvidence = false;
+    std::string rawControlLayout = "none";
+    int rawControllerTriggerAnchors = 0;
+    bool rawControllerSlider = false;
     const auto publishVisibility = [&](const CapturedFrame& captured, bool mapEvidence,
         bool minimapEvidence, bool focused) {
         const auto previous = overlayVisibility.Read();
         const auto visible = visibilityPolicy.Observe(captured.frameId, captured.capturedAt,
             captured.maximumAge, mapUiState.State(), mapEvidence, minimapEvidence, focused);
         overlayVisibility.Publish(visible);
+        GamepadContextSnapshot::Shared().ObserveUi(coordinateSessionId, DrawItemBase::MarkerProfile(),
+            MapUiStateController::IsStableBigMap(mapUiState.State()), mapEvidence, minimapEvidence,
+            focused, captured.capturedAt, captured.maximumAge);
         if (previous->mapVisible != visible.mapVisible || previous->minimapVisible != visible.minimapVisible) {
             Diagnostics::Record("overlay-visibility", "frame=" + std::to_string(captured.frameId) +
                 " map=" + std::to_string(visible.mapVisible) +
                 " minimap=" + std::to_string(visible.minimapVisible) +
                 " rawCompass=" + std::to_string(rawCompassEvidence) + " rawControls=" + std::to_string(rawControlEvidence) +
+                " controlLayout=" + rawControlLayout + " controllerTriggerAnchors=" + std::to_string(rawControllerTriggerAnchors) +
+                " controllerSlider=" + std::to_string(rawControllerSlider) +
                 " rawMinimap=" + std::to_string(rawMinimapEvidence) + " templateHud=" + std::to_string(templateHudEvidence) +
                 " stableState=" + MapUiStateController::StateName(mapUiState.State()));
         }
@@ -473,6 +482,7 @@ void App::Thread_DetectGameState() {
                 visibilityPolicy.Reset(); minimapHudEvidence.Reset(); overlayVisibility.Publish({});
             }
             if (!liveCapture) {
+                GamepadContextSnapshot::Shared().Invalidate(coordinateSessionId);
                 mapUiState.Reset(); isOpenMap = false; isExistMinMap = false;
                 bigMapStructureConfirmed = false; consecutiveBigMapCompassFrames = 0;
                 mapStructureRequiresControls = false;
@@ -506,9 +516,12 @@ void App::Thread_DetectGameState() {
 		if (!stateSnapshot.empty()) {
 			minimapVisible = IsExistMinMap(stateSnapshot, stateRect, &minimapMatchCount);
 			compassVisible = IsBigMapCompass(stateSnapshot, stateRect, &compassPixels);
-			// Paired zoom controls are independent evidence. A missed colour
-			// probe must not turn their confirmed map into Unknown during a drag.
-			mapControlsVisible = MapUiVisualDetector::DetectBigMapControls(stateSnapshot, stateRect);
+			// Both mouse and controller layouts need their complete zoom controls.
+			const auto controls = MapUiVisualDetector::DetectBigMapControlLayout(stateSnapshot, stateRect);
+			mapControlsVisible = controls.visible;
+			rawControlLayout = controls.mouse ? "mouse" : controls.controller ? "controller" : "none";
+			rawControllerTriggerAnchors = controls.controllerTriggerAnchors;
+			rawControllerSlider = controls.controllerSlider;
 			rawMinimapEvidence = minimapVisible; rawCompassEvidence = compassVisible; rawControlEvidence = mapControlsVisible;
 			const auto taskArea = ScreenCoordinate::SpecifyScreenCoordinate(stateRect, GameWindowsScreenData::IconTask_ScreenData);
 			const cv::Rect taskRegion(static_cast<int>(taskArea.leftPoint.x), static_cast<int>(taskArea.topPoint.y),
@@ -593,6 +606,8 @@ void App::Thread_DetectGameState() {
 				" minimapMatches=" + std::to_string(GoodMatchSize_IconTask.load()) +
 				" compassGoldPixels=" + std::to_string(compassPixels) +
 				" mapControlsVisible=" + std::to_string(mapControlsVisible) +
+				" controlLayout=" + rawControlLayout + " controllerTriggerAnchors=" + std::to_string(rawControllerTriggerAnchors) +
+				" controllerSlider=" + std::to_string(rawControllerSlider) +
 				" minimapHudAbsentLongEnough=" + std::to_string(minimapHudAbsentLongEnough) +
 				" mapStructureConfirmed=" + std::to_string(bigMapStructureConfirmed) +
 				" mapStructureMatches=" + std::to_string(GoodMatchSize_IconWavePlateCrystal.load()) +
@@ -638,6 +653,7 @@ void App::Thread_DetectGameState() {
 		isWindowFocused = DrawItemBase::IsMarkerDisplayContext(hwnd) || IsWindowFocused(ImGuiOverWindows::overWindowsHwnd);
 		}
 		catch (const cv::Exception& exception) {
+			GamepadContextSnapshot::Shared().Invalidate(coordinateSessionId);
 			visibilityPolicy.Reset(); overlayVisibility.Publish({});
 			GoodMatchSize_IconTask = 0;
 			GoodMatchSize_IconWavePlateCrystal = 0;
@@ -653,6 +669,7 @@ void App::Thread_DetectGameState() {
 			Diagnostics::Record("game-state-frame-error", exception.what());
 		}
 		catch (const std::exception& exception) {
+			GamepadContextSnapshot::Shared().Invalidate(coordinateSessionId);
 			visibilityPolicy.Reset(); overlayVisibility.Publish({});
 			GoodMatchSize_IconTask = 0;
 			GoodMatchSize_IconWavePlateCrystal = 0;
@@ -668,6 +685,7 @@ void App::Thread_DetectGameState() {
 			Diagnostics::Record("game-state-frame-error", exception.what());
 		}
 		catch (...) {
+			GamepadContextSnapshot::Shared().Invalidate(coordinateSessionId);
 			visibilityPolicy.Reset(); overlayVisibility.Publish({});
 			GoodMatchSize_IconTask = 0;
 			GoodMatchSize_IconWavePlateCrystal = 0;
@@ -734,9 +752,12 @@ bool App::IsBigMapCompass(const Mat& snapshot, const RECT& captureRect, int* goo
 }
 
 bool App::IsOpenMap(const Mat& snapshot, const RECT& captureRect, int* goodMatchSize, bool useMapFeatureFallback) {
-	if (MapUiVisualDetector::DetectBigMapControls(snapshot, captureRect)) {
+	const auto controls = MapUiVisualDetector::DetectBigMapControlLayout(snapshot, captureRect);
+	if (controls.visible) {
 		*goodMatchSize = 2;
-		Diagnostics::Record("map-open-detection", "source=zoom-controls confirmed=1");
+		Diagnostics::Record("map-open-detection", std::string("source=zoom-controls confirmed=1 layout=") +
+			(controls.mouse ? "mouse" : "controller") + " controllerTriggerAnchors=" +
+			std::to_string(controls.controllerTriggerAnchors) + " controllerSlider=" + std::to_string(controls.controllerSlider));
 		return true;
 	}
 	int legacyIconMatchSize = 0;
@@ -891,6 +912,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	};
 
 	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition) {
+        if(recognition || playerCurrentSceneId != candidate.sceneId) ++routeFixContinuity;
+        routeFixSequence=snapshotFrameId;routeFixCapturedAt=snapshotCapturedAt;routeVisualFix=true;
         if (recognition && candidate.affineEstimated && std::isfinite(candidate.scale) &&
             candidate.scale >= kNominalMinimapTerrainScale * 0.85 && candidate.scale <= kNominalMinimapTerrainScale * 1.15) {
             minimapTerrainScale = candidate.scale;
@@ -940,6 +963,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	};
 
 	auto commitCoordinateTextPosition = [&](const CoordinateCandidate& recognized) {
+        routeFixSequence=snapshotFrameId;routeFixCapturedAt=snapshotCapturedAt;routeVisualFix=false;++routeFixContinuity;
 		// This is deliberately a fallback, not a replacement for visual
 		// localization.  It is reached only after two high-confidence, stable
 		// readings (see below), which lets the existing game-coordinate transform
@@ -1483,6 +1507,7 @@ int App::ResolveMapViewportScene(const Coordinate& centerMapCoordinate) const {
 }
 
 void App::SuspendPlayerLocationForMapTransition() {
+    ++routeFixContinuity;
     GlobalVisualLocalizer::CancelPending();
 	const auto now = CoordinateRecoveryController::Clock::now();
     RoutePlanningService::CaptureMapStart(PlanningStart(playerLocationLock.sceneId, playerLocationLock.mapCoordinate,
@@ -1860,6 +1885,25 @@ void App::Thread_KeyMonitoring_SavePlayerNearItemPoint() {
         const auto frame = presented->source;
         const bool plainKey = !(GetAsyncKeyState(VK_SHIFT) & 0x8000) && !(GetAsyncKeyState(VK_CONTROL) & 0x8000) &&
             !(GetAsyncKeyState(VK_MENU) & 0x8000) && !(GetAsyncKeyState(VK_LWIN) & 0x8000) && !(GetAsyncKeyState(VK_RWIN) & 0x8000);
+        const auto profile = DrawItemBase::MarkerProfile();
+        const auto gamepadContext = GamepadContextSnapshot::Shared().Read(profile);
+        DWORD gameProcess = 0;
+        const bool liveGame = reinterpret_cast<std::uintptr_t>(hwnd) == gamepadContext.gameHwnd &&
+            RuntimeStatus::Snapshot().coreState == "running" && IsWindow(hwnd) &&
+            IsWindowVisible(hwnd) && !IsIconic(hwnd) && GetWindowThreadProcessId(hwnd, &gameProcess) &&
+            gameProcess == gamepadContext.gameProcessId;
+        const bool gamepadWorldVisible = presented->Fresh() && presented->minimapVisible && frame &&
+            liveGame && overlayVisibility.Read()->AllowsMinimap(frame->frameId) && DrawItemBase::IsMarkerGameFocused(hwnd) &&
+            frame->minimapMarkers.profileId == profile && frame->minimapMarkers.sceneName == gamepadContext.sceneName;
+        // Both world shortcuts resolve the current nearby observation. Explicit
+        // route-guide controls use their separate markerGuideShortcut event.
+        if (const auto request = GamepadWorldActions::Shared().Take(gamepadContext,
+            liveGame && DrawItemBase::IsMarkerGameFocused(hwnd))) {
+            if (gamepadWorldVisible)
+                DrawItemOnMinMap::HandlePlayerNearbyAction(request->action == GamepadWorldActions::Action::ToggleGuide,
+                    true, request->gameHwnd);
+            else DrawItemBase::NotifyNearby("当前位置暂不可用，请等小地图定位恢复后重试。", "world-context-unavailable");
+        }
 		if (keyIsPressed && !keyWasPressed && !RuntimeHotkeyPressOwnership::BlocksPolling(configuredKey) &&
             plainKey && presented->Fresh() && presented->minimapVisible &&
             overlayVisibility.Read()->AllowsMinimap(frame->frameId) && DrawItemBase::IsMarkerGameFocused(hwnd)) {
@@ -1868,9 +1912,34 @@ void App::Thread_KeyMonitoring_SavePlayerNearItemPoint() {
         keyWasPressed = keyIsPressed;
 		Sleep(50);
 	}
+    GamepadWorldActions::Shared().Clear();
 }
 
 
+
+void App::PublishPresentedOverlay(PresentedOverlayFrame frame) {
+    const auto route=RoutePlanningService::View();
+    if(route.active&&route.currentTargetIndex>=0&&route.currentTargetIndex<static_cast<int>(route.active->stops.size())){
+        AutoRoute::ProximityObservation observation;
+        observation.profileId=route.profileId;observation.routeId=route.active->id;observation.orderRevision=route.orderRevision;
+        const auto& target=route.active->stops[route.currentTargetIndex];observation.targetKey=AutoRoute::Key(target);
+        observation.presentedAt=frame.presentedAt;
+        if(frame.source){
+            const auto& source=*frame.source;const auto& player=source.routePlayer;
+            observation.sessionId=player.sessionId;observation.sceneId=player.sceneId;
+            observation.sourceFrameId=source.frameId;observation.capturedAt=source.capturedAt;
+            observation.valid=frame.Fresh()&&frame.minimapVisible&&source.minimapMotion.reliable&&
+                player.Fresh(std::chrono::steady_clock::now())&&player.profileId==route.profileId&&
+                player.sceneId==route.active->sceneId&&overlayVisibility.Read()->AllowsMinimap(source.frameId)&&
+                DrawItemBase::IsMarkerGameFocused(hwnd);
+            observation.distancePixels=AutoRoute::TargetDistancePixels(target.itemMapROC,
+                RelativeCoordinates::ImgMapCoordToROC(source.playerCoordinate,source.playerScene),
+                source.minimapMotion.screenCenter,source.minimapMotion.pixelsPerUnit,frame.motion);
+        }
+        RoutePlanningService::ObserveProximity(observation);
+    }
+    presentedOverlay.Publish(std::move(frame));
+}
 
 void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPrediction& viewport) {
     OverlayFrame frame;
@@ -1897,6 +1966,12 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
         GetMinimapProjectionGeometry(captured.clientRect, minimapTerrainScale).pixelsPerMapUnit,
         playerCurrentSceneId, coordinateUiGeneration, captured.frameId, captured.capturedAt,
         coordinateRecovery.State() == CoordinateLockState::Tracking};
+    frame.routePlayer={DrawItemBase::MarkerProfile(),coordinateSessionId,routeFixContinuity,routeFixSequence,
+        playerCurrentSceneId,RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate,playerCurrentSceneId),
+        routeFixCapturedAt,captured.capturedAt,routeVisualFix,
+        frame.minimapVisible&&frame.minimapMotion.reliable&&frame.focused&&playerLocationLock.valid&&
+        playerLocationLock.sceneId==playerCurrentSceneId&&DrawItemBase::IsMarkerGameFocused(hwnd)};
+    RoutePlanningService::ObservePlayer(frame.routePlayer);
     const bool mapRequested = isOpenMap.load() && enabledMapShowItem.load();
     const bool minimapRequested = isExistMinMap.load() && !isOpenMap.load() && enabledMinMapShowItem.load();
     if ((mapRequested && !frame.mapMotion.reliable) || (minimapRequested && !frame.minimapMotion.reliable)) {
@@ -1915,6 +1990,21 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
         }
     }
     frame.mapMarkers = DrawItemOnGameMap::Snapshot(); frame.minimapMarkers = DrawItemOnMinMap::Snapshot();
+    const auto gamepadProfile = DrawItemBase::MarkerProfile();
+    if (frame.minimapVisible && frame.minimapMotion.reliable && frame.focused && frame.Fresh() &&
+        overlayVisibility.Read()->AllowsMinimap(frame.frameId) && playerLocationLock.valid &&
+        playerLocationLock.sceneId == frame.playerScene) {
+        auto gamepadMarkers = frame.minimapMarkers;
+        for (auto& item : gamepadMarkers.markers)
+            item.isSaved = DrawItemBase::IsPointCompleted(gamepadMarkers.sceneName, item);
+        GamepadContextSnapshot::Shared().ObserveMinimap(coordinateSessionId, gamepadProfile, gamepadMarkers,
+            RelativeCoordinates::ImgMapCoordToROC(frame.playerCoordinate, frame.playerScene),
+            std::min(frame.capturedAt, playerLocationLock.confirmedAt), frame.capturedAt + frame.maximumAge,
+            GamepadContextSnapshot::Clock::now(), frame.minimapMotion.pixelsPerUnit);
+    }
+    if (frame.mapVisible && frame.mapMotion.reliable && frame.Fresh())
+        GamepadContextSnapshot::Shared().ObserveMapScene(coordinateSessionId, gamepadProfile,
+            Scene::SceneIdToName(frame.viewportScene), frame.capturedAt);
     frame.mapRoutes = DrawRouteOnMap::Snapshot(); frame.minimapRoutes = DrawRouteOnMinMap::Snapshot();
     RoutePlanningService::SetPlayerAvailable(frame.minimapVisible && frame.minimapMotion.reliable && frame.focused);
     const auto routeView = RoutePlanningService::View();
@@ -1938,11 +2028,27 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
             segment.automatic = true; segment.preview = preview; segment.emphasized = !preview && first;
             segment.profileId = plan.profileId;
             segment.routePlanId = plan.id;
+            segment.orderRevision=routeView.orderRevision;
             (onMap ? frame.mapRoutes : frame.minimapRoutes).push_back(std::move(segment));
             previous = stop.itemMapROC; first = false;
         }
     };
     if (routeView.active) appendRoute(*routeView.active, false);
+    if(routeView.active&&routeView.previousTarget&&routeView.autoReplanEnabled&&
+        (routeView.navigationStatus=="navigating"||routeView.navigationStatus=="waitingForLocation")){
+        const auto& plan=*routeView.active;const auto& target=*routeView.previousTarget;
+        const bool onMap=frame.mapVisible&&plan.sceneId==frame.viewportScene&&routeView.mapStart.valid&&routeView.mapStart.sceneId==plan.sceneId;
+        const bool onMini=frame.minimapVisible&&plan.sceneId==frame.playerScene&&frame.routePlayer.Fresh(std::chrono::steady_clock::now());
+        if(onMap||onMini){
+            const auto start=onMap?routeView.mapStart.roc:frame.routePlayer.roc;
+            const auto center=onMap?RelativeCoordinates::ImgMapCoordToROC(viewport.centerMapCoordinate,viewport.sceneId):start;
+            const auto project=[&](Coordinate roc){return onMap?ScreenCoordinate::ItemScreenCoordinateOnMap(center,roc,viewport.captureCorners,captured.clientRect):
+                ScreenCoordinate::ItemScreenCoordinateOnMinMap(captured.clientRect,roc,start,minimapTerrainScale);};
+            RouteDatas hint(plan.name,plan.sceneId,{start,target.itemMapROC},{project(start),project(target.itemMapROC)});
+            hint.automatic=true;hint.previousTarget=true;hint.profileId=plan.profileId;hint.routePlanId=plan.id;hint.orderRevision=routeView.orderRevision;
+            (onMap?frame.mapRoutes:frame.minimapRoutes).push_back(std::move(hint));
+        }
+    }
     if (routeView.enabled && routeView.preview) appendRoute(*routeView.preview, true);
     overlayFrames.Publish(std::move(frame));
 }

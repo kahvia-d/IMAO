@@ -12,7 +12,7 @@ using Windows.System;
 
 namespace IMao_WinUI.Views;
 
-// A separate input-owning window keeps guide scrolling and image zoom out of the game's input stream.
+// Keyboard ownership is window-scoped. Controller isolation is validated separately by the input service.
 public sealed class MarkerGuideWindow : Window
 {
     private readonly MarkerDetailService details;
@@ -47,12 +47,29 @@ public sealed class MarkerGuideWindow : Window
     private ContentDialog? imageDialog;
     private Image? enlargedPicture;
     private TextBlock? enlargedStatus;
+    private ScrollViewer? enlargedScroll;
+    private TextBlock? enlargedGamepadHint;
+    private readonly TextBlock gamepadHint = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
+    private readonly ProgressBar gamepadHold = new() { Minimum = 0, Maximum = 1, Height = 5, Visibility = Visibility.Collapsed };
+    private bool gamepadMode;
+    private int imageCommand;
     private readonly SubclassProcedure nonClientProcedure;
     private long generation;
 
     public bool IsClosed { get; private set; }
     internal bool IsGuideVisible { get; private set; }
     internal MarkerSelection? Selection => selected;
+    internal bool IsGamepadImageOpen => imageDialog is not null;
+    internal bool CanCompleteGamepad => gamepadMode && IsGuideVisible && imageDialog is null && selected?.Completed == false && !completing;
+    internal string GamepadViewToken => $"{generation}:{pictureIndex}:{(imageDialog is null ? "detail" : "image")}";
+    internal Func<long, Task>? ContentDismiss { get; set; }
+
+    internal void SetReturnState(string message)
+    {
+        CancelLoads();
+        contentScroll.IsEnabled = false; completion.IsEnabled = refresh.IsEnabled = sourceLink.IsEnabled = false;
+        status.Text = message;
+    }
 
     public MarkerGuideWindow(MarkerDetailService details, Func<MarkerSelection, bool, long, Task<bool>> setCompletion,
         Action<long> dismiss)
@@ -62,7 +79,9 @@ public sealed class MarkerGuideWindow : Window
         this.dismiss = dismiss;
         nonClientProcedure = HandleNonClientMessage;
         Title = "收集物攻略 · IMao";
-        root.Background = (Brush)Application.Current.Resources["ApplicationPageBackgroundThemeBrush"];
+        GamepadWindowChrome.ApplyTheme(root);
+        name.Foreground = description.Foreground = GamepadWindowChrome.Brush("IMaoTextBrush", 0xE7F0F7);
+        metadata.Foreground = status.Foreground = GamepadWindowChrome.Brush("IMaoSecondaryTextBrush", 0x9DACBD);
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -86,7 +105,11 @@ public sealed class MarkerGuideWindow : Window
             VerticalAlignment = VerticalAlignment.Top, Padding = new Thickness(8) };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(close, "关闭攻略");
         ToolTipService.SetToolTip(close, "关闭攻略");
-        close.Click += (_, _) => dismiss(generation);
+        close.Click += async (_, _) =>
+        {
+            if (ContentDismiss is { } action) await action(generation);
+            else dismiss(generation);
+        };
         Grid.SetColumn(close, 1);
         header.Children.Add(close);
         root.Children.Add(header);
@@ -112,6 +135,8 @@ public sealed class MarkerGuideWindow : Window
         root.Children.Add(contentScroll);
 
         var footer = new StackPanel { Spacing = 8 };
+        footer.Children.Add(gamepadHint);
+        footer.Children.Add(gamepadHold);
         footer.Children.Add(completion);
         var links = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         links.Children.Add(sourceLink);
@@ -121,6 +146,7 @@ public sealed class MarkerGuideWindow : Window
         Grid.SetRow(footer, 2);
         root.Children.Add(footer);
         Content = root;
+        root.PreviewKeyDown += (_, e) => { if (gamepadMode && (int)e.Key is >= 195 and <= 218) e.Handled = true; };
         AppWindow.Resize(new SizeInt32(440, 660));
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
@@ -139,7 +165,7 @@ public sealed class MarkerGuideWindow : Window
         previous.Click += async (_, _) => await ChangePictureAsync(-1);
         next.Click += async (_, _) => await ChangePictureAsync(1);
         enlarge.Click += async (_, _) => await ShowEnlargedAsync();
-        completion.Click += async (_, _) => await SaveCompletionAsync(selected?.Completed != true);
+        completion.Click += async (_, _) => await SaveCompletionAsync(gamepadMode || selected?.Completed != true);
         refresh.Click += async (_, _) => { if (selected is { } selection) await LoadOnlineAsync(selection, true); };
         sourceLink.Click += async (_, _) => await OpenLinkAsync(currentDetail?.SourceUrl);
         guideLink.Click += async (_, _) => await OpenLinkAsync(currentDetail?.GuideUrl);
@@ -150,13 +176,15 @@ public sealed class MarkerGuideWindow : Window
         };
     }
 
-    public async Task ShowMarkerAsync(MarkerSelection selection, long selectionGeneration, RectInt32? gameBounds = null)
+    public async Task ShowMarkerAsync(MarkerSelection selection, long selectionGeneration, RectInt32? gameBounds = null, bool activate = true)
     {
         if (IsClosed) return;
+        contentScroll.IsEnabled = true; refresh.IsEnabled = sourceLink.IsEnabled = true;
         CancelLoads();
         HideImageDialog();
         generation = selectionGeneration;
         completing = false;
+        SetGamepadHoldProgress(0);
         selectionCancellation = new CancellationTokenSource();
         var token = selectionCancellation.Token;
         selected = selection;
@@ -174,7 +202,7 @@ public sealed class MarkerGuideWindow : Window
         contentScroll.ChangeView(null, 0, null, true);
         PlaceAtGameLeft(selection, gameBounds);
         IsGuideVisible = true;
-        Activate();
+        if (activate) Activate();
         try
         {
             var local = await details.GetLocalAsync(selection, token);
@@ -213,6 +241,8 @@ public sealed class MarkerGuideWindow : Window
         imageDialog = null;
         enlargedPicture = null;
         enlargedStatus = null;
+        enlargedScroll = null;
+        enlargedGamepadHint = null;
         dialog?.Hide();
     }
 
@@ -226,7 +256,7 @@ public sealed class MarkerGuideWindow : Window
     {
         string previousLabel = RuntimeConfiguration.HotkeyName(previousKey);
         string nextLabel = RuntimeConfiguration.HotkeyName(nextKey);
-        pagingHint.Text = $"上一张：{previousLabel} · 下一张：{nextLabel}";
+        pagingHint.Text = gamepadMode ? "LB 上一张 · RB 下一张" : $"上一张：{previousLabel} · 下一张：{nextLabel}";
         ToolTipService.SetToolTip(previous, $"上一张（{previousLabel}）");
         ToolTipService.SetToolTip(next, $"下一张（{nextLabel}）");
     }
@@ -344,15 +374,76 @@ public sealed class MarkerGuideWindow : Window
         var content = new StackPanel { Spacing = 10 };
         var imageNotice = new TextBlock { Text = pictureStatus.Text, TextWrapping = TextWrapping.Wrap };
         content.Children.Add(imageNotice);
+        var controllerHint = new TextBlock { TextWrapping = TextWrapping.Wrap, Visibility = gamepadMode ? Visibility.Visible : Visibility.Collapsed };
+        content.Children.Add(controllerHint);
         content.Children.Add(zoomButtons);
         content.Children.Add(scroll);
         var dialog = new ContentDialog { XamlRoot = root.XamlRoot, Title = $"攻略图片 · {pictureIndex + 1}/{currentDetail!.PictureUrls.Length}", Content = content, CloseButtonText = "关闭" };
         enlargedPicture = large;
         enlargedStatus = imageNotice;
+        enlargedScroll = scroll;
+        enlargedGamepadHint = controllerHint;
+        imageCommand = 1;
+        UpdateImageGamepadHint();
         imageDialog = dialog;
         try { await dialog.ShowAsync(); }
         catch (Exception) { if (ReferenceEquals(imageDialog, dialog)) status.Text = "暂时无法打开图片"; }
-        finally { if (ReferenceEquals(imageDialog, dialog)) { imageDialog = null; enlargedPicture = null; enlargedStatus = null; } }
+        finally { if (ReferenceEquals(imageDialog, dialog)) { imageDialog = null; enlargedPicture = null; enlargedStatus = null;
+            enlargedScroll = null; enlargedGamepadHint = null; } }
+    }
+
+    internal void SetGamepadMode(bool enabled)
+    {
+        gamepadMode = enabled;
+        gamepadHint.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        gamepadHint.Text = "A 放大图片 · B 返回列表 · LB/RB 翻图 · 右摇杆滚动 · 按住 X 完成";
+        SetGamepadHoldProgress(0);
+        UpdateCompletionButton();
+    }
+
+    internal void SetGamepadHoldProgress(double value)
+    {
+        gamepadHold.Value = double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 0;
+        gamepadHold.Visibility = CanCompleteGamepad && gamepadHold.Value > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    internal void SetGamepadStatus(string value) { if (gamepadMode && IsGuideVisible) status.Text = value; }
+
+    internal void CloseGamepadImage() => HideImageDialog();
+
+    internal void HandleGamepadViewAction(GamepadAction action)
+    {
+        if (!gamepadMode || !IsGuideVisible) return;
+        if (action == GamepadAction.Accept)
+        {
+            if (imageDialog is null)
+            {
+                // ShowAsync completes only when the dialog closes; do not block controller dispatch.
+                if (enlarge.IsEnabled) _ = ShowEnlargedAsync();
+            }
+            else if (imageCommand == 2) HideImageDialog();
+            else if (enlargedScroll is { } imageScroll)
+                imageScroll.ChangeView(null, null, Math.Clamp(imageScroll.ZoomFactor * (imageCommand == 0 ? 1 / 1.4f : 1.4f), 1, 5));
+            return;
+        }
+        if (imageDialog is not null && action is GamepadAction.Up or GamepadAction.Down or GamepadAction.Left or GamepadAction.Right)
+        {
+            imageCommand = Math.Clamp(imageCommand + (action is GamepadAction.Up or GamepadAction.Left ? -1 : 1), 0, 2);
+            UpdateImageGamepadHint();
+            return;
+        }
+        var target = enlargedScroll ?? contentScroll;
+        double dx = action == GamepadAction.ScrollLeft ? -80 : action == GamepadAction.ScrollRight ? 80 : 0;
+        double dy = action is GamepadAction.ScrollUp or GamepadAction.Up ? -90 : action is GamepadAction.ScrollDown or GamepadAction.Down ? 90 : 0;
+        if (dx != 0 || dy != 0) target.ChangeView(Math.Clamp(target.HorizontalOffset + dx, 0, target.ScrollableWidth),
+            Math.Clamp(target.VerticalOffset + dy, 0, target.ScrollableHeight), null, true);
+    }
+
+    private void UpdateImageGamepadHint()
+    {
+        if (enlargedGamepadHint is null) return;
+        var labels = new[] { "缩小", "放大", "关闭大图" };
+        enlargedGamepadHint.Text = $"方向键选择：{labels[imageCommand]} · A 确认 · B 返回 · 右摇杆平移 · LB/RB 翻图";
     }
 
     internal Task CompleteCurrentAsync() => SaveCompletionAsync(true);
@@ -387,8 +478,8 @@ public sealed class MarkerGuideWindow : Window
 
     private void UpdateCompletionButton()
     {
-        completion.Content = completing ? "正在保存…" : selected?.Completed == true ? "已完成 · 撤销标记" : "标记完成";
-        completion.IsEnabled = selected is not null && !completing;
+        completion.Content = completing ? "正在保存…" : selected?.Completed == true ? gamepadMode ? "已完成" : "已完成 · 撤销标记" : "标记完成";
+        completion.IsEnabled = selected is not null && !completing && (!gamepadMode || !selected.Completed);
     }
 
     private static string LayerText(MarkerDetail detail)

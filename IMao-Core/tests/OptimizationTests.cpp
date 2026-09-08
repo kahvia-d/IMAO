@@ -1,5 +1,12 @@
 #include "CoarseSearchCoverageTests.h"
 #include "OverlayVisibilityTests.h"
+#include "GamepadContextTests.h"
+#include "GamepadCursorTargetsTests.h"
+#include "GamepadWorldActionsTests.h"
+#include "RouteGamepadTests.h"
+#include "MapToolsTests.h"
+#include "OverlayPanelLayoutTests.h"
+#include "MapControllerUiTests.h"
 #include "OverlayMotionTests.h"
 #include "ScreenMotionTrackerTests.h"
 #include "MinimapTrackingGeometryTests.h"
@@ -834,6 +841,13 @@ int main() {
     TestMinimapResumePolicy();
     TestCoarseSearchCoverage(Expect);
     TestOverlayVisibility(Expect);
+    TestGamepadContext(Expect);
+    TestGamepadCursorTargets(Expect);
+    TestGamepadWorldActions(Expect);
+    TestRouteGamepad(Expect);
+    TestMapTools(Expect);
+    TestOverlayPanelLayout(Expect);
+    TestControllerMapUi(Expect);
     TestScreenMotionTracker(Expect);
     TestMinimapTrackingGeometry(Expect);
     TestImageAnchoredOverlay(Expect);

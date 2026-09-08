@@ -1,130 +1,37 @@
-<Page
-    x:Class="IMao_WinUI.Views.StartPage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
-    mc:Ignorable="d"
-    xmlns:ui="using:CommunityToolkit.WinUI"
-    NavigationCacheMode="Enabled" >
-
-    <StackPanel>
-        <InfoBar x:Name="Start_InfoBar_CoreStatus" CornerRadius="8" IsOpen="True" Severity="Informational" IsClosable="False" Margin="0,0,0,12">
-            <InfoBar.ActionButton>
-                <Button Content="重启核心" Click="RestartCore_Click" />
-            </InfoBar.ActionButton>
-            <StackPanel Spacing="2">
-                <TextBlock x:Name="Start_TextBlock_CoreState" Text="正在连接核心" FontWeight="SemiBold" />
-                <TextBlock x:Name="Start_TextBlock_CoreDetail" Text="正在准备诊断与状态服务" Opacity="0.78" TextWrapping="Wrap" />
+<Page x:Class="IMao_WinUI.Views.StartPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="using:CommunityToolkit.WinUI.Controls">
+    <StackPanel Spacing="22">
+        <StackPanel Spacing="5"><TextBlock Text="EXPLORATION COMPANION" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="让每次探索，都有方向。" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="在游戏地图上看见目标，沿自己的路线继续前进。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
+        <Border Style="{StaticResource IMaoCardStyle}" Padding="24">
+            <StackPanel Spacing="18">
+                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="8"><FontIcon Glyph="&#xE774;" Foreground="{StaticResource IMaoAccentBrush}" /><TextBlock x:Name="Start_TextBlock_CoreState" Text="正在连接核心" Style="{StaticResource IMaoSectionTitleStyle}" /></controls:WrapPanel>
+                <TextBlock x:Name="Start_TextBlock_CoreDetail" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock x:Name="OverviewLocationSummary" Style="{StaticResource IMaoBodyTextStyle}" />
+                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                    <Button x:Name="Start_Button" Click="Start_Button_Click" Style="{StaticResource IMaoPrimaryButtonStyle}"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon x:Name="Start_Button_Icon" Glyph="&#xE768;" FontSize="16" /><TextBlock x:Name="Start_Button_Text" Text="开始探索" /></StackPanel></Button>
+                    <Button Content="重新连接核心" Click="RestartCore_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <Button Content="连接与显示设置" Tag="settings" Click="Navigate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                </controls:WrapPanel>
+                <InfoBar x:Name="Start_InfoBar_FindNotTargetProcess" IsOpen="False" Visibility="Collapsed" Title="正在等待游戏" Message="请先打开鸣潮，并回到可见的游戏画面。" Severity="Warning" CloseButtonClick="Start_InfoBar_FindNotTargetProcess_CloseButtonClick" />
+                <InfoBar x:Name="Start_InfoBar_IncorrectGameWindowSize" IsOpen="False" Visibility="Collapsed" Title="检查游戏窗口" Message="当前窗口比例可能影响地图识别；建议使用 16:9 游戏画面。" Severity="Warning" CloseButtonClick="Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick" />
             </StackPanel>
-        </InfoBar>
-        <InfoBar x:Name="Start_InfoBar_IncorrectGameWindowSize" x:Uid="Start_InfoBar_IncorrectGameWindowSize" CornerRadius="8" IsOpen="False" Severity="Warning"  
-                 IsClosable="True" CloseButtonClick="Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick"/>
-        
-        <InfoBar x:Name="Start_InfoBar_FindNotTargetProcess" x:Uid="Start_InfoBar_FindNotTargetProcess" CornerRadius="8" IsOpen="False" Severity="Error"  
-                 IsClosable="True" CloseButtonClick="Start_InfoBar_FindNotTargetProcess_CloseButtonClick"/>
-
-        <Border Height="150" CornerRadius="8" Margin="{StaticResource StartPage_Border_Margin}">
-            <Border.Background>
-                <ImageBrush ImageSource="ms-appx:///Assets/th.jpg" Stretch="UniformToFill" />
-            </Border.Background>
-            <Border.Child>
-                <Grid>
-                    <Rectangle Fill="Transparent" />
-                    <Rectangle>
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#90000000" Offset="0.2" />
-                                <GradientStop Color="Transparent" Offset="1.0" />
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
-                    <!-- <TextBlock 
-                Grid.Row="1" 
-                Grid.Column="0" 
-                TextWrapping="Wrap" 
-                Text="Text Text Text Text Text Text Text Text Text Text Text Text Text Text"
-                Margin="8" 
-                Foreground="White" 
-                FontSize="16" />-->
-                </Grid>
-            </Border.Child>
         </Border>
-
-        <toolkit:SettingsExpander CornerRadius="8"  Margin="{StaticResource ExpanderMargin}" x:Uid="Start_Expander_Start">
-            <toolkit:SettingsExpander.HeaderIcon>
-                <FontIcon Glyph="&#xE7E8;" />
-            </toolkit:SettingsExpander.HeaderIcon>
-
-            <toolkit:SettingsExpander.Description>
-                <TextBlock x:Uid="Start_Expander_Start_Description"/>
-            </toolkit:SettingsExpander.Description>
-
-            <Button x:Name="Start_Button" Click="Start_Button_Click" >
-                <Button.Content>
-                    <StackPanel Orientation="Horizontal"
-                            Spacing="8">
-                        <FontIcon x:Name="Start_Button_Icon" FontSize="16"
-                              Glyph="&#xE768;" />
-                        <TextBlock x:Name="Start_Button_Text" Text="Start" />
-                    </StackPanel>
-                </Button.Content>
-            </Button>
-
-
-            <toolkit:SettingsExpander.Items>
-                <toolkit:SettingsCard
-                                x:Name="Start_Card_CaptureMethod"
-                                x:Uid="Start_Card_CaptureMethod">
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Uid="Start_Card_CaptureMethod_Description" />
-                    </toolkit:SettingsCard.Description>
-
-                    <ComboBox x:Name="ComboBox_CaptureMethod" SelectionChanged="CaptureMethod_SelectionChanged"  Loaded="ComboBox_CaptureMethod_Loaded">
-                        <x:String>BitBlt</x:String>
-                        <x:String>WindowsGraphicsCapture</x:String>
-                    </ComboBox>
-
-                </toolkit:SettingsCard>
-
-                <toolkit:SettingsCard
-                                x:Name="Start_Card_SwitchAccount"
-                                x:Uid="Start_Card_SwitchAccount">
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Uid="Start_Card_SwitchAccount_Description" />
-                    </toolkit:SettingsCard.Description>
-                    <Button x:Uid="Button_OpenPointsFolder" Click="Button_OpenPointsFolder_Click" />
-                </toolkit:SettingsCard>
-
-                <toolkit:SettingsCard
-                  x:Name="Start_Card_GameServer"
-                  x:Uid="Start_Card_GameServer">
-                    <ComboBox x:Name="ComboBox_GameServer"  Loaded="ComboBox_GameServer_Loaded">
-                        <x:String>Client-Win64-Shipping.exe</x:String>
-                    </ComboBox>
-                </toolkit:SettingsCard>
-
-                <toolkit:SettingsCard
-                  x:Name="Start_Card_WindowOptimization"
-                  x:Uid="Start_Card_WindowOptimization">
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Uid="Start_Card_WindowOptimization_Description"/>
-                    </toolkit:SettingsCard.Description>
-
-                    <ToggleSwitch x:Name="Start_ToggleSwitch_WindowOptimization" IsOn="False"/>
-                </toolkit:SettingsCard>
-            </toolkit:SettingsExpander.Items>
-        </toolkit:SettingsExpander>
-
-        <InfoBar x:Name="Start_InfoBar_NotLatestVersion" x:Uid="Start_InfoBar_NotLatestVersion" CornerRadius="8" IsClosable="False" IsOpen="False" Severity="Informational">
-            <InfoBar.ActionButton>
-                <HyperlinkButton Content="Update" HorizontalAlignment="Right"
-            NavigateUri="https://github.com/Yepin2022/IMao-Wuthering-Waves/releases"/>
-            </InfoBar.ActionButton>
-        </InfoBar>
+        <Border Style="{StaticResource IMaoCardStyle}">
+            <StackPanel Spacing="14">
+                <TextBlock Text="本次路线" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <TextBlock x:Name="OverviewRouteTitle" Text="还没有活动路线" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock x:Name="OverviewRouteDetail" Text="先筛选感兴趣的点位，再到路线页选择本次目标。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock x:Name="OverviewRouteTarget" Style="{StaticResource IMaoBodyTextStyle}" />
+                <TextBlock x:Name="OverviewReplanStatus" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <Button Content="前往路线" Tag="routes" Click="Navigate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource IMaoCardStyle}">
+            <StackPanel Spacing="14">
+                <TextBlock Text="地图与点位" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <TextBlock x:Name="OverviewMarkerSummary" Text="启动后显示当前地图点位数量。" Style="{StaticResource IMaoBodyTextStyle}" />
+                <TextBlock Text="只显示你关心的收集物、宝箱和探索目标。筛选修改会保存到本地。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="筛选点位" Tag="filter" Click="Navigate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" /><Button Content="查看使用帮助" Tag="help" Click="Navigate_Click" /><Button Content="诊断与日志" Tag="diagnostics" Click="Navigate_Click" /></controls:WrapPanel>
+            </StackPanel>
+        </Border>
     </StackPanel>
 </Page>
-
-    
-

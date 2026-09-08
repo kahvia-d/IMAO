@@ -9,12 +9,22 @@
 #include "../Runtime/RoutePlanningService.h"
 #include "../Runtime/RuntimeHotkeys.h"
 #include "../Runtime/MarkerGuideProtocol.h"
+#include "../Runtime/GamepadContext.h"
+#include "../Runtime/GamepadCursorTargets.h"
+#include "../Runtime/GamepadCursorGeometry.h"
+#include "../Runtime/FrameState.h"
+#include "../App/GamepadMapCursorDetector.h"
+#include "../Runtime/RouteGamepadBridge.h"
+#include "../Runtime/MapToolsBridge.h"
+#include "../Runtime/GamepadWorldActions.h"
 
 #include <Windows.h>
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <climits>
+#include <cmath>
 #include <condition_variable>
 #include <deque>
 #include <exception>
@@ -265,6 +275,162 @@ void SendAck(PipeEventDispatcher& events, const json& command, bool accepted, st
     });
 }
 
+struct GamepadContextRead {
+    GamepadContextSnapshot::View view;
+    json data;
+};
+
+GamepadContextRead ReadGamepadContext() {
+    auto& snapshots = GamepadContextSnapshot::Shared();
+    const auto profile = DrawItemBase::MarkerProfile();
+    auto view = snapshots.Read(profile);
+    const auto window = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(view.gameHwnd));
+    DWORD processId = 0;
+    const bool live = view.running && RuntimeStatus::Snapshot().coreState == "running" && window &&
+        IsWindow(window) && IsWindowVisible(window) && !IsIconic(window) &&
+        GetWindowThreadProcessId(window, &processId) && view.gameProcessId != 0 && processId == view.gameProcessId;
+    if (!live) { snapshots.Invalidate(view.session); view = snapshots.Read(profile); }
+    const bool available = live && view.observable;
+    const bool bigMap = available && view.bigMap;
+    const bool nearby = bigMap && view.nearbyAvailable;
+    const std::string message = !live ? "核心或游戏窗口尚未就绪" : !available ? "当前游戏画面不可确认，请返回游戏大地图" :
+        !bigMap ? "请先打开游戏大地图" : !nearby ? "缺少开图前的新鲜玩家定位，可使用当前路线目标" :
+        view.candidates.empty() ? "当前筛选范围内没有附近未完成点位" : "已保留开图前的附近点位";
+    json data = {{"available", available}, {"gameHwnd", static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window))},
+        {"gameFocused", live && GetForegroundWindow() == window}, {"bigMap", bigMap},
+        {"gameplay", available && view.gameplay},
+        {"contextGeneration", view.generation}, {"profileId", view.profileId}, {"sceneName", view.sceneName},
+        {"nearbyAvailable", nearby}, {"message", message}};
+    return {std::move(view), std::move(data)};
+}
+
+GamepadCursorTargets::View ReadCursorTargets(const GamepadContextRead& current) {
+    static std::mutex detectorMutex;
+    static std::shared_ptr<const CapturedFrame> detectedCapture;
+    static GamepadMapCursorDetection detection;
+    std::scoped_lock detectorLock(detectorMutex);
+    auto& targets = GamepadCursorTargets::Shared();
+    auto& geometry = GamepadCursorGeometry::Shared();
+    auto read = [&](const GamepadContextRead& state) {
+        const auto window = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(state.view.gameHwnd));
+        RECT client{}; POINT origin{};
+        const bool live = state.data.at("available").get<bool>() && window && GetClientRect(window, &client) &&
+            ClientToScreen(window, &origin) && DrawItemBase::IsMarkerDisplayContext(window);
+        return targets.Read(state.view, DrawItemBase::MarkerFilterRevision(), client, origin, live);
+    };
+    if (!current.data.at("bigMap").get<bool>()) { targets.Clear("请返回游戏大地图读取圆环点位"); return read(current); }
+    for (int attempt=0;attempt<2;++attempt) {
+        const auto frame = geometry.Read();
+        if (!frame || !frame->capture || !frame->evidence.frameValid || !GamepadCursorTargets::FreshFrame(frame->evidence)) {
+            targets.Clear("地图显示帧已过期或定位尚未确认"); return read(ReadGamepadContext());
+        }
+        if (detectedCapture != frame->capture) {
+            const auto decoded = GamepadMapCursorDetector::Detect(frame->capture->image,frame->capture->clientRect);
+            detection = decoded;
+            detectedCapture = frame->capture;
+        }
+        const auto latest = geometry.Read();
+        if (!latest || !GamepadCursorGeometry::SamePaint(*frame,*latest) ||
+            !GamepadCursorTargets::FreshFrame(frame->evidence) || !GamepadCursorTargets::FreshFrame(latest->evidence)) continue;
+        auto publication = frame->evidence;
+        publication.cursorVisible = detection.visible;
+        publication.candidates = GamepadCursorGeometry::Collect(*frame,
+            {detection.visible,{detection.center.x,detection.center.y},detection.radius});
+        // Do not bind old circle pixels to the latest frame or renew their age.
+        targets.Publish(std::move(publication));
+        const auto after = geometry.Read();
+        if (!after || !GamepadCursorGeometry::SamePaint(*frame,*after)) continue;
+        return read(ReadGamepadContext());
+    }
+    targets.Clear("地图视图正在变化，请停稳后重新读取圆环点位");
+    return read(ReadGamepadContext());
+}
+
+json CursorSelection(const GamepadCursorTargets::View& view, const GamepadCursorTargets::Candidate& candidate) {
+    const auto& item = candidate.item;
+    return {{"type", "markerSelected"}, {"profileId", view.binding.context.profileId},
+        {"sceneName", view.binding.context.sceneName}, {"nameId", item.nameId}, {"pointId", item.itemId},
+        {"stateId", item.layer.stateId}, {"countryId", item.layer.countryId}, {"floorId", item.layer.floorId},
+        {"level", item.layer.level}, {"completed", false},
+        {"screenX", static_cast<int>(std::lround(view.binding.origin.x + candidate.position.x))},
+        {"screenY", static_cast<int>(std::lround(view.binding.origin.y + candidate.position.y))}};
+}
+
+json ResolveGamepadCursorCandidate(const json& command) {
+    const auto profile = command.at("profileId").get<std::string>();
+    const auto scene = command.at("sceneName").get<std::string>();
+    const auto point = command.at("pointId").get<std::string>();
+    const auto generation = MarkerGuideProtocol::Integer(command.at("contextGeneration"), false);
+    const auto revision = MarkerGuideProtocol::Integer(command.at("cursorRevision"), false);
+    const auto state = MarkerGuideProtocol::Integer(command.at("stateId"), false);
+    const auto assistant = MarkerGuideProtocol::Integer(command.at("assistantHwnd"), false);
+    const auto assistantGeneration = MarkerGuideProtocol::Integer(command.at("assistantGeneration"), false);
+    if (state > INT_MAX) throw std::invalid_argument("圆环点位 stateId 超出范围");
+    auto validAssistant = [&] {
+        const auto registered = DrawItemBase::FocusedGuideWindow();
+        const auto window = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(assistant));
+        DWORD owner = 0;
+        return static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(window)) == assistant &&
+            registered.value("hwnd", std::uint64_t{}) == assistant &&
+            registered.value("assistantGeneration", std::uint64_t{}) == assistantGeneration &&
+            controllerProcessId != 0 && GetWindowThreadProcessId(window, &owner) && owner == controllerProcessId;
+    };
+    if (!validAssistant()) throw std::invalid_argument("手柄助手窗口或焦点已变化，请重新选择点位");
+    const auto current = ReadGamepadContext();
+    auto snapshot = ReadCursorTargets(current);
+    auto candidate = GamepadCursorTargets::Resolve(snapshot, revision, profile, generation, scene, static_cast<int>(state), point);
+    if (!candidate) throw std::invalid_argument("圆环下点位或地图视图已变化，请返回大地图重新读取");
+    if (DrawItemBase::IsPointCompleted(scene, candidate->item))
+        throw std::invalid_argument("该点位已经完成，请重新读取圆环候选");
+    // A late response cannot switch to another item or another assistant window.
+    snapshot = ReadCursorTargets(ReadGamepadContext());
+    candidate = GamepadCursorTargets::Resolve(snapshot, revision, profile, generation, scene, static_cast<int>(state), point);
+    if (!candidate || !validAssistant() || DrawItemBase::IsPointCompleted(scene, candidate->item))
+        throw std::invalid_argument("读取点位期间画面或助手窗口已变化，操作已取消");
+    return {{"accepted", true}, {"data", {{"selection", CursorSelection(snapshot, *candidate)},
+        {"cursorRevision", revision}, {"assistantHwnd", assistant}, {"assistantGeneration", assistantGeneration}}}};
+}
+
+json GamepadTargets(const json& command) {
+    const auto generation = MarkerGuideProtocol::Integer(command.at("contextGeneration"), false);
+    const auto profile = command.at("profileId").get<std::string>();
+    const auto current = ReadGamepadContext();
+    if (!current.data.at("bigMap").get<bool>() || generation != current.view.generation || profile != current.view.profileId)
+        throw std::invalid_argument("大地图上下文已变化，请返回游戏大地图后重新打开手柄助手");
+    json data = {{"contextGeneration", generation}, {"profileId", profile}, {"sceneName", current.view.sceneName},
+        {"nearbyAvailable", current.view.nearbyAvailable}, {"message", current.data.at("message")},
+        {"candidates", json::array()}, {"routeTarget", nullptr}, {"routeId", ""}};
+    POINT cursor{}; GetCursorPos(&cursor);
+    if (current.view.nearbyAvailable) {
+        for (const auto& candidate : current.view.candidates) {
+            const auto& item = candidate.item;
+            if (DrawItemBase::IsPointCompleted(current.view.sceneName, item)) continue;
+            data["candidates"].push_back({{"type", "markerSelected"}, {"profileId", profile},
+                {"sceneName", current.view.sceneName}, {"nameId", item.nameId}, {"pointId", item.itemId},
+                {"stateId", item.layer.stateId}, {"countryId", item.layer.countryId},
+                {"floorId", item.layer.floorId}, {"level", item.layer.level}, {"completed", false},
+                {"screenX", cursor.x}, {"screenY", cursor.y}, {"distance", candidate.distance}});
+        }
+    }
+    const auto route = RoutePlanningService::GuideTarget({{"profileId", profile}, {"screenX", cursor.x}, {"screenY", cursor.y}});
+    if (route.value("accepted", false)) {
+        data["routeTarget"] = route.at("data").value("selection", json(nullptr));
+        data["routeId"] = route.at("data").value("routeId", std::string{});
+    }
+    const auto after = ReadGamepadContext();
+    if (!after.data.at("bigMap").get<bool>() || after.view.generation != generation || after.view.profileId != profile)
+        throw std::invalid_argument("读取点位期间大地图上下文已变化，请重新打开手柄助手");
+    const auto cursorTargets = ReadCursorTargets(after);
+    data["cursorAvailable"] = cursorTargets.available;
+    data["cursorMessage"] = cursorTargets.message;
+    data["cursorRevision"] = cursorTargets.revision;
+    data["cursorCandidates"] = json::array();
+    if (cursorTargets.available) for (const auto& candidate : cursorTargets.candidates)
+        if (!DrawItemBase::IsPointCompleted(cursorTargets.binding.context.sceneName, candidate.item))
+            data["cursorCandidates"].push_back(CursorSelection(cursorTargets, candidate));
+    return {{"accepted", true}, {"data", std::move(data)}};
+}
+
 bool ApplyConfigure(const json& command) {
     // Validate the complete command before applying any field.
     auto integer = [&](const char* key, int minimum, int maximum) -> std::optional<int> {
@@ -284,6 +450,7 @@ bool ApplyConfigure(const json& command) {
     const auto mini = boolean("minMapEnabled");
     const auto saved = boolean("savedPointsEnabled");
     const auto bar = boolean("statusBarEnabled");
+    const auto autoReplan = boolean("autoReplanEnabled");
     const auto hotkeys = RuntimeHotkeys::ValidateConfiguration(command);
     if (capture) SetCaptureWay(*capture);
     if (mapCycle) SetMapDataUpdateCycle(*mapCycle);
@@ -292,6 +459,7 @@ bool ApplyConfigure(const json& command) {
     if (mini) EnabledMinMapShowItem(*mini);
     if (saved) SetVisibleSavedPoints(*saved);
     if (bar) RuntimeStatus::SetStatusBarEnabled(*bar);
+    if (autoReplan) RoutePlanningService::SetAutoReplanEnabled(*autoReplan);
     RuntimeHotkeys::Apply(hotkeys);
     return true;
 }
@@ -318,7 +486,9 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
             try {
                 json result;
                 if (type == "markerSetGuideWindow") {
-                    const auto registration = MarkerGuideProtocol::Registration(command, DrawItemBase::MarkerProfile());
+                    auto registration = MarkerGuideProtocol::Registration(command, DrawItemBase::MarkerProfile());
+                    if (command.contains("assistantGeneration"))
+                        registration["assistantGeneration"] = MarkerGuideProtocol::Integer(command.at("assistantGeneration"), false);
                     const auto value = registration.at("hwnd").get<uint64_t>();
                     const auto window = reinterpret_cast<HWND>(static_cast<uintptr_t>(value));
                     if (static_cast<uint64_t>(reinterpret_cast<uintptr_t>(window)) != value)
@@ -329,6 +499,120 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
                         throw std::invalid_argument("攻略窗口不属于当前控制界面");
                     DrawItemBase::SetGuideWindow(window, registration);
                     result = {{"accepted", true}, {"data", json::object()}};
+                } else if (type == "markerGamepadWorldAction") {
+                    const auto current = ReadGamepadContext();
+                    const auto action = GamepadWorldActions::ParseAction(command.at("action").get<std::string>());
+                    if (!action) throw std::invalid_argument("未知的大世界手柄操作");
+                    GamepadWorldActions::Request request{*action, command.at("profileId").get<std::string>(),
+                        MarkerGuideProtocol::Integer(command.at("contextGeneration"), false),
+                        MarkerGuideProtocol::Integer(command.at("gameHwnd"), false)};
+                    if (!GamepadWorldActions::Shared().Enqueue(request, current.view,
+                        current.data.at("available").get<bool>() && current.data.at("gameFocused").get<bool>()))
+                        throw std::invalid_argument("当前大世界画面或焦点已变化，手柄操作未执行");
+                    result = {{"accepted", true}, {"data", {{"queued", true}}}};
+                } else if (type == "markerMapToolsRegister") {
+                    const auto current = ReadGamepadContext();
+                    const auto profile = command.at("profileId").get<std::string>();
+                    const auto generation = MarkerGuideProtocol::Integer(command.at("contextGeneration"), false);
+                    const auto gameValue = MarkerGuideProtocol::Integer(command.at("gameHwnd"), false);
+                    const auto hostValue = MarkerGuideProtocol::Integer(command.at("hostHwnd"), false);
+                    bool visible = false;
+                    const auto host = MapToolsBridge::Inspect(hostValue, visible);
+                    const auto gameIdentity = MapToolsBridge::Inspect(gameValue, visible);
+                    if (!current.data.at("available").get<bool>() || profile != current.view.profileId ||
+                        generation != current.view.generation || gameValue != current.view.gameHwnd ||
+                        !host.Valid() || !controllerProcessId || host.process != controllerProcessId)
+                        throw std::invalid_argument("工具台窗口或当前游戏地图已变化");
+                    RouteGamepadBridge::Shared().End(0, "已切换至地图工具台");
+                    result = {{"accepted", true}, {"data", MapToolsBridge::Json(MapToolsBridge::Shared().Register(
+                        current.view, host, gameIdentity, reinterpret_cast<std::uintptr_t>(GetForegroundWindow())))}};
+                } else if (type == "markerMapToolsUpdate") {
+                    auto& bridge = MapToolsBridge::Shared();
+                    const auto before = bridge.Read(DrawItemBase::MarkerProfile());
+                    const auto& bounds = command.at("bounds");
+                    const auto coordinate = [&](const char* key) {
+                        const auto number = bounds.at(key).get<std::int64_t>();
+                        if (number < -1000000 || number > 1000000) throw std::invalid_argument("窗口边界超出范围");
+                        return static_cast<LONG>(number);
+                    };
+                    RECT physical{coordinate("left"),coordinate("top"),coordinate("right"),coordinate("bottom")};
+                    result = {{"accepted", true}, {"data", MapToolsBridge::Json(bridge.Update(
+                        MarkerGuideProtocol::Integer(command.at("sessionId"), false), command.at("page").get<std::string>(),
+                        command.at("canvasTool").get<std::string>(), MarkerGuideProtocol::Integer(command.at("layoutRevision"), true),
+                        physical, command.at("interactive").get<bool>(), command.contains("expectedResultRevision") ?
+                        MarkerGuideProtocol::Integer(command.at("expectedResultRevision"), true) : UINT64_MAX))}};
+                    if (before.canvasTool != "pan" && result.at("data").value("canvasTool", "pan") == "pan") {
+                        const auto route = RoutePlanningService::View();
+                        if (route.enabled && route.tool != "pan" && route.profileId == DrawItemBase::MarkerProfile())
+                            RoutePlanningService::Command({{"action", "tool"}, {"tool", "pan"}, {"profileId", route.profileId},
+                                {"expectedSceneId", route.sceneId}, {"expectedGeneration", route.generation}, {"expectedRevision", route.revision}});
+                    }
+                } else if (type == "markerMapToolsInput") {
+                    auto& bridge = MapToolsBridge::Shared();
+                    bridge.Read(DrawItemBase::MarkerProfile());
+                    MapToolsBridge::Sample sample;
+                    sample.sequence = MarkerGuideProtocol::Integer(command.at("sequence"), false);
+                    const auto buttons = MarkerGuideProtocol::Integer(command.at("buttons"), true);
+                    sample.leftX = command.at("leftX").get<double>(); sample.leftY = command.at("leftY").get<double>();
+                    if (buttons > 65535 || !std::isfinite(sample.leftX) || !std::isfinite(sample.leftY) ||
+                        std::abs(sample.leftX) > 1 || std::abs(sample.leftY) > 1) throw std::invalid_argument("手柄输入快照无效");
+                    sample.buttons = static_cast<unsigned>(buttons); sample.connected = command.at("connected").get<bool>();
+                    sample.otherInput = command.value("otherInput", false);
+                    result = {{"accepted", true}, {"data", MapToolsBridge::Json(bridge.Push(
+                        MarkerGuideProtocol::Integer(command.at("sessionId"), false), sample))}};
+                } else if (type == "markerMapToolsUnregister") {
+                    auto& bridge = MapToolsBridge::Shared();
+                    bridge.Unregister(MarkerGuideProtocol::Integer(command.at("sessionId"), false));
+                    result = {{"accepted", true}, {"data", MapToolsBridge::Json(bridge.Read(DrawItemBase::MarkerProfile()))}};
+                } else if (type == "markerRouteGamepadBegin") {
+                    const auto current = ReadGamepadContext();
+                    const auto profile = command.at("profileId").get<std::string>();
+                    const auto generation = MarkerGuideProtocol::Integer(command.at("contextGeneration"), false);
+                    if (!current.data.at("bigMap").get<bool>() || !current.data.at("gameFocused").get<bool>() ||
+                        profile != current.view.profileId || generation != current.view.generation)
+                        throw std::invalid_argument("请在当前游戏大地图中重新进入路线工具栏");
+                    const auto value = MarkerGuideProtocol::Integer(command.at("hostHwnd"), false);
+                    const auto host = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(value));
+                    DWORD owner = 0;
+                    if (!value || reinterpret_cast<std::uintptr_t>(host) != value || !IsWindow(host) ||
+                        !GetWindowThreadProcessId(host, &owner) || !controllerProcessId || owner != controllerProcessId)
+                        throw std::invalid_argument("输入窗口不属于当前控制界面");
+                    const int device = command.at("deviceId").get<int>();
+                    if (device < 0 || device > 3) throw std::invalid_argument("手柄编号无效");
+                    const auto state = RouteGamepadBridge::Shared().Prepare(value, owner, current.view.gameHwnd, profile, generation);
+                    result = {{"accepted", true}, {"data", RouteGamepadBridge::Json(state)}};
+                } else if (type == "markerRouteGamepadInput") {
+                    const auto session = MarkerGuideProtocol::Integer(command.at("sessionId"), false);
+                    RouteGamepadBridge::Sample sample;
+                    sample.sequence = MarkerGuideProtocol::Integer(command.at("sequence"), false);
+                    const auto buttons = MarkerGuideProtocol::Integer(command.at("buttons"), true);
+                    sample.leftX = command.at("leftX").get<double>(); sample.leftY = command.at("leftY").get<double>();
+                    if (buttons > 65535 || !std::isfinite(sample.leftX) || !std::isfinite(sample.leftY) ||
+                        std::abs(sample.leftX) > 1 || std::abs(sample.leftY) > 1)
+                        throw std::invalid_argument("手柄输入快照无效");
+                    sample.buttons = static_cast<unsigned>(buttons);
+                    sample.connected = command.at("connected").get<bool>(); sample.otherInput = command.value("otherInput", false);
+                    auto& bridge = RouteGamepadBridge::Shared();
+                    const auto state = bridge.Push(session, sample, bridge.FocusedHost());
+                    result = {{"accepted", true}, {"data", RouteGamepadBridge::Json(state)}};
+                } else if (type == "markerRouteGamepadEnd") {
+                    auto& bridge = RouteGamepadBridge::Shared();
+                    bridge.End(MarkerGuideProtocol::Integer(command.at("sessionId"), false), "手柄操作已结束");
+                    result = {{"accepted", true}, {"data", RouteGamepadBridge::Json(bridge.Read())}};
+                } else if (type == "markerRouteGamepadReturnStatus") {
+                    const auto session = MarkerGuideProtocol::Integer(command.at("sessionId"), false);
+                    const auto status = command.at("status").get<std::string>();
+                    if (status != "returning" && status != "failed")
+                        throw std::invalid_argument("返回游戏显示状态无效");
+                    const bool shown = RouteGamepadBridge::Shared().SetReturnStatus(session,
+                        DrawItemBase::MarkerProfile(), status == "failed");
+                    result = {{"accepted", true}, {"data", {{"visible", shown}}}};
+                } else if (type == "markerGetGamepadContext") {
+                    result = {{"accepted", true}, {"data", ReadGamepadContext().data}};
+                } else if (type == "markerGetGamepadTargets") {
+                    result = GamepadTargets(command);
+                } else if (type == "markerResolveGamepadCursorCandidate") {
+                    result = ResolveGamepadCursorCandidate(command);
                 } else if (type == "markerGetGameWindowBounds") {
                     RECT bounds{};
                     json data = {{"available", false}};
@@ -353,6 +637,7 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
             return true;
         }
         if (type == "setItems") {
+            MapToolsBridge::Shared().InvalidateCanvas("筛选已变化，本次圈选已取消");
             if (command.contains("add")) {
                 for (const auto& value : command.at("add")) AddItem(value.get<std::string>().c_str());
             }
@@ -560,6 +845,8 @@ int main(int argc, char** argv) {
     DrawItemBase::SetMarkerEventCallback({});
     RoutePlanningService::SetEventCallback({});
     DrawItemBase::SetGuideWindow(nullptr);
+    RouteGamepadBridge::Shared().End(0, "控制界面已断开");
+    MapToolsBridge::Shared().Unregister(0);
     StructuredLogger::SetObserver({});
     events.Stop();
     if (!shouldExit) {

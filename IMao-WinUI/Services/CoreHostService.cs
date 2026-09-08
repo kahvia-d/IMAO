@@ -170,15 +170,39 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         finally { session.MarkerPending.TryRemove(id, out _); }
     }
 
+    public async Task<JsonElement> ExecuteConnectedMarkerAsync(string operation, object arguments,
+        CancellationToken cancellationToken = default)
+    {
+        var expected = active;
+        if (expected is null || !IsConnected) throw new IOException("核心连接已关闭");
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (!ReferenceEquals(active, expected) || expected.Stop.IsCancellationRequested || !expected.Pipe.IsConnected)
+                throw new IOException("核心会话已变化");
+            return await SendMarkerLockedAsync(expected, operation, arguments, cancellationToken);
+        }
+        finally { lifecycleLock.Release(); }
+    }
+
     public async Task<bool> ConfigureAsync(int? captureWay = null, int? mapUpdateCycle = null, int? minMapUpdateCycle = null,
         bool? mapEnabled = null, bool? minMapEnabled = null, bool? savedPointsEnabled = null,
         bool? statusBarEnabled = null, CancellationToken cancellationToken = default,
         int? nearestCompletionKey = null, int? manualRouteKey = null, int? currentTargetGuideKey = null,
-        int? guidePreviousImageKey = null, int? guideNextImageKey = null)
+        int? guidePreviousImageKey = null, int? guideNextImageKey = null,
+        bool? gamepadEnabled = null, int? gamepadControllerIndex = null,
+        GamepadButtons? gamepadEntryButton = null, bool? autoReplanEnabled = null,
+        bool? expectedAutoReplanEnabled = null, string? expectedAutoReplanProfile = null)
     {
         await lifecycleLock.WaitAsync(cancellationToken);
         try
         {
+            if ((expectedAutoReplanProfile is not null && expectedAutoReplanProfile != desiredMarkerProfile) ||
+                (expectedAutoReplanEnabled.HasValue && expectedAutoReplanEnabled != Configuration.AutoReplanEnabled))
+            {
+                ReportUserError("实时规划设置已变化，请重试。");
+                return false;
+            }
             // Persist the desired state before sending it. A disconnected core restores it on reconnect.
             RuntimeConfiguration next;
             try
@@ -190,11 +214,15 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     MapEnabled = mapEnabled ?? old.MapEnabled, MinMapEnabled = minMapEnabled ?? old.MinMapEnabled,
                     SavedPointsEnabled = savedPointsEnabled ?? old.SavedPointsEnabled,
                     StatusBarEnabled = statusBarEnabled ?? old.StatusBarEnabled,
+                    AutoReplanEnabled = autoReplanEnabled ?? old.AutoReplanEnabled,
                     NearestCompletionKey = nearestCompletionKey ?? old.NearestCompletionKey,
                     ManualRouteKey = manualRouteKey ?? old.ManualRouteKey,
                     CurrentTargetGuideKey = currentTargetGuideKey ?? old.CurrentTargetGuideKey,
                     GuidePreviousImageKey = guidePreviousImageKey ?? old.GuidePreviousImageKey,
-                    GuideNextImageKey = guideNextImageKey ?? old.GuideNextImageKey
+                    GuideNextImageKey = guideNextImageKey ?? old.GuideNextImageKey,
+                    GamepadEnabled = gamepadEnabled ?? old.GamepadEnabled,
+                    GamepadControllerIndex = gamepadControllerIndex ?? old.GamepadControllerIndex,
+                    GamepadEntryButton = gamepadEntryButton ?? old.GamepadEntryButton
                 });
                 OnUi(() => OnPropertyChanged(nameof(Configuration)));
             }
@@ -227,6 +255,33 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
 
     public Task SetItemsAsync(IEnumerable<string> enabledItemIds, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setItems", new Dictionary<string, object?> { ["add"] = enabledItemIds.ToArray() }, cancellationToken);
+
+    // A filter edit is already durable before this call. Never launch a core as
+    // a side effect of editing filters, and report the acknowledgement explicitly.
+    public async Task<bool> SynchronizeFilterAsync(IReadOnlyDictionary<string, bool> states,
+        CancellationToken cancellationToken = default)
+    {
+        var expected = active;
+        if (expected is null || !IsConnected) return false;
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (!ReferenceEquals(active, expected) || expected.Stop.IsCancellationRequested || !expected.Pipe.IsConnected)
+                return false;
+            return await SendLockedAsync(expected, "setItems", new Dictionary<string, object?>
+            {
+                ["add"] = states.Where(p => p.Value).Select(p => p.Key).ToArray(),
+                ["remove"] = states.Where(p => !p.Value).Select(p => p.Key).ToArray()
+            }, cancellationToken) && ReferenceEquals(active, expected) && !expected.Stop.IsCancellationRequested;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception exception)
+        {
+            ReportUserError("筛选已保存，等待同步：" + exception.Message);
+            return false;
+        }
+        finally { lifecycleLock.Release(); }
+    }
 
     public Task SetDiagnosticsCaptureAsync(bool enabled, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setDiagnosticsCapture", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
@@ -328,6 +383,22 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         finally { session.Pending.TryRemove(id, out _); }
     }
 
+    private async Task ApplyAutoReplanRequestAsync(Session session, JsonElement request)
+    {
+        try
+        {
+            if (!ReferenceEquals(active, session) || session.Stop.IsCancellationRequested) return;
+            if (!request.TryGetProperty("profileId", out var profile) || profile.ValueKind != JsonValueKind.String ||
+                !request.TryGetProperty("enabled", out var enabled) || enabled.ValueKind is not (JsonValueKind.True or JsonValueKind.False) ||
+                !request.TryGetProperty("expectedEnabled", out var expected) || expected.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                throw new InvalidOperationException("实时规划设置请求无效");
+            await ConfigureAsync(autoReplanEnabled: enabled.GetBoolean(), expectedAutoReplanEnabled: expected.GetBoolean(),
+                expectedAutoReplanProfile: profile.GetString(), cancellationToken: session.Stop.Token);
+        }
+        catch (OperationCanceledException) when (session.Stop.IsCancellationRequested) { }
+        catch (Exception exception) { ReportUserError("实时规划设置未生效：" + exception.Message); }
+    }
+
     private async Task ReadEventsAsync(Session session)
     {
         try
@@ -351,6 +422,11 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                         if (root.GetProperty("accepted").GetBoolean()) pending.TrySetResult(root.GetProperty("data").Clone());
                         else pending.TrySetException(new InvalidOperationException(root.GetProperty("message").GetString() ?? "点位操作失败"));
                     }
+                }
+                else if (type == "markerAutoReplanRequested")
+                {
+                    var value = root.Clone();
+                    OnSessionUi(session, () => _ = ApplyAutoReplanRequestAsync(session, value));
                 }
                 else if (type.StartsWith("marker", StringComparison.Ordinal))
                 {
@@ -452,6 +528,24 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         LastFault = message;
         AppendLog(new CoreLogEntry { Timestamp = DateTimeOffset.Now.ToString("O"), Severity = "error", Category = "ui", Message = message });
     });
+
+    public void ReportGamepadDiagnostic(string message, string details = "")
+    {
+        var now = DateTimeOffset.Now;
+        var entry = new CoreLogEntry { Timestamp = now.ToString("O"), Severity = "info", Category = "gamepad",
+            Message = message ?? string.Empty, Details = details ?? string.Empty };
+        try { GamepadDiagnosticLog.TryAppend(LogDirectory, entry, now); }
+        catch (Exception) { } // Resolving the destination must also remain best-effort.
+        try
+        {
+            OnUi(() =>
+            {
+                try { AppendLog(entry); }
+                catch (Exception) { } // A closing diagnostics page cannot interrupt controller handling.
+            });
+        }
+        catch (Exception) { }
+    }
 
     private void ApplyStatus(CoreRuntimeStatus value)
     {

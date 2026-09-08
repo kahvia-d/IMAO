@@ -25,6 +25,7 @@ public sealed class CoreHostService : INotifyPropertyChanged
         set { connected = value; PropertyChanged?.Invoke(this, new(nameof(IsConnected))); }
     }
     public RoutePlanningState RoutePlanning { get; set; } = new();
+    public CoreRuntimeStatus Status { get; set; } = new() { CoreState = "running" };
     private RuntimeConfiguration configuration = new();
     public RuntimeConfiguration Configuration
     {
@@ -32,6 +33,8 @@ public sealed class CoreHostService : INotifyPropertyChanged
         set { configuration = value; PropertyChanged?.Invoke(this, new(nameof(Configuration))); }
     }
     public JsonElement GameWindowBounds { get; set; } = JsonSerializer.SerializeToElement(new { available = false });
+    public JsonElement GamepadTargets { get; set; } = JsonSerializer.SerializeToElement(new { });
+    public JsonElement GamepadContext { get; set; } = JsonSerializer.SerializeToElement(new { });
     public MarkerSelection? AuthoritativeTarget { get; set; }
     public string ActiveProfile { get; set; } = "local";
     public string ActiveRouteId { get; set; } = "test-route";
@@ -39,6 +42,10 @@ public sealed class CoreHostService : INotifyPropertyChanged
     public JsonElement RegisteredGuide { get; private set; } = JsonSerializer.SerializeToElement(new { hwnd = 0L });
     internal List<RecordedCommand> Commands { get; } = [];
     internal List<string> Errors { get; } = [];
+    internal List<string> GamepadDiagnostics { get; } = [];
+    internal Func<string, JsonElement, JsonElement>? RouteGamepadResponder { get; set; }
+    internal Func<string, JsonElement, JsonElement>? NearbyResponder { get; set; }
+    internal Func<string, JsonElement, JsonElement>? CursorResponder { get; set; }
 
     internal DeferredCommand DeferNext(string operation)
     {
@@ -59,10 +66,25 @@ public sealed class CoreHostService : INotifyPropertyChanged
             // Deliberately allow a late reply after cancellation: production generation guards must still reject it.
             response = await pending.Reply.Task;
         }
+        else if (operation == "markerRouteGamepadReturnStatus")
+        {
+            if (command.GetProperty("sessionId").GetUInt64() == 0 ||
+                command.GetProperty("status").GetString() is not ("returning" or "failed"))
+                throw new InvalidOperationException("Invalid test return display status");
+            response = JsonSerializer.SerializeToElement(new { accepted = true });
+        }
+        else if (operation.StartsWith("markerRouteGamepad", StringComparison.Ordinal) && RouteGamepadResponder is { } responder)
+            response = responder(operation, command);
+        else if (operation is "markerBindNearbyCandidates" or "markerResolveNearbyCandidate" or "markerCompleteNearbyCandidate" && NearbyResponder is { } nearbyResponder)
+            response = nearbyResponder(operation, command);
+        else if (operation == "markerResolveGamepadCursorCandidate" && CursorResponder is { } cursorResponder)
+            response = cursorResponder(operation, command);
         else response = operation switch
         {
             "markerGetRouteGuide" => RouteGuideResponse(),
             "markerGetGameWindowBounds" => GameWindowBounds,
+            "markerGetGamepadTargets" => GamepadTargets,
+            "markerGetGamepadContext" => GamepadContext,
             "markerSetGuideWindow" => Empty(),
             "markerSetCompletion" => JsonSerializer.SerializeToElement(new { point = command }),
             "markerGetSnapshot" => JsonSerializer.SerializeToElement(new { points = Array.Empty<object>() }),
@@ -72,7 +94,26 @@ public sealed class CoreHostService : INotifyPropertyChanged
         return response;
     }
 
+    public async Task<RoutePlanningState> ExecuteRoutePlanningAsync(string action, object? arguments = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string operation = "routePlanning:" + action;
+        var command = JsonSerializer.SerializeToElement(arguments ?? new { });
+        Commands.Add(new(operation, command));
+        if (deferred.TryGetValue(operation, out var queue) && queue.Count > 0)
+        {
+            var pending = queue.Dequeue();
+            pending.Seen.TrySetResult(command);
+            return RoutePlanningState.FromJson(await pending.Reply.Task);
+        }
+        if (action == "state") return RoutePlanning;
+        // Mutations require an explicit controlled reply; no fake silent success.
+        throw new InvalidOperationException("Unexpected test route command: " + action);
+    }
+
     public void ReportUserError(string message) => Errors.Add(message);
+    public void ReportGamepadDiagnostic(string category, string message) => GamepadDiagnostics.Add(category + ": " + message);
     internal void Emit(object value) => MarkerEvent?.Invoke(this, JsonSerializer.SerializeToElement(value));
     internal JsonElement RouteGuideResponse() => JsonSerializer.SerializeToElement(new
     {

@@ -7,6 +7,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <controls:XamlControlsResources />
+        <ResourceDictionary Source="Styles/IMaoTheme.xaml" />
       </ResourceDictionary.MergedDictionaries>
       <SolidColorBrush x:Key="ApplicationPageBackgroundThemeBrush" Color="#FF202020" />
     </ResourceDictionary>

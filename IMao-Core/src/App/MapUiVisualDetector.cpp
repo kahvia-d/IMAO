@@ -1,6 +1,7 @@
 #include "MapUiVisualDetector.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <opencv2/imgproc.hpp>
 
@@ -55,19 +56,20 @@ MapCompassDetection MapUiVisualDetector::DetectBigMapCompass(const cv::Mat& snap
     return result;
 }
 
-bool MapUiVisualDetector::DetectBigMapControls(const cv::Mat& snapshot, const RECT& clientRect) {
+MapControlDetection MapUiVisualDetector::DetectBigMapControlLayout(const cv::Mat& snapshot, const RECT& clientRect) {
+    MapControlDetection result;
     if (snapshot.empty() || (snapshot.channels() != 3 && snapshot.channels() != 4) ||
         snapshot.depth() != CV_8U || snapshot.cols != clientRect.right - clientRect.left ||
-        snapshot.rows != clientRect.bottom - clientRect.top) return false;
+        snapshot.rows != clientRect.bottom - clientRect.top) return result;
 
     // Normalize only the narrow zoom-control strip, keeping this probe cheap
-    // enough to run on the state thread. The two circular +/- buttons are
-    // fixed UI, independent of map texture, panning, zoom, and player position.
+    // enough to run on the state thread. Mouse +/- and controller RT/LT use
+    // the same zoom track, but have different glyphs and additional anchors.
     const cv::Rect strip(cvRound(snapshot.cols * 1480.0 / kReferenceWidth),
         cvRound(snapshot.rows * 235.0 / kReferenceHeight),
         cvRound(snapshot.cols * 60.0 / kReferenceWidth),
         cvRound(snapshot.rows * 410.0 / kReferenceHeight));
-    if ((strip & cv::Rect(0, 0, snapshot.cols, snapshot.rows)) != strip) return false;
+    if ((strip & cv::Rect(0, 0, snapshot.cols, snapshot.rows)) != strip) return result;
     cv::Mat normalized;
     cv::resize(snapshot(strip), normalized, {60, 410}, 0, 0, cv::INTER_AREA);
     cv::Mat bgr;
@@ -75,6 +77,8 @@ bool MapUiVisualDetector::DetectBigMapControls(const cv::Mat& snapshot, const RE
     else bgr = normalized;
     cv::Mat white(bgr.size(), CV_8UC1, cv::Scalar(0));
     cv::Mat pale(bgr.size(), CV_8UC1, cv::Scalar(0));
+    cv::Mat dark(bgr.size(), CV_8UC1, cv::Scalar(0));
+    cv::Mat gold(bgr.size(), CV_8UC1, cv::Scalar(0));
     for (int y = 0; y < bgr.rows; ++y) {
         for (int x = 0; x < bgr.cols; ++x) {
             const auto pixel = bgr.at<cv::Vec3b>(y, x);
@@ -83,12 +87,16 @@ bool MapUiVisualDetector::DetectBigMapControls(const cv::Mat& snapshot, const RE
             white.at<uchar>(y, x) = low >= 155 && high - low <= 65 ? 255 : 0;
             // The thin ring is translucent, unlike the bright +/- glyph.
             pale.at<uchar>(y, x) = low >= 90 && high - low <= 65 ? 255 : 0;
+            dark.at<uchar>(y, x) = high <= 130 ? 255 : 0;
+            gold.at<uchar>(y, x) = pixel[2] > 120 && pixel[1] > 90 && pixel[0] < 100 &&
+                static_cast<int>(pixel[2]) - pixel[0] > 50 ? 255 : 0;
         }
     }
     const auto brightNear = [&white](int x, int y) {
         return cv::countNonZero(white(cv::Rect(x - 1, y - 1, 3, 3))) > 0;
     };
-    const auto button = [&](int expectedY, bool plus, int& foundX) {
+    const auto buttonCandidates = [&](int expectedY, bool plus) {
+        std::array<bool, 60> foundX{};
         for (int y = expectedY - 6; y <= expectedY + 6; ++y) {
             for (int x = 23; x <= 35; ++x) {
                 int horizontal = 0, vertical = 0, ring = 0, darkCorners = 0;
@@ -107,13 +115,75 @@ bool MapUiVisualDetector::DetectBigMapControls(const cv::Mat& snapshot, const RE
                     darkCorners += !brightNear(x + dx, y + dy);
                 }
                 if (ring >= 12 && darkCorners >= 3) {
-                    foundX = x;
-                    return true;
+                    foundX[x] = true;
                 }
             }
         }
+        return foundX;
+    };
+    const auto plusCandidates = buttonCandidates(30, true), minusCandidates = buttonCandidates(380, false);
+    // Antialiasing can admit more than one center for a thin glyph. Pair all
+    // centers that satisfy the unchanged shape tests; the first scan hit is
+    // not necessarily the center aligned with the other button.
+    for (int upperX = 23; upperX <= 35 && !result.mouse; ++upperX) {
+        if (!plusCandidates[upperX]) continue;
+        for (int lowerX = 23; lowerX <= 35; ++lowerX)
+            if (minusCandidates[lowerX] && std::abs(upperX - lowerX) <= 3) { result.mouse = true; break; }
+    }
+    if (result.mouse) { result.visible = true; return result; }
+
+    // Controller mode replaces +/- with opaque, dark-lettered RT/LT capsules.
+    // Their fill, internal lettering and paired positions distinguish them
+    // from thin mouse glyphs, terrain strokes, and large white dialog panels.
+    cv::Mat labels, stats, centroids;
+    const int count = cv::connectedComponentsWithStats(white, labels, stats, centroids, 8, CV_32S);
+    const auto bounds = [&](int component) {
+        return cv::Rect(stats.at<int>(component, cv::CC_STAT_LEFT), stats.at<int>(component, cv::CC_STAT_TOP),
+            stats.at<int>(component, cv::CC_STAT_WIDTH), stats.at<int>(component, cv::CC_STAT_HEIGHT));
+    };
+    const auto lettered = [&](int component, const cv::Rect& box, double minimumFill, int minimumDark) {
+        const int area = stats.at<int>(component, cv::CC_STAT_AREA);
+        const cv::Rect inner(box.x + 4, box.y + 3, box.width - 8, box.height - 6);
+        return area >= box.area() * minimumFill && area <= box.area() * 0.90 &&
+            cv::countNonZero(dark(inner)) >= minimumDark;
+    };
+    const auto trigger = [&](int expectedY, int& foundX) {
+        for (int component = 1; component < count; ++component) {
+            const auto box = bounds(component);
+            if (box.width < 20 || box.width > 32 || box.height < 13 || box.height > 23) continue;
+            const int x = box.x + box.width / 2, y = box.y + box.height / 2;
+            if (x < 23 || x > 35 || std::abs(y - expectedY) > 6 || !lettered(component, box, 0.45, 15)) continue;
+            foundX = x; return true;
+        }
         return false;
     };
-    int plusX = 0, minusX = 0;
-    return button(30, true, plusX) && button(380, false, minusX) && std::abs(plusX - minusX) <= 3;
+    int upperX = 0, lowerX = 0;
+    const bool upper = trigger(30, upperX), lower = trigger(380, lowerX);
+    result.controllerTriggerAnchors = static_cast<int>(upper) + static_cast<int>(lower);
+    if (upper && lower && std::abs(upperX - lowerX) <= 3) {
+        const int trackX = (upperX + lowerX) / 2;
+        // The R thumbstick indicator can move with map zoom. It must remain
+        // on the same track and have both gold direction arrows around it.
+        for (int component = 1; component < count; ++component) {
+            const auto box = bounds(component);
+            if (box.width < 18 || box.width > 32 || box.height < 18 || box.height > 32) continue;
+            const int x = box.x + box.width / 2, y = box.y + box.height / 2;
+            if (std::abs(x - trackX) > 3 || y < 60 || y > 350 || !lettered(component, box, 0.40, 12)) continue;
+            const cv::Rect above(x - 8, box.y - 12, 17, 16);
+            const cv::Rect below(x - 8, box.y + box.height - 4, 17, 16);
+            if (cv::countNonZero(gold(above)) >= 12 && cv::countNonZero(gold(below)) >= 12) {
+                result.controllerSlider = true; break;
+            }
+        }
+    }
+    // A pair of controller prompts alone is common elsewhere in the game.
+    // Require the full zoom control plus the independent map compass anchor.
+    result.controller = result.controllerTriggerAnchors == 2 && result.controllerSlider &&
+        DetectBigMapCompass(snapshot, clientRect).visible;
+    result.visible = result.controller;
+    return result;
+}
+
+bool MapUiVisualDetector::DetectBigMapControls(const cv::Mat& snapshot, const RECT& clientRect) {
+    return DetectBigMapControlLayout(snapshot, clientRect).visible;
 }

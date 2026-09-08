@@ -1,6 +1,7 @@
 #pragma once
 #include "../Domain/MapData.h"
 #include "OverlayMotion.h"
+#include "AutoReplanPolicy.h"
 #include <opencv2/core.hpp>
 #include <Windows.h>
 #include <chrono>
@@ -24,6 +25,7 @@ struct OverlayFrame {
     Coordinate playerCoordinate, viewportCenter;
     std::vector<cv::Point2f> viewportCorners;
     OverlayMotionSample mapMotion, minimapMotion;
+    AutoRoute::PlayerObservation routePlayer;
     cv::Mat motionImage;
     cv::Rect motionRegion;
     ItemMarkerFrame mapMarkers, minimapMarkers;
@@ -51,6 +53,9 @@ struct PresentedOverlayFrame {
     OverlayScreenTransform motion;
     bool mapVisible = false, minimapVisible = false;
     std::chrono::steady_clock::time_point presentedAt{};
+    // Exact current pixels to which motion attached the rendered marker layout.
+    // Kept last among data members for existing aggregate initializers.
+    std::shared_ptr<const CapturedFrame> capture;
     bool Fresh() const {
         return source && source->Fresh() &&
             std::chrono::steady_clock::now() - presentedAt < std::chrono::milliseconds(100);

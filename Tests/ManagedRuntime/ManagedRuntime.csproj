@@ -15,9 +15,11 @@
     <Compile Include="../../IMao-WinUI/Services/LocalSettingsService.cs" Link="LocalSettingsService.cs" />
     <Compile Include="../../IMao-WinUI/Services/RuntimeConfigurationStore.cs" Link="RuntimeConfigurationStore.cs" />
     <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="RuntimeConfiguration.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="GamepadInput.cs" />
     <Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="MapFilterCatalog.cs" />
     <Compile Include="../../IMao-WinUI/Helpers/UserDataPaths.cs" Link="UserDataPaths.cs" />
     <Compile Include="../../IMao-WinUI/Services/CoreHostService.cs" Link="CoreHostService.cs" />
+    <Compile Include="../../IMao-WinUI/Services/GamepadDiagnosticLog.cs" Link="GamepadDiagnosticLog.cs" />
     <Compile Include="../../IMao-WinUI/Services/LocalMarkerProfileSelection.cs" Link="LocalMarkerProfileSelection.cs" />
     <Compile Include="../../IMao-WinUI/Models/MarkerDetail.cs" Link="MarkerDetail.cs" />
     <Compile Include="../../IMao-WinUI/Models/MarkerGuideSession.cs" Link="MarkerGuideSession.cs" />

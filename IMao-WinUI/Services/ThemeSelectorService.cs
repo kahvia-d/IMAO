@@ -1,4 +1,4 @@
-﻿using IMao_WinUI.Contracts.Services;
+using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
 
 using Microsoft.UI.Xaml;
@@ -9,7 +9,7 @@ public class ThemeSelectorService : IThemeSelectorService
 {
     private const string SettingsKey = "AppBackgroundRequestedTheme";
 
-    public ElementTheme Theme { get; set; } = ElementTheme.Default;
+    public ElementTheme Theme { get; set; } = ElementTheme.Dark;
 
     private readonly ILocalSettingsService _localSettingsService;
 
@@ -20,13 +20,14 @@ public class ThemeSelectorService : IThemeSelectorService
 
     public async Task InitializeAsync()
     {
-        Theme = await LoadThemeFromSettingsAsync();
+        // The graphite palette has one coordinated dark appearance, including native title bars.
+        Theme = ElementTheme.Dark;
         await Task.CompletedTask;
     }
 
     public async Task SetThemeAsync(ElementTheme theme)
     {
-        Theme = theme;
+        Theme = ElementTheme.Dark;
 
         await SetRequestedThemeAsync();
         await SaveThemeInSettingsAsync(Theme);

@@ -66,6 +66,10 @@ public partial class App : Application
             services.AddSingleton<CoreHostService>();
             services.AddSingleton<MarkerDetailService>();
             services.AddSingleton<MarkerGuideCoordinator>();
+            services.AddSingleton<FilterSelectionService>();
+            services.AddSingleton<MapToolsController>();
+            services.AddSingleton<IMapToolsController>(provider => provider.GetRequiredService<MapToolsController>());
+            services.AddSingleton<GamepadInputService>();
             services.AddTransient<INavigationViewService, NavigationViewService>();
 
             services.AddSingleton<IActivationService, ActivationService>();
@@ -124,6 +128,9 @@ public partial class App : Application
         //App.GetService<IAppNotificationService>().Show(string.Format("AppNotificationSamplePayload".GetLocalized(), AppContext.BaseDirectory));
 
         _ = GetService<MarkerGuideCoordinator>();
+        var mapTools = GetService<MapToolsController>();
+        var gamepad = GetService<GamepadInputService>();
+        MainWindow.Closed += (_, _) => { mapTools.Dispose(); gamepad.Dispose(); };
         await App.GetService<IActivationService>().ActivateAsync(args);
     }
 }
