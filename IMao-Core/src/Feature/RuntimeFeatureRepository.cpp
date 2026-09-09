@@ -1,3 +1,4 @@
+#include "LegacyFeatureExclusions.h"
 #include "RuntimeFeatureRepository.h"
 
 #include "CandidateFeaturePack.h"
@@ -176,6 +177,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         std::array<std::uint8_t, 32> sourceImfSha{};
         bool sourceImfHashReady = FeatureBinaryCodec::Load(
             featureRoot / "Map_features.imf", loaded->map, failure, nullptr, &sourceImfSha);
+        const auto baselineRows = loaded->map.imgKeypoints.size();
         if (!sourceImfHashReady) {
 #ifdef IMAO_ALLOW_XML_FEATURE_FALLBACK
             Diagnostics::Record("resource-load", "stage=map-imf failed fallback=xml error=" + failure);
@@ -251,6 +253,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                     std::numeric_limits<std::uint32_t>::max() - mergedFeatureRows) {
                     throw std::runtime_error("Kuro tile feature row count overflow");
                 }
+                ApplyLegacyFeatureExclusions(*loaded, kuro.directoryPath / "manifest.json", sourceImfSha, baselineRows);
                 mapFeatureAdditions.push_back(&kuro.featureData);
                 mergedFeatureRows += static_cast<std::uint32_t>(kuro.featureData.imgKeypoints.size());
                 CandidateFeaturePack::AppendFeatures(loaded->kuroTileFeatures, kuro.featureData);

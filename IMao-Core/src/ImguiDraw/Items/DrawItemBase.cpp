@@ -1,4 +1,4 @@
-#include "DrawItemBase.h"
+﻿#include "DrawItemBase.h"
 #include <fstream>
 #include "../../DLL_API.h"
 #include "../../util.h"
@@ -505,7 +505,7 @@ void DrawItemBase::PublishMarkerCandidates(const std::string& profileId, const s
     }
     PublishMarkerEvent(std::move(event));
 }
-void DrawItemBase::PublishNearbyCandidates(NearbySelection::Observation observation, NearbySelection::Intent intent, bool gamepad) {
+json DrawItemBase::PublishNearbyCandidates(NearbySelection::Observation observation, NearbySelection::Intent intent, bool gamepad, bool publish) {
     json event;
     {
         std::scoped_lock lock(markerCandidatesMutex);
@@ -532,7 +532,8 @@ void DrawItemBase::PublishNearbyCandidates(NearbySelection::Observation observat
     StructuredLogger::Record("info", "gamepad", "nearby-candidates", "intent=" + event.at("intent").get<std::string>() +
         " revision=" + std::to_string(event.at("selectionRevision").get<std::uint64_t>()) +
         " count=" + std::to_string(event.at("total").get<std::size_t>()));
-    PublishMarkerEvent(std::move(event));
+    if (publish) PublishMarkerEvent(event);
+    return event;
 }
 void DrawItemBase::NotifyNearby(const std::string& message, const std::string& outcome) {
     StructuredLogger::Record("info", "gamepad", "nearby-result", outcome);

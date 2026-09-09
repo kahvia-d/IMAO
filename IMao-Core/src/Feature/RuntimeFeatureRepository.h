@@ -20,11 +20,13 @@ struct VisualFeatureShardRange {
 struct RuntimeFeatureResources {
     ImageFeatureData map;
     MapVisualIndex visualIndex;
-    // The base visual index is built from the historical state-8 World map.
-    // Optional packs are appended afterwards, so this boundary lets the
-    // localizer keep the base index's retrieval partitioning while reporting
-    // its successful matches as World.
+    // Legacy atlas retrieval partitions are not authoritative scene metadata.
+    // Loaded replacement packs may retire hash-bound duplicate feature rows.
     std::uint32_t baseVisualTileCount = 0;
+    std::vector<unsigned char> excludedBaseRows;
+    bool FeatureRowEnabled(std::size_t row) const {
+        return row >= excludedBaseRows.size() || excludedBaseRows[row] == 0;
+    }
     // Optional Kuro feature packs are kept separate so an image-only fallback
     // can verify one map package at a time without cross-region false matches.
     std::vector<VisualFeatureShardRange> kuroVisualShards;

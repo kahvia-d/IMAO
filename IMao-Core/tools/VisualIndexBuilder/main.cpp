@@ -100,6 +100,48 @@ bool BuildAndInstallShard(const ImageFeatureData& features, const cv::Mat& vocab
 }
 
 int main(int argc, char** argv) {
+    // Build one development shard with the existing vocabulary. Never rebuild
+    // the baseline or change the pack's field-verification/approval metadata.
+    if (argc == 5 && std::string(argv[1]) == "--pack-only") {
+        try {
+            const std::filesystem::path featureRoot = std::filesystem::path(argv[2]) / "FeaturesDatas";
+            const std::filesystem::path packRoot(argv[3]);
+            const bool allowUnverified = std::string(argv[4]) == "--allow-unverified";
+            if (!allowUnverified && std::string(argv[4]) != "--verified") throw std::runtime_error("Expected --verified or --allow-unverified");
+            std::ifstream input(packRoot / "manifest.json");
+            const auto manifest = nlohmann::json::parse(input);
+            if (manifest.value("formatVersion", 0) != 1) throw std::runtime_error("Unsupported pack format");
+            const auto* scene = Scene::Find(manifest.at("sceneId").get<int>());
+            if (!scene || manifest.at("scene").get<std::string>() != scene->name || manifest.at("source").at("state").get<int>() != scene->kuroStateId)
+                throw std::runtime_error("Pack scene identity is invalid");
+            if (!allowUnverified && !manifest.at("referenceVerification").value("passed", false))
+                throw std::runtime_error("Pack has no verified reference");
+            const auto file = manifest.at("features").at("file").get<std::string>();
+            if (std::filesystem::path(file).filename() != file) throw std::runtime_error("Invalid feature filename");
+            std::string error;
+            ImageFeatureData base, features;
+            FeatureBinaryHeader baseHeader, packHeader;
+            std::array<std::uint8_t, 32> baseHash{}, xmlHash{};
+            MapVisualIndex baseline;
+            if (!FeatureBinaryCodec::Load(featureRoot / "Map_features.imf", base, error, &baseHeader, &baseHash) ||
+                !MapVisualIndexCodec::Load(featureRoot / "Map_visual_index.imx", baseHash, baseHeader.keypointCount, baseline, error) ||
+                !FeatureBinaryCodec::Load(packRoot / "features.imf", features, error, &packHeader) ||
+                !FeatureBinaryCodec::Sha256File(packRoot / file, xmlHash, error)) throw std::runtime_error(error);
+            if (xmlHash != packHeader.sourceXmlSha256 || Hex(xmlHash) != manifest.at("features").at("sha256").get<std::string>() ||
+                packHeader.keypointCount != manifest.at("features").at("keypointCount").get<std::uint32_t>())
+                throw std::runtime_error("Pack binary and source manifest disagree");
+            nlohmann::json report;
+            if (!BuildAndInstallShard(features, baseline.vocabulary, packRoot / file,
+                packRoot / "visual-index.imx", scene->id, report, error)) throw std::runtime_error(error);
+            report["referenceVerified"] = manifest.at("referenceVerification").value("passed", false);
+            std::ofstream(packRoot / "visual-index.manifest.json") << report.dump(2) << '\n';
+            std::cout << report.dump(2) << '\n';
+            return 0;
+        } catch (const std::exception& exception) {
+            std::cerr << exception.what() << '\n';
+            return 1;
+        }
+    }
     if (argc < 3 || argc > 4) {
         std::cerr << "Usage: IMaoVisualIndexBuilder <Assets directory> <output.imx> [manifest.json]\n";
         return 2;

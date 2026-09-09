@@ -764,6 +764,15 @@ public sealed class MarkerGuideCoordinator : IDisposable
         openingRequest = request;
         try
         {
+            if (!controller)
+            {
+                var nearby = await core.ExecuteMarkerAsync("markerGetNearbyGuide", new { profileId }, request.Token);
+                if (!session.IsCurrent(generation) || disposed) return;
+                CloseGuide(generation);
+                if (Text(nearby, "profileId") == profileId && nearby.TryGetProperty("candidates", out _))
+                    await ShowCandidatesAsync(nearby);
+                return;
+            }
             while (session.IsCurrent(generation))
             {
                 long completionVersion = completionGeneration;
@@ -774,7 +783,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 if (completionVersion != completionGeneration) continue;
                 if (Text(result, "profileId") != profileId || !result.TryGetProperty("selection", out var target) ||
                     target.ValueKind == JsonValueKind.Null)
-                { CloseGuide(generation); if (controller) core.ReportUserError("当前没有可打开攻略的路线目标。"); return; }
+                {
+                    CloseGuide(generation); core.ReportUserError("当前没有可打开攻略的路线目标。"); return;
+                }
                 var selection = ReadSelection(target);
                 if (selection.Completed || selection.StateId <= 0 || selection.PointId.Length == 0 ||
                     !session.SetSelection(generation, selection)) { CloseGuide(generation); return; }
@@ -1058,12 +1069,13 @@ public sealed class MarkerGuideCoordinator : IDisposable
         var list = new StackPanel { Spacing = 10, Padding = new Thickness(20) };
         GamepadWindowChrome.ApplyTheme(list);
         list.PreviewKeyDown += (_, e) => { if (controller && (int)e.Key is >= 195 and <= 218) e.Handled = true; };
-        if (controller)
+        if (controller || nearby)
         {
             _ = new GamepadWindowChrome(window);
             list.Children.Add(GamepadWindowChrome.Header(window,
                 new TextBlock { Text = "选择点位", FontSize = 25, Foreground = GamepadWindowChrome.Brush("IMaoTextBrush", 0xE7F0F7) },
-                () => HandleGamepadAsync(GamepadAction.Back), "关闭点位选择"));
+                () => controller ? HandleGamepadAsync(GamepadAction.Back) :
+                    ReturnBeforeCloseAsync(window, chooserGameIdentity, CloseChoices), "关闭点位选择"));
         }
         list.Children.Add(new TextBlock { Text = complete ? "选择一个点位并确认完成，每次只保存所选的一个点。" :
             "选择附近点位查看攻略。", TextWrapping = TextWrapping.Wrap });
@@ -1182,12 +1194,14 @@ public sealed class MarkerGuideCoordinator : IDisposable
             Background = GamepadWindowChrome.Brush("IMaoCanvasBrush", 0x10151D),
             Foreground = GamepadWindowChrome.Brush("IMaoTextBrush", 0xE7F0F7) };
         window.AppWindow.Resize(new Windows.Graphics.SizeInt32(420, 480));
-        if (controller)
+        if (controller || nearby)
         {
             var bounds = GamepadWindowVisibility.Inspect(game);
-            window.AppWindow.Move(new Windows.Graphics.PointInt32(
-                bounds.WorkArea.X + Math.Max(0, (bounds.WorkArea.Width - 420) / 2),
-                bounds.WorkArea.Y + Math.Max(0, (bounds.WorkArea.Height - 480) / 2)));
+            var client = bounds.ClientBounds;
+            var work = bounds.WorkArea;
+            window.AppWindow.MoveAndResize(GuidePlacement.Calculate(
+                new(client.X, client.Y, client.Width, client.Height),
+                new(work.X, work.Y, work.Width, work.Height), bounds.Dpi / 96.0));
         }
         window.Closed += async (_, _) => { if (ReferenceEquals(chooser, window)) chooser = null; await UnregisterWindowAsync(window); };
         await RegisterWindowAsync(window);

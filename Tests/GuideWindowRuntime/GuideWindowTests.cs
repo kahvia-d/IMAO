@@ -391,15 +391,15 @@ internal static class GuideWindowTests
         var game = new RectInt32(100, 100, 1600, 900);
         var work = new RectInt32(0, 0, 1920, 1040);
         foreach (var item in new[] {
-            (Scale: 1.0, Expected: new RectInt32(116, 220, 440, 660)),
-            (Scale: 1.25, Expected: new RectInt32(120, 137, 550, 825)),
-            (Scale: 2.0, Expected: new RectInt32(132, 132, 880, 836)) })
+            (Scale: 1.0, Expected: new RectInt32(116, 341, 440, 643)),
+            (Scale: 1.25, Expected: new RectInt32(120, 345, 550, 635)),
+            (Scale: 2.0, Expected: new RectInt32(132, 357, 880, 611)) })
             Check(SameRect(GuidePlacement.Calculate(game, work, item.Scale), item.Expected), "placement preserves physical game bounds and scales only DIP size/inset");
         Check(SameRect(GuidePlacement.Calculate(new(-1800, 100, 1600, 900), new(-1920, 0, 1920, 1080), 1.5),
-            new(-1776, 124, 660, 852)), "negative-coordinate monitor placement stays in the game/work-area intersection");
-        Check(SameRect(GuidePlacement.Calculate(new(100, 50, 80, 60), work, 2), new(115, 65, 50, 30)),
+            new(-1776, 349, 660, 627)), "negative-coordinate monitor placement stays in the game/work-area intersection");
+        Check(SameRect(GuidePlacement.Calculate(new(100, 50, 80, 60), work, 2), new(115, 80, 50, 15)),
             "tiny game bounds shrink size and inset without negative dimensions");
-        Check(SameRect(GuidePlacement.Calculate(new(3000, 0, 600, 800), new(0, 0, 1000, 800), double.NaN), new(16, 70, 440, 660)),
+        Check(SameRect(GuidePlacement.Calculate(new(3000, 0, 600, 800), new(0, 0, 1000, 800), double.NaN), new(16, 216, 440, 568)),
             "disjoint game bounds fall back to the work area and invalid DPI uses a finite scale");
         log("PASS guide placement covers 100/125/150/200 percent DPI, negative monitors, tiny and disjoint rectangles");
     }

@@ -1,7 +1,7 @@
 [CmdletBinding(DefaultParameterSetName = 'Check')]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('LowerVault', 'Darkplain', 'TimeRiftRuins')]
+    [ValidateSet('Tethys', 'Fabricatorium', 'Avinoleum', 'Lahai', 'LowerVault', 'Darkplain', 'TimeRiftRuins')]
     [string]$Scene,
     [Parameter(Mandatory = $true)]
     [string]$SamplesPath,
@@ -15,7 +15,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$stateIds = @{ LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910 }
+$stateIds = @{ Tethys = 900; Fabricatorium = 905; Avinoleum = 903; Lahai = 906; LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910 }
 $calibrationPath = Join-Path $repoRoot 'Assets\KuroMap\scene-calibrations.json'
 
 function Require-FiniteNumber([object]$Value, [string]$Name) {

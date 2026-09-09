@@ -1,3 +1,5 @@
+﻿#include "Feature/LegacyFeatureExclusions.h"
+#include "../../tests/MultiSceneViewportTests.h"
 #include "Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
 #include "Coordinate/VisualLocalization/RecoveryPolicy.h"
 #include "App/MapViewportLocalizer.h"
@@ -8,6 +10,7 @@
 #include "Feature/Processing/FeatureBinaryCodec.h"
 #include "Feature/VisualIndex/MapVisualIndex.h"
 #include "ImageProcessing/ImageProcessing.h"
+#include "Runtime/ResourceSnapshotContext.h"
 
 #include <nlohmann/json.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -81,8 +84,9 @@ bool MergeVisualShard(MapVisualIndex& base, const MapVisualIndex& shard,
     return MapVisualIndexCodec::BuildPostingOffsets(base, error);
 }
 
-std::shared_ptr<RuntimeFeatureResources> LoadResources(
-    const std::filesystem::path& repositoryRoot, std::string& error) {
+std::shared_ptr<const RuntimeFeatureResources> LoadResources(
+    const std::filesystem::path& repositoryRoot, std::string& error,
+    const std::vector<std::string>& diagnosticPacks = {}) {
     const auto featureRoot = repositoryRoot / "Assets" / "FeaturesDatas";
     auto resources = std::make_shared<RuntimeFeatureResources>();
     std::array<std::uint8_t, 32> sourceHash{};
@@ -95,8 +99,10 @@ std::shared_ptr<RuntimeFeatureResources> LoadResources(
     if (!resources->visualIndexReady) return {};
     resources->baseVisualTileCount = static_cast<std::uint32_t>(resources->visualIndex.tiles.size());
 
+    const auto baselineRows = resources->map.imgKeypoints.size();
     const auto kuroPacks = KuroTileFeaturePack::LoadRegistered(featureRoot.string());
     for (const auto& kuro : kuroPacks) {
+        if (std::find(diagnosticPacks.begin(), diagnosticPacks.end(), kuro.directoryName) != diagnosticPacks.end()) continue;
         if (!kuro.loaded) continue;
         const auto rowBase = static_cast<std::uint32_t>(resources->map.imgKeypoints.size());
         const auto firstShardTile = static_cast<std::uint32_t>(resources->visualIndex.tiles.size());
@@ -107,6 +113,7 @@ std::shared_ptr<RuntimeFeatureResources> LoadResources(
             !MergeVisualShard(resources->visualIndex, shard, rowBase, error)) return {};
         resources->kuroVisualShards.push_back({
             kuro.sceneId, firstShardTile, static_cast<std::uint32_t>(shard.tiles.size()) });
+        ApplyLegacyFeatureExclusions(*resources, kuro.directoryPath / "manifest.json", sourceHash, baselineRows);
         CandidateFeaturePack::AppendFeatures(resources->map, kuro.featureData);
         CandidateFeaturePack::AppendFeatures(resources->kuroTileFeatures, kuro.featureData);
     }
@@ -124,6 +131,44 @@ std::shared_ptr<RuntimeFeatureResources> LoadResources(
             !MergeVisualShard(resources->visualIndex, shard, rowBase, error)) return {};
         CandidateFeaturePack::AppendFeatures(resources->map, candidate.featureData);
         CandidateFeaturePack::AppendFeatures(resources->curatedCandidates, candidate.featureData);
+    }
+    // Offline validation only. A new map must be measurable before it has a
+    // verified reference. This path never changes production approval files.
+    for (const auto& name : diagnosticPacks) {
+        try {
+            if (name.empty() || name.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-") != std::string::npos)
+                throw std::runtime_error("Invalid diagnostic pack name");
+            const auto pack = featureRoot / "KuroTilePacks" / name;
+            std::ifstream input(pack / "manifest.json");
+            const auto manifest = nlohmann::json::parse(input);
+            const int sceneId = manifest.at("sceneId").get<int>();
+            const auto* scene = Scene::Find(sceneId);
+            if (!scene || manifest.value("formatVersion", 0) != 1 ||
+                manifest.at("scene").get<std::string>() != scene->name ||
+                manifest.at("source").at("state").get<int>() != scene->kuroStateId)
+                throw std::runtime_error("Diagnostic scene identity mismatch");
+            ImageFeatureData features;
+            FeatureBinaryHeader header;
+            if (!FeatureBinaryCodec::Load(pack / "features.imf", features, error, &header)) return {};
+            if (FeatureBinaryCodec::Sha256Hex(header.sourceXmlSha256) != manifest.at("features").at("sha256").get<std::string>() ||
+                header.keypointCount != manifest.at("features").at("keypointCount").get<std::uint32_t>())
+                throw std::runtime_error("Diagnostic binary provenance mismatch");
+            MapVisualIndex shard;
+            if (!MapVisualIndexCodec::Load(pack / "visual-index.imx", header.sourceXmlSha256,
+                header.keypointCount, shard, error)) return {};
+            if (std::any_of(shard.tiles.begin(), shard.tiles.end(), [&](const auto& tile) { return tile.sceneId != sceneId; }))
+                throw std::runtime_error("Diagnostic index scene mismatch");
+            // Offline captures must be measurable before release approval.
+            // This process-local override never writes the runtime registry.
+            Scene::runtimeApproval[sceneId] = true;
+            const auto firstTile = static_cast<std::uint32_t>(resources->visualIndex.tiles.size());
+            if (!MergeVisualShard(resources->visualIndex, shard,
+                static_cast<std::uint32_t>(resources->map.imgKeypoints.size()), error)) return {};
+            resources->kuroVisualShards.push_back({sceneId, firstTile, static_cast<std::uint32_t>(shard.tiles.size())});
+            ApplyLegacyFeatureExclusions(*resources, pack / "manifest.json", sourceHash, baselineRows);
+            CandidateFeaturePack::AppendFeatures(resources->map, features);
+            std::cerr << "Offline diagnostic pack: " << name << " (not production approval)\n";
+        } catch (const std::exception& exception) { error = exception.what(); return {}; }
     }
     return resources;
 }
@@ -186,7 +231,7 @@ cv::Mat ApplyTransform(const cv::Mat& source, const nlohmann::json& sample) {
 // independent ground-truth annotation; keep it separate from accuracy metrics.
 __declspec(noinline) int ReplayRecoverySequence(const std::filesystem::path& root,
     const nlohmann::json& manifest, const std::filesystem::path& reportPath,
-    std::shared_ptr<RuntimeFeatureResources> resources) {
+    std::shared_ptr<const RuntimeFeatureResources> resources) {
     if (!manifest.contains("provenance") || !manifest.at("provenance").is_object() ||
         manifest.at("provenance").value("independentGroundTruth", true)) {
         std::cerr << "Recovery scenarios require explicit non-independent reference provenance.\n";
@@ -231,7 +276,12 @@ __declspec(noinline) int ReplayRecoverySequence(const std::filesystem::path& roo
         if (loaded.empty()) {
             ++failed; results.push_back({{"id", sample.at("id")}, {"missing", true}}); continue;
         }
-        const auto image = ApplyTransform(loaded, sample);
+        auto image = ApplyTransform(loaded, sample);
+        if (sample.value("fullSnapshot", false)) {
+            Coordinate minimapBottom;
+            image = ImageProcessing::CropToMinMapAreaImg(image,
+                RECT{0, 0, image.cols, image.rows}, minimapBottom);
+        }
         cv::Mat normalized;
         ImageFeatureData features;
         const bool hasFeatures = GlobalVisualLocalizer::PrepareMinimap(image, normalized, features);
@@ -372,7 +422,7 @@ __declspec(noinline) int ReplayRecoverySequence(const std::filesystem::path& roo
     }
     GlobalVisualLocalizer::Shutdown();
     if (manifest.value("requireSearchProgression", false) && maximumSearchOffset == 0) ++failed;
-    const nlohmann::json report = {{"scenarioPassed", failed == 0}, {"failed", failed},
+    const nlohmann::json report = {{"diagnosticOnly", manifest.contains("diagnosticPacks")}, {"scenarioPassed", failed == 0}, {"failed", failed},
         {"provenance", manifest.at("provenance")}, {"independentGroundTruth", false},
         {"accuracyEvaluated", false}, {"usesResumeHints", usesResumeHints},
         {"recovered", recovered}, {"confirmed", confirmed},
@@ -385,7 +435,7 @@ __declspec(noinline) int ReplayRecoverySequence(const std::filesystem::path& roo
 }
 
 __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, const nlohmann::json& manifest,
-    const std::filesystem::path& reportPath, std::shared_ptr<RuntimeFeatureResources> resources) {
+    const std::filesystem::path& reportPath, std::shared_ptr<const RuntimeFeatureResources> resources) {
     std::string error;
     if (!MapViewportLocalizer::Initialize(resources, error)) {
         std::cerr << error << '\n';
@@ -412,22 +462,27 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
         bool correct = received && (sample.value("mustReject", false) ? !result.accepted : result.accepted);
+        if (sample.contains("expectedSceneId") && result.accepted)
+            correct = correct && result.sceneId == sample.at("expectedSceneId").get<int>();
         double distance = 0.0;
         if (sample.contains("expected") && result.accepted) {
             const auto& expected = sample.at("expected");
             distance = std::hypot(result.centerMapCoordinate.x - expected.at("mapX").get<double>(),
                 result.centerMapCoordinate.y - expected.at("mapY").get<double>());
-            correct = correct && distance <= expected.value("tolerance", 12.0);
+            correct = correct && distance <= expected.value("tolerance", 12.0) &&
+                result.sceneId == expected.value("sceneId", 1);
         }
         if (!correct) ++failed;
-        results.push_back({{"id", sample.at("id")}, {"accepted", result.accepted}, {"correct", correct},
-            {"matches", result.goodMatchCount}, {"inliers", result.inlierCount},
+        nlohmann::json corners = nlohmann::json::array();
+        for (const auto& point : result.captureCorners) corners.push_back({point.x, point.y});
+        results.push_back({{"captureCorners", corners}, {"id", sample.at("id")}, {"accepted", result.accepted}, {"correct", correct},
+            {"sceneId", result.sceneId}, {"matches", result.goodMatchCount}, {"inliers", result.inlierCount},
             {"mapX", result.centerMapCoordinate.x}, {"mapY", result.centerMapCoordinate.y},
             {"errorDistance", distance}, {"durationMs", result.durationMilliseconds}});
     }
     MapViewportLocalizer::Shutdown();
     std::filesystem::create_directories(reportPath.parent_path());
-    const nlohmann::json report = {{"failed", failed}, {"samples", results}};
+    const nlohmann::json report = {{"diagnosticOnly", manifest.contains("diagnosticPacks")}, {"failed", failed}, {"samples", results}};
     std::ofstream(reportPath) << report.dump(2) << '\n';
     std::cout << report.dump(2) << '\n';
     return failed == 0 ? 0 : 3;
@@ -435,6 +490,7 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
 }
 
 int wmain(int argumentCount, wchar_t** arguments) {
+    if (argumentCount == 2 && std::wstring(arguments[1]) == L"--scene-self-test") return RunMultiSceneViewportTests();
     if (argumentCount != 4) {
         std::wcerr << L"Usage: IMaoVisualRegression <repo-root> <manifest.json> <report.json>\n";
         return 2;
@@ -455,7 +511,25 @@ int wmain(int argumentCount, wchar_t** arguments) {
     std::string error;
     const auto loadStart = std::chrono::steady_clock::now();
     const auto workingSetBeforeLoad = WorkingSetBytes();
-    const auto resources = LoadResources(repositoryRoot, error);
+    std::shared_ptr<const RuntimeFeatureResources> resources;
+    if (manifest.contains("resourceSnapshot")) {
+        if (manifest.contains("diagnosticPacks")) {
+            std::cerr << "Runtime snapshots cannot be mixed with diagnostic packs.\n";
+            return 2;
+        }
+        nlohmann::json snapshot;
+        if (!ResourceSnapshotValidation::ReadAndValidate(
+                ResourceSnapshotContext::Path(manifest.at("resourceSnapshot").get<std::string>()), snapshot, error)) {
+            std::cerr << "Invalid runtime snapshot: " << error << '\n';
+            return 1;
+        }
+        ResourceSnapshotContext::Initialize(std::move(snapshot));
+        RuntimeFeatureRepository::Instance().BeginPreload(ResourceSnapshotContext::BaselineRoot());
+        resources = RuntimeFeatureRepository::Instance().AwaitReady(error);
+    } else {
+        resources = LoadResources(repositoryRoot, error,
+            manifest.value("diagnosticPacks", std::vector<std::string>{}));
+    }
     if (!resources) {
         std::cerr << "Visual resources failed to load: " << error << '\n';
         return 1;
@@ -672,15 +746,10 @@ int wmain(int argumentCount, wchar_t** arguments) {
             const auto& candidate = localTrackingCandidate;
             const bool isStrong = candidate.quality == VisualLocalizationQuality::Strong;
             if (isStrong) ++rawStrong;
-            // Marginal matches always require a confirmation.  Strong matches
-            // can publish in one frame only when an OCR hint selected the
-            // region and image geometry has already confirmed that hint.
-            requiresSecondFrame = !isStrong || !candidate.ocrHintMatched;
-            if (!requiresSecondFrame) {
-                published = &candidate;
-                pendingConfirmations.erase(session);
-            }
-            else {
+            // OCR selects a search region only. Every recovery requires a
+            // second captured frame, including Strong OCR-bounded geometry.
+            requiresSecondFrame = true;
+            {
                 const auto previous = pendingConfirmations.find(session);
                 if (previous != pendingConfirmations.end() && previous->second.frameId + 1 == frameId &&
                     previous->second.candidate.sceneId == candidate.sceneId &&
@@ -745,6 +814,7 @@ int wmain(int argumentCount, wchar_t** arguments) {
             {"errorDistance", errorDistance}, {"coarseMilliseconds", result.coarseMilliseconds},
             {"preparationMilliseconds", preparationMilliseconds},
             {"minimapRawKeypoints", minimapDiagnostics.rawKeypointCount},
+            {"minimapAdaptivePlayerMaskApplied", minimapDiagnostics.adaptivePlayerMaskApplied},
             {"minimapRetainedKeypoints", minimapDiagnostics.retainedKeypointCount},
             {"minimapDynamicMaskPercent", minimapDiagnostics.dynamicMaskPercent},
             {"minimapTemporalMaskApplied", minimapDiagnostics.temporalMaskApplied},
@@ -785,6 +855,7 @@ int wmain(int argumentCount, wchar_t** arguments) {
         falseAccepted == 0 && acceptedPrecision >= 0.95 &&
         acceptedGlobalP95 <= 250.0 && localTrackingP95 <= 50.0;
     const nlohmann::json report = {
+        {"diagnosticOnly", manifest.contains("diagnosticPacks")},
         {"requiredPublications", requiredPublications}, {"requiredPublished", requiredPublished},
         {"latencyViolations", latencyViolations},
         {"processed", processed}, {"missing", missing}, {"featureless", featureless},

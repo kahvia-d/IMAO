@@ -1,3 +1,4 @@
+﻿#include <opencv2/imgcodecs.hpp>
 #include "CoarseSearchCoverageTests.h"
 #include "OverlayVisibilityTests.h"
 #include "GamepadContextTests.h"
@@ -29,6 +30,8 @@
 #include "App/MapViewportGeometry.h"
 #include "App/MinimapResumePolicy.h"
 #include "Coordinate/VisualLocalization/RecoveryPolicy.h"
+#include "Coordinate/VisualLocalization/MinimapTerrainEvidence.h"
+#include "SparseMinimapTests.h"
 #include "App/WorldSearchPrior.h"
 #include "Feature/Processing/FeatureBinaryCodec.h"
 #include "Feature/VisualIndex/MapVisualIndex.h"
@@ -375,6 +378,21 @@ void TestMapViewportPredictor() {
         observed.centerMapCoordinate.x > 1025.0 && observed.revision > draggedRevision,
         "a shifted map crop should move the predicted center and invalidate old viewport work");
 
+    // Empty viewport centers must not erase usable coastline motion evidence.
+    cv::Mat coast;
+    cv::resize(source, coast, cv::Size(800, 400));
+    coast(cv::Rect(250, 100, 300, 200)).setTo(0);
+    cv::Mat movedCoast;
+    const cv::Mat coastMotion = (cv::Mat_<double>(2, 3) << 1, 0, -8, 0, 1, 4);
+    cv::warpAffine(coast, movedCoast, coastMotion, coast.size());
+    MapViewportPrediction coastPose, bridgedCoast;
+    coastPose.sceneId = 2;
+    coastPose.centerMapCoordinate = Coordinate(1000, 2000);
+    coastPose.captureCorners = {{600,1800},{1400,1800},{1400,2200},{600,2200}};
+    Expect(MapViewportPredictor::TryBridgePrediction(coast, movedCoast, coastPose, bridgedCoast) &&
+        std::hypot(bridgedCoast.centerMapCoordinate.x - 1008, bridgedCoast.centerMapCoordinate.y - 1996) < 2,
+        "rectangular coastline frame preserves center translation with an empty center");
+
     cv::Mat blank = cv::Mat::zeros(256, 256, CV_8UC1);
     MapViewportPrediction held;
     predictor.ObserveFrame(blank, held);
@@ -404,6 +422,13 @@ void TestWorldSearchPrior() {
     Expect(prior.valid && prior.sceneId == Scene::SceneNameToId("World") &&
         prior.candidateTileCount == 2,
         "World prior should include only nearby World visual tiles");
+    const auto other = index.Build(resources, Coordinate(300.0, 180.0), 160.0, 2);
+    Expect(other.valid && other.sceneId == 2 && other.candidateTileCount == 1 && other.areaName == "Tethys",
+        "Independent scene prior excludes overlapping World tiles");
+    Expect(index.Build(resources, Coordinate(0.0, 0.0), 160.0, 2).valid,
+        "Map origin is a valid independent scene coordinate");
+    Expect(!index.Build(resources, Coordinate(300.0, 180.0), 160.0, 999).valid,
+        "Unknown scene cannot create a search prior");
     Expect(!prior.areaName.empty(), "World prior should expose a diagnostic area name when hierarchy data exists");
 #endif
 }
@@ -805,8 +830,102 @@ void TestFramePublication() {
     Expect(!frame.Fresh(), "slow update cadence still rejects a stalled capture");
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc == 5 && std::string(argv[1]) == "--map-minimap") {
+        auto map = cv::imread(argv[2]);
+        auto mini = cv::imread(argv[4]);
+        if (map.empty() || mini.empty()) return 2;
+        std::ifstream input(argv[3]);
+        const auto report = nlohmann::json::parse(input);
+        const auto& corners = report.at("samples").at(0).at("captureCorners");
+        const double width = corners.at(1).at(0).get<double>() - corners.at(0).at(0).get<double>();
+        cv::resize(map,map,{1600,900},0,0,cv::INTER_AREA);
+        cv::Point2f arrow;
+        if (!MinimapTerrainEvidence::PlayerArrow(map(cv::Rect(160,100,1280,720)),arrow)) return 3;
+        arrow += cv::Point2f(160,100);
+        auto reference = MinimapTerrainEvidence::ViewportReference(map,arrow,width/1280);
+        cv::resize(mini,mini,{184,184},0,0,cv::INTER_AREA);
+        cv::imwrite(std::string(argv[4])+".map-reference.png",reference);
+        MinimapTerrainEvidence::Motion motion;
+        const bool accepted = MinimapTerrainEvidence::TrackContours(reference,mini,motion,24,true);
+        std::cout << "map-minimap accepted=" << accepted << " shift=" << motion.shift << " score=" << motion.score
+            << " separation=" << motion.separation << " support=" << motion.support << '\n';
+        return accepted ? 0 : 1;
+    }
+    if (argc == 3 && std::string(argv[1]) == "--terrain-image") {
+        auto source = cv::imread(argv[2]);
+        if (source.empty()) return 2;
+        cv::resize(source, source, {184,184}, 0,0,cv::INTER_AREA);
+        cv::imwrite(std::string(argv[2]) + ".mask.png", MinimapTerrainEvidence::TerrainMask(source));
+        for (const auto shift : {cv::Point2d(0,0),cv::Point2d(4,2),cv::Point2d(-4,-2)}) {
+            cv::Mat moved;
+            const cv::Mat matrix = (cv::Mat_<double>(2,3) << 1,0,shift.x,0,1,shift.y);
+            cv::warpAffine(source,moved,matrix,source.size());
+            MinimapTerrainEvidence::Motion result;
+            const bool accepted = MinimapTerrainEvidence::TrackContours(source,moved,result);
+            std::cout << "contour shift=" << shift << " accepted=" << accepted << " measured=" << result.shift
+                << " score=" << result.score << " separation=" << result.separation << " support=" << result.support << '\n';
+        }
+        return 0;
+    }
+    if (argc == 3 && std::string(argv[1]) == "--map-arrow") {
+        auto source = cv::imread(argv[2]);
+        if (source.empty()) return 2;
+        cv::resize(source,source,{1600,900},0,0,cv::INTER_AREA);
+        cv::Point2f arrow;
+        const bool found = MinimapTerrainEvidence::PlayerArrow(source(cv::Rect(160,100,1280,720)),arrow);
+        std::cout << "arrow found=" << found << " point=" << arrow + cv::Point2f(160,100) << '\n';
+        return found ? 0 : 1;
+    }
+    {
+        cv::Mat empty(184,184,CV_8UC3,cv::Scalar::all(35));
+        MinimapTerrainEvidence::Motion motion;
+        Expect(!MinimapTerrainEvidence::TrackContours(empty,empty,motion), "blank terrain must not track");
+        auto edge = empty.clone();
+        cv::line(edge,{40,20},{40,164},cv::Scalar::all(160),2);
+        Expect(!MinimapTerrainEvidence::TrackContours(edge,edge,motion), "one straight edge cannot determine 2D motion");
+        auto terrain = empty.clone();
+        cv::fillConvexPoly(terrain,std::vector<cv::Point>{{48,56},{66,38},{82,62},{75,82},{52,78}},cv::Scalar::all(130));
+        cv::line(terrain,{48,62},{75,75},cv::Scalar::all(65),2);
+        cv::Mat shifted;
+        const cv::Mat transform = (cv::Mat_<double>(2,3) << 1,0,4,0,1,-2);
+        cv::warpAffine(terrain,shifted,transform,terrain.size());
+        Expect(MinimapTerrainEvidence::TrackContours(terrain,shifted,motion) && cv::norm(motion.shift-cv::Point2d(4,-2)) < 1,
+            "isolated terrain supports short relative tracking");
+        cv::Mat symbols(200,300,CV_8UC3,cv::Scalar::all(20));
+        cv::fillConvexPoly(symbols,std::vector<cv::Point>{{50,50},{80,65},{50,80}},cv::Scalar(0,230,255));
+        cv::Point2f arrow;
+        Expect(MinimapTerrainEvidence::PlayerArrow(symbols,arrow), "unique triangular arrow supplies a hint");
+        cv::fillConvexPoly(symbols,std::vector<cv::Point>{{150,50},{180,65},{150,80}},cv::Scalar(0,230,255));
+        Expect(!MinimapTerrainEvidence::PlayerArrow(symbols,arrow), "ambiguous arrows must not supply a hint");
+    }
+    if (argc == 3 && std::string(argv[1]) == "--bridge-image") {
+        const auto source = cv::imread(argv[2]);
+        if (source.empty()) return 2;
+        MapViewportPrediction pose;
+        pose.sceneId = 2;
+        pose.centerMapCoordinate = Coordinate(source.cols / 2.0, source.rows / 2.0);
+        pose.captureCorners = {{0,0},{static_cast<float>(source.cols),0},
+            {static_cast<float>(source.cols),static_cast<float>(source.rows)}, {0,static_cast<float>(source.rows)}};
+        int failed = 0;
+        for (const auto shift : {cv::Point2d(0,0), cv::Point2d(6,2), cv::Point2d(-6,-2)}) {
+            cv::Mat moved;
+            const cv::Mat motion = (cv::Mat_<double>(2,3) << 1,0,shift.x,0,1,shift.y);
+            cv::warpAffine(source, moved, motion, source.size());
+            MapViewportPrediction result;
+            int inliers = 0;
+            const bool accepted = MapViewportPredictor::TryBridgePrediction(source,moved,pose,result,&inliers);
+            const double error = accepted ? std::hypot(result.centerMapCoordinate.x - pose.centerMapCoordinate.x + shift.x,
+                result.centerMapCoordinate.y - pose.centerMapCoordinate.y + shift.y) : -1;
+            std::cout << "bridge shift=" << shift.x << "," << shift.y << " accepted=" << accepted
+                << " inliers=" << inliers << " errorPixels=" << error << "\n";
+            if (!accepted || error > 3) ++failed;
+        }
+        return failed == 0 ? 0 : 1;
+    }
+
     TestFramePublication();
+    TestSparseMinimap(Expect);
     TestRuntimeDataSafety();
     {
         UniqueMapFeatures unique;

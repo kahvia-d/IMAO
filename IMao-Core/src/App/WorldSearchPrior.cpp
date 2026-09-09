@@ -14,12 +14,6 @@ bool IntersectsRadius(const MapVisualTile& tile, const Coordinate& center, doubl
     const double nearestY = std::clamp(center.y, static_cast<double>(tile.minY), static_cast<double>(tile.maxY));
     return std::hypot(center.x - nearestX, center.y - nearestY) <= radius;
 }
-
-bool IsWorldVisualTile(const RuntimeFeatureResources& resources, std::size_t index) {
-    if (index < resources.baseVisualTileCount) return true;
-    return index < resources.visualIndex.tiles.size() &&
-        resources.visualIndex.tiles[index].sceneId == Scene::SceneNameToId("World");
-}
 }
 
 bool WorldSearchPriorIndex::Load(const std::filesystem::path& countryPath, std::string& error) {
@@ -80,22 +74,27 @@ bool WorldSearchPriorIndex::Load(const std::filesystem::path& countryPath, std::
 }
 
 WorldSearchPrior WorldSearchPriorIndex::Build(const RuntimeFeatureResources& resources,
-    const Coordinate& centerMapCoordinate, double radius) const {
+    const Coordinate& centerMapCoordinate, double radius, int sceneId) const {
     WorldSearchPrior prior;
-    if ((centerMapCoordinate.x == 0.0 && centerMapCoordinate.y == 0.0) ||
-        radius <= 0.0 || !resources.visualIndexReady) return prior;
+    if (radius <= 0.0 || !std::isfinite(radius) || !std::isfinite(centerMapCoordinate.x) ||
+        !std::isfinite(centerMapCoordinate.y) || !Scene::IsRuntimeApproved(sceneId) || !resources.visualIndexReady) return prior;
 
     prior.valid = true;
-    prior.sceneId = Scene::SceneNameToId("World");
+    prior.sceneId = sceneId;
     prior.centerMapCoordinate = centerMapCoordinate;
     prior.radius = radius;
     for (std::size_t index = 0; index < resources.visualIndex.tiles.size(); ++index) {
-        if (!IsWorldVisualTile(resources, index)) continue;
+        const int tileScene = index < resources.baseVisualTileCount ? 1 : resources.visualIndex.tiles[index].sceneId;
+        if (tileScene != sceneId) continue;
         if (IntersectsRadius(resources.visualIndex.tiles[index], centerMapCoordinate, radius)) {
             ++prior.candidateTileCount;
         }
     }
 
+    if (sceneId != Scene::SceneNameToId("World")) {
+        prior.areaName = Scene::Find(sceneId)->name;
+        return prior;
+    }
     double nearestDistance = std::numeric_limits<double>::infinity();
     for (const auto& anchor : anchors_) {
         const double distance = std::hypot(anchor.mapCoordinate.x - centerMapCoordinate.x,

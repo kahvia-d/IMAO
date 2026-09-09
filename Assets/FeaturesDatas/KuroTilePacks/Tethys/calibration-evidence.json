@@ -1,0 +1,163 @@
+{
+  "formatVersion": 1,
+  "scene": "Tethys",
+  "calibration": {
+    "scene": "Tethys",
+    "state": 900,
+    "sampleCount": 4,
+    "passed": true,
+    "coordinateTransform": {
+      "originX": 8593.004842739658,
+      "originY": 1408.620887208053,
+      "scale": 1.2055468368887101
+    },
+    "maxErrorPixels": 0.708248064237971,
+    "rmsErrorPixels": 0.47627739876952807,
+    "samples": [
+      {
+        "game": {
+          "x": -480.0,
+          "y": 710.0
+        },
+        "map": {
+          "x": 8014.39453125,
+          "y": 2264.7578125
+        },
+        "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.51.36.68.png"
+      },
+      {
+        "game": {
+          "x": -403.0,
+          "y": 356.0
+        },
+        "map": {
+          "x": 8106.78125,
+          "y": 1837.822265625
+        },
+        "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.52.03.66.png"
+      },
+      {
+        "game": {
+          "x": -227.0,
+          "y": 843.0
+        },
+        "map": {
+          "x": 8319.5693359375,
+          "y": 2424.224853515625
+        },
+        "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.52.45.96.png"
+      },
+      {
+        "game": {
+          "x": -21.0,
+          "y": 756.0
+        },
+        "map": {
+          "x": 8567.80078125,
+          "y": 2320.4609375
+        },
+        "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.53.17.21.png"
+      }
+    ]
+  },
+  "captures": [
+    {
+      "id": 1,
+      "sceneId": 2,
+      "sceneName": "Tethys",
+      "gameScreenshot": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.51.30.86.png",
+      "mapScreenshot": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.51.36.68.png",
+      "watermarkValues": [
+        -480,
+        710,
+        86
+      ],
+      "gameXY": [
+        -480,
+        710
+      ],
+      "sha256": {
+        "0": "b8b9ceb8562320363ebb9c0271168451d3946295216eb73179b8209173ead036",
+        "1": "c963a2c12cafe5019153e1c5ba2692660ab77d8f3a6795daeeaa17d29cf14a19"
+      }
+    },
+    {
+      "id": 2,
+      "sceneId": 2,
+      "sceneName": "Tethys",
+      "gameScreenshot": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.52.00.02.png",
+      "mapScreenshot": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.52.03.66.png",
+      "watermarkValues": [
+        -403,
+        356,
+        120
+      ],
+      "gameXY": [
+        -403,
+        356
+      ],
+      "sha256": {
+        "0": "57c91df27915349df84e3aa1f0fbb7ed43de65542185b87277f3e4d4fa68aa06",
+        "1": "e3519c8c577a0244a03a13ee497b924bdcbd544b8a790be0dc3a9079791acb1c"
+      }
+    },
+    {
+      "id": 3,
+      "sceneId": 2,
+      "sceneName": "Tethys",
+      "gameScreenshot": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.52.38.96.png",
+      "mapScreenshot": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.52.45.96.png",
+      "watermarkValues": [
+        -227,
+        843,
+        38
+      ],
+      "gameXY": [
+        -227,
+        843
+      ],
+      "sha256": {
+        "0": "4f317758088022fbb8f9ddef7b2aef310d910326c437d82bf09c397d97121cc7",
+        "1": "08cdb5f119a14ccc2ade08f3276d0477973a19d7328b0cf31972905c5f49352d"
+      }
+    },
+    {
+      "id": 4,
+      "sceneId": 2,
+      "sceneName": "Tethys",
+      "gameScreenshot": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.53.12.06.png",
+      "mapScreenshot": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.53.17.21.png",
+      "watermarkValues": [
+        -21,
+        756,
+        32
+      ],
+      "gameXY": [
+        -21,
+        756
+      ],
+      "sha256": {
+        "0": "1e9a08ac7be001abe2e09d6112c279f23f8f51895df2479fb061204da4c6e4e5",
+        "1": "c7dcce73b84ef140bfab43044deb7876cbdb2243ac71d829918255075b00505b"
+      }
+    }
+  ],
+  "heldOutMinimap": {
+    "screenshots": 4,
+    "strongCorrect": 3,
+    "rejected": 1,
+    "maxStrongErrorPixels": 3.332906364697712
+  },
+  "heldOutVideo": {
+    "processed": 30,
+    "strongCorrect": 26,
+    "publishedCorrect": 13,
+    "falseAccepted": 0,
+    "maxStrongErrorPixels": 3.846952159645086,
+    "viewportFramesPassed": 6
+  },
+  "limitations": [
+    "Third screenshot minimap has insufficient geometric support; map viewport passes.",
+    "Offline capture replay does not verify the running overlay or scene switching."
+  ]
+}

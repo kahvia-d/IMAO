@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('LowerVault', 'Darkplain', 'TimeRiftRuins')]
+    [ValidateSet('Tethys', 'Fabricatorium', 'Avinoleum', 'Lahai', 'LowerVault', 'Darkplain', 'TimeRiftRuins')]
     [string]$Scene,
 
     [Parameter(Mandatory)]

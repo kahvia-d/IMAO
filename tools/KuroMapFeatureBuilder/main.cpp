@@ -60,6 +60,7 @@ struct BuildSummary {
 };
 
 struct ReferenceVerification {
+    json geometryDiagnostic;
     bool passed = false;
     size_t mapKeypoints = 0;
     size_t minimapKeypoints = 0;
@@ -289,7 +290,7 @@ double Median(std::vector<double> values) {
 
 ReferenceVerification VerifyReference(const fs::path& featurePath, const fs::path& referencePath,
     double anchorWorldX, double anchorWorldY, const CoordinateTransform& transform,
-    bool referenceIsFullSnapshot) {
+    bool referenceIsFullSnapshot, double normalizedMinimapScale) {
     if (!fs::exists(referencePath)) { throw std::runtime_error("reference minimap is missing"); }
     std::vector<cv::KeyPoint> allMapKeypoints;
     cv::Mat allMapDescriptors;
@@ -359,17 +360,33 @@ ReferenceVerification VerifyReference(const fs::path& featurePath, const fs::pat
     matcher.knnMatch(nearbyMapDescriptors, minimapDescriptors, matches, 2);
     std::vector<double> estimateXs;
     std::vector<double> estimateYs;
-    const double minimapToMapScale = 194.0 / reference.cols;
+    std::vector<cv::Point2f> miniGeometry, mapGeometry;
+    const double minimapToMapScale = normalizedMinimapScale * 184.0 / reference.cols;
     for (const auto& pair : matches) {
         if (pair.size() < 2 || pair[0].distance >= 0.65f * pair[1].distance || pair[0].distance >= 0.5f) { continue; }
         ++verification.goodMatches;
         const auto& mapPoint = nearbyMapKeypoints[static_cast<size_t>(pair[0].queryIdx)].pt;
         const auto& minimapPoint = minimapKeypoints[static_cast<size_t>(pair[0].trainIdx)].pt;
+        miniGeometry.push_back(minimapPoint);
+        mapGeometry.push_back(mapPoint);
         const double estimateX = mapPoint.x - minimapToMapScale * (minimapPoint.x - reference.cols / 2.0);
         const double estimateY = mapPoint.y - minimapToMapScale * (minimapPoint.y - reference.rows / 2.0);
         if (std::abs(estimateX - expectedX) <= 8.0 && std::abs(estimateY - expectedY) <= 8.0) {
             estimateXs.push_back(estimateX);
             estimateYs.push_back(estimateY);
+        }
+    }
+    if (miniGeometry.size() >= 6) {
+        cv::Mat inliers;
+        const auto affine = cv::estimateAffinePartial2D(miniGeometry, mapGeometry, inliers, cv::RANSAC, 2.0);
+        if (!affine.empty()) {
+            const double a = affine.at<double>(0, 0), b = affine.at<double>(1, 0);
+            const double cx = reference.cols / 2.0, cy = reference.rows / 2.0;
+            verification.geometryDiagnostic = {
+                {"inliers", cv::countNonZero(inliers)}, {"scale", std::hypot(a, b)},
+                {"rotationDegrees", std::atan2(b, a) * 180.0 / CV_PI},
+                {"mapX", a * cx + affine.at<double>(0, 1) * cy + affine.at<double>(0, 2)},
+                {"mapY", b * cx + affine.at<double>(1, 1) * cy + affine.at<double>(1, 2)} };
         }
     }
     verification.nearAnchorMatches = estimateXs.size();
@@ -392,13 +409,15 @@ int main(int argc, char** argv) {
     fs::path reportPath;
     fs::path referencePath;
     bool referenceIsFullSnapshot = false;
+    bool verifyOnly = false;
     bool hasAnchorX = false;
     bool hasAnchorY = false;
     double anchorWorldX = 0;
     double anchorWorldY = 0;
     for (int index = 1; index < argc; ++index) {
         const std::string argument = argv[index];
-        if (argument == "--input" && index + 1 < argc) { inputPath = argv[++index]; }
+        if (argument == "--verify-only") { verifyOnly = true; }
+        else if (argument == "--input" && index + 1 < argc) { inputPath = argv[++index]; }
         else if (argument == "--output" && index + 1 < argc) { outputPath = argv[++index]; }
         else if (argument == "--report" && index + 1 < argc) { reportPath = argv[++index]; }
         else if (argument == "--verify-reference" && index + 1 < argc) { referencePath = argv[++index]; }
@@ -412,7 +431,11 @@ int main(int argc, char** argv) {
         (referencePath.empty() && (hasAnchorX || hasAnchorY || referenceIsFullSnapshot))) { PrintUsage(); return 2; }
     try {
         CoordinateTransform transform;
-        const BuildSummary summary = Build(inputPath, outputPath, transform);
+        BuildSummary summary;
+        if (verifyOnly) {
+            if (referencePath.empty()) throw std::runtime_error("verify-only requires a reference");
+            ReadTileManifest(inputPath, summary, transform);
+        } else summary = Build(inputPath, outputPath, transform);
         json report = {
             { "formatVersion", 1 },
             { "packId", summary.packId },
@@ -423,9 +446,26 @@ int main(int argc, char** argv) {
             { "coordinateBounds", {{ "minX", summary.minX }, { "maxX", summary.maxX }, { "minY", summary.minY }, { "maxY", summary.maxY }} },
             { "featuresSha256", Sha256File(outputPath) }
         };
+        if (verifyOnly) {
+            report["verificationOnly"] = true;
+            for (const auto* key : {"coordinateBounds", "tileCount", "extractedKeypoints", "selectedKeypoints"}) report.erase(key);
+        }
         if (!referencePath.empty()) {
+            CoordinateTransform referenceTransform = transform;
+            std::ifstream manifestInput(inputPath);
+            const auto sourceManifest = json::parse(manifestInput);
+            if (sourceManifest.contains("referenceCoordinateTransform")) {
+                const auto& value = sourceManifest.at("referenceCoordinateTransform");
+                referenceTransform.originX = value.at("originX").get<double>();
+                referenceTransform.originY = value.at("originY").get<double>();
+                referenceTransform.scale = value.at("scale").get<double>();
+                if (!std::isfinite(referenceTransform.originX) || !std::isfinite(referenceTransform.originY) ||
+                    !std::isfinite(referenceTransform.scale) || referenceTransform.scale <= 0)
+                    throw std::runtime_error("invalid reference coordinate transform");
+            }
             const ReferenceVerification verification = VerifyReference(outputPath, referencePath,
-                anchorWorldX, anchorWorldY, transform, referenceIsFullSnapshot);
+                anchorWorldX, anchorWorldY, referenceTransform, referenceIsFullSnapshot,
+                sourceManifest.value("minimapScale", 194.0 / 184.0));
             report["referenceVerification"] = {
                 { "reference", referencePath.filename().string() },
                 { "passed", verification.passed },
@@ -433,6 +473,7 @@ int main(int argc, char** argv) {
                 { "minimapKeypoints", verification.minimapKeypoints },
                 { "goodMatches", verification.goodMatches },
                 { "nearAnchorMatches", verification.nearAnchorMatches },
+                { "geometryDiagnostic", verification.geometryDiagnostic },
                 { "expectedMapCoordinate", {{ "x", verification.expectedMapX }, { "y", verification.expectedMapY }} },
                 { "resultMapCoordinate", {{ "x", verification.resultMapX }, { "y", verification.resultMapY }} },
                 { "errorPixels", verification.errorPixels }
@@ -444,6 +485,7 @@ int main(int argc, char** argv) {
             }
         }
         WriteJson(reportPath, report);
+        if (verifyOnly) { std::cout << "reference verification complete (features unchanged)\n"; return 0; }
         std::cout << "complete tiles=" << summary.tileCount << " extracted=" << summary.extractedKeypoints << " selected=" << summary.selectedKeypoints << '\n';
         return 0;
     }

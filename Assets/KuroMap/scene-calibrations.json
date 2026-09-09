@@ -1,4 +1,217 @@
 {
   "formatVersion": 1,
-  "scenes": {}
+  "scenes": {
+    "Tethys": {
+      "scene": "Tethys",
+      "state": 900,
+      "sampleCount": 4,
+      "passed": true,
+      "coordinateTransform": {
+        "originX": 8593.004842739658,
+        "originY": 1408.620887208053,
+        "scale": 1.2055468368887101
+      },
+      "maxErrorPixels": 0.708248064237971,
+      "rmsErrorPixels": 0.47627739876952807,
+      "samples": [
+        {
+          "game": {
+            "x": -480.0,
+            "y": 710.0
+          },
+          "map": {
+            "x": 8014.39453125,
+            "y": 2264.7578125
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.51.36.68.png"
+        },
+        {
+          "game": {
+            "x": -403.0,
+            "y": 356.0
+          },
+          "map": {
+            "x": 8106.78125,
+            "y": 1837.822265625
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.52.03.66.png"
+        },
+        {
+          "game": {
+            "x": -227.0,
+            "y": 843.0
+          },
+          "map": {
+            "x": 8319.5693359375,
+            "y": 2424.224853515625
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.52.45.96.png"
+        },
+        {
+          "game": {
+            "x": -21.0,
+            "y": 756.0
+          },
+          "map": {
+            "x": 8567.80078125,
+            "y": 2320.4609375
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 19.53.17.21.png"
+        }
+      ]
+    },
+    "Darkplain": {
+      "scene": "Darkplain",
+      "state": 909,
+      "sampleCount": 4,
+      "passed": true,
+      "coordinateTransform": {
+        "originX": -0.4373679618184383,
+        "originY": 0.23849610389572717,
+        "scale": 1.2051393242280368
+      },
+      "maxErrorPixels": 0.20167186629895134,
+      "rmsErrorPixels": 0.16081514327931204,
+      "samples": [
+        {
+          "game": {
+            "x": -214.0,
+            "y": 799.0
+          },
+          "map": {
+            "x": -258.4579162597656,
+            "y": 962.9832763671875
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.56.52.01.png"
+        },
+        {
+          "game": {
+            "x": -196.0,
+            "y": -172.0
+          },
+          "map": {
+            "x": -236.559814453125,
+            "y": -207.0005645751953
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.57.23.43.png"
+        },
+        {
+          "game": {
+            "x": 662.0,
+            "y": -250.0
+          },
+          "map": {
+            "x": 797.2310791015625,
+            "y": -300.98199462890625
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.57.42.71.png"
+        },
+        {
+          "game": {
+            "x": 1179.0,
+            "y": 616.0
+          },
+          "map": {
+            "x": 1420.591552734375,
+            "y": 742.6566162109375
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.58.15.51.png"
+        }
+      ]
+    },
+    "Lahai": {
+      "scene": "Lahai",
+      "state": 906,
+      "sampleCount": 4,
+      "passed": true,
+      "coordinateTransform": {
+        "originX": 21662.081855483,
+        "originY": 13138.6943378055,
+        "scale": 1.2051353792580002
+      },
+      "maxErrorPixels": 0.30264497736162066,
+      "rmsErrorPixels": 0.18322867578509508,
+      "samples": [
+        {
+          "game": {
+            "x": -3860.0,
+            "y": -6491.0
+          },
+          "map": {
+            "x": 17010.18359375,
+            "y": 5316.21044921875
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.47.22.19.png"
+        },
+        {
+          "game": {
+            "x": -667.0,
+            "y": -7444.0
+          },
+          "map": {
+            "x": 20858.201171875,
+            "y": 4167.78466796875
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.47.59.60.png"
+        },
+        {
+          "game": {
+            "x": 732.0,
+            "y": -5152.0
+          },
+          "map": {
+            "x": 22544.2890625,
+            "y": 6929.9599609375
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.48.53.90.png"
+        },
+        {
+          "game": {
+            "x": -798.0,
+            "y": -5287.0
+          },
+          "map": {
+            "x": 20700.466796875,
+            "y": 6766.8525390625
+          },
+          "capture": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.49.18.23.png"
+        }
+      ],
+      "minimapScale": 2.148779742693886,
+      "minimapScaleEvidence": {
+        "sampleCount": 4,
+        "method": "RANSAC similarity on original minimaps independently checked against map-calibrated centers",
+        "observations": [
+          {
+            "inliers": 53,
+            "mapX": 17006.528254121273,
+            "mapY": 5312.459708766726,
+            "rotationDegrees": 0.19559443185799594,
+            "scale": 2.1477283842968387
+          },
+          {
+            "inliers": 17,
+            "mapX": 20854.43367142386,
+            "mapY": 4164.060884913483,
+            "rotationDegrees": -0.02956298473791702,
+            "scale": 2.1538379756851205
+          },
+          {
+            "inliers": 32,
+            "mapX": 22540.27508221386,
+            "mapY": 6926.6255967459265,
+            "rotationDegrees": -0.25420341119584633,
+            "scale": 2.1466842552816274
+          },
+          {
+            "inliers": 16,
+            "mapX": 20696.72296749121,
+            "mapY": 6763.630122158607,
+            "rotationDegrees": -0.048728435636701206,
+            "scale": 2.1498311010909332
+          }
+        ]
+      }
+    }
+  }
 }

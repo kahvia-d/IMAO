@@ -1,0 +1,82 @@
+{
+  "formatVersion": 1,
+  "scene": "Darkplain",
+  "pairs": [
+    {
+      "game": {
+        "x": -214,
+        "y": 799
+      },
+      "minimap": {
+        "index": 9,
+        "path": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.56.49.01.png",
+        "sha256": "72ae946af2d5643d52d970741bb1db448253efa0f7b610b5c328150dbb6b3744"
+      },
+      "viewport": {
+        "index": 10,
+        "path": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.56.52.01.png",
+        "sha256": "0ff2a6d33b35739ef679a990781d8226a7022e0406184de9896bd2cdea4c5481"
+      }
+    },
+    {
+      "game": {
+        "x": -196,
+        "y": -172
+      },
+      "minimap": {
+        "index": 11,
+        "path": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.57.18.97.png",
+        "sha256": "593fcaa0ce8594d63cd01739da862faa3198011c0b5725f9932a1ded3bd8ba55"
+      },
+      "viewport": {
+        "index": 12,
+        "path": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.57.23.43.png",
+        "sha256": "57c3ffb36d5cd32495e85a67174d820e060837696e5a6b1a4831b15280ed4a16"
+      }
+    },
+    {
+      "game": {
+        "x": 662,
+        "y": -250
+      },
+      "minimap": {
+        "index": 13,
+        "path": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.57.38.97.png",
+        "sha256": "d02abfa97861087a4f75bc75bdc00f31409bb6bb41df701785afefb3965d7c0d"
+      },
+      "viewport": {
+        "index": 14,
+        "path": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.57.42.71.png",
+        "sha256": "121c3aae2c7e6850eab92a84ff4ade224ef72fb58522773589844971e87832c2"
+      }
+    },
+    {
+      "game": {
+        "x": 1179,
+        "y": 616
+      },
+      "minimap": {
+        "index": 15,
+        "path": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.58.12.18.png",
+        "sha256": "a503305bcdf16cac3bcbca26f5d2a1144504eaf89097f162fd9343f94e851d3f"
+      },
+      "viewport": {
+        "index": 16,
+        "path": "C:\\Users\\Kahvia\\Videos\\NVIDIA\\Wuthering Waves\\Wuthering Waves Screenshot 2026.09.09 - 21.58.15.51.png",
+        "sha256": "ad7613a42fa63b1d69d959dbe0ab757530ee896e121863eb755495fa6ed088d5"
+      }
+    }
+  ],
+  "scope": "Original screenshot calibration and offline replay; continuous gameplay and live overlays not verified",
+  "offlineValidation": {
+    "mapSamples": 4,
+    "mapFailed": 0,
+    "minimapRecovered": 4,
+    "minimapWrong": 0,
+    "publicationCount": 0,
+    "maxMinimapErrorPixels": 3.667938757996707,
+    "recoveryReport": "C:\\Dcode\\WWMAP-TOOLS\\out\\roy-maps-20260909\\Darkplain-recovery-report.json",
+    "recoveryReportSha256": "e7e3fe3e6f5ad5398621e41594e2a19a9cc694b6c0d88977bc3b33e383597474",
+    "continuousGameplayVerified": false
+  }
+}

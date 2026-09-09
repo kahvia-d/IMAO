@@ -1,4 +1,4 @@
-using IMao_WinUI.Contracts.Services;
+﻿using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
 using IMao_WinUI.ViewModels;
@@ -26,7 +26,7 @@ public sealed partial class UsageGuidePage : Page
     private void RenderBindings()
     {
         var c = coreHost.Configuration;
-        GuideShortcutDescription.Text = $"攻略开关：{RuntimeConfiguration.HotkeyName(c.CurrentTargetGuideKey)}。在游戏中打开当前路线目标攻略，在攻略中再次按下可关闭。";
+        GuideShortcutDescription.Text = $"攻略开关：{RuntimeConfiguration.HotkeyName(c.CurrentTargetGuideKey)}。打开附近小范围内最近的未完成点位攻略；仅紧邻点位需要选择，再次按下可关闭。";
         GuideCompletionShortcutDescription.Text = $"点位完成：{RuntimeConfiguration.HotkeyName(c.NearestCompletionKey)}。游戏前台处理小地图附近点，攻略前台只处理当前展示点；多个候选必须先选择。";
         GuideImageShortcutDescription.Text = $"图片上一张：{RuntimeConfiguration.HotkeyName(c.GuidePreviousImageKey)}；下一张：{RuntimeConfiguration.HotkeyName(c.GuideNextImageKey)}。攻略显示时，在游戏或攻略前台均可翻页；隐藏时不接管。";
     }

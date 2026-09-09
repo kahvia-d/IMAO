@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "..\ImageProcessing\ImageProcessing.h"
 #include "..\Feature\Match\FeatureMatch.h"
 #include "..\WindowsCapture\WindowsGraphicsCapture\CaptureSnapshot.h"
@@ -262,6 +262,8 @@ private:
     double minimapTerrainScale = kNominalMinimapTerrainScale;
 	// A viewport is a search range only; it never publishes player coordinates.
 	std::optional<MinimapResumeHint> viewportResumeHint;
+    cv::Mat viewportMinimapReference;
+    std::uint64_t viewportTerrainTrackingGeneration = 0;
 	std::uint64_t observedMapViewportRevision = 0;
 	void PrepareMinimapResumeHints(CoordinateRecoveryController::Clock::time_point now);
 	std::optional<std::pair<std::uint64_t, std::uint64_t>> visualRequestInFlight;
@@ -274,25 +276,18 @@ private:
 	// frame discard pixels that changed because of the heading wedge or the
 	// transparent game scene under the minimap.
 	cv::Mat trustedMinimapReference;
+    Coordinate trustedMinimapMapCenter;
+    int trustedMinimapSceneId = 0;
+    std::uint64_t trustedMinimapGeneration = 0;
+    std::chrono::steady_clock::time_point trustedMinimapCapturedAt{};
 	std::chrono::steady_clock::time_point lastMinimapFeatureReportAt{};
 	std::optional<std::uint64_t> ocrRequestInFlight;
 	std::uint64_t nextOcrRequestId = 1;
-	bool ocrAttemptedForRecovery = false;
+	int ocrAttemptsForRecovery = 0;
 	CoordinateRecoveryController::Clock::time_point lastOcrSubmitAt{};
-	struct CoordinateTextFallbackCandidate {
-		Coordinate worldCoordinate;
-		float modelScore = 0.0f;
-		CoordinateRecoveryController::Clock::time_point observedAt{};
-		int confirmations = 0;
-	};
-	// Visual matching remains the primary source of truth.  This candidate is
-	// used only after repeated visual failures, and must be repeated by OCR in
-	// a second fresh frame before markers can be restored.
-	std::optional<CoordinateTextFallbackCandidate> coordinateTextFallbackCandidate;
-	// Small-map localization is deliberately image-only. Coordinate-text OCR is
-	// kept for the separate offline diagnostic tool, but never starts or submits
-	// from the runtime capture path.
-	bool ocrAssistEnabled = false;
+    // OCR may bound visual searches after repeated failures; text never
+    // publishes a position or supplies scene identity by itself.
+    bool ocrAssistEnabled = true;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
 	// initialized.  It is warmed in the background after a visual lock, or
@@ -356,7 +351,6 @@ private:
 	bool IsExistMinMap(const cv::Mat& snapshot, const RECT& captureRect, int* goodMatchSize);
 
 	winrt::IAsyncOperation<bool> GetMinMapPlayerROC(const Mat& snapshot, Coordinate& outPlayerROC, float& outMinMapRadius);
-	int ResolveMapViewportScene(const Coordinate& centerMapCoordinate) const;
 	void SuspendPlayerLocationForMapTransition();
 	void BeginMinimapReacquisition();
 	void BeginMapViewportSession();
@@ -364,7 +358,7 @@ private:
 	bool SubmitMapViewportSearch(const cv::Mat& currentSnapshot, MapViewportSearchScope scope,
 		const std::optional<WorldSearchPrior>& prior);
 	void CommitMapViewportResult(const MapViewportLocalizationResult& result,
-		std::chrono::steady_clock::time_point anchoredAt);
+		std::chrono::steady_clock::time_point anchoredAt, const cv::Mat& mapCrop);
 	void ResetMapViewport();
 	void Thread_KeyMonitoring_SavePlayerNearItemPoint();
 };

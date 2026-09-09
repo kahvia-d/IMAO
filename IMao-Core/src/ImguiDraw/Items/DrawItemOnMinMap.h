@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../../Runtime/OverlayMotion.h"
 #include "vector"
 #include "../../Coordinate/locationCalculator/ScreenCoordinate.h"
@@ -13,7 +13,7 @@ public:
 	static void UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate &playerROC, float minMapRadius, int SceneId, double terrainScale = kNominalMinimapTerrainScale);
 	static void SavePlayerNearItemPoint(const ItemMarkerFrame& frame, const OverlayScreenTransform& motion = {},
         bool gamepad = false, std::uint64_t gameHwnd = 0);
-    static void HandlePlayerNearbyAction(bool guide, bool gamepad, std::uint64_t gameHwnd);
+    static nlohmann::json HandlePlayerNearbyAction(bool guide, bool gamepad, std::uint64_t gameHwnd, bool publish = true);
     static ItemMarkerFrame Snapshot();
 	static void ClearNearItemsData();
 

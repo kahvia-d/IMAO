@@ -1,0 +1,12 @@
+{
+  "featureCount": 7291,
+  "path": "visual-index.imx",
+  "postingCount": 20212,
+  "referenceVerified": true,
+  "sceneId": 2,
+  "source": "features.yml",
+  "sourceSha256": "5775226859ef6ff0809c88c4fd84af77d89fd237776c6e3457bc261eabb1df3a",
+  "tileCount": 73,
+  "visualIndexSha256": "c08243226353be457afbb10b85aec26a18106c91b943904fb1d43d1950923eb5",
+  "vocabularySha256": "8bd80ebd3cfe727538d65a0ccc8c17c043b80c70b5c721f4ac0e1436669a7c33"
+}

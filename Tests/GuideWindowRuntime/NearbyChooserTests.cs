@@ -17,6 +17,37 @@ internal static class NearbyChooserTests
     private static readonly MarkerSelection Second = First with { PointId = "1409980210964680704" };
     internal static async Task RunAsync(Action<string> log)
     {
+        await CaseAsync("keyboard F8 chooses nearby despite active route and cancels late lookup", async fixture =>
+        {
+            fixture.Core.AuthoritativeTarget = Second;
+            var lookup = fixture.Core.DeferNext("markerGetNearbyGuide");
+            fixture.F8();
+            await lookup.Seen.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            fixture.F8();
+            lookup.Reply.SetResult(fixture.Page("guide", [First], false));
+            await Task.Delay(150);
+            Check(fixture.Details.OnlineRequests.Count == 0, "cancelled keyboard lookup cannot reopen guide");
+            fixture.F8();
+            await UntilAsync(() => fixture.Details.OnlineRequests.Count == 1, "keyboard single guide auto opens");
+            Check(fixture.Count("markerGetRouteGuide") == 0 && fixture.Count("markerResolveNearbyCandidate") == 1 &&
+                fixture.Details.OnlineRequests.Single().PointId == First.PointId, "keyboard uses nearest candidate instead of route");
+            fixture.F8();
+        }, log);
+
+        await CaseAsync("keyboard chooser shares borderless left below-minimap placement", async fixture =>
+        {
+            fixture.Emit("guide", controller: false);
+            await UntilAsync(() => fixture.Details.LocalRequests.Count >= 2 && GetForegroundWindow() != fixture.GameHandle, "keyboard choices ready");
+            var actual = GamepadWindowVisibility.Inspect(GetForegroundWindow());
+            var game = GamepadWindowVisibility.Inspect(fixture.GameHandle);
+            Check(actual.ClientBounds.Y == actual.Bounds.Y && (actual.Style & 0x00C00000L) != 0x00C00000L,
+                "keyboard chooser has no white nonclient top strip or caption");
+            Check(actual.Bounds.X < game.ClientBounds.X + game.ClientBounds.Width / 3 &&
+                actual.Bounds.Y >= game.ClientBounds.Y + game.ClientBounds.Height / 4,
+                "keyboard chooser is on the left below the minimap");
+            fixture.F8();
+        }, log);
+
         await CaseAsync("complete chooser A saves only selected second point without opening a guide or repeating", async fixture =>
         {
             await fixture.OpenAsync("complete");
@@ -119,17 +150,21 @@ internal static class NearbyChooserTests
         public int Count(string operation) => Core.Commands.Count(command => command.Operation == operation);
         public JsonElement Respond(string operation, JsonElement command)
         {
+            if (operation == "markerGetNearbyGuide") return Page("guide", [First], false);
             if (operation == "markerBindNearbyCandidates") return CoreHostService.Empty();
             var selected = command.GetProperty("pointId").GetString() == Second.PointId ? Second : First;
             if (operation == "markerResolveNearbyCandidate") return JsonSerializer.SerializeToElement(new { selection = CoreHostService.SelectionPayload(selected) });
             return JsonSerializer.SerializeToElement(new { point = new { pointId = selected.PointId, stateId = selected.StateId, completed = true } });
         }
-        public void Emit(string intent, MarkerSelection[]? candidates = null)
-        {
-            candidates ??= [First, Second];
-            Core.Emit(new { type = "markerCandidates", intent, nearbySession = 3UL, gamepad = true, gameHwnd = GameHandle.ToInt64(),
+        public void F8() => Core.Emit(new { type = "markerGuideShortcut", profileId = "local" });
+        public JsonElement Page(string intent, MarkerSelection[] candidates, bool controller) =>
+            JsonSerializer.SerializeToElement(new { type = "markerCandidates", intent, nearbySession = 3UL, gamepad = controller, gameHwnd = GameHandle.ToInt64(),
                 profileId = "local", sceneName = "World", selectionRevision = 19L, total = candidates.Length, hasMore = false,
                 candidates = candidates.Select(CoreHostService.SelectionPayload).ToArray() });
+        public void Emit(string intent, MarkerSelection[]? candidates = null, bool controller = true)
+        {
+            candidates ??= [First, Second];
+            Core.Emit(Page(intent, candidates, controller));
         }
         public async Task OpenAsync(string intent)
         {

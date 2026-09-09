@@ -100,6 +100,7 @@ struct Scene {
     // original point data without making its markers available at runtime.
     inline static std::once_flag externalConfigLoadOnce;
     inline static std::unordered_map<int, bool> runtimeApproval;
+    inline static std::unordered_map<int, double> minimapScales;
 
     static std::filesystem::path AssetPath(const char* name) {
         return ResourceSnapshotContext::MapDataRoot() / name;
@@ -128,6 +129,9 @@ struct Scene {
                             definition.originX = originX;
                             definition.originY = originY;
                             definition.scale = scale;
+                            const double minimapScale = entry->value("minimapScale", 194.0 / 184.0);
+                            if (std::isfinite(minimapScale) && minimapScale >= 0.25 && minimapScale <= 4.0)
+                                minimapScales[definition.id] = minimapScale;
                         }
                     }
                 }
@@ -174,6 +178,11 @@ struct Scene {
     }
 
     static bool IsKnown(int sceneId) { return Find(sceneId) != nullptr; }
+    static double MinimapScale(int sceneId) {
+        EnsureExternalConfigLoaded();
+        const auto value = minimapScales.find(sceneId);
+        return value == minimapScales.end() ? 194.0 / 184.0 : value->second;
+    }
 
     static bool IsRuntimeApproved(int sceneId) {
         const auto* definition = Find(sceneId);
@@ -226,10 +235,11 @@ struct GameWindowsScreenData {
     inline static Coordinate IconWavePlateCrystal_Right= { 999,52 };
     inline static std::vector<Coordinate> IconWavePlateCrystal_ScreenData = { IconWavePlateCrystal_Top ,IconWavePlateCrystal_Bottom ,IconWavePlateCrystal_Left ,IconWavePlateCrystal_Right };
 
-    //350*350
-    inline static Coordinate mapCenterArea_Top = {796,275};
-    inline static Coordinate mapCenterArea_Bottom = {796,625};
-    inline static Coordinate mapCenterArea_Left = {625,456};
-    inline static Coordinate mapCenterArea_Right = {975,456};
+    // Include coastlines around an empty center; exclude edge UI. All viewport
+    // matching, motion bridging and projection share this centered rectangle.
+    inline static Coordinate mapCenterArea_Top = {800,135};
+    inline static Coordinate mapCenterArea_Bottom = {800,765};
+    inline static Coordinate mapCenterArea_Left = {160,450};
+    inline static Coordinate mapCenterArea_Right = {1440,450};
     inline static std::vector<Coordinate> mapCenterAreaSrceenData = { mapCenterArea_Top ,mapCenterArea_Bottom ,mapCenterArea_Left ,mapCenterArea_Right };
 };

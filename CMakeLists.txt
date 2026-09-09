@@ -352,6 +352,9 @@ set_target_properties(IMaoRoutePlanningServiceTests PROPERTIES
 
 add_executable(IMaoVisualRegression
     IMao-Core/tools/VisualRegression/main.cpp
+    IMao-Core/src/Feature/RuntimeFeatureRepository.cpp
+    IMao-Core/src/Runtime/ResourceSnapshotContext.cpp
+    IMao-Core/src/Runtime/RuntimeStatus.cpp
     IMao-Core/src/App/MapViewportLocalizer.cpp
     IMao-Core/src/Coordinate/VisualLocalization/GlobalVisualLocalizer.cpp
     IMao-Core/src/Diagnostics/Diagnostics.cpp
@@ -376,6 +379,7 @@ target_include_directories(IMaoVisualRegression PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
 )
 target_link_libraries(IMaoVisualRegression PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
+add_test(NAME IMaoMultiSceneViewportTests COMMAND IMaoVisualRegression --scene-self-test)
 
 add_executable(IMaoCoordinateRegression
     IMao-Core/tools/CoordinateRegression/main.cpp

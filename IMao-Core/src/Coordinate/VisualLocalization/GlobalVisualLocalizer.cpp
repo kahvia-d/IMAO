@@ -5,6 +5,7 @@
 #include "RecoveryPolicy.h"
 #include "CoarseSearchCoverage.h"
 #include "MinimapTrackingGeometry.h"
+#include "MinimapTerrainEvidence.h"
 #include "../../Feature/Match/UniqueMapFeatures.h"
 #include "../../Feature/Match/FeatureRowCache.h"
 #include "../../Feature/Match/ExactDescriptorMatcher.h"
@@ -83,6 +84,11 @@ bool ExtractPreparedMinimapFeatures(const cv::Mat& normalized, ImageFeatureData&
     // descriptor set. The latter is needed only for the rare fallback where
     // the temporal mask rejected every usable feature.
     surf->detect(gray, rawKeypoints, baseMask);
+    if (rawKeypoints.size() < 24 && normalized.channels() >= 3) {
+        baseMask = MinimapTerrainEvidence::TerrainMask(normalized);
+        surf->detect(gray, rawKeypoints, baseMask);
+        if (diagnostics != nullptr) diagnostics->adaptivePlayerMaskApplied = true;
+    }
     if (diagnostics != nullptr) diagnostics->rawKeypointCount = static_cast<int>(rawKeypoints.size());
 
     cv::Mat mask = baseMask.clone();
@@ -197,7 +203,8 @@ double Median(std::vector<double> values) {
 
 VisualLocalizationCandidate BuildTranslationVoteCandidate(const std::vector<TranslationVote>& votes,
     const cv::Size minimapSize, int sceneId, double retrievalScore, int mutualMatchCount,
-    double translationScale = kExpectedScale) {
+    double translationScale = 0.0) {
+    if (translationScale <= 0.0) translationScale = Scene::MinimapScale(sceneId);
     VisualLocalizationCandidate candidate;
     candidate.sceneId = sceneId;
     candidate.retrievalScore = retrievalScore;
@@ -450,8 +457,11 @@ public:
             if (interrupted && interrupted()) throw SearchInterrupted{};
             const auto& tile = resources_->visualIndex.tiles[tileIndex];
             std::vector<std::uint32_t> rows;
-            for (const auto& compatible : resources_->visualIndex.tiles) {
-                if (compatible.sceneId != tile.sceneId || compatible.gridX != tile.gridX ||
+            const int resultSceneId = tileIndex < resources_->baseVisualTileCount ? 1 : tile.sceneId;
+            for (std::size_t compatibleIndex = 0; compatibleIndex < resources_->visualIndex.tiles.size(); ++compatibleIndex) {
+                const auto& compatible = resources_->visualIndex.tiles[compatibleIndex];
+                const int compatibleSceneId = compatibleIndex < resources_->baseVisualTileCount ? 1 : compatible.sceneId;
+                if (compatibleSceneId != resultSceneId || compatible.gridX != tile.gridX ||
                     compatible.gridY != tile.gridY) continue;
                 rows.insert(rows.end(),
                     resources_->visualIndex.featureRows.begin() + compatible.featureRowOffset,
@@ -460,14 +470,11 @@ public:
             }
             std::sort(rows.begin(), rows.end());
             rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
-            // The original map feature set only contains the state-8 World map.
+            // Unattributed legacy atlas rows retain the historical World fallback.
             // Its tiles were historically partitioned by nearest scene origin to
             // improve retrieval, which puts Black Shores near Tethys internally.
-            // Keep that partitioning for matching, but expose every base match as
-            // World so downstream item filtering loads the correct data.
-            const bool baseTile = resources_->baseVisualTileCount > 0 &&
-                tileIndex < resources_->baseVisualTileCount;
-            const int resultSceneId = baseTile ? Scene::SceneNameToId("World") : tile.sceneId;
+            // Normalize this legacy identity for grouping and matching too;
+            // Hash-bound replacement metadata retires identified non-World duplicates.
             if (request.requireOcrHint && !TileMatchesHint(tile, resultSceneId, request.ocrHints)) {
                 continue;
             }
@@ -496,9 +503,9 @@ public:
 
         // Public map additions can contain visual details that were absent from
         // the historical base map used to train the retrieval vocabulary.  In
-        // that case the coarse search may not rank the correct World tile high
+        // that case the coarse search may not rank the correct scene tile high
         // enough to reach verification at all.  When it found no geometric
-        // candidate, make one bounded exact pass over optional World features.
+        // candidate, make one bounded exact pass over optional scene features.
         // This remains image-only: it does not use the game's coordinate text.
         const bool hasSupportedGeometricCandidate = std::any_of(candidates.begin(), candidates.end(),
             [](const auto& candidate) {
@@ -510,30 +517,29 @@ public:
         // Scanning every full shard again cannot supply an independent frame;
         // it only delays publication and repeats the same observations.
         if (fullShardRecovery && !hasSupportedGeometricCandidate && !resources_->kuroVisualShards.empty()) {
-            const int worldSceneId = Scene::SceneNameToId("World");
             for (const auto& shard : resources_->kuroVisualShards) {
                 if (interrupted && interrupted()) throw SearchInterrupted{};
-                if (shard.sceneId != worldSceneId || shard.tileCount == 0 ||
+                if (!Scene::IsRuntimeApproved(shard.sceneId) || shard.tileCount == 0 ||
                     shard.firstTile > resources_->visualIndex.tiles.size() ||
                     shard.tileCount > resources_->visualIndex.tiles.size() - shard.firstTile) continue;
-                std::vector<std::uint32_t> worldRows;
+                std::vector<std::uint32_t> sceneRows;
                 for (std::uint32_t tileIndex = shard.firstTile;
                     tileIndex < shard.firstTile + shard.tileCount; ++tileIndex) {
                     const auto& tile = resources_->visualIndex.tiles[tileIndex];
-                    if (request.requireOcrHint && !TileMatchesHint(tile, worldSceneId, request.ocrHints)) {
+                    if (request.requireOcrHint && !TileMatchesHint(tile, shard.sceneId, request.ocrHints)) {
                         continue;
                     }
-                    worldRows.insert(worldRows.end(),
+                    sceneRows.insert(sceneRows.end(),
                         resources_->visualIndex.featureRows.begin() + tile.featureRowOffset,
                         resources_->visualIndex.featureRows.begin() + tile.featureRowOffset +
                             tile.featureRowCount);
                 }
-                std::sort(worldRows.begin(), worldRows.end());
-                worldRows.erase(std::unique(worldRows.begin(), worldRows.end()), worldRows.end());
-                if (worldRows.size() < 4) continue;
-                const auto sharedMatches = MatchRows(worldRows, request.minimapFeatures, interrupted);
-                VisualLocalizationCandidate candidate = VerifyRows(worldRows, request.minimapFeatures,
-                    request.normalizedMinimap.size(), worldSceneId, 0.0, request.ocrHints, interrupted, &sharedMatches);
+                std::sort(sceneRows.begin(), sceneRows.end());
+                sceneRows.erase(std::unique(sceneRows.begin(), sceneRows.end()), sceneRows.end());
+                if (sceneRows.size() < 4) continue;
+                const auto sharedMatches = MatchRows(sceneRows, request.minimapFeatures, interrupted);
+                VisualLocalizationCandidate candidate = VerifyRows(sceneRows, request.minimapFeatures,
+                    request.normalizedMinimap.size(), shard.sceneId, 0.0, request.ocrHints, interrupted, &sharedMatches);
                 recordVerification(candidate);
                 // VerifyRows already fitted these observations. A Strong fit
                 // outranks every translation-only vote, so do not repeat the
@@ -541,8 +547,8 @@ public:
                 // Other shards still undergo geometry checks for ambiguity.
                 const auto translations = candidate.quality == VisualLocalizationQuality::Strong
                     ? std::vector<VisualLocalizationCandidate>{}
-                    : VerifyTranslationRows(worldRows, request.minimapFeatures,
-                        request.normalizedMinimap.size(), worldSceneId, 0.0, interrupted, &sharedMatches);
+                    : VerifyTranslationRows(sceneRows, request.minimapFeatures,
+                        request.normalizedMinimap.size(), shard.sceneId, 0.0, interrupted, &sharedMatches);
                 for (auto translation : translations) {
                     recordVerification(translation);
                     // Three descriptors from one corner of a translucent HUD
@@ -591,7 +597,8 @@ public:
                 !distinct.front().affineEstimated && !distinct[1].affineEstimated &&
                 distinct[1].medianReprojectionError > distinct.front().medianReprojectionError * 1.5;
             if (distinct.size() > 1 && distinct.front().inlierCount > 0 &&
-                Distance(distinct.front().mapCenter, distinct[1].mapCenter) > kDuplicateCenterDistance &&
+                (distinct.front().sceneId != distinct[1].sceneId ||
+                    Distance(distinct.front().mapCenter, distinct[1].mapCenter) > kDuplicateCenterDistance) &&
                 distinct[1].inlierCount * 5 >= distinct.front().inlierCount * 4 &&
                 !fixedScaleRunnerUpIsClearlyLessPrecise) {
                 result.ambiguous = true;
@@ -607,16 +614,17 @@ public:
     bool Track(const cv::Size minimapSize, const ImageFeatureData& minimapFeatures,
         int sceneId, const Coordinate& previousCenter, VisualLocalizationCandidate& output,
         double searchRadius = 0.0, const std::function<bool()>& interrupted = {},
-        double fixedTerrainScale = kExpectedScale) const {
+        double fixedTerrainScale = 0.0) const {
+        const double expectedScale = Scene::MinimapScale(sceneId);
+        if (fixedTerrainScale == 0.0) fixedTerrainScale = expectedScale;
         if (searchRadius <= 0.0 && (!std::isfinite(fixedTerrainScale) ||
-            fixedTerrainScale < kExpectedScale * (1.0 - kMaximumScaleDeviation) ||
-            fixedTerrainScale > kExpectedScale * (1.0 + kMaximumScaleDeviation))) return false;
+            fixedTerrainScale < expectedScale * (1.0 - kMaximumScaleDeviation) ||
+            fixedTerrainScale > expectedScale * (1.0 + kMaximumScaleDeviation))) return false;
         std::vector<std::uint32_t> rows;
         for (std::uint32_t tileIndex = 0; tileIndex < resources_->visualIndex.tiles.size(); ++tileIndex) {
             const auto& tile = resources_->visualIndex.tiles[tileIndex];
-            const bool baseWorldTile = sceneId == Scene::SceneNameToId("World") &&
-                resources_->baseVisualTileCount > 0 && tileIndex < resources_->baseVisualTileCount;
-            if (!baseWorldTile && tile.sceneId != sceneId) continue;
+            const int tileSceneId = tileIndex < resources_->baseVisualTileCount ? 1 : tile.sceneId;
+            if (tileSceneId != sceneId) continue;
             const double nearestX = std::clamp(previousCenter.x, static_cast<double>(tile.minX), static_cast<double>(tile.maxX));
             const double nearestY = std::clamp(previousCenter.y, static_cast<double>(tile.minY), static_cast<double>(tile.maxY));
             const bool overlapsPreviousTile = previousCenter.x >= tile.minX && previousCenter.x < tile.maxX &&
@@ -687,7 +695,7 @@ private:
             // Include zero-score copies when choosing the representative so
             // its identity stays stable as query scores change across frames.
             auto [entry, inserted] = groupedScores.try_emplace(
-                std::tuple{tile.sceneId, tile.gridY, tile.gridX}, std::pair{tileIndex, 0.0});
+                std::tuple{resultSceneId, tile.gridY, tile.gridX}, std::pair{tileIndex, 0.0});
             auto& group = entry->second;
             group.first = std::min(group.first, tileIndex);
             // Copies of the same region are alternate observations, not
@@ -711,6 +719,12 @@ private:
             return getenv_s(&length, value, sizeof(value), "IMAO_PROFILE_MATCHING") == 0 && value[0] == '1'; }();
         const auto start = std::chrono::steady_clock::now();
         MatchedRows matches;
+        std::vector<std::uint32_t> enabledRows;
+        if (!resources_->excludedBaseRows.empty()) {
+            enabledRows.reserve(rows.size());
+            for (const auto row : rows) if (resources_->FeatureRowEnabled(row)) enabledRows.push_back(row);
+            rows = enabledRows;
+        }
         matches.subset = rowCache_.Get(rows, interrupted);
         const auto prepared = std::chrono::steady_clock::now();
         MatchDescriptorsExactly(matches.subset->imgDescriptors, query.imgDescriptors,
@@ -743,8 +757,8 @@ private:
             const auto& mapPoint = mapKeypoints[static_cast<std::size_t>(pair[0].queryIdx)].pt;
             const auto& minimapPoint = minimapFeatures.imgKeypoints[static_cast<std::size_t>(pair[0].trainIdx)].pt;
             votes.push_back({
-                { mapPoint.x - kExpectedScale * (minimapPoint.x - minimapSize.width / 2.0),
-                    mapPoint.y - kExpectedScale * (minimapPoint.y - minimapSize.height / 2.0) },
+                { mapPoint.x - Scene::MinimapScale(sceneId) * (minimapPoint.x - minimapSize.width / 2.0),
+                    mapPoint.y - Scene::MinimapScale(sceneId) * (minimapPoint.y - minimapSize.height / 2.0) },
                 minimapPoint, pair[0].distance });
         }
         return BuildTranslationVoteCandidates(std::move(votes), minimapSize, sceneId,
@@ -770,7 +784,7 @@ private:
         const auto& reverse = sharedMatches->reverse;
         std::vector<cv::DMatch> matches;
         std::vector<TranslationVote> translationVotes;
-        const double translationScale = fixedTerrainScale > 0.0 ? fixedTerrainScale : kExpectedScale;
+        const double translationScale = fixedTerrainScale > 0.0 ? fixedTerrainScale : Scene::MinimapScale(sceneId);
         translationVotes.reserve(forward.size());
         for (const auto& pair : forward) {
             // The minimap palette/AA changed in recent game builds.  Relax the
@@ -821,8 +835,8 @@ private:
         const double scale = std::hypot(a, b);
         candidate.scale = scale;
         candidate.rotationDegrees = std::atan2(b, a) * 180.0 / CV_PI;
-        if (!std::isfinite(scale) || scale < kExpectedScale * (1.0 - kMaximumScaleDeviation) ||
-            scale > kExpectedScale * (1.0 + kMaximumScaleDeviation)) return translationCandidate.inlierCount >= kMinimumTranslationVotes
+        if (!std::isfinite(scale) || scale < Scene::MinimapScale(sceneId) * (1.0 - kMaximumScaleDeviation) ||
+            scale > Scene::MinimapScale(sceneId) * (1.0 + kMaximumScaleDeviation)) return translationCandidate.inlierCount >= kMinimumTranslationVotes
             ? translationCandidate : candidate;
         candidate.scaleWithinExpectedRange = true;
 
@@ -967,7 +981,7 @@ public:
 
     bool Track(const cv::Mat& minimap, const ImageFeatureData& features, int sceneId,
         const Coordinate& previous, VisualLocalizationCandidate& result, double searchRadius = 0.0,
-        double fixedTerrainScale = kExpectedScale) {
+        double fixedTerrainScale = 0.0) {
         std::scoped_lock lock(mutex_);
         if (!ready_ || !engine_) return false;
         return engine_->Track(minimap.size(), features, sceneId, previous, result, searchRadius,

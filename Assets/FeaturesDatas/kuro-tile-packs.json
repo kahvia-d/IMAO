@@ -1,4 +1,14 @@
 {
   "formatVersion": 1,
-  "packs": ["Dreamzhou", "DreamzhouWest", "BlackShores", "LowerVault", "Darkplain", "TimeRiftRuins"]
+  "packs": [
+    "Dreamzhou",
+    "DreamzhouWest",
+    "BlackShores",
+    "LowerVault",
+    "Darkplain",
+    "TimeRiftRuins",
+    "Tethys",
+    "Lahai",
+    "RoySurface"
+  ]
 }

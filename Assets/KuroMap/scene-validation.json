@@ -6,8 +6,12 @@
       "reason": "等待四点校准、瓦片特征包与实机验证。"
     },
     "Darkplain": {
-      "approved": false,
-      "reason": "等待四点校准、瓦片特征包与实机验证。"
+      "approved": true,
+      "state": 909,
+      "approvedAtUtc": "2026-09-09T14:20:00.0606164Z",
+      "calibrationMaxErrorPixels": 0.20167186629895134,
+      "gameEvidenceSha256": "d2b0cd5c08bdb9c1585192c3f39d0bf4e1f1dc773dbbe309d489ff341455f203",
+      "validationScope": "local-capture-trial"
     },
     "TimeRiftRuins": {
       "approved": false,

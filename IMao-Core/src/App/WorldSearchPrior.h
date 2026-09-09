@@ -7,11 +7,9 @@
 #include <string>
 #include <vector>
 
-// A WorldSearchPrior is deliberately a search hint, never a location result.
-// State 8 shares one coordinate system, so the accepted minimap coordinate is
-// more reliable than a semantic region name.  The name is only useful in
-// diagnostics when an operator wants to understand which part of World was
-// selected.
+// A scene-specific search hint, never a location result. The historical name
+// is retained for callers; sceneId now isolates every independent map space.
+// Country labels are advisory and available only for the World hierarchy.
 struct WorldSearchPrior {
     bool valid = false;
     int sceneId = 0;
@@ -26,7 +24,7 @@ public:
     bool Load(const std::filesystem::path& countryPath, std::string& error);
 
     WorldSearchPrior Build(const RuntimeFeatureResources& resources,
-        const Coordinate& centerMapCoordinate, double radius) const;
+        const Coordinate& centerMapCoordinate, double radius, int sceneId = 1) const;
 
 private:
     struct AreaAnchor {

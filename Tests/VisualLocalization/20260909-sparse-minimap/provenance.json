@@ -1,0 +1,36 @@
+{
+  "sourceMinimapSha256": "aaddb4497cb31cc8b151c3a87384c3003e979c3df33ed4154d5eb7ed8986851a",
+  "sourceMapSha256": "00ec1d77a4ec69b27cac01b51479e9f18a9b00685b78163dc20c8f44e031999e",
+  "mapCaptureCorners": [
+    [
+      7596.724609375,
+      2493.60107421875
+    ],
+    [
+      8583.9091796875,
+      2493.60107421875
+    ],
+    [
+      8583.9091796875,
+      2979.48095703125
+    ],
+    [
+      7596.724609375,
+      2979.48095703125
+    ]
+  ],
+  "arrowNominalScreen": [
+    781.046,
+    749.139
+  ],
+  "expectedGameCoordinate": [
+    -440,
+    1279
+  ],
+  "expectedMapCoordinate": [
+    8062.564234508625,
+    2950.5152915887134
+  ],
+  "toleranceMapPixels": 8,
+  "notes": "Minimap coordinate manually read from user screenshot. Map reference warped from independently matched big-map screenshot; synthetic movement tests are not live game validation."
+}

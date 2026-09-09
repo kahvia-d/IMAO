@@ -192,6 +192,10 @@ KuroTileFeaturePackStatus KuroTileFeaturePack::LoadDirectory(const std::filesyst
         // package whose verified anchor was built in a different coordinate
         // system. Signed files can still form an incompatible composition.
         if (ResourceSnapshotContext::Configured()) {
+            const double verifiedMinimapScale = manifest.value("minimapScale", 194.0 / 184.0);
+            if (!std::isfinite(verifiedMinimapScale) ||
+                std::abs(verifiedMinimapScale - Scene::MinimapScale(status.sceneId)) > 0.000001)
+                return Failure(std::move(status), "tile package minimap scale is incompatible with selected scene calibration");
             const auto& anchor = manifest.at("anchorWorldCoordinate");
             const auto& expected = referenceVerification.at("expectedMapCoordinate");
             const double anchorX = anchor.at("x").get<double>(), anchorY = anchor.at("y").get<double>();

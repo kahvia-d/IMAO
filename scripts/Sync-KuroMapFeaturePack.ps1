@@ -46,9 +46,47 @@ $tileSize = 1024
 $kuroVirtualMapSize = 850.0
 $sceneIds = @{ World = 1; Tethys = 2; Fabricatorium = 3; Avinoleum = 4; Lahai = 5; LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8 }
 $expectedStates = @{ World = 8; Tethys = 900; Fabricatorium = 905; Avinoleum = 903; Lahai = 906; LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910 }
+if (-not $PSBoundParameters.ContainsKey('State')) { $State = $expectedStates[$Scene] }
+if ($Scene -ne 'World') {
+    if (-not $PSBoundParameters.ContainsKey('PackId')) { $PackId = $Scene }
+    if (-not $PSBoundParameters.ContainsKey('AnchorWorldX') -or -not $PSBoundParameters.ContainsKey('AnchorWorldY')) {
+        throw 'Independent scenes require explicit anchor coordinates; the World anchor cannot be reused.'
+    }
+    # Read the runtime definition rather than maintain a second origin table.
+    $definitions = Get-Content -LiteralPath (Join-Path $repoRoot 'IMao-Core/src/Coordinate/CoordinateStruct.h') -Raw
+    $pattern = '\{\s*' + $sceneIds[$Scene] + '\s*,\s*"' + $Scene + '"\s*,\s*' + $State + '\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*(true|false)\s*\}'
+    $definition = [regex]::Match($definitions, $pattern)
+    if (-not $definition.Success) { throw "Cannot resolve runtime transform for $Scene." }
+    $invariant = [Globalization.CultureInfo]::InvariantCulture
+    $transform = @{
+        originX = [double]::Parse($definition.Groups[1].Value, $invariant)
+        originY = [double]::Parse($definition.Groups[2].Value, $invariant)
+        scale = [double]::Parse($definition.Groups[3].Value, $invariant)
+    }
+    $calibrations = Get-Content -LiteralPath (Join-Path $repoRoot 'Assets/KuroMap/scene-calibrations.json') -Raw | ConvertFrom-Json
+    $calibration = $calibrations.scenes.PSObject.Properties[$Scene]
+    # Tile coordinates define a fixed feature frame. A game calibration maps
+    # game coordinates into that frame; feeding it back into tile generation
+    # would recreate the measured offset on every rebuild.
+    $existingManifestPath = Join-Path $repoRoot "Assets/FeaturesDatas/KuroTilePacks/$PackId/manifest.json"
+    if (Test-Path -LiteralPath $existingManifestPath) {
+        $existingManifest = Get-Content -LiteralPath $existingManifestPath -Raw | ConvertFrom-Json
+        foreach ($key in @('originX', 'originY', 'scale')) { $transform[$key] = [double]$existingManifest.coordinateTransform.$key }
+    }
+    if ($definition.Groups[4].Value -eq 'true' -and -not $SkipReferenceVerification -and
+        ($null -eq $calibration -or -not $calibration.Value.passed -or $calibration.Value.maxErrorPixels -gt 8)) {
+        throw "$Scene requires four-point calibration before building a verified pack."
+    }
+    if (-not $PSBoundParameters.ContainsKey('TransformOriginX')) { $TransformOriginX = $transform.originX }
+    if (-not $PSBoundParameters.ContainsKey('TransformOriginY')) { $TransformOriginY = $transform.originY }
+    if (-not $PSBoundParameters.ContainsKey('TransformScale')) { $TransformScale = $transform.scale }
+}
 if ($State -ne $expectedStates[$Scene]) { throw "State $State does not belong to scene $Scene." }
 if ([string]::IsNullOrWhiteSpace($PackId) -or $PackId -notmatch '^[A-Za-z0-9_-]+$') { throw 'PackId must be an ASCII directory name.' }
 if ($TransformScale -le 0 -or [double]::IsNaN($TransformScale) -or [double]::IsInfinity($TransformScale)) { throw 'TransformScale must be finite and positive.' }
+foreach ($value in @($AnchorWorldX, $AnchorWorldY, $TransformOriginX, $TransformOriginY)) {
+    if ([double]::IsNaN($value) -or [double]::IsInfinity($value)) { throw 'Anchor and origin coordinates must be finite.' }
+}
 
 function Assert-KuroUri([string]$Url, [string[]]$AllowedHosts) {
     $uri = [Uri]$Url
@@ -168,6 +206,12 @@ try {
         tileBounds = [ordered]@{ minX = $minimumTileX; maxX = $maximumTileX; minY = $minimumTileY; maxY = $maximumTileY }
         tiles = @($tiles); missingTileCount = $missingTileCount
     }
+    if ($Scene -ne 'World' -and $null -ne $calibration -and $calibration.Value.passed) {
+        $tileManifest['referenceCoordinateTransform'] = $calibration.Value.coordinateTransform
+        if ($null -ne $calibration.Value.PSObject.Properties['minimapScale']) {
+            $tileManifest['minimapScale'] = [double]$calibration.Value.minimapScale
+        }
+    }
     $tileManifestPath = Join-Path $rawDir 'tiles.json'
     Write-Utf8Json $tileManifest $tileManifestPath
     $featurePath = Join-Path $generatedDir 'features.yml'
@@ -217,6 +261,14 @@ try {
         tiles = @($tiles); missingTileCount = $missingTileCount; coordinateBounds = $builderReport.coordinateBounds
         referenceVerification = $referenceVerification
         features = [ordered]@{ file = 'features.yml'; sha256 = [string]$builderReport.featuresSha256; keypointCount = [int]$builderReport.selectedKeypoints; extractedKeypointCount = [int]$builderReport.extractedKeypoints }
+    }
+    if ($tileManifest.Contains('minimapScale')) { $packManifest['minimapScale'] = $tileManifest.minimapScale }
+    if ($Scene -ne 'World' -and (Test-Path -LiteralPath $existingManifestPath) -and
+        $null -ne $existingManifest.PSObject.Properties['legacyBaseExclusions']) {
+        if ($packManifest.features.sha256 -ne $existingManifest.features.sha256) {
+            throw 'Replacement features changed; regenerate and validate legacy feature exclusions before publishing.'
+        }
+        $packManifest['legacyBaseExclusions'] = $existingManifest.legacyBaseExclusions
     }
     $generatedManifestPath = Join-Path $generatedDir 'manifest.json'
     Write-Utf8Json $packManifest $generatedManifestPath

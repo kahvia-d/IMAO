@@ -92,6 +92,7 @@ struct MinimapFeatureDiagnostics {
     int retainedKeypointCount = 0;
     int dynamicMaskPercent = 0;
     bool temporalMaskApplied = false;
+    bool adaptivePlayerMaskApplied = false;
     cv::Mat featureMask;
 };
 
@@ -122,7 +123,7 @@ public:
         const ImageFeatureData& minimapFeatures, int sceneId,
         const Coordinate& previousMapCenter,
         VisualLocalizationCandidate& result,
-        double fixedTerrainScale = 194.0 / 184.0);
+        double fixedTerrainScale = 0.0);
 
     // Revalidates a recently known area after returning from a full-screen UI.
     // Unlike TrackLocal this may inspect neighbouring map tiles, but it never

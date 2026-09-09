@@ -112,7 +112,7 @@ Coordinate MapCoordinate::IdentifyCoorToImgMapCoord(Coordinate identifyCoordinat
         identifyCoordinate.y * scene->scale + scene->originY);
 }
 
-//截取游戏中心的地图区域(350*350),在通过特征匹配，取角点，算出截取区域中心点在MapImage的坐标
+// Match the centered viewport rectangle and project its center into map coordinates.
 bool MapCoordinate::GetMapCoordinateOfCenterGameMapPos(const ImageFeatureData& originalFeatureData, const ImageFeatureData& testFeatureData, const vector<DMatch>& goodMatches, Mat& testIame,Coordinate& outResult) {
     if (goodMatches.size()<4) {
         return false;
@@ -147,7 +147,8 @@ bool MapCoordinate::GetMapCoordinateOfCenterGameMapPos(const ImageFeatureData& o
 
     //判断区域是否为正方形
     if (areaWidth > 0 && areaHigth > 0) {
-        if (abs(areaWidth - areaHigth) < 4) {
+        if (testIame.cols > 0 && testIame.rows > 0 &&
+            abs(areaWidth - areaHigth * static_cast<float>(testIame.cols) / testIame.rows) < 4) {
             outResult.x = (scene_corners[0].x + scene_corners[2].x) / 2;
             outResult.y = (scene_corners[0].y + scene_corners[2].y) / 2;
 
@@ -218,7 +219,9 @@ float CalculateInertiaStep(const HWND& gameHwnd,const vector<Point2f> captureCor
     double VerticaFactor = 0;//垂直缩放因子
 
     CalculateWindowScalingFactors(gameHwnd, HorizontalFactor, VerticaFactor);
-    return (captureCorners[2].x - captureCorners[0].x - ((GameWindowsScreenData::mapCenterArea_Right.x - GameWindowsScreenData::mapCenterArea_Left.x))) / 16.75 + 18.78;
+    // Preserve the legacy inertia calibration in its original 350-unit frame.
+    const double sampleWidth = GameWindowsScreenData::mapCenterArea_Right.x - GameWindowsScreenData::mapCenterArea_Left.x;
+    return static_cast<float>(((captureCorners[2].x - captureCorners[0].x) * 350.0 / sampleWidth - 350.0) / 16.75 + 18.78);
 }
 
 

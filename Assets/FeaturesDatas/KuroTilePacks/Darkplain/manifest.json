@@ -1,0 +1,212 @@
+{
+  "formatVersion": 1,
+  "packId": "darkplain-kurotiles",
+  "scene": "Darkplain",
+  "sceneId": 7,
+  "resourceVersion": "E62CEAC5F80745288BF76C7AD5F731C3",
+  "generatedAtUtc": "2026-09-09T14:06:25.1030051Z",
+  "source": {
+    "static": "https://web-static.kurobbs.com",
+    "state": 909,
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "coordinateTransform": {
+    "originX": 0.0,
+    "originY": 0.0,
+    "scale": 1.205
+  },
+  "anchorWorldCoordinate": {
+    "x": -214.0,
+    "y": 799.0
+  },
+  "tileRadius": null,
+  "tileBounds": {
+    "minX": -1,
+    "maxX": 4,
+    "minY": -2,
+    "maxY": 3
+  },
+  "tiles": [
+    {
+      "x": -1,
+      "y": -2,
+      "file": "tiles/909_-1_-2.png",
+      "sha256": "03eb1a110c3465c06fb79655443b284a45ad74035d7de4f2279170ddac15b31c"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "file": "tiles/909_-1_-1.png",
+      "sha256": "d9159f6fcf21c018a3560c3d034cce783fb54f13fd02cc4a344d594f84aff5d8"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "file": "tiles/909_-1_0.png",
+      "sha256": "0d390d724c65419bef78fbbc59d338f8972d108233c6eb1b9d92d2c936848865"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "file": "tiles/909_-1_1.png",
+      "sha256": "abee8ad53f862fb598be44002ac1376b16a7e0d1010e37ca3b2c42d071f85693"
+    },
+    {
+      "x": -1,
+      "y": 2,
+      "file": "tiles/909_-1_2.png",
+      "sha256": "03eb1a110c3465c06fb79655443b284a45ad74035d7de4f2279170ddac15b31c"
+    },
+    {
+      "x": 0,
+      "y": -2,
+      "file": "tiles/909_0_-2.png",
+      "sha256": "03eb1a110c3465c06fb79655443b284a45ad74035d7de4f2279170ddac15b31c"
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "file": "tiles/909_0_-1.png",
+      "sha256": "c8b03fc56e54f738d278458b58dae365cb57b9916e5557f87b0aa7a58c5c4b43"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/909_0_0.png",
+      "sha256": "a3c6eeacedd8932ddbaee1205ad044620b38f7e1135ca67b9caaf9616bb7c741"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/909_0_1.png",
+      "sha256": "ab48134a53aceb73427fdfe8a4aadf4594a66f48e7cf2bcfeeef398e770922be"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "file": "tiles/909_0_2.png",
+      "sha256": "1ba357cd9e13d297320a2d2cbc19b7694cfebec21a68f491a8e040916918eadf"
+    },
+    {
+      "x": 1,
+      "y": -2,
+      "file": "tiles/909_1_-2.png",
+      "sha256": "edc24ac96d2bccd036885525f7b7ad009cec3097a36169f6e90028a4c8e738e3"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "file": "tiles/909_1_-1.png",
+      "sha256": "115cca67b97da17cb2375ee286967e8dcde103b4478bac6c0a83a174578597bc"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "file": "tiles/909_1_0.png",
+      "sha256": "75db49eb0150edbb8c8801b8f9b6bbae8d554257048a1f795cf18149cffbb8d8"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "file": "tiles/909_1_1.png",
+      "sha256": "a5217aed88a259c3022331de66d7595a5770c5df3395c99bf83f79d954df87ae"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "file": "tiles/909_1_2.png",
+      "sha256": "35c939c4ae9a4aff0782563604ab34aa4803000619c3d8967d8dcbf889cb2ba8"
+    },
+    {
+      "x": 2,
+      "y": -2,
+      "file": "tiles/909_2_-2.png",
+      "sha256": "03eb1a110c3465c06fb79655443b284a45ad74035d7de4f2279170ddac15b31c"
+    },
+    {
+      "x": 2,
+      "y": -1,
+      "file": "tiles/909_2_-1.png",
+      "sha256": "593d0a8b274e1e3ada8c73fc8798441d8768664672bc3a780ba7f857b738e0ae"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "file": "tiles/909_2_0.png",
+      "sha256": "e832b158d7c7eef3c450c951050299de452049c46f643f4f142c282cf1737cbf"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "file": "tiles/909_2_1.png",
+      "sha256": "149071ccb81543344e46cfa37ba0626aea31905aa93422d29ecb589b803e4f43"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "file": "tiles/909_2_2.png",
+      "sha256": "ca5fa18fb877ad7816d90caa4746d15e68f3db199fd1994be2a4ad029469b464"
+    },
+    {
+      "x": 3,
+      "y": -2,
+      "file": "tiles/909_3_-2.png",
+      "sha256": "03eb1a110c3465c06fb79655443b284a45ad74035d7de4f2279170ddac15b31c"
+    },
+    {
+      "x": 3,
+      "y": -1,
+      "file": "tiles/909_3_-1.png",
+      "sha256": "b3583ebc685b1205750575ba78fd9e57f10f3df8c62ca4425b68d573ff594750"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/909_3_0.png",
+      "sha256": "a6a3d0bd0129e486ec9089c9604f99378ac5549f14d476163b87e86231904a65"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "file": "tiles/909_3_1.png",
+      "sha256": "7903da15c5351acc7bdbdc024bc857b33dea40aec0b18b7f94567a6cabd4df17"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "file": "tiles/909_3_2.png",
+      "sha256": "03eb1a110c3465c06fb79655443b284a45ad74035d7de4f2279170ddac15b31c"
+    }
+  ],
+  "missingTileCount": 11,
+  "coordinateBounds": {
+    "maxX": 2522.383056640625,
+    "maxY": 2020.583984375,
+    "minX": -1430.4644775390625,
+    "minY": -1658.381103515625
+  },
+  "referenceVerification": {
+    "errorPixels": 2.854919516707526,
+    "expectedMapCoordinate": {
+      "x": -258.3371833466183,
+      "y": 963.1448161620972
+    },
+    "goodMatches": 21,
+    "mapKeypoints": 1073,
+    "minimapKeypoints": 190,
+    "nearAnchorMatches": 15,
+    "passed": true,
+    "reference": "Wuthering Waves Screenshot 2026.09.09 - 21.56.49.01.png",
+    "resultMapCoordinate": {
+      "x": -260.822865071504,
+      "y": 961.7405541461447
+    }
+  },
+  "features": {
+    "file": "features.yml",
+    "sha256": "f6f2cfb2e01c6c3e39c350866e568d4a86292d48d206b00e6896a731dc45ec10",
+    "keypointCount": 37524,
+    "extractedKeypointCount": 37524
+  }
+}

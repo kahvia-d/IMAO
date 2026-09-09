@@ -40,6 +40,7 @@ struct MapViewportLocalizationResult {
     std::uint64_t viewportRevision = 0;
     MapViewportSearchScope scope = MapViewportSearchScope::Global;
     bool accepted = false;
+    int sceneId = 0;
     Coordinate centerMapCoordinate;
     std::vector<cv::Point2f> captureCorners;
     int goodMatchCount = 0;

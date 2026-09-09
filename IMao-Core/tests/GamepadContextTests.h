@@ -110,8 +110,8 @@ inline void TestGamepadContext(void (*check)(bool, const std::string&)) {
     check(!completeSession.Validate(latest, 7, 31, "local", "World", "1:near", start + 5s).empty(),
         "moving away rejects the old selected completion point and never substitutes the now-nearer point");
     NearbySelection::Session guideSession{initialNearby, NearbySelection::Intent::Guide, 32};
-    check(guideSession.Validate(latest, 7, 32, "local", "World", "1:far", start + 5s).empty(),
-        "nearby guide browsing uses the visible minimap radius rather than the narrower completion circle");
+    check(!guideSession.Validate(latest, 7, 32, "local", "World", "1:far", start + 5s).empty(),
+        "nearby guide rejects points outside the same strict 15-pixel completion circle");
     check(!guideSession.Validate(latest, 8, 32, "local", "World", "1:far", start + 5s).empty() &&
         !guideSession.Validate(latest, 7, 33, "local", "World", "1:far", start + 5s).empty() &&
         !guideSession.Validate(latest, 7, 32, "account-b", "World", "1:far", start + 5s).empty() &&
@@ -138,6 +138,21 @@ inline void TestGamepadContext(void (*check)(bool, const std::string&)) {
     point.itemId = "outside"; point.itemMapROC = {120.001, 0}; boundaries.markers.push_back(point);
     boundaries.markers.push_back(boundaries.markers.front());
     auto collected = NearbySelection::Collect(boundaries, {0, 0}, 1.0);
+    auto guideGroup = collected;
+    NearbySelection::KeepNearestGuideGroup(guideGroup);
+    check(guideGroup.size() == 1 && guideGroup.front().item.itemId == "within", "guide excludes exact radius and minimap-wide points");
+    auto groupPoint = point; groupPoint.isSaved = false;
+    std::vector<NearbySelection::Candidate> group;
+    for (int x : {2, 7, 12, -3}) {
+        groupPoint.itemId = std::to_string(x); groupPoint.itemMapROC = {double(x), 0};
+        group.push_back({groupPoint, double(std::abs(x)), double(std::abs(x))});
+    }
+    NearbySelection::KeepNearestGuideGroup(group);
+    check(group.size() == 3 && std::none_of(group.begin(), group.end(), [](const auto& c) { return c.item.itemId == "12"; }),
+        "guide groups only immediate neighbours of nearest, never a transitive chain");
+    group.front().item.isSaved = true;
+    NearbySelection::KeepNearestGuideGroup(group);
+    check(group.size() == 1 && group.front().item.itemId == "-3", "completed nearest is excluded before choosing the next anchor");
     check(collected.size() == 3 && NearbySelection::Includes(collected[0], NearbySelection::Intent::Complete) &&
         !NearbySelection::Includes(collected[1], NearbySelection::Intent::Complete) && collected.back().distance == 120,
         "shared nearby collector uses strict completion <15, inclusive map distance <=120 and deduplicates point identity");
