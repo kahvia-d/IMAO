@@ -21,7 +21,7 @@ if (Test-Path -LiteralPath $OutputRoot) { throw 'Candidate output already exists
 $taskCachePath = Join-Path ([IO.Path]::GetFullPath($NativeConfigurationDirectory, $taskRepo)) 'CMakeCache.txt'
 $taskCache = [IO.File]::ReadAllLines($taskCachePath)
 function Get-NativeConfiguration([string]$Name) {
-    $line = @($taskCache | Where-Object { $_ -match ('^' + [regex]::Escape($Name) + ':[^=]+=(.*)$') })
+    $line = @($taskCache | Where-Object { $_ -cmatch ('^' + [regex]::Escape($Name) + ':[^=]+=(.*)$') })
     if ($line.Count -ne 1) { throw "Configured native dependency is missing: $Name" }
     return ($line[0] -split '=', 2)[1]
 }
