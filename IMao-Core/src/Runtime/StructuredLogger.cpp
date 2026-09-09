@@ -3,6 +3,7 @@
 #include <Windows.h>
 
 #include <chrono>
+#include <atomic>
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
@@ -15,6 +16,7 @@ namespace {
 std::mutex loggerMutex;
 StructuredLogger::Observer observer;
 bool initialized = false;
+std::atomic_bool readOnlyMode = false;
 constexpr std::uintmax_t kMaximumLogBytes = 100ull * 1024ull * 1024ull;
 constexpr auto kRetention = std::chrono::hours(24 * 7);
 
@@ -87,6 +89,7 @@ void StructuredLogger::PruneLocked() {
 }
 
 void StructuredLogger::Initialize() {
+    if (readOnlyMode.load()) return;
     std::scoped_lock lock(loggerMutex);
     if (initialized) return;
     std::error_code error;
@@ -99,6 +102,7 @@ void StructuredLogger::Initialize() {
 
 void StructuredLogger::Record(std::string severity, std::string category, std::string message,
     std::string details) {
+    if (readOnlyMode.load()) return;
     Initialize();
     StructuredLogEvent event{ Timestamp(), std::move(severity), std::move(category), std::move(message), std::move(details) };
     Observer observerCopy;
@@ -121,6 +125,7 @@ void StructuredLogger::Record(std::string severity, std::string category, std::s
 }
 
 std::filesystem::path StructuredLogger::WriteCrashReport(std::string source, std::string details) {
+    if (readOnlyMode.load()) return {};
     Initialize();
     const auto path = CrashDirectory() / ("corehost-" + DateStamp() + "-" +
         std::to_string(GetTickCount64()) + ".json");
@@ -138,3 +143,5 @@ void StructuredLogger::SetObserver(Observer value) {
     std::scoped_lock lock(loggerMutex);
     observer = std::move(value);
 }
+
+void StructuredLogger::SetReadOnlyMode(bool enabled) { readOnlyMode = enabled; }

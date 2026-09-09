@@ -171,7 +171,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
     auto loaded = std::make_shared<RuntimeFeatureResources>();
     std::string failure;
     try {
-        const auto featureRoot = assetRoot / "FeaturesDatas";
+        const auto featureRoot = (ResourceSnapshotContext::Configured() ? ResourceSnapshotContext::BaselineRoot() : assetRoot) / "FeaturesDatas";
         const auto mapStart = std::chrono::steady_clock::now();
         std::array<std::uint8_t, 32> sourceImfSha{};
         bool sourceImfHashReady = FeatureBinaryCodec::Load(
@@ -223,6 +223,8 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
             kuroPacks.begin(), kuroPacks.end(), [](const auto& pack) { return pack.loaded && pack.runtimeApproved; }));
         std::size_t loadedKuroPack = 0;
         for (const auto& kuro : kuroPacks) {
+            if (ResourceSnapshotContext::Configured() && (!kuro.loaded || !kuro.runtimeApproved))
+                throw std::runtime_error("selected tile package failed: " + kuro.directoryPath.string() + " " + kuro.error);
             if (kuro.loaded && kuro.runtimeApproved) {
                 ++loadedKuroPack;
                 RuntimeStatus::SetMessage("正在整合扩展地图索引：" + kuro.directoryName + "（" +
@@ -233,7 +235,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 const auto firstShardTile = static_cast<std::uint32_t>(loaded->visualIndex.tiles.size());
                 std::string shardError;
                 const bool shardReady = loaded->visualIndexReady &&
-                    MapVisualIndexCodec::Load(featureRoot / "KuroTilePacks" / kuro.directoryName / "visual-index.imx",
+                    MapVisualIndexCodec::Load(kuro.directoryPath / "visual-index.imx",
                         kuro.sourceSha256, static_cast<std::uint32_t>(kuro.featureData.imgKeypoints.size()),
                         shard, shardError) &&
                     MergeVisualShard(loaded->visualIndex, shard, rowBase, shardError);
@@ -273,6 +275,8 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
             std::to_string(ElapsedMilliseconds(candidateLoadStart)) + " packs=" + std::to_string(candidates.size()));
         std::size_t loadedCandidatePack = 0;
         for (const auto& candidate : candidates) {
+            if (ResourceSnapshotContext::Configured() && !candidate.loaded)
+                throw std::runtime_error("selected candidate package failed: " + candidate.directoryPath.string() + " " + candidate.error);
             if (candidate.loaded) {
                 ++loadedCandidatePack;
                 RuntimeStatus::SetMessage("正在整合候选地图索引：" + candidate.directoryName + "（" +
@@ -281,9 +285,9 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 const auto rowBase = mergedFeatureRows;
                 MapVisualIndex shard;
                 std::string shardError;
-                const auto sourcePath = featureRoot / candidate.directoryName / "manifest.json";
+                const auto sourcePath = candidate.directoryPath / "manifest.json";
                 const bool shardReady = loaded->visualIndexReady &&
-                    MapVisualIndexCodec::LoadManifestShard(featureRoot / candidate.directoryName / "visual-index.imx",
+                    MapVisualIndexCodec::LoadManifestShard(candidate.directoryPath / "visual-index.imx",
                         sourcePath, static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size()),
                         shard, shardError) &&
                     MergeVisualShard(loaded->visualIndex, shard, rowBase, shardError);
@@ -350,6 +354,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
     catch (const std::exception& exception) {
         failure = exception.what();
         Diagnostics::Record("resource-load-failed", "stage=preload error=" + failure);
+        RuntimeStatus::SetCoreState("faulted", "地图资源加载失败：" + failure);
         loaded.reset();
     }
 

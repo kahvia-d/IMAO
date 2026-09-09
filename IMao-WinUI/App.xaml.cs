@@ -14,12 +14,14 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.Globalization;
 using System.ComponentModel;
+using IMao_WinUI.Core.Updates;
 
 namespace IMao_WinUI;
 
 // To learn more about WinUI 3, see https://docs.microsoft.com/windows/apps/winui/winui3/.
 public partial class App : Application
 {
+    public static bool ResourcesInitialized { get; private set; }
     // The .NET Generic Host provides dependency injection, configuration, logging, and other services.
     // https://docs.microsoft.com/dotnet/core/extensions/generic-host
     // https://docs.microsoft.com/dotnet/core/extensions/dependency-injection
@@ -64,6 +66,9 @@ public partial class App : Application
             services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
             services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
             services.AddSingleton<CoreHostService>();
+            services.AddSingleton<ResourceSnapshotService>(_ => ResourceUpdateBootstrap.CreateSnapshots());
+            services.AddSingleton<UpdateService>(provider => ResourceUpdateBootstrap.CreateUpdater(provider.GetRequiredService<ResourceSnapshotService>()));
+            services.AddSingleton<UpdateUiController>();
             services.AddSingleton<MarkerDetailService>();
             services.AddSingleton<MarkerGuideCoordinator>();
             services.AddSingleton<FilterSelectionService>();
@@ -127,10 +132,29 @@ public partial class App : Application
 
         //App.GetService<IAppNotificationService>().Show(string.Format("AppNotificationSamplePayload".GetLocalized(), AppContext.BaseDirectory));
 
+        try
+        {
+            var snapshots = GetService<ResourceSnapshotService>();
+            await snapshots.InitializeAsync();
+            ResourceSessionPaths.Initialize(snapshots);
+            ResourcesInitialized = true;
+        }
+        catch (Exception error)
+        {
+            MainWindow.Content = new TextBlock { Text = "地图资源初始化失败：" + error.Message + "\n请重新安装完整程序包后再试。", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(32) };
+            MainWindow.Activate();
+            return;
+        }
         _ = GetService<MarkerGuideCoordinator>();
         var mapTools = GetService<MapToolsController>();
         var gamepad = GetService<GamepadInputService>();
         MainWindow.Closed += (_, _) => { mapTools.Dispose(); gamepad.Dispose(); };
         await App.GetService<IActivationService>().ActivateAsync(args);
+        var updates = GetService<UpdateUiController>();
+        GetService<CoreHostService>().PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName == "ResourceActivation") updates.Refresh();
+        };
+        _ = updates.CheckAsync(automatic: true);
     }
 }

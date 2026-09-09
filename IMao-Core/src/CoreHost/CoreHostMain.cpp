@@ -1,6 +1,7 @@
 #include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/RuntimeStatus.h"
+#include "../Runtime/ResourceSnapshotContext.h"
 #include "../Runtime/StructuredLogger.h"
 #include "../Feature/RuntimeFeatureRepository.h"
 #include "../Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
@@ -150,7 +151,9 @@ private:
 json StatusEvent() {
     const auto status = RuntimeStatus::Snapshot();
     return {
-        { "version", kProtocolVersion }, { "type", "status" }, { "coreVersion", "1.0.1" },
+        { "version", kProtocolVersion }, { "type", "status" }, { "coreVersion", ResourceSnapshotContext::AppVersion() },
+        { "resourceSnapshotId", ResourceSnapshotContext::Id() },
+        { "resourcesReady", RuntimeFeatureRepository::Instance().IsReady() },
         { "sequence", status.sequence }, { "coreState", status.coreState },
         { "gameState", status.gameState }, { "localization", status.localization },
         { "quality", status.quality }, { "message", status.message },
@@ -472,7 +475,9 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
     const std::string type = command.value("type", "");
     try {
         if (type == "hello") {
-            SendAck(events, command, true, "CoreHost 已连接");
+            SendAck(events, command, true, "CoreHost 已连接", {
+                {"resourceSnapshotId", ResourceSnapshotContext::Id()},
+                {"resourcesReady", RuntimeFeatureRepository::Instance().IsReady()}});
             events.PublishStatus(StatusEvent());
             return true;
         }
@@ -734,23 +739,56 @@ void TerminateHandler() noexcept {
 }
 }
 
-int main(int argc, char** argv) {
+int wmain(int argc, wchar_t** wideArgv) {
+    std::vector<std::string> arguments;
+    std::vector<char*> pointers;
+    for (int index = 0; index < argc; ++index) {
+        const auto count = WideCharToMultiByte(CP_UTF8, 0, wideArgv[index], -1, nullptr, 0, nullptr, nullptr);
+        std::string value(static_cast<size_t>(count), '\0');
+        WideCharToMultiByte(CP_UTF8, 0, wideArgv[index], -1, value.data(), count, nullptr, nullptr);
+        value.pop_back(); arguments.push_back(std::move(value));
+    }
+    for (auto& value : arguments) pointers.push_back(value.data());
+    char** argv = pointers.data();
     try {
     // Exercise the exact shipped resource loader without requiring a game
     // window or a WinUI/IPC client. Useful after staging and in regression CI.
-    if (argc == 3 && std::string(argv[1]) == "--check-resources") {
+    if (argc == 3 && (std::string(argv[1]) == "--check-resources" || std::string(argv[1]) == "--check-resource-snapshot")) {
+        StructuredLogger::SetReadOnlyMode(true);
         std::string error;
+        const bool snapshotCheck = std::string(argv[1]) == "--check-resource-snapshot";
+        std::filesystem::path assetRoot = std::filesystem::absolute(Utf8ToWide(argv[2]));
+        if (snapshotCheck) {
+            json snapshot;
+            if (!ResourceSnapshotValidation::ReadAndValidate(assetRoot, snapshot, error)) {
+                std::cout << json({{"resourcesReady", false}, {"visualReady", false}, {"viewportReady", false}, {"error", error}}).dump() << std::endl;
+                return 1;
+            }
+            ResourceSnapshotContext::Initialize(std::move(snapshot));
+            assetRoot = ResourceSnapshotContext::BaselineRoot();
+        }
         auto& repository = RuntimeFeatureRepository::Instance();
-        repository.BeginPreload(std::filesystem::absolute(Utf8ToWide(argv[2])));
+        repository.BeginPreload(assetRoot);
         const auto resources = repository.AwaitReady(error);
         const bool visualReady = resources && GlobalVisualLocalizer::Initialize(resources, error);
         const bool viewportReady = visualReady && MapViewportLocalizer::Initialize(resources, error);
         std::cout << json({{"resourcesReady", resources != nullptr}, {"visualReady", visualReady},
-            {"viewportReady", viewportReady}, {"error", error}}).dump() << std::endl;
+            {"viewportReady", viewportReady}, {"resourceSnapshotId", ResourceSnapshotContext::Id()}, {"error", error}}).dump() << std::endl;
         MapViewportLocalizer::Shutdown();
         GlobalVisualLocalizer::Shutdown();
         repository.Shutdown();
         return visualReady && viewportReady ? 0 : 1;
+    }
+    for (int index = 1; index < argc; ++index) {
+        if (std::string(argv[index]) != "--resource-snapshot") continue;
+        if (++index >= argc) throw std::invalid_argument("--resource-snapshot requires a file path");
+        json snapshot;
+        std::string error;
+        if (!ResourceSnapshotValidation::ReadAndValidate(ResourceSnapshotContext::Path(argv[index]), snapshot, error)) {
+            std::cerr << "resource snapshot rejected: " << error << std::endl;
+            return 5;
+        }
+        ResourceSnapshotContext::Initialize(std::move(snapshot));
     }
     const auto pipeName = ParsePipeName(argc, argv);
     if (!pipeName.has_value() || pipeName->empty()) {

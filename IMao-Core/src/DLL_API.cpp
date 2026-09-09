@@ -239,7 +239,7 @@ void Initi()
 	LoadEditRouteData::PrepareStorage();
 	std::call_once(drawItemsInitialized, [] { DrawItemBase::Initi(); });
 	Diagnostics::Initialize();
-	const auto assetRoot = std::filesystem::path(GetCurrentPath()) / "Assets";
+	const auto assetRoot = ResourceSnapshotContext::BaselineRoot();
 	RuntimeFeatureRepository::Instance().BeginPreload(assetRoot);
 	Diagnostics::Record("ocr-preload", "deferred=until-app-ready background preload");
 	shutdownRequested = false;

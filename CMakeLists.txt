@@ -315,6 +315,14 @@ target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} bcrypt.lib wi
 enable_testing()
 add_test(NAME IMaoOptimizationTests COMMAND IMaoOptimizationTests)
 
+add_executable(IMaoResourceSnapshotTests
+    IMao-Core/tests/ResourceSnapshotTests.cpp
+    IMao-Core/src/Runtime/ResourceSnapshotContext.cpp)
+target_include_directories(IMaoResourceSnapshotTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+target_link_libraries(IMaoResourceSnapshotTests PRIVATE bcrypt.lib)
+set_target_properties(IMaoResourceSnapshotTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoResourceSnapshotTests COMMAND IMaoResourceSnapshotTests)
+
 add_executable(IMaoMarkerTests IMao-Core/tests/MarkerTests.cpp)
 target_include_directories(IMaoMarkerTests PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src

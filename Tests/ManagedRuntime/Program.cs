@@ -167,6 +167,8 @@ try
             if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); }
         }
     }
+    // Fixing ResourceSessionPaths is process-wide; run this after all existing service/host fixtures.
+    await ResourceSnapshotIntegrationTests.RunAsync(root, Check);
     Console.WriteLine("All managed runtime tests passed.");
 }
 finally

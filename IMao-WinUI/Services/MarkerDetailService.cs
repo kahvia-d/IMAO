@@ -21,7 +21,7 @@ public sealed class MarkerDetailService : IDisposable
     private readonly ConcurrentDictionary<int, Lazy<Task<IReadOnlyDictionary<string, MarkerDetail>>>> localStates = new();
     private readonly SemaphoreSlim cacheLock = new(1, 1);
 
-    public MarkerDetailService() : this(Path.Combine(AppContext.BaseDirectory, "Assets", "KuroMap"),
+    public MarkerDetailService() : this(IMao_WinUI.Helpers.ResourceSessionPaths.MapDataRoot,
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IMao-WinUI", "GuideCache")) { }
 
     public MarkerDetailService(string mapDirectory, string cacheDirectory, HttpClient? httpClient = null)

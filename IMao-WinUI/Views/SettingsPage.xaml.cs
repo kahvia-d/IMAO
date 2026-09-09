@@ -16,6 +16,8 @@ public sealed partial class SettingsPage : Page
     private bool saving;
     private bool subscribed;
     private bool restoringRuntime = true, savingRuntime;
+    private readonly UpdateUiController updates;
+    private bool restoringUpdates;
     public SettingsViewModel ViewModel { get; }
     private static readonly int[] SupportedKeys = Enumerable.Range(0, 124).Where(RuntimeConfiguration.IsSupportedHotkey).ToArray();
 
@@ -24,8 +26,10 @@ public sealed partial class SettingsPage : Page
         ViewModel = App.GetService<SettingsViewModel>();
         coreHost = App.GetService<CoreHostService>();
         gamepad = App.GetService<GamepadInputService>();
+        updates = App.GetService<UpdateUiController>();
         InitializeComponent();
         RestoreRuntime();
+        RenderUpdates();
         var choices = SupportedKeys.Select(RuntimeConfiguration.HotkeyName).ToArray();
         NearestCompletionKey.ItemsSource = choices;
         ManualRouteKey.ItemsSource = choices;
@@ -34,12 +38,13 @@ public sealed partial class SettingsPage : Page
         GuideNextImageKey.ItemsSource = choices;
         Loaded += (_, _) =>
         {
-            if (!subscribed) { coreHost.PropertyChanged += CoreHost_PropertyChanged; gamepad.PropertyChanged += Gamepad_PropertyChanged; subscribed = true; }
+            if (!subscribed) { coreHost.PropertyChanged += CoreHost_PropertyChanged; gamepad.PropertyChanged += Gamepad_PropertyChanged; updates.PropertyChanged += Updates_Changed; subscribed = true; }
+            RenderUpdates();
             RestoreBindings(); RestoreRuntime();
         };
         Unloaded += (_, _) =>
         {
-            if (subscribed) { coreHost.PropertyChanged -= CoreHost_PropertyChanged; gamepad.PropertyChanged -= Gamepad_PropertyChanged; subscribed = false; }
+            if (subscribed) { coreHost.PropertyChanged -= CoreHost_PropertyChanged; gamepad.PropertyChanged -= Gamepad_PropertyChanged; updates.PropertyChanged -= Updates_Changed; subscribed = false; }
         };
     }
 
@@ -48,6 +53,48 @@ public sealed partial class SettingsPage : Page
         if (e.PropertyName == nameof(CoreHostService.Configuration)) { RenderBindings(); RestoreGamepad(); RestoreRuntime(); }
         else if (e.PropertyName == nameof(CoreHostService.Status)) RestoreRuntime();
     }
+
+    private void Updates_Changed(object? sender, PropertyChangedEventArgs e) => RenderUpdates();
+    private void RenderUpdates()
+    {
+        restoringUpdates = true;
+        try
+        {
+            UpdateVersions.Text = $"程序 {updates.ProgramVersion}  ·  地图资源 {updates.ResourceVersion}";
+            UpdateLastChecked.Text = "上次检查：" + updates.LastCheckedText;
+            AutomaticUpdateCheck.IsOn = updates.AutoCheckEnabled;
+            CheckUpdatesButton.IsEnabled = ImportResourcesButton.IsEnabled = !updates.Busy;
+            InstallResourcesButton.IsEnabled = !updates.Busy && updates.ResourceAvailable;
+            RollbackResourcesButton.IsEnabled = !updates.Busy && updates.CanRollback && !updates.HasPending;
+            DownloadProgramButton.Visibility = updates.AppUpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
+            CancelUpdateButton.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
+            ResourceUpdateProgress.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
+            ResourceUpdateProgress.Value = updates.ProgressPercent;
+            ResourceUpdateProgressText.Text = updates.ProgressText;
+            ResourceUpdateProgressText.Visibility = string.IsNullOrEmpty(updates.ProgressText) ? Visibility.Collapsed : Visibility.Visible;
+            ResourceUpdateNotes.Text = updates.Notes;
+            ResourceUpdateNotes.Visibility = string.IsNullOrEmpty(updates.Notes) ? Visibility.Collapsed : Visibility.Visible;
+            ResourceUpdateMessage.Severity = updates.Failed ? InfoBarSeverity.Warning : updates.HasPending ? InfoBarSeverity.Success : InfoBarSeverity.Informational;
+            ResourceUpdateMessage.Message = updates.HasPending && !updates.Failed ? "资源已准备完成，退出并重新打开软件后生效。" : updates.Message;
+        }
+        finally { restoringUpdates = false; }
+    }
+    private async void AutomaticUpdateCheck_Toggled(object sender, RoutedEventArgs e)
+    { if (!restoringUpdates && IsLoaded) await updates.SetAutoCheckAsync(AutomaticUpdateCheck.IsOn); }
+    private async void CheckUpdates_Click(object sender, RoutedEventArgs e) => await updates.CheckAsync();
+    private async void InstallResources_Click(object sender, RoutedEventArgs e) => await updates.InstallAsync();
+    private async void ImportResources_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string? path = IMao_WinUI.Helpers.ResourcePackagePicker.Pick(WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow));
+            if (path is not null) await updates.ImportAsync(path);
+        }
+        catch (Exception error) { updates.ShowError(error); }
+    }
+    private async void RollbackResources_Click(object sender, RoutedEventArgs e) => await updates.RollbackAsync();
+    private void DownloadProgram_Click(object sender, RoutedEventArgs e) => updates.OpenProgramRelease();
+    private void CancelUpdate_Click(object sender, RoutedEventArgs e) => updates.Cancel();
 
     private void Gamepad_PropertyChanged(object? sender, PropertyChangedEventArgs e) => GamepadStatus.Text = gamepad.StatusMessage;
 

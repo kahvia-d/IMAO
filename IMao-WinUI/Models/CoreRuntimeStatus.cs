@@ -4,6 +4,12 @@ namespace IMao_WinUI.Models;
 
 public sealed class CoreRuntimeStatus
 {
+    [JsonPropertyName("resourceSnapshotId")]
+    public string ResourceSnapshotId { get; init; } = "";
+
+    [JsonPropertyName("resourcesReady")]
+    public bool ResourcesReady { get; init; }
+
     [JsonPropertyName("sequence")]
     public long Sequence { get; init; }
 

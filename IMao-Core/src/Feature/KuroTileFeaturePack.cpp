@@ -105,6 +105,14 @@ KuroTileFeaturePackStatus Failure(KuroTileFeaturePackStatus status, const std::s
 }
 
 std::vector<KuroTileFeaturePackStatus> KuroTileFeaturePack::LoadRegistered(const std::string& featureDataRoot) {
+    if (ResourceSnapshotContext::Configured()) {
+        std::vector<KuroTileFeaturePackStatus> result;
+        for (const auto& package : ResourceSnapshotContext::Snapshot().at("packages")) {
+            if (package.at("kind") == "tile")
+                result.push_back(LoadDirectory(ResourceSnapshotContext::Path(package.at("directory").get<std::string>())));
+        }
+        return result;
+    }
     const std::filesystem::path featureRoot(featureDataRoot);
     const auto registryPath = featureRoot / "kuro-tile-packs.json";
     if (!std::filesystem::exists(registryPath)) return { LoadPack(featureDataRoot, "Dreamzhou") };
@@ -142,6 +150,13 @@ KuroTileFeaturePackStatus KuroTileFeaturePack::LoadPack(const std::string& featu
     status.directoryName = directoryName;
     if (!IsSafeDirectoryName(directoryName)) return Failure(std::move(status), "invalid tile-pack directory");
     const auto packDirectory = std::filesystem::path(featureDataRoot) / "KuroTilePacks" / directoryName;
+    return LoadDirectory(packDirectory);
+}
+
+KuroTileFeaturePackStatus KuroTileFeaturePack::LoadDirectory(const std::filesystem::path& packDirectory) {
+    KuroTileFeaturePackStatus status;
+    status.directoryName = packDirectory.filename().string();
+    status.directoryPath = packDirectory;
     const auto manifestPath = packDirectory / "manifest.json";
     if (!std::filesystem::exists(manifestPath)) {
         status.error = "not installed";
@@ -172,6 +187,20 @@ KuroTileFeaturePackStatus KuroTileFeaturePack::LoadPack(const std::string& featu
         const auto& referenceVerification = manifest.value("referenceVerification", json::object());
         if (!referenceVerification.value("passed", false)) {
             return Failure(std::move(status), "field verification is missing or failed");
+        }
+        // A map-data calibration update must not silently reuse a feature
+        // package whose verified anchor was built in a different coordinate
+        // system. Signed files can still form an incompatible composition.
+        if (ResourceSnapshotContext::Configured()) {
+            const auto& anchor = manifest.at("anchorWorldCoordinate");
+            const auto& expected = referenceVerification.at("expectedMapCoordinate");
+            const double anchorX = anchor.at("x").get<double>(), anchorY = anchor.at("y").get<double>();
+            const double expectedX = expected.at("x").get<double>(), expectedY = expected.at("y").get<double>();
+            if (!std::isfinite(anchorX) || !std::isfinite(anchorY) || !std::isfinite(expectedX) || !std::isfinite(expectedY) ||
+                std::hypot(anchorX * scene->scale + scene->originX - expectedX,
+                    anchorY * scene->scale + scene->originY - expectedY) > 0.05) {
+                return Failure(std::move(status), "tile package verification anchor is incompatible with selected scene calibration");
+            }
         }
         const auto& features = manifest.at("features");
         const std::string fileName = features.at("file").get<std::string>();

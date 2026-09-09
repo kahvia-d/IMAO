@@ -79,16 +79,16 @@ class StringItem
             itemsDatas.Clear();
             var knownIds = new HashSet<string>(StringComparer.Ordinal);
 
-            if (jsonData != null)
+            bool updatedSnapshot = IMao_WinUI.Helpers.ResourceSessionPaths.Snapshots?.Current.Bundled == false;
+            if (!updatedSnapshot && jsonData != null)
             {
                 AppendItems(jsonData.RootElement, specifiedlLanguage, knownIds, false);
             }
 
-            // A map sync can add official item IDs here.  The embedded
-            // translations intentionally win for existing items.  New map
-            // states are kept in a separate file so publishing them never
-            // rewrites the established global synchronized catalog.
-            string kuroMapDirectory = Path.Combine(AppContext.BaseDirectory, "Assets", "KuroMap");
+            // Updated snapshots provide the entire catalog, including existing IDs.
+            // Embedded translations are only a bundled-version compatibility path;
+            // they must not override renamed or removed items from an installed pack.
+            string kuroMapDirectory = IMao_WinUI.Helpers.ResourceSessionPaths.MapDataRoot;
             string syncPath = Path.Combine(kuroMapDirectory, "filter-items.json");
             if (File.Exists(syncPath))
             {

@@ -12,6 +12,7 @@ using Windows.Graphics.Imaging;
 using Windows.Storage;
 using System.Runtime.InteropServices.WindowsRuntime;
 using TestApp=IMao_WinUI.App;
+using IMao_WinUI.Core.Updates;
 
 namespace MainWindowRuntime;
 public partial class App : Application
@@ -29,6 +30,12 @@ public partial class App : Application
         TestApp.Services[typeof(CoreHostService)]=core;
         TestApp.Services[typeof(FilterSelectionService)]=new FilterSelectionService(core);
         TestApp.Services[typeof(GamepadInputService)]=new GamepadInputService();
+        string updateRoot = Path.Combine(AppContext.BaseDirectory, "fixture", "update-ui-" + Guid.NewGuid().ToString("N"));
+        var snapshots = new ResourceSnapshotService(updateRoot, new ResourceSnapshot { SnapshotId = "bundled-ui-fixture", BaselineId = "fixture", BaselineRoot = AppContext.BaseDirectory, MapDataRoot = AppContext.BaseDirectory, Bundled = true }, "2026.9.9.1");
+        await snapshots.InitializeAsync();
+        var updateEngine = new UpdateService(new BuildInfo { BaselineId = "fixture" }, Array.Empty<TrustedUpdateKey>(), snapshots, new HttpClient(new OfflineUpdatesHandler()));
+        var updates = new UpdateUiController(updateEngine, snapshots);
+        TestApp.Services[typeof(UpdateUiController)] = updates;
         TestApp.Services[typeof(INavigationService)]=navigation;
         foreach(var type in new[] { typeof(StartViewModel),typeof(FilterViewModel),typeof(FunctionViewModel),typeof(SettingsViewModel),typeof(UsageGuideViewModel),typeof(DiagnosticsViewModel) }) TestApp.Services[type]=Activator.CreateInstance(type)!;
         var shell=new ShellPage(new ShellViewModel(navigation,navView)) { RequestedTheme=ElementTheme.Dark };
@@ -104,6 +111,15 @@ public partial class App : Application
             }
             navigation.NavigateTo(typeof(SettingsViewModel).FullName!);await Task.Delay(120);
             var settings=(SettingsPage)navigation.Frame!.Content;
+            Check(((TextBlock)settings.FindName("UpdateVersions")).Text.Contains("bundled-ui-fixture"), "settings displays actual fixed resource snapshot");
+            Check(!((Button)settings.FindName("InstallResourcesButton")).IsEnabled, "no resource install offered before verified catalog");
+            await updates.CheckAsync();
+            Check(updates.Failed && updates.Message.Contains("未完成") && !updates.Message.Contains("已经是最新"), "offline update error is visible and never reported as latest");
+            Check(((InfoBar)settings.FindName("ResourceUpdateMessage")).IsOpen, "manual update failure remains available in settings");
+            var autoUpdates = (ToggleSwitch)settings.FindName("AutomaticUpdateCheck");
+            autoUpdates.IsOn = false; await Task.Delay(100);
+            Check(!updateEngine.AutoCheckEnabled, "automatic update preference saved through production engine");
+            await Capture(shell, "updates-settings-error.png");
             var enabled=(ToggleSwitch)settings.FindName("Setting_MapShowItem");
             enabled.IsOn=false;await Task.Delay(80);Check(!core.Configuration.MapEnabled,"moved display toggle updates configuration");
             var automatic=(ToggleSwitch)settings.FindName("AutomaticReplan");
@@ -144,4 +160,10 @@ public partial class App : Application
         encoder.SetPixelData(BitmapPixelFormat.Bgra8,BitmapAlphaMode.Premultiplied,(uint)bitmap.PixelWidth,(uint)bitmap.PixelHeight,96,96,buffer.ToArray());
         await encoder.FlushAsync();
     }
+}
+
+internal sealed class OfflineUpdatesHandler : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+        Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable) { RequestMessage = request });
 }

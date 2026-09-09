@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../IMao-WinUI.Core/Updates/*.cs" Link="Updates/%(Filename)%(Extension)" />
+    <Compile Include="../../IMao-WinUI/Helpers/ResourceSessionPaths.cs" Link="ResourceSessionPaths.cs" />
+    <Compile Include="../../IMao-WinUI/StringItems/StringItems.cs" Link="StringItems.cs" />
+    <EmbeddedResource Include="../../IMao-WinUI/StringItems/StringItems.json" LogicalName="IMao_WinUI.StringItems.StringItems.json" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />

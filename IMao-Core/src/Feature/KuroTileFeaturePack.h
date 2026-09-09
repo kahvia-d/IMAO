@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,7 @@ struct KuroTileFeaturePackStatus {
     std::array<std::uint8_t, 32> sourceSha256{};
     std::string packId;
     std::string directoryName;
+    std::filesystem::path directoryPath;
     std::string resourceVersion;
     std::string error;
     ImageFeatureData featureData;
@@ -29,4 +31,5 @@ public:
     static std::vector<KuroTileFeaturePackStatus> LoadRegistered(const std::string& featureDataRoot);
     static KuroTileFeaturePackStatus LoadPack(const std::string& featureDataRoot,
         const std::string& directoryName);
+    static KuroTileFeaturePackStatus LoadDirectory(const std::filesystem::path& packDirectory);
 };

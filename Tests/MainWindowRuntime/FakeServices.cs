@@ -26,6 +26,7 @@ namespace IMao_WinUI.Helpers
     public static class BitBltRegistryHelper { public static bool TryDisableSwapEffectUpgrade(out string error) { error = ""; return true; } }
     public static class UserDataPaths
     {
+        public static string Root => Path.Combine(AppContext.BaseDirectory,"fixture");
         public static string SavedRoutes => Path.Combine(AppContext.BaseDirectory,"fixture","routes");
         public static string SavedPoints => Path.Combine(AppContext.BaseDirectory,"fixture","points");
     }

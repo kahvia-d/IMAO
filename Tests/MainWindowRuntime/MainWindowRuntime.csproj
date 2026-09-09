@@ -2,6 +2,11 @@
 <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows10.0.26100.0</TargetFramework><TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion><SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion><RootNamespace>MainWindowRuntime</RootNamespace><Platforms>x64</Platforms><PlatformTarget>x64</PlatformTarget><RuntimeIdentifier>win-x64</RuntimeIdentifier><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><UseWinUI>true</UseWinUI><WindowsPackageType>None</WindowsPackageType><WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained><SelfContained>true</SelfContained><EnableMsixTooling>true</EnableMsixTooling><EnableDefaultPriItems>true</EnableDefaultPriItems><AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath><AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath><OutputPath>../../out/main-window-runtime/</OutputPath><ApplicationManifest>app.manifest</ApplicationManifest><DefaultLanguage>zh-CN</DefaultLanguage></PropertyGroup>
 <ItemGroup><PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" /><PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" /><PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.250402" /><Manifest Include="$(ApplicationManifest)" /></ItemGroup>
 <ItemGroup>
+<Compile Include="../../IMao-WinUI.Core/Updates/*.cs" Link="Updates/%(Filename)%(Extension)" />
+<Compile Include="../../IMao-WinUI/Services/UpdateUiController.cs" Link="Production/UpdateUiController.cs" />
+<Compile Include="../../IMao-WinUI/Services/ResourceUpdateBootstrap.cs" Link="Production/ResourceUpdateBootstrap.cs" />
+<Compile Include="../../IMao-WinUI/Helpers/ResourceSessionPaths.cs" Link="Production/ResourceSessionPaths.cs" />
+<Compile Include="../../IMao-WinUI/Helpers/ResourcePackagePicker.cs" Link="Production/ResourcePackagePicker.cs" />
 <Page Include="../../IMao-WinUI/Views/*Page.xaml" Link="Views/%(Filename)%(Extension)" />
 <Compile Include="../../IMao-WinUI/Views/*Page.xaml.cs" Link="Views/%(Filename)%(Extension)" />
 <Page Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml" Link="Views/Controls/FilterControl.xaml" />

@@ -98,7 +98,7 @@ public sealed class MapFilterCatalog
         foreach (MapFilterSourceItem source in availableItems)
             if (!string.IsNullOrWhiteSpace(source.Id)) available.TryAdd(source.Id, source);
 
-        kuroMapDirectory ??= Path.Combine(AppContext.BaseDirectory, "Assets", "KuroMap");
+        kuroMapDirectory ??= IMao_WinUI.Helpers.ResourceSessionPaths.MapDataRoot;
         var warnings = new List<string>();
         var official = new Dictionary<string, OfficialItem>(StringComparer.Ordinal);
         var shortcuts = new Dictionary<string, Shortcut>(StringComparer.Ordinal);

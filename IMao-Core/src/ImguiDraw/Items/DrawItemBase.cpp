@@ -132,15 +132,21 @@ bool LoadJson(json& JsonData, const wchar_t* resourceName) {
 }
 
 void DrawItemBase::LoadItemsjson() {
-    if (!LoadJson(itemsJsonData_Tethys, L"ITEMSJSON_Tethys") ||
-        !LoadJson(itemsJsonData_World, L"ITEMSJSON_World") ||
-        !LoadJson(itemsJsonData_Fabricatorium, L"ITEMSJSON_Fabricatorium") ||
-        !LoadJson(itemsJsonData_Avinoleum, L"ITEMSJSON_Avinoleum") ||
-        !LoadJson(itemsJsonData_Lahai, L"ITEMSJSON_Lahai"))
-        throw std::runtime_error("Required map item resources are missing or invalid");
-	LoadExternalKuroRuntimeJson(itemsJsonData_LowerVault, "LowerVault");
-	LoadExternalKuroRuntimeJson(itemsJsonData_Darkplain, "Darkplain");
-	LoadExternalKuroRuntimeJson(itemsJsonData_TimeRiftRuins, "TimeRiftRuins");
+    const wchar_t* embedded[] = {L"ITEMSJSON_World", L"ITEMSJSON_Tethys", L"ITEMSJSON_Fabricatorium",
+        L"ITEMSJSON_Avinoleum", L"ITEMSJSON_Lahai"};
+    for (const auto sceneId : Scene::sceneIds) {
+        json* data = nullptr;
+        if (!FindItemJsonData(sceneId, data) || !data) throw std::runtime_error("unknown runtime scene");
+        *data = json::array();
+        const auto name = Scene::SceneIdToName(sceneId);
+        if (!Scene::IsRuntimeApproved(sceneId)) continue;
+        const auto path = ResourceSnapshotContext::MapDataRoot() / "runtime" / ("itemsData_" + name + ".json");
+        if (fs::exists(path)) {
+            if (!LoadExternalKuroRuntimeJson(*data, name.c_str())) throw std::runtime_error("invalid external points for " + name);
+        } else if (ResourceSnapshotContext::Strict() || sceneId > 5 || !LoadJson(*data, embedded[sceneId - 1])) {
+            throw std::runtime_error("required scene points missing: " + name);
+        }
+    }
 }
 
 static bool LoadExternalKuroRuntimeJson(json& jsonData, const char* sceneName) {
@@ -150,7 +156,7 @@ static bool LoadExternalKuroRuntimeJson(json& jsonData, const char* sceneName) {
             cerr << "Kuro map scene is not release-approved: " << sceneName << endl;
             return false;
         }
-        const fs::path path = fs::path(GetCurrentPath()) / "Assets" / "KuroMap" / "runtime" /
+        const fs::path path = ResourceSnapshotContext::MapDataRoot() / "runtime" /
             ("itemsData_" + string(sceneName) + ".json");
         ifstream input(path);
         if (!input) return false;
@@ -181,7 +187,7 @@ string DrawItemBase::GetExternalIconPath(const string& itemNameId) {
 
     call_once(manifestLoadOnce, []() {
         try {
-            const fs::path manifestPath = fs::path(GetCurrentPath()) / "Assets" / "KuroMap" / "icon-manifest.json";
+            const fs::path manifestPath = ResourceSnapshotContext::MapDataRoot() / "icon-manifest.json";
             ifstream file(manifestPath);
             if (!file) {
                 return;
@@ -198,7 +204,8 @@ string DrawItemBase::GetExternalIconPath(const string& itemNameId) {
                     continue;
                 }
                 const fs::path candidate = fs::path(relativePath.get<string>());
-                if (candidate.is_absolute() || candidate.empty()) {
+                if (candidate.is_absolute() || candidate.empty() || candidate.has_root_name() ||
+                    std::any_of(candidate.begin(), candidate.end(), [](const auto& component) { return component == ".."; })) {
                     continue;
                 }
                 const fs::path fullPath = manifestPath.parent_path() / candidate;

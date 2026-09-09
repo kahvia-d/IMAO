@@ -38,7 +38,7 @@
    <TextBlock Text="鸣潮地图探索辅助工具。地图、路线和完成进度在清晰的操作下协作，最终行动由你决定。" Style="{StaticResource IMaoBodyTextStyle}" />
    <TextBlock x:Uid="SettingsPage_ProjectIntroduction" Style="{StaticResource IMaoSecondaryTextStyle}" />
    <TextBlock Text="使用 OpenCV、PaddleOCR、Win32CaptureSample、ImGui、nlohmann/json、CommunityToolkit 与 WinUI。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-   <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><HyperlinkButton Content="项目源码" NavigateUri="https://github.com/Yepin2022/IMao-Wuthering-Waves" /><HyperlinkButton Content="版本发布" NavigateUri="https://github.com/Yepin2022/IMao-Wuthering-Waves/releases" /></controls:WrapPanel>
+   <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><HyperlinkButton Content="项目源码" NavigateUri="https://github.com/kahvia-d/WWMAP-TOOLS" /><HyperlinkButton Content="版本发布" NavigateUri="https://github.com/kahvia-d/WWMAP-TOOLS/releases" /><HyperlinkButton Content="原项目" NavigateUri="https://github.com/Yepin2022/IMao-Wuthering-Waves" /></controls:WrapPanel>
   </StackPanel></Border>
  </StackPanel>
 </Page>

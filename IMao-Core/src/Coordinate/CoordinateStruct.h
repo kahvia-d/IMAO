@@ -18,6 +18,7 @@
 #undef IMAO_COORDINATESTRUCT_UNDEF_NOMINMAX
 #endif
 #include <nlohmann/json.hpp>
+#include "../Runtime/ResourceSnapshotContext.h"
 struct Coordinate {
     double x;
     double y;
@@ -101,10 +102,7 @@ struct Scene {
     inline static std::unordered_map<int, bool> runtimeApproval;
 
     static std::filesystem::path AssetPath(const char* name) {
-        char buffer[MAX_PATH]{};
-        const DWORD length = GetModuleFileNameA(nullptr, buffer, MAX_PATH);
-        if (length == 0 || length >= MAX_PATH) return {};
-        return std::filesystem::path(buffer).parent_path() / "Assets" / "KuroMap" / name;
+        return ResourceSnapshotContext::MapDataRoot() / name;
     }
 
     static void LoadExternalConfig() noexcept {

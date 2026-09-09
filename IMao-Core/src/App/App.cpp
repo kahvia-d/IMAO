@@ -80,7 +80,7 @@ bool App::Init() {
 	Notification::AddInfo(NotificationDatas("这是一款免费使用的软件，如果你是付钱买来的，你已经被骗了。", 20));
 	Notification::AddInfo(NotificationDatas("The resource is loading, please be patient.", 40));
 
-	const auto assetRoot = std::filesystem::path(GetCurrentPath()) / "Assets";
+	const auto assetRoot = ResourceSnapshotContext::BaselineRoot();
 	RuntimeFeatureRepository::Instance().BeginPreload(assetRoot);
 	std::string resourceError;
 	const auto resourceWaitStart = std::chrono::steady_clock::now();
@@ -149,8 +149,8 @@ bool App::Init() {
 	// inference runtime is deferred until capture, feature resources, and visual
 	// indexes are ready, then warmed on its own worker before recovery is needed.
 	if (ocrAssistEnabled && !ocrPreloadStarted) {
-		const auto ocrModelDirectory = std::filesystem::path(GetCurrentPath()) /
-			"Assets" / "models" / "PP-OCRv5_mobile_rec_infer";
+		const auto ocrModelDirectory = ResourceSnapshotContext::BaselineRoot() /
+			"models" / "PP-OCRv5_mobile_rec_infer";
 		IdentifyWorldCoordinates::BeginPreload(ocrModelDirectory.string());
 		ocrPreloadStarted = true;
 		Diagnostics::Record("ocr-preload", "enabled=true trigger=app-ready-background role=guarded-coordinate-bootstrap");
@@ -936,8 +936,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         RoutePlanningService::UpdatePlayer(PlanningStart(candidate.sceneId, candidate.mapCenter, now, coordinateUiGeneration, true));
 		coordinateTextFallbackCandidate.reset();
 		if (ocrAssistEnabled && !ocrPreloadStarted) {
-			const auto ocrModelDirectory = std::filesystem::path(GetCurrentPath()) /
-				"Assets" / "models" / "PP-OCRv5_mobile_rec_infer";
+			const auto ocrModelDirectory = ResourceSnapshotContext::BaselineRoot() /
+				"models" / "PP-OCRv5_mobile_rec_infer";
 			IdentifyWorldCoordinates::BeginPreload(ocrModelDirectory.string());
 			ocrPreloadStarted = true;
 			Diagnostics::Record("ocr-preload", "enabled=true trigger=post-visual-lock role=visual-search-prior");
@@ -1244,8 +1244,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// searches that can each take several seconds in an uncovered area.  This
 		// does not delay resource loading or the capture loop.
 		if (ocrAssistEnabled && !ocrPreloadStarted) {
-			const auto ocrModelDirectory = std::filesystem::path(GetCurrentPath()) /
-				"Assets" / "models" / "PP-OCRv5_mobile_rec_infer";
+			const auto ocrModelDirectory = ResourceSnapshotContext::BaselineRoot() /
+				"models" / "PP-OCRv5_mobile_rec_infer";
 			IdentifyWorldCoordinates::BeginPreload(ocrModelDirectory.string());
 			ocrPreloadStarted = true;
 			Diagnostics::Record("ocr-preload", "enabled=true trigger=minimap-recovery-bootstrap");

@@ -174,6 +174,14 @@ CandidateFeaturePackStatus Failure(CandidateFeaturePackStatus status, const std:
 
 std::vector<CandidateFeaturePackStatus> CandidateFeaturePack::LoadRegisteredCandidates(
     const std::string& featureDataRoot) {
+    if (ResourceSnapshotContext::Configured()) {
+        std::vector<CandidateFeaturePackStatus> result;
+        for (const auto& package : ResourceSnapshotContext::Snapshot().at("packages")) {
+            if (package.at("kind") == "candidate")
+                result.push_back(LoadDirectory(ResourceSnapshotContext::Path(package.at("directory").get<std::string>())));
+        }
+        return result;
+    }
     const std::filesystem::path featureRoot(featureDataRoot);
     const std::filesystem::path registryPath = featureRoot / "candidate-packs.json";
     std::vector<CandidateFeaturePackStatus> result;
@@ -224,6 +232,13 @@ CandidateFeaturePackStatus CandidateFeaturePack::LoadCandidate(const std::string
         return status;
     }
     const std::filesystem::path packDirectory = std::filesystem::path(featureDataRoot) / directoryName;
+    return LoadDirectory(packDirectory);
+}
+
+CandidateFeaturePackStatus CandidateFeaturePack::LoadDirectory(const std::filesystem::path& packDirectory) {
+    CandidateFeaturePackStatus status;
+    status.directoryName = packDirectory.filename().string();
+    status.directoryPath = packDirectory;
     const std::filesystem::path manifestPath = packDirectory / "manifest.json";
     if (!std::filesystem::exists(manifestPath)) {
         status.error = "not installed";
@@ -247,6 +262,9 @@ CandidateFeaturePackStatus CandidateFeaturePack::LoadCandidate(const std::string
         const auto* scene = Scene::Find(status.sceneId);
         if (scene == nullptr || sceneName != scene->name) {
             return Failure(std::move(status), "candidate scene is invalid");
+        }
+        if (!Scene::IsRuntimeApproved(status.sceneId)) {
+            return Failure(std::move(status), "candidate scene is not release-approved");
         }
 
         status.packId = manifest.value("packId", std::string());

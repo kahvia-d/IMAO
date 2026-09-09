@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Version.props" />
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
@@ -17,7 +18,6 @@
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <BaseOutputPath>..\</BaseOutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>1.0.1</Version>
     <DefaultLanguage>en-US</DefaultLanguage>
     <SupportedLanguages>en-US;zh-CN</SupportedLanguages>
     <GenerateAllLanguageResourcePacks>false</GenerateAllLanguageResourcePacks>
@@ -25,6 +25,24 @@
     <ApplicationIcon>Assets/WindowIcon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <Target Name="StageResourceUpdateSnapshot" AfterTargets="CopyFilesToOutputDirectory">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\Stage-UpdateResources.ps1&quot; -Destination &quot;$(TargetDir).&quot; -Version &quot;$(IMaoVersion)&quot; -BaselineId &quot;$(IMaoBaselineId)&quot;" />
+  </Target>
+  <Target Name="StagePublishedResourceUpdateSnapshot" AfterTargets="Publish">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\Stage-UpdateResources.ps1&quot; -Destination &quot;$(PublishDir).&quot; -Version &quot;$(IMaoVersion)&quot; -BaselineId &quot;$(IMaoBaselineId)&quot;" />
+  </Target>
+  <Target Name="GenerateVersionedPackageManifest" BeforeTargets="_GenerateCurrentProjectAppxManifest">
+    <PropertyGroup>
+      <VersionedAppxManifest>$(IntermediateOutputPath)VersionedPackage.appxmanifest</VersionedAppxManifest>
+    </PropertyGroup>
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\Package.appxmanifest" DestinationFiles="$(VersionedAppxManifest)" />
+    <XmlPoke XmlInputPath="$(VersionedAppxManifest)" Query="/*[local-name()='Package']/*[local-name()='Identity']/@Version" Value="$(IMaoVersion)" />
+    <ItemGroup>
+      <AppxManifest Remove="@(AppxManifest)" />
+      <AppxManifest Include="$(VersionedAppxManifest)" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />

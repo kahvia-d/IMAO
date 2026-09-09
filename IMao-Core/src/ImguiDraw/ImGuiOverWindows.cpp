@@ -325,7 +325,7 @@ int ImGuiOverWindows::start()
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    std::string FontsPath = GetCurrentPath() + "\\Assets\\Fonts\\msyh.ttc";
+    std::string FontsPath = (ResourceSnapshotContext::BaselineRoot() / "Fonts" / "msyh.ttc").string();
     ImFont* font = io.Fonts->AddFontFromFileTTF(FontsPath.c_str(), 15.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
     if (!font) {
        font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\msyh.ttc", 15.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());

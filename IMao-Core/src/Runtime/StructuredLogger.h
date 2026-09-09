@@ -17,6 +17,8 @@ public:
     using Observer = std::function<void(const StructuredLogEvent&)>;
 
     static void Initialize();
+    // Resource preflight must not create or prune files in the user's profile.
+    static void SetReadOnlyMode(bool enabled);
     static void Record(std::string severity, std::string category, std::string message,
         std::string details = {});
     static std::filesystem::path WriteCrashReport(std::string source, std::string details);

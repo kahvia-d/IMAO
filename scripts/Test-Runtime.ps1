@@ -32,11 +32,12 @@ function Invoke-TestCommand([string]$Command, [string]$LogName) {
     if ($code -ne 0) { throw "$LogName failed with exit code $code; see $log" }
 }
 if (-not $SkipBuild) {
-    Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests IMaoRoutePlanningTests IMaoRoutePlanningServiceTests IMaoVisualRegression --parallel ' + $Parallel) 'native-build.log'
+    Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests IMaoRoutePlanningTests IMaoRoutePlanningServiceTests IMaoVisualRegression IMaoResourceSnapshotTests --parallel ' + $Parallel) 'native-build.log'
     Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" build Tests\ManagedRuntime\ManagedRuntime.csproj -c Release --output "' + $taskManagedOutput + '" --source "' + $env:NUGET_PACKAGES + '" -p:NuGetAudit=false') 'managed-build.log'
 }
 Invoke-TestCommand 'x64\Release\IMaoOptimizationTests.exe' 'native-tests.log'
 Invoke-TestCommand 'x64\Release\IMaoMarkerTests.exe' 'marker-tests.log'
+Invoke-TestCommand 'x64\Release\IMaoResourceSnapshotTests.exe' 'resource-snapshot-tests.log'
 if (Test-Path -LiteralPath (Join-Path $taskRepo 'out\auto-replan-native\IMaoRoutePlanningServiceTests.exe')) {
     Invoke-TestCommand ('out\auto-replan-native\IMaoRoutePlanningServiceTests.exe "' + (Join-Path $taskOutput 'route-service-data') + '"') 'route-service-tests.log'
     Invoke-TestCommand ('out\auto-replan-native\IMaoRoutePlanningServiceTests.exe "' + (Join-Path $taskOutput 'route-service-failure-data') + '" save-failure') 'route-service-failure-tests.log'
@@ -48,4 +49,12 @@ if (-not $SkipBuild -or (Test-Path -LiteralPath (Join-Path $taskRepo 'x64\Releas
 }
 $taskHostArgument = if ($SkipHost) { '' } else { ' "' + (Join-Path $taskRepo 'x64\Release') + '"' }
 Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" "' + (Join-Path $taskManagedOutput 'ManagedRuntime.dll') + '"' + $taskHostArgument) 'managed-tests.log'
+& (Join-Path $PSScriptRoot 'Test-ResourceUpdates.ps1') -OutputDirectory (Join-Path $taskOutput 'resource-updates')
+& (Join-Path $PSScriptRoot 'Test-ResourcePackagePicker.ps1') -OutputDirectory (Join-Path $taskOutput 'resource-package-picker')
+& (Join-Path $PSScriptRoot 'Test-ResourceBuildProvenance.ps1') -OutputRoot (Join-Path $taskOutput ('resource-provenance-' + [guid]::NewGuid().ToString('N')))
+& (Join-Path $PSScriptRoot 'Test-ResourceUpdateStaging.ps1') -OutputRoot (Join-Path $taskOutput ('resource-staging-' + [guid]::NewGuid().ToString('N')))
+& (Join-Path $PSScriptRoot 'Test-ResourceCatalogTransition.ps1') -OutputRoot (Join-Path $taskOutput ('resource-catalog-' + [guid]::NewGuid().ToString('N')))
 Write-Host "Runtime tests passed. Evidence: $taskOutput" -ForegroundColor Green
+# Negative-path subprocess tests intentionally return nonzero before asserting rejection.
+# Do not leak their expected exit status to automation after all suites have passed.
+$global:LASTEXITCODE = 0

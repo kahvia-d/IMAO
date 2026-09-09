@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
+using IMao_WinUI.Core.Updates;
 
 namespace IMao_WinUI.Services;
 
@@ -20,6 +21,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     private volatile Session? active;
     private bool disposed;
     private readonly string hostDirectory;
+    private readonly ResourceSnapshotService? resourceSnapshots;
+    private bool resourceHealthReported;
     private string desiredMarkerProfile = "local";
     private readonly string markerProfileWarning;
     public event EventHandler<JsonElement>? MarkerEvent;
@@ -32,11 +35,12 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
 
     public CoreHostService() : this(AppContext.BaseDirectory,
         new RuntimeConfigurationStore(Path.Combine(UserDataPaths.Root, "runtime-preferences.json")), new LocalItemFilter(),
-        new LocalMarkerProfileSelection(Path.Combine(UserDataPaths.Root, "kuromap-accounts.json"))) { }
+        new LocalMarkerProfileSelection(Path.Combine(UserDataPaths.Root, "kuromap-accounts.json")), ResourceSessionPaths.Snapshots) { }
     internal CoreHostService(string hostDirectory, RuntimeConfigurationStore configuration, LocalItemFilter filters,
-        LocalMarkerProfileSelection? profileSelection = null)
+        LocalMarkerProfileSelection? profileSelection = null, ResourceSnapshotService? resourceSnapshots = null)
     {
         this.hostDirectory = hostDirectory;
+        this.resourceSnapshots = resourceSnapshots;
         this.configuration = configuration;
         this.filters = filters;
         // Older versions stored the selected on-disk progress profile in account metadata.
@@ -88,16 +92,24 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         {
             Process = new Process { StartInfo = new ProcessStartInfo
             {
-                FileName = path, Arguments = $"--pipe {pipeName}", WorkingDirectory = hostDirectory,
+                FileName = path, WorkingDirectory = hostDirectory,
                 UseShellExecute = false, CreateNoWindow = true
             } },
             Pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
         };
+        session.Process.StartInfo.ArgumentList.Add("--pipe");
+        session.Process.StartInfo.ArgumentList.Add(pipeName);
+        if (resourceSnapshots is not null)
+        {
+            session.Process.StartInfo.ArgumentList.Add("--resource-snapshot");
+            session.Process.StartInfo.ArgumentList.Add(resourceSnapshots.CurrentPath);
+        }
         active = session;
         try
         {
             if (!session.Process.Start()) throw new IOException("无法启动 CoreHost");
-            await session.Pipe.ConnectAsync(5000, cancellationToken);
+            // A snapshot launch verifies its full file inventory before exposing IPC.
+            await session.Pipe.ConnectAsync(resourceSnapshots is null ? 5000 : 180000, cancellationToken);
             session.Reader = new StreamReader(session.Pipe, new UTF8Encoding(false), false, 64 * 1024, leaveOpen: true);
             session.Writer = new StreamWriter(session.Pipe, new UTF8Encoding(false), 64 * 1024, leaveOpen: true);
             OnSessionUi(session, () => { IsConnected = true; LastFault = string.Empty; ApplyRoutePlanning(new(), reset: true); });
@@ -549,9 +561,32 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
 
     private void ApplyStatus(CoreRuntimeStatus value)
     {
+        if (resourceSnapshots is not null && value.ResourcesReady && value.ResourceSnapshotId != resourceSnapshots.Current.SnapshotId)
+        {
+            SetFault("核心与界面使用的地图资源版本不一致，请重新启动软件。");
+            return;
+        }
         Status = value;
         if (value.CoreState == "faulted") LastFault = value.Message;
+        if (resourceSnapshots is not null && value.ResourcesReady && value.CoreState != "faulted" && !resourceHealthReported)
+        {
+            resourceHealthReported = true;
+            _ = ConfirmResourceHealthAsync(value.ResourceSnapshotId);
+        }
         StatusChanged?.Invoke(this, value);
+    }
+    private async Task ConfirmResourceHealthAsync(string snapshotId)
+    {
+        try
+        {
+            await resourceSnapshots!.ReportHealthyAsync(snapshotId);
+            OnUi(() => OnPropertyChanged("ResourceActivation"));
+        }
+        catch (Exception error)
+        {
+            resourceHealthReported = false;
+            ReportUserError("无法确认资源版本启用：" + error.Message);
+        }
     }
     private void ApplyRoutePlanning(RoutePlanningState value, bool reset = false)
     {

@@ -3,6 +3,27 @@
     <StackPanel Spacing="22">
         <StackPanel Spacing="5"><TextBlock Text="PREFERENCES" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="设置" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="把显示、运行和操作习惯调整到适合你的状态。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
         <Border Style="{StaticResource IMaoCardStyle}">
+            <StackPanel Spacing="12">
+                <TextBlock Text="版本与地图资源" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <TextBlock x:Name="UpdateVersions" Style="{StaticResource IMaoBodyTextStyle}" />
+                <TextBlock x:Name="UpdateLastChecked" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <ToggleSwitch x:Name="AutomaticUpdateCheck" Header="启动后检查更新" OnContent="每天最多检查一次，由你决定安装" OffContent="仅手动检查" Toggled="AutomaticUpdateCheck_Toggled" />
+                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                    <Button x:Name="CheckUpdatesButton" Content="检查更新" Click="CheckUpdates_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <Button x:Name="InstallResourcesButton" Content="下载并安装地图资源" Click="InstallResources_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+                    <Button x:Name="ImportResourcesButton" Content="导入离线包" Click="ImportResources_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <Button x:Name="RollbackResourcesButton" Content="回退上一版" Click="RollbackResources_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <Button x:Name="DownloadProgramButton" Content="下载新版程序" Click="DownloadProgram_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <Button x:Name="CancelUpdateButton" Content="取消" Click="CancelUpdate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                </controls:WrapPanel>
+                <ProgressBar x:Name="ResourceUpdateProgress" Minimum="0" Maximum="100" Visibility="Collapsed" />
+                <TextBlock x:Name="ResourceUpdateProgressText" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock x:Name="ResourceUpdateNotes" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <InfoBar x:Name="ResourceUpdateMessage" IsOpen="True" IsClosable="False" />
+                <TextBlock Text="地图资源在完整退出并重新打开软件后启用。点位进度、路线和个人设置继续保存在本机。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource IMaoCardStyle}">
             <ContentControl x:Name="RuntimeSettings" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="16">
                 <TextBlock Text="地图显示" Style="{StaticResource IMaoSectionTitleStyle}" />

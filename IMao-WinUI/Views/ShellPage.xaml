@@ -20,7 +20,7 @@
                 <NavigationViewItem Content="路线" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.FunctionViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE707;" /></NavigationViewItem.Icon></NavigationViewItem>
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="设置" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.SettingsViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE713;" /></NavigationViewItem.Icon></NavigationViewItem>
+                <NavigationViewItem Content="设置" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.SettingsViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE713;" /></NavigationViewItem.Icon><NavigationViewItem.InfoBadge><InfoBadge x:Name="UpdatesBadge" Visibility="Collapsed" /></NavigationViewItem.InfoBadge></NavigationViewItem>
                 <NavigationViewItem Content="帮助" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.UsageGuideViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE897;" /></NavigationViewItem.Icon></NavigationViewItem>
                 <NavigationViewItem Content="诊断" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.DiagnosticsViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" /></NavigationViewItem.Icon></NavigationViewItem>
             </NavigationView.FooterMenuItems>

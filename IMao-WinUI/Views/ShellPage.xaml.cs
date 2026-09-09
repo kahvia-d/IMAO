@@ -1,6 +1,8 @@
 using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.ViewModels;
+using IMao_WinUI.Services;
+using System.ComponentModel;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -14,6 +16,7 @@ namespace IMao_WinUI.Views;
 // TODO: Update NavigationViewItem titles and icons in ShellPage.xaml.
 public sealed partial class ShellPage : Page
 {
+    private readonly UpdateUiController updates;
     public ShellViewModel ViewModel
     {
         get;
@@ -23,6 +26,9 @@ public sealed partial class ShellPage : Page
     {
         ViewModel = viewModel;
         InitializeComponent();
+        updates = App.GetService<UpdateUiController>();
+        Loaded += (_, _) => { updates.PropertyChanged += UpdatesChanged; UpdatesChanged(null, new("")); };
+        Unloaded += (_, _) => updates.PropertyChanged -= UpdatesChanged;
 
         ViewModel.NavigationService.Frame = NavigationFrame;
         ViewModel.NavigationViewService.Initialize(NavigationViewControl);
@@ -43,6 +49,9 @@ public sealed partial class ShellPage : Page
         KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu));
         KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.GoBack));
     }
+
+    private void UpdatesChanged(object? sender, PropertyChangedEventArgs args) =>
+        UpdatesBadge.Visibility = updates.HasUpdate ? Visibility.Visible : Visibility.Collapsed;
 
     private void NavigationFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {

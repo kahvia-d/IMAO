@@ -1007,7 +1007,7 @@ void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, flo
         bool loaded = false;
         const auto external = DrawItemBase::GetExternalIconPath(item.nameId);
         if (!external.empty()) loaded = ImGuiOverWindows::LoadTextureFromPath(external.c_str(), &texture, &width, &height);
-        if (!loaded) {
+        if (!loaded && !ResourceSnapshotContext::Strict()) {
             const auto name = L"IDB_PNG_" + std::wstring(item.nameId.begin(), item.nameId.end());
             loaded = ImGuiOverWindows::LoadTextureFromResource(name.c_str(), &texture, &width, &height);
         }

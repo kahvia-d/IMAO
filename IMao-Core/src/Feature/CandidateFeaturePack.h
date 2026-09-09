@@ -20,6 +20,7 @@ struct CandidateFeaturePackStatus {
     double selfMatchErrorPixels = 0.0;
     std::string packId;
     std::string directoryName;
+    std::filesystem::path directoryPath;
     std::string referenceImage;
     std::string error;
     Coordinate anchorWorldCoordinate;
@@ -37,6 +38,7 @@ public:
 
     static CandidateFeaturePackStatus LoadCandidate(const std::string& featureDataRoot,
         const std::string& directoryName);
+    static CandidateFeaturePackStatus LoadDirectory(const std::filesystem::path& packDirectory);
 
     static void AppendFeatures(ImageFeatureData& destination, const ImageFeatureData& addition);
 };
