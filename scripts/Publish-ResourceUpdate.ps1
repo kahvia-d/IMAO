@@ -26,7 +26,7 @@ if ((Get-FileHash -LiteralPath $manifest -Algorithm SHA256).Hash -ne $report.sig
 if ($LASTEXITCODE -ne 0) { throw 'Prepared artifacts failed verification.' }
 function Invoke-Gh([string[]]$Arguments) {
     $result = & gh @Arguments
-    if ($LASTEXITCODE -ne 0) { throw 'GitHub operation failed; stable channel has not been advanced by this failed operation.' }
+    if ($LASTEXITCODE -ne 0) { throw ('GitHub operation failed: gh ' + ($Arguments -join ' ') + '; stable channel has not been advanced by this failed operation.') }
     return $result
 }
 $tag = [string]$report.tag
@@ -81,12 +81,22 @@ if ($LASTEXITCODE -eq 0) {
 }
 $releaseOutput = & gh api "repos/$repo/releases/tags/$tag" 2>$null
 if ($LASTEXITCODE -ne 0) {
-    # Confirm API availability; a transient lookup failure must not be treated as a missing release.
+    # Drafts without a created Git tag can be absent from the by-tag endpoint.
+    # Discover and reuse them by ID instead of creating another draft on retry.
     $all = (Invoke-Gh @('api',"repos/$repo/releases?per_page=100")) | ConvertFrom-Json
-    if (@($all | Where-Object tag_name -EQ $tag).Count) { throw 'Release lookup failed inconsistently.' }
-    Invoke-Gh @('release','create',$tag,'--repo',$repo,'--target',[string]$report.sourceCommit,'--draft','--title',$tag,'--notes-file',[IO.Path]::GetFullPath($NotesFile)) | Out-Null
+    $matching = @($all | Where-Object tag_name -EQ $tag)
+    if ($matching.Count -eq 0) {
+        Invoke-Gh @('release','create',$tag,'--repo',$repo,'--target',[string]$report.sourceCommit,'--draft','--title',$tag,'--notes-file',[IO.Path]::GetFullPath($NotesFile)) | Out-Null
+        $all = (Invoke-Gh @('api',"repos/$repo/releases?per_page=100")) | ConvertFrom-Json
+        $matching = @($all | Where-Object tag_name -EQ $tag)
+    }
+    if ($matching.Count -ne 1) { throw 'Cannot uniquely identify the release draft. No attachments were changed.' }
+    $release = $matching[0]
+} else {
+    $release = $releaseOutput | ConvertFrom-Json
 }
-$release = (Invoke-Gh @('api',"repos/$repo/releases/tags/$tag")) | ConvertFrom-Json
+$release = (Invoke-Gh @('api',"repos/$repo/releases/$($release.id)")) | ConvertFrom-Json
+if ($release.tag_name -ne $tag) { throw 'Release identity changed during lookup.' }
 $tagCommit = [string](& gh api "repos/$repo/commits/$tag" --jq '.sha' 2>$null)
 if ($LASTEXITCODE -eq 0) {
     if ($tagCommit.Trim() -ne $report.sourceCommit) { throw 'Release tag does not reference the reviewed source commit.' }
