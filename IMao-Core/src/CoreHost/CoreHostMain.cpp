@@ -1,4 +1,4 @@
-#include "../DLL_API.h"
+﻿#include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/ResourceSnapshotContext.h"
@@ -7,6 +7,7 @@
 #include "../Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
 #include "../App/MapViewportLocalizer.h"
 #include "../ImguiDraw/Items/DrawItemBase.h"
+#include "../ImguiDraw/Items/DrawItemOnMinMap.h"
 #include "../Runtime/RoutePlanningService.h"
 #include "../Runtime/RuntimeHotkeys.h"
 #include "../Runtime/MarkerGuideProtocol.h"
@@ -624,6 +625,12 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
                     if (TryGetGameWindowClientBounds(&bounds)) data = {{"available", true},
                         {"left", bounds.left}, {"top", bounds.top}, {"right", bounds.right}, {"bottom", bounds.bottom}};
                     result = {{"accepted", true}, {"data", std::move(data)}};
+                } else if (type == "markerGetNearbyGuide") {
+                    if (command.value("profileId", std::string{}) != DrawItemBase::MarkerProfile())
+                        throw std::invalid_argument("档案已变化，请重新打开攻略");
+                    // Return a correlated result: a cancelled F8 opening must
+                    // not receive a late unsolicited candidate-window event.
+                    result = {{"accepted", true}, {"data", DrawItemOnMinMap::HandlePlayerNearbyAction(true, false, 0, false)}};
                 } else if (type == "markerGetRouteGuide") result = RoutePlanningService::GuideTarget(command);
                 else result = DrawItemBase::HandleMarkerCommand(command);
                 events.PublishEvent({{"version", kProtocolVersion}, {"type", "markerResult"},

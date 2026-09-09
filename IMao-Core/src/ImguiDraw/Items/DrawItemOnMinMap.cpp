@@ -1,4 +1,4 @@
-#include "DrawItemOnMinMap.h"
+﻿#include "DrawItemOnMinMap.h"
 #include "../../Runtime/RuntimeHotkeys.h"
 #include "../../Runtime/RoutePlanningService.h"
 #include "DrawMarkerInteraction.h"
@@ -120,7 +120,7 @@ void DrawItemOnMinMap::SavePlayerNearItemPoint(const ItemMarkerFrame& frame, con
     HandlePlayerNearbyAction(false, gamepad, gameHwnd);
 }
 
-void DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamepad, std::uint64_t gameHwnd) {
+nlohmann::json DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamepad, std::uint64_t gameHwnd, bool publish) {
     auto observation = GamepadContextSnapshot::Shared().ReadNearby(DrawItemBase::MarkerProfile());
     const auto game = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(observation.gameHwnd));
     DWORD pid = 0;
@@ -128,15 +128,16 @@ void DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamepad, std::u
         !DrawItemBase::IsMarkerGameFocused(game) || !IsWindowVisible(game) || IsIconic(game) ||
         !GetWindowThreadProcessId(game, &pid) || pid != observation.gameProcessId ||
         observation.filterRevision != DrawItemBase::MarkerFilterRevision()) {
-        DrawItemBase::NotifyNearby("当前位置暂不可用，请等小地图定位恢复后重试。", "position-unavailable"); return;
+        DrawItemBase::NotifyNearby("当前位置暂不可用，请等小地图定位恢复后重试。", "position-unavailable"); return nlohmann::json::object();
     }
     const auto intent = guide ? NearbySelection::Intent::Guide : NearbySelection::Intent::Complete;
     std::erase_if(observation.candidates, [&](const auto& candidate) {
         return !NearbySelection::Includes(candidate, intent) || DrawItemBase::IsPointCompleted(observation.sceneName, candidate.item);
     });
+    if (guide) NearbySelection::KeepNearestGuideGroup(observation.candidates);
     if (observation.candidates.empty()) {
-        DrawItemBase::NotifyNearby(guide ? "小地图附近没有符合当前筛选的未完成点位。" :
-            "完成范围内没有符合当前筛选的未完成点位。", guide ? "guide-empty" : "complete-empty"); return;
+        DrawItemBase::NotifyNearby(guide ? "附近小范围内没有未完成点位，请靠近标记后重试。" :
+            "完成范围内没有符合当前筛选的未完成点位。", guide ? "guide-empty" : "complete-empty"); return nlohmann::json::object();
     }
     if (!guide && observation.candidates.size() == 1) {
         const auto& item = observation.candidates.front().item;
@@ -147,9 +148,9 @@ void DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamepad, std::u
         DrawItemBase::NotifyNearby(result.value("accepted", false) ? "已完成当前附近点位。" :
             reason.starts_with("nearby-") ? "附近点位或位置已变化，请重新操作。" : "点位未保存，请重试。",
             "complete-single point=" + NearbySelection::Key(item) + " accepted=" + std::to_string(result.value("accepted", false)) + " reason=" + reason);
-        return;
+        return nlohmann::json::object();
     }
-    DrawItemBase::PublishNearbyCandidates(std::move(observation), intent, gamepad);
+    return DrawItemBase::PublishNearbyCandidates(std::move(observation), intent, gamepad, publish);
 }
 
 void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {

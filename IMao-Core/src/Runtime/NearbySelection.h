@@ -24,7 +24,23 @@ struct Observation {
 };
 inline std::string Key(const ItemDatas& item) { return std::to_string(item.layer.stateId) + ":" + item.itemId; }
 inline bool Includes(const Candidate& item, Intent intent) {
-    return intent == Intent::Guide || item.screenDistance < CompletionPixels;
+    return !item.item.isSaved && std::isfinite(item.screenDistance) && item.screenDistance < CompletionPixels;
+}
+// Only direct neighbours of the nearest point belong to its guide choice.
+// Never grow a transitive chain across the minimap.
+inline void KeepNearestGuideGroup(std::vector<Candidate>& candidates) {
+    std::erase_if(candidates, [](const auto& item) { return !Includes(item, Intent::Guide); });
+    if (candidates.empty()) return;
+    const auto nearest = *std::min_element(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
+        if (a.distance != b.distance) return a.distance < b.distance;
+        return Key(a.item) < Key(b.item);
+    });
+    std::erase_if(candidates, [&](const auto& item) {
+        const double scale = nearest.distance > 0 ? nearest.screenDistance / nearest.distance :
+            item.distance > 0 ? item.screenDistance / item.distance : 1.0;
+        return std::hypot(item.item.itemMapROC.x - nearest.item.itemMapROC.x,
+            item.item.itemMapROC.y - nearest.item.itemMapROC.y) * scale > 6.0;
+    });
 }
 inline std::vector<Candidate> Collect(const ItemMarkerFrame& frame, const Coordinate& playerROC,
     double pixelsPerMapUnit = 0) {

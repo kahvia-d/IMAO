@@ -1,4 +1,4 @@
-using IMao_WinUI.Models;
+﻿using IMao_WinUI.Models;
 
 internal static class MarkerGuideSessionTests
 {
@@ -17,7 +17,7 @@ internal static class MarkerGuideSessionTests
                 "repeated guide shortcut open and close invalidates each previous presentation");
         }
 
-        foreach (string phase in new[] { "window registration", "local details", "online details" })
+        foreach (string phase in new[] { "nearby candidate lookup", "window registration", "local details", "online details" })
         {
             long pendingGeneration = session.Open(first);
             var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

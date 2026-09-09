@@ -1,4 +1,4 @@
-using IMao_WinUI.Helpers;
+﻿using IMao_WinUI.Helpers;
 using IMao_WinUI.Services;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -54,6 +54,11 @@ internal static class MarkerIpcTests
                     Point(local, FirstPoint).GetProperty("completed").GetBoolean(),
                     "real host migrates legacy completion into the independent local profile");
                 check(File.ReadAllText(legacyPath) == legacyBytes, "marker migration preserves the original legacy file");
+                var nearbyWithoutPosition = await Call(core, "markerGetNearbyGuide", new { profileId = "local" });
+                check(!nearbyWithoutPosition.TryGetProperty("candidates", out _),
+                    "F8 nearby lookup without a trusted game position cannot fabricate candidates");
+                check(!events.Any(e => Text(e, "type") == "markerCandidates"),
+                    "correlated F8 lookup does not publish a late unsolicited chooser");
                 await VerifyGamepadWithoutMapAsync(core, local, check);
 
                 await Call(core, "markerSelectProfile", new { profileId = Profile });

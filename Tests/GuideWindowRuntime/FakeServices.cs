@@ -75,7 +75,7 @@ public sealed class CoreHostService : INotifyPropertyChanged
         }
         else if (operation.StartsWith("markerRouteGamepad", StringComparison.Ordinal) && RouteGamepadResponder is { } responder)
             response = responder(operation, command);
-        else if (operation is "markerBindNearbyCandidates" or "markerResolveNearbyCandidate" or "markerCompleteNearbyCandidate" && NearbyResponder is { } nearbyResponder)
+        else if (operation is "markerGetNearbyGuide" or "markerBindNearbyCandidates" or "markerResolveNearbyCandidate" or "markerCompleteNearbyCandidate" && NearbyResponder is { } nearbyResponder)
             response = nearbyResponder(operation, command);
         else if (operation == "markerResolveGamepadCursorCandidate" && CursorResponder is { } cursorResponder)
             response = cursorResponder(operation, command);
