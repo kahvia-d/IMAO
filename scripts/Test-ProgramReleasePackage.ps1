@@ -6,6 +6,18 @@ $PackageRoot = [IO.Path]::GetFullPath($PackageRoot)
 $OutputRoot = [IO.Path]::GetFullPath($OutputRoot)
 if ($OutputRoot.StartsWith($PackageRoot.TrimEnd('\','/')+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Probe output must stay outside the package.' }
 [IO.Directory]::CreateDirectory($OutputRoot) | Out-Null
+$programBuild = Get-Content -LiteralPath (Join-Path $PackageRoot 'build-info.json') -Raw | ConvertFrom-Json
+if ([version]$programBuild.appVersion -ge [version]'2026.9.9.4') {
+    $launcherStart = [Diagnostics.ProcessStartInfo]::new((Join-Path $PackageRoot 'IMao-Launcher.exe'))
+    $launcherStart.UseShellExecute = $false; $launcherStart.CreateNoWindow = $true
+    $launcherStart.ArgumentList.Add('--self-check')
+    $launcherStart.Environment['DOTNET_BUNDLE_EXTRACT_BASE_DIR'] = Join-Path $OutputRoot 'launcher-runtime'
+    $launcherCheck = [Diagnostics.Process]::Start($launcherStart)
+    try {
+        if (-not $launcherCheck.WaitForExit(60000)) { $launcherCheck.Kill($true); throw 'Launcher self-check timed out.' }
+        if ($launcherCheck.ExitCode -ne 0) { throw 'Packaged launcher self-check failed.' }
+    } finally { $launcherCheck.Dispose() }
+}
 $before = @(Get-ChildItem -LiteralPath $PackageRoot -Recurse -File | ForEach-Object { [pscustomobject]@{path=[IO.Path]::GetRelativePath($PackageRoot,$_.FullName);length=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash} })
 $snapshot = Get-Content -LiteralPath (Join-Path $PackageRoot 'Assets/Updates/bundled-snapshot.json') -Raw | ConvertFrom-Json
 $snapshot.baselineRoot = Join-Path $PackageRoot 'Assets'

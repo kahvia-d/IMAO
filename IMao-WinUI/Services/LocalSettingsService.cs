@@ -27,6 +27,11 @@ public class LocalSettingsService : ILocalSettingsService
 
     private bool _isInitialized;
     private readonly SemaphoreSlim settingsLock = new(1, 1);
+    public async Task FlushAsync()
+    {
+        await settingsLock.WaitAsync();
+        settingsLock.Release();
+    }
 
     public LocalSettingsService(IFileService fileService, IOptions<LocalSettingsOptions> options)
     {

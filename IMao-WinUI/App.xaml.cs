@@ -15,12 +15,16 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.Globalization;
 using System.ComponentModel;
 using IMao_WinUI.Core.Updates;
+using System.Diagnostics;
+using System.Text.Json;
 
 namespace IMao_WinUI;
 
 // To learn more about WinUI 3, see https://docs.microsoft.com/windows/apps/winui/winui3/.
 public partial class App : Application
 {
+    private FileStream? programLease;
+    private bool closing, closeApproved;
     public static bool ResourcesInitialized { get; private set; }
     // The .NET Generic Host provides dependency injection, configuration, logging, and other services.
     // https://docs.microsoft.com/dotnet/core/extensions/generic-host
@@ -118,6 +122,14 @@ public partial class App : Application
 
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        var installRoot = ProgramUpdateStore.FindInstallRoot(AppContext.BaseDirectory);
+        var launcher = Path.Combine(installRoot, "IMao-Launcher.exe");
+        if (File.Exists(launcher) && !ProgramLaunchSession.IsManaged)
+        {
+            try { Process.Start(new ProcessStartInfo(launcher) { UseShellExecute = true, WorkingDirectory = installRoot }); }
+            catch (Exception error) { MainWindow.Content = new TextBlock { Text = "无法启动程序更新器：" + error.Message, Margin = new Thickness(32) }; MainWindow.Activate(); return; }
+            MainWindow.Close(); Exit(); return;
+        }
         // 强制语言匹配：仅中英，无匹配则用英语
         var excludedLanguagePrefixes = new[] { "en", "zh" };
 
@@ -134,6 +146,7 @@ public partial class App : Application
 
         try
         {
+            if (ProgramLaunchSession.IsManaged) programLease = ProgramLauncher.AcquireChildLease(installRoot);
             var snapshots = GetService<ResourceSnapshotService>();
             await snapshots.InitializeAsync();
             ResourceSessionPaths.Initialize(snapshots);
@@ -149,12 +162,72 @@ public partial class App : Application
         var mapTools = GetService<MapToolsController>();
         var gamepad = GetService<GamepadInputService>();
         MainWindow.Closed += (_, _) => { mapTools.Dispose(); gamepad.Dispose(); };
-        await App.GetService<IActivationService>().ActivateAsync(args);
+        MainWindow.AppWindow.Closing += async (_, e) =>
+        {
+            if (closeApproved) return;
+            e.Cancel = true;
+            await CloseCleanlyAsync();
+        };
         var updates = GetService<UpdateUiController>();
+        if (ProgramLaunchSession.IsManaged)
+        {
+            try
+            {
+                var keys = JsonSerializer.Deserialize<TrustedUpdateKeys>(File.ReadAllBytes(Path.Combine(installRoot, "Assets", "Updates", "trusted-keys.json")), UpdateJson.Options)!;
+                updates.AttachProgramUpdater(new ProgramUpdateStore(installRoot, keys.Keys), () => CloseCleanlyAsync(skipUpdateWait: true));
+            }
+            catch (Exception error) { updates.ShowError(error); }
+        }
+        await App.GetService<IActivationService>().ActivateAsync(args);
         GetService<CoreHostService>().PropertyChanged += (_, change) =>
         {
             if (change.PropertyName == "ResourceActivation") updates.Refresh();
         };
         _ = updates.CheckAsync(automatic: true);
+        if (ProgramLaunchSession.IsManaged) _ = ConfirmProgramHealthAsync(updates);
+    }
+
+    private async Task ConfirmProgramHealthAsync(UpdateUiController updates)
+    {
+        try
+        {
+            var snapshots = GetService<ResourceSnapshotService>();
+            if (Environment.GetEnvironmentVariable("IMAO_LAUNCH_TRIAL") == "1")
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+                var core = GetService<CoreHostService>();
+                await core.EnsureStartedAsync(timeout.Token);
+                while (!core.IsConnected || !core.Status.ResourcesReady || core.Status.CoreState == "faulted" || core.Status.ResourceSnapshotId != snapshots.Current.SnapshotId)
+                    await Task.Delay(100, timeout.Token);
+                await snapshots.ReportHealthyAsync(snapshots.Current.SnapshotId, timeout.Token);
+            }
+            await ProgramLaunchSession.ReportHealthyAsync(ResourceUpdateBootstrap.ReadBuildInfo().AppVersion, snapshots.Current.SnapshotId);
+            updates.Refresh();
+        }
+        catch (Exception error) { updates.ShowError(error); await CloseCleanlyAsync(); }
+    }
+
+    private async Task CloseCleanlyAsync(bool skipUpdateWait = false)
+    {
+        if (closing) return;
+        closing = true;
+        try
+        {
+            if (MainWindow.Content is UIElement content) content.IsHitTestVisible = false;
+            if (!skipUpdateWait) await GetService<UpdateUiController>().CancelAndWaitAsync();
+            await GetService<MapToolsController>().CloseAsync("软件正在退出", false);
+            GetService<MapToolsController>().Dispose(); GetService<GamepadInputService>().Dispose();
+            await GetService<CoreHostService>().DisposeAsync();
+            if (GetService<ILocalSettingsService>() is LocalSettingsService settings) await settings.FlushAsync();
+            closeApproved = true;
+            // Keep the program lease until process exit, including any final native shutdown work.
+            MainWindow.Close();
+        }
+        catch (Exception error)
+        {
+            closing = false;
+            if (MainWindow.Content is UIElement content) content.IsHitTestVisible = true;
+            GetService<UpdateUiController>().ShowError(error);
+        }
     }
 }

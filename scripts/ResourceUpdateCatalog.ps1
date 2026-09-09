@@ -32,6 +32,15 @@ function Get-ResourcePackageIdentities($Catalog) {
 function Assert-ResourceCatalogTransition($Previous, $Next) {
     if ([long]$Next.sequence -le [long]$Previous.sequence) { throw 'Catalog sequence must increase.' }
     if ([version]([string]$Next.app.version) -lt [version]([string]$Previous.app.version)) { throw 'The next stable catalog cannot downgrade the published program version. Prepare with --previous.' }
+    if ([version]([string]$Next.app.version) -eq [version]([string]$Previous.app.version) -and $Previous.app.package) {
+        if (-not $Next.app.package -or $Next.app.package.sha256 -ne $Previous.app.package.sha256 -or
+            $Next.app.package.sourceCommit -ne $Previous.app.package.sourceCommit -or
+            $Next.app.package.launcherProtocol -ne $Previous.app.package.launcherProtocol -or
+            $Next.app.package.baselineId -ne $Previous.app.package.baselineId -or $Next.app.package.architecture -ne $Previous.app.package.architecture -or
+            -not (Test-SameResourcePackageContent $Previous.app.package $Next.app.package)) {
+            throw 'An existing program version cannot change or lose its signed package. Increment the program version.'
+        }
+    }
     $baselines = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($release in $Next.resources) { [void]$baselines.Add([string]$release.baselineId) }
     foreach ($release in $Previous.resources) {

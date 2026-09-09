@@ -47,6 +47,19 @@ public sealed record ProgramRelease
     public string Version { get; init; } = "";
     public string Url { get; init; } = "";
     public string Notes { get; init; } = "";
+    public ProgramPackage? Package { get; init; }
+}
+
+public sealed record ProgramPackage
+{
+    public int LauncherProtocol { get; init; } = 1;
+    public string Architecture { get; init; } = "win-x64";
+    public string SourceCommit { get; init; } = "";
+    public string BaselineId { get; init; } = "";
+    public string Url { get; init; } = "";
+    public long Size { get; init; }
+    public string Sha256 { get; init; } = "";
+    public List<ResourceFile> Files { get; init; } = new();
 }
 
 public sealed record ResourceRelease

@@ -265,7 +265,22 @@ static class Publisher
         var resources = previous?.Resources.Where(r => r.BaselineId != release.BaselineId).ToList() ?? [];
         resources.Add(release);
         var app = previous?.App ?? new ProgramRelease { Version = build.AppVersion, Url = "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/" + tag, Notes = "首次支持程序与地图资源更新。" };
-        if (o.GetValueOrDefault("program-release") == "true") app = new() { Version = build.AppVersion, Url = "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/" + tag, Notes = release.Notes };
+        if (o.GetValueOrDefault("program-release") == "true")
+        {
+            ProgramPackage? program = null;
+            if (o.TryGetValue("program-zip", out var programZip))
+            {
+                program = await ProgramPackageValidation.DescribeAsync(programZip, build, baseUrl + "/" + Uri.EscapeDataString(Path.GetFileName(programZip)));
+                // Validate the exact ZIP bytes to be signed, rather than trusting a neighboring report.
+                var verifiedProgram = Path.Combine(output, "program-verification");
+                await ProgramPackageValidation.ExtractAsync(programZip, verifiedProgram, program);
+                await ProgramPackageValidation.VerifyDirectoryAsync(verifiedProgram, new ProgramRelease { Version = build.AppVersion, Package = program });
+                if (previous?.App.Version == build.AppVersion && previous.App.Package is not null && previous.App.Package.Sha256 != program.Sha256)
+                    throw new InvalidDataException("The published program version is immutable. Increment the version before rebuilding.");
+            }
+            else if (production) throw new InvalidDataException("Program releases require --program-zip with the complete tested application archive.");
+            app = new() { Version = build.AppVersion, Url = "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/" + tag, Notes = release.Notes, Package = program };
+        }
         var catalog = new UpdateCatalog { Sequence = sequence, App = app, Resources = resources };
         ValidateCatalog(catalog);
         var signedFile = Path.Combine(output, "update.json");
@@ -389,6 +404,24 @@ static class Publisher
             if (offline.Entries.Count != 3 || offline.GetEntry("update.json") is null || offline.GetEntry("packages/map-data-2026.9.9.1.zip") is null) throw new Exception("Offline archive is incomplete.");
         passed.Add("feature-only publish retains unchanged map-data version/hash and old program release");
         passed.Add("offline archive includes signed catalog and all selected packages");
+        foreach (var file in ProgramPackageValidation.RequiredFiles)
+        {
+            var path = Path.Combine(app, file); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            if (!File.Exists(path)) File.WriteAllText(path, "fixture:" + file);
+        }
+        var programZip = Path.Combine(root, "fixture-program.zip"); ZipFile.CreateFromDirectory(app, programZip);
+        options["previous"] = Path.Combine(root, "second", "update.json"); options["output"] = Path.Combine(root, "program"); options["sequence"] = "3"; options["resource-version"] = "2026.9.9.3";
+        options["program-release"] = "true"; options["program-zip"] = programZip;
+        Prepare(options).GetAwaiter().GetResult();
+        var programCatalog = VerifyEnvelope(Path.Combine(root, "program", "update.json"), keys, false);
+        if (programCatalog.App.Package?.Sha256 != Hash(programZip) || programCatalog.App.Package.Files.Count != Directory.GetFiles(app, "*", SearchOption.AllDirectories).Length)
+            throw new Exception("Program ZIP was not completely bound by the signature.");
+        passed.Add("program release signs archive hash and complete executable inventory");
+        options["previous"] = Path.Combine(root, "program", "update.json"); options["output"] = Path.Combine(root, "retained-program"); options["sequence"] = "4"; options["resource-version"] = "2026.9.9.4";
+        options.Remove("program-release"); options.Remove("program-zip");
+        Prepare(options).GetAwaiter().GetResult();
+        if (VerifyEnvelope(Path.Combine(root, "retained-program", "update.json"), keys, false).App.Package?.Sha256 != programCatalog.App.Package!.Sha256) throw new Exception("Resource-only release lost signed program metadata.");
+        passed.Add("resource-only release preserves signed program inventory");
         options["output"] = Path.Combine(root, "test-key-production"); options["test"] = "false";
         Reject("production prepare rejects test private key", () => Prepare(options).GetAwaiter().GetResult());
         WriteNew(Path.Combine(root, "test-report.json"), new { passed = passed.Count, tests = passed });

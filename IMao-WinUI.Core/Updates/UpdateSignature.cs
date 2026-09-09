@@ -40,6 +40,7 @@ public static class UpdateSignature
             throw new InvalidDataException("不支持的更新清单格式。");
         RequireVersion(catalog.App.Version);
         ValidateUrl(catalog.App.Url, asset: false);
+        if (catalog.App.Package is not null) ProgramPackageValidation.Validate(catalog.App.Package);
         var snapshots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var release in catalog.Resources)
         {

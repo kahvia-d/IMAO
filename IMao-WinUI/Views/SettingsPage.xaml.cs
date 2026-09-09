@@ -67,6 +67,12 @@ public sealed partial class SettingsPage : Page
             InstallResourcesButton.IsEnabled = !updates.Busy && updates.ResourceAvailable;
             RollbackResourcesButton.IsEnabled = !updates.Busy && updates.CanRollback && !updates.HasPending;
             DownloadProgramButton.Visibility = updates.AppUpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
+            DownloadProgramButton.Content = updates.ProgramDownloadText;
+            DownloadProgramButton.IsEnabled = !updates.Busy && !updates.ProgramPending;
+            RestartProgramButton.Visibility = updates.ProgramPending ? Visibility.Visible : Visibility.Collapsed;
+            RestartProgramButton.IsEnabled = !updates.Busy;
+            RollbackProgramButton.Visibility = updates.CanRollbackProgram ? Visibility.Visible : Visibility.Collapsed;
+            RollbackProgramButton.IsEnabled = !updates.Busy;
             CancelUpdateButton.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
             ResourceUpdateProgress.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
             ResourceUpdateProgress.Value = updates.ProgressPercent;
@@ -75,7 +81,7 @@ public sealed partial class SettingsPage : Page
             ResourceUpdateNotes.Text = updates.Notes;
             ResourceUpdateNotes.Visibility = string.IsNullOrEmpty(updates.Notes) ? Visibility.Collapsed : Visibility.Visible;
             ResourceUpdateMessage.Severity = updates.Failed ? InfoBarSeverity.Warning : updates.HasPending ? InfoBarSeverity.Success : InfoBarSeverity.Informational;
-            ResourceUpdateMessage.Message = updates.HasPending && !updates.Failed ? "资源已准备完成，退出并重新打开软件后生效。" : updates.Message;
+            ResourceUpdateMessage.Message = updates.ProgramPending && !updates.Failed ? "程序更新已准备完成，可点击“退出并更新”，也可稍后重新打开。" : updates.HasPending && !updates.Failed ? "资源已准备完成，退出并重新打开软件后生效。" : updates.Message;
         }
         finally { restoringUpdates = false; }
     }
@@ -93,7 +99,9 @@ public sealed partial class SettingsPage : Page
         catch (Exception error) { updates.ShowError(error); }
     }
     private async void RollbackResources_Click(object sender, RoutedEventArgs e) => await updates.RollbackAsync();
-    private void DownloadProgram_Click(object sender, RoutedEventArgs e) => updates.OpenProgramRelease();
+    private async void DownloadProgram_Click(object sender, RoutedEventArgs e) => await updates.DownloadProgramAsync();
+    private async void RestartProgram_Click(object sender, RoutedEventArgs e) => await updates.RestartProgramAsync();
+    private async void RollbackProgram_Click(object sender, RoutedEventArgs e) => await updates.RollbackProgramAsync();
     private void CancelUpdate_Click(object sender, RoutedEventArgs e) => updates.Cancel();
 
     private void Gamepad_PropertyChanged(object? sender, PropertyChangedEventArgs e) => GamepadStatus.Text = gamepad.StatusMessage;

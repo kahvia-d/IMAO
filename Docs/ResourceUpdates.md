@@ -1,6 +1,6 @@
 # 程序与地图资源更新
 
-使用者首次手动安装带更新功能的完整程序包。此后在设置的“版本与地图资源”中检查更新，阅读说明后下载并安装，正常退出全部软件窗口，再次启动即可启用。程序升级打开本项目正式发行页；资源更新在软件内完成。离线时选择“导入离线包”，使用维护者提供的 `resources-四段版本-offline.zip`。回退也在下次启动生效。
+使用者首次手动安装带更新功能的完整程序包。2026.9.9.4 起包含独立启动器，程序与资源均可在设置的“版本与地图资源”中下载。新版程序下载并校验完成后，可以继续使用，也可以点击“退出并更新”；正常退出后再打开也会启用。不自动下载、不强制重启。旧清单未提供程序包签名信息，或新版要求更高的启动器协议时，按钮仍打开正式发行页。离线资源使用“导入离线包”选择 `resources-四段版本-offline.zip`。回退在下次启动生效。程序自更新布局与故障恢复详见 [ProgramUpdates.md](ProgramUpdates.md)。
 
 更新不会包含或覆盖完成记录、路线、筛选选择与个人设置。首次启用没有确认成功时，下次启动恢复上一成功快照。错误签名、损坏资源、下载失败或磁盘不足均保留当前资源。
 
@@ -43,7 +43,7 @@ $privateKey = Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/release-signing
 正式候选使用 `scripts/Build-ReleaseCandidate.ps1`，要求当前工作区干净且 `SourceCommit` 等于当前 HEAD。脚本读取已经验证的 VS 2022 原生配置，在新的 CMake 目录中重新编译 CoreHost 和原生测试，重建 WinUI 后生成自包含发布，并输出独立程序 ZIP。每个阶段检查源码未变化；原生构建收据记录提交、版本与实际 CoreHost SHA-256，正式打包必须核对收据，不能拿旧 EXE 搭配新清单。
 
 ```powershell
-& scripts/Build-ReleaseCandidate.ps1 -OutputRoot out/release-candidate-2026.9.9.3 `
+& scripts/Build-ReleaseCandidate.ps1 -OutputRoot out/release-candidate-2026.9.9.4 `
   -SourceCommit (git rev-parse HEAD) `
   -NativeConfigurationDirectory out/build/windows-x64-release-vs144
 ```
@@ -56,15 +56,16 @@ $privateKey = Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/release-signing
 $sourceCommit = git rev-parse HEAD
 # 这些目录必须来自上述同一源码构建；每次使用新的输出目录。
 & scripts/New-ProgramReleasePackage.ps1 `
-  -PublishRoot out/release-publish -NativeRoot x64/Release `
-  -OutputRoot out/release-2026.9.9.1 -SourceCommit $sourceCommit `
+  -PublishRoot out/release-publish -NativeRoot x64/Release -LauncherRoot out/release-launcher `
+  -OutputRoot out/release-2026.9.9.4 -SourceCommit $sourceCommit `
   -RedistRoot 'C:/VSBuildTools-Current/VC/Redist/MSVC/14.44.35112/x64'
 
-$appRoot = 'out/release-2026.9.9.1/IMao-v2026.9.9.1-windows-x64'
+$appRoot = 'out/release-2026.9.9.4/IMao-v2026.9.9.4-windows-x64'
 & $dotnet $publisher prepare --app-root $appRoot `
   --private-key $privateKey --public-key Assets/Updates/trusted-keys.json `
-  --output out/maps-2026.9.9.1 --sequence 1 --resource-version 2026.9.9.1 `
-  --tag v2026.9.9.1 --program-release true `
+  --output out/maps-2026.9.9.4 --sequence 4 --resource-version 2026.9.9.4 `
+  --tag v2026.9.9.4 --program-release true --program-zip "$appRoot.zip" `
+  --previous updates/stable.json `
   --core-host "$appRoot/IMao-CoreHost.exe"
 ```
 

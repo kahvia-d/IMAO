@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../Version.props" />
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>IMao-Launcher</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier><SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile><IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../IMao-WinUI.Core/Updates/*.cs" Link="Updates/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../Assets/Updates/trusted-keys.json" LogicalName="trusted-keys.json" />
+  </ItemGroup>
+</Project>

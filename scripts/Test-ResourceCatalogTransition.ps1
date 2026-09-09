@@ -51,5 +51,26 @@ try {
     Assert-ResourceCatalogTransition $verifiedOld $verifiedNew
     $passed.Add('verified signed catalog payload transition accepted')
 }finally{$key.Dispose()}
+$withProgram = Copy-Catalog $old
+$programPackage = @{sha256=('d'*64);size=200;sourceCommit=('a'*40);launcherProtocol=1;files=@(@{path='app.exe';size=10;sha256=('b'*64)})}
+$withProgram.app | Add-Member -NotePropertyName package -NotePropertyValue $programPackage
+$retained = Copy-Catalog $withProgram; $retained.sequence = 2
+Assert-ResourceCatalogTransition $withProgram $retained
+$passed.Add('resource-only release retains signed program package')
+foreach ($property in @('sha256','size','sourceCommit','launcherProtocol','files','removed')) {
+    $changed = Copy-Catalog $retained
+    switch ($property) {
+        'sha256' { $changed.app.package.sha256 = 'e'*64 }
+        'size' { $changed.app.package.size = 201 }
+        'sourceCommit' { $changed.app.package.sourceCommit = 'c'*40 }
+        'launcherProtocol' { $changed.app.package.launcherProtocol = 2 }
+        'files' { $changed.app.package.files[0].sha256 = 'e'*64 }
+        'removed' { $changed.app.package = $null }
+    }
+    $rejected = $false
+    try { Assert-ResourceCatalogTransition $withProgram $changed } catch { $rejected = $true }
+    if (-not $rejected) { throw "Program package mutation was accepted: $property" }
+    $passed.Add("immutable signed program rejects $property mutation")
+}
 [IO.File]::WriteAllText((Join-Path $OutputRoot 'test-report.json'),(@{passed=$passed.Count;tests=@($passed.ToArray())}|ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
 Write-Host "PASS $($passed.Count) catalog transition checks."

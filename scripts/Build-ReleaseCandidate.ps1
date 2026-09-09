@@ -114,10 +114,16 @@ Invoke-CandidateProcess $env:IMAO_DOTNET (@('build') + $taskManagedArguments + @
 # WinUI's publish build targets generate and collect resources.pri. Skipping
 # that build drops the application's resource index even after Rebuild.
 Invoke-CandidateProcess $env:IMAO_DOTNET (@('publish') + $taskManagedArguments + @('--no-restore','-o',$taskPublish)) 'managed-publish.log'
+$taskLauncher = Join-Path $OutputRoot 'launcher'
+Invoke-CandidateProcess $env:IMAO_DOTNET @('publish','tools/ProgramLauncher/ProgramLauncher.csproj','-c','Release','-r','win-x64',
+    '--self-contained','true','-o',$taskLauncher,'--source',$env:NUGET_PACKAGES,'-p:NuGetAudit=false') 'launcher-publish.log'
+$taskLauncherReceipt = Get-Content -LiteralPath (Join-Path $taskPublish 'build-info.json') -Raw | ConvertFrom-Json
+$taskLauncherReceipt | Add-Member -NotePropertyName launcherSha256 -NotePropertyValue ((Get-FileHash -LiteralPath (Join-Path $taskLauncher 'IMao-Launcher.exe') -Algorithm SHA256).Hash.ToLowerInvariant())
+[IO.File]::WriteAllText((Join-Path $taskLauncher 'launcher-build-info.json'), ($taskLauncherReceipt | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 Assert-ResourceBuildUnchanged $taskSource (Get-ResourceBuildProvenance $taskRepo $SourceCommit)
 # Native runtime regressions use the development output; refresh its versioned
 # resource descriptor from the same clean source before those checks run.
 & (Join-Path $PSScriptRoot 'Stage-UpdateResources.ps1') -SourceRoot $taskRepo -Destination $taskNativeOutput -SourceCommit $SourceCommit
-& (Join-Path $PSScriptRoot 'New-ProgramReleasePackage.ps1') -PublishRoot $taskPublish -NativeRoot $taskNative -OutputRoot (Join-Path $OutputRoot 'program') -SourceCommit $SourceCommit -RedistRoot $RedistRoot
+& (Join-Path $PSScriptRoot 'New-ProgramReleasePackage.ps1') -PublishRoot $taskPublish -NativeRoot $taskNative -LauncherRoot $taskLauncher -OutputRoot (Join-Path $OutputRoot 'program') -SourceCommit $SourceCommit -RedistRoot $RedistRoot
 Assert-ResourceBuildUnchanged $taskSource (Get-ResourceBuildProvenance $taskRepo $SourceCommit)
 Write-Host "Clean-source candidate complete: $OutputRoot; source $SourceCommit"

@@ -6,7 +6,8 @@ param(
     [Parameter(Mandatory)][string]$SourceCommit,
     [Parameter(Mandatory)][string]$RedistRoot,
     [string]$SourceRoot,
-    [string]$NativeBuildReceipt
+    [string]$NativeBuildReceipt,
+    [string]$LauncherRoot
 )
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer is required.' }
@@ -30,10 +31,22 @@ if (Test-Path -LiteralPath $NativeBuildReceipt -PathType Leaf) {
     throw 'A clean program package requires native-build-info.json from the same clean source build.'
 }
 $version = [string]$build.appVersion
+if ([version]$version -ge [version]'2026.9.9.4') {
+    if (-not $LauncherRoot) { throw 'Self-updating program packages require -LauncherRoot from the same source build.' }
+    $launcherBuild = Get-Content -LiteralPath (Join-Path $LauncherRoot 'launcher-build-info.json') -Raw | ConvertFrom-Json
+    Assert-ManagedBuildProvenance $launcherBuild $sourceBefore
+    if ($launcherBuild.appVersion -ne $version) { throw 'Launcher version differs from application version.' }
+    if ($launcherBuild.launcherSha256 -ne (Get-FileHash -LiteralPath (Join-Path $LauncherRoot 'IMao-Launcher.exe') -Algorithm SHA256).Hash) { throw 'Launcher bytes differ from their build receipt.' }
+    if ([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $LauncherRoot 'IMao-Launcher.exe')).FileVersion -ne $version) { throw 'Launcher executable version does not match the package.' }
+}
 $name = "IMao-v$version-windows-x64"
 $package = Join-Path $OutputRoot $name
 if (Test-Path -LiteralPath $package) { throw 'Package staging already exists; reviewed files will not be overwritten.' }
 [IO.Directory]::CreateDirectory($package) | Out-Null
+if ($LauncherRoot) {
+    Copy-Item -LiteralPath (Join-Path $LauncherRoot 'IMao-Launcher.exe') -Destination $package
+    Copy-Item -LiteralPath (Join-Path $LauncherRoot 'launcher-build-info.json') -Destination $package
+}
 foreach ($file in Get-ChildItem -LiteralPath $PublishRoot -Recurse -File) {
     if ($file.Extension -eq '.pdb') { continue }
     $relative = [IO.Path]::GetRelativePath($PublishRoot,$file.FullName)
@@ -80,8 +93,9 @@ $notices = @{
 }
 foreach ($entry in $notices.GetEnumerator()) { Copy-Item -LiteralPath (Join-Path $SourceRoot $entry.Value) -Destination (Join-Path $noticeRoot $entry.Key) }
 Copy-Item -LiteralPath (Join-Path $SourceRoot 'Docs/ResourceUpdates.md') -Destination (Join-Path $package 'README-Updates.md')
+Copy-Item -LiteralPath (Join-Path $SourceRoot 'Docs/ProgramUpdates.md') -Destination (Join-Path $package 'ProgramUpdates.md')
 $unwanted = @(Get-ChildItem -LiteralPath $package -Recurse -File | Where-Object {
-    $_.FullName -match '(?i)[\\/](SavedPoints|SavedRoutes|Logs|diagnostics|obj|\.git|ResourceUpdates)[\\/]|\.pdb$|\.log$|\.user$|[\\/]Map_features\.yml$|[\\/]imgui\.ini$|[\\/]IMao.*Tests\.exe$|private.*key|signing-key|\.pfx$|\.pem$'
+    $_.FullName -match '(?i)[\\/](SavedPoints|SavedRoutes|Logs|diagnostics|obj|\.git|ResourceUpdates|ProgramUpdates)[\\/]|\.pdb$|\.log$|\.user$|[\\/]Map_features\.yml$|[\\/]imgui\.ini$|[\\/]IMao.*Tests\.exe$|private.*key|signing-key|\.pfx$|\.pem$'
 })
 if ($unwanted.Count) { throw ('Private/development files in program package: ' + ($unwanted.Name -join ', ')) }
 foreach ($relative in @('IMao-WinUI.exe','IMao-WinUI.dll','IMao-WinUI.Core.dll','IMao-CoreHost.exe','coreclr.dll','hostfxr.dll','hostpolicy.dll','Microsoft.ui.xaml.dll','Microsoft.WindowsAppRuntime.dll','resources.pri','vcomp140.dll','msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll','Assets/FeaturesDatas/Map_features.imf','Assets/FeaturesDatas/Map_visual_index.imx','Assets/Updates/bundled-snapshot.json','build-info.json')) {

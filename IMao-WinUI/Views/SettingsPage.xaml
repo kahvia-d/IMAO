@@ -14,6 +14,8 @@
                     <Button x:Name="ImportResourcesButton" Content="导入离线包" Click="ImportResources_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                     <Button x:Name="RollbackResourcesButton" Content="回退上一版" Click="RollbackResources_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                     <Button x:Name="DownloadProgramButton" Content="下载新版程序" Click="DownloadProgram_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <Button x:Name="RestartProgramButton" Content="退出并更新" Click="RestartProgram_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+                    <Button x:Name="RollbackProgramButton" Content="回退程序版本" Click="RollbackProgram_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                     <Button x:Name="CancelUpdateButton" Content="取消" Click="CancelUpdate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                 </controls:WrapPanel>
                 <ProgressBar x:Name="ResourceUpdateProgress" Minimum="0" Maximum="100" Visibility="Collapsed" />

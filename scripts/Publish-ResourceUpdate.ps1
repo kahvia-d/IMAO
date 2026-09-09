@@ -45,6 +45,12 @@ if ($ProgramZip) {
     $programReport = Get-Content -LiteralPath ([IO.Path]::ChangeExtension($ProgramZip, '.report.json')) -Raw | ConvertFrom-Json
     if (-not $programReport.passed -or $programReport.sourceDirty -ne $false -or $programReport.sourceCommit -ne $report.sourceCommit -or $programReport.version -ne $report.appVersion) { throw 'Program archive lacks a matching clean-source package validation report.' }
     if ((Get-FileHash -LiteralPath $ProgramZip -Algorithm SHA256).Hash -ne $programReport.sha256) { throw 'Program archive changed after verification.' }
+    if ([version]$programReport.version -ge [version]'2026.9.9.4' -and (-not $catalog.app.package -or
+        $catalog.app.package.sha256 -ne $programReport.sha256 -or $catalog.app.package.size -ne (Get-Item -LiteralPath $ProgramZip).Length -or
+        $catalog.app.package.sourceCommit -ne $programReport.sourceCommit -or
+        $catalog.app.package.url -ne "https://github.com/$repo/releases/download/$tag/$([IO.Path]::GetFileName($ProgramZip))")) {
+        throw 'Program archive is not bound to this release by the signed update catalog.'
+    }
     $assets.Add([pscustomobject]@{path=[IO.Path]::GetFullPath($ProgramZip);name=[IO.Path]::GetFileName($ProgramZip);sha256=$programReport.sha256})
 }
 foreach ($asset in $assets) {

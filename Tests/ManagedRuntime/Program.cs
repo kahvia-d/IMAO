@@ -138,6 +138,9 @@ try
         await core.EnsureStartedAsync();
         Check(core.IsConnected, "fresh startup after shutdown");
         await core.ShutdownAsync();
+        await core.DisposeAsync();
+        await core.EnsureStartedAsync();
+        Check(!core.IsConnected, "application exit disposal prevents late commands from starting another core");
 
         // Exercise a client that sends requests but never consumes host events.
         string pipeName = "IMao.Test." + Guid.NewGuid().ToString("N");

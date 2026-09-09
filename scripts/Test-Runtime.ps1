@@ -50,6 +50,7 @@ if (-not $SkipBuild -or (Test-Path -LiteralPath (Join-Path $taskRepo 'x64\Releas
 $taskHostArgument = if ($SkipHost) { '' } else { ' "' + (Join-Path $taskRepo 'x64\Release') + '"' }
 Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" "' + (Join-Path $taskManagedOutput 'ManagedRuntime.dll') + '"' + $taskHostArgument) 'managed-tests.log'
 & (Join-Path $PSScriptRoot 'Test-ResourceUpdates.ps1') -OutputDirectory (Join-Path $taskOutput 'resource-updates')
+& (Join-Path $PSScriptRoot 'Test-ProgramUpdates.ps1') -OutputDirectory (Join-Path $taskOutput 'program-updates')
 & (Join-Path $PSScriptRoot 'Test-ResourcePackagePicker.ps1') -OutputDirectory (Join-Path $taskOutput 'resource-package-picker')
 & (Join-Path $PSScriptRoot 'Test-ResourceBuildProvenance.ps1') -OutputRoot (Join-Path $taskOutput ('resource-provenance-' + [guid]::NewGuid().ToString('N')))
 & (Join-Path $PSScriptRoot 'Test-ResourceUpdateStaging.ps1') -OutputRoot (Join-Path $taskOutput ('resource-staging-' + [guid]::NewGuid().ToString('N')))
