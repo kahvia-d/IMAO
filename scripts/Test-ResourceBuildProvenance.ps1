@@ -61,5 +61,17 @@ $build.sourceDirty = $true
 Assert-ManagedBuildProvenance $build $dirty
 if ($build.sourceDirty -ne $true) { throw 'Dirty QA metadata was relabeled clean.' }
 $passed.Add('explicitly dirty local QA remains allowed without relabeling clean')
+$noModulesScript = Join-Path $OutputRoot 'ps5-without-module-autoload.ps1'
+[IO.File]::WriteAllText($noModulesScript, @'
+param([string]$Helper,[string]$Source,[string]$Commit,[string]$ExpectedHash)
+$ErrorActionPreference = 'Stop'
+$PSModuleAutoLoadingPreference = 'None'
+. $Helper
+$provenance = Get-ResourceBuildProvenance $Source $Commit
+if (-not $provenance.sourceDirty -or $provenance.sourceTreeSha256 -cne $ExpectedHash) { throw 'Dirty source SHA256 requires module auto loading.' }
+'@, [Text.UTF8Encoding]::new($false))
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $noModulesScript -Helper (Join-Path $PSScriptRoot 'ResourceBuildProvenance.ps1') -Source $source -Commit $current.sourceCommit -ExpectedHash $dirty.sourceTreeSha256
+if ($LASTEXITCODE -ne 0) { throw 'PowerShell 5 source hashing failed without module auto loading.' }
+$passed.Add('PS5 dirty source hashing works with module auto loading disabled')
 [IO.File]::WriteAllText((Join-Path $OutputRoot 'test-report.json'),(@{passed=$passed.Count;tests=@($passed.ToArray())} | ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
 Write-Host "PASS $($passed.Count) source provenance regressions."

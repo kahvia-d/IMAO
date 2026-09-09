@@ -32,6 +32,7 @@ $taskToolset = Get-NativeConfiguration 'CMAKE_GENERATOR_TOOLSET'
 $taskPaddle = Get-NativeConfiguration 'PADDLE_LIB'
 $taskOpenCv = Get-NativeConfiguration 'OPENCV_DIR'
 $taskCmake = Get-NativeConfiguration 'CMAKE_COMMAND'
+$taskCxxFlags = Get-NativeConfiguration 'CMAKE_CXX_FLAGS'
 $taskNativeOutput = Join-Path $taskRepo 'x64/Release'
 foreach ($taskRunning in @(Get-Process -Name 'IMao-CoreHost','IMao-WinUI' -ErrorAction SilentlyContinue)) {
     try { $taskRunningPath = $taskRunning.Path } catch { throw 'Cannot verify the running application path. Close IMao before rebuilding native output.' }
@@ -75,8 +76,11 @@ function Invoke-CandidateProcess([string]$Executable, [string[]]$Arguments, [str
 $taskNativeBuild = Join-Path $OutputRoot 'native-build'
 # A fresh CMake build directory has no prior objects to reuse. Dependency and
 # toolset paths come from the validated local configuration, not PATH guesses.
+# MSBuild's project parallelism does not parallelize C++ files within CoreHost.
+# Preserve the configured flags and give MSVC the same explicit worker limit.
 Invoke-CandidateProcess $taskCmake @('-S',$taskRepo,'-B',$taskNativeBuild,'-G',$taskGenerator,'-A','x64','-T',$taskToolset,
     "-DCMAKE_GENERATOR_INSTANCE=$taskInstance","-DPADDLE_LIB=$taskPaddle","-DOPENCV_DIR=$taskOpenCv",
+    "-DCMAKE_CXX_FLAGS=$taskCxxFlags /MP$Parallel",
     '-DIMAO_ENABLE_DIAGNOSTICS=OFF','-DIMAO_ALLOW_XML_FEATURE_FALLBACK=OFF') 'native-configure.log'
 Invoke-CandidateProcess $taskCmake @('--build',$taskNativeBuild,'--config','Release','--target','IMao-CoreHost','IMaoOptimizationTests',
     'IMaoMarkerTests','IMaoRoutePlanningTests','IMaoRoutePlanningServiceTests','IMaoVisualRegression','IMaoResourceSnapshotTests','--parallel',"$Parallel") 'native-build.log'
@@ -107,7 +111,9 @@ $taskManagedArguments = @('IMao-WinUI/IMao-WinUI.csproj','-c','Release','-r','wi
     '-p:Platform=x64','-p:WindowsPackageType=None','-p:GenerateAppxPackageOnBuild=false','-p:AppxPackageSigningEnabled=false',
     '-p:NuGetAudit=false',"-p:BaseOutputPath=$taskManagedBuild",'--source',$env:NUGET_PACKAGES)
 Invoke-CandidateProcess $env:IMAO_DOTNET (@('build') + $taskManagedArguments + @('-t:Rebuild')) 'managed-rebuild.log'
-Invoke-CandidateProcess $env:IMAO_DOTNET (@('publish') + $taskManagedArguments + @('--no-build','--no-restore','-o',$taskPublish)) 'managed-publish.log'
+# WinUI's publish build targets generate and collect resources.pri. Skipping
+# that build drops the application's resource index even after Rebuild.
+Invoke-CandidateProcess $env:IMAO_DOTNET (@('publish') + $taskManagedArguments + @('--no-restore','-o',$taskPublish)) 'managed-publish.log'
 Assert-ResourceBuildUnchanged $taskSource (Get-ResourceBuildProvenance $taskRepo $SourceCommit)
 # Native runtime regressions use the development output; refresh its versioned
 # resource descriptor from the same clean source before those checks run.

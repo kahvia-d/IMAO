@@ -1,4 +1,13 @@
 # Shared by resource staging and program packaging; compatible with Windows PowerShell 5.1.
+function Get-ResourceFileSha256([string]$Path) {
+    # Get-FileHash is a module function in Windows PowerShell. Build subprocesses
+    # can inherit a PowerShell 7 module path, so hash without module autoloading.
+    $stream = [IO.File]::OpenRead($Path)
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace('-','').ToLowerInvariant() }
+    finally { $algorithm.Dispose(); $stream.Dispose() }
+}
+
 function Get-ResourceBuildProvenance([string]$SourceRoot, [string]$SourceCommit) {
     $SourceRoot = [IO.Path]::GetFullPath($SourceRoot).TrimEnd('\','/')
     function Invoke-ProvenanceGit([string[]]$Arguments) {
@@ -18,10 +27,12 @@ function Get-ResourceBuildProvenance([string]$SourceRoot, [string]$SourceCommit)
     $changed += @(Invoke-ProvenanceGit @('diff','--cached','--name-only'))
     $provenance = [Collections.Generic.List[string]]::new()
     $provenance.Add($head)
-    foreach ($entry in @($changed | Sort-Object -Unique)) {
-        $file = Join-Path $SourceRoot $entry
+    $sortedChanges = [Collections.Generic.SortedSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($entry in $changed) { [void]$sortedChanges.Add($entry) }
+    foreach ($entry in $sortedChanges) {
+        $file = [IO.Path]::Combine($SourceRoot, $entry)
         if ([IO.File]::Exists($file)) {
-            $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+            $hash = Get-ResourceFileSha256 $file
             $provenance.Add($entry + ':' + $hash)
         } else { $provenance.Add($entry + ':deleted') }
     }
@@ -52,7 +63,7 @@ function Assert-NativeBuildProvenance($Receipt, $Current, $Build, [string]$CoreH
         $Receipt.coreHostSha256 -notmatch '^[a-f0-9]{64}$') {
         throw 'Native build receipt does not match the selected source and managed program version. Rebuild CoreHost.'
     }
-    if ((Get-FileHash -LiteralPath $CoreHostPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $Receipt.coreHostSha256) {
+    if ((Get-ResourceFileSha256 $CoreHostPath) -cne $Receipt.coreHostSha256) {
         throw 'CoreHost binary differs from its reviewed native build receipt. Rebuild CoreHost.'
     }
 }
