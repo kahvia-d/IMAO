@@ -70,6 +70,7 @@ public partial class App : Application
             services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
             services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
             services.AddSingleton<CoreHostService>();
+            services.AddSingleton<KuroProgressSyncService>();
             services.AddSingleton<ResourceSnapshotService>(_ => ResourceUpdateBootstrap.CreateSnapshots());
             services.AddSingleton<UpdateService>(provider => ResourceUpdateBootstrap.CreateUpdater(provider.GetRequiredService<ResourceSnapshotService>()));
             services.AddSingleton<UpdateUiController>();

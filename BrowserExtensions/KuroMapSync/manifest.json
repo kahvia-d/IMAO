@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "IMao 库街区进度同步",
+  "version": "0.1.0",
+  "description": "将当前库街区地图会话连接到本机 IMao。",
+  "permissions": ["nativeMessaging", "storage", "tabs"],
+  "host_permissions": ["https://www.kurobbs.com/*", "https://kurobbs.com/*"],
+  "background": { "service_worker": "service-worker.js", "type": "module" },
+  "action": { "default_title": "连接 IMao", "default_popup": "popup.html" },
+  "content_scripts": [
+    { "matches": ["https://www.kurobbs.com/mc/map/*", "https://kurobbs.com/mc/map/*"], "js": ["extract-main.js"], "world": "MAIN", "run_at": "document_idle" },
+    { "matches": ["https://www.kurobbs.com/mc/map/*", "https://kurobbs.com/mc/map/*"], "js": ["relay.js"], "world": "ISOLATED", "run_at": "document_idle" }
+  ]
+}

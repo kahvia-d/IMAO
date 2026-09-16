@@ -196,15 +196,20 @@ public:
         const auto key = std::to_string(SceneState(scene)) + ":" + id;
         const auto& points = document.at("points");
         const auto found = points.find(key);
-        return found != points.end() && found->value("nameId", "") == name && found->value("completed", false);
+        if (found != points.end()) return found->value("nameId", "") == name && found->value("completed", false);
+        return RemoteCompleted(document, SceneState(scene), id);
     }
     std::vector<std::string> CompletedIds(const std::string& scene, const std::string& name) const {
         std::scoped_lock lock(mutex);
-        std::vector<std::string> result;
+        std::set<std::string> completed;
+        const int state = SceneState(scene);
+        for (const auto& id : RemoteIds(document, state)) completed.insert(id);
         for (const auto& point : document.at("points"))
-            if (point.value("sceneName", "") == scene && point.value("nameId", "") == name && point.value("completed", false))
-                result.push_back(point.at("pointId").get<std::string>());
-        return result;
+            if (point.value("sceneName", "") == scene && point.value("nameId", "") == name) {
+                const auto id = point.at("pointId").get<std::string>();
+                if (point.value("completed", false)) completed.insert(id); else completed.erase(id);
+            }
+        return {completed.begin(), completed.end()};
     }
     std::string Profile() const { std::scoped_lock lock(mutex); return document.at("profileId").get<std::string>(); }
 
@@ -257,6 +262,17 @@ private:
         for (auto& entry : doc["syncStates"]) if (entry.at("stateId") == state) return entry;
         doc["syncStates"].push_back({{"stateId", state}, {"initialized", false}, {"enabled", false}, {"remoteIds", Json::array()}});
         return doc["syncStates"].back();
+    }
+    static const Json& RemoteIds(const Json& doc, int state) {
+        static const Json empty = Json::array();
+        if (state <= 0) return empty;
+        for (const auto& entry : doc.at("syncStates"))
+            if (entry.at("stateId") == state && entry.value("initialized", false)) return entry.at("remoteIds");
+        return empty;
+    }
+    static bool RemoteCompleted(const Json& doc, int state, const std::string& id) {
+        const auto& ids = RemoteIds(doc, state);
+        return std::find(ids.begin(), ids.end(), id) != ids.end();
     }
     static Json Snapshot(const Json& doc, const Json& options = Json::object()) {
         Json points = Json::array();

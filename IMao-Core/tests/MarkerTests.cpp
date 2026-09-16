@@ -47,6 +47,9 @@ int main() {
             {"remoteIds", Json::array({"cloud-only", "unknown-cloud"})}, {"points", Json::array({Point("cloud-only"), Point("untouched", false)})}});
         Require(store.Completed("World", "test", "cloud-only"), "upload deleted untouched cloud completion");
         Require(init.at("syncStates")[0].at("remoteIds").size() == 2, "unknown remote identity lost");
+        Require(store.Completed("World", "test", "unknown-cloud"), "remote-only completion was not visible without a local copy");
+        auto cloudIds = store.CompletedIds("World", "test");
+        Require(std::find(cloudIds.begin(), cloudIds.end(), "unknown-cloud") != cloudIds.end(), "remote-only completion was not exposed to map drawing");
         Require(!store.Execute({{"type", "markerCopyLocalProgress"}}).at("accepted").get<bool>(), "initialized account allowed surprise bulk copy");
         auto unseen = Send(store, "markerSetCompletion", Point("previously-unseen"));
         Require(unseen.at("point").at("remoteCompleted") == false && unseen.at("point").at("pending") == true,

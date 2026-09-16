@@ -17,6 +17,7 @@ public sealed partial class SettingsPage : Page
     private bool subscribed;
     private bool restoringRuntime = true, savingRuntime;
     private readonly UpdateUiController updates;
+    private readonly KuroProgressSyncService kuroSync;
     private bool restoringUpdates;
     public SettingsViewModel ViewModel { get; }
     private static readonly int[] SupportedKeys = Enumerable.Range(0, 124).Where(RuntimeConfiguration.IsSupportedHotkey).ToArray();
@@ -27,6 +28,7 @@ public sealed partial class SettingsPage : Page
         coreHost = App.GetService<CoreHostService>();
         gamepad = App.GetService<GamepadInputService>();
         updates = App.GetService<UpdateUiController>();
+        kuroSync = App.GetService<KuroProgressSyncService>();
         InitializeComponent();
         RestoreRuntime();
         RenderUpdates();
@@ -261,6 +263,24 @@ public sealed partial class SettingsPage : Page
     private async void ToggleSwitch_StatusBar_Toggled(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(statusBarEnabled: ToggleSwitch_StatusBar.IsOn));
     private async void AutomaticReplan_Toggled(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(autoReplanEnabled: AutomaticReplan.IsOn));
     private void OpenPoints_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.SavedPoints);
+    private async void KuroSyncImport_Click(object sender, RoutedEventArgs e)
+    {
+        string profile = KuroSyncProfile.Text.Trim();
+        if (KuroSyncState.SelectedItem is not ComboBoxItem state || !int.TryParse(state.Tag?.ToString(), out int stateId)) return;
+        try
+        {
+            int count = await kuroSync.ImportAsync(profile, stateId, KuroSyncMerge.IsOn);
+            KuroSyncMessage.Severity = InfoBarSeverity.Success;
+            KuroSyncMessage.Message = $"已导入 {count} 个库街区已完成点。";
+        }
+        catch (Exception error)
+        {
+            KuroSyncMessage.Severity = InfoBarSeverity.Error;
+            KuroSyncMessage.Message = error.Message;
+        }
+        KuroSyncMessage.IsOpen = true;
+    }
+    private void KuroSyncOpen_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.KuroSync);
     private void OpenRoutes_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.SavedRoutes);
     private static void OpenDirectory(string path)
     { if (Directory.Exists(path)) System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true, Verb = "open" }); }
