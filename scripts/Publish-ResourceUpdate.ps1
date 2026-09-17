@@ -106,8 +106,13 @@ if ($LASTEXITCODE -ne 0) {
     $matching = @($all | Where-Object tag_name -EQ $tag)
     if ($matching.Count -eq 0) {
         Invoke-Gh @('release','create',$tag,'--repo',$repo,'--target',[string]$report.sourceCommit,'--draft','--title',$tag,'--notes-file',[IO.Path]::GetFullPath($NotesFile)) | Out-Null
-        $all = (Invoke-Gh @('api',"repos/$repo/releases?per_page=100")) | ConvertFrom-Json
-        $matching = @($all | Where-Object tag_name -EQ $tag)
+        # The releases list can lag a moment behind creation. Retry the lookup instead of failing a
+        # promotion that has not touched a single attachment yet.
+        for ($attempt = 0; $attempt -lt 5 -and $matching.Count -eq 0; $attempt++) {
+            if ($attempt -gt 0) { Start-Sleep -Seconds 2 }
+            $all = (Invoke-Gh @('api',"repos/$repo/releases?per_page=100")) | ConvertFrom-Json
+            $matching = @($all | Where-Object tag_name -EQ $tag)
+        }
     }
     if ($matching.Count -ne 1) { throw 'Cannot uniquely identify the release draft. No attachments were changed.' }
     $release = $matching[0]
