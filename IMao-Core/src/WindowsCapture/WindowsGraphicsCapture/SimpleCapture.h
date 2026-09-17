@@ -113,6 +113,8 @@ private:
     /// host process, which the client reports as a core fault with no first frame.
     void ProcessFrame(winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool const& sender);
     void RecordFrameDiagnostic(const char* message, const std::string& details);
+    /// Reports the first readback that had to wait for its staging copy instead of being skipped.
+    void ReportBlockingReadback(HRESULT firstMapResult);
 
 
 private:
@@ -131,6 +133,7 @@ private:
     std::atomic<std::uint64_t> m_framesArrived{ 0 }, m_framesPublished{ 0 }, m_framesSkipped{ 0 }, m_stagingFailures{ 0 };
     std::chrono::steady_clock::time_point m_lastFrameDiagnosticAt{};
     std::chrono::steady_clock::time_point m_lastFrameSummaryAt{};
+    bool m_blockingReadbackReported = false;
     winrt::com_ptr<ID3D11Device> m_d3dDevice{ nullptr };
     winrt::com_ptr<ID3D11DeviceContext> m_d3dContext{ nullptr };
     winrt::Windows::Graphics::DirectX::DirectXPixelFormat m_pixelFormat;

@@ -431,7 +431,13 @@ winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result, uint64_t
 		if (clientRoi.width <= 0 || clientRoi.height <= 0 || clientRoi.x < 0 || clientRoi.y < 0 ||
 			clientRoi.x + clientRoi.width > temp.cols || clientRoi.y + clientRoi.height > temp.rows) {
 			result.release();
-			Diagnostics::Record("capture-frame-rejected", "client crop is outside the WGC frame");
+			// The frame size is what distinguishes a window that reports its own border from one that
+			// does not, so a rejected crop has to carry both rectangles.
+			Diagnostics::Record("capture-frame-rejected", "client crop is outside the WGC frame" +
+				std::string(" frame=") + std::to_string(temp.cols) + "x" + std::to_string(temp.rows) +
+				" client=" + std::to_string(captureRect.right) + "x" + std::to_string(captureRect.bottom) +
+				" nonClient=" + std::to_string(nonClientRegion.non_client_width_total) + "x" +
+				std::to_string(nonClientRegion.non_client_height_total));
 			co_return;
 		}
         result = temp(clientRoi); // The capture getter already returned an owned immutable image.

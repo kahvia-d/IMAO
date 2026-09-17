@@ -52,6 +52,7 @@
 // break the standard-library calls those headers make.
 #include "FramePacerTests.h"
 #include "OverlayPacingTests.h"
+#include "CaptureReadbackTests.h"
 
 namespace {
 int failures = 0;
@@ -966,6 +967,7 @@ int main(int argc, char** argv) {
     TestOverlayVisibility(Expect);
     TestFramePacer(Expect);
     TestOverlayPacing(Expect);
+    TestCaptureReadback(Expect);
     TestGamepadContext(Expect);
     TestGamepadCursorTargets(Expect);
     TestGamepadWorldActions(Expect);

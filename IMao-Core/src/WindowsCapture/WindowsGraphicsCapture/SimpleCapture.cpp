@@ -1,6 +1,7 @@
 #include "..\..\pch.h"
 #include "SimpleCapture.h"
 #include "..\..\Runtime\StructuredLogger.h"
+#include "..\..\Runtime\CaptureReadback.h"
 #include <iostream>
 #include <vector>
 #include "include/paddleocr.h"
@@ -170,6 +171,17 @@ void SimpleCapture::RecordFrameDiagnostic(const char* message, const std::string
     StructuredLogger::Record("error", "capture", message, details);
 }
 
+// Recorded once per session: this is the difference between a capture that works and one that reports
+// every frame as "still drawing", so it has to be visible in the log.
+void SimpleCapture::ReportBlockingReadback(HRESULT firstMapResult)
+{
+    if (m_blockingReadbackReported) return;
+    m_blockingReadbackReported = true;
+    StructuredLogger::Record("info", "capture", "capture-wgc-readback-blocking",
+        "hr=" + std::to_string(static_cast<long>(firstMapResult)) +
+        " published=" + std::to_string(m_framesPublished.load()));
+}
+
 void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender)
 {
     ++m_framesArrived;
@@ -268,11 +280,23 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             const int height = static_cast<int>(readbackDesc.Height);
 
             m_d3dContext->CopyResource(m_stagingTexture.get(), readbackSource);
+            // The immediate context submits its work lazily and nothing in this path presents, so
+            // without this flush the copy can stay queued and every non-blocking Map below answers
+            // DXGI_ERROR_WAS_STILL_DRAWING for the rest of the session.
+            m_d3dContext->Flush();
 
             // A synchronous readback would wait for the GPU to finish the frame. When the copy is not
             // ready yet, keep the previous frame instead of stalling this callback.
             D3D11_MAPPED_SUBRESOURCE mappedResource{};
             HRESULT mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mappedResource);
+            if (FAILED(mapped) && CaptureReadback::MustWaitForCopy(mapped, m_framesPublished.load() != 0))
+            {
+                // Nothing has been published yet, or the driver rejected the non-blocking flag: waiting
+                // for the copy beats starting the session without a single frame.
+                ReportBlockingReadback(mapped);
+                m_d3dContext->Flush();
+                mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, 0, &mappedResource);
+            }
             if (mapped == DXGI_ERROR_WAS_STILL_DRAWING)
             {
                 // Skipped frame; the next arrival callback reads a completed copy.
@@ -280,12 +304,6 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             }
             else
             {
-                if (FAILED(mapped))
-                {
-                    // Some drivers reject the non-blocking flag for this resource; a blocking read is
-                    // better than losing every frame.
-                    mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, 0, &mappedResource);
-                }
                 if (FAILED(mapped))
                 {
                     RecordFrameDiagnostic("capture-wgc-readback-failed", "hr=" + std::to_string(static_cast<long>(mapped)));
