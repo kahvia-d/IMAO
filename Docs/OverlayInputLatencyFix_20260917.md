@@ -35,8 +35,8 @@
 
 - 仍需实机确认手感与交互（点击点位、框选、Esc 接管、快捷键、指引窗口）。
 - 仍未处理、可继续优化的项：
-  1. `PrintWindow` 单次约 35 ms 的**绝对成本**（`WindowsCapture/BitBltCapture/BitBltCapture.cpp:92`）没有变化，本次只降低了调用频率。设置里已有"Windows Graphics Capture"选项，其实现本次也一并修好，建议实机 A/B 两种截图方式的帧时间与手感；若 WGC 明显更好，可考虑改默认值。
-  2. WGC 现在是**每次到达都回读并发布**（约 60 Hz），而覆盖层按 30 Hz 呈现、识别按 33/80 ms 取帧。若 `readbackAvgMs` 与 CPU 占用显得偏高，下一步是用 `GraphicsCaptureSession::MinUpdateInterval`（`SimpleCapture.h` 已有 setter，需用 `ApiInformation::IsPropertyPresent` 守卫，Windows 11 才有）把到达速率降到 33 ms，可见效果不变而回读与 `cv::Mat` 拷贝少一半。本次先不动，避免和"能不能出图"一起验证。
+  1. `PrintWindow` 单次约 35 ms 的**绝对成本**（`WindowsCapture/BitBltCapture/BitBltCapture.cpp:92`）没有变化，本次只降低了调用频率。两种截图方式的实机 A/B 见上一节：手感与输入延迟无差异，WGC 赢在尾部（无 >50 ms 慢采集），代价是它把约 26 ms 的回读放在帧池线程上。**默认值尚未改动**（仍是 BitBlt），是否切到 WGC、以及是否在 WGC 出不了首帧时自动回退 BitBlt，属于产品决定。
+  2. WGC 的回读现在是"拷贝到 staging + 阻塞 `Map`"，每帧约 26 ms，并且这个开销反过来把到达率限到约 33 fps（125 秒 4082 帧）——所以用 `MinUpdateInterval` 再限速几乎没有收益。若要让回读不再阻塞回调，可行的下一步是双 staging 纹理：本帧拷进 A，`Map` 上一帧已完成的 B（非阻塞），代价是发布的画面晚一帧（约 30 ms）。本次不动。
   3. 覆盖层窗口仍是 `WS_EX_LAYERED + LWA_COLORKEY + DXGI_SWAP_EFFECT_DISCARD`。若 30 Hz 之后 `presentMs` 仍偏高，下一步是换成 DirectComposition + flip model（每帧全屏 blt 变为翻转），这属于渲染管线改造，需实机看到画面才算验证。
   4. 偶发 `boundsMs=232 ms`（`Runtime/OverlayWindowBounds.h` 的 `SetWindowPos` 同步）尚未处理。
 - 同一个问题上已经处理的相关项：设置里的"应用窗口兼容设置"写入的是**全局** `SwapEffectUpgradeEnable=0`（`IMao-WinUI/Helpers/BitBltRegistryHelper.cs`），此前没有恢复入口，会让所有 Direct3D 程序停留在较旧的合成路径。现在设置里提供"恢复图形默认设置"，只删除这一个值、保留其他 Windows 图形偏好，清空后删除该值（`ManagedRuntime` 测试覆盖两种转换）。
@@ -49,6 +49,19 @@
 - 第一版修复只让"尚未发布过任何帧时"等待拷贝（`CopyResource` 后加 `Flush()`，其余帧继续跳过）。22:06 实机证明这还不够：`capture-wgc-readback-blocking hr=-2005270518 published=0` 后 `first-frame-wait durationMs=3 ready=true`、`app-ready snapshot=available`，但随后 `arrived=473 published=1 skipped=471` —— **首帧之后一帧都没再发布**，覆盖层永远显示同一张旧画面，界面停在"等待游戏画面"。
 - 原因：跳过逻辑本身不成立。拷贝是在**同一个回调里**刚发起的，下一个回调又先对同一张 staging 纹理发起新的 `CopyResource` 再 `Map`，所以"下次回调就能读到完成的拷贝"永远不会发生，非阻塞 `Map` 只会一直回答"还在绘制"。已删除该分支与配套的 `Runtime/CaptureReadback.h`、`CaptureReadbackTests.h`。
 - 定稿（`SimpleCapture.cpp`）：`CopyResource` → `Flush()` → **阻塞式 `Map`**（`flags=0`）。这一等发生在帧池自己的线程上，不是服务输入或呈现覆盖层的线程；实测首帧 `first-frame-wait durationMs=3`，代价可接受，而换来的是每帧都能发布。回读耗时按 `readbackAvgMs`/`readbackMaxMs` 计入 `capture-wgc-frames`，用于和 BitBlt 的 `captureAvgMs` 对比。
-- 顺带确认：WGC 这条路本身比 BitBlt 便宜得多 —— 22:06 会话里 `capture-cadence` 报 `captureAvgMs=3.2`、`captureMaxMs=4.9`，而 BitBlt 是 30-37 ms 并伴随 116-176 ms 尖峰，`captureSlow=0`。
+- 顺带确认：首帧 `first-frame-wait durationMs=3`，且这条路不再有任何"跳过"，说明等待是划算的。
+- **两种截图方式的实机对比**（2026-09-17 22:15:05-22:17:09 选 WGC，22:17:20-22:17:52 用默认 BitBlt，同一台机器、同一套设置、同一个角色位置附近）：
+  | 指标 | WGC | BitBlt |
+  | --- | --- | --- |
+  | `capture-cadence` 的 `captureAvgMs`（中位/p95/最大） | 4.4 / 5.0 / 5.1 | 30.9 / 32.2 / 32.8 |
+  | `capture-cadence` 的 `captureMaxMs` | 6.9 / 9.7 / 12.3 | 45.5 / 53.5 / 138.0 |
+  | `captureSlow` 次数（`captureMaxMs`>50 ms） | 0（60 个采样） | 3（13 个采样） |
+  | `capture-wgc-frames` 的 `readbackAvgMs` / `readbackMaxMs` | 26.3 / 55.7 | — |
+  | `overlay-motion` 的 `captureAgeMs`（中位/p95/最大） | 36 / 65 / 70 | 42 / 63 / 66 |
+  | `overlay-motion` 的 `sourceAgeMs` | 96 / 145 / 179 | 108 / 341 / 452 |
+  | `inputGapMs` / `presentMs` 中位 | 4 / 1 | 3 / 0 |
+  | `renderFps` / `attachedFps` | 29.8 / 29.8 | 29.7 / 29.8 |
+  结论：**手感与输入延迟上没有可测差异**（与实机感受一致，两种方式都在同一套 30 Hz 呈现 + 按需钩子的框架下），WGC 的优势在尾部——BitBlt 32 秒内出现 3 次 >50 ms 的慢采集（最长 138 ms），`sourceAgeMs` 的 p95/最大也随之恶化到 341/452 ms，而 WGC 是 145/179 ms。
+- 代价要说清楚，避免把口径搞混：WGC 的 `captureAvgMs=4.4` 只是消费线程取最新帧的拷贝，真正的回读代价记在帧池线程上（`readbackAvgMs≈26 ms`，其中大部分是在等 GPU 拷贝/OS 合成管线，不是 CPU 占用），并且它反过来把到达率限到约 33 fps（125 秒 4082 帧）。BitBlt 的 `captureAvgMs=30.9` 是 `PrintWindow` 的同步成本，由**游戏窗口自己去服务**。所以两者每帧总成本量级相近，区别是 WGC 的成本不在游戏的关键路径上，且没有 100 ms 级尖峰。
 - 另外：WGC 客户端裁剪被拒时（`capture-frame-rejected`）现在会一并记录 `frame=` 与 `client=`、`nonClient=` 尺寸，便于区分"窗口自带边框"与"裁剪越界"。这条尚未实机验证。
-- 证据：`scripts/Test-Runtime.ps1` 全绿（资源更新 66、发布器 19、选择器 33、来源 13、暂存 7、目录迁移 23、程序更新 28），优化套件通过。
+- 证据：`scripts/Test-Runtime.ps1` 全绿（资源更新 66、发布器 19、选择器 33、来源 13、暂存 7、目录迁移 23、程序更新 28），优化套件通过；两种方式的实机会话均无核心故障。
