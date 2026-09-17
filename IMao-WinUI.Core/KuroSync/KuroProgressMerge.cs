@@ -1,3 +1,4 @@
+#nullable enable
 namespace IMao_WinUI.Core.KuroSync;
 
 public sealed record KuroPointOperation(string PointId, bool Completed);

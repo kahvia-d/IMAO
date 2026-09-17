@@ -86,12 +86,19 @@
         <Expander Header="库街区点位进度同步" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="12">
                 <TextBlock Text="先在已登录的库街区鸣潮大地图页通过 IMao 浏览器扩展连接桌面端。凭据只加密保存在当前 Windows 用户下。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBox x:Name="KuroSyncProfile" Header="同步档案 ID" PlaceholderText="例如 kuro_123456；以扩展连接成功提示为准" MaxWidth="450" />
-                <ComboBox x:Name="KuroSyncState" Header="地图区域" SelectedIndex="0" MaxWidth="450"><ComboBoxItem Content="大世界" Tag="8" /><ComboBoxItem Content="泰缇斯" Tag="900" /><ComboBoxItem Content="拉海" Tag="906" /><ComboBoxItem Content="下层金库" Tag="902" /><ComboBoxItem Content="黯原" Tag="909" /><ComboBoxItem Content="时隙废都" Tag="910" /></ComboBox>
-                <ToggleSwitch x:Name="KuroSyncMerge" Header="首次同步时合并本地点位" OnContent="已完成点取并集" OffContent="以库街区已完成点为准" />
-                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10"><Button Content="从库街区导入已完成点" Click="KuroSyncImport_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" /><Button Content="打开同步数据目录" Click="KuroSyncOpen_Click" /></controls:WrapPanel>
+                <TextBox x:Name="KuroSyncProfile" Header="同步档案 ID" PlaceholderText="例如 kuro_123456；以扩展连接成功提示为准" MaxWidth="450" TextChanged="KuroSyncProfile_TextChanged" />
+                <ComboBox x:Name="KuroSyncState" Header="地图区域" MaxWidth="450" SelectionChanged="KuroSyncState_SelectionChanged" />
+                <ToggleSwitch x:Name="KuroSyncShowSynced" Header="显示两边都已同步的点位数" OnContent="显示" OffContent="不显示" Toggled="KuroSyncShowSynced_Toggled" />
+                <ToggleSwitch x:Name="KuroSyncShowAll" Header="显示没有差异的区域" OnContent="显示" OffContent="不显示" Toggled="KuroSyncShowAll_Toggled" />
+                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10"><Button x:Name="KuroSyncPreviewButton" Content="预览同步" Click="KuroSyncPreview_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" /><Button x:Name="KuroSyncApplyButton" Content="应用同步" Click="KuroSyncApply_Click" IsEnabled="False" /><Button Content="注册/修复浏览器桥接" Click="KuroBridgeRegister_Click" /><Button Content="打开同步数据目录" Click="KuroSyncOpen_Click" /></controls:WrapPanel>
+                <TextBlock x:Name="KuroBridgeStatus" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                 <InfoBar x:Name="KuroSyncMessage" IsOpen="False" IsClosable="True" />
-                <TextBlock Text="此版本已支持安全连接与从库街区导入。自动上传和取消完成写入将在接口请求体经过实机验证后开放。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <StackPanel x:Name="KuroSyncPlanPanel" Spacing="8" Visibility="Collapsed">
+                    <TextBlock x:Name="KuroSyncPlanSummary" TextWrapping="Wrap" />
+                    <Grid x:Name="KuroSyncPlanGrid" ColumnSpacing="16" RowSpacing="4" />
+                    <TextBlock x:Name="KuroSyncPlanFooter" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Text="区域列表来自库街区，默认同步全部区域。同步只做并集：把库街区独有的完成点拉进本地，把本地独有的写回库街区，两边只会互相补齐，不会取消任何点位。写入接口已按官方请求格式实测通过（幂等，可安全重试）。" Style="{StaticResource IMaoSecondaryTextStyle}" />
             </StackPanel>
         </Expander>
         <Expander Header="数据与兼容性" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">

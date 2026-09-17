@@ -126,6 +126,17 @@ internal static class MarkerIpcTests
                 check(events.Any(e => Text(e, "type") == "markerCompletionChanged" && Text(e, "profileId") == Profile) &&
                     events.Any(e => Text(e, "type") == "markerProfileChanged" && Text(e, "profileId") == Profile),
                     "real marker IPC delivers profile-scoped completion and selection events");
+                // The desktop has no point catalog, so the adapter must supply the
+                // identities; otherwise every cloud id looks unmapped. An explicit
+                // empty list must behave like an absent field.
+                var omitted = await Call(core, "markerPreviewSync", new
+                { profileId = Profile, stateId = 0, mode = "import", remoteIds = new[] { FirstPoint } });
+                check(omitted.GetProperty("mappedRemote").GetInt32() == 1 && omitted.GetProperty("unmappedRemote").GetInt32() == 0,
+                    "an account-wide preview maps cloud ids through the packaged catalog");
+                var emptyList = await Call(core, "markerPreviewSync", new
+                { profileId = Profile, stateId = 0, mode = "import", remoteIds = new[] { FirstPoint }, points = Array.Empty<object>() });
+                check(emptyList.GetProperty("mappedRemote").GetInt32() == 1 && emptyList.GetProperty("unmappedRemote").GetInt32() == 0,
+                    "an empty identity list is treated as no identities instead of a complete catalog");
                 await core.ShutdownAsync();
             }
 

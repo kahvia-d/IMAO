@@ -90,6 +90,16 @@ B 为上次双方确认一致的基线，L 为当前本地，R 为本次完整�
 
 ## 待第一阶段确定的外部条件
 
-已从库街区地图前端静态资源确认：登录 token 使用 `AKI_MAP_USER_TOKEN`，账号来自 `AKI_MAP_USER_INFO.userId`；已完成点读取为 `POST https://api.kurobbs.com/map/core/position/getHaveDonePositionIds`，请求头包含 `token`、`source=h5`、`wiki_type`、`devcode` 和 `state_id`。写入端点名称已确认存在 `changeStatus` 与 `cancelDoneLocationByGroup`，但请求体、幂等性、限流数值和条件写支持仍须在隔离测试账号中实测后才可开放。
+已从库街区地图前端静态资源确认：登录 token 使用 `AKI_MAP_USER_TOKEN`，账号来自 `AKI_MAP_USER_INFO.userId`；已完成点读取为 `POST https://api.kurobbs.com/map/core/position/getHaveDonePositionIds`，请求头包含 `token`、`source=h5`、`wiki_type=120`、`devcode` 和 `state_id`。
+
+以下读写契约已于 2026-09-17 用真实账号实测（读接口多次、写接口含往返与重复调用）：
+
+- **读取粒度是账号级**：`state_id` 只被要求携带，不参与过滤——同一个账号对 8 个不同 `state_id`（以及不带该头）返回**完全相同**的完成点集合。点位归属只能由本地点位目录推断，因此一次请求即可取全，再按目录分区。
+- **写入完成**：`POST https://api.kurobbs.com/map/core/position/changeStatus`，请求头同上（`state_id` 为该点位所属区域），`Content-Type: application/json`，请求体 `{"id":"<点位id>","positionType":"<类型id>","status":1}`；返回 `{"code":200,"msg":"操作成功","data":true}`。
+- **取消完成**：同一接口 `"status":0`（实测 43→42→43 往返可逆）。
+- **幂等**：同一请求连续重复调用均返回 200，集合不重复、不增加；因此写入结果未知时可以安全重试。
+- **字段来源**：`positionType` 等于点位目录里该点的 `typeId`；已全量校验本地 23,803 个点位，`typeId` 与目录分类 id 完全一致（0 处不一致），所以本地档案记录里的 `nameId` 可直接作为 `positionType` 使用。
+- **限流与条件写**：服务端未提供 ETag/版本条件写（未观察到相关头）；限流数值尚未测定，实现按串行写入 + 429 退避处理。
+- 服务端对请求形状敏感：缺少 `id` 或 `positionType` 会返回 `code=102` 及字段级提示（如“positionType 标点类型不能为空”），字段类型不符（如 `status` 传布尔）会返回 `code=102 服务器外部错误`。
 
 参考：https://www.kurobbs.com/mc/map/；https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging。

@@ -451,11 +451,16 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
         if (identity == markerIdentities.end()) return {{"accepted", false}, {"message", "unknown-public-point"}, {"data", json::object()}};
         for (const auto& [name, value] : identity->second.items()) normalized[name] = value;
     }
-    if ((type == "markerApplyRemote" || type == "markerInitializeSync") && !normalized.contains("points")) {
-        const int state = command.at("stateId").get<int>();
+    // An empty list means the caller supplied no identities (the desktop never
+    // has the catalog), so it must be treated the same as an absent field.
+    const bool suppliedIdentities = normalized.contains("points") && normalized.at("points").is_array() && !normalized.at("points").empty();
+    if ((type == "markerApplyRemote" || type == "markerInitializeSync" || type == "markerPreviewSync") && !suppliedIdentities) {
+        // A missing state selects every region: the cloud set is account-wide and
+        // the store groups it by the local catalog each identity belongs to.
+        const int state = command.value("stateId", 0);
         normalized["points"] = json::array();
         for (const auto& [key, identity] : markerIdentities)
-            if (identity.at("stateId") == state) normalized["points"].push_back(identity);
+            if (state <= 0 || identity.at("stateId") == state) normalized["points"].push_back(identity);
     }
     auto result = markerStore->Execute(normalized);
     if (result.value("accepted", false)) {

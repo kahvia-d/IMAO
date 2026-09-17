@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <set>
 
@@ -135,6 +136,110 @@ public:
                 Advance(next);
                 Commit(next);
                 return Result(Snapshot(next));
+            }
+            // Read-only counterpart of the apply commands. The upstream progress
+            // endpoint returns the account's whole completed set (verified: every
+            // state returns the same identities), so the cloud set is grouped by
+            // the region its local catalog belongs to and each region reports the
+            // changes its own sync would make. Nothing is written.
+            if (type == "markerPreviewSync") {
+                const int requested = command.value("stateId", 0);
+                const auto mode = command.value("mode", "import");
+                if (mode != "import" && mode != "merge" && mode != "upload") return Failure("invalid-sync-mode");
+                const auto source = profile == document.value("profileId", "local") ? document : Load(profile);
+                std::set<std::string> remoteIds;
+                for (const auto& id : command.value("remoteIds", Json::array())) remoteIds.insert(id.get<std::string>());
+                std::map<std::string, int> owner;
+                std::map<int, std::set<std::string>> supplied;
+                for (const auto& identityPoint : command.value("points", Json::array())) {
+                    Json key = identityPoint;
+                    ValidatePoint(key);
+                    const int state = key.at("stateId").get<int>();
+                    const auto id = key.at("pointId").get<std::string>();
+                    supplied[state].insert(id);
+                    owner[id] = state;
+                }
+                for (const auto& [identity, point] : source.at("points").items())
+                    owner[point.at("pointId").get<std::string>()] = point.value("stateId", 0);
+                std::map<int, std::set<std::string>> scoped;
+                std::vector<std::string> unmappedIds;
+                for (const auto& id : remoteIds) {
+                    const auto found = owner.find(id);
+                    if (found == owner.end() || found->second <= 0) { unmappedIds.push_back(id); continue; }
+                    scoped[found->second].insert(id);
+                }
+                std::sort(unmappedIds.begin(), unmappedIds.end());
+                std::set<int> states;
+                if (requested > 0) states.insert(requested);
+                else {
+                    for (const auto& [state, ids] : scoped) states.insert(state);
+                    for (const auto& [state, ids] : supplied) states.insert(state);
+                }
+                Json regions = Json::array();
+                std::int64_t willAddTotal = 0, willRemoveTotal = 0, unchangedTotal = 0, localTotal = 0, mappedRemote = 0;
+                std::int64_t bothTotal = 0, pendingTotal = 0;
+                for (const auto state : states) {
+                    if (state <= 0) continue;
+                    static const std::set<std::string> noRemote;
+                    const std::set<std::string>& regionRemote = scoped.count(state) ? scoped.at(state) : noRemote;
+                    const bool initialized = SyncInitialized(source, state);
+                    std::set<std::string> visited;
+                    std::int64_t localCompleted = 0, bothCompleted = 0, pendingLocal = 0, willAdd = 0, willRemove = 0, unchanged = 0, pendingHeld = 0, conflicts = 0;
+                    const auto inspect = [&](const std::string& id, const Json* record) {
+                        if (!visited.insert(id).second) return;
+                        const bool remote = regionRemote.contains(id);
+                        const bool local = record && record->value("completed", false);
+                        if (local) ++localCompleted;
+                        if (local && remote) ++bothCompleted;
+                        if (record && record->value("pending", false)) ++pendingLocal;
+                        if (record && initialized && record->value("pending", false)) {
+                            ++pendingHeld;
+                            if (!record->at("remoteCompleted").is_null() && record->at("remoteCompleted").get<bool>() != remote && local != remote)
+                                ++conflicts;
+                            return;
+                        }
+                        // Before initialization the cloud set is not yet a baseline, so an
+                        // absent record means "not completed"; afterwards remote-only ids
+                        // already read as completed through the baseline fallback.
+                        const bool current = record ? local : (initialized && remote);
+                        const bool desired = !initialized
+                            ? (mode == "import" ? remote : (mode == "merge" ? (local || remote)
+                                : ((record && record->value("localTouched", false)) ? local : remote)))
+                            : remote;
+                        if (desired == current) ++unchanged; else if (desired) ++willAdd; else ++willRemove;
+                    };
+                    for (const auto& [identity, point] : source.at("points").items()) {
+                        if (point.value("stateId", 0) != state) continue;
+                        inspect(point.at("pointId").get<std::string>(), &point);
+                    }
+                    if (supplied.count(state))
+                        for (const auto& id : supplied.at(state)) {
+                            const auto found = source.at("points").find(std::to_string(state) + ":" + id);
+                            inspect(id, found == source.at("points").end() ? nullptr : &found.value());
+                        }
+                    for (const auto& id : regionRemote) {
+                        if (visited.contains(id)) continue;
+                        const auto found = source.at("points").find(std::to_string(state) + ":" + id);
+                        inspect(id, found == source.at("points").end() ? nullptr : &found.value());
+                    }
+                    regions.push_back({{"stateId", state}, {"initialized", initialized}, {"localCompleted", localCompleted},
+                        {"remoteCompleted", static_cast<std::int64_t>(regionRemote.size())}, {"bothCompleted", bothCompleted},
+                        {"pendingLocal", pendingLocal}, {"willAdd", willAdd},
+                        {"willRemove", willRemove}, {"unchanged", unchanged}, {"pendingHeld", pendingHeld},
+                        {"conflicts", conflicts}, {"remoteIds", regionRemote}});
+                    willAddTotal += willAdd;
+                    willRemoveTotal += willRemove;
+                    unchangedTotal += unchanged;
+                    localTotal += localCompleted;
+                    bothTotal += bothCompleted;
+                    pendingTotal += pendingLocal;
+                    mappedRemote += static_cast<std::int64_t>(regionRemote.size());
+                }
+                return Result({{"mode", mode}, {"regions", std::move(regions)},
+                    {"remoteCompleted", static_cast<std::int64_t>(remoteIds.size())}, {"mappedRemote", mappedRemote},
+                    {"unmappedRemote", static_cast<std::int64_t>(unmappedIds.size())}, {"unmappedIds", unmappedIds},
+                    {"localCompleted", localTotal}, {"bothCompleted", bothTotal}, {"pendingLocal", pendingTotal}, {"willAdd", willAddTotal},
+                    {"willRemove", willRemoveTotal}, {"unchanged", unchangedTotal}});
             }
             if (type == "markerApplyRemote" || type == "markerInitializeSync") {
                 const int state = command.at("stateId").get<int>();
@@ -269,6 +374,12 @@ private:
         for (const auto& entry : doc.at("syncStates"))
             if (entry.at("stateId") == state && entry.value("initialized", false)) return entry.at("remoteIds");
         return empty;
+    }
+    static bool SyncInitialized(const Json& doc, int state) {
+        if (state <= 0) return false;
+        for (const auto& entry : doc.at("syncStates"))
+            if (entry.at("stateId") == state) return entry.value("initialized", false);
+        return false;
     }
     static bool RemoteCompleted(const Json& doc, int state, const std::string& id) {
         const auto& ids = RemoteIds(doc, state);

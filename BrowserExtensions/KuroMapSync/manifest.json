@@ -1,12 +1,28 @@
 {
   "manifest_version": 3,
   "name": "IMao 库街区进度同步",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "将当前库街区地图会话连接到本机 IMao。",
-  "permissions": ["nativeMessaging", "storage", "tabs"],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiXbA/3/U8AzKtMJQPz/MBuLhD0OcJEodLVSkZRFdHoBzwD5PpMvj0wJhCnxlz29J69KEQHtisIsxB7fpUui9LaNYDvJn5lrii6467RAK5IsIlGIwpUBWdCQ8FYY5EFAZ8TXWCO1lUBcVDK1PIX7AUbpQmYWdeEWZ7GmPvaucFmxmH7D24ZgCiOTQeDpqUDtFU+iwNKn7dNEfvWV86EDkG9aA4UugMtXMO8ADBg/3ImTRnu6Y+TeyGP0Eg39mdJNKqsGtkLKVYgWXCLaF8IzctsDsyugpBfo3PuWWeOQTY3F6RG3ztmtmi0Z39Ofa0mABC4WXAwn3LLvXuB9G3CUW5QIDAQAB",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["nativeMessaging", "storage"],
   "host_permissions": ["https://www.kurobbs.com/*", "https://kurobbs.com/*"],
   "background": { "service_worker": "service-worker.js", "type": "module" },
-  "action": { "default_title": "连接 IMao", "default_popup": "popup.html" },
+  "action": {
+    "default_title": "连接 IMao",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
   "content_scripts": [
     { "matches": ["https://www.kurobbs.com/mc/map/*", "https://kurobbs.com/mc/map/*"], "js": ["extract-main.js"], "world": "MAIN", "run_at": "document_idle" },
     { "matches": ["https://www.kurobbs.com/mc/map/*", "https://kurobbs.com/mc/map/*"], "js": ["relay.js"], "world": "ISOLATED", "run_at": "document_idle" }

@@ -4,7 +4,9 @@ const storageKey = tabId => `candidate:${tabId}`;
 chrome.runtime.onMessage.addListener((message, sender) => {
   if (message?.type !== "sessionCandidate" || sender.tab?.id == null || !/^https:\/\/(www\.)?kurobbs\.com\/mc\/map\//.test(sender.tab.url || "")) return;
   if (typeof message.token !== "string" || message.token.length > 16384) return;
-  chrome.storage.session.set({ [storageKey(sender.tab.id)]: { accountId: message.accountId, token: message.token } });
+  chrome.storage.session.set({
+    [storageKey(sender.tab.id)]: { accountId: message.accountId, token: message.token, diagnostic: String(message.diagnostic || "") }
+  });
 });
 
 async function sessionFor(tabId) {
@@ -24,7 +26,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!tab?.id || !/^https:\/\/(www\.)?kurobbs\.com\/mc\/map\//.test(tab.url || "")) throw new Error("请先打开已登录的库街区鸣潮大地图。");
     const session = await sessionFor(tab.id);
     const profile = profileId(message.profileId || session?.accountId || "");
-    if (!profile || !session?.token) throw new Error("未找到可用登录会话。请确认已登录，并在地图页刷新后重试。");
+    if (!profile || !session?.token) {
+      const cached = (await chrome.storage.session.get(storageKey(tab.id)))[storageKey(tab.id)];
+      const seen = cached ? `已收到页面会话但不可用（${cached.diagnostic || "无诊断信息"}）` : "页面脚本未上报会话";
+      throw new Error(`未找到可用登录会话：${seen}。请确认已登录，并在刷新地图页后重试。`);
+    }
     const response = await chrome.runtime.sendNativeMessage(host, { version: 1, type: "storeCredential", profileId: profile, token: session.token });
     if (!response?.accepted) throw new Error("桌面端拒绝保存凭据：" + (response?.error || "unknown"));
     await chrome.storage.session.remove(storageKey(tab.id));

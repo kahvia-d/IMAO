@@ -185,6 +185,9 @@ public partial class App : Application
             if (change.PropertyName == "ResourceActivation") updates.Refresh();
         };
         _ = updates.CheckAsync(automatic: true);
+        // Players must not have to run a script: keep the Native Messaging host
+        // registered for the current user on every start (best effort, per-user only).
+        _ = Task.Run(() => { try { KuroBridgeRegistration.EnsureRegistered(); } catch { } });
         if (ProgramLaunchSession.IsManaged) _ = ConfirmProgramHealthAsync(updates);
     }
 

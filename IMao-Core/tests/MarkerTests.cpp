@@ -80,6 +80,58 @@ int main() {
         Require(store.Completed("World", "test", "cloud-only"), "resolve cloud state did not apply");
         Require(!store.Execute({{"type", "markerResolveConflict"}, {"stateId", 8}, {"pointId", "cloud-only"},
             {"expectedRevision", cloudUndo.at("revision")}, {"completed", false}}).at("accepted").get<bool>(), "stale conflict resolution accepted");
+        {
+            // Preview describes what a sync would change and must leave the
+            // profile untouched while doing so.
+            const auto previewRoot = root / "preview";
+            std::filesystem::create_directories(previewRoot);
+            MarkerCompletionStore preview(previewRoot);
+            Send(preview, "markerSetCompletion", Point("local-done"));
+            const Json supplied = Json::array({Point("cloud-only"), Point("local-done"), Point("untouched", false)});
+            const Json cloud = Json::array({"cloud-only", "unmapped-cloud"});
+            const auto beforePlan = Send(preview, "markerGetSnapshot");
+            auto plan = Send(preview, "markerPreviewSync", {{"stateId", 8}, {"mode", "import"}, {"remoteIds", cloud}, {"points", supplied}});
+            const auto region = plan.at("regions").at(0);
+            Require(plan.at("regions").size() == 1 && region.at("stateId").get<int>() == 8, "single-region preview must report that region");
+            Require(!region.at("initialized").get<bool>(), "preview must report an uninitialized region");
+            Require(region.at("willAdd").get<int>() == 1 && region.at("willRemove").get<int>() == 1 && region.at("unchanged").get<int>() == 1,
+                "preview must report the expected first-sync changes");
+            Require(region.at("remoteCompleted").get<int>() == 1 && region.at("localCompleted").get<int>() == 1,
+                "preview must report both sides of the comparison");
+            Require(plan.at("remoteCompleted").get<int>() == 2 && plan.at("unmappedRemote").get<int>() == 1,
+                "preview must keep account-wide totals and report cloud identities without local points");
+            Require(plan.at("unmappedIds").size() == 1 && plan.at("unmappedIds").at(0).get<std::string>() == "unmapped-cloud",
+                "preview must name the cloud identities that have no local point");
+            Require(Send(preview, "markerGetSnapshot").at("revision") == beforePlan.at("revision"),
+                "preview modified the profile revision");
+            auto merged = Send(preview, "markerPreviewSync", {{"stateId", 8}, {"mode", "merge"}, {"remoteIds", cloud}, {"points", supplied}});
+            Require(merged.at("regions").at(0).at("willAdd").get<int>() == 1 && merged.at("regions").at(0).at("willRemove").get<int>() == 0,
+                "merge preview must never plan a cancellation");
+            // A cloud identity that belongs to another region must land in that
+            // region's row instead of being copied into every region.
+            const Json crossSupplied = Json::array({Point("cloud-only"), Point("local-done"), Point("untouched", false),
+                {{"sceneName", "Tethys"}, {"stateId", 900}, {"nameId", "test"}, {"pointId", "tethys-done"}, {"completed", false}}});
+            const Json crossCloud = Json::array({"cloud-only", "unmapped-cloud", "tethys-done"});
+            auto all = Send(preview, "markerPreviewSync", {{"stateId", 0}, {"mode", "import"}, {"remoteIds", crossCloud}, {"points", crossSupplied}});
+            Require(all.at("regions").size() == 2, "account-wide preview must group identities by region");
+            for (const auto& row : all.at("regions")) {
+                const auto state = row.at("stateId").get<int>();
+                Require(row.at("remoteCompleted").get<int>() == 1, "grouped preview must scope identities to their own region");
+                Require(row.at("remoteIds").at(0).get<std::string>() == (state == 8 ? "cloud-only" : "tethys-done"),
+                    "grouped preview must keep the region's own cloud identities");
+            }
+            Send(preview, "markerInitializeSync", {{"stateId", 8}, {"mode", "import"}, {"remoteIds", cloud}, {"points", supplied}});
+            Require(!preview.Completed("World", "test", "local-done"), "import did not apply the previewed removal");
+            Require(preview.Completed("World", "test", "cloud-only"), "import did not apply the previewed addition");
+            auto steady = Send(preview, "markerPreviewSync", {{"stateId", 8}, {"mode", "import"}, {"remoteIds", cloud}, {"points", supplied}});
+            Require(steady.at("regions").at(0).at("initialized").get<bool>() && steady.at("regions").at(0).at("willAdd").get<int>() == 0 &&
+                steady.at("regions").at(0).at("willRemove").get<int>() == 0,
+                "repeat sync must report no further changes");
+            Require(plan.at("regions").at(0).at("bothCompleted").get<int>() == 0 && steady.at("regions").at(0).at("bothCompleted").get<int>() == 1,
+                "preview must count the identities both sides already agree on");
+            Require(steady.at("localCompleted").get<int>() == 1 && steady.at("remoteCompleted").get<int>() == 2,
+                "preview must report both side totals for the comparison header");
+        }
         std::vector<MarkerLayoutPoint> points = {{"a", 5, 5, 0}, {"b", 6, 6, 1}, {"c", 150, 150, 2}};
         auto groups = BuildMarkerLayout(points, 30);
         Require(groups.size() == 2 && groups[0].members.size() == 2, "screen overlap grouping failed");

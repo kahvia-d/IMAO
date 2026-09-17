@@ -1,3 +1,6 @@
+#nullable enable
+using System.Text.Json;
+
 namespace IMao_WinUI.Core.KuroSync;
 
 public sealed record KuroNativeBridgeRequest(int Version, string Type, string ProfileId, string Token);
@@ -5,6 +8,12 @@ public sealed record KuroNativeBridgeRequest(int Version, string Type, string Pr
 public static class KuroNativeBridgeProtocol
 {
     public const int Version = 1;
+
+    // The extension writes camelCase field names, so matching must ignore case.
+    private static readonly JsonSerializerOptions ParseOptions = new() { PropertyNameCaseInsensitive = true };
+
+    /// <summary>Parses the raw native-message JSON sent by the browser extension.</summary>
+    public static KuroNativeBridgeRequest? Parse(string message) => JsonSerializer.Deserialize<KuroNativeBridgeRequest>(message, ParseOptions);
 
     public static bool TryValidate(KuroNativeBridgeRequest? request, out string error)
     {

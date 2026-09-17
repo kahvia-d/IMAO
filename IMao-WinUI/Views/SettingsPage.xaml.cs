@@ -1,6 +1,8 @@
 using IMao_WinUI.Contracts.Services;
+using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
+using IMao_WinUI.Core.KuroSync;
 using IMao_WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -18,6 +20,14 @@ public sealed partial class SettingsPage : Page
     private bool restoringRuntime = true, savingRuntime;
     private readonly UpdateUiController updates;
     private readonly KuroProgressSyncService kuroSync;
+    private readonly ILocalSettingsService kuroSettings;
+    private KuroSyncComparison? kuroSyncComparison;
+    private bool restoringKuroSync = true;
+    private const string KuroSyncProfileKey = "kuroSyncProfileId";
+    private const string KuroSyncStateKey = "kuroSyncStateId";
+    private const string KuroSyncShowSyncedKey = "kuroSyncShowSynced";
+    private const string KuroSyncShowAllKey = "kuroSyncShowAllRegions";
+    private bool kuroSyncWorldExpanded;
     private bool restoringUpdates;
     public SettingsViewModel ViewModel { get; }
     private static readonly int[] SupportedKeys = Enumerable.Range(0, 124).Where(RuntimeConfiguration.IsSupportedHotkey).ToArray();
@@ -29,6 +39,7 @@ public sealed partial class SettingsPage : Page
         gamepad = App.GetService<GamepadInputService>();
         updates = App.GetService<UpdateUiController>();
         kuroSync = App.GetService<KuroProgressSyncService>();
+        kuroSettings = App.GetService<ILocalSettingsService>();
         InitializeComponent();
         RestoreRuntime();
         RenderUpdates();
@@ -43,6 +54,7 @@ public sealed partial class SettingsPage : Page
             if (!subscribed) { coreHost.PropertyChanged += CoreHost_PropertyChanged; gamepad.PropertyChanged += Gamepad_PropertyChanged; updates.PropertyChanged += Updates_Changed; subscribed = true; }
             RenderUpdates();
             RestoreBindings(); RestoreRuntime();
+            _ = RestoreKuroSyncAsync();
         };
         Unloaded += (_, _) =>
         {
@@ -263,24 +275,266 @@ public sealed partial class SettingsPage : Page
     private async void ToggleSwitch_StatusBar_Toggled(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(statusBarEnabled: ToggleSwitch_StatusBar.IsOn));
     private async void AutomaticReplan_Toggled(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(autoReplanEnabled: AutomaticReplan.IsOn));
     private void OpenPoints_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.SavedPoints);
-    private async void KuroSyncImport_Click(object sender, RoutedEventArgs e)
+    private async void KuroSyncPreview_Click(object sender, RoutedEventArgs e)
     {
         string profile = KuroSyncProfile.Text.Trim();
-        if (KuroSyncState.SelectedItem is not ComboBoxItem state || !int.TryParse(state.Tag?.ToString(), out int stateId)) return;
+        if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "请先填写同步档案 ID（扩展连接成功后显示的那个）。"); return; }
+        int stateId = SelectedKuroSyncStateId();
+        KuroSyncPreviewButton.IsEnabled = false;
         try
         {
-            int count = await kuroSync.ImportAsync(profile, stateId, KuroSyncMerge.IsOn);
-            KuroSyncMessage.Severity = InfoBarSeverity.Success;
-            KuroSyncMessage.Message = $"已导入 {count} 个库街区已完成点。";
+            var plan = await kuroSync.PreviewAsync(profile, stateId == 0 ? null : stateId);
+            kuroSyncComparison = plan;
+            KuroSyncApplyButton.IsEnabled = plan.RegionsNeedingSync > 0;
+            await SaveKuroSyncStateAsync(profile, stateId);
+            RenderKuroSyncComparison(plan);
+            ShowKuroSync(InfoBarSeverity.Success, $"预览完成：本地 {plan.LocalCompleted} 个已完成、库街区 {plan.CloudCompleted} 个已完成；待拉取 {plan.ToFetch} 个、待推送 {plan.ToUpload} 个。");
         }
         catch (Exception error)
         {
-            KuroSyncMessage.Severity = InfoBarSeverity.Error;
-            KuroSyncMessage.Message = error.Message;
+            kuroSyncComparison = null;
+            KuroSyncApplyButton.IsEnabled = false;
+            ShowKuroSync(InfoBarSeverity.Error, error.Message);
         }
+        finally { KuroSyncPreviewButton.IsEnabled = true; }
+    }
+
+    private async void KuroSyncApply_Click(object sender, RoutedEventArgs e)
+    {
+        if (kuroSyncComparison is not { } comparison) { ShowKuroSync(InfoBarSeverity.Warning, "请先预览同步，确认后再应用。"); return; }
+        KuroSyncApplyButton.IsEnabled = false;
+        try
+        {
+            var result = await kuroSync.ApplyAsync(KuroSyncProfile.Text.Trim(), comparison);
+            kuroSyncComparison = null;
+            KuroSyncPlanPanel.Visibility = Visibility.Collapsed;
+            string pushed = result.Pushed > 0 ? $"已推送 {result.Pushed} 个本地标记到库街区、" : "无需推送本地标记、";
+            ShowKuroSync(InfoBarSeverity.Success, $"同步完成：{pushed}从库街区拉取 {result.Fetched} 个；本地还有 {result.PendingLocal} 个待推送。再次点“预览同步”可以查看最新差异。");
+        }
+        catch (Exception error)
+        {
+            ShowKuroSync(InfoBarSeverity.Error, error.Message);
+            KuroSyncApplyButton.IsEnabled = true;
+        }
+    }
+
+    private void KuroSyncOpen_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.KuroSync);
+
+    private void KuroBridgeRegister_Click(object sender, RoutedEventArgs e)
+    {
+        var status = KuroBridgeRegistration.EnsureRegistered();
+        KuroBridgeStatus.Text = status.Detail;
+    }
+
+    private void RenderKuroBridgeStatus() => KuroBridgeStatus.Text = KuroBridgeRegistration.Inspect().Detail;
+    private void KuroSyncProfile_TextChanged(object sender, TextChangedEventArgs e) => InvalidateKuroSyncPlan();
+    private void KuroSyncState_SelectionChanged(object sender, SelectionChangedEventArgs e) => InvalidateKuroSyncPlan();
+    private async void KuroSyncShowSynced_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (restoringKuroSync) return;
+        await kuroSettings.SaveSettingAsync(KuroSyncShowSyncedKey, KuroSyncShowSynced.IsOn);
+        if (kuroSyncComparison is { } comparison) RenderKuroSyncComparison(comparison);
+    }
+
+    private async void KuroSyncShowAll_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (restoringKuroSync) return;
+        await kuroSettings.SaveSettingAsync(KuroSyncShowAllKey, KuroSyncShowAll.IsOn);
+        if (kuroSyncComparison is { } comparison) RenderKuroSyncComparison(comparison);
+    }
+
+    private void InvalidateKuroSyncPlan()
+    {
+        if (restoringKuroSync) return;
+        kuroSyncComparison = null;
+        KuroSyncApplyButton.IsEnabled = false;
+    }
+
+    private void ShowKuroSync(InfoBarSeverity severity, string message)
+    {
+        KuroSyncMessage.Severity = severity;
+        KuroSyncMessage.Message = message;
         KuroSyncMessage.IsOpen = true;
     }
-    private void KuroSyncOpen_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.KuroSync);
+
+    private int SelectedKuroSyncStateId() =>
+        KuroSyncState.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag?.ToString(), out int stateId) ? stateId : 0;
+
+    private async Task RestoreKuroSyncAsync()
+    {
+        restoringKuroSync = true;
+        try
+        {
+            KuroSyncProfile.Text = await kuroSettings.ReadSettingAsync<string>(KuroSyncProfileKey) ?? "";
+            KuroSyncShowSynced.IsOn = await kuroSettings.ReadSettingAsync<bool?>(KuroSyncShowSyncedKey) ?? false;
+            KuroSyncShowAll.IsOn = await kuroSettings.ReadSettingAsync<bool?>(KuroSyncShowAllKey) ?? false;
+            int saved = await kuroSettings.ReadSettingAsync<int?>(KuroSyncStateKey) ?? 0;
+            string error = await LoadKuroSyncStatesAsync(saved);
+            if (error.Length > 0) ShowKuroSync(InfoBarSeverity.Warning, $"暂时无法读取库街区区域列表：{error}");
+            RenderKuroBridgeStatus();
+        }
+        catch (Exception) { }
+        finally { restoringKuroSync = false; }
+    }
+
+    private async Task SaveKuroSyncStateAsync(string profile, int stateId)
+    {
+        await kuroSettings.SaveSettingAsync(KuroSyncProfileKey, profile);
+        await kuroSettings.SaveSettingAsync(KuroSyncStateKey, stateId);
+        await kuroSettings.SaveSettingAsync(KuroSyncShowSyncedKey, KuroSyncShowSynced.IsOn);
+        await kuroSettings.SaveSettingAsync(KuroSyncShowAllKey, KuroSyncShowAll.IsOn);
+    }
+
+    /// <summary>The region list comes from the published map states, so it cannot drift from upstream.</summary>
+    private async Task<string> LoadKuroSyncStatesAsync(int selectedTag)
+    {
+        var items = new List<ComboBoxItem> { new() { Content = "全部区域", Tag = 0 } };
+        string error = "";
+        try
+        {
+            foreach (var region in await kuroSync.GetStatesAsync())
+                items.Add(new ComboBoxItem { Content = $"{region.Name}（{region.StateId}）", Tag = region.StateId });
+        }
+        catch (Exception exception) { error = exception.Message; }
+        KuroSyncState.ItemsSource = items;
+        KuroSyncState.SelectedItem = items.FirstOrDefault(item => (int)(item.Tag ?? 0) == selectedTag) ?? items[0];
+        return error;
+    }
+
+    /// <summary>
+    /// Renders both sides as plain counts: 本地点位数 / 待推送 / 云端点位数 /
+    /// 待拉取, with the shared count as an optional column.
+    /// </summary>
+    private void RenderKuroSyncComparison(KuroSyncComparison comparison)
+    {
+        KuroSyncPlanGrid.Children.Clear();
+        KuroSyncPlanGrid.ColumnDefinitions.Clear();
+        KuroSyncPlanGrid.RowDefinitions.Clear();
+        var headers = new List<string> { "范围", "本地点位数", "待推送", "云端点位数", "待拉取" };
+        if (KuroSyncShowSynced.IsOn) headers.Add("已同步点位数");
+        for (int column = 0; column < headers.Count; ++column)
+            KuroSyncPlanGrid.ColumnDefinitions.Add(new ColumnDefinition
+            { Width = column == 0 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
+        AddKuroSyncRow(headers.ToArray(), numeric: true, header: true);
+        bool allRegions = SelectedKuroSyncStateId() == 0;
+        if (allRegions)
+        {
+            // The table has to add up: the first row is the sum of the rows shown
+            // below it. With "show regions without differences" off, regions that
+            // only contain already-synced points are neither listed nor counted.
+            var all = comparison.Regions.OrderBy(region => region.StateId).ToList();
+            var differing = all.Where(region => region.ToFetch + region.ToUpload > 0).ToList();
+            bool accountWide = KuroSyncShowAll.IsOn || differing.Count == 0;
+            var shown = accountWide ? all : differing;
+            string label = accountWide ? "全部区域" : $"有差异的区域（{differing.Count}）";
+            AddKuroSyncRow(Cells(label,
+                    shown.Sum(region => region.LocalCompleted), shown.Sum(region => region.ToUpload),
+                    shown.Sum(region => region.CloudCompleted), shown.Sum(region => region.ToFetch),
+                    shown.Sum(region => region.BothCompleted)),
+                numeric: true, header: false, em: true);
+            foreach (var region in shown)
+            {
+                var parts = RegionParts(region);
+                AddKuroSyncRow(Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.CloudCompleted, region.ToFetch, region.BothCompleted),
+                    numeric: true, header: false,
+                    scope: BuildKuroSyncScope(comparison, region, parts),
+                    detail: parts.Length > 1 && kuroSyncWorldExpanded ? "包含：" + string.Join("、", parts) : null);
+            }
+        }
+        else
+        {
+            foreach (var region in comparison.Regions)
+                AddKuroSyncRow(Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.CloudCompleted, region.ToFetch, region.BothCompleted),
+                    numeric: true, header: false);
+        }
+        int regionsWithDifferences = comparison.Regions.Count(region => region.ToFetch + region.ToUpload > 0);
+        KuroSyncPlanSummary.Text = $"整个账号：本地 {comparison.LocalCompleted} 个已完成 · 库街区 {comparison.CloudCompleted} 个已完成" +
+            (comparison.BothCompleted > 0 ? $"，其中 {comparison.BothCompleted} 个两边一致" : "") +
+            (regionsWithDifferences > 0 ? $"；差异分布在 {regionsWithDifferences} 个区域。" : "；两边完全一致。");
+        var footer = new List<string>
+        {
+            "待推送＝本地已标记完成、库街区未标记，点“应用同步”会写回库街区。",
+            "待拉取＝库街区已标记完成、本地未标记，点“应用同步”会拉进本地。"
+        };
+        if (comparison.PendingLocal > 0) footer.Add($"本地有 {comparison.PendingLocal} 个完成标记正在等待上传确认。");
+        if (comparison.Unmapped > 0)
+        {
+            // Keep the identities on disk so the count can be checked afterwards.
+            string report = kuroSync.WriteUnmappedReport(KuroSyncProfile.Text.Trim(), comparison);
+            footer.Add($"另有 {comparison.Unmapped} 个库街区完成点在本地没有对应点位目录，未计入上表；明细见 {report}");
+        }
+        KuroSyncPlanFooter.Text = string.Join(" ", footer);
+        KuroSyncPlanFooter.Visibility = Visibility.Visible;
+        KuroSyncPlanPanel.Visibility = Visibility.Visible;
+
+        string[] Cells(string scope, int local, int toUpload, int cloud, int toFetch, int both)
+        {
+            var cells = new List<string> { scope, local.ToString(), toUpload.ToString(), cloud.ToString(), toFetch.ToString() };
+            if (KuroSyncShowSynced.IsOn) cells.Add(both.ToString());
+            return cells.ToArray();
+        }
+    }
+
+    /// <summary>State 8 is the open world; the published name lists its sub-regions.</summary>
+    private static string RegionName(KuroSyncRegionComparison region) => region.StateId == 8 ? "大世界" : region.Name;
+
+    private static string[] RegionParts(KuroSyncRegionComparison region) =>
+        region.StateId == 8 ? region.Name.Split('、', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) : Array.Empty<string>();
+
+    private FrameworkElement BuildKuroSyncScope(KuroSyncComparison comparison, KuroSyncRegionComparison region, string[] parts)
+    {
+        var label = new TextBlock { Text = RegionName(region), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        if (parts.Length <= 1) return label;
+        var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        panel.Children.Add(label);
+        var toggle = new HyperlinkButton
+        {
+            Content = kuroSyncWorldExpanded ? "收起" : "展开",
+            Padding = new Thickness(4, 0, 4, 0),
+            MinHeight = 0,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        toggle.Click += (_, _) => { kuroSyncWorldExpanded = !kuroSyncWorldExpanded; RenderKuroSyncComparison(comparison); };
+        panel.Children.Add(toggle);
+        return panel;
+    }
+
+    private void AddKuroSyncRow(IReadOnlyList<string> cells, bool numeric, bool header, bool em = false, FrameworkElement? scope = null, string? detail = null)
+    {
+        int row = KuroSyncPlanGrid.RowDefinitions.Count;
+        KuroSyncPlanGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        for (int column = 0; column < cells.Count; ++column)
+        {
+            if (column == 0 && scope is not null)
+            {
+                Grid.SetRow(scope, row);
+                Grid.SetColumn(scope, 0);
+                KuroSyncPlanGrid.Children.Add(scope);
+                continue;
+            }
+            var block = new TextBlock
+            {
+                Text = cells[column],
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                TextAlignment = numeric && column > 0 ? TextAlignment.Right : TextAlignment.Left,
+                Opacity = header ? 0.7 : 1,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            if (header || em) block.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+            Grid.SetRow(block, row);
+            Grid.SetColumn(block, column);
+            KuroSyncPlanGrid.Children.Add(block);
+        }
+        if (detail is null) return;
+        int detailRow = KuroSyncPlanGrid.RowDefinitions.Count;
+        KuroSyncPlanGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var text = new TextBlock { Text = detail, TextWrapping = TextWrapping.Wrap, Opacity = 0.75, Margin = new Thickness(0, 0, 0, 4) };
+        if (Application.Current.Resources.TryGetValue("IMaoSecondaryTextStyle", out var style) && style is Style textStyle) text.Style = textStyle;
+        Grid.SetRow(text, detailRow);
+        Grid.SetColumn(text, 0);
+        Grid.SetColumnSpan(text, cells.Count);
+        KuroSyncPlanGrid.Children.Add(text);
+    }
     private void OpenRoutes_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.SavedRoutes);
     private static void OpenDirectory(string path)
     { if (Directory.Exists(path)) System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true, Verb = "open" }); }

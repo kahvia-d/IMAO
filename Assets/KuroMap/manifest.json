@@ -68,7 +68,7 @@
     },
     {
       "state": 902,
-      "runtime": "",
+      "runtime": "LowerVault",
       "supported": false,
       "reason": "待接入：尚未建立坐标换算、地图底图和 SURF 特征库。",
       "itemTypes": 37,
@@ -77,7 +77,7 @@
     },
     {
       "state": 909,
-      "runtime": "",
+      "runtime": "Darkplain",
       "supported": false,
       "reason": "待接入：尚未建立坐标换算、地图底图和 SURF 特征库。",
       "itemTypes": 43,
@@ -86,7 +86,7 @@
     },
     {
       "state": 910,
-      "runtime": "",
+      "runtime": "TimeRiftRuins",
       "supported": false,
       "reason": "待接入：尚未建立坐标换算、地图底图和 SURF 特征库。",
       "itemTypes": 9,
