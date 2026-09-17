@@ -34,7 +34,7 @@
        registers that host for the current user, so the bridge has to ship with
        every build and publish output. -->
   <Target Name="StageKuroSyncBridgeToOutput" AfterTargets="CopyFilesToOutputDirectory">
-    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectDirectory)\..\tools\KuroSyncBridge\KuroSyncBridge.csproj&quot; -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o &quot;$(TargetDir).kuro-bridge&quot; --source &quot;$(NuGetPackageRoot)&quot; -p:NuGetAudit=false" />
+    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectDirectory)\..\tools\KuroSyncBridge\KuroSyncBridge.csproj&quot; -c Release -r win-x64 -p:Platform=x64 --self-contained false -p:PublishSingleFile=true -o &quot;$(TargetDir).kuro-bridge&quot; --source &quot;$(NuGetPackageRoot)&quot; -p:NuGetAudit=false" />
     <Copy SourceFiles="$(TargetDir).kuro-bridge\KuroSyncBridge.exe" DestinationFolder="$(TargetDir)" />
   </Target>
 
