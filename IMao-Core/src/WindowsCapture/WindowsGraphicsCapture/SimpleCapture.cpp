@@ -1,7 +1,6 @@
 #include "..\..\pch.h"
 #include "SimpleCapture.h"
 #include "..\..\Runtime\StructuredLogger.h"
-#include "..\..\Runtime\CaptureReadback.h"
 #include <iostream>
 #include <vector>
 #include "include/paddleocr.h"
@@ -171,17 +170,6 @@ void SimpleCapture::RecordFrameDiagnostic(const char* message, const std::string
     StructuredLogger::Record("error", "capture", message, details);
 }
 
-// Recorded once per session: this is the difference between a capture that works and one that reports
-// every frame as "still drawing", so it has to be visible in the log.
-void SimpleCapture::ReportBlockingReadback(HRESULT firstMapResult)
-{
-    if (m_blockingReadbackReported) return;
-    m_blockingReadbackReported = true;
-    StructuredLogger::Record("info", "capture", "capture-wgc-readback-blocking",
-        "hr=" + std::to_string(static_cast<long>(firstMapResult)) +
-        " published=" + std::to_string(m_framesPublished.load()));
-}
-
 void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender)
 {
     ++m_framesArrived;
@@ -192,7 +180,11 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
         m_lastFrameSummaryAt = frameNow;
         StructuredLogger::Record("info", "capture", "capture-wgc-frames",
             "arrived=" + std::to_string(m_framesArrived.load()) + " published=" + std::to_string(m_framesPublished.load()) +
-            " skipped=" + std::to_string(m_framesSkipped.load()) + " stagingFailures=" + std::to_string(m_stagingFailures.load()));
+            " skipped=" + std::to_string(m_framesSkipped.load()) + " stagingFailures=" + std::to_string(m_stagingFailures.load()) +
+            // How long the callback waited for the frame it published: this is the cost the capture
+            // method adds to the frame pool's thread, and what a mode switch is traded against.
+            " readbackAvgMs=" + std::to_string(m_readbackCount == 0 ? 0.0 : m_readbackTotalMs / m_readbackCount) +
+            " readbackMaxMs=" + std::to_string(m_readbackMaxMs));
     }
     auto swapChainResizedToFrame = false;
 
@@ -279,36 +271,27 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             const int width = static_cast<int>(readbackDesc.Width);
             const int height = static_cast<int>(readbackDesc.Height);
 
+            const auto readbackStart = std::chrono::steady_clock::now();
             m_d3dContext->CopyResource(m_stagingTexture.get(), readbackSource);
-            // The immediate context submits its work lazily and nothing in this path presents, so
-            // without this flush the copy can stay queued and every non-blocking Map below answers
-            // DXGI_ERROR_WAS_STILL_DRAWING for the rest of the session.
+            // Submit the copy now instead of leaving it in this context's command buffer: nothing else
+            // in this path presents, so a copy that is never submitted never completes.
             m_d3dContext->Flush();
 
-            // A synchronous readback would wait for the GPU to finish the frame. When the copy is not
-            // ready yet, keep the previous frame instead of stalling this callback.
+            // This copy was issued by this very callback, so a non-blocking Map answers
+            // DXGI_ERROR_WAS_STILL_DRAWING for it every single time and only the first frame of the
+            // session would ever be published (measured: arrived=473 published=1, which left the
+            // overlay showing one stale frame). Reading the frame back is therefore not optional; the
+            // wait is a few milliseconds on the frame pool's own thread, never on the thread that
+            // services input or presents the overlay, and it is measured as readbackMs below.
             D3D11_MAPPED_SUBRESOURCE mappedResource{};
-            HRESULT mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mappedResource);
-            if (FAILED(mapped) && CaptureReadback::MustWaitForCopy(mapped, m_framesPublished.load() != 0))
+            const HRESULT mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, 0, &mappedResource);
+            if (FAILED(mapped))
             {
-                // Nothing has been published yet, or the driver rejected the non-blocking flag: waiting
-                // for the copy beats starting the session without a single frame.
-                ReportBlockingReadback(mapped);
-                m_d3dContext->Flush();
-                mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, 0, &mappedResource);
-            }
-            if (mapped == DXGI_ERROR_WAS_STILL_DRAWING)
-            {
-                // Skipped frame; the next arrival callback reads a completed copy.
                 ++m_framesSkipped;
+                RecordFrameDiagnostic("capture-wgc-readback-failed", "hr=" + std::to_string(static_cast<long>(mapped)));
             }
             else
             {
-                if (FAILED(mapped))
-                {
-                    RecordFrameDiagnostic("capture-wgc-readback-failed", "hr=" + std::to_string(static_cast<long>(mapped)));
-                }
-                else
                 {
                     cv::Mat mappedFrame(height, width, CV_8UC4, mappedResource.pData, static_cast<size_t>(mappedResource.RowPitch));
                     cv::Mat ownedFrame;
@@ -334,6 +317,11 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                         StructuredLogger::Record("info", "capture", "capture-wgc-first-frame",
                             "width=" + std::to_string(width) + " height=" + std::to_string(height));
                 }
+                const double readbackMs = std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - readbackStart).count();
+                m_readbackTotalMs += readbackMs;
+                ++m_readbackCount;
+                if (readbackMs > m_readbackMaxMs) m_readbackMaxMs = readbackMs;
             }
         }
         else

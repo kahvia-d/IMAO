@@ -40,11 +40,14 @@
   3. 偶发 `boundsMs=232 ms`（`Runtime/OverlayWindowBounds.h` 的 `SetWindowPos` 同步）尚未处理。
 - 同一个问题上已经处理的相关项：设置里的"应用窗口兼容设置"写入的是**全局** `SwapEffectUpgradeEnable=0`（`IMao-WinUI/Helpers/BitBltRegistryHelper.cs`），此前没有恢复入口，会让所有 Direct3D 程序停留在较旧的合成路径。现在设置里提供"恢复图形默认设置"，只删除这一个值、保留其他 Windows 图形偏好，清空后删除该值（`ManagedRuntime` 测试覆盖两种转换）。
 
-## 追加修复：WGC 回读（`6500402`）
+## 追加修复：WGC 回读（`6500402` 起步，`SimpleCapture.cpp` 定稿）
 
-上面第 5 条去掉 `Present1` 时漏掉了一点：`Present` 同时是**提交这个 D3D 立即上下文命令缓冲**的动作。这条路径上没有任何 Present，`CopyResource` 到 staging 纹理的命令就可能一直留在缓冲区里没送到 GPU，于是 `Map(D3D11_MAP_FLAG_DO_NOT_WAIT)` 永远返回 `DXGI_ERROR_WAS_STILL_DRAWING`，每一帧都走"跳过"分支。
+上面第 5 条去掉 `Present1` 时漏掉了一点：`Present` 同时是**提交这个 D3D 立即上下文命令缓冲**的动作。这条路径上没有任何 Present，`CopyResource` 到 staging 纹理的命令就可能一直留在缓冲区里没送到 GPU，于是 `Map(D3D11_MAP_FLAG_DO_NOT_WAIT)` 返回 `DXGI_ERROR_WAS_STILL_DRAWING`，帧被不断跳过。
 
 - 实机日志（21:46，选 WGC 启动）证明不是"找不到游戏窗口"也不是窗口被工具挡住：`capture-wgc-frames` 在 1.5 秒内报到 `arrived=88..97`（约 60 fps），`published=0`、`skipped=87..89`、`stagingFailures=0`，`first-frame-wait capture=wgc ready=false` —— 窗口和采集项都正常，是自家回读一帧都没成功。`App::Init()` 只以"首帧是否为空"决定成败，所以客户端显示核心故障。
-- 修复（`Runtime/CaptureReadback.h` + `SimpleCapture.cpp`）：`CopyResource` 之后 `Flush()`；尚未发布过任何帧时（启动阶段）等待拷贝完成而不是跳过，因为此时没有上一帧可退回、跳过就等于启动失败；已经有帧在跑时仍按原设计跳过未完成的拷贝，回调不会为 GPU 停住；驱动拒绝非阻塞标志时也按"未完成"处理并等待。首次等待会记为 `capture-wgc-readback-blocking`。
-- 另外：WGC 客户端裁剪被拒时（`capture-frame-rejected`）现在会一并记录 `frame=` 与 `client=`、`nonClient=` 尺寸，便于区分"窗口自带边框"与"裁剪越界"。这条后续尚未实机验证。
-- 证据：`IMao-Core/tests/CaptureReadbackTests.h`（6 项：已完成即用、首帧等待、有帧后跳过、驱动拒绝标志在首帧与后续都仍能出图）随优化套件通过；`scripts/Test-Runtime.ps1` 全绿（资源更新 66、发布器 19、选择器 33、来源 13、暂存 7、目录迁移 23、程序更新 28）。
+- 第一版修复只让"尚未发布过任何帧时"等待拷贝（`CopyResource` 后加 `Flush()`，其余帧继续跳过）。22:06 实机证明这还不够：`capture-wgc-readback-blocking hr=-2005270518 published=0` 后 `first-frame-wait durationMs=3 ready=true`、`app-ready snapshot=available`，但随后 `arrived=473 published=1 skipped=471` —— **首帧之后一帧都没再发布**，覆盖层永远显示同一张旧画面，界面停在"等待游戏画面"。
+- 原因：跳过逻辑本身不成立。拷贝是在**同一个回调里**刚发起的，下一个回调又先对同一张 staging 纹理发起新的 `CopyResource` 再 `Map`，所以"下次回调就能读到完成的拷贝"永远不会发生，非阻塞 `Map` 只会一直回答"还在绘制"。已删除该分支与配套的 `Runtime/CaptureReadback.h`、`CaptureReadbackTests.h`。
+- 定稿（`SimpleCapture.cpp`）：`CopyResource` → `Flush()` → **阻塞式 `Map`**（`flags=0`）。这一等发生在帧池自己的线程上，不是服务输入或呈现覆盖层的线程；实测首帧 `first-frame-wait durationMs=3`，代价可接受，而换来的是每帧都能发布。回读耗时按 `readbackAvgMs`/`readbackMaxMs` 计入 `capture-wgc-frames`，用于和 BitBlt 的 `captureAvgMs` 对比。
+- 顺带确认：WGC 这条路本身比 BitBlt 便宜得多 —— 22:06 会话里 `capture-cadence` 报 `captureAvgMs=3.2`、`captureMaxMs=4.9`，而 BitBlt 是 30-37 ms 并伴随 116-176 ms 尖峰，`captureSlow=0`。
+- 另外：WGC 客户端裁剪被拒时（`capture-frame-rejected`）现在会一并记录 `frame=` 与 `client=`、`nonClient=` 尺寸，便于区分"窗口自带边框"与"裁剪越界"。这条尚未实机验证。
+- 证据：`scripts/Test-Runtime.ps1` 全绿（资源更新 66、发布器 19、选择器 33、来源 13、暂存 7、目录迁移 23、程序更新 28），优化套件通过。
