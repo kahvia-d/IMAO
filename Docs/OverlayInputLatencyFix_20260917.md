@@ -39,3 +39,12 @@
   2. 覆盖层窗口仍是 `WS_EX_LAYERED + LWA_COLORKEY + DXGI_SWAP_EFFECT_DISCARD`。若 30 Hz 之后 `presentMs` 仍偏高，下一步是换成 DirectComposition + flip model（每帧全屏 blt 变为翻转），这属于渲染管线改造，需实机看到画面才算验证。
   3. 偶发 `boundsMs=232 ms`（`Runtime/OverlayWindowBounds.h` 的 `SetWindowPos` 同步）尚未处理。
 - 同一个问题上已经处理的相关项：设置里的"应用窗口兼容设置"写入的是**全局** `SwapEffectUpgradeEnable=0`（`IMao-WinUI/Helpers/BitBltRegistryHelper.cs`），此前没有恢复入口，会让所有 Direct3D 程序停留在较旧的合成路径。现在设置里提供"恢复图形默认设置"，只删除这一个值、保留其他 Windows 图形偏好，清空后删除该值（`ManagedRuntime` 测试覆盖两种转换）。
+
+## 追加修复：WGC 回读（`6500402`）
+
+上面第 5 条去掉 `Present1` 时漏掉了一点：`Present` 同时是**提交这个 D3D 立即上下文命令缓冲**的动作。这条路径上没有任何 Present，`CopyResource` 到 staging 纹理的命令就可能一直留在缓冲区里没送到 GPU，于是 `Map(D3D11_MAP_FLAG_DO_NOT_WAIT)` 永远返回 `DXGI_ERROR_WAS_STILL_DRAWING`，每一帧都走"跳过"分支。
+
+- 实机日志（21:46，选 WGC 启动）证明不是"找不到游戏窗口"也不是窗口被工具挡住：`capture-wgc-frames` 在 1.5 秒内报到 `arrived=88..97`（约 60 fps），`published=0`、`skipped=87..89`、`stagingFailures=0`，`first-frame-wait capture=wgc ready=false` —— 窗口和采集项都正常，是自家回读一帧都没成功。`App::Init()` 只以"首帧是否为空"决定成败，所以客户端显示核心故障。
+- 修复（`Runtime/CaptureReadback.h` + `SimpleCapture.cpp`）：`CopyResource` 之后 `Flush()`；尚未发布过任何帧时（启动阶段）等待拷贝完成而不是跳过，因为此时没有上一帧可退回、跳过就等于启动失败；已经有帧在跑时仍按原设计跳过未完成的拷贝，回调不会为 GPU 停住；驱动拒绝非阻塞标志时也按"未完成"处理并等待。首次等待会记为 `capture-wgc-readback-blocking`。
+- 另外：WGC 客户端裁剪被拒时（`capture-frame-rejected`）现在会一并记录 `frame=` 与 `client=`、`nonClient=` 尺寸，便于区分"窗口自带边框"与"裁剪越界"。这条后续尚未实机验证。
+- 证据：`IMao-Core/tests/CaptureReadbackTests.h`（6 项：已完成即用、首帧等待、有帧后跳过、驱动拒绝标志在首帧与后续都仍能出图）随优化套件通过；`scripts/Test-Runtime.ps1` 全绿（资源更新 66、发布器 19、选择器 33、来源 13、暂存 7、目录迁移 23、程序更新 28）。
