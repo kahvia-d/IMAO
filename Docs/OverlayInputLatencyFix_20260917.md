@@ -22,4 +22,5 @@
 - 仍未处理、且都属于"改变游戏侧帧时间"的改动，需实机对比：
   1. 默认截图方式是 BitBlt，并以 60 Hz 调用 `PrintWindow` 抓游戏窗口（`App.cpp:168-210`、`WindowsCapture/BitBltCapture/BitBltCapture.cpp:92`），每次都会要求游戏窗口同步产出画面。可考虑仅在内置覆盖层需要画面时保持 60 Hz，其余时间降到识别周期（80 ms）。
   2. WGC 路径每帧新建 staging 纹理 + 阻塞式 `Map(..., D3D11_MAP_READ, ...)` + 帧回调内 `Present1(1, 0, ...)`（`WindowsCapture/WindowsGraphicsCapture/SimpleCapture.cpp:237-268`）。
-  3. 覆盖层窗口以 `WS_EX_LAYERED + LWA_COLORKEY` 全屏 TOPMOST 60 Hz Present（`ImGuiOverWindows.cpp:274/349/532`）；另外设置里的"应用窗口兼容设置"写入的是**全局** `SwapEffectUpgradeEnable=0`（`IMao-WinUI/Helpers/BitBltRegistryHelper.cs:19-27`），目前没有恢复默认值的入口。
+  3. 覆盖层窗口以 `WS_EX_LAYERED + LWA_COLORKEY` 全屏 TOPMOST 60 Hz Present（`ImGuiOverWindows.cpp:274/349/532`）。
+- 同一个问题上已经处理的相关项：设置里的"应用窗口兼容设置"写入的是**全局** `SwapEffectUpgradeEnable=0`（`IMao-WinUI/Helpers/BitBltRegistryHelper.cs`），此前没有恢复入口，会让所有 Direct3D 程序停留在较旧的合成路径。现在设置里提供"恢复图形默认设置"，只删除这一个值、保留其他 Windows 图形偏好，清空后删除该值（`ManagedRuntime` 测试覆盖两种转换）。
