@@ -39,6 +39,12 @@ internal static class KuroAutoSyncTests
             check(await auto.RunOnceAsync() is null && auto.Status.Contains("凭据"),
                 "a profile without a local credential pauses the automatic pass");
 
+            // The timer calls this from a thread-pool thread, so the pass must not
+            // assume it runs on the UI thread.
+            bool? background = await Task.Run(async () => await auto.RunOnceAsync() is null);
+            check(background == true && auto.Status.Length > 0,
+                "an automatic pass started from the timer thread completes safely");
+
             await auto.SetEnabledAsync(false);
             check(!auto.IsEnabled && await settings.ReadSettingAsync<bool?>(KuroSyncSettings.Automatic) == false,
                 "turning automatic sync off is persisted too");

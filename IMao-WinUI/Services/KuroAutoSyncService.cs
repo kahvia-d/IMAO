@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Core.KuroSync;
+using Microsoft.UI.Dispatching;
+using System.ComponentModel;
 
 namespace IMao_WinUI.Services;
 
@@ -16,6 +18,10 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
     private readonly KuroSyncSchedule schedule = new();
     private readonly Timer timer;
     private readonly SemaphoreSlim gate = new(1, 1);
+    // The timer runs on a thread-pool thread, but every subscriber is a page that
+    // touches its controls from this notification, so it has to arrive on the UI
+    // thread the same way the other services raise theirs.
+    private readonly DispatcherQueue? dispatcherQueue = DispatcherQueue.GetForCurrentThread();
     private bool disposed;
 
     [ObservableProperty] private bool isEnabled;
@@ -119,6 +125,12 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
     }
 
     private void ScheduleNext() => timer.Change(schedule.NextDelay, Timeout.InfiniteTimeSpan);
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        if (dispatcherQueue is null || dispatcherQueue.HasThreadAccess) base.OnPropertyChanged(e);
+        else dispatcherQueue.TryEnqueue(() => base.OnPropertyChanged(e));
+    }
 
     private async Task RunScheduledAsync()
     {
