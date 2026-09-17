@@ -15,6 +15,8 @@ public sealed record UpdateCheckResult
     public bool Skipped { get; init; }
     public DateTimeOffset? LastChecked { get; init; }
     public string Message { get; init; } = "";
+    /// <summary>Non-empty when the stored anti-rollback record had to be re-synced during this check.</summary>
+    public string StateNotice { get; init; } = "";
 }
 
 public sealed class UpdateService : IDisposable
@@ -57,6 +59,12 @@ public sealed class UpdateService : IDisposable
     public bool AutoCheckEnabled => string.IsNullOrEmpty(_initializationError) && _state.AutoCheckEnabled;
     public string InitializationError => string.IsNullOrEmpty(_initializationError) ? _stateReadError : _initializationError;
     public string LastError => string.IsNullOrEmpty(_initializationError) ? _state.LastError : _initializationError;
+    /// <summary>
+    /// True when the last verified catalog was refused because this client's stored anti-rollback
+    /// record is higher than the published channel. The interface offers an explicit repair action
+    /// for exactly this state instead of leaving the client permanently unable to update.
+    /// </summary>
+    public bool StateConflictDetected { get; private set; }
 
     public async Task PrepareProgramAsync(ProgramUpdateStore programs, IProgress<UpdateProgress>? progress = null, CancellationToken ct = default)
     {
@@ -66,7 +74,7 @@ public sealed class UpdateService : IDisposable
         _state = LoadState();
         var envelope = _checkedEnvelope.ToArray();
         var catalog = UpdateSignature.Verify(envelope, _keys, _allowTestKeys);
-        AcceptSequence(catalog, envelope);
+        AcceptCatalog(catalog, envelope);
         if (UpdateSignature.RequireVersion(catalog.App.Version) <= UpdateSignature.RequireVersion(_build.AppVersion))
             throw new InvalidOperationException("没有比当前程序更新的版本。");
         await programs.PrepareAsync(envelope, async (package, output, token) =>
@@ -105,8 +113,8 @@ public sealed class UpdateService : IDisposable
         {
             var bytes = await DownloadManifestAsync(ct).ConfigureAwait(false);
             var catalog = UpdateSignature.Verify(bytes, _keys, _allowTestKeys);
-            AcceptSequence(catalog, bytes);
-            var result = MakeResult(catalog);
+            var notice = AcceptCatalog(catalog, bytes);
+            var result = MakeResult(catalog) with { StateNotice = notice ?? "" };
             await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
             _checkedEnvelope = bytes;
             return LastCheckResult = result;
@@ -119,6 +127,36 @@ public sealed class UpdateService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Re-verifies the currently published manifest and rebases this client's anti-rollback record on
+    /// it. This is the explicit, user-consented escape hatch for a channel whose sequence numbering
+    /// was reset while this client still held a higher record: the signed manifest is still validated
+    /// with the pinned key, but the local record stops blocking the published channel. The caller
+    /// records the action in the update log.
+    /// </summary>
+    public async Task<UpdateCheckResult> RepairStateAsync(CancellationToken ct = default)
+    {
+        EnsureAvailable();
+        await using var gate = await UpdateStorage.LockAsync(_snapshots.Root, ct).ConfigureAwait(false);
+        _state = LoadState();
+        var bytes = await DownloadManifestAsync(ct).ConfigureAwait(false);
+        var catalog = UpdateSignature.Verify(bytes, _keys, _allowTestKeys);
+        var signed = JsonSerializer.Deserialize<SignedUpdateEnvelope>(bytes, UpdateJson.Options)!;
+        // Only this channel's record is dropped, and the verified manifest becomes the new baseline
+        // immediately below, so a repair can never leave an unverified or stale record behind.
+        _state.Channels.Remove(signed.KeyId);
+        _state.HighestSequence = 0;
+        _state.HighestPayloadHash = "";
+        StateConflictDetected = false;
+        _state.LastAttempt = _clock();
+        _state.LastError = "";
+        var notice = AcceptCatalog(catalog, bytes);
+        var result = MakeResult(catalog) with { StateNotice = notice ?? "" };
+        await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
+        _checkedEnvelope = bytes;
+        return LastCheckResult = result;
+    }
+
     public async Task InstallAsync(IProgress<UpdateProgress>? progress = null, CancellationToken ct = default)
     {
         EnsureAvailable();
@@ -126,7 +164,7 @@ public sealed class UpdateService : IDisposable
         await using var gate = await UpdateStorage.LockAsync(_snapshots.Root, ct).ConfigureAwait(false);
         _state = LoadState();
         var catalog = UpdateSignature.Verify(_checkedEnvelope, _keys, _allowTestKeys);
-        AcceptSequence(catalog, _checkedEnvelope);
+        AcceptCatalog(catalog, _checkedEnvelope);
         var release = SelectCompatible(catalog) ?? throw new InvalidOperationException("没有与当前程序兼容的资源更新。");
         if (release.SnapshotId == _snapshots.Current.SnapshotId || release.Sequence <= _snapshots.Current.Sequence)
             throw new InvalidOperationException("当前资源已经是此清单中的最新兼容版本。");
@@ -145,7 +183,7 @@ public sealed class UpdateService : IDisposable
         byte[] envelope;
         await using (var manifestInput = manifest.Open()) envelope = await ReadBoundedAsync(manifestInput, UpdateSignature.MaxManifestBytes, ct).ConfigureAwait(false);
         var catalog = UpdateSignature.Verify(envelope, _keys, _allowTestKeys);
-        AcceptSequence(catalog, envelope);
+        AcceptCatalog(catalog, envelope);
         var release = SelectCompatible(catalog) ?? throw new InvalidOperationException("离线包与当前程序不兼容，请先升级程序。");
         if (release.Sequence <= _snapshots.Current.Sequence && release.SnapshotId != _snapshots.Current.SnapshotId) throw new InvalidDataException("离线包版本早于当前资源，请使用本地回退功能。");
         var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "update.json" };
@@ -192,13 +230,57 @@ public sealed class UpdateService : IDisposable
             .OrderByDescending(r => r.Sequence).FirstOrDefault();
     }
 
-    private void AcceptSequence(UpdateCatalog catalog, byte[] envelope)
+    /// <summary>
+    /// Records the highest verified catalog per publishing channel. The record exists to stop a
+    /// replayed, older catalog from freezing an installed client; it must never be able to lock a
+    /// client out of a legitimate channel, which is what the previous single global counter did.
+    /// Therefore a catalog that is not older than the running program re-syncs the record, and a
+    /// republished manifest under the same sequence updates it in place. Returns a user-facing note
+    /// when the record had to be re-synced, or null when it simply advanced.
+    /// </summary>
+    private string? AcceptCatalog(UpdateCatalog catalog, byte[] envelope)
     {
-        var hash = Convert.ToHexString(SHA256.HashData(Convert.FromBase64String(JsonSerializer.Deserialize<SignedUpdateEnvelope>(envelope, UpdateJson.Options)!.Payload)));
-        if (catalog.Sequence < _state.HighestSequence || (catalog.Sequence == _state.HighestSequence && !string.Equals(hash, _state.HighestPayloadHash, StringComparison.Ordinal)))
-            throw new InvalidDataException("拒绝旧清单或同一清单序号下的不同内容。");
-        _state.HighestSequence = catalog.Sequence;
-        _state.HighestPayloadHash = hash;
+        var signed = JsonSerializer.Deserialize<SignedUpdateEnvelope>(envelope, UpdateJson.Options)!;
+        var hash = Convert.ToHexString(SHA256.HashData(Convert.FromBase64String(signed.Payload)));
+        if (!_state.Channels.TryGetValue(signed.KeyId, out var record))
+        {
+            record = new ChannelRecord();
+            // Clients older than this version kept one global record that carries no channel
+            // identity. The first verified catalog adopts it; every other channel starts at zero, so
+            // a local test or preview channel can no longer poison the published one.
+            if (_state.HighestSequence > 0 || _state.HighestPayloadHash.Length > 0)
+            {
+                record.Sequence = _state.HighestSequence;
+                record.PayloadHash = _state.HighestPayloadHash;
+            }
+            _state.Channels[signed.KeyId] = record;
+            _state.HighestSequence = 0;
+            _state.HighestPayloadHash = "";
+        }
+        string? notice = null;
+        if (record.Sequence > catalog.Sequence)
+        {
+            // The channel numbering restarted, or a release was withdrawn. Refusing an older *program*
+            // line is the replay this record exists to stop; a catalog that is not older than the
+            // running program cannot lower anything already installed, so the record is re-synced.
+            if (UpdateSignature.RequireVersion(catalog.App.Version) < UpdateSignature.RequireVersion(_build.AppVersion))
+            {
+                StateConflictDetected = true;
+                throw new InvalidDataException("拒绝旧清单：本机记录的最高清单序号高于该清单，且该清单早于当前程序版本。若维护者重置了渠道序号，请使用“修复更新状态”。");
+            }
+            notice = $"更新渠道序号已从 {record.Sequence} 重新同步为 {catalog.Sequence}。";
+        }
+        else if (record.Sequence == catalog.Sequence && record.PayloadHash.Length > 0 && !hash.Equals(record.PayloadHash, StringComparison.Ordinal))
+        {
+            // Same sequence, different signed bytes: the channel republished that sequence. Both
+            // payloads are authentic, and refusing here used to brick every client that had seen the
+            // first bytes until a higher sequence appeared.
+            notice = $"同一清单序号 {catalog.Sequence} 下的内容已重新同步。";
+        }
+        record.Sequence = catalog.Sequence;
+        record.PayloadHash = hash;
+        StateConflictDetected = false;
+        return notice;
     }
 
     private async Task InstallReleaseAsync(ResourceRelease release, Dictionary<string, ZipArchiveEntry>? offline, IProgress<UpdateProgress>? progress, CancellationToken ct)
@@ -432,7 +514,14 @@ public sealed class UpdateService : IDisposable
         try
         {
             var state = UpdateStorage.Read<UpdaterState>(_statePath);
+            state.EnsureChannels();
             if (state.HighestSequence < 0 || (state.HighestSequence > 0 && !UpdateSignature.IsHash(state.HighestPayloadHash))) throw new InvalidDataException("清单序号状态无效。");
+            foreach (var (keyId, record) in state.Channels)
+            {
+                if (string.IsNullOrEmpty(keyId) || keyId.Length > 100 || record is null || record.Sequence < 0 ||
+                    (record.Sequence > 0 && !UpdateSignature.IsHash(record.PayloadHash)))
+                    throw new InvalidDataException("清单序号状态无效。");
+            }
             return state;
         }
         catch (Exception ex) when (ex is JsonException or InvalidDataException or IOException or UnauthorizedAccessException)
@@ -445,8 +534,23 @@ public sealed class UpdateService : IDisposable
     {
         public bool AutoCheckEnabled { get; set; } = true;
         public DateTimeOffset? LastAttempt { get; set; }
+        public string LastError { get; set; } = "";
+        // One global record written by clients older than per-channel records. It carries no channel
+        // identity, so the first verified catalog adopts it into Channels; it remains readable only
+        // so an existing update-state.json keeps loading.
         public long HighestSequence { get; set; }
         public string HighestPayloadHash { get; set; } = "";
-        public string LastError { get; set; } = "";
+        public Dictionary<string, ChannelRecord> Channels { get; set; } = new(StringComparer.Ordinal);
+
+        public void EnsureChannels()
+        {
+            if (Channels is null) Channels = new(StringComparer.Ordinal);
+        }
+    }
+
+    private sealed class ChannelRecord
+    {
+        public long Sequence { get; set; }
+        public string PayloadHash { get; set; } = "";
     }
 }

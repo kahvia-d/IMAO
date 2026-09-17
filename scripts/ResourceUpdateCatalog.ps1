@@ -56,3 +56,15 @@ function Assert-ResourceCatalogTransition($Previous, $Next) {
         }
     }
 }
+
+# A published sequence number stays published. Clients keep the highest sequence they ever verified,
+# so reusing a number - even after the stable file was reverted or rewritten - refuses updates on
+# every client that already recorded the earlier content. $ChannelState is the committed
+# updates/channel-state.json (or any object with maxSequence); $null means nothing was published yet.
+function Assert-ChannelSequenceAdvance($ChannelState, $Catalog) {
+    $published = 0
+    if ($null -ne $ChannelState -and $null -ne $ChannelState.maxSequence) { $published = [long]$ChannelState.maxSequence }
+    if ([long]$Catalog.sequence -le $published) {
+        throw "Sequence $($Catalog.sequence) was already published (highest $published). Prepare a new release with a higher --sequence."
+    }
+}

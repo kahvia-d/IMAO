@@ -13,6 +13,7 @@
                     <Button x:Name="InstallResourcesButton" Content="下载并安装地图资源" Click="InstallResources_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
                     <Button x:Name="ImportResourcesButton" Content="导入离线包" Click="ImportResources_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                     <Button x:Name="RollbackResourcesButton" Content="回退上一版" Click="RollbackResources_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <Button x:Name="RepairUpdateStateButton" Content="修复更新状态" Click="RepairUpdateState_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Visibility="Collapsed" />
                     <Button x:Name="DownloadProgramButton" Content="下载新版程序" Click="DownloadProgram_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                     <Button x:Name="RestartProgramButton" Content="退出并更新" Click="RestartProgram_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
                     <Button x:Name="RollbackProgramButton" Content="回退程序版本" Click="RollbackProgram_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />

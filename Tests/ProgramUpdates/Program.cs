@@ -14,7 +14,10 @@ if (args.FirstOrDefault() == "worker")
 if (args.FirstOrDefault() == "launcher")
 {
     var registry = JsonSerializer.Deserialize<TrustedUpdateKeys>(File.ReadAllText(args[2]), UpdateJson.Options)!;
-    var store = new ProgramUpdateStore(args[1], registry.Keys, true, (_, _) => Task.CompletedTask);
+    var launcherDescriptor = Path.Combine(args[1], "build-info.json");
+    var launcherVersion = File.Exists(launcherDescriptor)
+        ? JsonSerializer.Deserialize<BuildInfo>(File.ReadAllText(launcherDescriptor), UpdateJson.Options)!.AppVersion : "";
+    var store = new ProgramUpdateStore(args[1], registry.Keys, launcherVersion, true, (_, _) => Task.CompletedTask);
     await new ProgramLauncher(store, path =>
     {
         var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true };
@@ -75,7 +78,7 @@ ProgramUpdateStore Store(Func<string, CancellationToken, Task>? preflight = null
     var root = Path.Combine(output, "install-" + ++serial); Directory.CreateDirectory(root);
     File.WriteAllText(Path.Combine(root, "build-info.json"), JsonSerializer.Serialize(build1, UpdateJson.Options));
     File.WriteAllText(Path.Combine(root, "user-sentinel.txt"), "preserve me");
-    return new(root, [key], true, preflight ?? ((_, _) => Task.CompletedTask), space);
+    return new(root, [key], build1.AppVersion, true, preflight ?? ((_, _) => Task.CompletedTask), space);
 }
 async Task Download(ProgramPackage p, Stream target, CancellationToken ct) { await using var input = File.OpenRead(archive); await input.CopyToAsync(target, ct); }
 ProcessStartInfo Child(string path, string mode = "healthy")

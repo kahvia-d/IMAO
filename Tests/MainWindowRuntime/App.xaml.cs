@@ -120,7 +120,7 @@ public partial class App : Application
             autoUpdates.IsOn = false; await Task.Delay(100);
             Check(!updateEngine.AutoCheckEnabled, "automatic update preference saved through production engine");
             Check(((Button)settings.FindName("RestartProgramButton")).Visibility == Visibility.Collapsed, "program restart hidden until an update is staged");
-            var programFixture = new ProgramUpdateStore(Path.Combine(updateRoot, "program-install"), Array.Empty<TrustedUpdateKey>());
+            var programFixture = new ProgramUpdateStore(Path.Combine(updateRoot, "program-install"), Array.Empty<TrustedUpdateKey>(), "2026.9.9.1");
             bool restartRequested = false;
             await UpdateStorage.WriteAsync(Path.Combine(programFixture.Root, "state.json"), new ProgramUpdateState { Previous = "" }, default);
             updates.AttachProgramUpdater(programFixture, () => { restartRequested = true; return Task.CompletedTask; });

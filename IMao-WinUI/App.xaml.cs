@@ -1,4 +1,4 @@
-﻿using IMao_WinUI.Activation;
+using IMao_WinUI.Activation;
 using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Core.Contracts.Services;
 using IMao_WinUI.Core.Services;
@@ -176,7 +176,7 @@ public partial class App : Application
             try
             {
                 var keys = JsonSerializer.Deserialize<TrustedUpdateKeys>(File.ReadAllBytes(Path.Combine(installRoot, "Assets", "Updates", "trusted-keys.json")), UpdateJson.Options)!;
-                updates.AttachProgramUpdater(new ProgramUpdateStore(installRoot, keys.Keys), () => CloseCleanlyAsync(skipUpdateWait: true));
+                updates.AttachProgramUpdater(new ProgramUpdateStore(installRoot, keys.Keys, ResourceUpdateBootstrap.ReadBuildInfo().AppVersion), () => CloseCleanlyAsync(skipUpdateWait: true));
             }
             catch (Exception error) { updates.ShowError(error); }
         }

@@ -57,6 +57,17 @@ foreach ($asset in $assets) {
     if ((Get-Item -LiteralPath $asset.path).Length -ge 2GB) { throw "GitHub release attachments must be smaller than 2 GiB: $($asset.name)" }
     if ((Get-FileHash -LiteralPath $asset.path -Algorithm SHA256).Hash -ne $asset.sha256) { throw "Asset changed after preparation: $($asset.name)" }
 }
+# The committed channel record is the durable floor for sequence numbers. The stable file alone is not
+# enough: it can be reverted or rewritten, and clients keep the highest sequence they ever verified.
+$channelOutput = & gh api "repos/$repo/contents/updates/channel-state.json?ref=main" 2>$null
+$channelSha = $null
+$publishedFloor = 0
+if ($LASTEXITCODE -eq 0) {
+    $channelFile = $channelOutput | ConvertFrom-Json
+    $channelSha = $channelFile.sha
+    $channelState = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($channelFile.content -replace '\s',''))) | ConvertFrom-Json
+    if ($null -ne $channelState.maxSequence) { $publishedFloor = [long]$channelState.maxSequence }
+}
 # Read stable before creating a release, and use its blob SHA as a compare-and-swap on promotion.
 $stableOutput = & gh api "repos/$repo/contents/updates/stable.json?ref=main" 2>$null
 $stableSha = $null
@@ -70,6 +81,7 @@ if ($LASTEXITCODE -eq 0) {
     $oldCheck = & $Dotnet $PublisherDll verify-manifest --input $oldFile --public-key $PublicKey
     if ($LASTEXITCODE -ne 0) { throw 'Current stable signature could not be verified.' }
     $oldSequence = ($oldCheck | ConvertFrom-Json).sequence
+    if ($oldSequence -gt $publishedFloor) { $publishedFloor = [long]$oldSequence }
     if ($oldSequence -gt $report.sequence) { throw 'Refusing to replace a newer stable channel.' }
     if ($oldSequence -eq $report.sequence) {
         if ((Get-FileHash -LiteralPath $oldFile -Algorithm SHA256).Hash -eq $report.signedManifestSha256) { Write-Host 'This exact update is already stable.'; exit 0 }
@@ -85,6 +97,7 @@ if ($LASTEXITCODE -eq 0) {
     $tree = (Invoke-Gh @('api',"repos/$repo/git/trees/main?recursive=1")) | ConvertFrom-Json
     if ($tree.truncated -or @($tree.tree | Where-Object path -EQ 'updates/stable.json').Count) { throw 'Unable to safely determine current stable channel.' }
 }
+Assert-ChannelSequenceAdvance @{maxSequence = $publishedFloor} $catalog
 $releaseOutput = & gh api "repos/$repo/releases/tags/$tag" 2>$null
 if ($LASTEXITCODE -ne 0) {
     # Drafts without a created Git tag can be absent from the by-tag endpoint.
@@ -150,6 +163,17 @@ try {
         } finally { $response.Dispose() }
     }
 } finally { $client.Dispose(); $handler.Dispose() }
+# Burn the sequence number before the stable channel moves, so a failed promotion can never free the
+# number for reuse. After a failed promotion the reviewed artifacts must be re-prepared with a higher
+# --sequence instead of retrying the same number.
+$channelPromotion = [ordered]@{message="Record published sequence $($report.sequence)";branch='main';content=[Convert]::ToBase64String([Text.UTF8Encoding]::new($false).GetBytes(([ordered]@{maxSequence=[long]$report.sequence} | ConvertTo-Json)))}
+if ($channelSha) { $channelPromotion.sha = $channelSha }
+$channelPromotionFile = Join-Path $verification 'channel-state-promotion.json'
+[IO.File]::WriteAllText($channelPromotionFile,($channelPromotion | ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
+Invoke-Gh @('api',"repos/$repo/contents/updates/channel-state.json",'--method','PUT','--input',$channelPromotionFile) | Out-Null
+$channelAfter = (Invoke-Gh @('api',"repos/$repo/contents/updates/channel-state.json?ref=main")) | ConvertFrom-Json
+$channelAfterState = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($channelAfter.content -replace '\s',''))) | ConvertFrom-Json
+if ([long]$channelAfterState.maxSequence -ne [long]$report.sequence) { throw 'Channel sequence record verification failed. Stable channel remains unchanged.' }
 $promotion = [ordered]@{message="Publish verified resource update $($report.snapshotId)";branch='main';content=[Convert]::ToBase64String([IO.File]::ReadAllBytes($manifest))}
 if ($stableSha) { $promotion.sha = $stableSha }
 $promotionFile = Join-Path $verification 'stable-promotion.json'

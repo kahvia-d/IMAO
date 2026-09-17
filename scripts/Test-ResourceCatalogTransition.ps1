@@ -35,6 +35,15 @@ Expect-Rejection 'conflicting shared identity across baselines rejected' {param(
 $new=Copy-Catalog $old;$new.sequence=2;$new.resources[0].packages[0].version='2026.9.9.2';$new.resources[0].packages[0].sha256='c'*64
 Assert-ResourceCatalogTransition $old $new
 $passed.Add('changed bytes with new package version accepted')
+Assert-ChannelSequenceAdvance $null $new
+Assert-ChannelSequenceAdvance @{maxSequence=1} $new
+$passed.Add('unused channel sequence accepted for a first or advancing release')
+foreach ($reused in @(@{maxSequence=2},@{maxSequence=9},@{maxSequence='2'})) {
+    $rejected=$false
+    try { Assert-ChannelSequenceAdvance $reused $new } catch { $rejected=$true }
+    if (-not $rejected) { throw "Reused channel sequence was accepted: $($reused.maxSequence)" }
+}
+$passed.Add('reused or reverted channel sequence rejected')
 # Round-trip actual P-256 signed fixture payloads so comparison is independent of serialized property order.
 $key=[Security.Cryptography.ECDsa]::Create([Security.Cryptography.ECCurve+NamedCurves]::nistP256)
 function Read-SignedFixture($Catalog,[string]$Name){

@@ -32,6 +32,12 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     public bool AutoCheckEnabled => updater.AutoCheckEnabled;
     public bool HasPending => snapshots.HasPending;
     public bool CanRollback => snapshots.CanRollback;
+    /// <summary>
+    /// True when the last check was refused because this client's stored update record is higher than
+    /// the published channel. The repair action re-verifies the published manifest and rebases the
+    /// record on it, which is the only supported way out of that state.
+    /// </summary>
+    public bool CanRepairState => updater.StateConflictDetected;
     public bool ResourceAvailable => updater.LastCheckResult?.Resource is not null && !HasPending;
     public bool AppUpdateAvailable => updater.LastCheckResult?.AppUpdate is not null;
     public bool ProgramPending => programState.Pending is not null;
@@ -80,9 +86,20 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         await RunAsync(async ct =>
         {
             var result = await updater.CheckAsync(automatic, ct);
-            if (!result.Skipped) Message = result.Message;
+            if (!result.Skipped)
+            {
+                Message = result.StateNotice.Length > 0 ? result.Message + " " + result.StateNotice : result.Message;
+                if (result.StateNotice.Length > 0) Audit("state-resynced " + result.StateNotice);
+            }
         }, automatic);
     }
+
+    public Task RepairAsync() => RunAsync(async ct =>
+    {
+        var result = await updater.RepairStateAsync(ct);
+        Message = "更新状态已重新同步。" + result.Message;
+        Audit($"state-repaired sequence={result.Catalog?.Sequence ?? 0} app={result.Catalog?.App.Version ?? ""}");
+    });
 
     public Task InstallAsync() => RunAsync(async ct =>
     {
@@ -154,17 +171,23 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         {
             Failed = true;
             Message = (automatic ? "后台检查未完成：" : "更新操作未完成：") + error.Message;
-            try
-            {
-                string directory = Path.Combine(UserDataPaths.Root, "Logs");
-                Directory.CreateDirectory(directory);
-                File.AppendAllText(Path.Combine(directory, "resource-updates.log"), $"{DateTimeOffset.UtcNow:O} {Message}{Environment.NewLine}");
-            }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
+            Audit(Message);
         }
         finally { operation.Dispose(); operation = null; Busy = false; idle.TrySetResult(true); Changed(); }
     }
 
     private void Changed() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(""));
+
+    /// <summary>Appends one line to the update log; logging never hides the original outcome.</summary>
+    private static void Audit(string line)
+    {
+        try
+        {
+            string directory = Path.Combine(UserDataPaths.Root, "Logs");
+            Directory.CreateDirectory(directory);
+            File.AppendAllText(Path.Combine(directory, "resource-updates.log"), $"{DateTimeOffset.UtcNow:O} {line}{Environment.NewLine}");
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
 }

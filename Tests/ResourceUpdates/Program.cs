@@ -132,12 +132,77 @@ await Test("network timeout remains an explicit failure rather than user cancell
     using var f = New(); await f.Initialize(); f.Network.Timeout = true;
     await ThrowsAsync<TimeoutException>(() => f.Updates.CheckAsync()); True(f.Updates.LastError.Contains("超时")); True(f.Updates.LastCheckResult is null);
 });
-await Test("highest accepted sequence rejects stale and equivocated catalogs", async () =>
+await Test("stale catalog for the running program line re-syncs instead of blocking updates", async () =>
 {
     using var f = New(); await f.Initialize(); f.Publish(f.Catalog(3)); await f.Updates.CheckAsync();
-    f.Publish(f.Catalog(2)); await ThrowsAsync<InvalidDataException>(() => f.Updates.CheckAsync());
-    f.Publish(f.Catalog(3) with { App = f.Catalog(3).App with { Notes = "changed without sequence" } });
+    f.Publish(f.Catalog(2)); var resynced = await f.Updates.CheckAsync();
+    True(resynced.StateNotice.Length > 0); True(resynced.StateNotice.Contains("3"));
+    False(f.Updates.StateConflictDetected); Equal("snapshot-2", resynced.Resource!.SnapshotId);
+});
+await Test("republished catalog under the same sequence re-syncs instead of blocking updates", async () =>
+{
+    using var f = New(); await f.Initialize(); f.Publish(f.Catalog(3)); await f.Updates.CheckAsync();
+    f.Publish(f.Catalog(3) with { App = f.Catalog(3).App with { Notes = "republished without a new sequence" } });
+    var result = await f.Updates.CheckAsync();
+    True(result.StateNotice.Length > 0); False(f.Updates.StateConflictDetected); Equal(3L, result.Catalog!.Sequence);
+});
+await Test("replayed catalog for an older program line stays refused and offers repair", async () =>
+{
+    using var f = New(); await f.Initialize(); f.Publish(f.Catalog(3)); await f.Updates.CheckAsync();
+    f.Publish(f.Catalog(2) with { App = f.Catalog(2).App with { Version = "2026.9.8.1" } });
     await ThrowsAsync<InvalidDataException>(() => f.Updates.CheckAsync());
+    True(f.Updates.StateConflictDetected); True(f.Updates.LastError.Contains("修复更新状态"));
+});
+await Test("explicit repair rebases the stored record on the published channel", async () =>
+{
+    using var f = New(); await f.Initialize(); f.Publish(f.Catalog(3)); await f.Updates.CheckAsync();
+    f.Publish(f.Catalog(2) with { App = f.Catalog(2).App with { Version = "2026.9.8.1" } });
+    await ThrowsAsync<InvalidDataException>(() => f.Updates.CheckAsync());
+    var repaired = await f.Updates.RepairStateAsync();
+    False(f.Updates.StateConflictDetected); Equal(2L, repaired.Catalog!.Sequence);
+    var state = JsonSerializer.Deserialize<JsonNode>(await File.ReadAllTextAsync(Path.Combine(f.Root, "update-state.json")))!;
+    Equal(2L, state["channels"]!["test-only"]!["sequence"]!.GetValue<long>());
+});
+await Test("legacy global record is adopted once and then re-synced by the published channel", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var path = Path.Combine(f.Root, "update-state.json");
+    await File.WriteAllTextAsync(path, JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["autoCheckEnabled"] = true, ["highestSequence"] = 112L, ["highestPayloadHash"] = new string('a', 64), ["lastError"] = ""
+    }, UpdateJson.Options));
+    f.Publish(f.Catalog(8)); var result = await f.Updates.CheckAsync();
+    True(result.StateNotice.Contains("112")); False(f.Updates.StateConflictDetected);
+    var state = JsonSerializer.Deserialize<JsonNode>(await File.ReadAllTextAsync(path))!;
+    Equal(0L, state["highestSequence"]!.GetValue<long>());
+    Equal(8L, state["channels"]!["test-only"]!["sequence"]!.GetValue<long>());
+});
+await Test("a local test channel cannot poison the published channel record", async () =>
+{
+    using var f = New(); await f.Initialize(); f.Publish(f.Catalog(50)); await f.Updates.CheckAsync();
+    Equal(50L, f.Updates.LastCheckResult!.Catalog!.Sequence);
+    f.Publish(f.Catalog(4) with { App = f.Catalog(4).App with { Version = "2026.9.8.1" } }, f.PublishedKey);
+    var result = await f.Updates.CheckAsync();
+    False(f.Updates.StateConflictDetected); Equal(4L, result.Catalog!.Sequence);
+});
+await Test("real published channel recovers a client that recorded the pre-rewrite sequence", async () =>
+{
+    // End-to-end check against the manifest and public key that actually ship: a client holding the
+    // single global record from the channel that was later renumbered (observed value 112) must be able
+    // to use the published channel again instead of failing every check forever.
+    var repository = RepositoryRoot();
+    var manifest = await File.ReadAllBytesAsync(Path.Combine(repository, "updates", "stable.json"));
+    var keys = JsonSerializer.Deserialize<TrustedUpdateKeys>(await File.ReadAllTextAsync(Path.Combine(repository, "Assets", "Updates", "trusted-keys.json")), UpdateJson.Options)!.Keys;
+    using var f = New(); await f.Initialize();
+    await File.WriteAllTextAsync(Path.Combine(f.Root, "update-state.json"), JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["autoCheckEnabled"] = true, ["highestSequence"] = 112L, ["highestPayloadHash"] = new string('a', 64), ["lastError"] = "拒绝旧清单或同一清单序号下的不同内容。"
+    }, UpdateJson.Options));
+    f.Network.Routes[UpdateService.StableUri.AbsoluteUri] = manifest;
+    using var published = new UpdateService(f.Build, keys, f.Snapshots, new HttpClient(f.Network), false, () => f.Now, () => f.FreeBytes);
+    var result = await published.CheckAsync();
+    False(published.StateConflictDetected); True(result.Catalog is not null);
+    True(result.StateNotice.Contains("112")); False(result.Skipped);
 });
 await Test("compatible resource choice is independent of program update", async () =>
 {
@@ -306,10 +371,12 @@ await Test("offline incomplete package and extra entries fail atomically", async
     var extra = f.WriteOffline(catalog, extra: "extras/readme.txt"); await ThrowsAsync<InvalidDataException>(() => f.Updates.ImportOfflineAsync(extra));
     False(f.Snapshots.HasPending); Equal(0, f.Network.Requests.Count);
 });
-await Test("offline downgrade catalog is rejected after newer online catalog", async () =>
+await Test("offline downgrade of installed resources is still rejected", async () =>
 {
-    using var f = New(); await f.Initialize(); f.Publish(f.Catalog(3)); await f.Updates.CheckAsync();
-    await ThrowsAsync<InvalidDataException>(() => f.Updates.ImportOfflineAsync(f.WriteOffline(f.Catalog(2)))); False(f.Snapshots.HasPending);
+    using var f = New(); await f.Initialize(); f.Publish(f.Catalog(3)); await f.Updates.CheckAsync(); await f.Updates.InstallAsync();
+    var next = f.NewSnapshots(); await next.InitializeAsync(); await next.ReportHealthyAsync("snapshot-3");
+    using var downgrade = f.NewUpdates(next);
+    await ThrowsAsync<InvalidDataException>(() => downgrade.ImportOfflineAsync(f.WriteOffline(f.Catalog(2)))); False(next.HasPending);
 });
 await Test("insufficient disk fails before package download", async () =>
 {
@@ -509,6 +576,16 @@ if (failed.Count > 0) Environment.ExitCode = 1;
 
 static void True(bool value) { if (!value) throw new Exception("Expected true."); }
 static void False(bool value) => True(!value);
+static string RepositoryRoot()
+{
+    var directory = new DirectoryInfo(AppContext.BaseDirectory);
+    while (directory is not null)
+    {
+        if (File.Exists(Path.Combine(directory.FullName, "updates", "stable.json"))) return directory.FullName;
+        directory = directory.Parent;
+    }
+    throw new Exception("Repository root containing updates/stable.json was not found.");
+}
 static void Equal<T>(T expected, T actual) { if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"Expected {expected}; actual {actual}."); }
 static void Throws<T>(Action action) where T : Exception { try { action(); } catch (T) { return; } throw new Exception("Expected " + typeof(T).Name); }
 static async Task ThrowsAsync<T>(Func<Task> action) where T : Exception { try { await action(); } catch (T) { return; } throw new Exception("Expected " + typeof(T).Name); }
@@ -539,11 +616,14 @@ sealed class FakeNetwork : HttpMessageHandler
 sealed class Fixture : IDisposable
 {
     private readonly ECDsa _signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+    private readonly ECDsa _publishedSigner = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     private readonly HttpClient _http;
     public string Root { get; }
     public BuildInfo Build { get; } = new() { AppVersion = "2026.9.9.1", BaselineId = "test-baseline" };
     public ResourceSnapshot Bundled { get; set; }
     public TrustedUpdateKey Key { get; }
+    /// <summary>A second, independent channel used to prove that records never leak between keys.</summary>
+    public TrustedUpdateKey PublishedKey { get; }
     public FakeNetwork Network { get; } = new();
     public ResourceSnapshotService Snapshots { get; private set; } = null!;
     public UpdateService Updates { get; private set; } = null!;
@@ -555,11 +635,12 @@ sealed class Fixture : IDisposable
     {
         Root = root; Directory.CreateDirectory(root); _http = new HttpClient(Network);
         Key = new TrustedUpdateKey { KeyId = "test-only", TestOnly = true, PublicKey = Convert.ToBase64String(_signer.ExportSubjectPublicKeyInfo()) };
+        PublishedKey = new TrustedUpdateKey { KeyId = "published-test", PublicKey = Convert.ToBase64String(_publishedSigner.ExportSubjectPublicKeyInfo()) };
         Bundled = new ResourceSnapshot { SnapshotId = "bundled", BaselineId = Build.BaselineId, BaselineRoot = Path.Combine(root, "baseline"), MapDataRoot = Path.Combine(root, "baseline/data"), Bundled = true };
     }
     public async Task Initialize() { Snapshots = NewSnapshots(); await Snapshots.InitializeAsync(); Updates = NewUpdates(Snapshots); }
     public ResourceSnapshotService NewSnapshots(string? appVersion = null) => new(Root, Bundled, appVersion ?? Build.AppVersion, (_, ct) => { ct.ThrowIfCancellationRequested(); PreflightCalls++; if (PreflightFails) throw new InvalidDataException("Injected preflight failure."); return Task.CompletedTask; });
-    public UpdateService NewUpdates(ResourceSnapshotService snapshots) => new(Build, [Key], snapshots, _http, true, () => Now, () => FreeBytes);
+    public UpdateService NewUpdates(ResourceSnapshotService snapshots) => new(Build, [Key, PublishedKey], snapshots, _http, true, () => Now, () => FreeBytes);
     public UpdateCatalog Catalog(long sequence = 2)
     {
         var package = MakePackage("map-data", "map-data", "2026.9.9." + sequence, "{\"marker\":" + sequence + "}");
@@ -580,12 +661,14 @@ sealed class Fixture : IDisposable
         var zip = Zip(entries); var url = $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/{version}/{id}.zip"; Network.Routes[url] = zip;
         return new ResourcePackage { Id = id, Kind = kind, Version = version, Url = url, Size = zip.Length, Sha256 = Hash(zip), Files = [new ResourceFile { Path = name, Size = bytes.Length, Sha256 = Hash(bytes) }] };
     }
-    public byte[] Sign(UpdateCatalog catalog)
+    public byte[] Sign(UpdateCatalog catalog, TrustedUpdateKey? key = null)
     {
+        var keyId = key?.KeyId ?? Key.KeyId;
+        var signer = keyId == PublishedKey.KeyId ? _publishedSigner : _signer;
         var payload = JsonSerializer.SerializeToUtf8Bytes(catalog, UpdateJson.Options);
-        return JsonSerializer.SerializeToUtf8Bytes(new SignedUpdateEnvelope { KeyId = Key.KeyId, Payload = Convert.ToBase64String(payload), Signature = Convert.ToBase64String(_signer.SignData(payload, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation)) }, UpdateJson.Options);
+        return JsonSerializer.SerializeToUtf8Bytes(new SignedUpdateEnvelope { KeyId = keyId, Payload = Convert.ToBase64String(payload), Signature = Convert.ToBase64String(signer.SignData(payload, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation)) }, UpdateJson.Options);
     }
-    public void Publish(UpdateCatalog catalog) => Network.Routes[UpdateService.StableUri.AbsoluteUri] = Sign(catalog);
+    public void Publish(UpdateCatalog catalog, TrustedUpdateKey? key = null) => Network.Routes[UpdateService.StableUri.AbsoluteUri] = Sign(catalog, key);
     public string WriteOffline(UpdateCatalog catalog, bool omitPackage = false, string? extra = null)
     {
         var entries = new List<(string, byte[], int)> { ("update.json", Sign(catalog), 0) };
@@ -603,5 +686,5 @@ sealed class Fixture : IDisposable
         }
         return output.ToArray();
     }
-    public void Dispose() { Updates?.Dispose(); _http.Dispose(); _signer.Dispose(); }
+    public void Dispose() { Updates?.Dispose(); _http.Dispose(); _signer.Dispose(); _publishedSigner.Dispose(); }
 }

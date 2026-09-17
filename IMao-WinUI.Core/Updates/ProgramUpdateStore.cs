@@ -23,18 +23,23 @@ public sealed class ProgramUpdateStore
 {
     private readonly TrustedUpdateKey[] keys;
     private readonly bool testKeys;
+    private readonly string runningAppVersion;
     private readonly Func<string, CancellationToken, Task> preflight;
     private readonly Func<long> freeBytes;
     public string InstallRoot { get; }
     public string Root => Path.Combine(InstallRoot, "ProgramUpdates");
     private string StatePath => Path.Combine(Root, "state.json");
 
-    public ProgramUpdateStore(string installRoot, IEnumerable<TrustedUpdateKey> keys, bool allowTestKeys = false,
-        Func<string, CancellationToken, Task>? preflight = null, Func<long>? availableBytes = null)
+    /// <param name="runningAppVersion">
+    /// Version of the program that is executing now, used to tell a genuine program upgrade from a
+    /// replayed program catalog. Empty keeps the strict sequence rule.
+    /// </param>
+    public ProgramUpdateStore(string installRoot, IEnumerable<TrustedUpdateKey> keys, string runningAppVersion,
+        bool allowTestKeys = false, Func<string, CancellationToken, Task>? preflight = null, Func<long>? availableBytes = null)
     {
         InstallRoot = Path.GetFullPath(installRoot).TrimEnd(Path.DirectorySeparatorChar);
         UpdateStorage.RejectLink(InstallRoot);
-        this.keys = keys.ToArray(); testKeys = allowTestKeys;
+        this.keys = keys.ToArray(); testKeys = allowTestKeys; this.runningAppVersion = runningAppVersion ?? "";
         this.preflight = preflight ?? CheckNativeAsync;
         freeBytes = availableBytes ?? (() => new DriveInfo(Path.GetPathRoot(InstallRoot)!).AvailableFreeSpace);
     }
@@ -77,7 +82,16 @@ public sealed class ProgramUpdateStore
         var state = ReadState();
         if (state.Trial is not null) throw new InvalidOperationException("当前程序尚未完成启动确认。");
         var payloadHash = Convert.ToHexString(SHA256.HashData(Convert.FromBase64String(JsonSerializer.Deserialize<SignedUpdateEnvelope>(envelope, UpdateJson.Options)!.Payload)));
-        if (catalog.Sequence < state.HighestSequence || (catalog.Sequence == state.HighestSequence && payloadHash != state.HighestPayloadHash)) throw new InvalidDataException("拒绝过期或被改写的程序清单。");
+        if (catalog.Sequence < state.HighestSequence || (catalog.Sequence == state.HighestSequence && payloadHash != state.HighestPayloadHash))
+        {
+            // A channel whose numbering was reset must not lock a client out of a real program
+            // upgrade, but a replayed or rewritten catalog must stay refused: only a program version
+            // that is newer than the running one and was never prepared here may re-sync the record.
+            var resync = runningAppVersion.Length > 0 &&
+                UpdateSignature.RequireVersion(catalog.App.Version) > UpdateSignature.RequireVersion(runningAppVersion) &&
+                !state.Versions.ContainsKey(catalog.App.Version);
+            if (!resync) throw new InvalidDataException("拒绝过期或被改写的程序清单。");
+        }
         if (state.Versions.TryGetValue(catalog.App.Version, out var prior) && !prior.Equals(package.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("同一程序版本不能对应不同内容。");
         state.HighestSequence = catalog.Sequence; state.HighestPayloadHash = payloadHash; state.Versions[catalog.App.Version] = package.Sha256;
         await SaveAsync(state, ct); // Keep replay protection even if a transfer subsequently fails.

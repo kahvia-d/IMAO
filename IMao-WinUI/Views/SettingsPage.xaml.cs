@@ -84,6 +84,8 @@ public sealed partial class SettingsPage : Page
             CheckUpdatesButton.IsEnabled = ImportResourcesButton.IsEnabled = !updates.Busy;
             InstallResourcesButton.IsEnabled = !updates.Busy && updates.ResourceAvailable;
             RollbackResourcesButton.IsEnabled = !updates.Busy && updates.CanRollback && !updates.HasPending;
+            RepairUpdateStateButton.Visibility = updates.CanRepairState ? Visibility.Visible : Visibility.Collapsed;
+            RepairUpdateStateButton.IsEnabled = !updates.Busy;
             DownloadProgramButton.Visibility = updates.AppUpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
             DownloadProgramButton.Content = updates.ProgramDownloadText;
             DownloadProgramButton.IsEnabled = !updates.Busy && !updates.ProgramPending;
@@ -117,6 +119,7 @@ public sealed partial class SettingsPage : Page
         catch (Exception error) { updates.ShowError(error); }
     }
     private async void RollbackResources_Click(object sender, RoutedEventArgs e) => await updates.RollbackAsync();
+    private async void RepairUpdateState_Click(object sender, RoutedEventArgs e) => await updates.RepairAsync();
     private async void DownloadProgram_Click(object sender, RoutedEventArgs e) => await updates.DownloadProgramAsync();
     private async void RestartProgram_Click(object sender, RoutedEventArgs e) => await updates.RestartProgramAsync();
     private async void RollbackProgram_Click(object sender, RoutedEventArgs e) => await updates.RollbackProgramAsync();
