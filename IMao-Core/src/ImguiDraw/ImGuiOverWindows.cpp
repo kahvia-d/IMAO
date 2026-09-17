@@ -357,6 +357,25 @@ int ImGuiOverWindows::start()
     std::uint64_t renderedFrames = 0, observedFrames = 0, lastObservedFrame = 0;
     std::uint64_t capturedFrames = 0, lastCapturedFrame = 0;
     std::uint64_t attachedFrames = 0, trackingMisses = 0;
+    // This thread owns the low-level mouse and keyboard hooks, so Windows hands it every input event
+    // and waits for the callback. The gap between pumps is therefore the worst-case delay this tool
+    // adds to the player's mouse; it is reported below so a slow frame is visible in the logs.
+    auto lastPumpAt = std::chrono::steady_clock::now();
+    auto longestPumpGap = std::chrono::steady_clock::duration::zero();
+    const auto pumpMessages = [&]() {
+        const auto now = std::chrono::steady_clock::now();
+        longestPumpGap = std::max(longestPumpGap, now - lastPumpAt);
+        lastPumpAt = now;
+        MSG message;
+        while (::PeekMessage(&message, nullptr, 0U, 0U, PM_REMOVE))
+        {
+            ::TranslateMessage(&message);
+            ::DispatchMessage(&message);
+            if (message.message == WM_QUIT)
+                stopFlag = true;
+        }
+        return !stopFlag;
+    };
     while (!stopFlag)
     {
         // 记录帧开始时间
@@ -366,15 +385,7 @@ int ImGuiOverWindows::start()
         if (!GetClientRect(h_window, &GameRect)) break;
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
-        MSG msg;
-        while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
-        {
-            ::TranslateMessage(&msg);
-            ::DispatchMessage(&msg);
-            if (msg.message == WM_QUIT)
-                stopFlag = true;
-        }
-        if (stopFlag)
+        if (!pumpMessages())
             break;
         RECT physicalGame{};
         if (GameRect.right > 0 && GameRect.bottom > 0) {
@@ -382,7 +393,8 @@ int ImGuiOverWindows::start()
             // the HWND each frame, so a failed move is retried, never cached.
             if (!OverlayWindowBounds::GameClient(h_window, physicalGame) || !OverlayWindowBounds::Synchronize(overWindowsHwnd, physicalGame)) {
                 Diagnostics::Record("overlay-window-position-error", std::to_string(GetLastError()));
-                framePacer.WaitUntil(frameStart + kOverlayFramePeriod); continue;
+                if (!framePacer.WaitUntil(frameStart + kOverlayFramePeriod, pumpMessages)) break;
+                continue;
             }
         }
         const auto toolsWindow = MapToolsBridge::Shared().Read(DrawItemBase::MarkerProfile());
@@ -437,7 +449,7 @@ int ImGuiOverWindows::start()
                 if (!rendererReady) { stopFlag = true; break; }
             }
             // Recreated devices must also pass readback before any NewFrame.
-            framePacer.WaitUntil(frameStart + kOverlayFramePeriod);
+            if (!framePacer.WaitUntil(frameStart + kOverlayFramePeriod, pumpMessages)) break;
             continue;
         }
 
@@ -451,6 +463,9 @@ int ImGuiOverWindows::start()
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
         RuntimeStatusBar::Prepare(h_window);
+        // Image tracking is the longest stretch of work in this frame; pump before it so a hook
+        // callback that arrived during the previous frame runs before the new one begins.
+        if (!pumpMessages()) break;
 
         // Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         {
@@ -470,9 +485,12 @@ int ImGuiOverWindows::start()
                     " captureAgeMs=" + std::to_string(capture->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
                         frameStart - capture->capturedAt).count() : -1) +
                     " sourceAgeMs=" + std::to_string(frame->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
-                        frameStart - frame->capturedAt).count() : -1));
+                        frameStart - frame->capturedAt).count() : -1) +
+                    " inputGapMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                        longestPumpGap).count()));
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
                 attachedFrames = trackingMisses = 0;
+                longestPumpGap = std::chrono::steady_clock::duration::zero();
             }
             bool drewMap = false, drewMinimap = false;
             bool mapEligible = false, minimapEligible = false;
@@ -522,6 +540,7 @@ int ImGuiOverWindows::start()
         }
 
         // Rendering
+        if (!pumpMessages()) break;
         ImGui::Render();
         const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
         g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
@@ -538,8 +557,9 @@ int ImGuiOverWindows::start()
             break;
         }
 
-        // Keep fractional milliseconds and include rendering cost in pacing.
-        framePacer.WaitUntil(frameStart + kOverlayFramePeriod);
+        // Keep fractional milliseconds and include rendering cost in pacing. The wait keeps servicing
+        // queued input so this thread's hooks are never deferred for the rest of the frame.
+        if (!framePacer.WaitUntil(frameStart + kOverlayFramePeriod, pumpMessages)) break;
 
         // 在渲染周期结束后释放纹理
        //for (auto texture : texturesToRelease) {

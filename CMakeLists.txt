@@ -310,7 +310,7 @@ set_target_properties(IMaoOptimizationTests PROPERTIES
 )
 target_include_directories(IMaoOptimizationTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
 target_compile_definitions(IMaoOptimizationTests PRIVATE IMAO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib)
+target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib user32.lib)
 
 enable_testing()
 add_test(NAME IMaoOptimizationTests COMMAND IMaoOptimizationTests)

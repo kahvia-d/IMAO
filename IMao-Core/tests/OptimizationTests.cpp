@@ -1,4 +1,4 @@
-﻿#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include "CoarseSearchCoverageTests.h"
 #include "OverlayVisibilityTests.h"
 #include "GamepadContextTests.h"
@@ -48,6 +48,9 @@
 #include <string>
 #include <vector>
 #include <wil/resource.h>
+// FramePacer pulls in <Windows.h>; keep it after every OpenCV header so its min/max macros cannot
+// break the standard-library calls those headers make.
+#include "FramePacerTests.h"
 
 namespace {
 int failures = 0;
@@ -960,6 +963,7 @@ int main(int argc, char** argv) {
     TestMinimapResumePolicy();
     TestCoarseSearchCoverage(Expect);
     TestOverlayVisibility(Expect);
+    TestFramePacer(Expect);
     TestGamepadContext(Expect);
     TestGamepadCursorTargets(Expect);
     TestGamepadWorldActions(Expect);
