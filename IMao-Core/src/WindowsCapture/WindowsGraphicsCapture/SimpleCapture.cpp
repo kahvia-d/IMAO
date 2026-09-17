@@ -1,5 +1,6 @@
 #include "..\..\pch.h"
 #include "SimpleCapture.h"
+#include "..\..\Runtime\StructuredLogger.h"
 #include <iostream>
 #include <vector>
 #include "include/paddleocr.h"
@@ -138,8 +139,49 @@ bool SimpleCapture::TryUpdatePixelFormat()
     return false;
 }
 
+// An exception escaping a WinRT frame callback terminates CoreHost; the client then reports a core
+// fault with no first frame, and Windows Graphics Capture looked broken instead of failing loudly.
+// Every failure stays inside ProcessFrame and is reported as a diagnostic.
 void SimpleCapture::OnFrameArrived(winrt::Direct3D11CaptureFramePool const& sender, winrt::IInspectable const&)
 {
+    try
+    {
+        ProcessFrame(sender);
+    }
+    catch (const winrt::hresult_error& error)
+    {
+        RecordFrameDiagnostic("capture-wgc-hresult", "hr=" + std::to_string(static_cast<long>(error.code().value)));
+    }
+    catch (const std::exception& error)
+    {
+        RecordFrameDiagnostic("capture-wgc-error", error.what());
+    }
+    catch (...)
+    {
+        RecordFrameDiagnostic("capture-wgc-error", "unknown exception");
+    }
+}
+
+void SimpleCapture::RecordFrameDiagnostic(const char* message, const std::string& details)
+{
+    const auto now = std::chrono::steady_clock::now();
+    if (m_lastFrameDiagnosticAt != std::chrono::steady_clock::time_point{} && now - m_lastFrameDiagnosticAt < std::chrono::seconds(1)) return;
+    m_lastFrameDiagnosticAt = now;
+    StructuredLogger::Record("error", "capture", message, details);
+}
+
+void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender)
+{
+    ++m_framesArrived;
+    // Frame accounting is what distinguishes "the capture never delivers" from "we drop every frame".
+    const auto frameNow = std::chrono::steady_clock::now();
+    if (m_lastFrameSummaryAt == std::chrono::steady_clock::time_point{} || frameNow - m_lastFrameSummaryAt >= std::chrono::seconds(2))
+    {
+        m_lastFrameSummaryAt = frameNow;
+        StructuredLogger::Record("info", "capture", "capture-wgc-frames",
+            "arrived=" + std::to_string(m_framesArrived.load()) + " published=" + std::to_string(m_framesPublished.load()) +
+            " skipped=" + std::to_string(m_framesSkipped.load()) + " stagingFailures=" + std::to_string(m_stagingFailures.load()));
+    }
     auto swapChainResizedToFrame = false;
 
     {
@@ -230,37 +272,59 @@ void SimpleCapture::OnFrameArrived(winrt::Direct3D11CaptureFramePool const& send
             // A synchronous readback would wait for the GPU to finish the frame. When the copy is not
             // ready yet, keep the previous frame instead of stalling this callback.
             D3D11_MAPPED_SUBRESOURCE mappedResource{};
-            const HRESULT mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mappedResource);
+            HRESULT mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mappedResource);
             if (mapped == DXGI_ERROR_WAS_STILL_DRAWING)
             {
                 // Skipped frame; the next arrival callback reads a completed copy.
-            }
-            else if (FAILED(mapped))
-            {
-                winrt::check_hresult(mapped);
+                ++m_framesSkipped;
             }
             else
             {
-                cv::Mat mappedFrame(height, width, CV_8UC4, mappedResource.pData, static_cast<size_t>(mappedResource.RowPitch));
-                cv::Mat ownedFrame;
-                // mappedFrame aliases D3D memory and must be copied before Unmap.
-                try {
-                    mappedFrame.copyTo(ownedFrame);
-                }
-                catch (...) {
-                    m_d3dContext->Unmap(m_stagingTexture.get(), 0);
-                    throw;
-                }
-                m_d3dContext->Unmap(m_stagingTexture.get(), 0);
-
+                if (FAILED(mapped))
                 {
-                    std::lock_guard<std::mutex> lock(m_frameMutex);
-                    m_latestFrame = std::move(ownedFrame);
-                    m_frameCapturedAt = std::chrono::steady_clock::now();
-                    ++m_frameSequence;
+                    // Some drivers reject the non-blocking flag for this resource; a blocking read is
+                    // better than losing every frame.
+                    mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, 0, &mappedResource);
                 }
-                m_frameCondition.notify_all();
+                if (FAILED(mapped))
+                {
+                    RecordFrameDiagnostic("capture-wgc-readback-failed", "hr=" + std::to_string(static_cast<long>(mapped)));
+                }
+                else
+                {
+                    cv::Mat mappedFrame(height, width, CV_8UC4, mappedResource.pData, static_cast<size_t>(mappedResource.RowPitch));
+                    cv::Mat ownedFrame;
+                    // mappedFrame aliases D3D memory and must be copied before Unmap.
+                    try {
+                        mappedFrame.copyTo(ownedFrame);
+                    }
+                    catch (...) {
+                        m_d3dContext->Unmap(m_stagingTexture.get(), 0);
+                        throw;
+                    }
+                    m_d3dContext->Unmap(m_stagingTexture.get(), 0);
+
+                    {
+                        std::lock_guard<std::mutex> lock(m_frameMutex);
+                        m_latestFrame = std::move(ownedFrame);
+                        m_frameCapturedAt = std::chrono::steady_clock::now();
+                        ++m_frameSequence;
+                    }
+                    m_frameCondition.notify_all();
+                    ++m_framesPublished;
+                    if (m_framesPublished == 1)
+                        StructuredLogger::Record("info", "capture", "capture-wgc-first-frame",
+                            "width=" + std::to_string(width) + " height=" + std::to_string(height));
+                }
             }
+        }
+        else
+        {
+            ++m_stagingFailures;
+            D3D11_TEXTURE2D_DESC failedDesc = {};
+            if (readbackSource != nullptr) readbackSource->GetDesc(&failedDesc);
+            RecordFrameDiagnostic("capture-wgc-staging-failed",
+                "width=" + std::to_string(failedDesc.Width) + " height=" + std::to_string(failedDesc.Height));
         }
     }
 

@@ -109,6 +109,10 @@ private:
     bool TryUpdatePixelFormat();
     /// Reuses one CPU-readable copy target instead of allocating a staging texture per frame.
     bool EnsureStaging(ID3D11Texture2D* source);
+    /// Frame body. It must never throw: an exception escaping the WinRT frame callback terminates the
+    /// host process, which the client reports as a core fault with no first frame.
+    void ProcessFrame(winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool const& sender);
+    void RecordFrameDiagnostic(const char* message, const std::string& details);
 
 
 private:
@@ -122,6 +126,11 @@ private:
     winrt::com_ptr<ID3D11Texture2D> m_stagingTexture{ nullptr };
     UINT m_stagingWidth = 0, m_stagingHeight = 0;
     DXGI_FORMAT m_stagingFormat = DXGI_FORMAT_UNKNOWN;
+    // Frame diagnostics; the callback thread owns them, the counters are read by the test/diagnostic
+    // paths only.
+    std::atomic<std::uint64_t> m_framesArrived{ 0 }, m_framesPublished{ 0 }, m_framesSkipped{ 0 }, m_stagingFailures{ 0 };
+    std::chrono::steady_clock::time_point m_lastFrameDiagnosticAt{};
+    std::chrono::steady_clock::time_point m_lastFrameSummaryAt{};
     winrt::com_ptr<ID3D11Device> m_d3dDevice{ nullptr };
     winrt::com_ptr<ID3D11DeviceContext> m_d3dContext{ nullptr };
     winrt::Windows::Graphics::DirectX::DirectXPixelFormat m_pixelFormat;

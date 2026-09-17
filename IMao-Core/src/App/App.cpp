@@ -175,7 +175,7 @@ void App::Thread_Capture() {
         // The window capture runs synchronously against the game, so its cost lands in the game's own
         // frame time. Report the per-call average and worst case next to the achieved rate.
         double captureTotalMs = 0, captureMaxMs = 0;
-        uint64_t captureAttempts = 0;
+        uint64_t captureAttempts = 0, slowCaptures = 0;
         while (!allThreadStopFlag.load()) {
             const auto start = std::chrono::steady_clock::now();
             RECT captureRect{};
@@ -195,6 +195,8 @@ void App::Thread_Capture() {
             }
             const auto captureMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
             captureTotalMs += captureMs; captureMaxMs = std::max(captureMaxMs, captureMs); ++captureAttempts;
+            const bool slowCapture = captureMs > OverlayPacing::kSlowCaptureMs;
+            if (slowCapture) ++slowCaptures;
             // The game can resize between our client-rect read and the capture
             // backend's read. Never publish pixels with incompatible geometry.
             if (image.empty() || image.cols != captureRect.right || image.rows != captureRect.bottom)
@@ -215,15 +217,16 @@ void App::Thread_Capture() {
             const bool overlayActive = isOpenMap.load() || isExistMinMap.load() ||
                 ((presented->mapVisible || presented->minimapVisible) &&
                  now - presented->presentedAt < std::chrono::milliseconds(500));
-            const auto capturePeriod = OverlayPacing::CapturePeriod(overlayActive);
+            const auto capturePeriod = OverlayPacing::CapturePeriod(overlayActive, slowCapture);
             if (now - reportAt >= std::chrono::seconds(2)) {
                 Diagnostics::Record("capture-cadence", "fps=" + std::to_string(published /
                     std::chrono::duration<double>(now - reportAt).count()) + " independentOfLocalization=1" +
                     " captureAvgMs=" + std::to_string(captureAttempts ? captureTotalMs / captureAttempts : 0.0) +
                     " captureMaxMs=" + std::to_string(captureMaxMs) +
+                    " captureSlow=" + std::to_string(slowCaptures) +
                     " capturePeriodMs=" + std::to_string(capturePeriod.count() / 1000.0));
                 published = 0; reportAt = now;
-                captureTotalMs = 0; captureMaxMs = 0; captureAttempts = 0;
+                captureTotalMs = 0; captureMaxMs = 0; captureAttempts = 0; slowCaptures = 0;
             }
             pacer.WaitUntil(start + capturePeriod);
         }

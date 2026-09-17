@@ -31,7 +31,17 @@ inline bool WantsMouseHook(bool mapInteractive, Clock::time_point regionsPublish
 inline constexpr std::chrono::microseconds kCaptureActivePeriod{33333};
 inline constexpr std::chrono::microseconds kCaptureIdlePeriod{80000};
 
+// A capture that took far longer than usual means the game is struggling to produce the extra frame
+// this tool asks for. Waiting longer before asking again keeps such a stall from repeating back to
+// back (measured: 116-176 ms stalls arrived in pairs two seconds apart).
+inline constexpr double kSlowCaptureMs = 50.0;
+inline constexpr std::chrono::microseconds kSlowCaptureBackoff{30000};
+
 inline std::chrono::microseconds CapturePeriod(bool overlayActive) {
     return overlayActive ? kCaptureActivePeriod : kCaptureIdlePeriod;
+}
+
+inline std::chrono::microseconds CapturePeriod(bool overlayActive, bool slowCapture) {
+    return CapturePeriod(overlayActive) + (slowCapture ? kSlowCaptureBackoff : std::chrono::microseconds::zero());
 }
 }
