@@ -2,7 +2,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Core.KuroSync;
 using Microsoft.UI.Dispatching;
+using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Text.Json;
 
 namespace IMao_WinUI.Services;
 
@@ -15,9 +17,14 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
 {
     private readonly KuroProgressSyncService sync;
     private readonly ILocalSettingsService settings;
+    private readonly CoreHostService core;
     private readonly KuroSyncSchedule schedule = new();
     private readonly Timer timer;
     private readonly SemaphoreSlim gate = new(1, 1);
+    // Points the player marked locally, waiting to be written to Kuro. Keyed by
+    // point so that a fast back-and-forth edit only sends its final state.
+    private readonly ConcurrentDictionary<string, KuroLocalChange> instant = new(StringComparer.Ordinal);
+    private int instantRunning;
     // The timer runs on a thread-pool thread, but every subscriber is a page that
     // touches its controls from this notification, so it has to arrive on the UI
     // thread the same way the other services raise theirs.
@@ -28,10 +35,12 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
     [ObservableProperty] private string status = "自动同步未启用";
     [ObservableProperty] private string lastResult = "";
 
-    public KuroAutoSyncService(KuroProgressSyncService sync, ILocalSettingsService settings)
+    public KuroAutoSyncService(KuroProgressSyncService sync, ILocalSettingsService settings, CoreHostService core)
     {
         this.sync = sync;
         this.settings = settings;
+        this.core = core;
+        core.MarkerEvent += OnMarkerEvent;
         timer = new Timer(_ => _ = RunScheduledAsync(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
@@ -126,6 +135,69 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
 
     private void ScheduleNext() => timer.Change(schedule.NextDelay, Timeout.InfiniteTimeSpan);
 
+    /// <summary>
+    /// A local completion should not wait ten minutes, so it is written as soon as
+    /// the core reports it. Cloud applies are ignored here: they are already the
+    /// other side's state and pushing them back would echo every download.
+    /// </summary>
+    private async void OnMarkerEvent(object? sender, JsonElement value)
+    {
+        if (disposed || !IsEnabled) return;
+        try
+        {
+            string profile = (await settings.ReadSettingAsync<string>(KuroSyncSettings.Profile) ?? "").Trim();
+            if (!KuroLocalChange.TryRead(value, profile, out var change) || !sync.IsConnected(profile)) return;
+            instant[change.Key] = change;
+            StartInstantPush();
+        }
+        catch (Exception) { }
+    }
+
+    private void StartInstantPush()
+    {
+        if (disposed || Interlocked.CompareExchange(ref instantRunning, 1, 0) != 0) return;
+        _ = Task.Run(InstantPushAsync);
+    }
+
+    private async Task InstantPushAsync()
+    {
+        try
+        {
+            while (!disposed)
+            {
+                var batch = instant.ToArray();
+                if (batch.Length == 0) break;
+                foreach (var entry in batch) instant.TryRemove(entry.Key, out _);
+                string profile = (await settings.ReadSettingAsync<string>(KuroSyncSettings.Profile) ?? "").Trim();
+                if (profile.Length == 0 || !sync.IsConnected(profile)) break;
+                int pushed = 0, failed = 0;
+                foreach (var entry in batch)
+                {
+                    try { if (await sync.PushLocalChangeAsync(profile, entry.Value)) ++pushed; }
+                    catch (Exception) { ++failed; }
+                }
+                ReportInstantPush(pushed, failed);
+            }
+        }
+        catch (Exception error) { ReportInstantPush(0, 1, error.Message); }
+        finally
+        {
+            Interlocked.Exchange(ref instantRunning, 0);
+            // Anything queued while the loop was draining still has to go out.
+            if (!disposed && !instant.IsEmpty) StartInstantPush();
+        }
+    }
+
+    private void ReportInstantPush(int pushed, int failed, string message = "")
+    {
+        if (pushed == 0 && failed == 0) return;
+        LastResult = pushed > 0
+            ? $"{DateTime.Now:HH:mm} 已立即推送 {pushed} 个点位"
+            : $"{DateTime.Now:HH:mm} 立即推送失败：{message}";
+        if (failed > 0 && pushed > 0) LastResult += $"（{failed} 个稍后重试）";
+        Status = LastResult;
+    }
+
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
         if (dispatcherQueue is null || dispatcherQueue.HasThreadAccess) base.OnPropertyChanged(e);
@@ -142,6 +214,7 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
     public void Dispose()
     {
         disposed = true;
+        core.MarkerEvent -= OnMarkerEvent;
         timer.Dispose();
         gate.Dispose();
     }

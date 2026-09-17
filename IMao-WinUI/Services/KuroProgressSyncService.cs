@@ -158,6 +158,40 @@ public sealed class KuroProgressSyncService
     }
 
     /// <summary>
+    /// Pushes one point the player just marked, so a completion reaches Kuro
+    /// immediately instead of waiting for the next scheduled pass. Only ever called
+    /// for local edits of the profile the sync is bound to. Returns false when this
+    /// machine has no credential for that profile.
+    /// </summary>
+    public async Task<bool> PushLocalChangeAsync(string profileId, KuroLocalChange change, CancellationToken cancellationToken = default)
+    {
+        if (!vault.TryRead(profileId, out var credential)) return false;
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            using var client = new KuroMapProgressClient();
+            await client.SetCompletionAsync(credential.Token, deviceId, change.StateId, change.PointId,
+                change.PositionType, change.Completed, cancellationToken);
+            try
+            {
+                // The write already happened and the contract is idempotent, so a
+                // failed acknowledgement only leaves the point queued for the next
+                // pass instead of losing it.
+                await core.ExecuteMarkerAsync("markerAcknowledgeSync", new
+                {
+                    stateId = change.StateId,
+                    pointId = change.PointId,
+                    revision = change.Revision,
+                    completed = change.Completed
+                }, cancellationToken);
+            }
+            catch (Exception error) when (error is not OperationCanceledException) { }
+            return true;
+        }
+        finally { gate.Release(); }
+    }
+
+    /// <summary>
     /// Writes the cloud identities that could not be matched to any local catalog,
     /// so the count shown in the preview can be checked afterwards.
     /// </summary>
