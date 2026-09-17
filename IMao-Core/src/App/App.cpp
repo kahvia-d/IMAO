@@ -16,6 +16,7 @@
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/FramePacer.h"
+#include "../Runtime/OverlayPacing.h"
 #include "../Runtime/RoutePlanningService.h"
 #include "../Runtime/RuntimeHotkeys.h"
 #include "MinimapHudEvidence.h"
@@ -207,15 +208,24 @@ void App::Thread_Capture() {
                 }
             }
             const auto now = std::chrono::steady_clock::now();
+            // The window capture runs synchronously against the game, so it only follows the overlay
+            // rate while an overlay is attached to fresh pixels; otherwise it runs at the recognition
+            // cadence and asks the game for far fewer extra frames.
+            const auto presented = presentedOverlay.Read();
+            const bool overlayActive = isOpenMap.load() || isExistMinMap.load() ||
+                ((presented->mapVisible || presented->minimapVisible) &&
+                 now - presented->presentedAt < std::chrono::milliseconds(500));
+            const auto capturePeriod = OverlayPacing::CapturePeriod(overlayActive);
             if (now - reportAt >= std::chrono::seconds(2)) {
                 Diagnostics::Record("capture-cadence", "fps=" + std::to_string(published /
                     std::chrono::duration<double>(now - reportAt).count()) + " independentOfLocalization=1" +
                     " captureAvgMs=" + std::to_string(captureAttempts ? captureTotalMs / captureAttempts : 0.0) +
-                    " captureMaxMs=" + std::to_string(captureMaxMs));
+                    " captureMaxMs=" + std::to_string(captureMaxMs) +
+                    " capturePeriodMs=" + std::to_string(capturePeriod.count() / 1000.0));
                 published = 0; reportAt = now;
                 captureTotalMs = 0; captureMaxMs = 0; captureAttempts = 0;
             }
-            pacer.WaitUntil(start + std::chrono::microseconds(16667));
+            pacer.WaitUntil(start + capturePeriod);
         }
     } catch (const std::exception& error) {
         Diagnostics::Record("capture-worker-error", error.what());

@@ -17,6 +17,7 @@
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/ImageAnchoredOverlay.h"
 #include "../Runtime/FramePacer.h"
+#include "../Runtime/OverlayPacing.h"
 #include "../Runtime/OverlayWindowBounds.h"
 #include "../Runtime/OverlayBackBufferSize.h"
 #include "../Runtime/MapToolsBridge.h"
@@ -50,7 +51,7 @@ void CleanupDeviceD3D();
 bool CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-constexpr auto kOverlayFramePeriod = std::chrono::microseconds(16667); // 60 Hz presentation
+constexpr auto kOverlayFramePeriod = OverlayPacing::kFramePeriod; // matches the capture rate
 
 namespace {
 constexpr auto kOverlayDiagnosticsInterval = std::chrono::seconds(2);
@@ -508,7 +509,8 @@ int ImGuiOverWindows::start()
                     " trackMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxTrack).count()) +
                     " motionMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxMotion).count()) +
                     " presentMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxPresent).count()) +
-                    " waitMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxWait).count()));
+                    " waitMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxWait).count()) +
+                    " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
                 attachedFrames = trackingMisses = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();

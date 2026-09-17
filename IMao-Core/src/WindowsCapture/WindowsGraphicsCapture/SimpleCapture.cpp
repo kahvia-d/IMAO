@@ -1,4 +1,4 @@
-﻿#include "..\..\pch.h"
+#include "..\..\pch.h"
 #include "SimpleCapture.h"
 #include <iostream>
 #include <vector>
@@ -147,29 +147,23 @@ void SimpleCapture::OnFrameArrived(winrt::Direct3D11CaptureFramePool const& send
         auto frame = sender.TryGetNextFrame();
         swapChainResizedToFrame = TryResizeSwapChain(frame);
 
-        winrt::com_ptr<ID3D11Texture2D> backBuffer;
-        winrt::check_hresult(m_swapChain->GetBuffer(0, winrt::guid_of<ID3D11Texture2D>(), backBuffer.put_void()));
-
         auto surfaceTexture = GetDXGIInterfaceFromObject<ID3D11Texture2D>(frame.Surface());
-
 
         // If we have a dirty region visualizer, then we're running on a build
         // of Windows that supports dirty regions.
         bool renderRects = m_dirtyRegionVisualizer && frame.DirtyRegionMode() == winrt::GraphicsCaptureDirtyRegionMode::ReportAndRender;
 
-        if (!renderRects)
-        {
-            // On builds of Windows that don't support dirty regions or when the dirty
-            // region mode is set to ReportOnly, the entire frame has been rendered.
-
-            // copy surfaceTexture to backBuffer
-            m_d3dContext->CopyResource(backBuffer.get(), surfaceTexture.get());
-        }
-        else
+        // A frame that contains the whole image is read back straight from its surface. Routing it
+        // through the swap chain back buffer only added a full-surface copy, and presenting that chain
+        // blocked this callback on vblank for a surface nothing consumed.
+        winrt::com_ptr<ID3D11Texture2D> backBuffer;
+        ID3D11Texture2D* readbackSource = surfaceTexture.get();
+        if (renderRects)
         {
             // When the dirty region mode is set to ReportAndRender, only the pixels within
             // the dirty region are valid. To visualize this, we'll clear our render target
             // to opaque black and copy out the dirty regions.
+            winrt::check_hresult(m_swapChain->GetBuffer(0, winrt::guid_of<ID3D11Texture2D>(), backBuffer.put_void()));
 
             // First, let's clear our render target
             winrt::com_ptr<ID3D11RenderTargetView> rtv;
@@ -216,56 +210,59 @@ void SimpleCapture::OnFrameArrived(winrt::Direct3D11CaptureFramePool const& send
                 region.back = 1;
                 m_d3dContext->CopySubresourceRegion(backBuffer.get(), 0, static_cast<uint32_t>(left), static_cast<uint32_t>(top), 0, surfaceTexture.get(), 0, &region);
             }
-        }
 
-        if (m_dirtyRegionVisualizer && m_visualizeDirtyRegions.load())
-        {
-            m_dirtyRegionVisualizer->Render(backBuffer, frame);
-        }
-
-        {
-            D3D11_TEXTURE2D_DESC backBufferDesc;
-            backBuffer->GetDesc(&backBufferDesc);
-            int width = static_cast<int>(backBufferDesc.Width);
-            int height = static_cast<int>(backBufferDesc.Height);
-
-            winrt::com_ptr<ID3D11Texture2D> cpuTexture;
-            D3D11_TEXTURE2D_DESC cpuTextureDesc = backBufferDesc;
-            cpuTextureDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-            cpuTextureDesc.Usage = D3D11_USAGE_STAGING;
-            cpuTextureDesc.BindFlags = 0;
-            winrt::check_hresult(m_d3dDevice->CreateTexture2D(&cpuTextureDesc, nullptr, cpuTexture.put()));
-
-            m_d3dContext->CopyResource(cpuTexture.get(), backBuffer.get());
-
-            D3D11_MAPPED_SUBRESOURCE mappedResource;
-            winrt::check_hresult(m_d3dContext->Map(cpuTexture.get(), 0, D3D11_MAP_READ, 0, &mappedResource));
-
-            cv::Mat mappedFrame(height, width, CV_8UC4, mappedResource.pData, static_cast<size_t>(mappedResource.RowPitch));
-            cv::Mat ownedFrame;
-            // mappedFrame aliases D3D memory and must be copied before Unmap.
-            try {
-                mappedFrame.copyTo(ownedFrame);
-            }
-            catch (...) {
-                m_d3dContext->Unmap(cpuTexture.get(), 0);
-                throw;
-            }
-            m_d3dContext->Unmap(cpuTexture.get(), 0);
-
+            if (m_dirtyRegionVisualizer && m_visualizeDirtyRegions.load())
             {
-                std::lock_guard<std::mutex> lock(m_frameMutex);
-                m_latestFrame = std::move(ownedFrame);
-                m_frameCapturedAt = std::chrono::steady_clock::now();
-                ++m_frameSequence;
+                m_dirtyRegionVisualizer->Render(backBuffer, frame);
             }
-            m_frameCondition.notify_all();
+            readbackSource = backBuffer.get();
+        }
 
-           // m_imguiImTextureID = GetImTextureFromMat(m_latestFrame);
+        if (EnsureStaging(readbackSource))
+        {
+            D3D11_TEXTURE2D_DESC readbackDesc = {};
+            readbackSource->GetDesc(&readbackDesc);
+            const int width = static_cast<int>(readbackDesc.Width);
+            const int height = static_cast<int>(readbackDesc.Height);
+
+            m_d3dContext->CopyResource(m_stagingTexture.get(), readbackSource);
+
+            // A synchronous readback would wait for the GPU to finish the frame. When the copy is not
+            // ready yet, keep the previous frame instead of stalling this callback.
+            D3D11_MAPPED_SUBRESOURCE mappedResource{};
+            const HRESULT mapped = m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mappedResource);
+            if (mapped == DXGI_ERROR_WAS_STILL_DRAWING)
+            {
+                // Skipped frame; the next arrival callback reads a completed copy.
+            }
+            else if (FAILED(mapped))
+            {
+                winrt::check_hresult(mapped);
+            }
+            else
+            {
+                cv::Mat mappedFrame(height, width, CV_8UC4, mappedResource.pData, static_cast<size_t>(mappedResource.RowPitch));
+                cv::Mat ownedFrame;
+                // mappedFrame aliases D3D memory and must be copied before Unmap.
+                try {
+                    mappedFrame.copyTo(ownedFrame);
+                }
+                catch (...) {
+                    m_d3dContext->Unmap(m_stagingTexture.get(), 0);
+                    throw;
+                }
+                m_d3dContext->Unmap(m_stagingTexture.get(), 0);
+
+                {
+                    std::lock_guard<std::mutex> lock(m_frameMutex);
+                    m_latestFrame = std::move(ownedFrame);
+                    m_frameCapturedAt = std::chrono::steady_clock::now();
+                    ++m_frameSequence;
+                }
+                m_frameCondition.notify_all();
+            }
         }
     }
-    DXGI_PRESENT_PARAMETERS presentParameters{};
-    m_swapChain->Present1(1, 0, &presentParameters);
 
     swapChainResizedToFrame = swapChainResizedToFrame || TryUpdatePixelFormat();
 
@@ -273,6 +270,30 @@ void SimpleCapture::OnFrameArrived(winrt::Direct3D11CaptureFramePool const& send
     {
         m_framePool.Recreate(m_device, m_pixelFormat, 2, m_lastSize);
     }
+}
+
+bool SimpleCapture::EnsureStaging(ID3D11Texture2D* source)
+{
+    if (source == nullptr) return false;
+    D3D11_TEXTURE2D_DESC desc = {};
+    source->GetDesc(&desc);
+    if (m_stagingTexture && m_stagingWidth == desc.Width && m_stagingHeight == desc.Height && m_stagingFormat == desc.Format) return true;
+    m_stagingTexture = nullptr;
+    m_stagingWidth = 0; m_stagingHeight = 0; m_stagingFormat = DXGI_FORMAT_UNKNOWN;
+    D3D11_TEXTURE2D_DESC stagingDesc = desc;
+    stagingDesc.Usage = D3D11_USAGE_STAGING;
+    stagingDesc.BindFlags = 0;
+    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    stagingDesc.MiscFlags = 0;
+    stagingDesc.MipLevels = 1;
+    stagingDesc.ArraySize = 1;
+    if (FAILED(m_d3dDevice->CreateTexture2D(&stagingDesc, nullptr, m_stagingTexture.put())))
+    {
+        m_stagingTexture = nullptr;
+        return false;
+    }
+    m_stagingWidth = desc.Width; m_stagingHeight = desc.Height; m_stagingFormat = desc.Format;
+    return true;
 }
 
 ImTextureID SimpleCapture::GetImTextureFromMat(const cv::Mat& inputMat)

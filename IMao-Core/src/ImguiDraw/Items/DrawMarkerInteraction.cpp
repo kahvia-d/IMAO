@@ -10,6 +10,7 @@
 #include "../../Runtime/PlanningEscapeKey.h"
 #include "../../Runtime/RuntimeHotkeys.h"
 #include "../../Runtime/MarkerGuideProtocol.h"
+#include "../../Runtime/OverlayPacing.h"
 #include "../../Runtime/RouteGamepadBridge.h"
 #include "../../Runtime/RouteGamepadControls.h"
 #include "../../Runtime/GamepadContext.h"
@@ -885,13 +886,35 @@ void DrawMarkerInteraction::Initialize(HWND gameWindow) {
         if ((GetAsyncKeyState(static_cast<int>(index)) & 0x8000) != 0) guideKeys[index].Handle(true, false, false, false);
     }
     if ((GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0) escapeKey.Handle(true, false, false, false);
-    mouseHook = SetWindowsHookExW(WH_MOUSE_LL, MouseProcedure, GetModuleHandleW(nullptr), 0);
-    if (!mouseHook) StructuredLogger::Record("error", "markers", "marker-input-unavailable", std::to_string(GetLastError()));
+    // The keyboard hook stays installed for the session: the configured guide and completion keys are
+    // swallowed while the game is focused. The mouse hook only exists while the map publishes clickable
+    // regions, see SyncMouseHook.
     keyboardHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeyboardProcedure, GetModuleHandleW(nullptr), 0);
     if (!keyboardHook) {
         StructuredLogger::Record("error", "routes", "route-escape-input-unavailable", std::to_string(GetLastError()));
         planningNotice = "Esc 接管不可用，请用工具条切换移动模式";
     }
+    SyncMouseHook();
+}
+// The mouse hook decides synchronously whether a click belongs to the overlay, so it can only be
+// installed while the map publishes clickable regions. Installed for the whole session it would route
+// every mouse event of the game through this frame-paced thread and add that frame's work, including
+// the present that blocks on the compositor, to the player's mouse latency.
+void DrawMarkerInteraction::SyncMouseHook() {
+    const bool dragging = leftCapture.owned || rightCapture.owned || gesture.active;
+    const bool wanted = OverlayPacing::WantsMouseHook(mapInteractive, regionsAt, Clock::now(), dragging);
+    if (wanted == (mouseHook != nullptr)) return;
+    if (wanted) {
+        mouseHook = SetWindowsHookExW(WH_MOUSE_LL, MouseProcedure, GetModuleHandleW(nullptr), 0);
+        if (!mouseHook) StructuredLogger::Record("error", "markers", "marker-input-unavailable", std::to_string(GetLastError()));
+    } else {
+        UnhookWindowsHookEx(mouseHook);
+        mouseHook = nullptr;
+        leftCapture = {}; rightCapture = {}; gesture = {}; pendingGesture.reset();
+    }
+}
+std::string DrawMarkerInteraction::HookState() {
+    return "mouse=" + std::string(mouseHook ? "on" : "off") + " keyboard=" + std::string(keyboardHook ? "on" : "off");
 }
 void DrawMarkerInteraction::Shutdown() {
     MapToolsBridge::Shared().Unregister(0);
@@ -906,6 +929,9 @@ void DrawMarkerInteraction::Shutdown() {
     gesture = {}; planningBinding = {}; pendingGesture.reset();
 }
 void DrawMarkerInteraction::BeginFrame() {
+    // The mouse hook follows whether the map published clickable regions, so it stays removed during
+    // ordinary gameplay and never adds this thread's frame work to the player's mouse input.
+    SyncMouseHook();
     // Sample every frame, including blank areas; mouse activation itself comes
     // only from hook-owned clicks, never from a click that reached the game.
     for (auto click = clicks.begin(); click != clicks.end();) {
@@ -996,7 +1022,8 @@ void DrawMarkerInteraction::DrawMapToolsLauncher(const RECT& rect, HWND gameWind
     }
     hitClientRect = rect; displayedProfile = profile;
     AddRegion(x, y, radius, radius, origin, "maptools:open");
-    mapInteractive = mouseHook != nullptr; regionsAt = Clock::now();
+    mapInteractive = true;
+    regionsAt = Clock::now();
 }
 
 void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted, bool completed, std::size_t count) {
@@ -1314,7 +1341,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         }
     }
     GamepadCursorGeometry::Shared().Publish(std::move(cursorGeometry));
-    mapInteractive = (mouseHook && DrawItemBase::IsMarkerGameFocused(gameWindow)) || ToolsFocused();
+    mapInteractive = DrawItemBase::IsMarkerGameFocused(gameWindow) || ToolsFocused();
     regionsAt = now;
     if (!mapInteractive) { clicks.clear(); regions.clear(); }
     ProcessMapTools(rect, origin);

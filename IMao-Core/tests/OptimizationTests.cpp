@@ -51,6 +51,7 @@
 // FramePacer pulls in <Windows.h>; keep it after every OpenCV header so its min/max macros cannot
 // break the standard-library calls those headers make.
 #include "FramePacerTests.h"
+#include "OverlayPacingTests.h"
 
 namespace {
 int failures = 0;
@@ -964,6 +965,7 @@ int main(int argc, char** argv) {
     TestCoarseSearchCoverage(Expect);
     TestOverlayVisibility(Expect);
     TestFramePacer(Expect);
+    TestOverlayPacing(Expect);
     TestGamepadContext(Expect);
     TestGamepadCursorTargets(Expect);
     TestGamepadWorldActions(Expect);
