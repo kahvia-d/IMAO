@@ -107,14 +107,6 @@ try {
     Invoke-VisualStudioCommand ('"' + $Dotnet + '" build "IMao-WinUI\IMao-WinUI.csproj" --configuration Release -p:Platform=x64 --packages "' + $nugetPackages + '"')
     & (Join-Path $PSScriptRoot 'Test-WinUINavigation.ps1') -Platform x64 -Configuration Release
 
-    # The browser extension reaches IMao through a Native Messaging host. Ship the
-    # framework-dependent bridge next to the app so the app can register it for the
-    # current user itself instead of asking players to run a script.
-    $bridgeStage = Join-Path $repoRoot 'out\bridge-stage'
-    Invoke-VisualStudioCommand ('"' + $Dotnet + '" publish "' + (Join-Path $repoRoot 'tools\KuroSyncBridge\KuroSyncBridge.csproj') +
-        '" -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o "' + $bridgeStage +
-        '" --packages "' + $nugetPackages + '" -p:NuGetAudit=false')
-    Copy-Item -LiteralPath (Join-Path $bridgeStage 'KuroSyncBridge.exe') -Destination (Join-Path $repoRoot 'x64\Release') -Force
 
     $outputDirectory = Join-Path $repoRoot 'x64\Release'
     if (-not (Test-Path -LiteralPath $outputDirectory)) {
