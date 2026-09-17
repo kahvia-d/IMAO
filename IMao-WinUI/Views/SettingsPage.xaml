@@ -117,8 +117,11 @@
                     <Button Content="点位进度目录" Click="OpenPoints_Click" />
                     <Button Content="路线文件目录" Click="OpenRoutes_Click" />
                 </controls:WrapPanel>
-                <TextBlock Text="若 BitBlt 捕获异常，可应用原有的 Windows 窗口兼容设置。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <Button Content="应用窗口兼容设置" Click="ApplyWindowCompatibility_Click" HorizontalAlignment="Left" />
+                <TextBlock Text="若 BitBlt 捕获异常，可应用原有的 Windows 窗口兼容设置。该设置对全部 Direct3D 程序生效，不需要时可以恢复。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                    <Button Content="应用窗口兼容设置" Click="ApplyWindowCompatibility_Click" />
+                    <Button Content="恢复图形默认设置" Click="RestoreWindowCompatibility_Click" />
+                </controls:WrapPanel>
             </StackPanel>
         </Expander>
     </StackPanel>

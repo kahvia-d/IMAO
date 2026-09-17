@@ -73,6 +73,11 @@ try
         "OtherFlag=1;ThirdFlag=2;SwapEffectUpgradeEnable=0;", "graphics compatibility edit preserves unrelated Windows preferences");
     Check(BitBltRegistryHelper.DisableSwapEffectUpgrade("SwapEffectUpgradeEnable=0;") == "SwapEffectUpgradeEnable=0;",
         "graphics compatibility edit is idempotent");
+    Check(BitBltRegistryHelper.RestoreSwapEffectUpgrade("OtherFlag=1;SwapEffectUpgradeEnable=0;ThirdFlag=2;") == "OtherFlag=1;ThirdFlag=2;",
+        "restoring graphics defaults keeps unrelated Windows preferences");
+    Check(BitBltRegistryHelper.RestoreSwapEffectUpgrade("SwapEffectUpgradeEnable=0;") == string.Empty &&
+        BitBltRegistryHelper.RestoreSwapEffectUpgrade(null) == string.Empty,
+        "restoring graphics defaults clears the override so it can be deleted");
     string configPath = Path.Combine(root, "runtime-migration.json");
     File.WriteAllText(configPath, "{\"StatusBarEnabled\":false}");
     var config = new RuntimeConfigurationStore(configPath);

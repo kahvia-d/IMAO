@@ -594,4 +594,11 @@ public sealed partial class SettingsPage : Page
         RuntimeMessage.Message = ok ? "Windows 窗口兼容设置已应用。" : error;
         RuntimeMessage.IsOpen = true;
     }
+    private void RestoreWindowCompatibility_Click(object sender, RoutedEventArgs e)
+    {
+        bool ok = IMao_WinUI.Helpers.BitBltRegistryHelper.TryRestoreSwapEffectUpgrade(out var error);
+        RuntimeMessage.Severity = ok ? InfoBarSeverity.Success : InfoBarSeverity.Error;
+        RuntimeMessage.Message = ok ? "已恢复 Windows 图形默认设置，重启游戏后生效。" : error;
+        RuntimeMessage.IsOpen = true;
+    }
 }
