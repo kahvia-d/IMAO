@@ -89,6 +89,32 @@ void RecordOverlayFrameDiagnostics(HWND overlayWindow, HRESULT presentResult,
     Diagnostics::Record("overlay-frame", details.str());
 }
 
+// Identity of one overlay frame. The overlay draws static icon textures whose positions are the
+// vertices, so hashing the vertex and index bytes tells a moved marker, a changed count or a new
+// notification from an identical frame; the command texture ids are mixed in so a swapped icon is not
+// mistaken for unchanged content. Measured cost is well under a millisecond for the HUD's geometry.
+std::uint64_t HashOverlayDrawData(const ImDrawData* drawData) {
+    if (drawData == nullptr || drawData->TotalVtxCount <= 0) return 0;
+    std::uint64_t hash = 14695981039346656037ull;
+    const auto mixBytes = [&hash](const void* data, std::size_t size) {
+        const auto* bytes = static_cast<const unsigned char*>(data);
+        for (std::size_t index = 0; index < size; ++index) {
+            hash ^= bytes[index];
+            hash *= 1099511628211ull;
+        }
+    };
+    for (int list = 0; list < drawData->CmdListsCount; ++list) {
+        const ImDrawList* commands = drawData->CmdLists[list];
+        mixBytes(commands->VtxBuffer.Data, static_cast<std::size_t>(commands->VtxBuffer.Size) * sizeof(ImDrawVert));
+        mixBytes(commands->IdxBuffer.Data, static_cast<std::size_t>(commands->IdxBuffer.Size) * sizeof(ImDrawIdx));
+        for (const ImDrawCmd& command : commands->CmdBuffer) {
+            const ImTextureID texture = command.GetTexID();
+            mixBytes(&texture, sizeof(texture));
+        }
+    }
+    return hash;
+}
+
 void DrawOverlayDiagnosticsProbe() {
     if (!Diagnostics::Enabled()) return;
 
@@ -365,6 +391,12 @@ int ImGuiOverWindows::start()
     auto lastPumpAt = std::chrono::steady_clock::now();
     SegmentDuration maxBounds{}, maxTrack{}, maxPresent{}, maxWait{}, maxMotion{};
     bool waitPumpConsumed = false;
+    // The overlay window covers the whole game screen, so a present is a full-screen composition for
+    // the game's GPU as well. Unchanged frames are skipped, and an overlay with nothing to draw hides
+    // its window so the compositor can ignore it entirely.
+    std::uint64_t lastPresentedHash = 0, skippedPresents = 0;
+    bool hasPresented = false, overlayWindowHidden = false;
+    int consecutiveEmptyFrames = 0;
     const auto drainMessages = [&]() {
         MSG message;
         while (::PeekMessage(&message, nullptr, 0U, 0U, PM_REMOVE))
@@ -510,9 +542,11 @@ int ImGuiOverWindows::start()
                     " motionMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxMotion).count()) +
                     " presentMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxPresent).count()) +
                     " waitMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxWait).count()) +
+                    " presentSkipped=" + std::to_string(skippedPresents) +
+                    " windowHidden=" + std::to_string(overlayWindowHidden ? 1 : 0) +
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
-                attachedFrames = trackingMisses = 0;
+                attachedFrames = trackingMisses = 0; skippedPresents = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();
             }
             bool drewMap = false, drewMinimap = false;
@@ -571,19 +605,50 @@ int ImGuiOverWindows::start()
         // Rendering
         if (!pump(maxTrack)) break;
         ImGui::Render();
-        const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-        g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
-        g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
-        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+        ImDrawData* drawData = ImGui::GetDrawData();
+        // The window is the whole game screen, so its cost does not depend on how much is drawn inside
+        // it; only whether anything changed does.
+        const bool hasContent = drawData != nullptr && drawData->TotalVtxCount > 0;
+        const std::uint64_t contentHash = HashOverlayDrawData(drawData);
+        consecutiveEmptyFrames = hasContent ? 0 : consecutiveEmptyFrames + 1;
 
-        // Present
-        HRESULT hr = g_pSwapChain->Present(0, 0);
-        g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
-        RecordOverlayFrameDiagnostics(overWindowsHwnd, hr, bufferSize.after);
-        if (FAILED(hr)) {
-            Diagnostics::Record("overlay-device-error", "presentation failed; session restart required");
-            stopFlag = true;
-            break;
+        if (hasContent && overlayWindowHidden) {
+            ::ShowWindow(overWindowsHwnd, SW_SHOWNOACTIVATE);
+            overlayWindowHidden = false;
+            hasPresented = false; // The surface has to be filled again.
+            Diagnostics::Record("overlay-window-visibility", "visible=1 reason=content");
+        }
+        else if (!hasContent && !overlayWindowHidden && OverlayPacing::ShouldHideIdleOverlay(consecutiveEmptyFrames)) {
+            ::ShowWindow(overWindowsHwnd, SW_HIDE);
+            overlayWindowHidden = true;
+            Diagnostics::Record("overlay-window-visibility", "visible=0 reason=idle");
+        }
+
+        // A back buffer that was just recreated has undefined content, so the frame has to be drawn even
+        // when the overlay's own content did not change.
+        const bool surfaceRecreated = bufferSize.resizeAttempted && SUCCEEDED(bufferSize.resizeResult);
+        if (surfaceRecreated ||
+            OverlayPacing::ShouldPresentFrame(contentHash, lastPresentedHash, hasPresented, !overlayWindowHidden)) {
+            const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
+            g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
+            g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
+            ImGui_ImplDX11_RenderDrawData(drawData);
+
+            // Present
+            HRESULT hr = g_pSwapChain->Present(0, 0);
+            g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
+            RecordOverlayFrameDiagnostics(overWindowsHwnd, hr, bufferSize.after);
+            if (FAILED(hr)) {
+                Diagnostics::Record("overlay-device-error", "presentation failed; session restart required");
+                stopFlag = true;
+                break;
+            }
+            lastPresentedHash = contentHash;
+            hasPresented = true;
+        }
+        else {
+            // The last surface stays on screen, so there is nothing to repaint.
+            ++skippedPresents;
         }
 
         // Keep fractional milliseconds and include rendering cost in pacing. The wait keeps servicing

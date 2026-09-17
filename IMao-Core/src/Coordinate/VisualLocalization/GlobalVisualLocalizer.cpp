@@ -2,6 +2,7 @@
 #include "GlobalVisualLocalizer.h"
 
 #include "../../Diagnostics/Diagnostics.h"
+#include "../../Runtime/ThreadPriority.h"
 #include "RecoveryPolicy.h"
 #include "CoarseSearchCoverage.h"
 #include "MinimapTrackingGeometry.h"
@@ -917,6 +918,7 @@ public:
             resources_ = std::move(resources);
             engine_ = std::make_unique<VisualLocalizationEngine>(resources_);
             worker_ = std::jthread([this](std::stop_token token) { Worker(token); });
+            ThreadPriority::MakeBackground(worker_);
             ready_ = true;
             error.clear();
             return true;

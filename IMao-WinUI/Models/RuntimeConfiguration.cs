@@ -2,7 +2,14 @@ namespace IMao_WinUI.Models;
 
 public sealed record RuntimeConfiguration
 {
-    public int CaptureWay { get; init; }
+    // Bumped when a stored default changes meaning. A file written before this field existed carries
+    // the version 1 default capture method, which was not a deliberate choice; the store migrates it.
+    public const int CurrentSchemaVersion = 2;
+    public int ConfigVersion { get; init; } = CurrentSchemaVersion;
+
+    // 1 = Windows Graphics Capture: it never asks the game window to render into a device context, and
+    // startup falls back to BitBlt (0) on its own when it cannot produce a first frame.
+    public int CaptureWay { get; init; } = 1;
     public int MapUpdateCycle { get; init; } = 80;
     public int MinMapUpdateCycle { get; init; } = 80;
     public bool MapEnabled { get; init; } = true;

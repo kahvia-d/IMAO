@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <cstdint>
 
 // Pacing and input-hook policy for the in-game overlay. These decisions are separated from the
 // rendering code so they can be tested without a game window.
@@ -43,5 +44,24 @@ inline std::chrono::microseconds CapturePeriod(bool overlayActive) {
 
 inline std::chrono::microseconds CapturePeriod(bool overlayActive, bool slowCapture) {
     return CapturePeriod(overlayActive) + (slowCapture ? kSlowCaptureBackoff : std::chrono::microseconds::zero());
+}
+
+// The overlay window covers the whole game screen, so every present makes the desktop compositor
+// blend that whole screen again - including the game's own frames, which a visible topmost layered
+// window keeps out of its direct flip path. A frame whose content did not change therefore costs the
+// game GPU time for nothing, and is skipped: the compositor keeps showing the last surface.
+inline bool ShouldPresentFrame(std::uint64_t contentHash, std::uint64_t lastPresentedHash,
+    bool hasPresented, bool windowVisible) {
+    if (!hasPresented || !windowVisible) return true;
+    return contentHash != lastPresentedHash;
+}
+
+// Nothing drawn for this many overlay frames (one second at the overlay rate) means the tool has
+// nothing to show at all: hiding the window lets the compositor ignore it completely until the next
+// marker appears.
+inline constexpr int kFramesBeforeHidingIdleOverlay = 30;
+
+inline bool ShouldHideIdleOverlay(int consecutiveEmptyFrames) {
+    return consecutiveEmptyFrames >= kFramesBeforeHidingIdleOverlay;
 }
 }

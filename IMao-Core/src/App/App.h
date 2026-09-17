@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "..\ImageProcessing\ImageProcessing.h"
 #include "..\Feature\Match\FeatureMatch.h"
 #include "..\WindowsCapture\WindowsGraphicsCapture\CaptureSnapshot.h"
@@ -26,6 +26,7 @@
 #include "../Runtime/SnapshotChannel.h"
 #include "../Runtime/FrameState.h"
 #include "../Runtime/GamepadContext.h"
+#include "../Runtime/ThreadPriority.h"
 
 
 class App
@@ -65,6 +66,11 @@ public:
 		captureThread = std::thread(&App::Thread_Capture, this);
 		detectGameStateThread = std::thread(&App::Thread_DetectGameState, this);
 		keyMonitoringThread = std::thread(&App::Thread_KeyMonitoring_SavePlayerNearItemPoint, this);
+		// Capturing and analysing frames is what the tool does *for* the game, so it must never
+		// compete with the game for CPU on equal terms. The overlay thread and this key watcher keep
+		// normal priority: they sit on the input path, where waiting for CPU is felt as lag.
+		ThreadPriority::MakeBackground(captureThread);
+		ThreadPriority::MakeBackground(detectGameStateThread);
 
 		mainThread = std::thread([this]() {
 			try {

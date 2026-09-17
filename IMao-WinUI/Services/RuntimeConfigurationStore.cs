@@ -22,8 +22,10 @@ internal sealed class RuntimeConfigurationStore
             if (current is not null) return current;
             try
             {
-                var value = JsonSerializer.Deserialize<RuntimeConfiguration>(File.ReadAllText(path))
+                var text = File.ReadAllText(path);
+                var value = JsonSerializer.Deserialize<RuntimeConfiguration>(text)
                     ?? throw new JsonException("配置必须是有效对象");
+                value = Migrate(value, HasStoredSchemaVersion(text));
                 value.Validate();
                 return current = value;
             }
@@ -61,5 +63,22 @@ internal sealed class RuntimeConfigurationStore
             AtomicFile.WriteAllText(path, JsonSerializer.Serialize(next));
             return current = next;
         }
+    }
+
+    // A stored capture method of 0 came from the version 1 default rather than from a deliberate
+    // choice, so a file written before the schema field existed is promoted once: Windows Graphics
+    // Capture leaves the game's own presentation path alone, and a machine where it cannot start falls
+    // back to BitBlt by itself. The setting still offers both methods, and a player who picks BitBlt in
+    // it is recorded with the current schema version and never migrated again.
+    private static RuntimeConfiguration Migrate(RuntimeConfiguration value, bool writtenWithSchemaVersion) =>
+        writtenWithSchemaVersion ? value : value with { CaptureWay = 1 };
+
+    // The stored field is the only witness for the schema: a deserialized object cannot distinguish a
+    // missing property from the default its initializer supplies.
+    private static bool HasStoredSchemaVersion(string text)
+    {
+        using var document = JsonDocument.Parse(text);
+        return document.RootElement.ValueKind == JsonValueKind.Object &&
+            document.RootElement.TryGetProperty(nameof(RuntimeConfiguration.ConfigVersion), out _);
     }
 }

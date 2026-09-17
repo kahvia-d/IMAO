@@ -83,6 +83,13 @@ try
     var config = new RuntimeConfigurationStore(configPath);
     Check(!config.Read().StatusBarEnabled && config.Read().MapUpdateCycle == 80, "legacy runtime preferences migrate with default new fields");
     Check(!config.Read().AutoReplanEnabled, "existing navigation remains manual after preference migration");
+    Check(config.Read().CaptureWay == 1,
+        "a configuration written before the schema change moves to the Windows Graphics Capture default");
+    File.WriteAllText(configPath, "{\"ConfigVersion\":2,\"CaptureWay\":0,\"StatusBarEnabled\":false}");
+    Check(new RuntimeConfigurationStore(configPath).Read().CaptureWay == 0,
+        "a capture method chosen after the schema change stays BitBlt");
+    Check(config.Update(old => old with { CaptureWay = 0 }).CaptureWay == 0 && config.Read().CaptureWay == 0,
+        "choosing BitBlt persists instead of being migrated back to the new default");
     config.Update(old => old with { AutoReplanEnabled = true });
     Check(new RuntimeConfigurationStore(configPath).Read().AutoReplanEnabled &&
         config.Read().ToPayload()["autoReplanEnabled"] is true,

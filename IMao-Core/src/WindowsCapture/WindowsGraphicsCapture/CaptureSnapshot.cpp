@@ -1,5 +1,6 @@
-﻿#include "..\..\pch.h"
+#include "..\..\pch.h"
 #include "CaptureSnapshot.h"
+#include "..\..\Diagnostics\Diagnostics.h"
 using namespace std;
 
 using namespace cv;
@@ -45,10 +46,11 @@ winrt::GraphicsCaptureItem CaptureSnapshot::TryStartCaptureFromWindowHandle(HWND
     }
     catch (winrt::hresult_error const& error)
     {
-        MessageBoxW(NULL,
-            error.message().c_str(),
-            L"Win32CaptureSample",
-            MB_OK | MB_ICONERROR);
+        // A modal message box would block this process at exactly the moment startup needs to fall back
+        // to BitBlt, and it would appear behind the game where the player cannot dismiss it. The
+        // failure is recorded and rethrown for the caller to act on.
+        Diagnostics::Record("capture-item-error", "hr=" + std::to_string(static_cast<long>(error.code().value)));
+        throw;
     }
     return item;
 }

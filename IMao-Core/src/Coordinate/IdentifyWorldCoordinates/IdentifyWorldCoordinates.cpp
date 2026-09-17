@@ -1,6 +1,7 @@
 #include "IdentifyWorldCoordinates.h"
 
 #include "../../Diagnostics/Diagnostics.h"
+#include "../../Runtime/ThreadPriority.h"
 #include <include/ocr_rec.h>
 
 #include <algorithm>
@@ -101,6 +102,10 @@ public:
             Initialize(stopToken, modelDirectory, dictionaryPath);
         });
         workerThread_ = std::jthread([this](std::stop_token stopToken) { Worker(stopToken); });
+        // OCR and the coordinate search are the tool's heaviest CPU consumers; they must yield to the
+        // game instead of sharing the scheduler evenly with it.
+        ThreadPriority::MakeBackground(initThread_);
+        ThreadPriority::MakeBackground(workerThread_);
     }
 
     bool Await(std::string& error) {

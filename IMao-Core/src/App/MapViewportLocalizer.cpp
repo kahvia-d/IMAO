@@ -4,6 +4,7 @@
 #include "MapViewportLocalizer.h"
 #include "MapViewportGeometry.h"
 #include "../Feature/Match/UniqueMapFeatures.h"
+#include "../Runtime/ThreadPriority.h"
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/features2d.hpp>
@@ -196,6 +197,7 @@ public:
         // Start button is pressed.
         try {
             worker_ = std::jthread([this](std::stop_token token) { Worker(token); });
+            ThreadPriority::MakeBackground(worker_);
             ready_ = true;
             error.clear();
             return true;

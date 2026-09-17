@@ -7,6 +7,7 @@
 #include "Processing/FeatureProcessing.h"
 #include "VisualIndex/MapVisualIndex.h"
 #include "../Diagnostics/Diagnostics.h"
+#include "../Runtime/ThreadPriority.h"
 #include "../Runtime/RuntimeStatus.h"
 
 #include <algorithm>
@@ -136,6 +137,7 @@ void RuntimeFeatureRepository::BeginPreload(const std::filesystem::path& assetRo
     preloadThread_ = std::jthread([this, assetRoot](std::stop_token stopToken) {
         Load(stopToken, assetRoot);
     });
+    ThreadPriority::MakeBackground(preloadThread_);
 }
 
 std::shared_ptr<const RuntimeFeatureResources> RuntimeFeatureRepository::AwaitReady(std::string& error) {

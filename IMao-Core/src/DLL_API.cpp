@@ -27,7 +27,9 @@
 using namespace std;
 
 HINSTANCE g_hDllInstance = NULL;
-std::atomic_int CaptureWay = 0;
+// 1 = Windows Graphics Capture, which never asks the game window to render into a device context.
+// Startup falls back to BitBlt (0) when it cannot produce a first frame.
+std::atomic_int CaptureWay = 1;
 std::atomic_int minMapDataUpdateCycle = 100;
 std::atomic_int mapDataUpdateCycle = 60;
 std::atomic_bool enabledMapShowItem = false;
@@ -58,6 +60,42 @@ struct OverlaySession {
         Notification::Stop();
     }
 };
+
+// One overlay session on one capture method, including the wait until the player stops it. A failed
+// attempt reports false after tearing itself down, which is what lets the caller retry with the other
+// capture method instead of reporting a core fault.
+bool RunOverlayAttempt(HWND hwnd, const RECT& clientRect, bool useGraphicsCapture, std::stop_token stopToken) {
+    optional<BitBltCapture> bitBltCapture;
+    optional<CaptureSnapshot> graphicsCapture;
+    if (useGraphicsCapture) graphicsCapture.emplace(hwnd);
+    else bitBltCapture.emplace(hwnd);
+
+    OverlaySession session;
+    Notification::Start();
+    session.app = make_unique<App>(graphicsCapture, bitBltCapture, hwnd, clientRect);
+    auto& currentApp = session.app;
+    App::SetUpdateMapDataCycleTime(mapDataUpdateCycle.load());
+    App::SetUpdateMinMapDataCycleTime(minMapDataUpdateCycle.load());
+    App::SetEnabledMapShowItem(enabledMapShowItem.load());
+    App::SetEnabledMinMapShowItem(enabledMinMapShowItem.load());
+    session.overlay = make_unique<ImGuiOverWindows>(hwnd, *currentApp);
+
+    if (!currentApp->StartTasks()) return false;
+
+    LoadEditRouteData::Initi(currentApp.get());
+    RuntimeStatus::SetCoreState("running", "核心正在运行");
+    {
+        std::unique_lock lock(runtimeMutex);
+        while (!stopToken.stop_requested() && !shutdownRequested && runRequested && !currentApp->HasStopped() &&
+            !session.overlay->HasStopped())
+            runtimeCondition.wait_for(lock, std::chrono::milliseconds(100));
+        if (runRequested && (currentApp->HasStopped() || session.overlay->HasStopped()) && !shutdownRequested &&
+            RuntimeStatus::Snapshot().coreState != "faulted")
+            RuntimeStatus::SetCoreState("faulted", "运行任务意外停止，请检查游戏窗口后重试");
+        runRequested = false;
+    }
+    return true;
+}
 
 std::string WideToUtf8(const std::wstring& value) {
 	if (value.empty()) return {};
@@ -170,42 +208,40 @@ void RuntimeMain(std::stop_token stopToken) {
 		}
 
         bool started = false;
+        bool fellBackToBitBlt = false;
         try {
-		optional<BitBltCapture> bitBltCapture;
-		optional<CaptureSnapshot> graphicsCapture;
-		if (CaptureWay.load() == 0) bitBltCapture.emplace(hwnd);
-		else graphicsCapture.emplace(hwnd);
-
-        OverlaySession session;
-        Notification::Start();
-        session.app = make_unique<App>(graphicsCapture, bitBltCapture, hwnd, clientRect);
-        auto& currentApp = session.app;
-		App::SetUpdateMapDataCycleTime(mapDataUpdateCycle.load());
-		App::SetUpdateMinMapDataCycleTime(minMapDataUpdateCycle.load());
-		App::SetEnabledMapShowItem(enabledMapShowItem.load());
-		App::SetEnabledMinMapShowItem(enabledMinMapShowItem.load());
-        session.overlay = make_unique<ImGuiOverWindows>(hwnd, *currentApp);
-
-        started = currentApp->StartTasks();
+		// Windows Graphics Capture is the default: it never asks the game window to render into a
+		// device context, and its cost sits on the frame pool's own thread. A machine where it cannot
+		// start at all (protected window, driver, older Windows) must still get an overlay, so a failed
+		// WGC attempt retries with BitBlt before the player is told that the overlay failed.
+		const bool requestedGraphicsCapture = CaptureWay.load() != 0;
+		const int captureAttempts = requestedGraphicsCapture ? 2 : 1;
+		for (int captureAttempt = 0; !started && captureAttempt < captureAttempts; ++captureAttempt) {
+			const bool useGraphicsCapture = requestedGraphicsCapture && captureAttempt == 0;
+			try {
+				started = RunOverlayAttempt(hwnd, clientRect, useGraphicsCapture, stopToken);
+			}
+			catch (const std::exception& exception) {
+				Diagnostics::Record("capture-attempt-error", std::string("capture=") +
+					(useGraphicsCapture ? "wgc" : "bitblt") + " error=" + exception.what());
+			}
+			catch (...) {
+				Diagnostics::Record("capture-attempt-error", std::string("capture=") +
+					(useGraphicsCapture ? "wgc" : "bitblt") + " error=unknown exception");
+			}
+			if (started) break;
+			Diagnostics::Record("capture-attempt-failed", std::string("capture=") +
+				(useGraphicsCapture ? "wgc" : "bitblt"));
+			fellBackToBitBlt = requestedGraphicsCapture;
+		}
 		if (!started) {
 			if (RuntimeStatus::Snapshot().coreState != "faulted") {
 				RuntimeStatus::SetCoreState("faulted", "叠加层启动失败，请回到可见的游戏窗口后重试");
 			}
 			Notification::AddError(NotificationDatas(RuntimeStatus::Snapshot().message, 10));
 		}
-		else {
-			LoadEditRouteData::Initi(currentApp.get());
-			RuntimeStatus::SetCoreState("running", "核心正在运行");
-		}
-
-		{
-			std::unique_lock lock(runtimeMutex);
-            while (!stopToken.stop_requested() && !shutdownRequested && runRequested && started && !currentApp->HasStopped() && !session.overlay->HasStopped())
-                runtimeCondition.wait_for(lock, std::chrono::milliseconds(100));
-            if (started && runRequested && (currentApp->HasStopped() || session.overlay->HasStopped()) && !shutdownRequested &&
-                RuntimeStatus::Snapshot().coreState != "faulted")
-                RuntimeStatus::SetCoreState("faulted", "运行任务意外停止，请检查游戏窗口后重试");
-			runRequested = false;
+		else if (fellBackToBitBlt) {
+			Notification::AddInfo(NotificationDatas("Windows Graphics Capture 启动失败，已自动改用 BitBlt 捕获画面", 10));
 		}
 
         } catch (const std::exception& exception) {

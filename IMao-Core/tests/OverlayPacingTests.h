@@ -28,4 +28,19 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
     check(OverlayPacing::CapturePeriod(false, true) > OverlayPacing::CapturePeriod(false, false),
         "the back-off also applies while the overlay is idle");
     check(OverlayPacing::kFramePeriod >= std::chrono::microseconds(33333), "the overlay presents no faster than its content changes");
+
+    check(OverlayPacing::ShouldPresentFrame(7, 7, true, true) == false,
+        "an unchanged overlay frame is not presented again");
+    check(OverlayPacing::ShouldPresentFrame(8, 7, true, true),
+        "changed content is presented");
+    check(OverlayPacing::ShouldPresentFrame(7, 7, false, true),
+        "the first frame of a session is always presented");
+    check(OverlayPacing::ShouldPresentFrame(7, 7, true, false),
+        "a hidden overlay window is filled before it is shown again");
+
+    check(!OverlayPacing::ShouldHideIdleOverlay(0), "a freshly drawn overlay is never hidden");
+    check(!OverlayPacing::ShouldHideIdleOverlay(OverlayPacing::kFramesBeforeHidingIdleOverlay - 1),
+        "a short gap between markers keeps the overlay window visible");
+    check(OverlayPacing::ShouldHideIdleOverlay(OverlayPacing::kFramesBeforeHidingIdleOverlay),
+        "an overlay with nothing to draw for a second is hidden from the compositor");
 }
