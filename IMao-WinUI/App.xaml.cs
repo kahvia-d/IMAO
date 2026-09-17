@@ -71,6 +71,7 @@ public partial class App : Application
             services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
             services.AddSingleton<CoreHostService>();
             services.AddSingleton<KuroProgressSyncService>();
+            services.AddSingleton<KuroAutoSyncService>();
             services.AddSingleton<ResourceSnapshotService>(_ => ResourceUpdateBootstrap.CreateSnapshots());
             services.AddSingleton<UpdateService>(provider => ResourceUpdateBootstrap.CreateUpdater(provider.GetRequiredService<ResourceSnapshotService>()));
             services.AddSingleton<UpdateUiController>();
@@ -188,6 +189,7 @@ public partial class App : Application
         // Players must not have to run a script: keep the Native Messaging host
         // registered for the current user on every start (best effort, per-user only).
         _ = Task.Run(() => { try { KuroBridgeRegistration.EnsureRegistered(); } catch { } });
+        _ = GetService<KuroAutoSyncService>().InitializeAsync();
         if (ProgramLaunchSession.IsManaged) _ = ConfirmProgramHealthAsync(updates);
     }
 

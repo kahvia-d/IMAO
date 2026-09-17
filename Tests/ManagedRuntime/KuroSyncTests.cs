@@ -126,6 +126,27 @@ internal static class KuroSyncTests
         check(KuroNativeBridgeHost.HostManifestJson(@"C:\x\KuroSyncBridge.exe").Contains("\"allowed_origins\"") &&
             KuroNativeBridgeHost.SettingsJson().Contains(KuroNativeBridgeHost.Origin),
             "the host manifest and bridge settings carry the extension origin");
+
+        // Automatic sync must fire soon after start-up, then settle on the normal
+        // interval, and it must not hammer a failing endpoint.
+        var schedule = new KuroSyncSchedule();
+        check(schedule.NextDelay == KuroSyncSchedule.StartupDelay, "a fresh session waits the short start-up delay");
+        schedule.RecordSuccess();
+        check(schedule.NextDelay == KuroSyncSchedule.Interval && schedule.FailureCount == 0,
+            "a successful pass settles on the normal interval");
+        schedule.RecordManual();
+        check(schedule.NextDelay == KuroSyncSchedule.Interval, "a manual sync restarts the normal interval");
+        var ladder = new List<double>();
+        for (int i = 0; i < 8; ++i) { schedule.RecordFailure(); ladder.Add(schedule.NextDelay.TotalSeconds); }
+        check(ladder.SequenceEqual(new[] { 60d, 120d, 240d, 480d, 960d, 1800d, 1800d, 1800d }),
+            "repeated failures back off exponentially and stop at the retry ceiling");
+        schedule.RecordSuccess();
+        check(schedule.NextDelay == KuroSyncSchedule.Interval && schedule.FailureCount == 0,
+            "a recovered pass clears the failure backoff");
+        schedule.RecordStartup();
+        check(schedule.NextDelay == KuroSyncSchedule.StartupDelay, "switching the feature on arms the start-up delay");
+        check(KuroSyncSchedule.MaximumRetry <= TimeSpan.FromMinutes(30) && KuroSyncSchedule.Interval >= TimeSpan.FromMinutes(5),
+            "the automatic interval stays inside the documented bounds");
     }
 }
 

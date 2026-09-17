@@ -90,7 +90,15 @@
                 <ComboBox x:Name="KuroSyncState" Header="地图区域" MaxWidth="450" SelectionChanged="KuroSyncState_SelectionChanged" />
                 <ToggleSwitch x:Name="KuroSyncShowSynced" Header="显示两边都已同步的点位数" OnContent="显示" OffContent="不显示" Toggled="KuroSyncShowSynced_Toggled" />
                 <ToggleSwitch x:Name="KuroSyncShowAll" Header="显示没有差异的区域" OnContent="显示" OffContent="不显示" Toggled="KuroSyncShowAll_Toggled" />
-                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10"><Button x:Name="KuroSyncPreviewButton" Content="预览同步" Click="KuroSyncPreview_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" /><Button x:Name="KuroSyncApplyButton" Content="应用同步" Click="KuroSyncApply_Click" IsEnabled="False" /><Button Content="注册/修复浏览器桥接" Click="KuroBridgeRegister_Click" /><Button Content="打开同步数据目录" Click="KuroSyncOpen_Click" /></controls:WrapPanel>
+                <ToggleSwitch x:Name="KuroSyncAutoSync" Header="自动同步" OnContent="每 10 分钟自动补齐两边" OffContent="仅手动同步" Toggled="KuroSyncAutoSync_Toggled" />
+                <TextBlock x:Name="KuroAutoSyncStatus" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                    <Button x:Name="KuroSyncPreviewButton" Content="预览同步" Click="KuroSyncPreview_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+                    <Button x:Name="KuroSyncApplyButton" Content="应用同步" Click="KuroSyncApply_Click" IsEnabled="False" />
+                    <Button Content="注册/修复浏览器桥接" Click="KuroBridgeRegister_Click" />
+                    <Button Content="打开同步数据目录" Click="KuroSyncOpen_Click" />
+                    <Button Content="断开库街区连接" Click="KuroSyncDisconnect_Click" />
+                </controls:WrapPanel>
                 <TextBlock x:Name="KuroBridgeStatus" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                 <InfoBar x:Name="KuroSyncMessage" IsOpen="False" IsClosable="True" />
                 <StackPanel x:Name="KuroSyncPlanPanel" Spacing="8" Visibility="Collapsed">

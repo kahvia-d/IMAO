@@ -14,6 +14,9 @@ public sealed class KuroProgressSyncService
     private readonly CoreHostService core;
     private readonly KuroTokenVault vault = new(UserDataPaths.KuroSync);
     private readonly string deviceId;
+    // Manual and automatic sync share one gate so a timed pass can never write
+    // while the user is applying a preview.
+    private readonly SemaphoreSlim gate = new(1, 1);
 
     public KuroProgressSyncService(CoreHostService core)
     {
@@ -38,6 +41,13 @@ public sealed class KuroProgressSyncService
     /// belongs to locally.
     /// </summary>
     public async Task<KuroSyncComparison> PreviewAsync(string profileId, int? stateId, CancellationToken cancellationToken = default)
+    {
+        await gate.WaitAsync(cancellationToken);
+        try { return await PreviewCoreAsync(profileId, stateId, cancellationToken); }
+        finally { gate.Release(); }
+    }
+
+    private async Task<KuroSyncComparison> PreviewCoreAsync(string profileId, int? stateId, CancellationToken cancellationToken)
     {
         if (!vault.TryRead(profileId, out var credential)) throw new InvalidOperationException("此同步档案尚未连接库街区。请在浏览器扩展中重新连接。");
         using var client = new KuroMapProgressClient();
@@ -74,6 +84,13 @@ public sealed class KuroProgressSyncService
     /// cloud set is read again first, so a stale comparison is refused.
     /// </summary>
     public async Task<KuroSyncApplyResult> ApplyAsync(string profileId, KuroSyncComparison comparison, CancellationToken cancellationToken = default)
+    {
+        await gate.WaitAsync(cancellationToken);
+        try { return await ApplyCoreAsync(profileId, comparison, cancellationToken); }
+        finally { gate.Release(); }
+    }
+
+    private async Task<KuroSyncApplyResult> ApplyCoreAsync(string profileId, KuroSyncComparison comparison, CancellationToken cancellationToken)
     {
         if (!vault.TryRead(profileId, out var credential)) throw new InvalidOperationException("此同步档案尚未连接库街区。请在浏览器扩展中重新连接。");
         using var client = new KuroMapProgressClient();

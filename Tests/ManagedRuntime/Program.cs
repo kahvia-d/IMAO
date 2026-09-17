@@ -25,6 +25,7 @@ try
     RoutePlanningTests.Run(Check);
     GamepadInputTests.Run(root, Check);
     GamepadDiagnosticTests.Run(root, Check);
+    await KuroAutoSyncTests.RunAsync(root, Check);
     await MarkerGuideSessionTests.RunAsync(Check);
     await MarkerDetailTests.RunAsync(root, Check);
     var options = Options.Create(new LocalSettingsOptions { ApplicationDataFolder = root, LocalSettingsFile = "settings.json" });

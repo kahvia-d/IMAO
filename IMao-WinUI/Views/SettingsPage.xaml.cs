@@ -20,13 +20,15 @@ public sealed partial class SettingsPage : Page
     private bool restoringRuntime = true, savingRuntime;
     private readonly UpdateUiController updates;
     private readonly KuroProgressSyncService kuroSync;
+    private readonly KuroAutoSyncService kuroAutoSync;
     private readonly ILocalSettingsService kuroSettings;
     private KuroSyncComparison? kuroSyncComparison;
     private bool restoringKuroSync = true;
-    private const string KuroSyncProfileKey = "kuroSyncProfileId";
-    private const string KuroSyncStateKey = "kuroSyncStateId";
-    private const string KuroSyncShowSyncedKey = "kuroSyncShowSynced";
-    private const string KuroSyncShowAllKey = "kuroSyncShowAllRegions";
+    private bool restoringKuroAutoSync = true;
+    private const string KuroSyncProfileKey = KuroSyncSettings.Profile;
+    private const string KuroSyncStateKey = KuroSyncSettings.State;
+    private const string KuroSyncShowSyncedKey = KuroSyncSettings.ShowSynced;
+    private const string KuroSyncShowAllKey = KuroSyncSettings.ShowAllRegions;
     private bool kuroSyncWorldExpanded;
     private bool restoringUpdates;
     public SettingsViewModel ViewModel { get; }
@@ -39,6 +41,7 @@ public sealed partial class SettingsPage : Page
         gamepad = App.GetService<GamepadInputService>();
         updates = App.GetService<UpdateUiController>();
         kuroSync = App.GetService<KuroProgressSyncService>();
+        kuroAutoSync = App.GetService<KuroAutoSyncService>();
         kuroSettings = App.GetService<ILocalSettingsService>();
         InitializeComponent();
         RestoreRuntime();
@@ -51,14 +54,15 @@ public sealed partial class SettingsPage : Page
         GuideNextImageKey.ItemsSource = choices;
         Loaded += (_, _) =>
         {
-            if (!subscribed) { coreHost.PropertyChanged += CoreHost_PropertyChanged; gamepad.PropertyChanged += Gamepad_PropertyChanged; updates.PropertyChanged += Updates_Changed; subscribed = true; }
+            if (!subscribed) { coreHost.PropertyChanged += CoreHost_PropertyChanged; gamepad.PropertyChanged += Gamepad_PropertyChanged; updates.PropertyChanged += Updates_Changed; kuroAutoSync.PropertyChanged += KuroAutoSync_Changed; subscribed = true; }
             RenderUpdates();
+            RenderKuroAutoSync();
             RestoreBindings(); RestoreRuntime();
             _ = RestoreKuroSyncAsync();
         };
         Unloaded += (_, _) =>
         {
-            if (subscribed) { coreHost.PropertyChanged -= CoreHost_PropertyChanged; gamepad.PropertyChanged -= Gamepad_PropertyChanged; updates.PropertyChanged -= Updates_Changed; subscribed = false; }
+            if (subscribed) { coreHost.PropertyChanged -= CoreHost_PropertyChanged; gamepad.PropertyChanged -= Gamepad_PropertyChanged; updates.PropertyChanged -= Updates_Changed; kuroAutoSync.PropertyChanged -= KuroAutoSync_Changed; subscribed = false; }
         };
     }
 
@@ -319,6 +323,48 @@ public sealed partial class SettingsPage : Page
     }
 
     private void KuroSyncOpen_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.KuroSync);
+
+    private void KuroAutoSync_Changed(object? sender, PropertyChangedEventArgs e)
+    {
+        // An automatic pass writes to the same profile the preview was taken from,
+        // so any cached plan is stale once it reports a result.
+        if (e.PropertyName == nameof(KuroAutoSyncService.LastResult)) InvalidateKuroSyncPlan();
+        RenderKuroAutoSync();
+    }
+
+    private void RenderKuroAutoSync()
+    {
+        restoringKuroAutoSync = true;
+        try { KuroSyncAutoSync.IsOn = kuroAutoSync.IsEnabled; }
+        finally { restoringKuroAutoSync = false; }
+        KuroAutoSyncStatus.Text = kuroAutoSync.Status;
+    }
+
+    private async void KuroSyncAutoSync_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (restoringKuroAutoSync) return;
+        await kuroAutoSync.SetEnabledAsync(KuroSyncAutoSync.IsOn);
+        RenderKuroAutoSync();
+    }
+
+    private async void KuroSyncDisconnect_Click(object sender, RoutedEventArgs e)
+    {
+        string profile = KuroSyncProfile.Text.Trim();
+        if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "请先填写同步档案 ID。"); return; }
+        var dialog = new ContentDialog
+        {
+            Title = "断开库街区连接",
+            Content = $"将删除本机保存的库街区凭据（档案 {profile}）。本地点位进度、路线和设置都不受影响。",
+            PrimaryButtonText = "断开",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        kuroSync.Disconnect(profile);
+        ShowKuroSync(InfoBarSeverity.Success, $"已删除档案 {profile} 的本机凭据；本地进度未改动。");
+        RenderKuroBridgeStatus();
+    }
 
     private void KuroBridgeRegister_Click(object sender, RoutedEventArgs e)
     {

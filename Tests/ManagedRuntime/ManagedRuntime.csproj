@@ -35,6 +35,9 @@
     <Compile Include="../../IMao-WinUI/Models/CoreRuntimeStatus.cs" Link="CoreRuntimeStatus.cs" />
     <Compile Include="../../IMao-WinUI/Models/CoreLogEntry.cs" Link="CoreLogEntry.cs" />
     <Compile Include="../../IMao-WinUI.Core/KuroSync/*.cs" Link="KuroSync/%(Filename)%(Extension)" />
+    <Compile Include="../../IMao-WinUI/Services/KuroProgressSyncService.cs" Link="KuroProgressSyncService.cs" />
+    <Compile Include="../../IMao-WinUI/Services/KuroAutoSyncService.cs" Link="KuroAutoSyncService.cs" />
+    <Compile Include="../../IMao-WinUI/Services/KuroSyncSettings.cs" Link="KuroSyncSettings.cs" />
   </ItemGroup>
   <ItemGroup><Compile Include="../../IMao-WinUI/Helpers/BitBltRegistryHelper.cs" Link="BitBltRegistryHelper.cs" /></ItemGroup>
 </Project>
