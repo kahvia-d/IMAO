@@ -36,8 +36,9 @@
 - 仍需实机确认手感与交互（点击点位、框选、Esc 接管、快捷键、指引窗口）。
 - 仍未处理、可继续优化的项：
   1. `PrintWindow` 单次约 35 ms 的**绝对成本**（`WindowsCapture/BitBltCapture/BitBltCapture.cpp:92`）没有变化，本次只降低了调用频率。设置里已有"Windows Graphics Capture"选项，其实现本次也一并修好，建议实机 A/B 两种截图方式的帧时间与手感；若 WGC 明显更好，可考虑改默认值。
-  2. 覆盖层窗口仍是 `WS_EX_LAYERED + LWA_COLORKEY + DXGI_SWAP_EFFECT_DISCARD`。若 30 Hz 之后 `presentMs` 仍偏高，下一步是换成 DirectComposition + flip model（每帧全屏 blt 变为翻转），这属于渲染管线改造，需实机看到画面才算验证。
-  3. 偶发 `boundsMs=232 ms`（`Runtime/OverlayWindowBounds.h` 的 `SetWindowPos` 同步）尚未处理。
+  2. WGC 现在是**每次到达都回读并发布**（约 60 Hz），而覆盖层按 30 Hz 呈现、识别按 33/80 ms 取帧。若 `readbackAvgMs` 与 CPU 占用显得偏高，下一步是用 `GraphicsCaptureSession::MinUpdateInterval`（`SimpleCapture.h` 已有 setter，需用 `ApiInformation::IsPropertyPresent` 守卫，Windows 11 才有）把到达速率降到 33 ms，可见效果不变而回读与 `cv::Mat` 拷贝少一半。本次先不动，避免和"能不能出图"一起验证。
+  3. 覆盖层窗口仍是 `WS_EX_LAYERED + LWA_COLORKEY + DXGI_SWAP_EFFECT_DISCARD`。若 30 Hz 之后 `presentMs` 仍偏高，下一步是换成 DirectComposition + flip model（每帧全屏 blt 变为翻转），这属于渲染管线改造，需实机看到画面才算验证。
+  4. 偶发 `boundsMs=232 ms`（`Runtime/OverlayWindowBounds.h` 的 `SetWindowPos` 同步）尚未处理。
 - 同一个问题上已经处理的相关项：设置里的"应用窗口兼容设置"写入的是**全局** `SwapEffectUpgradeEnable=0`（`IMao-WinUI/Helpers/BitBltRegistryHelper.cs`），此前没有恢复入口，会让所有 Direct3D 程序停留在较旧的合成路径。现在设置里提供"恢复图形默认设置"，只删除这一个值、保留其他 Windows 图形偏好，清空后删除该值（`ManagedRuntime` 测试覆盖两种转换）。
 
 ## 追加修复：WGC 回读（`6500402` 起步，`SimpleCapture.cpp` 定稿）
