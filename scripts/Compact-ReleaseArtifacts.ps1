@@ -12,9 +12,10 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer is required.' }
 $repoRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
-$outPrefix = [IO.Path]::GetFullPath((Join-Path $repoRoot 'out')).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+$outRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot 'out')).TrimEnd('\', '/')
+$outPrefix = $outRoot + [IO.Path]::DirectorySeparatorChar
 $OutputRoot = [IO.Path]::GetFullPath($OutputRoot, $repoRoot)
-if (-not $OutputRoot.StartsWith($outPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'Compaction only operates on directories under the repository out directory.' }
+if (-not ($OutputRoot -eq $outRoot -or $OutputRoot.StartsWith($outPrefix, [StringComparison]::OrdinalIgnoreCase))) { throw 'Compaction only operates on the repository out directory or a directory inside it.' }
 if (-not (Test-Path -LiteralPath $OutputRoot -PathType Container)) { throw "Output directory does not exist: $OutputRoot" }
 if (-not $EvidenceRoot) { $EvidenceRoot = Join-Path $OutputRoot 'evidence' }
 $EvidenceRoot = [IO.Path]::GetFullPath($EvidenceRoot, $repoRoot)
