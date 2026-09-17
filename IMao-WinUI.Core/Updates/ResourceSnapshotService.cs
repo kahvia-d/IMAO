@@ -211,6 +211,14 @@ public sealed class ResourceSnapshotService
          (!string.IsNullOrEmpty(p.Sha256) && p.Sha256.Equals(package.Sha256, StringComparison.OrdinalIgnoreCase) &&
           JsonSerializer.SerializeToUtf8Bytes(p.Files, UpdateJson.Options).AsSpan().SequenceEqual(JsonSerializer.SerializeToUtf8Bytes(package.Files, UpdateJson.Options)))));
 
+    /// <summary>
+    /// True when every package of the release is the copy that ships inside this program, so installing
+    /// it would change no bytes. A freshly installed build must not be told that the resource snapshot
+    /// it already contains is an update it should download.
+    /// </summary>
+    public bool ShipsWithProgram(ResourceRelease release) => release.Packages.Count > 0 && release.Packages.All(package =>
+        FindBundledPackage(new SnapshotPackage { Id = package.Id, Version = package.Version, Kind = package.Kind, Sha256 = package.Sha256, Files = package.Files }) is not null);
+
     private ResourceSnapshot Rebind(ResourceSnapshot snapshot)
     {
         if (snapshot.Bundled) return _bundled;

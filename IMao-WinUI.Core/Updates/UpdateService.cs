@@ -212,7 +212,10 @@ public sealed class UpdateService : IDisposable
     private UpdateCheckResult MakeResult(UpdateCatalog catalog)
     {
         var compatible = SelectCompatible(catalog);
-        var newer = compatible is not null && compatible.Sequence > _snapshots.Current.Sequence && compatible.SnapshotId != _snapshots.Current.SnapshotId ? compatible : null;
+        // A release that ships inside the running program is already present. Offering it would tell a
+        // freshly installed build to download the same bytes it was installed with.
+        var newer = compatible is not null && compatible.Sequence > _snapshots.Current.Sequence &&
+            compatible.SnapshotId != _snapshots.Current.SnapshotId && !_snapshots.ShipsWithProgram(compatible) ? compatible : null;
         var app = UpdateSignature.RequireVersion(catalog.App.Version) > UpdateSignature.RequireVersion(_build.AppVersion) ? catalog.App : null;
         var upgradeRequired = compatible is null && catalog.Resources.Any(r => r.Sequence > _snapshots.Current.Sequence);
         return new UpdateCheckResult

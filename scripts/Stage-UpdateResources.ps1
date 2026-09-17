@@ -5,7 +5,8 @@ param(
     [string]$Version,
     [string]$BaselineId,
     [string]$SourceCommit,
-    [string]$AppxManifest
+    [string]$AppxManifest,
+    [string]$PreviousCatalog
 )
 $ErrorActionPreference = 'Stop'
 # Release resource bytes must not depend on which PowerShell launched a build.
@@ -20,7 +21,7 @@ if ($PSVersionTable.PSVersion.Major -gt 5) {
     $start.CreateNoWindow = $true
     $start.WorkingDirectory = (Get-Location).ProviderPath
     foreach ($argument in @('-NoProfile','-ExecutionPolicy','Bypass','-File',$PSCommandPath)) { $start.ArgumentList.Add($argument) }
-    foreach ($name in @('Destination','SourceRoot','Version','BaselineId','SourceCommit','AppxManifest')) {
+    foreach ($name in @('Destination','SourceRoot','Version','BaselineId','SourceCommit','AppxManifest','PreviousCatalog')) {
         if (-not $PSBoundParameters.ContainsKey($name) -or $null -eq $PSBoundParameters[$name] -or [string]$PSBoundParameters[$name] -eq '') { continue }
         $start.ArgumentList.Add('-' + $name)
         $start.ArgumentList.Add([string]$PSBoundParameters[$name])
@@ -79,6 +80,47 @@ function Assert-OutputInventory([string]$Source, [string]$Output, [string[]]$Gen
     }
     if ($Complete -and -not $expected.SetEquals($present)) { throw 'Staged resource inventory is incomplete; use a new output directory.' }
 }
+# Published package versions are content identities: UpdatePublisher keeps the previous version and
+# download URL whenever a package's file list is unchanged. The bundled descriptor must name the same
+# versions, otherwise a client treats bytes that already ship inside the program as missing and
+# downloads the complete resource set again on its first check.
+if (-not $PreviousCatalog) { $PreviousCatalog = Join-Path $SourceRoot 'updates/stable.json' }
+$previousPackages = @{}
+if (Test-Path -LiteralPath $PreviousCatalog) {
+    $previousEnvelope = Get-Content -LiteralPath $PreviousCatalog -Encoding UTF8 -Raw | ConvertFrom-Json
+    $previousPayload = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([string]$previousEnvelope.payload)) | ConvertFrom-Json
+    foreach ($previousRelease in @($previousPayload.resources)) {
+        foreach ($previousPackage in @($previousRelease.packages)) {
+            $previousId = [string]$previousPackage.id
+            if ($previousId -and -not $previousPackages.ContainsKey($previousId)) { $previousPackages[$previousId] = $previousPackage }
+        }
+    }
+}
+function Get-StagedPackageFileMap([string]$Directory) {
+    $prefix = [IO.Path]::GetFullPath($Directory).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
+    $map = @{}
+    foreach ($file in [IO.Directory]::EnumerateFiles($Directory,'*',[IO.SearchOption]::AllDirectories)) {
+        $relative = $file.Substring($prefix.Length).Replace('\','/')
+        $map[$relative] = ([IO.FileInfo]::new($file).Length).ToString() + ':' + (Get-Sha256 $file)
+    }
+    return $map
+}
+function Get-BundledPackageVersion([string]$Directory, [string]$Id) {
+    $prior = $previousPackages[$Id]
+    if ($null -ne $prior -and $null -ne $prior.files) {
+        $files = @($prior.files)
+        $map = Get-StagedPackageFileMap $Directory
+        if ($map.Count -eq $files.Count) {
+            $matches = $true
+            foreach ($file in $files) {
+                $key = [string]$file.path
+                if (-not $map.ContainsKey($key) -or $map[$key] -ne (([long]$file.size).ToString() + ':' + ([string]$file.sha256).ToLowerInvariant())) { $matches = $false; break }
+            }
+            if ($matches) { return [string]$prior.version }
+        }
+    }
+    return $Version
+}
 $assets = Join-Path $Destination 'Assets'
 $mapData = Join-Path $assets 'KuroMap'
 $sceneNames = @('World','Tethys','Fabricatorium','Avinoleum','Lahai','LowerVault','Darkplain','TimeRiftRuins')
@@ -113,7 +155,7 @@ foreach ($state in $mapManifest.states) {
 Write-Json $mapManifest (Join-Path $mapData 'manifest.json')
 Assert-OutputInventory (Join-Path $SourceRoot 'Assets/KuroMap') $mapData $runtimeFiles -Complete
 $packages = [Collections.Generic.List[object]]::new()
-$packages.Add([ordered]@{id='map-data';version=$Version;kind='map-data';directory='KuroMap';sha256='';files=@()})
+$packages.Add([ordered]@{id='map-data';version=(Get-BundledPackageVersion $mapData 'map-data');kind='map-data';directory='KuroMap';sha256='';files=@()})
 $tileRegistry = Get-Content -LiteralPath (Join-Path $SourceRoot 'Assets/FeaturesDatas/kuro-tile-packs.json') -Encoding UTF8 -Raw | ConvertFrom-Json
 foreach ($name in $tileRegistry.packs) {
     $relative = "FeaturesDatas/KuroTilePacks/$name"
@@ -128,7 +170,7 @@ foreach ($name in $tileRegistry.packs) {
     [IO.Directory]::CreateDirectory((Join-Path $assets $relative)) | Out-Null
     Copy-Item -Path (Join-Path $sourcePack '*') -Destination (Join-Path $assets $relative) -Recurse -Force
     Assert-OutputInventory $sourcePack (Join-Path $assets $relative) -Complete
-    $packages.Add([ordered]@{id=[string]$manifest.packId;version=$Version;kind='tile';directory=$relative;sha256='';files=@()})
+    $packages.Add([ordered]@{id=[string]$manifest.packId;version=(Get-BundledPackageVersion (Join-Path $assets $relative) ([string]$manifest.packId));kind='tile';directory=$relative;sha256='';files=@()})
 }
 $candidateRegistry = Get-Content -LiteralPath (Join-Path $SourceRoot 'Assets/FeaturesDatas/candidate-packs.json') -Encoding UTF8 -Raw | ConvertFrom-Json
 foreach ($name in $candidateRegistry.packs) {
@@ -144,7 +186,7 @@ foreach ($name in $candidateRegistry.packs) {
     [IO.Directory]::CreateDirectory((Join-Path $assets $relative)) | Out-Null
     Copy-Item -Path (Join-Path $sourcePack '*') -Destination (Join-Path $assets $relative) -Recurse -Force
     Assert-OutputInventory $sourcePack (Join-Path $assets $relative) -Complete
-    $packages.Add([ordered]@{id=[string]$manifest.packId;version=$Version;kind='candidate';directory=$relative;sha256='';files=@()})
+    $packages.Add([ordered]@{id=[string]$manifest.packId;version=(Get-BundledPackageVersion (Join-Path $assets $relative) ([string]$manifest.packId));kind='candidate';directory=$relative;sha256='';files=@()})
 }
 Write-Json ([ordered]@{formatVersion=1;snapshotId="bundled-$Version";sequence=0;baselineId=$BaselineId;baselineRoot='.';mapDataRoot='KuroMap';bundled=$true;packages=@($packages.ToArray())}) (Join-Path $assets 'Updates/bundled-snapshot.json')
 $keyFile = Join-Path $SourceRoot 'Assets/Updates/trusted-keys.json'

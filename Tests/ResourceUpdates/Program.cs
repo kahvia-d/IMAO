@@ -468,6 +468,22 @@ await Test("unchanged bundled package is verified and reused without download or
     Equal(2, f.Network.Requests.Count); False(f.Network.Requests.Contains(data.Url)); False(Directory.Exists(Path.Combine(f.Root, "packages/map-data")));
     var next = f.NewSnapshots(); await next.InitializeAsync(); Equal(bundleDirectory, next.Current.MapDataRoot); await next.ReportHealthyAsync("snapshot-2");
 });
+await Test("a release that ships with the program is not offered as a resource update", async () =>
+{
+    using var f = New();
+    f.Bundled = f.Bundled with { Packages = [new SnapshotPackage { Id = "map-data", Version = "2026.9.9.2", Kind = "map-data", Directory = f.Bundled.MapDataRoot }] };
+    await f.Initialize(); f.Publish(f.Catalog(2));
+    var result = await f.Updates.CheckAsync();
+    True(result.Resource is null); False(result.RequiresAppUpgrade); True(result.Message.Contains("已是最新版本"));
+});
+await Test("a release with a package the program does not ship is still offered", async () =>
+{
+    using var f = New();
+    f.Bundled = f.Bundled with { Packages = [new SnapshotPackage { Id = "map-data", Version = "2026.9.9.1", Kind = "map-data", Directory = f.Bundled.MapDataRoot }] };
+    await f.Initialize(); f.Publish(f.Catalog(3));
+    var result = await f.Updates.CheckAsync();
+    True(result.Resource is not null); Equal("snapshot-3", result.Resource!.SnapshotId); True(result.Message.Contains("发现可安装"));
+});
 await Test("same-baseline moved app rebinds proven bundled payload and native snapshot paths", async () =>
 {
     using var f = New(); var data = f.MakePackage("map-data", "map-data", "2026.9.9.1", "bundled-data");

@@ -77,5 +77,51 @@ $forgedDestination = Join-Path $OutputRoot 'forged-source-commit'
 $forgedOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPath -SourceRoot $source -Destination $forgedDestination -SourceCommit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 2>&1
 if ($LASTEXITCODE -eq 0 -or ($forgedOutput -join "`n") -notlike '*Selected SourceCommit differs*' -or (Test-Path -LiteralPath $forgedDestination)) { throw 'Forged source SHA was not rejected before resource writes.' }
 $passed.Add('PS5 forged source SHA rejected before writing output')
+# A published package keeps its version while its content is unchanged. The bundled descriptor must
+# name that same version, otherwise clients treat bytes shipped inside the program as missing.
+function Get-StagedInventory([string]$Root) {
+    $prefix = [IO.Path]::GetFullPath($Root).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
+    $files = [Collections.Generic.List[object]]::new()
+    foreach ($file in ([IO.Directory]::EnumerateFiles($Root,'*',[IO.SearchOption]::AllDirectories) | Sort-Object)) {
+        $files.Add([ordered]@{path=$file.Substring($prefix.Length).Replace('\','/');size=[long]([IO.FileInfo]::new($file).Length);sha256=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()})
+    }
+    return ,$files
+}
+function Write-FixtureCatalog([string]$Path,[string]$MapDataVersion,[string]$TileVersion,[switch]$BreakMapData) {
+    $mapFiles=Get-StagedInventory (Join-Path $OutputRoot 'clean/Assets/KuroMap')
+    if($BreakMapData){$mapFiles[0].sha256='f'*64}
+    $tileFiles=Get-StagedInventory (Join-Path $OutputRoot 'clean/Assets/FeaturesDatas/KuroTilePacks/Fixture')
+    $payload=[ordered]@{schemaVersion=1;sequence=9;app=[ordered]@{version='2026.9.9.1';url='https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/fixture'};resources=@([ordered]@{snapshotId='resources-fixture';sequence=9;baselineId='staging-fixture';minAppVersion='2026.9.9.1';packages=@(
+        [ordered]@{id='map-data';version=$MapDataVersion;kind='map-data';files=$mapFiles},
+        [ordered]@{id='fixture';version=$TileVersion;kind='tile';files=$tileFiles})})}
+    $envelope=[ordered]@{keyId='fixture';payload=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($payload | ConvertTo-Json -Depth 10 -Compress)));signature='fixture'}
+    [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($Path)) | Out-Null
+    [IO.File]::WriteAllText($Path,($envelope | ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
+}
+function Commit-Fixture([string]$Message) {
+    & git -C $source add -- updates
+    if ($LASTEXITCODE -ne 0) { throw 'Fixture catalog staging failed.' }
+    & git -C $source -c user.name=ReleaseFixture -c user.email=fixture@example.invalid -c commit.gpgsign=false commit --quiet -m $Message
+    if ($LASTEXITCODE -ne 0) { throw 'Fixture catalog commit failed.' }
+    return [string](& git -C $source rev-parse HEAD)
+}
+function Invoke-StageAt([string]$Name,[string]$Commit) {
+    $destination=Join-Path $OutputRoot $Name
+    $output=& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPath -SourceRoot $source -Destination $destination -SourceCommit $Commit 2>&1
+    [IO.File]::WriteAllText((Join-Path $OutputRoot "$Name-last-run.log"),($output -join "`n"))
+    if($LASTEXITCODE -ne 0) { throw "Staging fixture failed: $($output -join ' ')" }
+    return (Get-Content -LiteralPath (Join-Path $destination 'Assets/Updates/bundled-snapshot.json') -Raw | ConvertFrom-Json)
+}
+$catalogPath=Join-Path $source 'updates/stable.json'
+Write-FixtureCatalog $catalogPath '2020.1.1.1' '2020.2.2.2'
+$aligned=Invoke-StageAt 'aligned' (Commit-Fixture 'Published fixture catalog')
+if($aligned.snapshotId -ne 'bundled-2026.9.9.1' -or $aligned.sequence -ne 0){throw 'Bundled snapshot identity changed.'}
+if(($aligned.packages | Where-Object id -EQ 'map-data').version -ne '2020.1.1.1' -or ($aligned.packages | Where-Object id -EQ 'fixture').version -ne '2020.2.2.2'){throw 'Bundled descriptor did not reuse published package versions for identical content.'}
+$passed.Add('PS5 bundled descriptor reuses published package versions for unchanged content')
+Write-FixtureCatalog $catalogPath '2020.1.1.1' '2020.2.2.2' -BreakMapData
+$changed=Invoke-StageAt 'changed-content' (Commit-Fixture 'Changed fixture map data')
+if(($changed.packages | Where-Object id -EQ 'map-data').version -ne '2026.9.9.1'){throw 'Changed map-data must fall back to the program version.'}
+if(($changed.packages | Where-Object id -EQ 'fixture').version -ne '2020.2.2.2'){throw 'Unchanged pack must keep its published version.'}
+$passed.Add('PS5 bundled descriptor falls back to the program version when package content differs')
 [IO.File]::WriteAllText((Join-Path $OutputRoot 'test-report.json'),(@{passed=$passed.Count;tests=@($passed.ToArray())}|ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
 Write-Host "PASS $($passed.Count) PS5 staging regressions."

@@ -12,6 +12,7 @@
 - `build-info.json` 在构建输出生成，记录实际 Git 提交、程序版本、基础资源 ID、`sourceDirty` 及 `sourceTreeSha256`（提交 SHA 加本地变化文件的内容摘要）。正式发布必须从已提交的明确源码构建；尚未提交的工作区构建可制作正式密钥签名的本地验收包，但远端发布脚本会拒绝，不把它误报为该提交的正式发行。
 - 基础资源继续随程序提供。一个 `map-data` 包完整包含八个现有场景的点位、分类、图标、校准、场景准入和本地攻略数据；`tile` 和 `candidate` 分别按地区打包。五份原先嵌入 DLL 的点位在构建时复制到输出的 `Assets/KuroMap/runtime`，只统一既有两个分类 ID 别名，不改变点位 ID、坐标或状态 ID。
 - 构建生成 `Assets/Updates/bundled-snapshot.json`，明确启用 `map-data`、Dreamzhou、DreamzhouWest 和已注册的 DreamzhouCandidate。BlackShores 未通过验证，新场景尚未开放，均不得因为目录存在而启用。打包还需通过 CoreHost 资源预检。
+- 内置包的版本必须与线上清单使用同一内容身份：某包内容与上一份 `updates/stable.json` 中同 ID 的包逐文件一致时沿用清单里的版本，内容有变化时才使用本程序版本（暂存入口默认读取仓库的 `updates/stable.json`，可用 `-PreviousCatalog` 覆盖）。版本一致时客户端会把随程序内置的资源识别为已安装，不重复下载；不一致会让客户端认为这些包缺失并重新下载整套资源。客户端同时要求发布内容全部内置时才不提示资源更新。
 - 客户端固定读取 `https://raw.githubusercontent.com/kahvia-d/WWMAP-TOOLS/main/updates/stable.json`。程序版本、清单序号、资源快照版本和各包版本分别处理。单独发布资源时保留上一清单的程序信息。
 - 客户端按发布密钥分别记录该渠道已验证过的最高清单序号与内容哈希，本地测试密钥或预览渠道不会污染正式渠道。只有清单所属程序版本早于当前运行版本时（即回放旧清单的场景）序号下降才会被拒绝；同一程序线内的序号下降或同序号不同内容会在记录中重新同步，并在界面与更新日志里说明。旧版客户端写入的单一全局序号由下一次检查时首个验证通过的渠道继承，不会被丢弃。确实需要重建记录时，可在设置中使用“修复更新状态”，该操作仍会用内置公钥验证当前线上清单。
 - 私钥保存在仓库外，以 Windows 当前用户 DPAPI 加密；客户端只携带 `Assets/Updates/trusted-keys.json`。清单使用 P-256/SHA-256、P1363 签名，封装字段为 `keyId`、Base64 `payload`、Base64 `signature`。私钥换机须先规划密钥迁移与客户端公钥升级；不要删除旧密钥后重新初始化同名密钥。
