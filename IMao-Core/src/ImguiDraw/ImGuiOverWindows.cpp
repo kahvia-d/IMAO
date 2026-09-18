@@ -817,12 +817,25 @@ int ImGuiOverWindows::start()
 // Helper functions
 
 namespace {
+/// Reports which composition step failed with its HRESULT. Without this a fallback says only that
+/// something did not work, which is not actionable: the first attempt reported hr=0, the value of the
+/// swap chain creation that had actually succeeded, and hid the real failure.
+bool ReportCompositionStep(const char* step, HRESULT result)
+{
+    if (SUCCEEDED(result)) return true;
+    Diagnostics::Record("overlay-presentation",
+        std::string("mode=layered-colorkey reason=composition-step-failed step=") + step +
+        " hr=" + std::to_string(static_cast<long>(result)));
+    return false;
+}
+
 /// Binds whatever the composition path needs after the swap chain exists: one render target view per
 /// buffer, a composition device, and a visual for it.
 bool CreateCompositionPresentation(HWND hWnd)
 {
     IDXGIDevice* dxgiDevice = nullptr;
-    if (FAILED(g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&dxgiDevice)))) return false;
+    if (!ReportCompositionStep("query-dxgi-device",
+        g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&dxgiDevice))) || dxgiDevice == nullptr) return false;
     // A composition surface has to be produced promptly; the default frame latency lets the visual lag
     // the frame the overlay just drew. SetMaximumFrameLatency lives on IDXGIDevice1.
     IDXGIDevice1* frameLatencyDevice = nullptr;
@@ -832,18 +845,20 @@ bool CreateCompositionPresentation(HWND hWnd)
     }
     const HRESULT deviceResult = ::DCompositionCreateDevice(dxgiDevice, IID_PPV_ARGS(&g_compositionDevice));
     dxgiDevice->Release();
-    if (FAILED(deviceResult) || g_compositionDevice == nullptr) {
+    if (!ReportCompositionStep("create-composition-device", deviceResult) || g_compositionDevice == nullptr) {
         g_compositionDevice = nullptr;
         return false;
     }
     if (!CreateCompositionRenderTargets()) return false;
-    if (FAILED(g_compositionDevice->CreateTargetForHwnd(hWnd, TRUE, &g_compositionTarget)) ||
-        FAILED(g_compositionDevice->CreateVisual(&g_compositionVisual)) ||
-        FAILED(g_compositionVisual->SetContent(g_pSwapChain)) ||
-        FAILED(g_compositionTarget->SetRoot(g_compositionVisual)) ||
-        FAILED(g_compositionDevice->Commit())) {
-        return false;
-    }
+    if (!ReportCompositionStep("create-target-for-hwnd",
+        g_compositionDevice->CreateTargetForHwnd(hWnd, TRUE, &g_compositionTarget))) return false;
+    if (!ReportCompositionStep("create-visual",
+        g_compositionDevice->CreateVisual(&g_compositionVisual))) return false;
+    if (!ReportCompositionStep("set-content",
+        g_compositionVisual->SetContent(g_pSwapChain))) return false;
+    if (!ReportCompositionStep("set-root",
+        g_compositionTarget->SetRoot(g_compositionVisual))) return false;
+    if (!ReportCompositionStep("commit", g_compositionDevice->Commit())) return false;
     return true;
 }
 }
@@ -978,7 +993,10 @@ bool CreateRenderTarget()
 bool CreateCompositionRenderTargets()
 {
     CleanupRenderTarget();
-    if (g_pSwapChain == nullptr || g_pd3dDevice == nullptr) return false;
+    if (g_pSwapChain == nullptr || g_pd3dDevice == nullptr) {
+        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=no-swap-chain-for-views");
+        return false;
+    }
 
     DXGI_SWAP_CHAIN_DESC1 description{};
     IDXGISwapChain1* modern = nullptr;
@@ -991,11 +1009,18 @@ bool CreateCompositionRenderTargets()
         DXGI_SWAP_CHAIN_DESC legacy{};
         if (SUCCEEDED(g_pSwapChain->GetDesc(&legacy))) count = legacy.BufferCount;
     }
-    if (count == 0 || count > kMaxSwapChainBuffers) return false;
+    if (count == 0 || count > kMaxSwapChainBuffers) {
+        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=buffer-count-unusable count=" +
+            std::to_string(count) + " limit=" + std::to_string(kMaxSwapChainBuffers));
+        return false;
+    }
 
     for (UINT index = 0; index < count; ++index) {
         ID3D11Texture2D* buffer = nullptr;
-        if (FAILED(g_pSwapChain->GetBuffer(index, IID_PPV_ARGS(&buffer))) || buffer == nullptr) {
+        const HRESULT bufferResult = g_pSwapChain->GetBuffer(index, IID_PPV_ARGS(&buffer));
+        if (FAILED(bufferResult) || buffer == nullptr) {
+            Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=get-buffer-failed index=" +
+                std::to_string(index) + " hr=" + std::to_string(static_cast<long>(bufferResult)));
             CleanupRenderTarget();
             return false;
         }
@@ -1003,6 +1028,8 @@ bool CreateCompositionRenderTargets()
             &g_compositionRenderTargets[index]);
         buffer->Release();
         if (FAILED(viewResult) || g_compositionRenderTargets[index] == nullptr) {
+            Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=create-view-failed index=" +
+                std::to_string(index) + " hr=" + std::to_string(static_cast<long>(viewResult)));
             CleanupRenderTarget();
             return false;
         }

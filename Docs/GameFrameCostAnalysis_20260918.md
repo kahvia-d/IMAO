@@ -631,3 +631,45 @@ DComp）只要 1.8 fps，而真实覆盖层要 13-16 fps。
    这是由证据指向的、改动最小的假设：探针与真实覆盖层最本质的差别就在这里。
 2. 若 flip 模型无效，再测**降低覆盖层绘制频率**（30 Hz → 20 Hz）：若代价与绘制次数成比例
    就线性回收，若是 DWM 合成固定成本则无效——这正是第 12 节组 4 已经问过一半的问题。
+
+## 17. DirectComposition 第一次实测：**数据无效，回退发生了**
+
+玩家只跑了前两段（`baseline-colorkey` 14:28:13-14:28:58，`composition` 14:29:30-14:30:16）：
+
+| 段 | 帧数 | fps | p50 | p95 | **>20 ms** | PresentMode |
+| --- | --- | --- | --- | --- | --- | --- |
+| `baseline-colorkey` | 4550 | 101.1 | 9.57 | 22.66 | 18.37% | Independent Flip 100% |
+| `composition` | 5250 | **114.2** | 7.68 | 19.32 | **2.34%** | Independent Flip 100% |
+
+表面上这像是 **+13.1 fps、长尾从 18.37% 掉到 2.34%**，也就是假设被完美证实。
+**但这个结论是错的**，日志显示：
+
+```text
+14:29:18  overlay-presentation  mode=layered-colorkey reason=composition-unavailable hr=0
+14:29:18  overlay-presentation  mode=layered-colorkey swapEffect=discard
+```
+
+**composition 段实际上跑的是 colorkey 路径**——`CreateSwapChainForComposition` 成功了（`hr=0`
+是它的返回值，成功），失败发生在它之后的某一步。所以那两段测的是**同一种呈现方式**，
+13 fps 的差是**场景漂移**，不是换贴法的收益。
+
+**教训（写下来避免重犯）**：日志里"回退发生了"这一行必须和数字一起看。
+而且原来的失败原因写成 `hr=0`（那个**成功**的调用的返回值），把真正的失败点藏起来了——
+这正是错误信息不能只报告"失败了"、必须报告**哪一步、什么 HRESULT** 的原因。
+
+### 17.1 已加的诊断
+
+`CreateCompositionPresentation` 现在逐步上报 HRESULT，任何一步失败都会记录
+`reason=composition-step-failed step=<哪一步> hr=<HRESULT>`；
+`CreateCompositionRenderTargets` 也分别上报 no-swap-chain / buffer-count-unusable /
+get-buffer-failed / create-view-failed。下一次运行会直接指出断点。
+
+### 17.2 顺带发现的真实信号
+
+虽然换贴法没被测到，但这次数据里有一个**独立于换贴法**的现象值得记下：
+**同一个 colorkey 配置，两次运行差了 13 fps**（本轮 101.1，而 13:37 那轮是 105-118）。
+这说明这台机器上**场景/机器状态带来的漂移可达 13 fps**，
+比大多数待测效应还大。所以：
+
+- 归因必须**同一次运行内**对比（这正是脚本测量两次基准的原因）；
+- 跨运行比较绝对 fps **没有意义**，只能比 `>20 ms` 这类比例指标。
