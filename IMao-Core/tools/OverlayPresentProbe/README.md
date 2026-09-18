@@ -75,6 +75,19 @@ geometry: windowRect=0,0 2560x1440 client=2560x1440 block=999,22 562x87
 | 窗口样式 | `WS_EX_LAYERED` + `SetLayeredWindowAttributes(LWA_COLORKEY)` | `WS_EX_NOREDIRECTIONBITMAP` |
 | 表面 | 交换链 → 重定向位图 | 交换链 → DirectComposition visual |
 
+> **注意（2026-09-18 晚补记）：探针的 `dcomp` 模式不是程序发布出去的那个窗口。**
+> 探针用 `WS_EX_NOREDIRECTIONBITMAP`、**不带** `WS_EX_LAYERED`；而程序里 composition 路径
+> **两者都有**——`WS_EX_LAYERED` 是"点击不被吞掉"所必需的（见
+> `Docs/GameFrameCostAnalysis_20260918.md` 第 21、22 节）。`WS_EX_LAYERED` 正是最可能影响
+> DWM 合成路径的那个标志，所以**探针测的不是线上组合**，`dcomp` 与 `layered` 的差不能直接
+> 当成"改写呈现路径的收益"。
+>
+> 要测线上组合，需要再加一个 `NOREDIRECTIONBITMAP | LAYERED` 的模式（并且与实机一样**不调用**
+> `SetLayeredWindowAttributes`）。另外，`none → dcomp → layered` 是**固定顺序、只跑一遍**，
+> 无法把"贴法差异"和"这台机器随时间的漂移"分开（同一次运行内两个相同基准就能差 5 fps，
+> 跨运行差到 13 fps）。**结论要可信，必须交替跑**（例如 `dcomp → dcomp+LAYERED → layered →`
+> 回环，比较每段差值与回环一致性）。
+
 ## 怎么跑
 
 **需要管理员权限**（PresentMon 要建 ETW 会话）。跑之前先把游戏开起来并保持在前台。
