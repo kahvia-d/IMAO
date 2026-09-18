@@ -152,7 +152,7 @@ GPU 同步仍然发生。这条链路是持续的 PCIe / 内存带宽负载，�
 历史文档里那句「剩下的不是我们的阻塞调用」只对**阻塞**成立；这两条是**带宽与呈现路径**
 成本，不体现为某个 `xxxMs` 尖峰，所以上次没被认领，但它恰恰是每帧都付的钱。
 
-## 6. 后续方向（按性价比，尚未实施）
+## 6. 后续方向（按性价比）
 
 1. **给 WGC 加 `MinUpdateInterval`**（只在我们需要的频率上要帧）。改动小、风险低、
    直接在源头砍掉第 4 节 C / D 的大部分流量。需要 `ApiInformation` 运行时探测，
@@ -174,3 +174,36 @@ GPU 同步仍然发生。这条链路是持续的 PCIe / 内存带宽负载，�
 并同时记录工具侧 `capture-wgc-frames` 的 `readbackAvgMs` / `arrived` 与
 `overlay-motion` 的 `renderFps` / `presentSkipped` / `windowHidden`，
 这样每一条改动的效果都能单独归因，而不是只看游戏自报的 fps 数字。
+
+### 7.1 用于归因的具体读数
+
+| 改动 | 该看哪个读数 | 预期方向 |
+| --- | --- | --- |
+| 1 · 采集限流 | `capture-wgc-frames` 的 `arrived`、`readbackAvgMs` | 两者都下降；`applied=1 intervalMs=33.333` 出现在 `capture-wgc-rate-limit` |
+| 3 · 状态条 | `overlay-motion` 的 `presentSkipped` | 在工具正常工作时明显上升（10:34 那次只有 41/2 秒） |
+| 4 · 拷贝链 | `capture-cadence` 的 `captureAvgMs` 与整体 CPU 占用 | 小幅下降，且帧时间分布更紧 |
+
+## 8. 实施状态（2026-09-18）
+
+已在分支 `fix/overlay-game-frame-impact` 落地前三条里改动最小、风险最低的三项，
+第 4 节 A / B（整屏置顶分层窗口与 30 Hz 整屏呈现）**尚未改动**：
+
+- `7e965ac` 采集限流：`SimpleCapture` 在建立会话后设置
+  `GraphicsCaptureSession.MinUpdateInterval = OverlayPacing::kCaptureMinUpdateInterval`（33.33 ms）。
+  该属性是可选的（Windows 11 22H2+），运行时用 `ApiInformation::IsPropertyPresent` 探测，
+  没有它就保持原来的不节流行为并记录 `applied=0`；有它则记录
+  `capture-wgc-rate-limit applied=1 intervalMs=33.333`。新增两条策略断言保证这个间隔
+  不会饿死已附着覆盖层的节奏，也不会是 0。
+- `c4f7d9c` 状态条稳定：`App::Start` 改为按窗口累计帧时间、每秒最多发布一次均值，
+  于是状态条文本在窗口之间保持稳定，`OverlayPacing::ShouldPresentFrame` 得以真正命中。
+  发布的量仍是「每轮定位循环耗时」，语义与窗口大小不变。
+- `119443f` 拷贝链：读回直接拷进保留下来的帧缓冲（尺寸不变时整个会话只分配一次），
+  消费侧同样复用目标 Mat；因为缓冲是「覆盖」而不是「替换」，等待新帧改为按调用方
+  已消费的序号判断，`App::Init` 读掉的启动帧由 `CaptureSequenceFilter` 精确跳过。
+- `2dae30d` 把上面那条序号规则从 `App::Thread_Capture` 里提出来变成
+  `OverlayPacing::CaptureSequenceFilter`，并补上基线、跳过与重复发布的用例。
+
+以上四项都只经过构建与 `IMaoOptimizationTests`（全绿）验证，**没有做过实机帧率验证**。
+按第 7 节的读数验收时，重点看 `readbackAvgMs` / `arrived` 是否随改动 1 下降、
+`presentSkipped` 是否随改动 3 上升；如果改动 1 与 3 拿回的比例有限，就说明剩下的主要是
+第 4 节 A（呈现路径）而不是带宽，需要进入方向 2 或方向 5。
