@@ -73,6 +73,34 @@ struct CaptureSequenceFilter {
     }
 };
 
+// The capture loop publishes a frame id that every consumer uses as "have I seen this frame". Two kinds
+// of backend have to end up in that one id space:
+//
+//  - A backend that numbers its frames (Windows Graphics Capture) hands the loop the same number
+//    App::Init already consumed, so the filter skips exactly that one.
+//  - A backend that numbers nothing (PrintWindow, this path's BitBlt fallback) reports no sequence at
+//    all, and every successful call is a frame the loop has never published. The loop numbers those
+//    itself, and it must hand out a *new* id each time, because a consumer that sees an unchanged id
+//    concludes there is no new frame and never looks at the pixels.
+//
+// Those two cases cannot share the filter: the loop's synthetic number is derived from the last id it
+// published, so when the filter swallows the first frame that number never advances - the same id is
+// offered again forever and the tool publishes nothing for the whole session. Keep the decision here so
+// the test can cover the numbering itself instead of only the filter in isolation.
+struct CaptureFrameSource {
+    CaptureSequenceFilter filter;
+    std::uint64_t lastPublished = 0;
+
+    // sourceSequence is the backend's frame number, or 0 when the backend reports none. Returns the
+    // frame id to publish, or 0 when this frame must not be published.
+    std::uint64_t Publish(std::uint64_t sourceSequence) {
+        if (sourceSequence == 0) return ++lastPublished;
+        if (!filter.Accept(sourceSequence)) return 0;
+        lastPublished = sourceSequence;
+        return sourceSequence;
+    }
+};
+
 // The overlay window covers the whole game screen, so every present makes the desktop compositor
 // blend that whole screen again - including the game's own frames, which a visible topmost layered
 // window keeps out of its direct flip path. A frame whose content did not change therefore costs the
