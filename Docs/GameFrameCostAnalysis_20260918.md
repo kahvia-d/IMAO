@@ -324,3 +324,43 @@ captureAgeMs=69 ~ 181 ms
 
 读数：`overlay-motion` 新增 `presentHeld=` 与 `holdDiagnostic=1`，
 `overlay-window-visibility` 不再出现 `reason=idle`（暂停期间窗口始终保持显示）。
+
+## 12. 归因实验结论（2026-09-18 12:07-12:08）
+
+第四组实测**约 100 fps**，与组 3 相同。日志确认开关生效且测量条件成立：
+
+```text
+12:07:21  overlay-present-diagnostic  holdPresent=1
+12:07:27  overlay-motion  holdDiagnostic=1 presentHeld=54  windowHidden=0 hiddenByDiagnostic=0
+12:08:25  overlay-motion  holdDiagnostic=1 presentHeld=0   windowHidden=0 hiddenByDiagnostic=0
+```
+
+`presentHeld` 每三秒积累约 60 帧，也就是 `Present` 从约 12-15 次/秒降到约 0.3 次/秒，
+而**窗口全程 `windowHidden=0`**。帧率没有任何回升。
+
+### 12.1 最终归因
+
+| 组 | 窗口 | 呈现 | 采集+定位 | 帧率 |
+| --- | --- | --- | --- | --- |
+| 1 | 无 | — | 无 | ~120 |
+| 2 | 隐藏 | — | 开 | ~110 |
+| 3 | 显示 | 12-15 次/秒 | 开 | ~100 |
+| 4 | 显示 | **约 0.3 次/秒** | 开 | **~100** |
+
+**结论：这 10 fps 与刷新次数无关，完全来自「一个可见的置顶分层窗口在场」。**
+只要它显示着（哪怕几乎不刷新），DWM 就必须把游戏留在合成路径上。
+
+这也**同时否掉了方向 2**：缩小窗口减少的是合成面积，但「必须合成」这件事不变，
+按组 4 的结果，面积不是这里的成本项。
+
+### 12.2 因此只剩两条路
+
+1. **让窗口在不需要时真正消失**。现有代码已经有这个机制（`OverlayPacing::ShouldHideIdleOverlay`
+   会在无内容 1 秒后 `SW_HIDE`），但状态条让它永远有内容，永远不触发。
+   本文档第 4 节 B 记录的现象就是这个。所以这条路的实质是**取舍**：
+   不显示状态条 → 窗口能真正隐藏 → 拿回约 10 fps。
+   组 2 已经证明「窗口隐藏时」帧率确实是 110。
+2. **换掉贴法**（DirectComposition 取代 `WS_EX_LAYERED` + `LWA_COLORKEY`，方向 5）。
+   这是唯一有机会**既保留常显 UI 又恢复 Independent Flip** 的路子，工作量与风险最大。
+
+采集侧的另外 10 fps（组 1 → 2）仍然独立存在，无论选哪条路都还要另外处理。
