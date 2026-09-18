@@ -449,6 +449,7 @@ bool ApplyConfigure(const json& command) {
         return command.contains(key) ? std::optional<bool>(command.at(key).get<bool>()) : std::nullopt;
     };
     const auto capture = integer("captureWay", 0, 1);
+    const auto present = integer("overlayPresentMode", 0, 1);
     const auto mapCycle = integer("mapUpdateCycle", 16, 1000);
     const auto miniCycle = integer("minMapUpdateCycle", 16, 1000);
     const auto map = boolean("mapEnabled");
@@ -458,6 +459,7 @@ bool ApplyConfigure(const json& command) {
     const auto autoReplan = boolean("autoReplanEnabled");
     const auto hotkeys = RuntimeHotkeys::ValidateConfiguration(command);
     if (capture) SetCaptureWay(*capture);
+    if (present) SetOverlayPresentMode(*present);
     if (mapCycle) SetMapDataUpdateCycle(*mapCycle);
     if (miniCycle) SetMinMapDataUpdateCycle(*miniCycle);
     if (map) EnabledMapShowItem(*map);

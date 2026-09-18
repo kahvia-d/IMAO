@@ -417,6 +417,13 @@ void SetIsolationSwitches(int setValue) {
         "mask=" + std::to_string(applied) + " mode=" + Isolation::DescribeAscii(applied));
 }
 
+void SetOverlayPresentMode(int setValue) {
+    ImGuiOverWindows::SetPresentMode(setValue);
+    StructuredLogger::Record("info", "core", "overlay-present-mode",
+        std::string("requested=") + std::to_string(setValue) + " applied=" +
+        std::to_string(ImGuiOverWindows::PresentMode()));
+}
+
 void SetSavedJsonRouteName(const char* itemId) {
     LoadEditRouteData::SetRouteJsonName(itemId);
 }

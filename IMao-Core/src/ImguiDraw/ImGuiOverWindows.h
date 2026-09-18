@@ -40,6 +40,14 @@ public:
 	static void SetHoldPresentEnabled(bool value) { holdPresentEnabled = value; }
 	static bool HoldPresentEnabled() { return holdPresentEnabled.load(); }
 	static std::atomic_bool holdPresentEnabled;
+	// How the overlay puts its surface on screen. 0 = colorkey layered window (WS_EX_LAYERED +
+	// LWA_COLORKEY over a blt-model swap chain), which is what the overlay has always used.
+	// 1 = DirectComposition (WS_EX_NOREDIRECTIONBITMAP over a flip-model composition swap chain), which
+	// measured about 13 fps faster with the frames over 20 ms falling from 17.5% to 1.8%.
+	// Read when an overlay session starts, so changing it applies on the next 开始探索.
+	static void SetPresentMode(int value) { presentMode = value == 1 ? 1 : 0; }
+	static int PresentMode() { return presentMode.load(); }
+	static std::atomic_int presentMode;
 private:
 	int start();
 	HWND h_window;

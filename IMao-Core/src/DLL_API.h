@@ -30,6 +30,10 @@ extern "C" _declspec(dllexport) void SetHoldOverlayPresent(bool setValue);
 // can be measured on its own instead of inferred from an aggregate. Bit values live in
 // Runtime/IsolationSwitches.h; zero means everything runs normally.
 extern "C" _declspec(dllexport) void SetIsolationSwitches(int setValue);
+
+// How the overlay puts its surface on screen: 0 = colorkey layered window (default),
+// 1 = DirectComposition. Read when an overlay session starts.
+extern "C" _declspec(dllexport) void SetOverlayPresentMode(int setValue);
 extern "C" _declspec(dllexport) void SetSavedJsonRouteName(const char* itemId);
 extern "C" _declspec(dllexport) void LoadJsonRoute();
 extern "C" _declspec(dllexport) void LoadOneJsonRoute(const char* routeName);

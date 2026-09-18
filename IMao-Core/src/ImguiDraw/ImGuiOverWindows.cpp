@@ -34,6 +34,15 @@
 std::atomic<HWND> ImGuiOverWindows::overWindowsHwnd{nullptr};
 std::atomic_bool ImGuiOverWindows::keepWindowHidden{false};
 std::atomic_bool ImGuiOverWindows::holdPresentEnabled{false};
+std::atomic_int ImGuiOverWindows::presentMode{0};
+
+namespace {
+/// True when the overlay should use DirectComposition for this session: either the player chose it in
+/// settings, or the diagnostic isolation switch forces it.
+bool WantCompositionPresentation() {
+    return ImGuiOverWindows::PresentMode() == 1 || Isolation::UseOverlayComposition();
+}
+}
 
 ImGuiOverWindows::ImGuiOverWindows(HWND window, App& app) : h_window(window), app(app) {
     imguiThread = std::thread([this] {
@@ -321,7 +330,7 @@ int ImGuiOverWindows::start()
     // A composition visual needs no redirection bitmap, and asking for one is what makes DWM take the
     // slower path for the surface. The window style therefore depends on which presentation the
     // session will use, which is decided before the window exists.
-    const bool useComposition = Isolation::UseOverlayComposition();
+    const bool useComposition = WantCompositionPresentation();
     DWORD overlayStyles = WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
     if (useComposition) overlayStyles |= WS_EX_NOREDIRECTIONBITMAP;
     else overlayStyles |= WS_EX_LAYERED;
@@ -927,7 +936,7 @@ bool CreateDeviceD3D(HWND hWnd)
         return false;
     }
 
-    if (Isolation::UseOverlayComposition()) {
+    if (WantCompositionPresentation()) {
         // Premultiplied alpha is what lets the game show through the parts the overlay does not draw,
         // which is what the colorkey did in the other path.
         DXGI_SWAP_CHAIN_DESC1 description{};

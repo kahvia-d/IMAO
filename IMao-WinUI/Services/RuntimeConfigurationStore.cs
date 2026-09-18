@@ -70,6 +70,11 @@ internal sealed class RuntimeConfigurationStore
     // Capture leaves the game's own presentation path alone, and a machine where it cannot start falls
     // back to BitBlt by itself. The setting still offers both methods, and a player who picks BitBlt in
     // it is recorded with the current schema version and never migrated again.
+    //
+    // OverlayPresentMode deliberately needs no migration and no schema bump: its default is the
+    // colorkey window every existing install already uses, so a file that lacks the field keeps
+    // exactly the behaviour it had. Only a version whose default changed meaning needs a bump, which
+    // is what the capture method above is.
     private static RuntimeConfiguration Migrate(RuntimeConfiguration value, bool writtenWithSchemaVersion) =>
         writtenWithSchemaVersion ? value : value with { CaptureWay = 1 };
 
