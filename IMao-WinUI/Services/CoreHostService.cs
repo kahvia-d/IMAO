@@ -298,6 +298,11 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public Task SetDiagnosticsCaptureAsync(bool enabled, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setDiagnosticsCapture", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
 
+    /// Diagnostic only. Keeps capture, tracking and drawing running while the overlay window itself
+    /// stays hidden, so a frame-rate comparison can show what the visible window costs the game.
+    public Task SetOverlayHiddenAsync(bool enabled, CancellationToken cancellationToken = default) =>
+        SendCommandAsync("setOverlayHidden", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
+
     public Task SetRouteNameAsync(string routeName, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setRouteName", new Dictionary<string, object?> { ["routeName"] = routeName }, cancellationToken);
 

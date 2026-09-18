@@ -28,6 +28,7 @@
 #include <sstream>
 
 std::atomic<HWND> ImGuiOverWindows::overWindowsHwnd{nullptr};
+std::atomic_bool ImGuiOverWindows::keepWindowHidden{false};
 
 ImGuiOverWindows::ImGuiOverWindows(HWND window, App& app) : h_window(window), app(app) {
     imguiThread = std::thread([this] {
@@ -544,6 +545,7 @@ int ImGuiOverWindows::start()
                     " waitMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxWait).count()) +
                     " presentSkipped=" + std::to_string(skippedPresents) +
                     " windowHidden=" + std::to_string(overlayWindowHidden ? 1 : 0) +
+                    " hiddenByDiagnostic=" + std::to_string(ImGuiOverWindows::KeepWindowHidden() ? 1 : 0) +
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
                 attachedFrames = trackingMisses = 0; skippedPresents = 0;
@@ -612,7 +614,19 @@ int ImGuiOverWindows::start()
         const std::uint64_t contentHash = HashOverlayDrawData(drawData);
         consecutiveEmptyFrames = hasContent ? 0 : consecutiveEmptyFrames + 1;
 
-        if (hasContent && overlayWindowHidden) {
+        // The diagnostic switch drives the window itself, never the work behind it. Forcing the window
+        // hidden leaves capture, tracking, the draw-list build and the present exactly as they are, so
+        // a frame-rate comparison against a normal session isolates what the visible window costs.
+        if (ImGuiOverWindows::KeepWindowHidden()) {
+            const bool wasVisible = !overlayWindowHidden;
+            if (wasVisible) {
+                ::ShowWindow(overWindowsHwnd, SW_HIDE);
+                overlayWindowHidden = true;
+                hasPresented = false;
+                Diagnostics::Record("overlay-window-visibility", "visible=0 reason=diagnostic-hidden");
+            }
+        }
+        else if (hasContent && overlayWindowHidden) {
             ::ShowWindow(overWindowsHwnd, SW_SHOWNOACTIVATE);
             overlayWindowHidden = false;
             hasPresented = false; // The surface has to be filled again.

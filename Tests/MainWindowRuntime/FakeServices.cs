@@ -87,6 +87,7 @@ namespace IMao_WinUI.Services
         public Task LoadRouteAsync(string name) => Task.CompletedTask;
         public Task SetItemsEnabledAsync(IEnumerable<string> ids,bool enabled) => Task.CompletedTask;
         public Task SetDiagnosticsCaptureAsync(bool enabled) => Task.CompletedTask;
+        public Task SetOverlayHiddenAsync(bool enabled) => Task.CompletedTask;
         public Task<RoutePlanningState> ExecuteRoutePlanningAsync(string action,object? arguments=null,CancellationToken cancellationToken=default)
         { RouteCommands.Add((action,arguments)); return Task.FromResult(RoutePlanning); }
         public Task<bool> ConfigureAsync(int? captureWay=null,int? mapUpdateCycle=null,int? minMapUpdateCycle=null,bool? mapEnabled=null,bool? minMapEnabled=null,bool? savedPointsEnabled=null,bool? statusBarEnabled=null,CancellationToken cancellationToken=default,int? nearestCompletionKey=null,int? manualRouteKey=null,int? currentTargetGuideKey=null,int? guidePreviousImageKey=null,int? guideNextImageKey=null,bool? gamepadEnabled=null,int? gamepadControllerIndex=null,GamepadButtons? gamepadEntryButton=null,bool? autoReplanEnabled=null)

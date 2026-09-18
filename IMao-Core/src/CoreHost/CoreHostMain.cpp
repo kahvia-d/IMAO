@@ -1,4 +1,4 @@
-﻿#include "../DLL_API.h"
+#include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/ResourceSnapshotContext.h"
@@ -674,6 +674,18 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
             const bool enabled = command.value("enabled", false);
             Diagnostics::SetCaptureEnabled(enabled);
             SendAck(events, command, true, enabled ? "诊断截图已开启" : "诊断截图已关闭");
+            return true;
+        }
+        if (type == "setOverlayHidden") {
+            // Diagnostic: hide the overlay window without stopping the capture, tracking or drawing
+            // behind it, so a frame-rate comparison can attribute the cost to the window itself.
+            const bool enabled = command.value("enabled", false);
+            SetKeepOverlayHidden(enabled);
+            StructuredLogger::Record("info", "core", "overlay-window-diagnostic",
+                std::string("keepHidden=") + (enabled ? "1" : "0"));
+            SendAck(events, command, true, enabled
+                ? "已隐藏叠加层窗口（采集与定位仍在运行）"
+                : "已恢复叠加层窗口");
             return true;
         }
         if (type == "setRouteName") {

@@ -26,6 +26,13 @@ public:
 	static void ReleaseTexture(ID3D11ShaderResourceView* texture);
 
 	static std::atomic<HWND> overWindowsHwnd;
+	// Diagnostic only. While this is set the overlay still captures, tracks and renders, but its
+	// window is never shown, so a frame-rate comparison can separate the cost of the window itself
+	// from the cost of everything running behind it. Not persisted: a session that never asked for it
+	// behaves exactly as before.
+	static void SetKeepWindowHidden(bool value) { keepWindowHidden = value; }
+	static bool KeepWindowHidden() { return keepWindowHidden.load(); }
+	static std::atomic_bool keepWindowHidden;
 private:
 	int start();
 	HWND h_window;

@@ -402,6 +402,10 @@ void SetVisibleSavedPoints(bool setValue) {
     DrawItemOnGameMap::SetVisibleSavedPoints(setValue);
 }
 
+void SetKeepOverlayHidden(bool setValue) {
+    ImGuiOverWindows::SetKeepWindowHidden(setValue);
+}
+
 void SetSavedJsonRouteName(const char* itemId) {
     LoadEditRouteData::SetRouteJsonName(itemId);
 }
