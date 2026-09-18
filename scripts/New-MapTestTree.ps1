@@ -101,20 +101,42 @@ foreach ($region in $packRegions) {
     Write-Host ("Installed {0} -> {1} (referenceVerification.passed={2})" -f $region, $target, $verified)
 }
 
-# 4. Registry listing only directories that exist: a registered pack with no directory
+# 4. The runtime does not read kuro-tile-packs.json when CoreHost is started with
+#    --resource-snapshot, which it always is: LoadRegistered walks the snapshot's own
+#    package list instead. A package whose directory is missing fails to load, and a
+#    failed package aborts the entire resource load, so the core never becomes ready.
+#    Every directory the snapshot names must therefore exist.
+$snapshotPath = Join-Path $runAssets 'Updates/bundled-snapshot.json'
+if (-not (Test-Path -LiteralPath $snapshotPath)) { throw "The run root has no bundled snapshot: $snapshotPath" }
+$snapshot = Get-Content -LiteralPath $snapshotPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$missing = [Collections.Generic.List[string]]::new()
+$snapshotPackDirs = [Collections.Generic.List[string]]::new()
+foreach ($package in @($snapshot.packages)) {
+    if ([string]::IsNullOrWhiteSpace([string]$package.directory)) { continue }
+    if ([string]$package.kind -eq 'tile') { $snapshotPackDirs.Add(($package.directory -split '/')[-1]) }
+    if (-not (Test-Path -LiteralPath (Join-Path $runAssets ([string]$package.directory)))) {
+        $missing.Add("$($package.id) -> $($package.directory)")
+    }
+}
+if ($missing.Count -gt 0) {
+    throw ("The bundled snapshot references directories that do not exist, which would abort the resource load and stop the core: " + ($missing -join '; ') + ". Removing a shipped pack directory also requires removing its snapshot entry.")
+}
+
+Write-Host ''
+# 5. Registry listing only directories that exist: a registered pack with no directory
 #    fails to load and aborts the whole resource load when a snapshot is configured.
+$registryPackNames = @($snapshotPackDirs | Sort-Object -Unique)
 $registry = [ordered]@{
     formatVersion = 1
-    packs = @(Get-ChildItem -LiteralPath $runPacks -Directory | Sort-Object Name | ForEach-Object { $_.Name })
+    packs = @($registryPackNames)
 }
 $registryPath = Join-Path $runFeatureDatas 'kuro-tile-packs.json'
 [IO.File]::WriteAllText($registryPath, (($registry | ConvertTo-Json -Depth 4) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
 
-Write-Host ''
 Write-Host "Test run root ready: $RunRoot" -ForegroundColor Green
 Write-Host "  binaries copied from : $BinaryRoot (its Assets untouched)"
 Write-Host "  rebuilt packs        : $($replaced -join ', ')"
 Write-Host "  excluded old packs   : $($excluded -join ', ')"
-Write-Host "  registered packs     : $($registry.packs -join ', ')"
+Write-Host "  snapshot tile packs  : $($snapshotPackDirs -join ', ')   <- what the runtime actually loads"
 Write-Host "  Assets cloned from   : $assetsRoot (untouched)"
 Write-Host "Launch: $RunRoot\IMao-WinUI.exe"
