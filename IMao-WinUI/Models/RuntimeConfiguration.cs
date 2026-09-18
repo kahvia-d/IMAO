@@ -2,19 +2,21 @@ namespace IMao_WinUI.Models;
 
 public sealed record RuntimeConfiguration
 {
-    // Bumped when a stored default changes meaning. A file written before this field existed carries
-    // the version 1 default capture method, which was not a deliberate choice; the store migrates it.
-    public const int CurrentSchemaVersion = 2;
+    // Bumped when a stored default changes meaning. Version 2 promoted the capture method; version 3
+    // promotes the overlay presentation. A file written before a bump carries a value that was never a
+    // deliberate choice, so the store migrates it once and a player who changes the setting afterwards
+    // is recorded with the current version and never migrated again.
+    public const int CurrentSchemaVersion = 3;
     public int ConfigVersion { get; init; } = CurrentSchemaVersion;
 
     // 1 = Windows Graphics Capture: it never asks the game window to render into a device context, and
     // startup falls back to BitBlt (0) on its own when it cannot produce a first frame.
     public int CaptureWay { get; init; } = 1;
-    // How the overlay puts its surface on screen. 0 = colorkey layered window, which the overlay has
-    // always used and stays the default. 1 = DirectComposition, measured at about +13 fps with the
-    // frames over 20 ms falling from 17.5% to 1.8%, but only verified at one resolution so far, which
-    // is why it is a setting rather than the default.
-    public int OverlayPresentMode { get; init; }
+    // How the overlay puts its surface on screen. 1 = DirectComposition, which measured about +13 fps
+    // with the frames over 20 ms falling from 17.5% to 1.8%, and is the default for new installs and
+    // for installs migrated from an older schema. 0 = colorkey layered window, kept as the fallback a
+    // player can select if their machine renders the composition surface badly.
+    public int OverlayPresentMode { get; init; } = 1;
     public int MapUpdateCycle { get; init; } = 80;
     public int MinMapUpdateCycle { get; init; } = 80;
     public bool MapEnabled { get; init; } = true;

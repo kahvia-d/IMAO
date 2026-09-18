@@ -34,11 +34,11 @@
 std::atomic<HWND> ImGuiOverWindows::overWindowsHwnd{nullptr};
 std::atomic_bool ImGuiOverWindows::keepWindowHidden{false};
 std::atomic_bool ImGuiOverWindows::holdPresentEnabled{false};
-std::atomic_int ImGuiOverWindows::presentMode{0};
+std::atomic_int ImGuiOverWindows::presentMode{1};
 
 namespace {
-/// True when the overlay should use DirectComposition for this session: either the player chose it in
-/// settings, or the diagnostic isolation switch forces it.
+/// True when the overlay should use DirectComposition for this session: the player's setting, which
+/// defaults to it, or the diagnostic isolation switch, which forces it either way.
 bool WantCompositionPresentation() {
     return ImGuiOverWindows::PresentMode() == 1 || Isolation::UseOverlayComposition();
 }
