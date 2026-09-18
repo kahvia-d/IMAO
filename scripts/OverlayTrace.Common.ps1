@@ -172,7 +172,9 @@ function Format-PhaseFrameStats {
 function Write-PhaseStats {
     <#
       Reports the per-phase table and, when asked, writes it next to the trace so the numbers survive
-      the console window.
+      the console window. The report path must not be the phase-mark file: an earlier version passed
+      the same path for both, and writing the table silently replaced the timestamps the table had
+      been derived from.
     #>
     param(
         [Parameter(Mandatory)][object[]]$Stats,
@@ -181,7 +183,6 @@ function Write-PhaseStats {
     $text = Format-PhaseFrameStats -Stats $Stats
     Write-Host $text
     if (-not [string]::IsNullOrWhiteSpace($ReportPath)) {
-        # out-string keeps the separators that make the file readable without the CSV machinery.
         ($Stats | Format-List | Out-String) + $text | Set-Content -LiteralPath $ReportPath -Encoding utf8
         Write-Host "phase report: $ReportPath" -ForegroundColor Cyan
     }

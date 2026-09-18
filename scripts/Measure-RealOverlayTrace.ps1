@@ -106,7 +106,9 @@ if ($SkipAnalysis) { return }
 $offset = Get-PresentMonDateTimeOffset -CsvPath $OutputPath -CaptureRequestedAt $captureRequestedAt
 & $record ("recorded timestamps are {0:+#;-#;0} h from local time" -f $offset.TotalHours)
 $stats = Get-PhaseFrameStats -CsvPath $OutputPath -Phases $phases.ToArray() -RecordedOffset $offset
-Write-PhaseStats -Stats $stats -ReportPath ([IO.Path]::ChangeExtension($OutputPath, '.phases.txt'))
+# A separate report path: the phase marks file is the input this table was computed from, so writing
+# the table over it would destroy the timestamps a re-analysis needs.
+Write-PhaseStats -Stats $stats -ReportPath ([IO.Path]::ChangeExtension($OutputPath, '.stats.txt'))
 
 Write-Host 'How to read it:' -ForegroundColor Yellow
 Write-Host '  * toolOn in Hardware: Independent Flip  -> the overlay is not costing the fast path, and a'
