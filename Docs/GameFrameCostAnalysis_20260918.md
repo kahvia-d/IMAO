@@ -364,3 +364,28 @@ captureAgeMs=69 ~ 181 ms
    这是唯一有机会**既保留常显 UI 又恢复 Independent Flip** 的路子，工作量与风险最大。
 
 采集侧的另外 10 fps（组 1 → 2）仍然独立存在，无论选哪条路都还要另外处理。
+
+### 12.3 路 B 的前提必须先验证（`3216319`）
+
+方向 5（DirectComposition）在本文档第 6 节沿用了历史文档的说法：「唯一有机会恢复
+Independent Flip 的路」。**这个说法从未被验证过**，而组 4 的结果反而对它不利——
+DirectComposition 的表面**同样在合成树里**，换贴法并没有让窗口「不在场」。
+
+所以先不投入完整改造，而是加了最小探针 `IMaoOverlayPresentProbe`
+（`IMao-Core/tools/OverlayPresentProbe/`，含 README）：
+
+- 三种模式：`none`（无窗口基准）、`dcomp`（`WS_EX_NOREDIRECTIONBITMAP` + DirectComposition
+  visual）、`layered`（今天用的 `WS_EX_LAYERED` + `LWA_COLORKEY`）；
+- 只有一块与状态条同尺寸同位置的可视色块，**不含采集、定位、ImGui**——
+  那些已经单独测出约 10 fps，放进来会把要测的效应盖掉；
+- `scripts/Test-OverlayPresentPath.ps1` 一次录完三段并打印 `PresentMode` 分布
+  （需要管理员权限，PresentMon 要建 ETW 会话）。
+
+判读：
+
+| 观察 | 结论 |
+| --- | --- |
+| `dcomp` 段出现 `Hardware: Independent Flip`，`layered` 段为 `Composed: Flip` | 前提成立，值得做完整改造 |
+| 两段都是 `Composed: Flip` | 换贴法不能恢复独立翻转，方向 5 被探针否决 |
+
+这一步的价值在于：**用几小时的验证代替几天的改造**，且无论结果如何都不浪费。
