@@ -42,7 +42,7 @@ C:\Users\<你>\AppData\Local\Packages\<包名>\LocalCache\Local\WWMAP-TOOLS-Publ
 # 两个候选都查一遍，用存在的那个
 $candidates = @(
   (Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/release-signing-key.json'),
-  (Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Packages') -Recurse -Depth 4 `
+  (Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Packages') -Recurse -Depth 6 `
      -Filter 'release-signing-key.json' -ErrorAction SilentlyContinue).FullName
 )
 $privateKey = $candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
@@ -50,7 +50,9 @@ if (-not $privateKey) { throw '找不到发布私钥；先在生成它的那个�
 $privateKey
 ```
 
-另外：私钥用 DPAPI 保护，**绑定生成它的 Windows 账户**。换账户或换机器都解不开，此时需要在能解开的环境里发布，而不是重新生成密钥——重新生成会让所有已发布客户端验签失败。
+深度必须够：重定向路径在 `Packages` 以下有 5 层，`-Depth 4` 会**静默什么都找不到**（`-ErrorAction SilentlyContinue` 把无结果也吞了），于是又变成"看起来没有密钥"。若这个脚本报了找不到，先用 `Get-ChildItem -Recurse -Filter 'release-signing-key.json'` 不带深度限制手工确认一次。
+
+如果确实一个都搜不到，**不要重新生成**——见下面关于 DPAPI 的说明；改为在生成密钥的那个 Windows 账户下执行发布。
 
 再另外：`init-key` 只在从未建立过发布身份时运行。密钥已存在时**不要重跑**，任何已有的私钥都要先确认位置再使用。
 
