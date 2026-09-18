@@ -116,3 +116,18 @@ B 为上次双方确认一致的基线，L 为当前本地，R 为本次完整�
 - 服务端对请求形状敏感：缺少 `id` 或 `positionType` 会返回 `code=102` 及字段级提示（如“positionType 标点类型不能为空”），字段类型不符（如 `status` 传布尔）会返回 `code=102 服务器外部错误`。
 
 参考：https://www.kurobbs.com/mc/map/；https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging。
+
+## 扩展分发（2026-09-18）
+
+Edge 加载项商店的首次提交仍在审核。审核期间玩家用手动加载同一份代码：
+
+- 已发布 `ext-v0.1.1`（`IMao-KuroMapSync-0.1.1.zip` + `.sha256`），打包与发布入口为 `scripts/Publish-BrowserExtension.ps1`：它按固定顺序与固定时间戳生成确定性归档，并**校验 `manifest.json` 的 `key` 推导出的 CRX ID 必须等于桌面端桥接白名单里的 `ohmikfaeobbffhlhoocklplniobcfdbg`**，否则拒绝打包。玩家步骤见 `Docs/KuroMapSyncInstall.md`。
+- 手动版与商店版共用同一个 CRX ID，因此桌面端的 `allowed_origins` 与凭据都不用改。
+- 已知代价：会出现「开发人员模式扩展」提示，且不会自动更新（扩展升级要重新下载覆盖后在扩展页点「重新加载」）。
+
+**随下次程序发布收口**（对应阶段 6 的"接入程序打包/更新"）：
+
+1. 把 `BrowserExtensions/KuroMapSync/` 打进程序包（`scripts/New-ProgramReleasePackage.ps1`），玩家装完工具后扩展就在安装目录里，无需下载解压。
+2. 设置页「库街区点位进度同步」增加两个按钮：「打开扩展目录」「打开扩展管理页」，并在状态行说明当前该用商店版还是手动版。
+3. 商店过审后，把安装说明改成优先商店版；手动版与商店版扩展 ID 相同，切换不影响桌面端凭据与同步档案。
+
