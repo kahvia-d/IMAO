@@ -95,7 +95,14 @@ if ($selected.Count -eq 0) { throw 'No region selected.' }
 $buildable = [Collections.Generic.List[object]]::new()
 $skipped = [Collections.Generic.List[object]]::new()
 foreach ($record in $selected) {
-    if (-not [bool]$record['buildable'] -or $null -eq $record['tileBounds']) { $skipped.Add($record) } else { $buildable.Add($record) }
+    if ($null -eq $record['tileBounds']) { $skipped.Add($record); continue }
+    if ([bool]$record['buildable']) { $buildable.Add($record); continue }
+    # A frame with no calibration has a guessed window, but a supplied reference capture
+    # turns the build into its own test: the reference is matched against the tiles around
+    # the anchor, so a wrong raw->game origin fails loudly instead of producing a pack.
+    $hasReference = Test-Path -LiteralPath (Join-Path $ReferenceRoot "$($record['id']).png") -PathType Leaf
+    if ([string]$record['tileConfidence'] -eq 'uncalibrated' -and $hasReference) { $buildable.Add($record) }
+    else { $skipped.Add($record) }
 }
 if ($skipped.Count -gt 0) {
     foreach ($record in $skipped) {

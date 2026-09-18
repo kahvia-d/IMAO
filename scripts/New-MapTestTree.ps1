@@ -122,9 +122,49 @@ if ($missing.Count -gt 0) {
     throw ("The bundled snapshot references directories that do not exist, which would abort the resource load and stop the core: " + ($missing -join '; ') + ". Removing a shipped pack directory also requires removing its snapshot entry.")
 }
 
+# 5. Rewrite the snapshot's package list. CoreHost is always started with
+#    --resource-snapshot, so LoadRegistered walks this list and never reads
+#    kuro-tile-packs.json: a pack that is not named here never loads. New regions must be
+#    added and packs whose directory was left out must be dropped. snapshotId is preserved
+#    so the activation record already on disk still validates and no user data is cleared.
+$kept = [Collections.Generic.List[object]]::new()
+$named = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($package in @($snapshot.packages)) {
+    if ([string]::IsNullOrWhiteSpace([string]$package.directory)) { continue }
+    if (-not (Test-Path -LiteralPath (Join-Path $runAssets ([string]$package.directory)))) {
+        Write-Host "  dropped from snapshot: $($package.id)"
+        continue
+    }
+    $kept.Add($package)
+    if ([string]$package.kind -eq 'tile') { [void]$named.Add(($package.directory -split '/')[-1]) }
+}
+$template = @($kept | Where-Object { [string]$_.kind -eq 'tile' })
+if ($template.Count -eq 0) { throw 'The snapshot names no tile package to model a new entry on.' }
+foreach ($entry in @(Get-ChildItem -LiteralPath $runPacks -Directory | Sort-Object Name)) {
+    if ($named.Contains($entry.Name)) { continue }
+    $packManifest = Get-Content -LiteralPath (Join-Path $entry.FullName 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    # Clone the shape of a known-good tile entry so every format the native reader
+    # validates stays valid; only identity and location change.
+    $added = $template[0] | Select-Object *
+    $added.id = [string]$packManifest.packId
+    $added.directory = "FeaturesDatas/KuroTilePacks/$($entry.Name)"
+    $kept.Add($added)
+    [void]$named.Add($entry.Name)
+    Write-Host "  added to snapshot: $($packManifest.packId) -> $($entry.Name)"
+}
+$snapshot.packages = @($kept)
+[IO.File]::WriteAllText($snapshotPath, (($snapshot | ConvertTo-Json -Depth 10) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
+
+$snapshotPackDirs.Clear()
+foreach ($package in @($snapshot.packages)) {
+    if ([string]$package.kind -eq 'tile') { $snapshotPackDirs.Add(($package.directory -split '/')[-1]) }
+    if (-not (Test-Path -LiteralPath (Join-Path $runAssets ([string]$package.directory)))) {
+        throw "The rewritten snapshot still names a missing directory: $($package.id) -> $($package.directory)"
+    }
+}
+
 Write-Host ''
-# 5. Registry listing only directories that exist: a registered pack with no directory
-#    fails to load and aborts the whole resource load when a snapshot is configured.
+# 6. Registry, derived from the same list for the path where no snapshot is passed.
 $registryPackNames = @($snapshotPackDirs | Sort-Object -Unique)
 $registry = [ordered]@{
     formatVersion = 1
