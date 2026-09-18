@@ -107,6 +107,12 @@ $appRoot = 'out/release-2026.9.9.4/IMao-v2026.9.9.4-windows-x64'
 
 已发布的序号由 `updates/channel-state.json` 持久化。脚本在创建草稿之前核对它，并在推进稳定清单**之前**写入新序号，因此已发布的序号永不重用：即使 `updates/stable.json` 被回退或历史被重写，客户端已经记录过的高序号也不会重新可用（客户端只记得自己验证过的最高序号，重编号会让所有旧客户端拒绝更新）。稳定清单推进失败时该序号已被占用，需用更高的 `--sequence` 重新准备发布，而不是重试同一个序号。
 
+"无认证公开下载核对"这一步用 .NET `HttpClient` 拉取附件并比对哈希，它只按环境变量与系统代理设置走代理，不跟随只在网络层生效的透明代理：系统代理关闭、而本机代理只做透明转发时，这一步会直连 GitHub 并被远端重置（`An error occurred while sending the request`，内层是 `远程主机强迫关闭了一个现有的连接`）。此时发行版与附件其实已经上传并公开，只是稳定清单没有推进；让 .NET 也走代理后重跑同一准备目录即可，不需要重新签名：
+
+```powershell
+$env:HTTPS_PROXY = 'http://127.0.0.1:7890'; $env:HTTP_PROXY = $env:HTTPS_PROXY
+```
+
 创建草稿之前，还会比较已验证的线上稳定清单与候选清单：共同包 ID 与版本的归档哈希、大小、类型、完整文件清单必须一致；已有基础资源版本的条目不得丢失，程序版本不得倒退。忘记 `--previous` 时不能绕过这些检查。可执行 `scripts/Test-ResourceCatalogTransition.ps1 -OutputRoot out/catalog-transition-test-new-run` 运行本地清单迁移回归。
 
 如果附件上传或公开下载失败，稳定清单保持原值。排查网络后可对同一准备目录重试，不需要重新签名或替换已有资源。日志和验证输出留在准备目录，不记录私钥或认证令牌。清单推进之后客户端下次检查才会看见更新；已有运行实例仍固定使用当前快照。发布完成后可运行 `scripts/Compact-ReleaseArtifacts.ps1` 归档这些证据并释放候选与准备目录里可重建的大体积产物（`-WhatIf` 先预览，`-RetainFull N` 保留最近 N 个目录完整；归档会逐文件校验哈希并写入 `archive-manifest.json`，`scripts/Test-CompactReleaseArtifacts.ps1` 覆盖归档、保留与越界拒绝）。发布字节本身仍可从对应 GitHub 发行重新下载，并与归档的 `release-report.json` 哈希对账。
