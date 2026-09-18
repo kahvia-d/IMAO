@@ -106,8 +106,8 @@ geometry: windowRect=0,0 2560x1440 client=2560x1440 block=999,22 562x87
 | 文件 | 内容 |
 | --- | --- |
 | `out/perf/overlay-present-path.csv` | PresentMon 逐帧数据 |
-| `out/perf/overlay-present-path.phases.txt` | 三段起止的本地时间戳 |
-| `out/perf/overlay-present-path.presentmode.txt` | 全程 `PresentMode` 分布 |
+| `out/perf/overlay-present-path.phases.txt` | 三段起止的本地时间戳 + 逐段统计 |
+| `out/perf/overlay-present-path.stats.txt` | 逐段统计表 |
 
 按 `phases.txt` 的时间戳把 CSV 切成三段，然后比较 `dcomp` 与 `layered`：
 
@@ -120,6 +120,21 @@ geometry: windowRect=0,0 2560x1440 client=2560x1440 block=999,22 562x87
 
 对齐时间戳时要记得 PresentMon 的 `--date_time` 列与本地时间的关系
 （2026-09-17 那次实测是**快 8 小时**，见 `Docs/GameFrameDropAnalysis_20260917.md`）。
+`scripts/OverlayTrace.Common.ps1` 会从轨迹本身探测这个偏移，两个测量脚本共用它，
+保证探针和真实覆盖层的统计口径完全一致。
+
+## 测真实覆盖层
+
+探针只能回答"两种贴法哪个便宜"，回答不了"真实覆盖层现在到底是什么 PresentMode"。
+后者由 `scripts/Measure-RealOverlayTrace.ps1` 测量（同样需要管理员权限）：
+
+```powershell
+.\scripts\Measure-RealOverlayTrace.ps1
+```
+
+它按 `工具关 → 工具开 → 工具关` 三段各约 45 秒录一份轨迹，并在每段之间提示你去点
+「开始探索 / 停止探索」。它**不能自己启动覆盖层**（覆盖层在 WinUI 进程里），所以由你操作，
+其余全自动。跑之前请确认**诊断页里两个开关都关着**。
 
 ## 退出
 
