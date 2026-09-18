@@ -12,6 +12,11 @@ param(
     # Minimap matching has to work wherever the player can stand, so the window is
     # grown by this many tiles on each side.
     [ValidateRange(0, 16)][int]$CoverageMargin = 2,
+    # Regions whose tile window is intersected with the footprint the tile archive
+    # actually serves. A tile that is absent upstream carries no imagery, so including
+    # it only inflates the request. Applied per named region because a stale or partial
+    # archive would otherwise silently shrink coverage everywhere.
+    [string[]]$TightenRegionId = @(),
     # Explicit count of outliers that must be reported for every region.
     [switch]$Check
 )
@@ -134,6 +139,42 @@ if (Test-Path -LiteralPath $originEvidenceRoot) {
             SampleCount = $samples.Count
             MaxNearestUnits = ($samples | ForEach-Object { [double]$_.nearestPointUnits } | Measure-Object -Maximum).Maximum
             Source = [string]$file.Name
+        }
+    }
+}
+
+# The tile archive records, per region and tile, whether the public host served it.
+# That footprint is the only direct measurement of where a region's map actually is;
+# everything else is inferred from collectible positions.
+$archiveFootprints = @{}
+$archiveManifestPath = Join-Path $SourceRoot 'map-regions/tiles/tiles.manifest.json'
+if (Test-Path -LiteralPath $archiveManifestPath) {
+    $archiveManifest = Get-Content -LiteralPath $archiveManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+    $substituted = [bool]$archiveManifest['substituted']
+    $verified = $false
+    if ($null -ne $archiveManifest['verification']) {
+        $verification = $archiveManifest['verification']
+        $verified = [bool]$verification['performed'] -and [int]$verification['mismatched'] -eq 0 -and [int]$verification['compared'] -gt 0
+    }
+    # A footprint measured against a different tile generation is only usable when it
+    # was proven byte-identical to the generation the registry was derived from.
+    $footprintUsable = (-not $substituted) -or $verified
+    if (-not $footprintUsable) {
+        Write-Warning 'Tile archive substitutes a generation that was not verified byte-identical; archive footprints will be recorded but not applied.'
+    }
+    foreach ($regionId in @($archiveManifest['regions'].Keys)) {
+        $tiles = @($archiveManifest['regions'][$regionId]['tiles'])
+        $present = @($tiles | Where-Object { -not [bool]$_['absent'] })
+        if ($present.Count -eq 0) { continue }
+        $archiveFootprints[$regionId] = [pscustomobject]@{
+            MinX = ($present | ForEach-Object { [int]$_['x'] } | Measure-Object -Minimum).Minimum
+            MaxX = ($present | ForEach-Object { [int]$_['x'] } | Measure-Object -Maximum).Maximum
+            MinY = ($present | ForEach-Object { [int]$_['y'] } | Measure-Object -Minimum).Minimum
+            MaxY = ($present | ForEach-Object { [int]$_['y'] } | Measure-Object -Maximum).Maximum
+            Present = $present.Count
+            Requested = $tiles.Count
+            Generation = [string]$archiveManifest['tileResourceVersion']
+            Usable = $footprintUsable
         }
     }
 }
@@ -364,12 +405,43 @@ foreach ($entry in $regionTable) {
         $pointMinX = $tileMinX; $pointMaxX = $tileMaxX; $pointMinY = $tileMinY; $pointMaxY = $tileMaxY
         $tileMinX -= $CoverageMargin; $tileMaxX += $CoverageMargin
         $tileMinY -= $CoverageMargin; $tileMaxY += $CoverageMargin
+        $basis = "points p$([int]($LowerQuantile * 100))..p$([int]($UpperQuantile * 100)) grown by $CoverageMargin tile(s)"
+        $tightened = $false
+        $footprint = if ($archiveFootprints.ContainsKey($entry.Id)) { $archiveFootprints[$entry.Id] } else { $null }
+        if ($null -ne $footprint) {
+            $requested = ($tileMaxX - $tileMinX + 1) * ($tileMaxY - $tileMinY + 1)
+            if (($TightenRegionId -contains $entry.Id) -and -not $footprint.Usable) {
+                throw "Region $($entry.Id) was asked to tighten, but the archive generation $($footprint.Generation) was not verified byte-identical to the registry generation $($mapManifest.resourceVersion)."
+            }
+            if (($TightenRegionId -contains $entry.Id) -and $footprint.Usable) {
+                # Intersect, never expand: tightening must not add coverage the point
+                # window did not already claim.
+                $tileMinX = [Math]::Max($tileMinX, $footprint.MinX)
+                $tileMaxX = [Math]::Min($tileMaxX, $footprint.MaxX)
+                $tileMinY = [Math]::Max($tileMinY, $footprint.MinY)
+                $tileMaxY = [Math]::Min($tileMaxY, $footprint.MaxY)
+                if ($tileMinX -gt $tileMaxX -or $tileMinY -gt $tileMaxY) {
+                    throw "Tightening region $($entry.Id) emptied its window; the archive footprint does not overlap the point window."
+                }
+                $tightened = $true
+                $basis = "intersected with the archived present-tile footprint (generation $($footprint.Generation))"
+            }
+        }
         $tileBounds = [ordered]@{
             minX = $tileMinX; maxX = $tileMaxX; minY = $tileMinY; maxY = $tileMaxY
             count = ($tileMaxX - $tileMinX + 1) * ($tileMaxY - $tileMinY + 1)
             pointMinX = $pointMinX; pointMaxX = $pointMaxX; pointMinY = $pointMinY; pointMaxY = $pointMaxY
             coverageMargin = $CoverageMargin
-            basis = "points p$([int]($LowerQuantile * 100))..p$([int]($UpperQuantile * 100)) grown by $CoverageMargin tile(s)"
+            tightened = $tightened
+            basis = $basis
+        }
+        if ($null -ne $footprint) {
+            $tileBounds['archivePresent'] = [ordered]@{
+                minX = $footprint.MinX; maxX = $footprint.MaxX; minY = $footprint.MinY; maxY = $footprint.MaxY
+                present = $footprint.Present; requested = $footprint.Requested
+                generation = $footprint.Generation; usable = $footprint.Usable
+                emptyInWindow = ($tileMaxX - $tileMinX + 1) * ($tileMaxY - $tileMinY + 1) - $footprint.Present
+            }
         }
         if ($state -eq 8) { $confidence = 'validated' }
         elseif ($transform.Source -eq 'calibration') { $confidence = 'calibrated' }

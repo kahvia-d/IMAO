@@ -79,7 +79,7 @@ tileY = ceil(-gameY / 850)
 | tethys 泰缇斯之底 | x -2..3, y -3..2 | 36 | calibrated |
 | avinoleum 阿维纽林 | x -1..14, y -13..2 | 400 | **uncalibrated** |
 | fabricatorium 隐海试验场 | x -3..5, y -2..2 | 117 | **uncalibrated** |
-| lowervault 下层金库 | x 1..11, y -5..3 | 99 | **origin-verified** |
+| lowervault 下层金库 | x 2..4, y -1..1 | 9 | **origin-verified**（已收紧） |
 | timeriftruins 时隙废都 | — | — | **blocked** |
 
 置信度含义：
@@ -101,6 +101,20 @@ tileY = ceil(-gameY / 850)
 生成器会校验证据文件：至少 4 个样本、每个样本到最近收集点的距离不超过 `toleranceUnits`、且 `origin` 必须与生效原点一致，否则报错。
 
 **证据文件目前只填了 `game` 坐标，`map` 留空。** 要生成正式的 `scene-calibrations.json` 记录，还差把每张大地图截图里玩家箭头的位置换算成内部地图像素（方法见下）。
+
+### 窗口收紧（`-TightenRegionId`）
+
+点位推导的矩形窗口会被**少量离群点严重撑大**。下层金库请求 99 块，但上游真实只提供紧凑的 3×3 = 9 块，原因是 6 个离群点挤在遥远的 tile(9,-3)。
+
+`-TightenRegionId <id>` 把该地区的窗口**与归档里实际存在的瓦片足迹求交集**（只收紧、绝不扩张）。因为矩形窗口表达不了非矩形足迹，收紧结果是现存瓦片的**包围盒**，非矩形地区仍会包含少量不存在的瓦片（构建时计为 missing，无害）。
+
+收紧只在两种情况下允许：归档代次与注册表代次相同，或者归档是**经过逐字节取证**的代次替换（`verification.performed && mismatched == 0`）。否则直接报错——否则一个陈旧或不完整的归档会静默缩小覆盖范围。
+
+```powershell
+pwsh -File scripts\New-MapRegionRegistry.ps1 -TightenRegionId lowervault
+```
+
+**未收紧的地区仍保留推导窗口**：`jinzhou 196/396`、`tethys 13/36`、`darkplain 25/56` 等都有虚高，逐一复核后再决定是否收紧。归档清单里每个地区的现存/请求数可以直接用来判断。
 
 ## 五、上游代次已变更（重要）
 
@@ -144,7 +158,7 @@ pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply
 
 ## 八、当前状态与未决项
 
-**已完成**：注册表（13 地区，校验全绿）；瓦片归档（629 块，230 MB，跨地区去重 995→795）；代次替换取证（302/302 一致）；四个脚本；重建脚本补强。
+**已完成**：注册表（13 地区，校验全绿）；瓦片归档（638 块，跨地区去重）；代次替换取证（302/302 一致）；四个脚本；重建脚本补强；下层金库解除阻塞并**收紧到 9 块、建成完整包**（9008 关键点，`Test-KuroMapFeaturePack.ps1` 通过）；blackshores 试点（28 块、15168 关键点）。
 
 **未决项**
 

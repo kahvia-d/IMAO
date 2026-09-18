@@ -114,21 +114,31 @@ foreach ($area in $areas) {
     $key = "$($area.Frame)|$($area.Name)"
     Check ($registryAreaKeys.ContainsKey($key)) "area $($area.Name) (frame $($area.Frame)) is in the registry"
 }
-# Areas must sit inside their region's tile window.
+# Areas must sit inside the region's derived point footprint. A tightened window may
+# legitimately exclude an area's label tile: the label is a place name on the map, not
+# a geometric centre, and the archived footprint is the real map extent.
 Write-Host 'Tile containment'
 foreach ($record in $regions) {
     $bounds = $record['tileBounds']
     if ($null -eq $bounds) { continue }
     foreach ($area in @($record['areas'])) {
-        $inside = $area['tileX'] -ge [int]$bounds['minX'] -and $area['tileX'] -le [int]$bounds['maxX'] -and
-                  $area['tileY'] -ge [int]$bounds['minY'] -and $area['tileY'] -le [int]$bounds['maxY']
-        Check $inside "area $($area['name']) tile ($($area['tileX']),$($area['tileY'])) sits in $($record['id'])'s window"
+        $inside = $area['tileX'] -ge [int]$bounds['pointMinX'] -and $area['tileX'] -le [int]$bounds['pointMaxX'] -and
+                  $area['tileY'] -ge [int]$bounds['pointMinY'] -and $area['tileY'] -le [int]$bounds['pointMaxY']
+        Check $inside "area $($area['name']) tile ($($area['tileX']),$($area['tileY'])) sits in $($record['id'])'s point footprint"
     }
+    # The builder rejects a window that does not contain the anchor tile, so the anchor
+    # must be inside the window that will actually be requested.
     $anchorTileX = Get-TileX ([double]$record['anchor']['x'])
     $anchorTileY = Get-TileY ([double]$record['anchor']['y'])
     $anchorInside = $anchorTileX -ge [int]$bounds['minX'] -and $anchorTileX -le [int]$bounds['maxX'] -and
                     $anchorTileY -ge [int]$bounds['minY'] -and $anchorTileY -le [int]$bounds['maxY']
-    Check $anchorInside "region $($record['id'])'s anchor tile ($anchorTileX,$anchorTileY) sits in its own window"
+    Check $anchorInside "region $($record['id'])'s anchor tile ($anchorTileX,$anchorTileY) sits in its requested window"
+    if ([bool]$bounds['tightened']) {
+        $present = $bounds['archivePresent']
+        Check ([int]$present['minX'] -eq [int]$bounds['minX'] -and [int]$present['maxX'] -eq [int]$bounds['maxX'] -and
+               [int]$present['minY'] -eq [int]$bounds['minY'] -and [int]$present['maxY'] -eq [int]$bounds['maxY']) `
+            "region $($record['id']) is tightened to exactly its archived present-tile footprint"
+    }
 }
 
 # ---------------------------------------------------------------------------
