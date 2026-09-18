@@ -44,12 +44,17 @@ if (-not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($ProcessName
 # Each phase switches off exactly one piece relative to the baseline, so the difference from the
 # baseline is that piece's cost. The baseline is measured twice, once at the start and once in the
 # middle: if the two disagree the scene or the machine drifted and the whole table is unsafe.
+#
+# Order matters because a run is long and can be abandoned partway. The first group splits the piece
+# the previous run found dominant - the overlay's own frame work, worth about 13.5 fps and almost all
+# of the >20 ms tail - into its parts. The second group is the rest of the per-frame work.
 $sequence = @(
     [pscustomobject]@{ name = 'baseline-a';        mask = 0;  label = '0  (base)' }
     [pscustomobject]@{ name = 'no-overlay-render'; mask = 8;  label = '8' }
-    [pscustomobject]@{ name = 'no-localization';   mask = 4;  label = '4' }
+    [pscustomobject]@{ name = 'no-overlay-clear';  mask = 16; label = '16' }
+    [pscustomobject]@{ name = 'no-window-sync';    mask = 32; label = '32' }
     [pscustomobject]@{ name = 'baseline-b';        mask = 0;  label = '0  (base)' }
-    [pscustomobject]@{ name = 'no-game-state';     mask = 2;  label = '2' }
+    [pscustomobject]@{ name = 'no-localization';   mask = 4;  label = '4' }
     [pscustomobject]@{ name = 'no-capture';        mask = 1;  label = '1' }
 )
 

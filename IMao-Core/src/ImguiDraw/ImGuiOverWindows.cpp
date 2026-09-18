@@ -406,6 +406,11 @@ int ImGuiOverWindows::start()
     OverlayPacing::HoldPresentPolicy holdPolicy;
     bool hadMarkersRequested = false;
     std::uint64_t heldFrames = 0, heldPresents = 0, skippedOverlayFrames = 0;
+    // Per-segment cost of this thread's own frame, reported with the motion diagnostics. The overlay
+    // runs on its own core, so these numbers cannot be read as the game's cost directly; they say
+    // which segment is doing the work, which is what a split has to establish.
+    double syncTotalMs = 0, newFrameTotalMs = 0, buildTotalMs = 0, renderTotalMs = 0, hashTotalMs = 0, presentTotalMs = 0;
+    std::uint64_t syncCalls = 0, renderCalls = 0, hashCalls = 0, presentCalls = 0;
     const auto drainMessages = [&]() {
         MSG message;
         while (::PeekMessage(&message, nullptr, 0U, 0U, PM_REMOVE))
@@ -461,7 +466,14 @@ int ImGuiOverWindows::start()
         if (GameRect.right > 0 && GameRect.bottom > 0) {
             // Correct position/size BEFORE NewFrame and ResizeBuffers. Verify
             // the HWND each frame, so a failed move is retried, never cached.
-            if (!OverlayWindowBounds::GameClient(h_window, physicalGame) || !OverlayWindowBounds::Synchronize(overWindowsHwnd, physicalGame)) {
+            // Diagnostic isolation measures what this per-frame verification costs on its own.
+            const auto syncStarted = std::chrono::steady_clock::now();
+            const bool synced = Isolation::Enabled(Isolation::kWindowSync) ||
+                (OverlayWindowBounds::GameClient(h_window, physicalGame) &&
+                    OverlayWindowBounds::Synchronize(overWindowsHwnd, physicalGame));
+            syncTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - syncStarted).count();
+            ++syncCalls;
+            if (!synced) {
                 Diagnostics::Record("overlay-window-position-error", std::to_string(GetLastError()));
                 beginWait();
                 if (!framePacer.WaitUntil(frameStart + kOverlayFramePeriod, pumpDuringWait)) break;
@@ -537,16 +549,19 @@ int ImGuiOverWindows::start()
         const bool buildOverlayFrame = !Isolation::Enabled(Isolation::kOverlayRender);
         if (!buildOverlayFrame) ++skippedOverlayFrames;
         if (buildOverlayFrame) {
+            const auto newFrameStarted = std::chrono::steady_clock::now();
             ImGui_ImplDX11_NewFrame();
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
             RuntimeStatusBar::Prepare(h_window);
+            newFrameTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - newFrameStarted).count();
         }
         // Image tracking is the longest stretch of work in this frame; pump before it so a hook
         // callback that arrived during the previous segment runs before the new one begins.
         if (!pump(maxBounds)) break;
 
         // Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        const auto buildStarted = std::chrono::steady_clock::now();
         if (buildOverlayFrame) {
             const auto frame = app.ReadOverlayFrame();
             const auto capture = app.ReadCapturedFrame();
@@ -577,9 +592,20 @@ int ImGuiOverWindows::start()
                     " presentHeld=" + std::to_string(heldPresents) +
                     " holdDiagnostic=" + std::to_string(ImGuiOverWindows::HoldPresentEnabled() ? 1 : 0) +
                     " overlayRenderSkipped=" + std::to_string(skippedOverlayFrames) +
+                    // Per-segment millisecond averages for this thread's own frame, so a split can
+                    // name the expensive segment instead of the whole loop.
+                    " segSyncMs=" + std::to_string(syncCalls ? syncTotalMs / syncCalls : 0.0) +
+                    " segNewFrameMs=" + std::to_string(renderCalls ? newFrameTotalMs / renderCalls : 0.0) +
+                    " segBuildMs=" + std::to_string(renderCalls ? buildTotalMs / renderCalls : 0.0) +
+                    " segRenderMs=" + std::to_string(renderCalls ? renderTotalMs / renderCalls : 0.0) +
+                    " segHashMs=" + std::to_string(hashCalls ? hashTotalMs / hashCalls : 0.0) +
+                    " segPresentMs=" + std::to_string(presentCalls ? presentTotalMs / presentCalls : 0.0) +
+                    " segPresents=" + std::to_string(presentCalls) +
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
                 attachedFrames = trackingMisses = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;
+                syncTotalMs = newFrameTotalMs = buildTotalMs = renderTotalMs = hashTotalMs = presentTotalMs = 0;
+                syncCalls = renderCalls = hashCalls = presentCalls = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();
             }
             bool drewMap = false, drewMinimap = false;
@@ -633,17 +659,24 @@ int ImGuiOverWindows::start()
             Notification::DrawInfo();
             //Debug::DebugWindow(io,app);
             DrawOverlayDiagnosticsProbe();
+            buildTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - buildStarted).count();
         }
 
         // Rendering
         if (!pump(maxTrack)) break;
+        const auto renderStarted = std::chrono::steady_clock::now();
         // Skipped together with the frame build, because ImGui requires the calls to be paired.
         if (buildOverlayFrame) ImGui::Render();
         ImDrawData* drawData = ImGui::GetDrawData();
         // The window is the whole game screen, so its cost does not depend on how much is drawn inside
         // it; only whether anything changed does.
         const bool hasContent = drawData != nullptr && drawData->TotalVtxCount > 0;
+        const auto hashStarted = std::chrono::steady_clock::now();
         const std::uint64_t contentHash = HashOverlayDrawData(drawData);
+        hashTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - hashStarted).count();
+        ++hashCalls;
+        renderTotalMs += std::chrono::duration<double, std::milli>(hashStarted - renderStarted).count();
+        ++renderCalls;
         consecutiveEmptyFrames = hasContent ? 0 : consecutiveEmptyFrames + 1;
 
         // The diagnostic switch drives the window itself, never the work behind it. Forcing the window
@@ -682,11 +715,18 @@ int ImGuiOverWindows::start()
             OverlayPacing::ShouldPresentFrame(contentHash, lastPresentedHash, hasPresented, !overlayWindowHidden))) {
             const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
             g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
-            g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
+            // The clear colour is fully transparent and black is the colorkey, so every pixel the draw
+            // data does not cover is transparent either way. Diagnostic isolation measures what the
+            // full-screen clear costs on its own.
+            if (!Isolation::Enabled(Isolation::kOverlayClear))
+                g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
+            const auto presentStarted = std::chrono::steady_clock::now();
             ImGui_ImplDX11_RenderDrawData(drawData);
 
             // Present
             HRESULT hr = g_pSwapChain->Present(0, 0);
+            presentTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - presentStarted).count();
+            ++presentCalls;
             g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
             RecordOverlayFrameDiagnostics(overWindowsHwnd, hr, bufferSize.after);
             if (FAILED(hr)) {

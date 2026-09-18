@@ -19,7 +19,14 @@ inline constexpr int kCapture = 1 << 0;
 inline constexpr int kGameStateDetection = 1 << 1;
 inline constexpr int kLocalization = 1 << 2;
 inline constexpr int kOverlayRender = 1 << 3;
-inline constexpr int kAll = kCapture | kGameStateDetection | kLocalization | kOverlayRender;
+// Splitting the overlay's own frame work, because measuring all of it as one piece says what it costs
+// but not which part of it does. The clear is separable at all only because the clear colour is fully
+// transparent: every pixel the draw data does not cover stays black, and black is the colorkey, so
+// skipping the clear cannot change what the player sees.
+inline constexpr int kOverlayClear = 1 << 4;
+inline constexpr int kWindowSync = 1 << 5;
+inline constexpr int kAll = kCapture | kGameStateDetection | kLocalization | kOverlayRender |
+    kOverlayClear | kWindowSync;
 
 inline std::atomic_int switches{ 0 };
 
@@ -39,6 +46,8 @@ inline const char* Describe(int value) {
     case kGameStateDetection: return "关闭游戏状态检测";
     case kLocalization: return "关闭定位";
     case kOverlayRender: return "关闭覆盖层绘制";
+    case kOverlayClear: return "关闭覆盖层整屏清屏";
+    case kWindowSync: return "关闭窗口几何同步";
     default: return "自定义组合";
     }
 }
@@ -51,6 +60,8 @@ inline const char* DescribeAscii(int value) {
     case kGameStateDetection: return "no-game-state-detection";
     case kLocalization: return "no-localization";
     case kOverlayRender: return "no-overlay-render";
+    case kOverlayClear: return "no-overlay-clear";
+    case kWindowSync: return "no-window-sync";
     default: return "custom";
     }
 }
