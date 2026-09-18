@@ -36,6 +36,18 @@
 | `layered` | **绿** | 今天的贴法：`WS_EX_LAYERED` + colorkey |
 | `plain` | **蓝** | 额外参照：普通不透明窗口（可选，见 `-IncludePlain`） |
 
+### 顺带能回答的问题：代价跟窗口/色块"面积"有关吗
+
+探针窗口恒为整个游戏客户区，但**色块大小可调**，所以可以用它判断
+"面积"是不是成本项（`Docs/GameFrameCostAnalysis_20260918.md` 第 19 节）：
+
+```powershell
+.\x64\Release\IMaoOverlayPresentProbe.exe --mode=layered --block=1x1   --hold=45
+.\x64\Release\IMaoOverlayPresentProbe.exe --mode=layered --block=450x70 --hold=45
+```
+
+两次 fps 相同 → 面积无关，"缩小覆盖层窗口"这条可以直接放弃。
+
 色块是**必须能看见**的。如果某一轮该看到颜色却没有，说明那一段无效——2026-09-18 12:23 那轮
 `layered` 就是这种情况：它什么都没画，而 colorkey 让纯黑表面完全透明，于是那个窗口等于不在
 合成里，跟 `mode=none` 是同一件事，数据不能用来代表「可见分层窗口」
