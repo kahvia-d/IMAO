@@ -55,6 +55,24 @@ inline std::chrono::microseconds CapturePeriod(bool overlayActive, bool slowCapt
     return CapturePeriod(overlayActive) + (slowCapture ? kSlowCaptureBackoff : std::chrono::microseconds::zero());
 }
 
+// Startup reads one frame to prove the capture works, and that frame is already stale by the time the
+// capture loop runs - it is not a frame the loop observed. The loop therefore takes the first sequence
+// it sees as its baseline and needs a newer one before it publishes, instead of re-publishing startup
+// pixels as if they were current.
+struct CaptureSequenceFilter {
+    bool baselineKnown = false;
+    std::uint64_t baseline = 0;
+    std::uint64_t lastPublished = 0;
+
+    // Returns true when this sequence is a frame the loop should publish, and records it.
+    bool Accept(std::uint64_t sequence) {
+        if (!baselineKnown) { baselineKnown = true; baseline = sequence; }
+        if (sequence == baseline || sequence == lastPublished) return false;
+        lastPublished = sequence;
+        return true;
+    }
+};
+
 // The overlay window covers the whole game screen, so every present makes the desktop compositor
 // blend that whole screen again - including the game's own frames, which a visible topmost layered
 // window keeps out of its direct flip path. A frame whose content did not change therefore costs the

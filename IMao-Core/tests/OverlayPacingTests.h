@@ -37,6 +37,22 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
     check(OverlayPacing::kCaptureMinUpdateInterval > std::chrono::microseconds::zero(),
         "a zero capture interval would still ask the game for every presented frame");
 
+    // The startup frame App::Init read is not a frame the capture loop observed.
+    {
+        OverlayPacing::CaptureSequenceFilter filter;
+        check(!filter.Accept(1), "the startup frame is not republished by the capture loop");
+        check(filter.Accept(2), "a frame that arrived after startup is published");
+        check(!filter.Accept(2), "the same frame is never published twice");
+        check(filter.Accept(3), "the next frame is published");
+        check(!filter.Accept(3), "and it is not published twice either");
+    }
+    {
+        // A backend with no source sequence, such as PrintWindow, still starts from its own baseline.
+        OverlayPacing::CaptureSequenceFilter filter;
+        check(!filter.Accept(7), "a sequence the loop starts on is its baseline, not a frame to publish");
+        check(filter.Accept(8), "the next sequence is published");
+    }
+
     check(OverlayPacing::ShouldPresentFrame(7, 7, true, true) == false,
         "an unchanged overlay frame is not presented again");
     check(OverlayPacing::ShouldPresentFrame(8, 7, true, true),
