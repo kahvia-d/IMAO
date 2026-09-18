@@ -26,9 +26,33 @@ $dotnet = Join-Path (Get-Location) 'tools/dotnet-sdk-8.0.424/dotnet.exe'
 $env:DOTNET_CLI_HOME = Join-Path (Get-Location) 'third_party/dotnet-cli-home'
 $env:NUGET_PACKAGES = Join-Path (Get-Location) 'third_party/nuget-packages'
 & $dotnet build tools/UpdatePublisher/UpdatePublisher.csproj -c Release
-$publisher = 'tools/UpdatePublisher/bin/Release/net8.0/UpdatePublisher.dll'
+$publisher = 'tools/UpdatePublisher/Release/net8.0/UpdatePublisher.dll'
 $privateKey = Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/release-signing-key.json'
 ```
+
+**私钥路径有陷阱，别照抄上一行就去用。** `init-key` 生成在哪个目录，取决于当时是谁在跑：普通桌面 shell 里 `%LOCALAPPDATA%` 就是 `C:\Users\<你>\AppData\Local`；而在 MSIX/AppContainer 封装的打包环境里，写这个路径会被重定向到容器的私有位置：
+
+```text
+C:\Users\<你>\AppData\Local\Packages\<包名>\LocalCache\Local\WWMAP-TOOLS-Publisher\release-signing-key.json
+```
+
+两个位置同名不同地，`Test-Path` 在错误的那一边只会说"没有"，看起来像密钥不存在。**先确认密钥到底在哪一边**，再把该路径传给 `prepare`：
+
+```powershell
+# 两个候选都查一遍，用存在的那个
+$candidates = @(
+  (Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/release-signing-key.json'),
+  (Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Packages') -Recurse -Depth 4 `
+     -Filter 'release-signing-key.json' -ErrorAction SilentlyContinue).FullName
+)
+$privateKey = $candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+if (-not $privateKey) { throw '找不到发布私钥；先在生成它的那个环境里定位，不要重新 init-key。' }
+$privateKey
+```
+
+另外：私钥用 DPAPI 保护，**绑定生成它的 Windows 账户**。换账户或换机器都解不开，此时需要在能解开的环境里发布，而不是重新生成密钥——重新生成会让所有已发布客户端验签失败。
+
+再另外：`init-key` 只在从未建立过发布身份时运行。密钥已存在时**不要重跑**，任何已有的私钥都要先确认位置再使用。
 
 仅在从未建立过发布身份时运行以下命令。目标文件存在会拒绝覆盖。生产私钥不能位于仓库内；测试密钥使用不同 ID、输出目录并显式传入 `--test true`，正式验包和发布拒绝测试密钥。
 
@@ -96,6 +120,13 @@ $appRoot = 'out/release-2026.9.9.4/IMao-v2026.9.9.4-windows-x64'
 ## 正式发布
 
 准备输出本身不会发布。检查完整构建、更新事务测试、资源预检和地图回放报告后，再执行下面的独立发布入口。首次或程序更新时增加 `-ProgramZip`；仅资源发布省略它。GitHub CLI 必须以有本仓库写权限的维护者身份登录。
+
+**发布前先确认自己在哪个分支。** 候选包、公告文件和 `prepare` 的输入都按路径读取；如果在这中间有别的会话或自动任务 `checkout` 了其它分支，路径会找不到，`prepare` 会失败（此时尚未产生任何签名产物，重新切回并重跑即可，不用清理）。动手前跑一次：
+
+```powershell
+git branch --show-current     # 必须是你要发布的那个分支
+git log --oneline -1          # 必须与 -SourceCommit 一致
+```
 
 ```powershell
 & scripts/Publish-ResourceUpdate.ps1 -PreparedRoot out/maps-2026.9.9.1 `
