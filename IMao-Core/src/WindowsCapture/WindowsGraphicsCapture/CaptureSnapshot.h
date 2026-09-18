@@ -36,6 +36,8 @@ public:
     
     winrt::IAsyncOperation<winrt::StorageFile> TakeSnapshotAsync();
 
+    /// A caller that keeps `output` across calls reuses its buffer instead of allocating a
+    /// full-screen image every time.
     bool WaitForFirstFrame(Mat& output, std::chrono::milliseconds timeout,
         std::uint64_t* frameSequence = nullptr) {
         return m_capture != nullptr && m_capture->WaitForFirstFrame(output, timeout, frameSequence);

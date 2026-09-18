@@ -171,6 +171,11 @@ void App::Thread_Capture() {
         winrt::init_apartment();
         FramePacer pacer;
         uint64_t lastSequence = 0, published = 0;
+        // App::Init already read the startup frame out of the capture session. Publishing that same
+        // frame here would emit an overlay frame built from stale startup pixels, so the loop only
+        // takes frames that arrived after the one it starts on.
+        bool startupSequenceKnown = false;
+        uint64_t startupSequence = 0;
         auto reportAt = std::chrono::steady_clock::now();
         // The window capture runs synchronously against the game, so its cost lands in the game's own
         // frame time. Report the per-call average and worst case next to the achieved rate.
@@ -203,7 +208,8 @@ void App::Thread_Capture() {
                 capturedFrames.Publish({});
             else {
                 if (sequence == 0) sequence = lastSequence + 1; // PrintWindow has no source sequence.
-                if (sequence != lastSequence) {
+                if (!startupSequenceKnown) { startupSequenceKnown = true; startupSequence = sequence; }
+                if (sequence != startupSequence && sequence != lastSequence) {
                     lastSequence = sequence;
                     capturedFrames.Publish({sequence, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250)});
                     ++published;

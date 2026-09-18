@@ -126,13 +126,17 @@ void SimpleCapture::Close()
 bool SimpleCapture::WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::milliseconds timeout,
     std::uint64_t* frameSequence)
 {
+    // Based on the last sequence this call itself handed out, not on whether a frame is being held:
+    // the callback now overwrites one retained buffer, so "not empty" can no longer mean "not seen".
+    const std::uint64_t afterSequence = m_deliveredSequence;
     std::unique_lock lock(m_frameMutex);
-    if (!m_frameCondition.wait_for(lock, timeout, [this] {
-        return m_closed.load() || (m_frameSequence > 0 && !m_latestFrame.empty());
-    }) || m_latestFrame.empty()) {
+    if (!m_frameCondition.wait_for(lock, timeout, [this, afterSequence] {
+        return m_closed.load() || (m_frameSequence > afterSequence && !m_latestFrame.empty());
+    }) || m_latestFrame.empty() || m_frameSequence <= afterSequence) {
         return false;
     }
     m_latestFrame.copyTo(outputFrame);
+    m_deliveredSequence = m_frameSequence;
     if (frameSequence != nullptr) *frameSequence = m_frameSequence;
     return true;
 }
@@ -328,10 +332,17 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             {
                 {
                     cv::Mat mappedFrame(height, width, CV_8UC4, mappedResource.pData, static_cast<size_t>(mappedResource.RowPitch));
-                    cv::Mat ownedFrame;
-                    // mappedFrame aliases D3D memory and must be copied before Unmap.
+                    // mappedFrame aliases D3D memory and must be copied before Unmap. That copy goes
+                    // into the buffer the previous frame already allocated rather than into a fresh
+                    // local Mat: at 2560x1440 those frames are 14.7 MB, and building a new one per
+                    // frame churned the allocator for the whole session. The published sequence is
+                    // raised while the same lock is still held, so a consumer can never read the new
+                    // pixels under the old frame id.
                     try {
-                        mappedFrame.copyTo(ownedFrame);
+                        std::lock_guard<std::mutex> lock(m_frameMutex);
+                        mappedFrame.copyTo(m_latestFrame);
+                        m_frameCapturedAt = std::chrono::steady_clock::now();
+                        ++m_frameSequence;
                     }
                     catch (...) {
                         m_d3dContext->Unmap(m_stagingTexture.get(), 0);
@@ -339,12 +350,6 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                     }
                     m_d3dContext->Unmap(m_stagingTexture.get(), 0);
 
-                    {
-                        std::lock_guard<std::mutex> lock(m_frameMutex);
-                        m_latestFrame = std::move(ownedFrame);
-                        m_frameCapturedAt = std::chrono::steady_clock::now();
-                        ++m_frameSequence;
-                    }
                     m_frameCondition.notify_all();
                     ++m_framesPublished;
                     if (m_framesPublished == 1)

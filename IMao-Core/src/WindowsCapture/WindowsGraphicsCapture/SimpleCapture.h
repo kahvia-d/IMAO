@@ -48,6 +48,11 @@ public:
 
     void Close();
 
+    /// Takes the frame the consumer has not read yet. `outputFrame` is reused when it already has the
+    /// right shape, so a caller that keeps its Mat across calls never allocates a full-screen image
+    /// again; it only has to have finished with the previous contents. Unlike GetLatestFrame_Mat this
+    /// waits for one the caller could not already have seen, which is what lets the capture loop start
+    /// from a frame that arrived after the startup frame was consumed.
     bool WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::milliseconds timeout,
         std::uint64_t* frameSequence = nullptr);
 
@@ -159,5 +164,7 @@ private:
     mutable std::mutex m_frameMutex;
     std::condition_variable m_frameCondition;
     std::uint64_t m_frameSequence = 0;
+    /// Highest sequence already handed to a WaitForFirstFrame caller.
+    std::uint64_t m_deliveredSequence = 0;
     std::chrono::steady_clock::time_point m_frameCapturedAt{};
 };
