@@ -806,3 +806,40 @@ composition 路径目前**只在 mask 64 下启用**，默认仍是 colorkey。�
 - **没有改默认**，也**没有走发布流程**——等玩家本地试玩验证；
 - 试玩要覆盖的场景：DPR 缩放（125% 已测）、无边框全屏、切分辨率、最小化恢复、
   以及 composition 不可用时的回退表现。
+
+## 21. 严重回归：composition 下鼠标点击失效（2026-09-18 16:0x）
+
+玩家在实机试玩中发现：**composition 状态下鼠标点击无法生效**。此前的验证全部是"站在原地挂机"，
+**从未点过任何东西**，所以这个问题在测量里完全没暴露出来——这是测试设计的缺口，不是运气问题。
+
+### 21.1 用窗口样式对照实验定位到具体标志位
+
+`scripts/Test-OverlayHitTest.ps1` 会把游戏切到前台，然后逐个创建只差一个
+`WS_EX_*` 标志位的同尺寸窗口，并询问 `WindowFromPoint` 在游戏中心点会命中谁：
+
+| 窗口样式 | 结果 |
+| --- | --- |
+| `LAYERED + TRANSPARENT`（colorkey 路径） | **游戏收到** ✅ |
+| `NOREDIRECTIONBITMAP + TRANSPARENT`（composition 路径） | **被吞掉** ❌ |
+| `LAYERED + NOREDIRECTIONBITMAP + TRANSPARENT` | **游戏收到** ✅ |
+| `NOREDIRECTIONBITMAP`，无 `TRANSPARENT` | 被吞掉 |
+| 只有 `TRANSPARENT`（无 `TOPMOST`） | 游戏收到 |
+
+**结论：`WS_EX_NOREDIRECTIONBITMAP` 会让窗口变成命中测试的目标，**
+**而 `WS_EX_LAYERED` 会阻止这一点**；两者同时存在时 `WS_EX_LAYERED` 胜出。
+`WS_EX_TRANSPARENT` 在这个组合里不是决定因素。
+
+这也解释了为什么这个 bug 只出现在 composition 路径：原路径靠 `WS_EX_LAYERED` 保持穿透，
+而我在 composition 路径里**把它换成了** `WS_EX_NOREDIRECTIONBITMAP`——**两者并非二选一**。
+
+### 21.2 修复
+
+窗口样式改为**始终保留 `WS_EX_LAYERED`**，composition 时**另外加上**
+`WS_EX_NOREDIRECTIONBITMAP`。composition 路径本来就不调用 `SetLayeredWindowAttributes`
+（它靠自己的预乘 alpha 透明），所以 `WS_EX_LAYERED` 在这里只承担"不参与命中测试"这一个作用。
+
+### 21.3 教训
+
+**这条排查最贵的一课**：帧率指标**无法**发现"窗口吞掉了玩家输入"——
+它每一帧都正常，数字也很漂亮。所以交互路径必须**单独**验证，
+而 `Test-OverlayHitTest.ps1` 现在把这个验证变成了一条命令。

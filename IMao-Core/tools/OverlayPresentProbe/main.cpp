@@ -76,9 +76,10 @@ Options ParseOptions(int argc, char** argv) {
         else if (argument.rfind("--hz=", 0) == 0) options.presentHz = std::max(0, std::stoi(value("--hz")));
         else if (argument.rfind("--hold=", 0) == 0) options.holdSeconds = std::max(0, std::stoi(value("--hold")));
         else if (argument == "--help" || argument == "-h") {
-            std::printf("usage: IMaoOverlayPresentProbe [--mode=none|plain|dcomp|layered] [--block=WxH]"
+            std::printf("usage: IMaoOverlayPresentProbe [--mode=none|plain|dcomp|layered|hittest] [--block=WxH]"
                 " [--alpha=0..1] [--hz=N|0] [--hold=seconds]\n"
-                "  colours: dcomp=red  layered=green  plain=blue  none=no window\n");
+                "  colours: dcomp=red  layered=green  plain=blue  none=no window\n"
+                "  hittest: reports which window receives a click at the game's centre, per window type\n");
             std::exit(0);
         }
     }
@@ -296,6 +297,56 @@ bool CreateCompositionSurface(ProbeState& state) {
     return true;
 }
 
+/// A drawn block cannot tell whether the window it was drawn into swallows the player's clicks, and a
+/// window that does so passes every frame-rate measurement while making the overlay unusable. This
+/// reports what WindowFromPoint answers at the centre of the overlay for each window type.
+void ProbeHitTesting(const Options& options, HINSTANCE instance, HWND game, const RECT& physical) {
+    struct Candidate { const char* name; DWORD styles; };
+    const Candidate candidates[] = {
+        { "layered-colorkey", WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_LAYERED },
+        { "composition",      WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_NOREDIRECTIONBITMAP },
+    };
+    const LONG centreX = (physical.left + physical.right) / 2;
+    const LONG centreY = (physical.top + physical.bottom) / 2;
+    const LONG width = physical.right - physical.left;
+    const LONG height = physical.bottom - physical.top;
+
+    std::printf("hit-test: game hwnd=%p at %ld,%ld %ldx%ld; probing %ld,%ld\n",
+        static_cast<void*>(game), physical.left, physical.top, width, height, centreX, centreY);
+    if (!::RegisterProbeClass(instance)) { std::printf("  RegisterClassExW failed\n"); return; }
+    for (const auto& candidate : candidates) {
+        HWND window = ::CreateWindowExW(candidate.styles, kWindowClassName, L"IMao hit-test",
+            WS_POPUP, physical.left, physical.top, width, height, nullptr, nullptr, instance, nullptr);
+        if (window == nullptr) { std::printf("  %-18s CreateWindowExW failed %lu\n", candidate.name, ::GetLastError()); continue; }
+        ::ShowWindow(window, SW_SHOWNOACTIVATE);
+        ::SetWindowPos(window, HWND_TOPMOST, physical.left, physical.top, width, height,
+            SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        ::UpdateWindow(window);
+        ::Sleep(300); // Let the compositor and the hit-test data settle before asking.
+        const POINT point{ centreX, centreY };
+        const HWND hit = ::WindowFromPoint(point);
+        const LONG_PTR hitStyle = hit ? ::GetWindowLongPtrW(hit, GWL_EXSTYLE) : 0;
+        const char* verdict = "OTHER";
+        if (hit == window) verdict = "OVERLAY-WOULD-SWALLOW-CLICK";
+        else if (hit == game) verdict = "GAME-RECEIVES-CLICK";
+        else if (hit == nullptr) verdict = "NULL";
+        std::printf("  %-18s WindowFromPoint=%p %s\n", candidate.name, static_cast<void*>(hit), verdict);
+        if (hit != nullptr && hit != window && hit != game) {
+            // Knowing which foreign window it is matters when the answer is neither ours nor the game.
+            wchar_t title[128]{};
+            wchar_t className[128]{};
+            const DWORD pid = [&] { DWORD value = 0; ::GetWindowThreadProcessId(hit, &value); return value; }();
+            ::GetWindowTextW(hit, title, 128);
+            ::GetClassNameW(hit, className, 128);
+            std::printf("                     foreign: pid=%lu class=%ls title=%ls exStyle=0x%llX\n",
+                static_cast<unsigned long>(pid), className, title,
+                static_cast<unsigned long long>(hitStyle));
+        }
+        ::DestroyWindow(window);
+        ::Sleep(200);
+    }
+}
+
 /// One frame of a GDI window. In layered mode black is the colorkey and therefore transparent, so the
 /// background fill is what erases the previous frame; in plain mode the same fill is just an opaque
 /// background. Either way the block and its stripe make the window visible, which is what puts it in
@@ -342,7 +393,7 @@ void DrawCompositionFrame(ProbeState& state, const Options& options, float scale
 
 int Run(const Options& options, HINSTANCE instance) {
     if (options.mode != "none" && options.mode != "plain" &&
-        options.mode != "dcomp" && options.mode != "layered") {
+        options.mode != "dcomp" && options.mode != "layered" && options.mode != "hittest") {
         std::printf("unknown mode: %s\n", options.mode.c_str());
         return 2;
     }
@@ -358,6 +409,13 @@ int Run(const Options& options, HINSTANCE instance) {
     }
     const UINT width = static_cast<UINT>(physical.right - physical.left);
     const UINT height = static_cast<UINT>(physical.bottom - physical.top);
+
+    // The hit-test question needs no rendering and no capture loop: it creates each window type in turn
+    // and asks Windows which window a click at the centre would go to.
+    if (options.mode == "hittest") {
+        ProbeHitTesting(options, instance, game, physical);
+        return 0;
+    }
 
     ProbeState state;
     state.game = game;

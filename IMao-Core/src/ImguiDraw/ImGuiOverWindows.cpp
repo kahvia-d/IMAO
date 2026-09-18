@@ -330,10 +330,16 @@ int ImGuiOverWindows::start()
     // A composition visual needs no redirection bitmap, and asking for one is what makes DWM take the
     // slower path for the surface. The window style therefore depends on which presentation the
     // session will use, which is decided before the window exists.
+    //
+    // WS_EX_LAYERED is kept in both cases even though the composition path does not use a colorkey: it
+    // is what keeps the window out of hit-testing. Measured by Test-OverlayHitTest.ps1 against the live
+    // game, a WS_EX_NOREDIRECTIONBITMAP window without it becomes the window a click reaches, so the
+    // overlay's own clicks stop working while every frame-rate number still looks right. The two are
+    // not alternatives; WS_EX_LAYERED is the one that matters for input.
     const bool useComposition = WantCompositionPresentation();
-    DWORD overlayStyles = WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
+    DWORD overlayStyles = WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW |
+        WS_EX_LAYERED;
     if (useComposition) overlayStyles |= WS_EX_NOREDIRECTIONBITMAP;
-    else overlayStyles |= WS_EX_LAYERED;
     overWindowsHwnd = ::CreateWindowExW(overlayStyles,
         wc.lpszClassName, L"IMao Map Overlay", WS_POPUP, initialOrigin.x, initialOrigin.y,
         initialClient.right, initialClient.bottom, nullptr, nullptr, wc.hInstance, nullptr);
