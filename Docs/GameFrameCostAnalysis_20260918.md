@@ -673,3 +673,60 @@ get-buffer-failed / create-view-failed。下一次运行会直接指出断点。
 
 - 归因必须**同一次运行内**对比（这正是脚本测量两次基准的原因）；
 - 跨运行比较绝对 fps **没有意义**，只能比 `>20 ms` 这类比例指标。
+
+## 18. DirectComposition 实测成立（2026-09-18 14:53-14:55）
+
+修掉两个 bug 后（见 18.1），composition 路径真正跑起来了：
+
+```text
+14:53:19  overlay-presentation  mode=layered-colorkey swapEffect=discard
+14:54:56  overlay-presentation  mode=composition swapEffect=flip-sequential
+```
+
+这次**没有 `reason=` 回退**，且同一会话内还确认了覆盖层仍在正常工作：
+`overlay-motion renderFps=29.78 attachedFps=29.78 windowHidden=0`（标记持续附着），
+整个 composition 窗口内**没有任何设备或呈现错误**。
+
+| 段 | 帧数 | fps | p50 | p95 | **>20 ms** | PresentMode |
+| --- | --- | --- | --- | --- | --- | --- |
+| `baseline-colorkey`（mask 0） | 4558 | **101.3** | 6.45 | 22.58 | **17.46%** | Independent Flip 100% |
+| `composition`（mask 64） | 5170 | **114.9** | 7.68 | 19.09 | **1.82%** | Independent Flip 100% |
+
+**+13.6 fps，`>20 ms` 从 17.46% 降到 1.82%（约 10 倍）。**
+
+而且这与第 17 节那次**无效运行的数字几乎一样**（101.1 → 114.2、18.37% → 2.34%）。
+两次一致**不能**当作"双份证据"——因为第 17 节那次两段其实都是 colorkey，
+而这次基准也仍然停在 101.3（与 17 节的 101.1 相同）。合理解释是：
+**这台机器上 colorkey 配置稳定在约 101 fps，composition 配置稳定在约 115 fps**，
+于是"无效的那次"和"有效的那次"看起来相同。**这正是必须查日志而不是看数字的原因。**
+
+### 18.1 从"启动不了"到"跑起来"修了什么
+
+| 现象 | 原因 | 修复 |
+| --- | --- | --- |
+| `reason=composition-unavailable hr=0` | 回退日志打印的是**成功**的 `CreateSwapChainForComposition` 的返回值，把真正的失败点藏了 | 每一步分别上报 HRESULT |
+| `reason=create-view-failed index=1 hr=0x80070057` | 按缓冲区索引逐个取 view，但 DXGI 不允许对 flip 模型 `GetBuffer(1)` | 只取当前缓冲区（`GetBuffer(0)`），每次 present 后重新获取并释放旧 view |
+
+### 18.2 结论
+
+**第 16 节的假设成立**：覆盖层那 13-16 fps 的代价与 `>20 ms` 长尾，
+主要来自 **blt 模型交换链 + colorkey 分层窗口**这条呈现路径，而不是全屏清屏、
+不是窗口几何同步、也不是绘制本身的内容。改成 **flip 模型 + DirectComposition** 后：
+
+- 平均帧率接近（但仍低于）无覆盖层的水平；
+- **`>20 ms` 长尾基本消失**（17.5% → 1.8%），这才是玩家感觉到的"不丝滑"。
+
+顺带确认了第 14 节探针测到的现象是真实的：一个 flip 模型 + 合成表面的等价窗口
+只要 1.8 fps，而 blt 模型 + colorkey 的要 6.8-17%。
+
+### 18.3 尚未决定
+
+composition 路径目前**只在 mask 64 下启用**，默认仍是 colorkey。要把它变成默认，
+需要先补两件事：
+
+1. **确认玩家侧观感**：DPR 缩放、全屏/无边框、切分辨率、最小化恢复等情况下，
+   合成表面的透明与缩放行为必须与 colorkey 一致（本机只验证了 2560×1440 一档）；
+2. **确认回退路径**：composition 不可用的机器（旧驱动、远程桌面、某些虚拟机）
+   仍然要能正常出覆盖层——代码已有回退，但需要在那种环境下实测一次。
+
+在这两件事完成前，**不应直接把默认切过去**。
