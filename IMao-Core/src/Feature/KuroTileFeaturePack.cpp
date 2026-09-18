@@ -214,7 +214,6 @@ KuroTileFeaturePackStatus KuroTileFeaturePack::LoadDirectory(const std::filesyst
             return Failure(std::move(status), "feature metadata is invalid");
         }
         const auto featurePath = packDirectory / fileName;
-        if (!std::filesystem::exists(featurePath)) return Failure(std::move(status), "feature XML is missing");
         const auto binaryPath = packDirectory / "features.imf";
         if (std::filesystem::exists(binaryPath)) {
             FeatureBinaryHeader binaryHeader;
@@ -228,6 +227,13 @@ KuroTileFeaturePackStatus KuroTileFeaturePack::LoadDirectory(const std::filesyst
             }
         }
         if (!status.loadedFromBinary) {
+            // The binary is the shipping format and its header carries the source XML hash, so a
+            // valid, current binary already proves this pack's integrity. The XML stays the
+            // fallback for a missing or stale binary and no longer has to be installed at all:
+            // it is 75% of a pack's bytes and is never read on the normal path.
+            if (!std::filesystem::exists(featurePath)) {
+                return Failure(std::move(status), "no usable feature binary and the feature XML is missing");
+            }
             if (Sha256File(featurePath) != expectedHash) return Failure(std::move(status), "feature XML SHA-256 mismatch");
             if (!FeatureLoader::loadFeaturesFromXML(featurePath.string(), status.featureData)) return Failure(std::move(status), "feature XML cannot be read");
         }
