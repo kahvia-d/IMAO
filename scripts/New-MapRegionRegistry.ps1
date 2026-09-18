@@ -107,6 +107,37 @@ $calibrations = (Read-Json (Join-Path $SourceRoot 'Assets/KuroMap/scene-calibrat
 $validations = (Read-Json (Join-Path $SourceRoot 'Assets/KuroMap/scene-validation.json')).scenes
 $mapManifest = Read-Json (Join-Path $SourceRoot 'Assets/KuroMap/manifest.json')
 
+# Frames whose compiled origin is still the (0, 0) placeholder cannot have a tile
+# window derived. An origin-evidence file records in-game captures that prove the
+# placeholder is nonetheless correct, which is enough for the tile grid (it needs
+# only the origin) but is not a four-point calibration.
+$originEvidence = @{}
+$originEvidenceRoot = Join-Path $SourceRoot 'map-regions/origins'
+if (Test-Path -LiteralPath $originEvidenceRoot) {
+    foreach ($file in @(Get-ChildItem -LiteralPath $originEvidenceRoot -Filter '*.json' -File)) {
+        $evidence = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ([int]$evidence.formatVersion -ne 1) { throw "Unsupported origin evidence format: $($file.Name)" }
+        $evidenceState = [int]$evidence.state
+        if ($originEvidence.ContainsKey($evidenceState)) { throw "Duplicate origin evidence for state $evidenceState." }
+        $samples = @($evidence.samples)
+        if ($samples.Count -lt 4) { throw "Origin evidence for state $evidenceState needs at least four samples." }
+        $tolerance = [double]$evidence.toleranceUnits
+        foreach ($sample in $samples) {
+            if ([double]$sample.nearestPointUnits -gt $tolerance) {
+                throw "Origin evidence for state $evidenceState has a sample $([double]$sample.nearestPointUnits) units from the nearest collectible, above the $tolerance unit tolerance."
+            }
+        }
+        $originEvidence[$evidenceState] = [pscustomobject]@{
+            Scene = [string]$evidence.scene
+            OriginX = [double]$evidence.origin.x
+            OriginY = [double]$evidence.origin.y
+            SampleCount = $samples.Count
+            MaxNearestUnits = ($samples | ForEach-Object { [double]$_.nearestPointUnits } | Measure-Object -Maximum).Maximum
+            Source = [string]$file.Name
+        }
+    }
+}
+
 function Get-FrameTransform([int]$State) {
     if (-not $sceneByState.ContainsKey($State)) { throw "No runtime scene definition for state $State." }
     $scene = $sceneByState[$State]
@@ -130,13 +161,24 @@ function Get-FrameTransform([int]$State) {
     }
     elseif (-not $scene.RequiresGameValidation) { $approved = $true }
     # A frame whose origin is still the compiled zero placeholder has no usable
-    # raw->game mapping; a tile window derived from it would be meaningless.
-    $trustworthy = $status -eq 'calibration' -or -not ($originX -eq 0 -and $originY -eq 0)
+    # raw->game mapping; a tile window derived from it would be meaningless. In-game
+    # capture evidence can confirm the placeholder instead.
+    $evidence = $null
+    if ($originEvidence.ContainsKey($State)) {
+        $candidate = $originEvidence[$State]
+        if ($candidate.Scene -ne $scene.Scene) { throw "Origin evidence scene $($candidate.Scene) does not match state $State ($($scene.Scene))." }
+        if ($candidate.OriginX -ne $originX -or $candidate.OriginY -ne $originY) {
+            throw "Origin evidence for $($scene.Scene) asserts ($($candidate.OriginX), $($candidate.OriginY)) but the effective origin is ($originX, $originY)."
+        }
+        $evidence = $candidate
+    }
+    $trustworthy = $status -eq 'calibration' -or -not ($originX -eq 0 -and $originY -eq 0) -or $null -ne $evidence
     return [pscustomobject]@{
         Scene = $scene.Scene; SceneId = $scene.SceneId; State = $State
         OriginX = $originX; OriginY = $originY; Scale = $scale
         Source = $status; RequiresGameValidation = $scene.RequiresGameValidation
         Approved = $approved; ApprovalReason = $approvalReason; Trustworthy = $trustworthy
+        OriginEvidence = $evidence
     }
 }
 
@@ -297,13 +339,15 @@ foreach ($entry in $regionTable) {
     $tileBounds = $null
     $outliers = 0
     # Confidence decides whether a region may be built at all:
-    #   validated    frame 8 - the transform is ground-truthed against the six
-    #                shipped overworld packs (every area anchor lands inside its
-    #                pack's tile rectangle).
-    #   calibrated   the frame carries a passed four-point calibration.
-    #   uncalibrated no calibration: the window below is a guess and must not be
-    #                turned into a published pack.
-    #   blocked      the frame origin is still the compiled zero placeholder.
+    #   validated        frame 8 - the transform is ground-truthed against the six
+    #                    shipped overworld packs (every area anchor lands inside its
+    #                    pack's tile rectangle).
+    #   calibrated       the frame carries a passed four-point calibration.
+    #   origin-verified  the compiled origin is confirmed by in-game captures. Enough
+    #                    for the tile grid, which needs only the origin.
+    #   uncalibrated     no calibration and no origin evidence: the window is a guess
+    #                    and must not be turned into a published pack.
+    #   blocked          the frame origin is still the compiled zero placeholder.
     $confidence = 'blocked'
     if ($transform.Trustworthy -and $gameX.Count -gt 0) {
         $minX = Get-Quantile $gameX $LowerQuantile
@@ -329,6 +373,7 @@ foreach ($entry in $regionTable) {
         }
         if ($state -eq 8) { $confidence = 'validated' }
         elseif ($transform.Source -eq 'calibration') { $confidence = 'calibrated' }
+        elseif ($null -ne $transform.OriginEvidence) { $confidence = 'origin-verified' }
         else { $confidence = 'uncalibrated' }
     }
 
@@ -366,7 +411,11 @@ foreach ($entry in $regionTable) {
         anchor = $anchor
         tileBounds = $tileBounds
         tileConfidence = $confidence
-        buildable = ($confidence -eq 'validated' -or $confidence -eq 'calibrated')
+        buildable = ($confidence -eq 'validated' -or $confidence -eq 'calibrated' -or $confidence -eq 'origin-verified')
+        originEvidence = if ($null -ne $transform.OriginEvidence) {
+            [ordered]@{ source = $transform.OriginEvidence.Source; samples = $transform.OriginEvidence.SampleCount
+                maxNearestPointUnits = $transform.OriginEvidence.MaxNearestUnits }
+        } else { $null }
         transformSource = $transform.Source
         requiresGameValidation = $transform.RequiresGameValidation
         approved = $transform.Approved

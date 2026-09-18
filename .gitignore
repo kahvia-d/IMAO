@@ -20,5 +20,6 @@ third_party/
 tools/dotnet/
 tools/dotnet-sdk-8.0.424/
 # Archived upstream map tiles are third-party public assets and are reproducible
-# from scripts/Get-MapTileArchive.ps1; only the hash manifest is committed.
-map-regions/tiles/
+# from scripts/Get-MapTileArchive.ps1. The hash manifest beside them is committed.
+map-regions/tiles/*/
+!map-regions/tiles/tiles.manifest.json

@@ -79,17 +79,28 @@ tileY = ceil(-gameY / 850)
 | tethys 泰缇斯之底 | x -2..3, y -3..2 | 36 | calibrated |
 | avinoleum 阿维纽林 | x -1..14, y -13..2 | 400 | **uncalibrated** |
 | fabricatorium 隐海试验场 | x -3..5, y -2..2 | 117 | **uncalibrated** |
-| lowervault 下层金库 | — | — | **blocked** |
+| lowervault 下层金库 | x 1..11, y -5..3 | 99 | **origin-verified** |
 | timeriftruins 时隙废都 | — | — | **blocked** |
 
 置信度含义：
 
 - `validated`：frame 8，换算用 6 个既有包做过地面真值验证。
 - `calibrated`：该 frame 有通过的四点校准。
-- `uncalibrated`：无校准，窗口只是猜测，**不得据此发布**。
-- `blocked`：frame 原点仍是编译期占位值 `(0, 0)`。
+- `origin-verified`：编译期原点由实机截图证实。**瓦片网格只需要原点**，所以这足以推导可信窗口，但它不是四点校准，也不能开放该地区。
+- `uncalibrated`：无校准也无原点证据，窗口只是猜测，**不得据此发布**。
+- `blocked`：frame 原点仍是编译期占位值 `(0, 0)`，且无证据。
 
-**四个地区必须先补四点校准**：avinoleum(903)、fabricatorium(905)、lowervault(902)、timeriftruins(910)。其中 902/910 的 origin 是 `(0,0)` 且 `requiresGameValidation=true`。
+**只剩 `时隙废都`(910) 仍被阻塞。** `下层金库`(902) 已由 `map-regions/origins/lowervault.json` 的实机证据解除阻塞。
+
+### 原点证据（`map-regions/origins/<region>.json`）
+
+编译期原点为 `(0, 0)` 的 frame 原本无法推导窗口。证据文件的原理：`game = (raw - origin)/100`，**原点错误会让整个点云均匀平移**，所以正确的原点会把实机采集到的坐标放在真实收集点之上。
+
+下层金库的实测：区域内点云横跨约 7210 × 3524 游戏单位，四张实机截图读出的坐标到最近收集点的距离分别是 **2.0 / 5.5 / 24.5 / 8.1 单位**。这不可能是巧合，因此 `(0, 0)` 成立。
+
+生成器会校验证据文件：至少 4 个样本、每个样本到最近收集点的距离不超过 `toleranceUnits`、且 `origin` 必须与生效原点一致，否则报错。
+
+**证据文件目前只填了 `game` 坐标，`map` 留空。** 要生成正式的 `scene-calibrations.json` 记录，还差把每张大地图截图里玩家箭头的位置换算成内部地图像素（方法见下）。
 
 ## 五、上游代次已变更（重要）
 
@@ -137,7 +148,8 @@ pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply
 
 **未决项**
 
-1. **四个地区缺校准**（avinoleum/fabricatorium/lowervault/timeriftruins），需要四点校准后才能定窗口。
+1. **时隙废都(910) 缺原点证据或校准**，阿维纽林(903)、隐海试验场(905) 缺校准。按用户要求先放着，不要求一次做完。
+2. **下层金库的四点校准记录还差一步**：`map-regions/origins/lowervault.json` 里 4 个 `game` 坐标已经读出（截图在 `C:\Users\Kahvia\Videos\NVIDIA\Wuthering Waves`，成对的时间戳见文件里的 `capture`/`mapCapture` 字段），`map` 留空待填。填法是"把大地图箭头中心换算为内部地图像素"：仓库里唯一的完整样例是 `Tests/VisualLocalization/20260909-sparse-minimap/provenance.json`（含 `mapCaptureCorners` 与 `arrowNominalScreen`），消费方是 `IMao-Core/tests/SparseMinimapTests.h`。**该四角是把大地图裁剪图独立匹配到地图影像上得到的**，所以先要有该地区的地图影像——这也是为什么先建包、后校准是自然的顺序。填好后跑 `scripts/Set-KuroSceneCalibration.ps1`。
 2. **参考小地图**：`map-regions/references/<region>.png` 放一张实机小地图截图后，该地区就会构建成**已验证**包；没有的话构建会明确标记为 unverified 覆盖包（`referenceVerification.skipped=true`）。现有 4 张可复用的参考：`Assets/FeaturesDatas/KuroTilePacks/*/reference-minimap.png`。
 3. **`legacyBaseExclusions` 需要重新生成**。旧包 `Tethys`/`Lahai` 带有这个字段，它记录的是**与该包特征重复的基线 IMF 行号**（由 `IMao-Core/src/Feature/LegacyFeatureExclusions.h` 在运行时排除）。旧脚本在特征哈希变化时拒绝继承，而重建必然变化，所以：
    - `-OutputRoot` 指向全新目录时该门禁自动跳过（干净重做语义）；

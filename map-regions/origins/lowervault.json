@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "scene": "LowerVault",
+  "state": 902,
+  "origin": { "x": 0, "y": 0 },
+  "originSource": "compiled placeholder in CoordinateStruct.h, confirmed against four in-game captures",
+  "verifiedAtUtc": "2026-09-14T11:16:44+08:00",
+  "method": "Each captured in-game coordinate is converted with game = (raw - origin) / 100 and compared against the region's own point cloud. A wrong origin shifts every point uniformly, so a correct origin puts the captures on or beside real collectibles.",
+  "regionSpanUnits": { "x": 7210, "y": 3524 },
+  "toleranceUnits": 40,
+  "samples": [
+    {
+      "game": { "x": 2383, "y": 505 },
+      "nearestPointUnits": 2.0,
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.15.05.89.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.15.08.97.png",
+      "map": null
+    },
+    {
+      "game": { "x": 1805, "y": 687 },
+      "nearestPointUnits": 5.5,
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.15.56.50.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.15.59.08.png",
+      "map": null
+    },
+    {
+      "game": { "x": 2363, "y": -329 },
+      "nearestPointUnits": 24.5,
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.16.21.11.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.16.23.84.png",
+      "map": null
+    },
+    {
+      "game": { "x": 2363, "y": 727 },
+      "nearestPointUnits": 8.1,
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.16.41.32.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.16.44.04.png",
+      "map": null
+    }
+  ],
+  "remainingWork": "Fill each sample's map coordinate by measuring the player arrow in mapCapture against the LowerVault map imagery, then run scripts/Set-KuroSceneCalibration.ps1 to store the four-point calibration. Origin evidence is enough to derive a trustworthy tile window; it is not a substitute for the calibration record and does not approve the scene."
+}
