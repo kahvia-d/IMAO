@@ -53,25 +53,20 @@ static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
 
 // DirectComposition presentation. When g_compositionDevice is set the overlay presents through a
 // composition visual instead of a colorkey layered window: the swap chain is a flip-model one created
-// for composition, and each of its buffers needs its own render target view because a flip-model
-// chain rotates which buffer is current. A blt-model surface costs DWM an extra copy, which is the
-// leading explanation for the gap between this overlay and an equivalent probe window.
+// for composition, and its current buffer's view is re-acquired after every present because a
+// flip-model chain rotates which buffer it presents from. A blt-model surface costs DWM an extra copy,
+// which is the leading explanation for the gap between this overlay and an equivalent probe window.
 static IDCompositionDevice* g_compositionDevice = nullptr;
 static IDCompositionTarget* g_compositionTarget = nullptr;
 static IDCompositionVisual* g_compositionVisual = nullptr;
-static constexpr UINT kMaxSwapChainBuffers = 3;
-static ID3D11RenderTargetView* g_compositionRenderTargets[kMaxSwapChainBuffers] = {};
-static UINT g_compositionRenderTargetCount = 0;
-static UINT g_compositionBufferIndex = 0;
 
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 bool CreateRenderTarget();
 void CleanupRenderTarget();
-/// Rebuilds the per-buffer views after a resize or a new swap chain; composition chains need one view
-/// per buffer.
-bool CreateCompositionRenderTargets();
+/// Re-acquires the composition swap chain's current back buffer view after a present or a resize.
+bool AcquireCompositionBackBufferView();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 constexpr auto kOverlayFramePeriod = OverlayPacing::kFramePeriod; // matches the capture rate
 
@@ -538,20 +533,17 @@ int ImGuiOverWindows::start()
         }, !UsingCompositionPresentation());
         g_ResizeWidth = g_ResizeHeight = 0; // Notifications never serve as size truth.
         bool targetReady = bufferSize.Ready() && (g_mainRenderTargetView || CreateRenderTarget());
-        // A flip-model chain rotates which buffer is current, so the view has to follow it; the plain
-        // windowed chain always renders into buffer 0 and keeps the one view.
-        if (targetReady && UsingCompositionPresentation()) {
-            if (bufferSize.resizeAttempted && SUCCEEDED(bufferSize.resizeResult)) {
-                if (!CreateCompositionRenderTargets()) {
-                    Diagnostics::Record("overlay-resize-error",
-                        "action=disable-overlay-after-composition-view-rebuild-failed");
-                    stopFlag = true;
-                    break;
-                }
-                hasPresented = false; // The new buffers hold undefined content.
+        // A flip-model chain rotates which buffer it presents from, so its current buffer's view has to
+        // be re-acquired after a resize; the plain windowed chain always renders into buffer 0.
+        if (targetReady && UsingCompositionPresentation() &&
+            bufferSize.resizeAttempted && SUCCEEDED(bufferSize.resizeResult)) {
+            if (!AcquireCompositionBackBufferView()) {
+                Diagnostics::Record("overlay-resize-error",
+                    "action=disable-overlay-after-composition-view-rebuild-failed");
+                stopFlag = true;
+                break;
             }
-            if (g_compositionRenderTargetCount > 0)
-                g_mainRenderTargetView = g_compositionRenderTargets[g_compositionBufferIndex];
+            hasPresented = false; // The new buffers hold undefined content.
         }
         targetReady = targetReady && g_mainRenderTargetView != nullptr;
         if (!targetReady) {
@@ -780,8 +772,14 @@ int ImGuiOverWindows::start()
                 // A committed visual is what makes the new surface visible; without this the compositor
                 // keeps showing the previous one.
                 if (g_compositionDevice != nullptr) g_compositionDevice->Commit();
-                if (g_compositionRenderTargetCount > 0)
-                    g_compositionBufferIndex = (g_compositionBufferIndex + 1) % g_compositionRenderTargetCount;
+                // The next present comes from the other buffer, so its view has to be taken now. A
+                // failure here is fatal to the session rather than a fallback: the swap chain already
+                // exists and the surface is already live.
+                if (!AcquireCompositionBackBufferView()) {
+                    Diagnostics::Record("overlay-device-error", "composition back buffer view unavailable");
+                    stopFlag = true;
+                    break;
+                }
             }
             g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
             RecordOverlayFrameDiagnostics(overWindowsHwnd, hr, bufferSize.after);
@@ -829,8 +827,8 @@ bool ReportCompositionStep(const char* step, HRESULT result)
     return false;
 }
 
-/// Binds whatever the composition path needs after the swap chain exists: one render target view per
-/// buffer, a composition device, and a visual for it.
+/// Binds whatever the composition path needs after the swap chain exists: a render target view for the
+/// current buffer, a composition device, and a visual for it.
 bool CreateCompositionPresentation(HWND hWnd)
 {
     IDXGIDevice* dxgiDevice = nullptr;
@@ -849,7 +847,7 @@ bool CreateCompositionPresentation(HWND hWnd)
         g_compositionDevice = nullptr;
         return false;
     }
-    if (!CreateCompositionRenderTargets()) return false;
+    if (!AcquireCompositionBackBufferView()) return false;
     if (!ReportCompositionStep("create-target-for-hwnd",
         g_compositionDevice->CreateTargetForHwnd(hWnd, TRUE, &g_compositionTarget))) return false;
     if (!ReportCompositionStep("create-visual",
@@ -861,6 +859,38 @@ bool CreateCompositionPresentation(HWND hWnd)
     if (!ReportCompositionStep("commit", g_compositionDevice->Commit())) return false;
     return true;
 }
+}
+
+/// Takes the render target view of the buffer a flip-model chain will present from next.
+///
+/// Only buffer 0 is ever requested, and the previous view is released first. Acquiring a view for every
+/// buffer index looks like the obvious way to follow a rotating chain, but it is not how DXGI exposes
+/// one: GetBuffer(1) answered E_INVALIDARG on the first attempt, which sent the whole overlay back to
+/// the colorkey path while still looking like a working session.
+bool AcquireCompositionBackBufferView()
+{
+    if (g_pSwapChain == nullptr || g_pd3dDevice == nullptr) {
+        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=no-swap-chain-for-view");
+        return false;
+    }
+    if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
+    // Unbind before releasing: a view still bound to the context cannot be released cleanly.
+    if (g_pd3dDeviceContext) g_pd3dDeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+    ID3D11Texture2D* buffer = nullptr;
+    const HRESULT bufferResult = g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&buffer));
+    if (FAILED(bufferResult) || buffer == nullptr) {
+        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=get-buffer-failed hr=" +
+            std::to_string(static_cast<long>(bufferResult)));
+        return false;
+    }
+    const HRESULT viewResult = g_pd3dDevice->CreateRenderTargetView(buffer, nullptr, &g_mainRenderTargetView);
+    buffer->Release();
+    if (FAILED(viewResult) || g_mainRenderTargetView == nullptr) {
+        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=create-view-failed hr=" +
+            std::to_string(static_cast<long>(viewResult)));
+        return false;
+    }
+    return true;
 }
 
 bool CreateDeviceD3D(HWND hWnd)
@@ -990,69 +1020,11 @@ bool CreateRenderTarget()
     return SUCCEEDED(viewResult) && g_mainRenderTargetView != nullptr;
 }
 
-bool CreateCompositionRenderTargets()
-{
-    CleanupRenderTarget();
-    if (g_pSwapChain == nullptr || g_pd3dDevice == nullptr) {
-        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=no-swap-chain-for-views");
-        return false;
-    }
-
-    DXGI_SWAP_CHAIN_DESC1 description{};
-    IDXGISwapChain1* modern = nullptr;
-    UINT count = 0;
-    if (SUCCEEDED(g_pSwapChain->QueryInterface(IID_PPV_ARGS(&modern))) && modern != nullptr) {
-        if (SUCCEEDED(modern->GetDesc1(&description))) count = description.BufferCount;
-        modern->Release();
-    }
-    if (count == 0) {
-        DXGI_SWAP_CHAIN_DESC legacy{};
-        if (SUCCEEDED(g_pSwapChain->GetDesc(&legacy))) count = legacy.BufferCount;
-    }
-    if (count == 0 || count > kMaxSwapChainBuffers) {
-        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=buffer-count-unusable count=" +
-            std::to_string(count) + " limit=" + std::to_string(kMaxSwapChainBuffers));
-        return false;
-    }
-
-    for (UINT index = 0; index < count; ++index) {
-        ID3D11Texture2D* buffer = nullptr;
-        const HRESULT bufferResult = g_pSwapChain->GetBuffer(index, IID_PPV_ARGS(&buffer));
-        if (FAILED(bufferResult) || buffer == nullptr) {
-            Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=get-buffer-failed index=" +
-                std::to_string(index) + " hr=" + std::to_string(static_cast<long>(bufferResult)));
-            CleanupRenderTarget();
-            return false;
-        }
-        const HRESULT viewResult = g_pd3dDevice->CreateRenderTargetView(buffer, nullptr,
-            &g_compositionRenderTargets[index]);
-        buffer->Release();
-        if (FAILED(viewResult) || g_compositionRenderTargets[index] == nullptr) {
-            Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=create-view-failed index=" +
-                std::to_string(index) + " hr=" + std::to_string(static_cast<long>(viewResult)));
-            CleanupRenderTarget();
-            return false;
-        }
-        g_compositionRenderTargetCount = index + 1;
-    }
-    g_compositionBufferIndex = 0;
-    g_mainRenderTargetView = g_compositionRenderTargets[0];
-    return true;
-}
-
 void CleanupRenderTarget()
 {
-    // g_mainRenderTargetView aliases one of these entries, so it is cleared first and never released
-    // on its own: releasing both would double-free the same view.
-    g_mainRenderTargetView = nullptr;
-    for (UINT index = 0; index < g_compositionRenderTargetCount; ++index) {
-        if (g_compositionRenderTargets[index]) {
-            g_compositionRenderTargets[index]->Release();
-            g_compositionRenderTargets[index] = nullptr;
-        }
-    }
-    g_compositionRenderTargetCount = 0;
-    g_compositionBufferIndex = 0;
+    // The composition path re-acquires this view every frame, so the plain release here is all either
+    // path needs: there is no per-buffer array to keep in step.
+    if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
 }
 
 // Forward declare message handler from imgui_impl_win32.cpp
