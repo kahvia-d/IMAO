@@ -25,12 +25,21 @@
 | --- | --- |
 | 与真实覆盖层同尺寸（游戏客户区）、同位置、同为鼠标穿透 + 置顶 + 不激活的窗口 | 画面采集 |
 | 顶部中央一块 450×70 的圆角色块（对应真实状态条的位置与面积） | 定位、追踪 |
-| 三种模式：`none` / `dcomp` / `layered` | ImGui、标记绘制 |
+| 四种模式：`none` / `plain` / `dcomp` / `layered` | ImGui、标记绘制 |
 
-**三种模式下色块都可见**，包括 `layered`。这一点很关键：2026-09-18 12:23 那轮里
-`layered` 模式**什么都没画**，而 colorkey 让纯黑表面完全透明，于是那个窗口等于不在合成里——
-跟 `mode=none` 是同一件事。所以那一轮拿 `layered` 去对比是**无效的**（详见
-`Docs/GameFrameCostAnalysis_20260918.md` 第 13 节）。
+**每一段用不同颜色，屏幕上一眼就能确认自己在哪一段：**
+
+| 模式 | 颜色 | 说明 |
+| --- | --- | --- |
+| `none` | **无色块** | **故意什么都不显示**——这就是基准，别以为它坏了 |
+| `dcomp` | **红** | 新贴法：`WS_EX_NOREDIRECTIONBITMAP` + DirectComposition |
+| `layered` | **绿** | 今天的贴法：`WS_EX_LAYERED` + colorkey |
+| `plain` | **蓝** | 额外参照：普通不透明窗口（可选，见 `-IncludePlain`） |
+
+色块是**必须能看见**的。如果某一轮该看到颜色却没有，说明那一段无效——2026-09-18 12:23 那轮
+`layered` 就是这种情况：它什么都没画，而 colorkey 让纯黑表面完全透明，于是那个窗口等于不在
+合成里，跟 `mode=none` 是同一件事，数据不能用来代表「可见分层窗口」
+（详见 `Docs/GameFrameCostAnalysis_20260918.md` 第 13 节）。
 
 采集与定位**已经单独测出约 10 fps 的代价**，如果放进来会掩盖这里要测的东西，所以不放。
 
@@ -51,22 +60,24 @@
 ```
 
 它会按 `none → dcomp → layered` 三段各约 45 秒跑完，同时录一份 PresentMon 轨迹，结束时打印
-`PresentMode` 分布。约 3 分钟。
+`PresentMode` 分布。约 3 分钟。**第一段屏幕上什么都不显示，那是基准**；第二段红色、第三段绿色。
 
 可调参数：
 
 ```powershell
 .\scripts\Test-OverlayPresentPath.ps1 -PhaseSeconds 60      # 每段更长
 .\scripts\Test-OverlayPresentPath.ps1 -PresentHz 0          # 按显示刷新率刷，取最大代价
+.\scripts\Test-OverlayPresentPath.ps1 -IncludePlain         # 末尾额外跑一段蓝色普通窗口
 .\scripts\Test-OverlayPresentPath.ps1 -SkipLayered          # 只跟 none 比
 ```
 
 也可以单独手动跑探针：
 
 ```powershell
-.\x64\Release\IMaoOverlayPresentProbe.exe --mode=dcomp   --hold=60
-.\x64\Release\IMaoOverlayPresentProbe.exe --mode=layered --hold=60
-.\x64\Release\IMaoOverlayPresentProbe.exe --mode=none    --hold=60
+.\x64\Release\IMaoOverlayPresentProbe.exe --mode=dcomp   --hold=60   # 红
+.\x64\Release\IMaoOverlayPresentProbe.exe --mode=layered --hold=60   # 绿
+.\x64\Release\IMaoOverlayPresentProbe.exe --mode=plain   --hold=60   # 蓝
+.\x64\Release\IMaoOverlayPresentProbe.exe --mode=none    --hold=60   # 无色块
 ```
 
 - `--block=WxH`、`--alpha=0..1` 调整色块。

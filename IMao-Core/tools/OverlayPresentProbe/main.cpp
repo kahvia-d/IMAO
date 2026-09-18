@@ -8,13 +8,20 @@
 // rate.
 //
 // Modes, meant to be run one at a time against the game with PresentMon recording:
-//   --mode=none     never creates a window; the baseline the other two are compared against
+//   --mode=none     creates no window at all; the baseline the others are compared against, so it is
+//                   deliberately the one phase with nothing on screen
+//   --mode=plain    a normal window: visible and topmost, but neither layered nor composed
 //   --mode=dcomp    Window 8 / Windows 11 composition, WS_EX_NOREDIRECTIONBITMAP, DirectComposition
 //   --mode=layered  WS_EX_LAYERED + LWA_COLORKEY, which is what the overlay uses today
 //
+// Every phase that shows a window shows it in a different colour, so which phase is running is
+// visible at a glance instead of inferred from the console:
+//
+//   dcomp = red    layered = green    plain = blue
+//
 // The comparison that matters is dcomp against layered. If the game reports Hardware: Independent
 // Flip while dcomp is up and Composed: Flip while layered is up, the rewrite is worth its cost. If
-// both report Composed, the presentation path is not what a rewrite can buy back.
+// both report the same thing, the presentation path is not what a rewrite can buy back.
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -69,8 +76,9 @@ Options ParseOptions(int argc, char** argv) {
         else if (argument.rfind("--hz=", 0) == 0) options.presentHz = std::max(0, std::stoi(value("--hz")));
         else if (argument.rfind("--hold=", 0) == 0) options.holdSeconds = std::max(0, std::stoi(value("--hold")));
         else if (argument == "--help" || argument == "-h") {
-            std::printf("usage: IMaoOverlayPresentProbe [--mode=none|dcomp|layered] [--block=WxH]"
-                " [--alpha=0..1] [--hz=N|0] [--hold=seconds]\n");
+            std::printf("usage: IMaoOverlayPresentProbe [--mode=none|plain|dcomp|layered] [--block=WxH]"
+                " [--alpha=0..1] [--hz=N|0] [--hold=seconds]\n"
+                "  colours: dcomp=red  layered=green  plain=blue  none=no window\n");
             std::exit(0);
         }
     }
@@ -133,9 +141,26 @@ DWORD WindowStylesFor(const std::string& mode) {
     return styles;
 }
 
-/// Draws the same block the real status bar occupies, so the measured surface covers comparable pixels.
+/// One colour per phase, so the phase that is running is visible rather than inferred. mode=none has
+/// no window and therefore no colour.
+bool BlockColorFor(const std::string& mode, COLORREF& block, COLORREF& stripe) {
+    if (mode == "dcomp") { block = RGB(92, 22, 26); stripe = RGB(240, 72, 76); return true; }   // red
+    if (mode == "layered") { block = RGB(20, 68, 40); stripe = RGB(74, 222, 128); return true; } // green
+    if (mode == "plain") { block = RGB(20, 46, 96); stripe = RGB(96, 165, 250); return true; }   // blue
+    return false;
+}
+
+const char* ColorNameFor(const std::string& mode) {
+    if (mode == "dcomp") return "red";
+    if (mode == "layered") return "green";
+    if (mode == "plain") return "blue";
+    return "none (no window)";
+}
+
+/// Draws the same block the real status bar occupies, so the measured surface covers comparable pixels,
+/// in the phase's own colour.
 void DrawStatusBarBlock(ID2D1DeviceContext* context, ID2D1SolidColorBrush* brush, float scale,
-    float width, float height, const Options& options) {
+    float width, float height, const Options& options, const COLORREF blockColor, const COLORREF stripeColor) {
     const float blockWidth = std::min(options.blockWidth * scale, width);
     const float blockHeight = options.blockHeight * scale;
     const float left = (width - blockWidth) / 2.0f;
@@ -143,7 +168,8 @@ void DrawStatusBarBlock(ID2D1DeviceContext* context, ID2D1SolidColorBrush* brush
     const D2D1_ROUNDED_RECT block{
         D2D1::RectF(left, top, left + blockWidth, top + blockHeight),
         std::min(12.0f * scale, blockHeight / 2.0f), std::min(12.0f * scale, blockHeight / 2.0f) };
-    brush->SetColor(D2D1::ColorF(0.06f, 0.08f, 0.11f, options.alpha));
+    brush->SetColor(D2D1::ColorF(GetRValue(blockColor) / 255.0f, GetGValue(blockColor) / 255.0f,
+        GetBValue(blockColor) / 255.0f, options.alpha));
     context->FillRoundedRectangle(block, brush);
     // A deliberately bright stripe: the probe has to be visibly present, or a "no cost" result could
     // just mean nothing was ever drawn.
@@ -151,7 +177,8 @@ void DrawStatusBarBlock(ID2D1DeviceContext* context, ID2D1SolidColorBrush* brush
         D2D1::RectF(left + blockHeight * 0.4f, top + blockHeight * 0.35f,
             left + blockWidth - blockHeight * 0.4f, top + blockHeight * 0.65f),
         blockHeight * 0.15f, blockHeight * 0.15f };
-    brush->SetColor(D2D1::ColorF(0.39f, 0.85f, 0.91f, options.alpha));
+    brush->SetColor(D2D1::ColorF(GetRValue(stripeColor) / 255.0f, GetGValue(stripeColor) / 255.0f,
+        GetBValue(stripeColor) / 255.0f, options.alpha));
     context->FillRoundedRectangle(stripe, brush);
 }
 
@@ -171,9 +198,13 @@ struct ProbeState {
     ComPtr<IDCompositionVisual> compositionVisual;
     UINT width = 0, height = 0;
     unsigned long long presented = 0;
-    /// mode=layered paints with GDI into the window's redirection surface; mode=dcomp presents a
-    /// composition swap chain.
-    bool usesLayeredGdi = false;
+    /// Windows other than mode=dcomp paint with GDI into the window's redirection surface.
+    bool usesGdi = false;
+    /// The colour this phase draws with, so the phase is identifiable on screen.
+    COLORREF blockColor = RGB(0, 0, 0);
+    COLORREF stripeColor = RGB(255, 255, 255);
+    /// In layered mode this is the colorkey, which is why transparent windows erase with black.
+    COLORREF windowBackground = RGB(0, 0, 0);
 };
 
 /// Reports which step failed with its HRESULT, because "composition setup failed" cannot distinguish
@@ -228,10 +259,11 @@ bool CreateCompositionSurface(ProbeState& state) {
     return true;
 }
 
-/// One frame of the layered colorkey window. GDI is what the colorkey path can actually paint with:
-/// black becomes transparent, everything else is composited. The block is drawn as a plain rectangle
-/// with a stripe, which is enough to make the window visible and therefore present in the composition.
-void DrawLayeredFrame(ProbeState& state, const Options& options, float scale) {
+/// One frame of a GDI window. In layered mode black is the colorkey and therefore transparent, so the
+/// background fill is what erases the previous frame; in plain mode the same fill is just an opaque
+/// background. Either way the block and its stripe make the window visible, which is what puts it in
+/// the composition and makes the comparison meaningful.
+void DrawGdiFrame(ProbeState& state, const Options& options, float scale) {
     HDC target = ::GetDC(state.window);
     if (target == nullptr) return;
     const int blockWidth = std::min(static_cast<int>(options.blockWidth * scale), static_cast<int>(state.width));
@@ -240,18 +272,18 @@ void DrawLayeredFrame(ProbeState& state, const Options& options, float scale) {
     const int top = static_cast<int>(options.blockMargin * scale);
 
     RECT background{ 0, 0, static_cast<LONG>(state.width), static_cast<LONG>(state.height) };
-    HBRUSH colorkeyBrush = ::CreateSolidBrush(RGB(0, 0, 0));
-    ::FillRect(target, &background, colorkeyBrush);
-    ::DeleteObject(colorkeyBrush);
+    HBRUSH backgroundBrush = ::CreateSolidBrush(state.windowBackground);
+    ::FillRect(target, &background, backgroundBrush);
+    ::DeleteObject(backgroundBrush);
 
     RECT block{ left, top, left + blockWidth, top + blockHeight };
-    HBRUSH blockBrush = ::CreateSolidBrush(RGB(15, 20, 29));
+    HBRUSH blockBrush = ::CreateSolidBrush(state.blockColor);
     ::FillRect(target, &block, blockBrush);
     ::DeleteObject(blockBrush);
 
     RECT stripe{ left + blockHeight * 2 / 5, top + blockHeight * 35 / 100,
         left + blockWidth - blockHeight * 2 / 5, top + blockHeight * 65 / 100 };
-    HBRUSH stripeBrush = ::CreateSolidBrush(RGB(99, 216, 232));
+    HBRUSH stripeBrush = ::CreateSolidBrush(state.stripeColor);
     ::FillRect(target, &stripe, stripeBrush);
     ::DeleteObject(stripeBrush);
 
@@ -266,14 +298,16 @@ void DrawCompositionFrame(ProbeState& state, const Options& options, float scale
     state.d2dContext->BeginDraw();
     state.d2dContext->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
     DrawStatusBarBlock(state.d2dContext.Get(), state.brush.Get(), scale,
-        static_cast<float>(state.width), static_cast<float>(state.height), options);
+        static_cast<float>(state.width), static_cast<float>(state.height), options,
+        state.blockColor, state.stripeColor);
     if (FAILED(state.d2dContext->EndDraw())) return;
     const DXGI_PRESENT_PARAMETERS parameters{};
     if (SUCCEEDED(state.compositionSwapChain->Present1(0, 0, &parameters))) ++state.presented;
 }
 
 int Run(const Options& options, HINSTANCE instance) {
-    if (options.mode != "none" && options.mode != "dcomp" && options.mode != "layered") {
+    if (options.mode != "none" && options.mode != "plain" &&
+        options.mode != "dcomp" && options.mode != "layered") {
         std::printf("unknown mode: %s\n", options.mode.c_str());
         return 2;
     }
@@ -322,19 +356,28 @@ int Run(const Options& options, HINSTANCE instance) {
         state.width = width; state.height = height;
         if (!CreateCompositionSurface(state)) { std::printf("composition setup failed\n"); return 4; }
     }
-    else if (options.mode == "layered") {
+    // Every phase that shows a window shows it in its own colour, so the phase running is visible on
+    // screen instead of inferred from the console. mode=none has no window and so no colour.
+    if (BlockColorFor(options.mode, state.blockColor, state.stripeColor)) {
+        state.usesGdi = true;
+        state.windowBackground = RGB(0, 0, 0);
+    }
+    if (options.mode == "layered") {
         // The colorkey makes pure black transparent, which is exactly how the overlay erases its
-        // background today. This mode has to draw the same block the other two draw: an earlier
-        // version of this probe left the layered window blank, which made it fully transparent and
-        // therefore not present in the composition at all - the same situation as mode=none, so the
-        // comparison against it was meaningless. Drawing happens in the frame loop below.
+        // background today, so the background fill above doubles as the erase. An earlier version of
+        // this probe left the layered window blank, which made it fully transparent and therefore not
+        // present in the composition at all - the same situation as mode=none, so its numbers were
+        // meaningless.
         ::SetLayeredWindowAttributes(state.window, RGB(0, 0, 0), 0, LWA_COLORKEY);
-        state.usesLayeredGdi = true;
+    }
+    else if (options.mode == "plain") {
+        // Opaque, so the background is a real colour rather than a colorkey.
+        state.windowBackground = RGB(24, 24, 28);
     }
 
     const float scale = static_cast<float>(::GetDpiForWindow(game)) / 96.0f;
-    std::printf("mode=%s game=%ux%u at %ld,%ld block=%dx%d alpha=%.2f presentHz=%d\n",
-        options.mode.c_str(), width, height, physical.left, physical.top,
+    std::printf("mode=%s color=%s game=%ux%u at %ld,%ld block=%dx%d alpha=%.2f presentHz=%d\n",
+        options.mode.c_str(), ColorNameFor(options.mode), width, height, physical.left, physical.top,
         options.blockWidth, options.blockHeight, options.alpha, options.presentHz);
     std::printf("leave this running while PresentMon records; Ctrl+C or --hold to stop\n");
     std::fflush(stdout);
@@ -361,7 +404,7 @@ int Run(const Options& options, HINSTANCE instance) {
             continue;
         }
         if (options.mode == "dcomp") DrawCompositionFrame(state, options, scale);
-        else if (state.usesLayeredGdi) DrawLayeredFrame(state, options, scale);
+        else if (state.usesGdi) DrawGdiFrame(state, options, scale);
         if (presentPeriod.count() > 0) nextPresentAt += presentPeriod;
         else ::DwmFlush(); // One iteration per display frame, like a game.
         if (state.presented % 300 == 1) {

@@ -18,7 +18,8 @@ param(
     [string]$OutputPath,
     [string]$PresentMonPath,
     [switch]$SkipLayered,
-    [switch]$SkipDcomp
+    [switch]$SkipDcomp,
+    [switch]$IncludePlain
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,6 +53,7 @@ $record = {
 }
 
 & $record "phases: none -> dcomp -> layered, about $PhaseSeconds s each, presentHz=$PresentHz"
+& $record "on screen: phase 1 shows NOTHING (that is the baseline); dcomp is RED; layered is GREEN"
 & $record "trace:  $OutputPath"
 & $record ("-" * 60)
 
@@ -67,13 +69,14 @@ $capture = Start-Process -FilePath $PresentMonPath -ArgumentList @(
 
 Start-Sleep -Seconds 3
 
-$phases = @([pscustomobject]@{ name = 'none'; mode = 'none' })
-if (-not $SkipDcomp) { $phases += [pscustomobject]@{ name = 'dcomp'; mode = 'dcomp' } }
-if (-not $SkipLayered) { $phases += [pscustomobject]@{ name = 'layered'; mode = 'layered' } }
+$phases = @([pscustomobject]@{ name = 'none'; mode = 'none'; note = 'no window at all' })
+if (-not $SkipDcomp) { $phases += [pscustomobject]@{ name = 'dcomp'; mode = 'dcomp'; note = 'RED block' } }
+if (-not $SkipLayered) { $phases += [pscustomobject]@{ name = 'layered'; mode = 'layered'; note = 'GREEN block' } }
+if ($IncludePlain) { $phases += [pscustomobject]@{ name = 'plain'; mode = 'plain'; note = 'BLUE block' } }
 
 try {
     foreach ($phase in $phases) {
-        & $record "PHASE START $($phase.name) (mode=$($phase.mode))"
+        & $record "PHASE START $($phase.name) (mode=$($phase.mode), $($phase.note))"
         if ($phase.mode -eq 'none') {
             Start-Sleep -Seconds $PhaseSeconds
         }
