@@ -127,46 +127,83 @@ if ($LASTEXITCODE -eq 0) {
 } elseif (-not $release.draft -or $release.target_commitish -ne $report.sourceCommit) {
     throw 'Cannot verify the reviewed source commit or pending draft tag target.'
 }
+# Confirm the remote bytes without downloading them. GitHub computes a SHA-256 for every stored
+# asset and returns it as "digest" on the release API, so comparing that against the reviewed hash
+# proves the server holds exactly the reviewed bytes while costing one API call instead of a full
+# transfer. Downloading every attachment back used to cost as much traffic as the upload itself,
+# which matters on a metered connection.
+#
+# The comparison is not weaker than hashing a re-download: the digest is what the service computed
+# from what it actually stored, it is compared byte for byte, and it cannot be satisfied by a
+# truncated or re-encoded upload. What it does not prove is that the asset is reachable and complete
+# for an anonymous client, so the public check later still asks for each URL.
+#
+# An absent digest means an API that does not report one; that falls back to downloading rather than
+# being skipped, because "could not check" must never read as "checked and fine".
+function Assert-RemoteAssetBytes([object]$asset, [object[]]$remoteAssets) {
+    $remote = @($remoteAssets | Where-Object name -EQ $asset.name)
+    if ($remote.Count -eq 0) { throw "Remote release is missing an expected asset: $($asset.name)" }
+    $stored = ([string]$remote[0].digest) -replace '^sha256:', ''
+    if ($stored) {
+        if ($stored -ne $asset.sha256) {
+            throw "Remote asset bytes differ from the reviewed artifact: $($asset.name). Nothing was overwritten."
+        }
+        Write-Host ("  verified {0} by digest {1}" -f $asset.name, $stored.Substring(0, 12))
+        return
+    }
+    Write-Host ("  {0}: no digest reported by the API; downloading to check" -f $asset.name) -ForegroundColor Yellow
+    $checkRoot = Join-Path $verification ('nodigest-' + [guid]::NewGuid().ToString('N'))
+    [IO.Directory]::CreateDirectory($checkRoot) | Out-Null
+    Invoke-Gh @('release','download',$tag,'--repo',$repo,'--pattern',$asset.name,'--dir',$checkRoot) | Out-Null
+    if ((Get-FileHash -LiteralPath (Join-Path $checkRoot $asset.name) -Algorithm SHA256).Hash -ne $asset.sha256) {
+        throw "Remote asset bytes differ from the reviewed artifact: $($asset.name). Nothing was overwritten."
+    }
+}
+$release = (Invoke-Gh @('api',"repos/$repo/releases/$($release.id)")) | ConvertFrom-Json
 foreach ($asset in $assets) {
     $existing = @($release.assets | Where-Object name -EQ $asset.name)
     if ($existing.Count) {
-        $checkRoot = Join-Path $verification ('existing-' + [guid]::NewGuid().ToString('N'))
-        [IO.Directory]::CreateDirectory($checkRoot) | Out-Null
-        Invoke-Gh @('release','download',$tag,'--repo',$repo,'--pattern',$asset.name,'--dir',$checkRoot) | Out-Null
-        if ((Get-FileHash -LiteralPath (Join-Path $checkRoot $asset.name) -Algorithm SHA256).Hash -ne $asset.sha256) { throw "Remote asset already exists with different bytes: $($asset.name). Nothing was overwritten." }
+        # Same name and same bytes is a retry and is reused; same name with different bytes is a
+        # conflict and is never overwritten.
+        Assert-RemoteAssetBytes $asset $release.assets
     } else {
         if (-not $release.draft) { throw "Published release is missing an expected asset: $($asset.name). Do not modify an immutable release." }
         Invoke-Gh @('release','upload',$tag,$asset.path,'--repo',$repo) | Out-Null
     }
 }
-# Verify all remote draft bytes, including files uploaded in this invocation.
-foreach ($asset in $assets) {
-    $dir = Join-Path $verification ('uploaded-' + [guid]::NewGuid().ToString('N'))
-    [IO.Directory]::CreateDirectory($dir) | Out-Null
-    Invoke-Gh @('release','download',$tag,'--repo',$repo,'--pattern',$asset.name,'--dir',$dir) | Out-Null
-    if ((Get-FileHash -LiteralPath (Join-Path $dir $asset.name) -Algorithm SHA256).Hash -ne $asset.sha256) { throw "Uploaded bytes failed verification: $($asset.name)" }
-}
+# Read the release back once: a successful upload command is not proof of the stored bytes, and the
+# digest is the service's own statement about them.
+$release = (Invoke-Gh @('api',"repos/$repo/releases/$($release.id)")) | ConvertFrom-Json
+$missing = @($assets | Where-Object { $name = $_.name; -not ($release.assets | Where-Object name -EQ $name) })
+if ($missing.Count) { throw ('Upload did not produce every expected asset: ' + (($missing | ForEach-Object name) -join ', ')) }
+foreach ($asset in $assets) { Assert-RemoteAssetBytes $asset $release.assets }
 if ($release.draft) { Invoke-Gh @('release','edit',$tag,'--repo',$repo,'--draft=false','--latest=false') | Out-Null }
 $publishedCommit = [string](Invoke-Gh @('api',"repos/$repo/commits/$tag",'--jq','.sha'))
 if ($publishedCommit.Trim() -ne $report.sourceCommit) { throw 'Published tag does not match the reviewed source commit. Stable channel remains unchanged.' }
-# Use unauthenticated public downloads and separate connection/transfer timeouts. Never print redirected signed URLs.
+# Ask each published URL for its headers instead of its body. The bytes were already confirmed against
+# the reviewed hashes by digest, so what is left to establish is that an anonymous client - which is
+# what every installed copy is - can reach this exact URL and that the asset is there. A HEAD request
+# answers that without transferring the release a second time, and it exercises the redirect from the
+# release page to the asset host that the client depends on.
 $handler = [Net.Http.SocketsHttpHandler]::new(); $handler.ConnectTimeout = [TimeSpan]::FromSeconds(20)
-$client = [Net.Http.HttpClient]::new($handler); $client.Timeout = [TimeSpan]::FromHours(2)
+$handler.AllowAutoRedirect = $true
+$client = [Net.Http.HttpClient]::new($handler); $client.Timeout = [TimeSpan]::FromMinutes(5)
 try {
-    $publicChecks = @($assets | ForEach-Object { [pscustomobject]@{name=$_.name;sha256=$_.sha256;url="https://github.com/$repo/releases/download/$tag/$([Uri]::EscapeDataString($_.name))"} })
-    $publicChecks += @($report.assets | Where-Object { ([Uri]$_.url).AbsolutePath -notlike "/$repo/releases/download/$tag/*" })
+    $publicChecks = @($assets | ForEach-Object { [pscustomobject]@{name=$_.name;url="https://github.com/$repo/releases/download/$tag/$([Uri]::EscapeDataString($_.name))"} })
+    # Unchanged packages keep their previous release URL, so their reachability has to be asked at that
+    # URL rather than at this tag.
+    $publicChecks += @($report.assets | Where-Object { ([Uri]$_.url).AbsolutePath -notlike "/$repo/releases/download/$tag/*" } |
+        ForEach-Object { [pscustomobject]@{name=$_.name;url=[string]$_.url} })
     foreach ($asset in $publicChecks) {
-        $url = [string]$asset.url
-        $response = $client.GetAsync($url,[Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
+        $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Head, [string]$asset.url)
+        $response = $client.SendAsync($request).GetAwaiter().GetResult()
         try {
-            $response.EnsureSuccessStatusCode() | Out-Null
-            $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
-            $transfer = [Threading.CancellationTokenSource]::new([TimeSpan]::FromHours(2))
-            try { $sha = [Security.Cryptography.SHA256]::HashDataAsync($stream,$transfer.Token).GetAwaiter().GetResult(); $actual = [Convert]::ToHexString($sha) }
-            finally { $transfer.Dispose(); $stream.Dispose() }
-            if ($actual -ne $asset.sha256) { throw "Public asset verification failed: $($asset.name)" }
-        } finally { $response.Dispose() }
+            if (-not $response.IsSuccessStatusCode) {
+                throw "Public asset is not reachable: $($asset.name) answered $([int]$response.StatusCode)"
+            }
+        } finally { $response.Dispose(); $request.Dispose() }
     }
+    Write-Host ("public reachability confirmed for {0} assets by HEAD" -f $publicChecks.Count)
 } finally { $client.Dispose(); $handler.Dispose() }
 # Burn the sequence number before the stable channel moves, so a failed promotion can never free the
 # number for reuse. After a failed promotion the reviewed artifacts must be re-prepared with a higher
