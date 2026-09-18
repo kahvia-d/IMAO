@@ -899,22 +899,22 @@
         }
       ],
       "anchor": {
-        "x": 1700.0,
-        "y": 0.0
+        "x": 4250.0,
+        "y": 850.0
       },
       "tileBounds": {
-        "minX": 2,
-        "maxX": 4,
-        "minY": -1,
-        "maxY": 1,
-        "count": 9,
+        "minX": 1,
+        "maxX": 11,
+        "minY": -5,
+        "maxY": 3,
+        "count": 99,
         "pointMinX": 3,
         "pointMaxX": 9,
         "pointMinY": -3,
         "pointMaxY": 1,
         "coverageMargin": 2,
-        "tightened": true,
-        "basis": "intersected with the archived present-tile footprint (generation B50F4135DCCC4D8DA87ED33CE95EA31D)",
+        "tightened": false,
+        "basis": "points p1..p99 grown by 2 tile(s)",
         "archivePresent": {
           "minX": 2.0,
           "maxX": 4.0,
@@ -924,17 +924,13 @@
           "requested": 99,
           "generation": "B50F4135DCCC4D8DA87ED33CE95EA31D",
           "usable": true,
-          "emptyInWindow": 0
+          "emptyInWindow": 90
         }
       },
-      "tileConfidence": "origin-verified",
+      "tileConfidence": "calibrated",
       "buildable": true,
-      "originEvidence": {
-        "source": "lowervault.json",
-        "samples": 4,
-        "maxNearestPointUnits": 24.5
-      },
-      "transformSource": "builtin",
+      "originEvidence": null,
+      "transformSource": "calibration",
       "requiresGameValidation": true,
       "approved": false,
       "approvalReason": "等待四点校准、瓦片特征包与实机验证。",
@@ -1120,17 +1116,33 @@
           "stateMatchValid": false
         }
       ],
-      "anchor": null,
-      "tileBounds": null,
-      "tileConfidence": "blocked",
-      "buildable": false,
+      "anchor": {
+        "x": -425.0,
+        "y": -425.0
+      },
+      "tileBounds": {
+        "minX": -2,
+        "maxX": 3,
+        "minY": -2,
+        "maxY": 3,
+        "count": 36,
+        "pointMinX": 0,
+        "pointMaxX": 1,
+        "pointMinY": 0,
+        "pointMaxY": 1,
+        "coverageMargin": 2,
+        "tightened": false,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "calibrated",
+      "buildable": true,
       "originEvidence": null,
-      "transformSource": "builtin",
+      "transformSource": "calibration",
       "requiresGameValidation": true,
       "approved": false,
       "approvalReason": "等待四点校准、瓦片特征包与实机验证。",
       "points": 59,
-      "outliers": 0
+      "outliers": 2
     }
   ]
 }

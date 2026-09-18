@@ -1,0 +1,59 @@
+{
+  "formatVersion": 1,
+  "scene": "TimeRiftRuins",
+  "state": 910,
+  "samples": [
+    {
+      "game": {
+        "x": 115,
+        "y": 22
+      },
+      "map": {
+        "x": 136.71,
+        "y": 24.53
+      },
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.46.13.81.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.46.28.22.png",
+      "measuredBy": "KuroMapFeatureBuilder --verify-reference --reference-full-snapshot (minimap crop at runtime geometry)"
+    },
+    {
+      "game": {
+        "x": 114,
+        "y": -48
+      },
+      "map": {
+        "x": 135.57,
+        "y": -59.79
+      },
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.46.57.91.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.47.01.70.png",
+      "measuredBy": "KuroMapFeatureBuilder --verify-reference --reference-full-snapshot (minimap crop at runtime geometry)"
+    },
+    {
+      "game": {
+        "x": 45,
+        "y": -80
+      },
+      "map": {
+        "x": 52.23,
+        "y": -98.33
+      },
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.47.25.32.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.47.28.17.png",
+      "measuredBy": "KuroMapFeatureBuilder --verify-reference --reference-full-snapshot (minimap crop at runtime geometry)"
+    },
+    {
+      "game": {
+        "x": -51,
+        "y": -4
+      },
+      "map": {
+        "x": -63.16,
+        "y": -6.34
+      },
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.47.52.44.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.47.55.49.png",
+      "measuredBy": "KuroMapFeatureBuilder --verify-reference --reference-full-snapshot (minimap crop at runtime geometry)"
+    }
+  ]
+}

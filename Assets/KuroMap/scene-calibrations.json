@@ -212,6 +212,124 @@
           }
         ]
       }
+    },
+    "TimeRiftRuins": {
+      "scene": "TimeRiftRuins",
+      "state": 910,
+      "sampleCount": 4,
+      "passed": true,
+      "coordinateTransform": {
+        "originX": -1.831443100381179,
+        "originY": -1.8498374841169039,
+        "scale": 1.2048240914866581
+      },
+      "maxErrorPixels": 0.3494691790587125,
+      "rmsErrorPixels": 0.21552710142471385,
+      "samples": [
+        {
+          "game": {
+            "x": 115.0,
+            "y": 22.0
+          },
+          "map": {
+            "x": 136.71,
+            "y": 24.53
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.46.13.81.png"
+        },
+        {
+          "game": {
+            "x": 114.0,
+            "y": -48.0
+          },
+          "map": {
+            "x": 135.57,
+            "y": -59.79
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.46.57.91.png"
+        },
+        {
+          "game": {
+            "x": 45.0,
+            "y": -80.0
+          },
+          "map": {
+            "x": 52.23,
+            "y": -98.33
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.47.25.32.png"
+        },
+        {
+          "game": {
+            "x": -51.0,
+            "y": -4.0
+          },
+          "map": {
+            "x": -63.16,
+            "y": -6.34
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.19 - 00.47.52.44.png"
+        }
+      ]
+    },
+    "LowerVault": {
+      "scene": "LowerVault",
+      "state": 902,
+      "sampleCount": 4,
+      "passed": true,
+      "coordinateTransform": {
+        "originX": -3.5217144866560375,
+        "originY": -2.458652236233206,
+        "scale": 1.205304785499958
+      },
+      "maxErrorPixels": 0.8222329599821808,
+      "rmsErrorPixels": 0.6002783812256312,
+      "samples": [
+        {
+          "game": {
+            "x": 2383.0,
+            "y": 505.0
+          },
+          "map": {
+            "x": 2868.5,
+            "y": 606.6
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.15.05.89.png"
+        },
+        {
+          "game": {
+            "x": 1805.0,
+            "y": 687.0
+          },
+          "map": {
+            "x": 2172.6,
+            "y": 826.2
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.15.56.50.png"
+        },
+        {
+          "game": {
+            "x": 2363.0,
+            "y": -329.0
+          },
+          "map": {
+            "x": 2844.4,
+            "y": -399.4
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.16.21.11.png"
+        },
+        {
+          "game": {
+            "x": 2363.0,
+            "y": 727.0
+          },
+          "map": {
+            "x": 2844.5,
+            "y": 873.2
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.16.41.32.png"
+        }
+      ]
     }
   }
 }
