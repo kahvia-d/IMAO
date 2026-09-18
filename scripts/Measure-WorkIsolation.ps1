@@ -1,4 +1,4 @@
-# Attributes the overlay's frame-rate cost to individual pieces of per-frame work, instead of to
+﻿# Attributes the overlay's frame-rate cost to individual pieces of per-frame work, instead of to
 # "capture and localization" as one lump.
 #
 # The whole overlay costs about 26 fps with frames over 20 ms rising from 0.37% to 10.18% (see
@@ -19,7 +19,7 @@
 [CmdletBinding()]
 param(
     [string]$ProcessName = 'Client-Win64-Shipping.exe',
-    [int]$PhaseSeconds = 20,
+    [int]$PhaseSeconds = 45,
     [int]$WarmupSeconds = 5,
     [string]$OutputPath,
     [string]$PresentMonPath

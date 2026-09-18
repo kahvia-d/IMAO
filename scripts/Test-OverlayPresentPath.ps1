@@ -1,4 +1,4 @@
-# Runs the overlay present-path probe against the live game and records one PresentMon trace across
+﻿# Runs the overlay present-path probe against the live game and records one PresentMon trace across
 # three phases: no overlay, the DirectComposition surface, and the WS_EX_LAYERED colorkey window the
 # overlay uses today. All three phases draw the same visible block, so the comparison is between window
 # types rather than between "something on screen" and "nothing on screen".

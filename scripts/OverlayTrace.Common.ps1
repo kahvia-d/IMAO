@@ -1,4 +1,4 @@
-# Shared PresentMon handling for the overlay cost traces. Dot-source it: it defines functions only.
+﻿# Shared PresentMon handling for the overlay cost traces. Dot-source it: it defines functions only.
 #
 # Why a helper: the frame-time split has to be identical for the probe trace and the real-overlay
 # trace, or the two results cannot be put in the same table. It has one implementation, here.

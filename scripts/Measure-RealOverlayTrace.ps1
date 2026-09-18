@@ -1,4 +1,4 @@
-# Measures the REAL overlay with PresentMon, on the same three-phase structure as
+﻿# Measures the REAL overlay with PresentMon, on the same three-phase structure as
 # Test-OverlayPresentPath.ps1: tool off, tool running, tool off again.
 #
 # Why it exists: the probe showed that an equivalent overlay surface costs about 1.8 fps and that both
@@ -20,7 +20,7 @@
 [CmdletBinding()]
 param(
     [string]$ProcessName = 'Client-Win64-Shipping.exe',
-    [int]$PhaseSeconds = 20,
+    [int]$PhaseSeconds = 45,
     [int]$WarmupSeconds = 5,
     [string]$OutputPath,
     [string]$PresentMonPath,
