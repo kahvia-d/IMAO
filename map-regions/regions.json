@@ -1,0 +1,982 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": {
+    "country": "Assets/KuroMap/country.json",
+    "points": "Assets/KuroMap/runtime/itemsData_*.json",
+    "calibrations": "Assets/KuroMap/scene-calibrations.json",
+    "validation": "Assets/KuroMap/scene-validation.json",
+    "sceneTable": "IMao-Core/src/Coordinate/CoordinateStruct.h",
+    "kuroResourceVersion": "E62CEAC5F80745288BF76C7AD5F731C3",
+    "kuroStateCount": 8
+  },
+  "tileGrid": {
+    "formula": "game = (raw - origin) / 100",
+    "tileX": "floor(gameX / 850 + 1)",
+    "tileY": "ceil(-gameY / 850)",
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "regions": [
+    {
+      "id": "jinzhou",
+      "name": "今州",
+      "kind": "overworld",
+      "frame": 8,
+      "scene": "World",
+      "mapState": "1",
+      "countryId": 1,
+      "country": "瑝珑",
+      "areas": [
+        {
+          "name": "云陵谷",
+          "rawX": -127935.0,
+          "rawY": 56340.0,
+          "gameX": -1304.1,
+          "gameY": 543.8,
+          "tileX": -1,
+          "tileY": 0,
+          "stateMatchValid": true
+        },
+        {
+          "name": "今州城",
+          "rawX": -31569.0,
+          "rawY": 105644.0,
+          "gameX": -340.4,
+          "gameY": 1036.9,
+          "tileX": 0,
+          "tileY": -1,
+          "stateMatchValid": true
+        },
+        {
+          "name": "中曲台地",
+          "rawX": -53901.0,
+          "rawY": 65258.0,
+          "gameX": -563.8,
+          "gameY": 633.0,
+          "tileX": 0,
+          "tileY": 0,
+          "stateMatchValid": true
+        },
+        {
+          "name": "荒石高地",
+          "rawX": -30096.0,
+          "rawY": -14306.0,
+          "gameX": -325.7,
+          "gameY": -162.6,
+          "tileX": 0,
+          "tileY": 1,
+          "stateMatchValid": true
+        },
+        {
+          "name": "虎口山脉",
+          "rawX": -27950.0,
+          "rawY": 177084.0,
+          "gameX": -304.2,
+          "gameY": 1751.3,
+          "tileX": 0,
+          "tileY": -2,
+          "stateMatchValid": true
+        },
+        {
+          "name": "怨鸟泽",
+          "rawX": 46570.0,
+          "rawY": 275326.0,
+          "gameX": 441.0,
+          "gameY": 2733.7,
+          "tileX": 1,
+          "tileY": -3,
+          "stateMatchValid": true
+        },
+        {
+          "name": "无光之森",
+          "rawX": -42925.0,
+          "rawY": 274116.0,
+          "gameX": -454.0,
+          "gameY": 2721.6,
+          "tileX": 0,
+          "tileY": -3,
+          "stateMatchValid": true
+        },
+        {
+          "name": "归墟港市",
+          "rawX": -134208.0,
+          "rawY": 203114.0,
+          "gameX": -1366.8,
+          "gameY": 2011.6,
+          "tileX": -1,
+          "tileY": -2,
+          "stateMatchValid": true
+        },
+        {
+          "name": "无明湾",
+          "rawX": 22619.0,
+          "rawY": 170699.0,
+          "gameX": 201.4,
+          "gameY": 1687.4,
+          "tileX": 1,
+          "tileY": -1,
+          "stateMatchValid": true
+        },
+        {
+          "name": "北落野",
+          "rawX": 59542.0,
+          "rawY": -110144.0,
+          "gameX": 570.7,
+          "gameY": -1121.0,
+          "tileX": 1,
+          "tileY": 2,
+          "stateMatchValid": true
+        },
+        {
+          "name": "乘霄山",
+          "rawX": 249127.0,
+          "rawY": 312994.0,
+          "gameX": 2466.5,
+          "gameY": 3110.4,
+          "tileX": 3,
+          "tileY": -3,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": 3825.0,
+        "y": -425.0
+      },
+      "tileBounds": {
+        "minX": -3,
+        "maxX": 14,
+        "minY": -10,
+        "maxY": 11,
+        "count": 396,
+        "pointMinX": -1,
+        "pointMaxX": 12,
+        "pointMinY": -8,
+        "pointMaxY": 9,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "validated",
+      "buildable": true,
+      "transformSource": "builtin",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 9234,
+      "outliers": 184
+    },
+    {
+      "id": "mengzhou",
+      "name": "梦州",
+      "kind": "overworld",
+      "frame": 8,
+      "scene": "World",
+      "mapState": "8",
+      "countryId": 1,
+      "country": "瑝珑",
+      "areas": [
+        {
+          "name": "玄方城",
+          "rawX": -691572.0,
+          "rawY": -90388.0,
+          "gameX": -6940.5,
+          "gameY": -923.4,
+          "tileX": -8,
+          "tileY": 2,
+          "stateMatchValid": true
+        },
+        {
+          "name": "方擎西峰",
+          "rawX": -805396.0,
+          "rawY": -32420.0,
+          "gameX": -8078.7,
+          "gameY": -343.8,
+          "tileX": -9,
+          "tileY": 1,
+          "stateMatchValid": true
+        },
+        {
+          "name": "落渊南丘",
+          "rawX": -705020.0,
+          "rawY": 3750.0,
+          "gameX": -7074.9,
+          "gameY": 17.9,
+          "tileX": -8,
+          "tileY": 0,
+          "stateMatchValid": true
+        },
+        {
+          "name": "玄幽东岳",
+          "rawX": -612364.0,
+          "rawY": -59000.0,
+          "gameX": -6148.4,
+          "gameY": -609.6,
+          "tileX": -7,
+          "tileY": 1,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": -7650.0,
+        "y": -850.0
+      },
+      "tileBounds": {
+        "minX": -12,
+        "maxX": -4,
+        "minY": -2,
+        "maxY": 4,
+        "count": 63,
+        "pointMinX": -10,
+        "pointMaxX": -6,
+        "pointMinY": 0,
+        "pointMaxY": 2,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "validated",
+      "buildable": true,
+      "transformSource": "builtin",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 1483,
+      "outliers": 29
+    },
+    {
+      "id": "laguna",
+      "name": "拉古那",
+      "kind": "overworld",
+      "frame": 8,
+      "scene": "World",
+      "mapState": "3",
+      "countryId": 3,
+      "country": "黎那汐塔",
+      "areas": [
+        {
+          "name": "拉古那城",
+          "rawX": 712737.0,
+          "rawY": 579840.0,
+          "gameX": 7102.6,
+          "gameY": 5778.8,
+          "tileX": 9,
+          "tileY": -6,
+          "stateMatchValid": true
+        },
+        {
+          "name": "埃弗拉德金库",
+          "rawX": 919680.0,
+          "rawY": 634098.0,
+          "gameX": 9172.1,
+          "gameY": 6321.4,
+          "tileX": 11,
+          "tileY": -7,
+          "stateMatchValid": true
+        },
+        {
+          "name": "悲叹墓岛",
+          "rawX": 824065.0,
+          "rawY": 501324.0,
+          "gameX": 8215.9,
+          "gameY": 4993.7,
+          "tileX": 10,
+          "tileY": -5,
+          "stateMatchValid": true
+        },
+        {
+          "name": "赞悼圣迹",
+          "rawX": 840696.0,
+          "rawY": 549204.0,
+          "gameX": 8382.2,
+          "gameY": 5472.5,
+          "tileX": 10,
+          "tileY": -6,
+          "stateMatchValid": true
+        },
+        {
+          "name": "拂风水畔",
+          "rawX": 742034.0,
+          "rawY": 555816.0,
+          "gameX": 7395.6,
+          "gameY": 5538.6,
+          "tileX": 9,
+          "tileY": -6,
+          "stateMatchValid": true
+        },
+        {
+          "name": "氤柔水境",
+          "rawX": 829632.0,
+          "rawY": 622027.0,
+          "gameX": 8271.6,
+          "gameY": 6200.7,
+          "tileX": 10,
+          "tileY": -7,
+          "stateMatchValid": true
+        },
+        {
+          "name": "槲生半岛",
+          "rawX": 919143.0,
+          "rawY": 524756.0,
+          "gameX": 9166.7,
+          "gameY": 5228.0,
+          "tileX": 11,
+          "tileY": -6,
+          "stateMatchValid": true
+        },
+        {
+          "name": "狄萨莱海脊",
+          "rawX": 799971.0,
+          "rawY": 669884.0,
+          "gameX": 7975.0,
+          "gameY": 6679.3,
+          "tileX": 10,
+          "tileY": -7,
+          "stateMatchValid": true
+        },
+        {
+          "name": "黎乔利群岛",
+          "rawX": 709704.0,
+          "rawY": 327685.0,
+          "gameX": 7072.3,
+          "gameY": 3257.3,
+          "tileX": 9,
+          "tileY": -3,
+          "stateMatchValid": true
+        },
+        {
+          "name": "贝奥海域",
+          "rawX": 988851.0,
+          "rawY": 808331.0,
+          "gameX": 9863.8,
+          "gameY": 8063.7,
+          "tileX": 12,
+          "tileY": -9,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": 8075.0,
+        "y": 5525.0
+      },
+      "tileBounds": {
+        "minX": 6,
+        "maxX": 15,
+        "minY": -12,
+        "maxY": -1,
+        "count": 120,
+        "pointMinX": 8,
+        "pointMaxX": 13,
+        "pointMinY": -10,
+        "pointMaxY": -3,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "validated",
+      "buildable": true,
+      "transformSource": "builtin",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 5610,
+      "outliers": 112
+    },
+    {
+      "id": "qiqiu",
+      "name": "七丘",
+      "kind": "overworld",
+      "frame": 8,
+      "scene": "World",
+      "mapState": "4",
+      "countryId": 3,
+      "country": "黎那汐塔",
+      "areas": [
+        {
+          "name": "七丘",
+          "rawX": 1197817.0,
+          "rawY": 1150751.0,
+          "gameX": 11953.4,
+          "gameY": 11487.9,
+          "tileX": 15,
+          "tileY": -13,
+          "stateMatchValid": true
+        },
+        {
+          "name": "桑古伊斯狩原",
+          "rawX": 1175419.0,
+          "rawY": 1334125.0,
+          "gameX": 11729.4,
+          "gameY": 13321.7,
+          "tileX": 14,
+          "tileY": -15,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": 11475.0,
+        "y": 11900.0
+      },
+      "tileBounds": {
+        "minX": 11,
+        "maxX": 18,
+        "minY": -18,
+        "maxY": -10,
+        "count": 72,
+        "pointMinX": 13,
+        "pointMaxX": 16,
+        "pointMinY": -16,
+        "pointMaxY": -12,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "validated",
+      "buildable": true,
+      "transformSource": "builtin",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 1345,
+      "outliers": 25
+    },
+    {
+      "id": "roysurface",
+      "name": "冰原地表",
+      "kind": "overworld",
+      "frame": 8,
+      "scene": "World",
+      "mapState": "6",
+      "countryId": 4,
+      "country": "罗伊冰原",
+      "areas": [
+        {
+          "name": "冰原运输港",
+          "rawX": -83000.0,
+          "rawY": -516060.0,
+          "gameX": -854.7,
+          "gameY": -5180.2,
+          "tileX": -1,
+          "tileY": 7,
+          "stateMatchValid": true
+        },
+        {
+          "name": "加拉尔冠阶",
+          "rawX": -62980.0,
+          "rawY": -684480.0,
+          "gameX": -654.5,
+          "gameY": -6864.4,
+          "tileX": 0,
+          "tileY": 9,
+          "stateMatchValid": true
+        },
+        {
+          "name": "盲望之塌",
+          "rawX": -163070.0,
+          "rawY": -660110.0,
+          "gameX": -1655.4,
+          "gameY": -6620.7,
+          "tileX": -1,
+          "tileY": 8,
+          "stateMatchValid": true
+        },
+        {
+          "name": "元林遗址",
+          "rawX": 63230.0,
+          "rawY": -708850.0,
+          "gameX": 607.6,
+          "gameY": -7108.1,
+          "tileX": 1,
+          "tileY": 9,
+          "stateMatchValid": true
+        },
+        {
+          "name": "覆海原",
+          "rawX": -133920.0,
+          "rawY": -849860.0,
+          "gameX": -1363.9,
+          "gameY": -8518.2,
+          "tileX": -1,
+          "tileY": 11,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": -850.0,
+        "y": -7225.0
+      },
+      "tileBounds": {
+        "minX": -4,
+        "maxX": 4,
+        "minY": 4,
+        "maxY": 13,
+        "count": 90,
+        "pointMinX": -2,
+        "pointMaxX": 2,
+        "pointMinY": 6,
+        "pointMaxY": 11,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "validated",
+      "buildable": true,
+      "transformSource": "builtin",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 1160,
+      "outliers": 24
+    },
+    {
+      "id": "blackshores",
+      "name": "黑海岸群岛",
+      "kind": "overworld",
+      "frame": 8,
+      "scene": "World",
+      "mapState": "",
+      "countryId": 900,
+      "country": "黑海岸",
+      "areas": [
+        {
+          "name": "黑海岸群岛",
+          "rawX": 306821.0,
+          "rawY": 128753.0,
+          "gameX": 3043.5,
+          "gameY": 1268.0,
+          "tileX": 4,
+          "tileY": -1,
+          "stateMatchValid": false
+        }
+      ],
+      "anchor": {
+        "x": 2550.0,
+        "y": 425.0
+      },
+      "tileBounds": {
+        "minX": 2,
+        "maxX": 6,
+        "minY": -3,
+        "maxY": 2,
+        "count": 30,
+        "pointMinX": 4,
+        "pointMaxX": 4,
+        "pointMinY": -1,
+        "pointMaxY": 0,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "validated",
+      "buildable": true,
+      "transformSource": "builtin",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 352,
+      "outliers": 7
+    },
+    {
+      "id": "lahai",
+      "name": "拉海洛",
+      "kind": "subworld",
+      "frame": 906,
+      "scene": "Lahai",
+      "mapState": "5",
+      "countryId": 4,
+      "country": "罗伊冰原",
+      "areas": [
+        {
+          "name": "蚀刻平原",
+          "rawX": 36526.0,
+          "rawY": -621394.0,
+          "gameX": 148.6,
+          "gameY": -6345.3,
+          "tileX": 1,
+          "tileY": 8,
+          "stateMatchValid": true
+        },
+        {
+          "name": "星炬学院",
+          "rawX": -57241.0,
+          "rawY": -534609.0,
+          "gameX": -789.0,
+          "gameY": -5477.5,
+          "tileX": 0,
+          "tileY": 7,
+          "stateMatchValid": true
+        },
+        {
+          "name": "联运椎骨",
+          "rawX": -369436.0,
+          "rawY": -892821.0,
+          "gameX": -3911.0,
+          "gameY": -9059.6,
+          "tileX": -4,
+          "tileY": 11,
+          "stateMatchValid": true
+        },
+        {
+          "name": "牙列石壑",
+          "rawX": -35765.0,
+          "rawY": -749380.0,
+          "gameX": -574.3,
+          "gameY": -7625.2,
+          "tileX": 0,
+          "tileY": 9,
+          "stateMatchValid": true
+        },
+        {
+          "name": "浮光林",
+          "rawX": -386289.0,
+          "rawY": -657193.0,
+          "gameX": -4079.5,
+          "gameY": -6703.3,
+          "tileX": -4,
+          "tileY": 8,
+          "stateMatchValid": true
+        },
+        {
+          "name": "陷足流川",
+          "rawX": -162442.0,
+          "rawY": -494007.0,
+          "gameX": -1841.0,
+          "gameY": -5071.5,
+          "tileX": -2,
+          "tileY": 6,
+          "stateMatchValid": true
+        },
+        {
+          "name": "复生丘原",
+          "rawX": -184444.0,
+          "rawY": -608873.0,
+          "gameX": -2061.1,
+          "gameY": -6220.1,
+          "tileX": -2,
+          "tileY": 8,
+          "stateMatchValid": true
+        },
+        {
+          "name": "隐喙深腹",
+          "rawX": 8177.0,
+          "rawY": -377241.0,
+          "gameX": -134.9,
+          "gameY": -3903.8,
+          "tileX": 0,
+          "tileY": 5,
+          "stateMatchValid": true
+        },
+        {
+          "name": "巨目远野",
+          "rawX": 105621.0,
+          "rawY": -478408.0,
+          "gameX": 839.6,
+          "gameY": -4915.5,
+          "tileX": 1,
+          "tileY": 6,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": -2125.0,
+        "y": -6800.0
+      },
+      "tileBounds": {
+        "minX": -7,
+        "maxX": 4,
+        "minY": 3,
+        "maxY": 13,
+        "count": 132,
+        "pointMinX": -5,
+        "pointMaxX": 2,
+        "pointMinY": 5,
+        "pointMaxY": 11,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "calibrated",
+      "buildable": true,
+      "transformSource": "calibration",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 2536,
+      "outliers": 50
+    },
+    {
+      "id": "darkplain",
+      "name": "黯原",
+      "kind": "subworld",
+      "frame": 909,
+      "scene": "Darkplain",
+      "mapState": "7",
+      "countryId": 4,
+      "country": "罗伊冰原",
+      "areas": [
+        {
+          "name": "落日堤屿",
+          "rawX": 123544.0,
+          "rawY": 95148.0,
+          "gameX": 1235.4,
+          "gameY": 951.5,
+          "tileX": 2,
+          "tileY": -1,
+          "stateMatchValid": true
+        },
+        {
+          "name": "封存地",
+          "rawX": -27620.0,
+          "rawY": 75380.0,
+          "gameX": -276.2,
+          "gameY": 753.8,
+          "tileX": 0,
+          "tileY": 0,
+          "stateMatchValid": true
+        },
+        {
+          "name": "寂静断崖",
+          "rawX": -13560.0,
+          "rawY": -57930.0,
+          "gameX": -135.6,
+          "gameY": -579.3,
+          "tileX": 0,
+          "tileY": 1,
+          "stateMatchValid": true
+        },
+        {
+          "name": "恒黯之原",
+          "rawX": 101680.0,
+          "rawY": -42450.0,
+          "gameX": 1016.8,
+          "gameY": -424.5,
+          "tileX": 2,
+          "tileY": 1,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": 425.0,
+        "y": 0.0
+      },
+      "tileBounds": {
+        "minX": -2,
+        "maxX": 5,
+        "minY": -3,
+        "maxY": 3,
+        "count": 56,
+        "pointMinX": 0,
+        "pointMaxX": 3,
+        "pointMinY": -1,
+        "pointMaxY": 1,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "calibrated",
+      "buildable": true,
+      "transformSource": "calibration",
+      "requiresGameValidation": true,
+      "approved": true,
+      "approvalReason": "",
+      "points": 673,
+      "outliers": 14
+    },
+    {
+      "id": "lowervault",
+      "name": "下层金库",
+      "kind": "subworld",
+      "frame": 902,
+      "scene": "LowerVault",
+      "mapState": "3",
+      "countryId": 3,
+      "country": "黎那汐塔",
+      "areas": [
+        {
+          "name": "下层金库",
+          "rawX": 223087.0,
+          "rawY": 36166.0,
+          "gameX": 2230.9,
+          "gameY": 361.7,
+          "tileX": 3,
+          "tileY": 0,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": null,
+      "tileBounds": null,
+      "tileConfidence": "blocked",
+      "buildable": false,
+      "transformSource": "builtin",
+      "requiresGameValidation": true,
+      "approved": false,
+      "approvalReason": "等待四点校准、瓦片特征包与实机验证。",
+      "points": 238,
+      "outliers": 0
+    },
+    {
+      "id": "avinoleum",
+      "name": "阿维纽林",
+      "kind": "subworld",
+      "frame": 903,
+      "scene": "Avinoleum",
+      "mapState": "3",
+      "countryId": 3,
+      "country": "黎那汐塔",
+      "areas": [
+        {
+          "name": "阿维纽林",
+          "rawX": 0.0,
+          "rawY": -22802.0,
+          "gameX": -24.3,
+          "gameY": -318.3,
+          "tileX": 0,
+          "tileY": 1,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": 4675.0,
+        "y": 4675.0
+      },
+      "tileBounds": {
+        "minX": -3,
+        "maxX": 16,
+        "minY": -15,
+        "maxY": 4,
+        "count": 400,
+        "pointMinX": -1,
+        "pointMaxX": 14,
+        "pointMinY": -13,
+        "pointMaxY": 2,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "uncalibrated",
+      "buildable": false,
+      "transformSource": "builtin",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 462,
+      "outliers": 9
+    },
+    {
+      "id": "fabricatorium",
+      "name": "隐海试验场",
+      "kind": "subworld",
+      "frame": 905,
+      "scene": "Fabricatorium",
+      "mapState": "3",
+      "countryId": 3,
+      "country": "黎那汐塔",
+      "areas": [
+        {
+          "name": "隐海试验场",
+          "rawX": -20291.0,
+          "rawY": 72671.0,
+          "gameX": -277.3,
+          "gameY": 588.9,
+          "tileX": 0,
+          "tileY": 0,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "tileBounds": {
+        "minX": -5,
+        "maxX": 7,
+        "minY": -4,
+        "maxY": 4,
+        "count": 117,
+        "pointMinX": -3,
+        "pointMaxX": 5,
+        "pointMinY": -2,
+        "pointMaxY": 2,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "uncalibrated",
+      "buildable": false,
+      "transformSource": "builtin",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 236,
+      "outliers": 4
+    },
+    {
+      "id": "tethys",
+      "name": "泰缇斯之底",
+      "kind": "subworld",
+      "frame": 900,
+      "scene": "Tethys",
+      "mapState": "",
+      "countryId": 900,
+      "country": "黑海岸",
+      "areas": [
+        {
+          "name": "泰缇斯之底",
+          "rawX": 2510.0,
+          "rawY": 51950.0,
+          "gameX": -60.8,
+          "gameY": 505.4,
+          "tileX": 0,
+          "tileY": 0,
+          "stateMatchValid": false
+        }
+      ],
+      "anchor": {
+        "x": -425.0,
+        "y": 425.0
+      },
+      "tileBounds": {
+        "minX": -2,
+        "maxX": 3,
+        "minY": -3,
+        "maxY": 2,
+        "count": 36,
+        "pointMinX": 0,
+        "pointMaxX": 1,
+        "pointMinY": -1,
+        "pointMaxY": 0,
+        "coverageMargin": 2,
+        "basis": "points p1..p99 grown by 2 tile(s)"
+      },
+      "tileConfidence": "calibrated",
+      "buildable": true,
+      "transformSource": "calibration",
+      "requiresGameValidation": false,
+      "approved": true,
+      "approvalReason": "",
+      "points": 415,
+      "outliers": 8
+    },
+    {
+      "id": "timeriftruins",
+      "name": "时隙废都",
+      "kind": "subworld",
+      "frame": 910,
+      "scene": "TimeRiftRuins",
+      "mapState": "",
+      "countryId": 900,
+      "country": "黑海岸",
+      "areas": [
+        {
+          "name": "时隙废都",
+          "rawX": 3350.0,
+          "rawY": 0.0,
+          "gameX": 33.5,
+          "gameY": 0.0,
+          "tileX": 1,
+          "tileY": 0,
+          "stateMatchValid": false
+        }
+      ],
+      "anchor": null,
+      "tileBounds": null,
+      "tileConfidence": "blocked",
+      "buildable": false,
+      "transformSource": "builtin",
+      "requiresGameValidation": true,
+      "approved": false,
+      "approvalReason": "等待四点校准、瓦片特征包与实机验证。",
+      "points": 59,
+      "outliers": 0
+    }
+  ]
+}

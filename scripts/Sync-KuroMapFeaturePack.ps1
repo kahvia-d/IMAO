@@ -32,6 +32,24 @@ param(
     [Nullable[int]]$TileMaxX = $null,
     [Nullable[int]]$TileMinY = $null,
     [Nullable[int]]$TileMaxY = $null,
+    # Explicit tile bounds may cover more than the 5x5 radius default. Regions derived
+    # from point extents need up to a few hundred tiles, so the ceiling is a parameter
+    # instead of the previous hardcoded 256.
+    [ValidateRange(1, 4096)]
+    [int]$MaxTiles = 256,
+    # A tile archive directory in the layout scripts/Get-MapTileArchive.ps1 writes:
+    # <archive>/<state>/<state>_<x>_<y>.png. When set, no network access happens and the
+    # build is reproducible from archived bytes alone.
+    [string]$TileArchive,
+    # Generation recorded in the manifest. With -TileArchive it defaults to the archive
+    # directory name; without it, the value is compared against the live upstream value
+    # and a mismatch aborts instead of silently building from another generation.
+    [string]$ResourceVersion,
+    # Redirect the applied pack out of the repository. Regenerated features are build
+    # products: they are published as resource packages, never committed. With an output
+    # root, an existing pack in that root is the only inheritance source, so a fresh
+    # directory is a clean-slate build.
+    [string]$OutputRoot,
     [string]$PaddleLib = $env:IMAO_PADDLE_LIB,
     [string]$OpenCvDir = $env:IMAO_OPENCV_DIR
 )
@@ -68,7 +86,10 @@ if ($Scene -ne 'World') {
     # Tile coordinates define a fixed feature frame. A game calibration maps
     # game coordinates into that frame; feeding it back into tile generation
     # would recreate the measured offset on every rebuild.
-    $existingManifestPath = Join-Path $repoRoot "Assets/FeaturesDatas/KuroTilePacks/$PackId/manifest.json"
+    $existingManifestPath = if ($OutputRoot) {
+        Join-Path ([IO.Path]::GetFullPath($OutputRoot)) "$PackId/manifest.json"
+    }
+    else { Join-Path $repoRoot "Assets/FeaturesDatas/KuroTilePacks/$PackId/manifest.json" }
     if (Test-Path -LiteralPath $existingManifestPath) {
         $existingManifest = Get-Content -LiteralPath $existingManifestPath -Raw | ConvertFrom-Json
         foreach ($key in @('originX', 'originY', 'scale')) { $transform[$key] = [double]$existingManifest.coordinateTransform.$key }
@@ -83,6 +104,17 @@ if ($Scene -ne 'World') {
 }
 if ($State -ne $expectedStates[$Scene]) { throw "State $State does not belong to scene $Scene." }
 if ([string]::IsNullOrWhiteSpace($PackId) -or $PackId -notmatch '^[A-Za-z0-9_-]+$') { throw 'PackId must be an ASCII directory name.' }
+# Resolve the tile generation before any download. A pinned generation that the public
+# host no longer serves must fail here rather than silently building from a different one.
+if ($TileArchive) {
+    $TileArchive = [IO.Path]::GetFullPath($TileArchive)
+    if (-not [IO.Directory]::Exists($TileArchive)) { throw "Tile archive directory does not exist: $TileArchive" }
+    if (-not $ResourceVersion) { $ResourceVersion = Split-Path -Leaf $TileArchive }
+}
+if ($ResourceVersion -and $ResourceVersion -notmatch '^[A-Fa-f0-9]{32}$') {
+    throw "ResourceVersion must be a 32-character hex value: $ResourceVersion"
+}
+if ($ResourceVersion) { $ResourceVersion = $ResourceVersion.ToUpperInvariant() }
 if ($TransformScale -le 0 -or [double]::IsNaN($TransformScale) -or [double]::IsInfinity($TransformScale)) { throw 'TransformScale must be finite and positive.' }
 foreach ($value in @($AnchorWorldX, $AnchorWorldY, $TransformOriginX, $TransformOriginY)) {
     if ([double]::IsNaN($value) -or [double]::IsInfinity($value)) { throw 'Anchor and origin coordinates must be finite.' }
@@ -150,7 +182,17 @@ try {
     $generatedDir = Join-Path $tempRoot 'generated'
     New-Item -ItemType Directory -Force -Path $tileDir, $generatedDir | Out-Null
 
-    $resourceVersion = Get-KuroResourceVersion (Join-Path $rawDir 'resource.json')
+    if ($TileArchive) {
+        # Reproducible, offline: the archived generation is the source of truth.
+        if (-not $ResourceVersion) { throw 'A tile archive requires a resource version.' }
+        $resourceVersion = $ResourceVersion
+    }
+    else {
+        $resourceVersion = Get-KuroResourceVersion (Join-Path $rawDir 'resource.json')
+        if ($ResourceVersion -and $ResourceVersion -ne $resourceVersion) {
+            throw "Pinned resource version $ResourceVersion differs from the live upstream version $resourceVersion. The tile generation changed; re-verify the region registry and recalibrate before building, then archive the new generation with scripts/Get-MapTileArchive.ps1."
+        }
+    }
     $kuroX = $AnchorWorldX * $tileSize / $kuroVirtualMapSize + $tileSize
     $kuroY = -$AnchorWorldY * $tileSize / $kuroVirtualMapSize
     $centerTileX = [int][Math]::Floor($kuroX / $tileSize)
@@ -173,8 +215,8 @@ try {
         throw 'Explicit tile bounds must contain the reference anchor tile.'
     }
     $requestedTileCount = ($maximumTileX - $minimumTileX + 1) * ($maximumTileY - $minimumTileY + 1)
-    if ($requestedTileCount -lt 1 -or $requestedTileCount -gt 256) {
-        throw "Requested tile bounds contain an unsupported number of tiles: $requestedTileCount"
+    if ($requestedTileCount -lt 1 -or $requestedTileCount -gt $MaxTiles) {
+        throw "Requested tile bounds contain an unsupported number of tiles: $requestedTileCount (limit $MaxTiles). Raise -MaxTiles or split the region into smaller packs."
     }
     $tiles = [Collections.Generic.List[object]]::new()
     $missingTileCount = 0
@@ -183,12 +225,22 @@ try {
         for ($tileY = $minimumTileY; $tileY -le $maximumTileY; ++$tileY) {
             $fileName = "${State}_${tileX}_${tileY}.png"
             $destination = Join-Path $tileDir $fileName
-            $url = "https://$kuroStaticHost/mcmap/tiles/$resourceVersion/$State/$fileName"
-            if (-not (Invoke-KuroDownload $url $destination)) {
-                ++$missingTileCount
-                continue
+            if ($TileArchive) {
+                # A tile the archive records as absent is treated exactly like an
+                # upstream 404 so missingTileCount keeps its meaning.
+                $archived = Join-Path (Join-Path $TileArchive "$State") $fileName
+                if (-not [IO.File]::Exists($archived)) { ++$missingTileCount; continue }
+                Copy-Item -LiteralPath $archived -Destination $destination -Force
+                Assert-MapTilePng $destination
             }
-            Assert-MapTilePng $destination
+            else {
+                $url = "https://$kuroStaticHost/mcmap/tiles/$resourceVersion/$State/$fileName"
+                if (-not (Invoke-KuroDownload $url $destination)) {
+                    ++$missingTileCount
+                    continue
+                }
+                Assert-MapTilePng $destination
+            }
             $tiles.Add([ordered]@{
                 x = $tileX; y = $tileY; file = "tiles/$fileName"
                 sha256 = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -289,7 +341,10 @@ try {
     )
     [IO.File]::WriteAllLines((Join-Path $generatedDir 'report.md'), $reportLines, [Text.UTF8Encoding]::new($false))
 
-    $target = Join-Path $repoRoot "Assets\FeaturesDatas\KuroTilePacks\$PackId"
+    $target = if ($OutputRoot) {
+        Join-Path ([IO.Path]::GetFullPath($OutputRoot)) $PackId
+    }
+    else { Join-Path $repoRoot "Assets\FeaturesDatas\KuroTilePacks\$PackId" }
     $existingHash = if (Test-Path -LiteralPath (Join-Path $target 'features.yml')) { (Get-FileHash -LiteralPath (Join-Path $target 'features.yml') -Algorithm SHA256).Hash.ToLowerInvariant() } else { '' }
     $status = if ($existingHash -eq $packManifest.features.sha256) { 'unchanged' } elseif ([string]::IsNullOrWhiteSpace($existingHash)) { 'new' } else { 'changed' }
     Write-Host "Kuro tile feature pack $($PSCmdlet.ParameterSetName): pack=$PackId resource=$resourceVersion tiles=$($tiles.Count) selected=$($builderReport.selectedKeypoints) status=$status"
