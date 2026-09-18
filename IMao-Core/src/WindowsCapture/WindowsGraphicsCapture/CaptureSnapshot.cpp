@@ -26,14 +26,40 @@ namespace util
     using namespace robmikh::common::uwp;
 }
 
+namespace
+{
+    // Everything between a created capture item and a running session can fail, and the caller's only
+    // reaction is to fall back to BitBlt - so the HRESULT alone cannot say whether this machine lacks
+    // an optional session property (IsBorderRequired, MinUpdateInterval) or cannot capture the window
+    // at all. Each step reports its own name before the failure is rethrown.
+    template <typename Action>
+    void RunCaptureStep(const char* step, Action&& action)
+    {
+        try
+        {
+            action();
+        }
+        catch (const winrt::hresult_error& error)
+        {
+            Diagnostics::Record("capture-step-error", std::string("step=") + step +
+                " hr=" + std::to_string(static_cast<long>(error.code().value)));
+            throw;
+        }
+    }
+}
+
 void CaptureSnapshot::StartCaptureFromItem(winrt::GraphicsCaptureItem item)
 {
-    m_capture = std::make_unique<SimpleCapture>(m_device, m_dirtyRegionVisualizer, item, m_pixelFormat);
-    auto surface = m_capture->CreateSurface(m_compositor);
-    m_brush.Surface(surface);
-    m_capture->IsCursorEnabled(false);
-    m_capture->IsBorderRequired(false);
-    m_capture->StartCapture();
+    RunCaptureStep("create-session", [&] {
+        m_capture = std::make_unique<SimpleCapture>(m_device, m_dirtyRegionVisualizer, item, m_pixelFormat);
+    });
+    RunCaptureStep("create-surface", [&] {
+        auto surface = m_capture->CreateSurface(m_compositor);
+        m_brush.Surface(surface);
+    });
+    RunCaptureStep("cursor", [&] { m_capture->IsCursorEnabled(false); });
+    RunCaptureStep("border", [&] { m_capture->IsBorderRequired(false); });
+    RunCaptureStep("start", [&] { m_capture->StartCapture(); });
 }
 
 winrt::GraphicsCaptureItem CaptureSnapshot::TryStartCaptureFromWindowHandle(HWND hwnd)

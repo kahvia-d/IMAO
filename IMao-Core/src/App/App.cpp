@@ -171,16 +171,22 @@ void App::Thread_Capture() {
     try {
         winrt::init_apartment();
         FramePacer pacer;
-        uint64_t lastSequence = 0, published = 0;
+        uint64_t published = 0;
         // App::Init already read the startup frame out of the capture session. Publishing that same
         // frame here would emit an overlay frame built from stale startup pixels, so the loop only
-        // takes frames that arrived after the one it starts on.
-        OverlayPacing::CaptureSequenceFilter sequenceFilter;
+        // takes frames that arrived after the one it starts on. A backend that reports no sequence
+        // (the BitBlt fallback) is numbered here instead - see OverlayPacing::CaptureFrameSource.
+        OverlayPacing::CaptureFrameSource frameSource;
         auto reportAt = std::chrono::steady_clock::now();
         // The window capture runs synchronously against the game, so its cost lands in the game's own
         // frame time. Report the per-call average and worst case next to the achieved rate.
         double captureTotalMs = 0, captureMaxMs = 0;
         uint64_t captureAttempts = 0, slowCaptures = 0;
+        // A capture that produced no usable pixels (empty, or geometry that does not match the client
+        // rect) and a capture whose frame the source numbering refused look identical from the
+        // outside - both leave the overlay waiting for a game frame forever - so the two reasons are
+        // counted separately and reported next to the achieved rate.
+        uint64_t emptyCaptures = 0, unpublishedCaptures = 0;
         while (!allThreadStopFlag.load()) {
             const auto start = std::chrono::steady_clock::now();
             RECT captureRect{};
@@ -208,12 +214,15 @@ void App::Thread_Capture() {
             // The game can resize between our client-rect read and the capture
             // backend's read. Never publish pixels with incompatible geometry.
             if (image.empty() || image.cols != captureRect.right || image.rows != captureRect.bottom)
+            {
+                ++emptyCaptures;
                 capturedFrames.Publish({});
+            }
             else {
-                if (sequence == 0) sequence = lastSequence + 1; // PrintWindow has no source sequence.
-                if (sequenceFilter.Accept(sequence)) {
-                    lastSequence = sequence;
-                    capturedFrames.Publish({sequence, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250)});
+                const std::uint64_t frameId = frameSource.Publish(sequence);
+                if (frameId == 0) ++unpublishedCaptures;
+                else {
+                    capturedFrames.Publish({frameId, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250)});
                     ++published;
                 }
             }
@@ -232,9 +241,12 @@ void App::Thread_Capture() {
                     " captureAvgMs=" + std::to_string(captureAttempts ? captureTotalMs / captureAttempts : 0.0) +
                     " captureMaxMs=" + std::to_string(captureMaxMs) +
                     " captureSlow=" + std::to_string(slowCaptures) +
+                    " captureEmpty=" + std::to_string(emptyCaptures) +
+                    " captureUnpublished=" + std::to_string(unpublishedCaptures) +
                     " capturePeriodMs=" + std::to_string(capturePeriod.count() / 1000.0));
                 published = 0; reportAt = now;
                 captureTotalMs = 0; captureMaxMs = 0; captureAttempts = 0; slowCaptures = 0;
+                emptyCaptures = 0; unpublishedCaptures = 0;
             }
             pacer.WaitUntil(start + capturePeriod);
         }

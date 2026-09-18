@@ -39,18 +39,26 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
 
     // The startup frame App::Init read is not a frame the capture loop observed.
     {
-        OverlayPacing::CaptureSequenceFilter filter;
-        check(!filter.Accept(1), "the startup frame is not republished by the capture loop");
-        check(filter.Accept(2), "a frame that arrived after startup is published");
-        check(!filter.Accept(2), "the same frame is never published twice");
-        check(filter.Accept(3), "the next frame is published");
-        check(!filter.Accept(3), "and it is not published twice either");
+        OverlayPacing::CaptureFrameSource source;
+        check(source.Publish(1) == 0, "the startup frame is not republished by the capture loop");
+        check(source.Publish(2) == 2, "a frame that arrived after startup is published with its own id");
+        check(source.Publish(2) == 0, "the same frame is never published twice");
+        check(source.Publish(3) == 3, "the next frame is published");
+        check(source.Publish(3) == 0, "and it is not published twice either");
     }
     {
-        // A backend with no source sequence, such as PrintWindow, still starts from its own baseline.
-        OverlayPacing::CaptureSequenceFilter filter;
-        check(!filter.Accept(7), "a sequence the loop starts on is its baseline, not a frame to publish");
-        check(filter.Accept(8), "the next sequence is published");
+        // A backend with no source sequence, such as PrintWindow, reports 0 for every successful call.
+        // Each of those is a frame the loop has never published, so it must never be refused and must
+        // never repeat an id: a consumer that sees an unchanged id reads no new frame and the overlay
+        // then waits for a game frame that already arrived.
+        OverlayPacing::CaptureFrameSource source;
+        const auto first = source.Publish(0);
+        const auto second = source.Publish(0);
+        const auto third = source.Publish(0);
+        check(first != 0, "a backend that reports no sequence still publishes its first frame");
+        check(second != 0, "and its second frame");
+        check(third != 0, "and every frame after that");
+        check(first != second && second != third, "the loop numbers those frames so each id is new");
     }
 
     check(OverlayPacing::ShouldPresentFrame(7, 7, true, true) == false,
