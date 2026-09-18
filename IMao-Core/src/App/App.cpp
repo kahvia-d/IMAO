@@ -19,6 +19,7 @@
 #include "../Runtime/OverlayPacing.h"
 #include "../Runtime/RoutePlanningService.h"
 #include "../Runtime/RuntimeHotkeys.h"
+#include "../Runtime/IsolationSwitches.h"
 #include "MinimapHudEvidence.h"
 #include "../Coordinate/VisualLocalization/MinimapTerrainEvidence.h"
 
@@ -171,6 +172,10 @@ void App::Thread_Capture() {
         winrt::init_apartment();
         FramePacer pacer;
         uint64_t lastSequence = 0, published = 0;
+        // App::Init already read the startup frame out of the capture session. Publishing that same
+        // frame here would emit an overlay frame built from stale startup pixels, so the loop only
+        // takes frames that arrived after the one it starts on.
+        OverlayPacing::CaptureSequenceFilter sequenceFilter;
         auto reportAt = std::chrono::steady_clock::now();
         // The window capture runs synchronously against the game, so its cost lands in the game's own
         // frame time. Report the per-call average and worst case next to the achieved rate.
@@ -189,7 +194,10 @@ void App::Thread_Capture() {
             uint64_t sequence = 0;
             auto capturedAt = start;
             try {
-                GetMatSnapshot(false, image, &sequence, &captureRect, &capturedAt).get();
+                // Diagnostic isolation: with capture switched off the loop still runs and still paces
+                // itself, but never asks the game for pixels.
+                if (!Isolation::Enabled(Isolation::kCapture))
+                    GetMatSnapshot(false, image, &sequence, &captureRect, &capturedAt).get();
             } catch (const std::exception& error) {
                 Diagnostics::Record("capture-frame-error", error.what());
             }
@@ -203,7 +211,7 @@ void App::Thread_Capture() {
                 capturedFrames.Publish({});
             else {
                 if (sequence == 0) sequence = lastSequence + 1; // PrintWindow has no source sequence.
-                if (sequence != lastSequence) {
+                if (sequenceFilter.Accept(sequence)) {
                     lastSequence = sequence;
                     capturedFrames.Publish({sequence, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250)});
                     ++published;
@@ -246,6 +254,13 @@ winrt::IAsyncAction App::Start() {
 	auto startTime = std::chrono::high_resolution_clock::now();
 	int cycleTime = 100;
     uint64_t lastLocalizedFrame = 0;
+	// The in-game status bar prints this number, so publishing it per frame made the overlay's own
+	// frame content change on every iteration and defeated OverlayPacing::ShouldPresentFrame: the
+	// window was then re-presented - and the whole screen recomposited for the game - even when
+	// nothing else had changed. Report the window's mean instead, once per window.
+	long long frameWindowTotalMs = 0;
+	long long frameWindowSamples = 0;
+	auto frameWindowStartedAt = std::chrono::steady_clock::now();
 	while (!allThreadStopFlag) {
         const auto latest = capturedFrames.Read();
         if (latest->image.empty() || latest->frameId == lastLocalizedFrame) {
@@ -349,7 +364,7 @@ winrt::IAsyncAction App::Start() {
 		// Minimap coordinate recognition is valid only while the gameplay HUD is
 		// visible and focused. A UI generation change invalidates queued OCR.
 		const bool coordinateVisible = isExistMinMap.load() && !isOpenMap.load() &&
-			isWindowFocused.load() && captureFresh;
+			isWindowFocused.load() && captureFresh && !Isolation::Enabled(Isolation::kLocalization);
 		if (coordinateVisible != lastCoordinateVisible) {
 			lastCoordinateVisible = coordinateVisible;
 			++coordinateUiGeneration;
@@ -388,7 +403,11 @@ winrt::IAsyncAction App::Start() {
 		PublishOverlayFrame(captured, renderedViewport);
 		auto endTime = std::chrono::high_resolution_clock::now();
 		auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-		RuntimeStatus::SetFrameMilliseconds(static_cast<int>(elapsedTime));
+		frameWindowTotalMs += elapsedTime;
+		if (++frameWindowSamples >= 8 && endTime - frameWindowStartedAt >= std::chrono::seconds(1)) {
+			RuntimeStatus::SetFrameMilliseconds(static_cast<int>(frameWindowTotalMs / frameWindowSamples));
+			frameWindowTotalMs = 0; frameWindowSamples = 0; frameWindowStartedAt = endTime;
+		}
 		if (elapsedTime < cycleTime) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - elapsedTime));
 		}
@@ -526,13 +545,21 @@ void App::Thread_DetectGameState() {
 				? "F10 detected; requesting an immediate visual map check"
 				: "M detected; requesting an immediate visual map check");
 		}
-
+		// Diagnostic isolation: skip the per-frame SURF probes and HUD evidence while leaving the state
+		// machine below running, so what is measured is this detection work and not the state tracking.
+		// The evidence the probes would have produced stays false, which is the same shape a frame the
+		// detectors reject already has.
 		int compassPixels = 0;
 		bool minimapVisible = false;
 		bool compassVisible = false;
 		bool mapControlsVisible = false;
 		bool structuralMapEvidence = false;
 		bool minimapHudAbsentLongEnough = false;
+		if (Isolation::Enabled(Isolation::kGameStateDetection)) {
+			GoodMatchSize_IconTask = 0;
+			GoodMatchSize_IconWavePlateCrystal = 0;
+		}
+		else {
 		if (!stateSnapshot.empty()) {
 			minimapVisible = IsExistMinMap(stateSnapshot, stateRect, &minimapMatchCount);
 			compassVisible = IsBigMapCompass(stateSnapshot, stateRect, &compassPixels);
@@ -598,6 +625,7 @@ void App::Thread_DetectGameState() {
 						std::to_string(consecutiveBigMapCompassFrames) + " goldPixels=" + std::to_string(compassPixels));
 				}
 			}
+		}
 		}
 
 		GoodMatchSize_IconTask = minimapMatchCount;

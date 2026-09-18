@@ -247,6 +247,10 @@ public sealed partial class SettingsPage : Page
         var value = coreHost.Configuration;
         ComboBox_CaptureMethod.SelectedIndex = value.CaptureWay;
         ComboBox_CaptureMethod.IsEnabled = !coreHost.Status.IsRunning;
+        ComboBox_PresentMethod.SelectedIndex = value.OverlayPresentMode;
+        // Like the capture method, this is read when an overlay session starts, so it only makes sense
+        // to change it while nothing is running.
+        ComboBox_PresentMethod.IsEnabled = !coreHost.Status.IsRunning;
         UpdateMinMapItemDataCycle.Value = value.MinMapUpdateCycle;
         UpdateMapItemDataCycle.Value = value.MapUpdateCycle;
         Setting_MinMapShowItem.IsOn = value.MinMapEnabled;
@@ -272,6 +276,8 @@ public sealed partial class SettingsPage : Page
     }
     private async void CaptureMethod_SelectionChanged(object sender, SelectionChangedEventArgs e)
     { if (ComboBox_CaptureMethod.SelectedIndex >= 0) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex)); }
+    private async void PresentMethod_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    { if (ComboBox_PresentMethod.SelectedIndex >= 0) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(overlayPresentMode: ComboBox_PresentMethod.SelectedIndex)); }
     private async void UpdateMinMapItemDataCycle_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 16 and <= 1000) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(minMapUpdateCycle: (int)e.NewValue)); }
     private async void UpdateMapItemDataCycle_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)

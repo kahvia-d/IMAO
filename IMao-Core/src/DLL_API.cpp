@@ -16,6 +16,7 @@
 #include "Feature/RuntimeFeatureRepository.h"
 #include "Runtime/RuntimeStatus.h"
 #include "Runtime/StructuredLogger.h"
+#include "Runtime/IsolationSwitches.h"
 #include "util.h"
 #include <condition_variable>
 #include <DbgHelp.h>
@@ -400,6 +401,27 @@ void SetCaptureWay(int setValue) {
 
 void SetVisibleSavedPoints(bool setValue) {
     DrawItemOnGameMap::SetVisibleSavedPoints(setValue);
+}
+
+void SetKeepOverlayHidden(bool setValue) {
+    ImGuiOverWindows::SetKeepWindowHidden(setValue);
+}
+
+void SetHoldOverlayPresent(bool setValue) {
+    ImGuiOverWindows::SetHoldPresentEnabled(setValue);
+}
+
+void SetIsolationSwitches(int setValue) {
+    const int applied = Isolation::Set(setValue);
+    StructuredLogger::Record("info", "core", "isolation-switches",
+        "mask=" + std::to_string(applied) + " mode=" + Isolation::DescribeAscii(applied));
+}
+
+void SetOverlayPresentMode(int setValue) {
+    ImGuiOverWindows::SetPresentMode(setValue);
+    StructuredLogger::Record("info", "core", "overlay-present-mode",
+        std::string("requested=") + std::to_string(setValue) + " applied=" +
+        std::to_string(ImGuiOverWindows::PresentMode()));
 }
 
 void SetSavedJsonRouteName(const char* itemId) {

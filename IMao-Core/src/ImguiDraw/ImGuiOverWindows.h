@@ -26,6 +26,29 @@ public:
 	static void ReleaseTexture(ID3D11ShaderResourceView* texture);
 
 	static std::atomic<HWND> overWindowsHwnd;
+	// Diagnostic only. While this is set the overlay still captures, tracks and renders, but its
+	// window is never shown, so a frame-rate comparison can separate the cost of the window itself
+	// from the cost of everything running behind it. Not persisted: a session that never asked for it
+	// behaves exactly as before.
+	static void SetKeepWindowHidden(bool value) { keepWindowHidden = value; }
+	static bool KeepWindowHidden() { return keepWindowHidden.load(); }
+	static std::atomic_bool keepWindowHidden;
+	// Diagnostic only. While this is set, a frame whose content is the status bar alone is held on the
+	// compositor instead of being re-rendered and re-presented, which separates the cost of the
+	// window's presence in the composition from the cost of presenting into it. Markers are never
+	// held.
+	static void SetHoldPresentEnabled(bool value) { holdPresentEnabled = value; }
+	static bool HoldPresentEnabled() { return holdPresentEnabled.load(); }
+	static std::atomic_bool holdPresentEnabled;
+	// How the overlay puts its surface on screen. 1 = DirectComposition (WS_EX_NOREDIRECTIONBITMAP and
+	// WS_EX_LAYERED over a flip-model composition swap chain), the default: it measured about 13 fps
+	// faster with the frames over 20 ms falling from 17.5% to 1.8%.
+	// 0 = colorkey layered window (WS_EX_LAYERED + LWA_COLORKEY over a blt-model swap chain), kept
+	// because a machine that renders the composition surface badly can be switched back to it.
+	// Read when an overlay session starts, so changing it applies on the next 开始探索.
+	static void SetPresentMode(int value) { presentMode = value == 0 ? 0 : 1; }
+	static int PresentMode() { return presentMode.load(); }
+	static std::atomic_int presentMode;
 private:
 	int start();
 	HWND h_window;

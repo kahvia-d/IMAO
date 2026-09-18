@@ -1,6 +1,7 @@
 #include "..\..\pch.h"
 #include "SimpleCapture.h"
 #include "..\..\Runtime\StructuredLogger.h"
+#include "..\..\Runtime\OverlayPacing.h"
 #include <iostream>
 #include <vector>
 #include "include/paddleocr.h"
@@ -10,6 +11,7 @@ using namespace PaddleOCR;
 namespace winrt
 {
     using namespace Windows::Foundation;
+    using namespace Windows::Foundation::Metadata;
     using namespace Windows::Foundation::Numerics;
     using namespace Windows::Graphics;
     using namespace Windows::Graphics::Capture;
@@ -50,6 +52,38 @@ SimpleCapture::SimpleCapture(
     m_session = m_framePool.CreateCaptureSession(m_item);
     m_lastSize = m_item.Size();
     m_framePool.FrameArrived({ this, &SimpleCapture::OnFrameArrived });
+    ApplyMinUpdateInterval();
+}
+
+// Windows Graphics Capture delivers a frame for every frame the game presents. On a 120 Hz game that
+// is 120 full-screen GPU readbacks and 120 owned 14.7 MB copies per second, while the fastest
+// consumer in this process asks for one every 33 ms. MinUpdateInterval moves that ceiling into the
+// capture session, so the frames nobody reads are never copied out of the GPU at all. It is an
+// optional property: on a Windows build without it the session keeps its unthrottled behaviour and
+// the interval recorded here is what the diagnostics attribute the measured readback rate to.
+void SimpleCapture::ApplyMinUpdateInterval()
+{
+    const auto interval = std::chrono::duration_cast<winrt::Windows::Foundation::TimeSpan>(
+        OverlayPacing::kCaptureMinUpdateInterval);
+    try
+    {
+        if (!winrt::ApiInformation::IsPropertyPresent(
+            winrt::name_of<winrt::GraphicsCaptureSession>(), L"MinUpdateInterval"))
+        {
+            StructuredLogger::Record("info", "capture", "capture-wgc-rate-limit",
+                "applied=0 reason=unsupported requestedMs=" +
+                std::to_string(OverlayPacing::kCaptureMinUpdateInterval.count() / 1000.0));
+            return;
+        }
+        m_session.MinUpdateInterval(interval);
+        StructuredLogger::Record("info", "capture", "capture-wgc-rate-limit",
+            "applied=1 intervalMs=" + std::to_string(interval.count() / 10000.0));
+    }
+    catch (const winrt::hresult_error& error)
+    {
+        RecordFrameDiagnostic("capture-wgc-rate-limit-error",
+            "hr=" + std::to_string(static_cast<long>(error.code().value)));
+    }
 }
 
 void SimpleCapture::StartCapture()
@@ -92,13 +126,17 @@ void SimpleCapture::Close()
 bool SimpleCapture::WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::milliseconds timeout,
     std::uint64_t* frameSequence)
 {
+    // Based on the last sequence this call itself handed out, not on whether a frame is being held:
+    // the callback now overwrites one retained buffer, so "not empty" can no longer mean "not seen".
+    const std::uint64_t afterSequence = m_deliveredSequence;
     std::unique_lock lock(m_frameMutex);
-    if (!m_frameCondition.wait_for(lock, timeout, [this] {
-        return m_closed.load() || (m_frameSequence > 0 && !m_latestFrame.empty());
-    }) || m_latestFrame.empty()) {
+    if (!m_frameCondition.wait_for(lock, timeout, [this, afterSequence] {
+        return m_closed.load() || (m_frameSequence > afterSequence && !m_latestFrame.empty());
+    }) || m_latestFrame.empty() || m_frameSequence <= afterSequence) {
         return false;
     }
     m_latestFrame.copyTo(outputFrame);
+    m_deliveredSequence = m_frameSequence;
     if (frameSequence != nullptr) *frameSequence = m_frameSequence;
     return true;
 }
@@ -294,10 +332,12 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             {
                 {
                     cv::Mat mappedFrame(height, width, CV_8UC4, mappedResource.pData, static_cast<size_t>(mappedResource.RowPitch));
-                    cv::Mat ownedFrame;
-                    // mappedFrame aliases D3D memory and must be copied before Unmap.
+                    // mappedFrame aliases D3D memory and must be copied before Unmap. That copy goes
+                    // into the buffer the previous frame already allocated rather than into a fresh
+                    // local Mat: at 2560x1440 those frames are 14.7 MB, and building a new one per
+                    // frame churned the allocator for the whole session.
                     try {
-                        mappedFrame.copyTo(ownedFrame);
+                        mappedFrame.copyTo(m_scratchFrame);
                     }
                     catch (...) {
                         m_d3dContext->Unmap(m_stagingTexture.get(), 0);
@@ -305,9 +345,16 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                     }
                     m_d3dContext->Unmap(m_stagingTexture.get(), 0);
 
+                    // The 14.7 MB copy above must not run under m_frameMutex: the readback waits on the
+                    // GPU for tens of milliseconds, and a consumer blocked on that same lock waited the
+                    // whole time (measured before this split: captureAvgMs 13.6 and captureMaxMs 71.7
+                    // against a readback of about 30 ms). Only the buffer swap and the published
+                    // sequence run under the lock, so a consumer sees either the previous frame or the
+                    // new one and never a half-written buffer.
                     {
                         std::lock_guard<std::mutex> lock(m_frameMutex);
-                        m_latestFrame = std::move(ownedFrame);
+                        using std::swap;
+                        swap(m_latestFrame, m_scratchFrame);
                         m_frameCapturedAt = std::chrono::steady_clock::now();
                         ++m_frameSequence;
                     }

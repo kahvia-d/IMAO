@@ -350,6 +350,18 @@ target_link_libraries(IMaoRoutePlanningServiceTests PRIVATE bcrypt.lib user32.li
 set_target_properties(IMaoRoutePlanningServiceTests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out/auto-replan-native/$<0:>)
 
+# Present-path probe. Not part of the program: it exists to answer whether a DirectComposition surface
+# instead of the overlay's WS_EX_LAYERED colorkey window puts the game back on independent flip.
+add_executable(IMaoOverlayPresentProbe
+    IMao-Core/tools/OverlayPresentProbe/main.cpp
+)
+set_target_properties(IMaoOverlayPresentProbe PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+# dcomp.lib and dwmapi.lib are the DirectComposition and DwmFlush imports; the rest are the Win32,
+# D3D11 and D2D1 pieces the probe draws its block with.
+target_link_libraries(IMaoOverlayPresentProbe PRIVATE dcomp.lib dwmapi.lib d3d11.lib dxgi.lib d2d1.lib user32.lib)
+
 add_executable(IMaoVisualRegression
     IMao-Core/tools/VisualRegression/main.cpp
     IMao-Core/src/Feature/RuntimeFeatureRepository.cpp

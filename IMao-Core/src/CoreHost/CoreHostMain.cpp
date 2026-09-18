@@ -1,4 +1,4 @@
-﻿#include "../DLL_API.h"
+#include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/ResourceSnapshotContext.h"
@@ -19,6 +19,7 @@
 #include "../Runtime/RouteGamepadBridge.h"
 #include "../Runtime/MapToolsBridge.h"
 #include "../Runtime/GamepadWorldActions.h"
+#include "../Runtime/IsolationSwitches.h"
 
 #include <Windows.h>
 
@@ -448,6 +449,7 @@ bool ApplyConfigure(const json& command) {
         return command.contains(key) ? std::optional<bool>(command.at(key).get<bool>()) : std::nullopt;
     };
     const auto capture = integer("captureWay", 0, 1);
+    const auto present = integer("overlayPresentMode", 0, 1);
     const auto mapCycle = integer("mapUpdateCycle", 16, 1000);
     const auto miniCycle = integer("minMapUpdateCycle", 16, 1000);
     const auto map = boolean("mapEnabled");
@@ -457,6 +459,7 @@ bool ApplyConfigure(const json& command) {
     const auto autoReplan = boolean("autoReplanEnabled");
     const auto hotkeys = RuntimeHotkeys::ValidateConfiguration(command);
     if (capture) SetCaptureWay(*capture);
+    if (present) SetOverlayPresentMode(*present);
     if (mapCycle) SetMapDataUpdateCycle(*mapCycle);
     if (miniCycle) SetMinMapDataUpdateCycle(*miniCycle);
     if (map) EnabledMapShowItem(*map);
@@ -674,6 +677,41 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
             const bool enabled = command.value("enabled", false);
             Diagnostics::SetCaptureEnabled(enabled);
             SendAck(events, command, true, enabled ? "诊断截图已开启" : "诊断截图已关闭");
+            return true;
+        }
+        if (type == "setOverlayHidden") {
+            // Diagnostic: hide the overlay window without stopping the capture, tracking or drawing
+            // behind it, so a frame-rate comparison can attribute the cost to the window itself.
+            const bool enabled = command.value("enabled", false);
+            SetKeepOverlayHidden(enabled);
+            StructuredLogger::Record("info", "core", "overlay-window-diagnostic",
+                std::string("keepHidden=") + (enabled ? "1" : "0"));
+            SendAck(events, command, true, enabled
+                ? "已隐藏叠加层窗口（采集与定位仍在运行）"
+                : "已恢复叠加层窗口");
+            return true;
+        }
+        if (type == "setHoldOverlayPresent") {
+            // Diagnostic: keep presenting the same surface for about three seconds at a time while the
+            // window stays visible, so the cost of the composition's presence can be told apart from
+            // the cost of presenting into it. Markers are never held.
+            const bool enabled = command.value("enabled", false);
+            SetHoldOverlayPresent(enabled);
+            StructuredLogger::Record("info", "core", "overlay-present-diagnostic",
+                std::string("holdPresent=") + (enabled ? "1" : "0"));
+            SendAck(events, command, true, enabled
+                ? "已暂停叠加层画面更新（窗口仍然显示）"
+                : "已恢复叠加层画面更新");
+            return true;
+        }
+        if (type == "setIsolationSwitches") {
+            // Diagnostic: switch off whole pieces of the per-frame work so each one's cost can be
+            // measured against a baseline instead of inferred from an aggregate.
+            const int mask = static_cast<int>(command.value("mask", 0));
+            const int applied = Isolation::Set(mask);
+            StructuredLogger::Record("info", "core", "isolation-switches",
+                "mask=" + std::to_string(applied) + " mode=" + Isolation::DescribeAscii(applied));
+            SendAck(events, command, true, std::string("隔离开关已应用：") + Isolation::Describe(applied));
             return true;
         }
         if (type == "setRouteName") {

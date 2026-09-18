@@ -197,7 +197,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         finally { lifecycleLock.Release(); }
     }
 
-    public async Task<bool> ConfigureAsync(int? captureWay = null, int? mapUpdateCycle = null, int? minMapUpdateCycle = null,
+    public async Task<bool> ConfigureAsync(int? captureWay = null, int? overlayPresentMode = null,
+        int? mapUpdateCycle = null, int? minMapUpdateCycle = null,
         bool? mapEnabled = null, bool? minMapEnabled = null, bool? savedPointsEnabled = null,
         bool? statusBarEnabled = null, CancellationToken cancellationToken = default,
         int? nearestCompletionKey = null, int? manualRouteKey = null, int? currentTargetGuideKey = null,
@@ -221,7 +222,9 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             {
                 next = configuration.Update(old => old with
                 {
-                    CaptureWay = captureWay ?? old.CaptureWay, MapUpdateCycle = mapUpdateCycle ?? old.MapUpdateCycle,
+                    CaptureWay = captureWay ?? old.CaptureWay,
+                    OverlayPresentMode = overlayPresentMode ?? old.OverlayPresentMode,
+                    MapUpdateCycle = mapUpdateCycle ?? old.MapUpdateCycle,
                     MinMapUpdateCycle = minMapUpdateCycle ?? old.MinMapUpdateCycle,
                     MapEnabled = mapEnabled ?? old.MapEnabled, MinMapEnabled = minMapEnabled ?? old.MinMapEnabled,
                     SavedPointsEnabled = savedPointsEnabled ?? old.SavedPointsEnabled,
@@ -297,6 +300,22 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
 
     public Task SetDiagnosticsCaptureAsync(bool enabled, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setDiagnosticsCapture", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
+
+    /// Diagnostic only. Keeps capture, tracking and drawing running while the overlay window itself
+    /// stays hidden, so a frame-rate comparison can show what the visible window costs the game.
+    public Task SetOverlayHiddenAsync(bool enabled, CancellationToken cancellationToken = default) =>
+        SendCommandAsync("setOverlayHidden", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
+
+    /// Diagnostic only. Holds a status-bar-only frame on the compositor for about three seconds at a
+    /// time while the window stays visible, which separates the cost of the window's presence from the
+    /// cost of presenting into it. Marker frames are never held.
+    public Task SetHoldOverlayPresentAsync(bool enabled, CancellationToken cancellationToken = default) =>
+        SendCommandAsync("setHoldOverlayPresent", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
+
+    /// Diagnostic only. A bitmask that switches off whole pieces of the per-frame work so each one's
+    /// cost can be measured on its own. Bit values live in IMao-Core/src/Runtime/IsolationSwitches.h.
+    public Task SetIsolationSwitchesAsync(int mask, CancellationToken cancellationToken = default) =>
+        SendCommandAsync("setIsolationSwitches", new Dictionary<string, object?> { ["mask"] = mask }, cancellationToken);
 
     public Task SetRouteNameAsync(string routeName, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setRouteName", new Dictionary<string, object?> { ["routeName"] = routeName }, cancellationToken);

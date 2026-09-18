@@ -32,6 +32,15 @@ inline bool WantsMouseHook(bool mapInteractive, Clock::time_point regionsPublish
 inline constexpr std::chrono::microseconds kCaptureActivePeriod{33333};
 inline constexpr std::chrono::microseconds kCaptureIdlePeriod{80000};
 
+// The fastest rate this process ever consumes captured frames. Windows Graphics Capture otherwise
+// delivers every frame the game presents - on a 120 Hz game that is 120 full GPU readbacks plus a
+// 14.7 MB copy per second for pixels nobody reads - while no consumer here asks for more than
+// kCaptureActivePeriod. Telling the capture session this interval removes that work at the source,
+// and it is deliberately a whole multiple of the display refresh so the frames we do get stay evenly
+// spaced instead of arriving in pairs (measured: pairs of 100-176 ms game frames two seconds apart).
+// It must never be larger than kCaptureActivePeriod, or the promise made above goes unmet.
+inline constexpr std::chrono::microseconds kCaptureMinUpdateInterval{33333};
+
 // A capture that took far longer than usual means the game is struggling to produce the extra frame
 // this tool asks for. Waiting longer before asking again keeps such a stall from repeating back to
 // back (measured: 116-176 ms stalls arrived in pairs two seconds apart).
@@ -45,6 +54,24 @@ inline std::chrono::microseconds CapturePeriod(bool overlayActive) {
 inline std::chrono::microseconds CapturePeriod(bool overlayActive, bool slowCapture) {
     return CapturePeriod(overlayActive) + (slowCapture ? kSlowCaptureBackoff : std::chrono::microseconds::zero());
 }
+
+// Startup reads one frame to prove the capture works, and that frame is already stale by the time the
+// capture loop runs - it is not a frame the loop observed. The loop therefore takes the first sequence
+// it sees as its baseline and needs a newer one before it publishes, instead of re-publishing startup
+// pixels as if they were current.
+struct CaptureSequenceFilter {
+    bool baselineKnown = false;
+    std::uint64_t baseline = 0;
+    std::uint64_t lastPublished = 0;
+
+    // Returns true when this sequence is a frame the loop should publish, and records it.
+    bool Accept(std::uint64_t sequence) {
+        if (!baselineKnown) { baselineKnown = true; baseline = sequence; }
+        if (sequence == baseline || sequence == lastPublished) return false;
+        lastPublished = sequence;
+        return true;
+    }
+};
 
 // The overlay window covers the whole game screen, so every present makes the desktop compositor
 // blend that whole screen again - including the game's own frames, which a visible topmost layered
@@ -64,4 +91,33 @@ inline constexpr int kFramesBeforeHidingIdleOverlay = 30;
 inline bool ShouldHideIdleOverlay(int consecutiveEmptyFrames) {
     return consecutiveEmptyFrames >= kFramesBeforeHidingIdleOverlay;
 }
+
+// Diagnostic only. A visible topmost layered window costs the game two different things: the desktop
+// compositor has to keep it in the composition, and every present makes the compositor blend the
+// whole screen again. Holding the presents lets a frame-rate comparison say which of the two a
+// measurement is actually paying for, because a held overlay keeps its window in the composition
+// while skipping the render, the present and everything leading up to them.
+//
+// Markers are never held: their screen position changes with the map, so a held overlay would show
+// them in the wrong place. Only a frame whose content is the status bar alone is a candidate.
+inline constexpr int kHeldFrameInterval = 90; // about three seconds at the overlay rate
+
+struct HoldPresentPolicy {
+    bool holding = false;
+    int heldFrames = 0;
+    /// needsMarkers: whether the frame about to be rendered has markers to draw at a tracked position.
+    /// Those are never held - their screen position moves with the map, so a held overlay would show
+    /// them in the wrong place, and a frame that stopped needing them has to reach the screen to clear
+    /// them. Only a frame with nothing but the status bar is a candidate.
+    bool ShouldHold(bool needsMarkers) {
+        if (holding) {
+            if (++heldFrames >= kHeldFrameInterval) { holding = false; heldFrames = 0; }
+            return holding;
+        }
+        if (needsMarkers) return false;
+        holding = true;
+        heldFrames = 0; // Counted when the next frame asks to hold, so the interval is exact.
+        return true;
+    }
+};
 }

@@ -16,7 +16,7 @@ struct Snapshot {
     }
 };
 
-inline Snapshot Read(HWND window, IDXGISwapChain* chain) {
+inline Snapshot Read(HWND window, IDXGISwapChain* chain, bool swapChainHasOutputWindow = true) {
     Snapshot value;
     RECT client{};
     if (!IsWindow(window) || !GetClientRect(window, &client)) {
@@ -31,9 +31,14 @@ inline Snapshot Read(HWND window, IDXGISwapChain* chain) {
     DXGI_SWAP_CHAIN_DESC chainDesc{};
     value.result = chain->GetDesc(&chainDesc);
     if (FAILED(value.result)) return value;
-    value.outputWindow = chainDesc.OutputWindow;
     value.flags = chainDesc.Flags;
-    if (value.outputWindow != window) { value.result = E_INVALIDARG; return value; }
+    // A composition swap chain is created for a visual, not for a window, so it has no OutputWindow to
+    // compare against and its v1 descriptor does not carry one. The caller says so instead of this
+    // helper guessing, because guessing would silently accept a normal chain that was never checked.
+    if (swapChainHasOutputWindow) {
+        value.outputWindow = chainDesc.OutputWindow;
+        if (value.outputWindow != window) { value.result = E_INVALIDARG; return value; }
+    }
     ID3D11Texture2D* buffer = nullptr;
     value.result = chain->GetBuffer(0, IID_PPV_ARGS(&buffer));
     if (FAILED(value.result) || !buffer) {
@@ -56,9 +61,10 @@ struct Result {
 };
 
 template<class ReleaseTargets>
-inline Result Ensure(HWND window, IDXGISwapChain* chain, ReleaseTargets releaseTargets) {
+inline Result Ensure(HWND window, IDXGISwapChain* chain, ReleaseTargets releaseTargets,
+    bool swapChainHasOutputWindow = true) {
     Result value;
-    value.before = value.after = Read(window, chain);
+    value.before = value.after = Read(window, chain, swapChainHasOutputWindow);
     if (FAILED(value.before.result) || value.before.Matches()) return value;
     // Callers must also unbind views from their immediate/deferred contexts.
     // The temporary GetBuffer reference from Read has already been released.
@@ -68,7 +74,7 @@ inline Result Ensure(HWND window, IDXGISwapChain* chain, ReleaseTargets releaseT
         value.before.clientHeight, DXGI_FORMAT_UNKNOWN, value.before.flags);
     // Always read back, including failures; a successful resize request alone
     // does not prove the latest client size or the actual buffer is correct.
-    value.after = Read(window, chain);
+    value.after = Read(window, chain, swapChainHasOutputWindow);
     return value;
 }
 }

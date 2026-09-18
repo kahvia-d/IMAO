@@ -3,6 +3,9 @@
 #include "../App/App.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../Base/stb_image.h"
+// DirectComposition presentation for the overlay. dcomp.lib is linked by CMakeLists.txt.
+#include <dcomp.h>
+#pragma comment(lib, "dcomp.lib")
 #include <iostream>
 #include "../ImguiDraw/Items/DrawItemOnMinMap.h"
 #include "../ImguiDraw/Items/DrawItemOnGameMap.h"
@@ -21,6 +24,7 @@
 #include "../Runtime/OverlayWindowBounds.h"
 #include "../Runtime/OverlayBackBufferSize.h"
 #include "../Runtime/MapToolsBridge.h"
+#include "../Runtime/IsolationSwitches.h"
 #include "Routes/DrawRouteOnMap.h"
 #include "Routes/DrawRouteOnMinMap.h"
 
@@ -28,6 +32,17 @@
 #include <sstream>
 
 std::atomic<HWND> ImGuiOverWindows::overWindowsHwnd{nullptr};
+std::atomic_bool ImGuiOverWindows::keepWindowHidden{false};
+std::atomic_bool ImGuiOverWindows::holdPresentEnabled{false};
+std::atomic_int ImGuiOverWindows::presentMode{1};
+
+namespace {
+/// True when the overlay should use DirectComposition for this session: the player's setting, which
+/// defaults to it, or the diagnostic isolation switch, which forces it either way.
+bool WantCompositionPresentation() {
+    return ImGuiOverWindows::PresentMode() == 1 || Isolation::UseOverlayComposition();
+}
+}
 
 ImGuiOverWindows::ImGuiOverWindows(HWND window, App& app) : h_window(window), app(app) {
     imguiThread = std::thread([this] {
@@ -45,13 +60,27 @@ static bool                     g_SwapChainOccluded = false;
 static UINT                     g_ResizeWidth = 0, g_ResizeHeight = 0;
 static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
 
+// DirectComposition presentation. When g_compositionDevice is set the overlay presents through a
+// composition visual instead of a colorkey layered window: the swap chain is a flip-model one created
+// for composition, and its current buffer's view is re-acquired after every present because a
+// flip-model chain rotates which buffer it presents from. A blt-model surface costs DWM an extra copy,
+// which is the leading explanation for the gap between this overlay and an equivalent probe window.
+static IDCompositionDevice* g_compositionDevice = nullptr;
+static IDCompositionTarget* g_compositionTarget = nullptr;
+static IDCompositionVisual* g_compositionVisual = nullptr;
+
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 bool CreateRenderTarget();
 void CleanupRenderTarget();
+/// Re-acquires the composition swap chain's current back buffer view after a present or a resize.
+bool AcquireCompositionBackBufferView();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 constexpr auto kOverlayFramePeriod = OverlayPacing::kFramePeriod; // matches the capture rate
+
+/// True once the composition path is in use for this session.
+bool UsingCompositionPresentation() { return g_compositionDevice != nullptr; }
 
 namespace {
 constexpr auto kOverlayDiagnosticsInterval = std::chrono::seconds(2);
@@ -298,7 +327,20 @@ int ImGuiOverWindows::start()
     // from the previous HWND must never size the new swap chain or viewport.
     g_ResizeWidth = g_ResizeHeight = 0; g_SwapChainOccluded = false;
     g_LastOverlayDiagnosticsAt = {};
-    overWindowsHwnd = ::CreateWindowExW(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
+    // A composition visual needs no redirection bitmap, and asking for one is what makes DWM take the
+    // slower path for the surface. The window style therefore depends on which presentation the
+    // session will use, which is decided before the window exists.
+    //
+    // WS_EX_LAYERED is kept in both cases even though the composition path does not use a colorkey: it
+    // is what keeps the window out of hit-testing. Measured by Test-OverlayHitTest.ps1 against the live
+    // game, a WS_EX_NOREDIRECTIONBITMAP window without it becomes the window a click reaches, so the
+    // overlay's own clicks stop working while every frame-rate number still looks right. The two are
+    // not alternatives; WS_EX_LAYERED is the one that matters for input.
+    const bool useComposition = WantCompositionPresentation();
+    DWORD overlayStyles = WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW |
+        WS_EX_LAYERED;
+    if (useComposition) overlayStyles |= WS_EX_NOREDIRECTIONBITMAP;
+    overWindowsHwnd = ::CreateWindowExW(overlayStyles,
         wc.lpszClassName, L"IMao Map Overlay", WS_POPUP, initialOrigin.x, initialOrigin.y,
         initialClient.right, initialClient.bottom, nullptr, nullptr, wc.hInstance, nullptr);
     if (!overWindowsHwnd) return 1;
@@ -373,7 +415,11 @@ int ImGuiOverWindows::start()
 
     //设置透明窗口
     ImVec4 clear_color = ImVec4(0, 0, 0, 0);
-    SetLayeredWindowAttributes(overWindowsHwnd, ImColor(0, 0, 0, 0), 0, LWA_COLORKEY);
+    // The colorkey is the transparent mechanism of the layered path only. A composition surface is
+    // transparent through its own premultiplied alpha, and applying a colorkey to it would make every
+    // black pixel of the overlay disappear.
+    if (!UsingCompositionPresentation())
+        SetLayeredWindowAttributes(overWindowsHwnd, ImColor(0, 0, 0, 0), 0, LWA_COLORKEY);
     //DrawPiPWindows::Initi();
     //std::vector<ID3D11ShaderResourceView*> texturesToRelease; // 用于存储需要释放的纹理
     // Main loop
@@ -397,6 +443,17 @@ int ImGuiOverWindows::start()
     std::uint64_t lastPresentedHash = 0, skippedPresents = 0;
     bool hasPresented = false, overlayWindowHidden = false;
     int consecutiveEmptyFrames = 0;
+    // Diagnostic only (Diagnostics > hold the overlay present). Holding a frame whose content is the
+    // status bar alone keeps the window in the composition while skipping the render and the present,
+    // so a frame-rate comparison can tell which of the two the game is actually paying for.
+    OverlayPacing::HoldPresentPolicy holdPolicy;
+    bool hadMarkersRequested = false;
+    std::uint64_t heldFrames = 0, heldPresents = 0, skippedOverlayFrames = 0;
+    // Per-segment cost of this thread's own frame, reported with the motion diagnostics. The overlay
+    // runs on its own core, so these numbers cannot be read as the game's cost directly; they say
+    // which segment is doing the work, which is what a split has to establish.
+    double syncTotalMs = 0, newFrameTotalMs = 0, buildTotalMs = 0, renderTotalMs = 0, hashTotalMs = 0, presentTotalMs = 0;
+    std::uint64_t syncCalls = 0, renderCalls = 0, hashCalls = 0, presentCalls = 0;
     const auto drainMessages = [&]() {
         MSG message;
         while (::PeekMessage(&message, nullptr, 0U, 0U, PM_REMOVE))
@@ -431,6 +488,19 @@ int ImGuiOverWindows::start()
 
         RECT GameRect{};
         if (!GetClientRect(h_window, &GameRect)) break;
+        // Decide whether this frame may be held before anything is rendered. A held frame is only ever
+        // one that has nothing to show but the status bar, and the frame that stops having markers is
+        // the one that has to reach the screen and clear them - so the previous frame's need for
+        // markers, not the current one's, is what permits a hold.
+        bool holdThisFrame = false;
+        {
+            const auto markerFrame = app.ReadOverlayFrame();
+            const bool lastFrameNeededMarkers = hadMarkersRequested;
+            hadMarkersRequested = markerFrame && (markerFrame->mapVisible || markerFrame->minimapVisible);
+            holdThisFrame = ImGuiOverWindows::HoldPresentEnabled() &&
+                holdPolicy.ShouldHold(lastFrameNeededMarkers || hadMarkersRequested);
+        }
+        if (holdThisFrame) ++heldFrames;
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         if (!pump(maxWait))
@@ -439,7 +509,14 @@ int ImGuiOverWindows::start()
         if (GameRect.right > 0 && GameRect.bottom > 0) {
             // Correct position/size BEFORE NewFrame and ResizeBuffers. Verify
             // the HWND each frame, so a failed move is retried, never cached.
-            if (!OverlayWindowBounds::GameClient(h_window, physicalGame) || !OverlayWindowBounds::Synchronize(overWindowsHwnd, physicalGame)) {
+            // Diagnostic isolation measures what this per-frame verification costs on its own.
+            const auto syncStarted = std::chrono::steady_clock::now();
+            const bool synced = Isolation::Enabled(Isolation::kWindowSync) ||
+                (OverlayWindowBounds::GameClient(h_window, physicalGame) &&
+                    OverlayWindowBounds::Synchronize(overWindowsHwnd, physicalGame));
+            syncTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - syncStarted).count();
+            ++syncCalls;
+            if (!synced) {
                 Diagnostics::Record("overlay-window-position-error", std::to_string(GetLastError()));
                 beginWait();
                 if (!framePacer.WaitUntil(frameStart + kOverlayFramePeriod, pumpDuringWait)) break;
@@ -468,9 +545,22 @@ int ImGuiOverWindows::start()
         const auto bufferSize = OverlayBackBufferSize::Ensure(overWindowsHwnd, g_pSwapChain, [] {
             if (g_pd3dDeviceContext) g_pd3dDeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
             CleanupRenderTarget();
-        });
+        }, !UsingCompositionPresentation());
         g_ResizeWidth = g_ResizeHeight = 0; // Notifications never serve as size truth.
-        const bool targetReady = bufferSize.Ready() && (g_mainRenderTargetView || CreateRenderTarget());
+        bool targetReady = bufferSize.Ready() && (g_mainRenderTargetView || CreateRenderTarget());
+        // A flip-model chain rotates which buffer it presents from, so its current buffer's view has to
+        // be re-acquired after a resize; the plain windowed chain always renders into buffer 0.
+        if (targetReady && UsingCompositionPresentation() &&
+            bufferSize.resizeAttempted && SUCCEEDED(bufferSize.resizeResult)) {
+            if (!AcquireCompositionBackBufferView()) {
+                Diagnostics::Record("overlay-resize-error",
+                    "action=disable-overlay-after-composition-view-rebuild-failed");
+                stopFlag = true;
+                break;
+            }
+            hasPresented = false; // The new buffers hold undefined content.
+        }
+        targetReady = targetReady && g_mainRenderTargetView != nullptr;
         if (!targetReady) {
             const HRESULT deviceReason = g_pd3dDevice == nullptr ? E_POINTER : g_pd3dDevice->GetDeviceRemovedReason();
             const auto now = std::chrono::steady_clock::now();
@@ -508,17 +598,27 @@ int ImGuiOverWindows::start()
         GameRect = {0, 0, static_cast<LONG>(bufferSize.after.clientWidth),
             static_cast<LONG>(bufferSize.after.clientHeight)};
 
-        // Start the Dear ImGui frame
-        ImGui_ImplDX11_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
-        RuntimeStatusBar::Prepare(h_window);
+        // Start the Dear ImGui frame. Diagnostic isolation skips the whole frame build - the draw-list
+        // work in the block below and the render/hash/present after it - while leaving the window
+        // itself visible and its pacing untouched, so what is measured is this work rather than the
+        // cost of the window existing.
+        const bool buildOverlayFrame = !Isolation::Enabled(Isolation::kOverlayRender);
+        if (!buildOverlayFrame) ++skippedOverlayFrames;
+        if (buildOverlayFrame) {
+            const auto newFrameStarted = std::chrono::steady_clock::now();
+            ImGui_ImplDX11_NewFrame();
+            ImGui_ImplWin32_NewFrame();
+            ImGui::NewFrame();
+            RuntimeStatusBar::Prepare(h_window);
+            newFrameTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - newFrameStarted).count();
+        }
         // Image tracking is the longest stretch of work in this frame; pump before it so a hook
         // callback that arrived during the previous segment runs before the new one begins.
         if (!pump(maxBounds)) break;
 
         // Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-        {
+        const auto buildStarted = std::chrono::steady_clock::now();
+        if (buildOverlayFrame) {
             const auto frame = app.ReadOverlayFrame();
             const auto capture = app.ReadCapturedFrame();
             const auto visibility = app.ReadOverlayVisibility();
@@ -544,9 +644,24 @@ int ImGuiOverWindows::start()
                     " waitMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxWait).count()) +
                     " presentSkipped=" + std::to_string(skippedPresents) +
                     " windowHidden=" + std::to_string(overlayWindowHidden ? 1 : 0) +
+                    " hiddenByDiagnostic=" + std::to_string(ImGuiOverWindows::KeepWindowHidden() ? 1 : 0) +
+                    " presentHeld=" + std::to_string(heldPresents) +
+                    " holdDiagnostic=" + std::to_string(ImGuiOverWindows::HoldPresentEnabled() ? 1 : 0) +
+                    " overlayRenderSkipped=" + std::to_string(skippedOverlayFrames) +
+                    // Per-segment millisecond averages for this thread's own frame, so a split can
+                    // name the expensive segment instead of the whole loop.
+                    " segSyncMs=" + std::to_string(syncCalls ? syncTotalMs / syncCalls : 0.0) +
+                    " segNewFrameMs=" + std::to_string(renderCalls ? newFrameTotalMs / renderCalls : 0.0) +
+                    " segBuildMs=" + std::to_string(renderCalls ? buildTotalMs / renderCalls : 0.0) +
+                    " segRenderMs=" + std::to_string(renderCalls ? renderTotalMs / renderCalls : 0.0) +
+                    " segHashMs=" + std::to_string(hashCalls ? hashTotalMs / hashCalls : 0.0) +
+                    " segPresentMs=" + std::to_string(presentCalls ? presentTotalMs / presentCalls : 0.0) +
+                    " segPresents=" + std::to_string(presentCalls) +
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
-                attachedFrames = trackingMisses = 0; skippedPresents = 0;
+                attachedFrames = trackingMisses = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;
+                syncTotalMs = newFrameTotalMs = buildTotalMs = renderTotalMs = hashTotalMs = presentTotalMs = 0;
+                syncCalls = renderCalls = hashCalls = presentCalls = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();
             }
             bool drewMap = false, drewMinimap = false;
@@ -600,42 +715,87 @@ int ImGuiOverWindows::start()
             Notification::DrawInfo();
             //Debug::DebugWindow(io,app);
             DrawOverlayDiagnosticsProbe();
+            buildTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - buildStarted).count();
         }
 
         // Rendering
         if (!pump(maxTrack)) break;
-        ImGui::Render();
+        const auto renderStarted = std::chrono::steady_clock::now();
+        // Skipped together with the frame build, because ImGui requires the calls to be paired.
+        if (buildOverlayFrame) ImGui::Render();
         ImDrawData* drawData = ImGui::GetDrawData();
         // The window is the whole game screen, so its cost does not depend on how much is drawn inside
         // it; only whether anything changed does.
         const bool hasContent = drawData != nullptr && drawData->TotalVtxCount > 0;
+        const auto hashStarted = std::chrono::steady_clock::now();
         const std::uint64_t contentHash = HashOverlayDrawData(drawData);
+        hashTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - hashStarted).count();
+        ++hashCalls;
+        renderTotalMs += std::chrono::duration<double, std::milli>(hashStarted - renderStarted).count();
+        ++renderCalls;
         consecutiveEmptyFrames = hasContent ? 0 : consecutiveEmptyFrames + 1;
 
-        if (hasContent && overlayWindowHidden) {
+        // The diagnostic switch drives the window itself, never the work behind it. Forcing the window
+        // hidden leaves capture, tracking, the draw-list build and the present exactly as they are, so
+        // a frame-rate comparison against a normal session isolates what the visible window costs.
+        if (ImGuiOverWindows::KeepWindowHidden()) {
+            const bool wasVisible = !overlayWindowHidden;
+            if (wasVisible) {
+                ::ShowWindow(overWindowsHwnd, SW_HIDE);
+                overlayWindowHidden = true;
+                hasPresented = false;
+                Diagnostics::Record("overlay-window-visibility", "visible=0 reason=diagnostic-hidden");
+            }
+        }
+        else if (!holdThisFrame && hasContent && overlayWindowHidden) {
             ::ShowWindow(overWindowsHwnd, SW_SHOWNOACTIVATE);
             overlayWindowHidden = false;
             hasPresented = false; // The surface has to be filled again.
             Diagnostics::Record("overlay-window-visibility", "visible=1 reason=content");
         }
-        else if (!hasContent && !overlayWindowHidden && OverlayPacing::ShouldHideIdleOverlay(consecutiveEmptyFrames)) {
+        else if (!holdThisFrame && !hadMarkersRequested && !overlayWindowHidden &&
+            OverlayPacing::ShouldHideIdleOverlay(consecutiveEmptyFrames)) {
+            // The idle hide only fires when this frame and the previous one needed no markers. Using
+            // the vertex count alone would also hide a held frame, which would take the window back out
+            // of the composition and defeat the diagnostic.
             ::ShowWindow(overWindowsHwnd, SW_HIDE);
             overlayWindowHidden = true;
             Diagnostics::Record("overlay-window-visibility", "visible=0 reason=idle");
         }
 
         // A back buffer that was just recreated has undefined content, so the frame has to be drawn even
-        // when the overlay's own content did not change.
+        // when the overlay's own content did not change. A held frame is the diagnostic exception: its
+        // whole point is that the compositor keeps showing the previous surface.
         const bool surfaceRecreated = bufferSize.resizeAttempted && SUCCEEDED(bufferSize.resizeResult);
-        if (surfaceRecreated ||
-            OverlayPacing::ShouldPresentFrame(contentHash, lastPresentedHash, hasPresented, !overlayWindowHidden)) {
+        if (buildOverlayFrame && !holdThisFrame && (surfaceRecreated ||
+            OverlayPacing::ShouldPresentFrame(contentHash, lastPresentedHash, hasPresented, !overlayWindowHidden))) {
             const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
             g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
-            g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
+            // The clear colour is fully transparent and black is the colorkey, so every pixel the draw
+            // data does not cover is transparent either way. Diagnostic isolation measures what the
+            // full-screen clear costs on its own.
+            if (!Isolation::Enabled(Isolation::kOverlayClear))
+                g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
+            const auto presentStarted = std::chrono::steady_clock::now();
             ImGui_ImplDX11_RenderDrawData(drawData);
 
             // Present
             HRESULT hr = g_pSwapChain->Present(0, 0);
+            presentTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - presentStarted).count();
+            ++presentCalls;
+            if (UsingCompositionPresentation()) {
+                // A committed visual is what makes the new surface visible; without this the compositor
+                // keeps showing the previous one.
+                if (g_compositionDevice != nullptr) g_compositionDevice->Commit();
+                // The next present comes from the other buffer, so its view has to be taken now. A
+                // failure here is fatal to the session rather than a fallback: the swap chain already
+                // exists and the surface is already live.
+                if (!AcquireCompositionBackBufferView()) {
+                    Diagnostics::Record("overlay-device-error", "composition back buffer view unavailable");
+                    stopFlag = true;
+                    break;
+                }
+            }
             g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
             RecordOverlayFrameDiagnostics(overWindowsHwnd, hr, bufferSize.after);
             if (FAILED(hr)) {
@@ -649,6 +809,7 @@ int ImGuiOverWindows::start()
         else {
             // The last surface stays on screen, so there is nothing to repaint.
             ++skippedPresents;
+            if (holdThisFrame) ++heldPresents;
         }
 
         // Keep fractional milliseconds and include rendering cost in pacing. The wait keeps servicing
@@ -668,9 +829,156 @@ int ImGuiOverWindows::start()
 
 // Helper functions
 
+namespace {
+/// Reports which composition step failed with its HRESULT. Without this a fallback says only that
+/// something did not work, which is not actionable: the first attempt reported hr=0, the value of the
+/// swap chain creation that had actually succeeded, and hid the real failure.
+bool ReportCompositionStep(const char* step, HRESULT result)
+{
+    if (SUCCEEDED(result)) return true;
+    Diagnostics::Record("overlay-presentation",
+        std::string("mode=layered-colorkey reason=composition-step-failed step=") + step +
+        " hr=" + std::to_string(static_cast<long>(result)));
+    return false;
+}
+
+/// Binds whatever the composition path needs after the swap chain exists: a render target view for the
+/// current buffer, a composition device, and a visual for it.
+bool CreateCompositionPresentation(HWND hWnd)
+{
+    IDXGIDevice* dxgiDevice = nullptr;
+    if (!ReportCompositionStep("query-dxgi-device",
+        g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&dxgiDevice))) || dxgiDevice == nullptr) return false;
+    // A composition surface has to be produced promptly; the default frame latency lets the visual lag
+    // the frame the overlay just drew. SetMaximumFrameLatency lives on IDXGIDevice1.
+    IDXGIDevice1* frameLatencyDevice = nullptr;
+    if (SUCCEEDED(dxgiDevice->QueryInterface(IID_PPV_ARGS(&frameLatencyDevice))) && frameLatencyDevice != nullptr) {
+        frameLatencyDevice->SetMaximumFrameLatency(1);
+        frameLatencyDevice->Release();
+    }
+    const HRESULT deviceResult = ::DCompositionCreateDevice(dxgiDevice, IID_PPV_ARGS(&g_compositionDevice));
+    dxgiDevice->Release();
+    if (!ReportCompositionStep("create-composition-device", deviceResult) || g_compositionDevice == nullptr) {
+        g_compositionDevice = nullptr;
+        return false;
+    }
+    if (!AcquireCompositionBackBufferView()) return false;
+    if (!ReportCompositionStep("create-target-for-hwnd",
+        g_compositionDevice->CreateTargetForHwnd(hWnd, TRUE, &g_compositionTarget))) return false;
+    if (!ReportCompositionStep("create-visual",
+        g_compositionDevice->CreateVisual(&g_compositionVisual))) return false;
+    if (!ReportCompositionStep("set-content",
+        g_compositionVisual->SetContent(g_pSwapChain))) return false;
+    if (!ReportCompositionStep("set-root",
+        g_compositionTarget->SetRoot(g_compositionVisual))) return false;
+    if (!ReportCompositionStep("commit", g_compositionDevice->Commit())) return false;
+    return true;
+}
+}
+
+/// Takes the render target view of the buffer a flip-model chain will present from next.
+///
+/// Only buffer 0 is ever requested, and the previous view is released first. Acquiring a view for every
+/// buffer index looks like the obvious way to follow a rotating chain, but it is not how DXGI exposes
+/// one: GetBuffer(1) answered E_INVALIDARG on the first attempt, which sent the whole overlay back to
+/// the colorkey path while still looking like a working session.
+bool AcquireCompositionBackBufferView()
+{
+    if (g_pSwapChain == nullptr || g_pd3dDevice == nullptr) {
+        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=no-swap-chain-for-view");
+        return false;
+    }
+    if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
+    // Unbind before releasing: a view still bound to the context cannot be released cleanly.
+    if (g_pd3dDeviceContext) g_pd3dDeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+    ID3D11Texture2D* buffer = nullptr;
+    const HRESULT bufferResult = g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&buffer));
+    if (FAILED(bufferResult) || buffer == nullptr) {
+        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=get-buffer-failed hr=" +
+            std::to_string(static_cast<long>(bufferResult)));
+        return false;
+    }
+    const HRESULT viewResult = g_pd3dDevice->CreateRenderTargetView(buffer, nullptr, &g_mainRenderTargetView);
+    buffer->Release();
+    if (FAILED(viewResult) || g_mainRenderTargetView == nullptr) {
+        Diagnostics::Record("overlay-presentation", "mode=layered-colorkey reason=create-view-failed hr=" +
+            std::to_string(static_cast<long>(viewResult)));
+        return false;
+    }
+    return true;
+}
+
 bool CreateDeviceD3D(HWND hWnd)
 {
-    // Setup swap chain
+    // One device for both paths. D3D11_CREATE_DEVICE_BGRA_SUPPORT is only strictly required by the
+    // composition path, but it costs nothing and keeps a single device creation to reason about.
+    UINT createDeviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    D3D_FEATURE_LEVEL featureLevel;
+    const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
+    HRESULT res = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags,
+        featureLevelArray, 2, D3D11_SDK_VERSION, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+    if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
+        res = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags,
+            featureLevelArray, 2, D3D11_SDK_VERSION, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+    if (res != S_OK || g_pd3dDevice == nullptr) return false;
+
+    IDXGIDevice* dxgiDevice = nullptr;
+    IDXGIAdapter* adapter = nullptr;
+    IDXGIFactory2* factory = nullptr;
+    if (FAILED(g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&dxgiDevice))) ||
+        FAILED(dxgiDevice->GetAdapter(&adapter)) ||
+        FAILED(adapter->GetParent(IID_PPV_ARGS(&factory)))) {
+        if (dxgiDevice) dxgiDevice->Release();
+        if (adapter) adapter->Release();
+        if (factory) factory->Release();
+        CleanupDeviceD3D();
+        return false;
+    }
+
+    RECT client{};
+    if (!GetClientRect(hWnd, &client) || client.right <= 0 || client.bottom <= 0) {
+        dxgiDevice->Release(); adapter->Release(); factory->Release();
+        CleanupDeviceD3D();
+        return false;
+    }
+
+    if (WantCompositionPresentation()) {
+        // Premultiplied alpha is what lets the game show through the parts the overlay does not draw,
+        // which is what the colorkey did in the other path.
+        DXGI_SWAP_CHAIN_DESC1 description{};
+        description.Width = static_cast<UINT>(client.right);
+        description.Height = static_cast<UINT>(client.bottom);
+        description.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        description.SampleDesc.Count = 1;
+        description.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        description.BufferCount = 2;
+        description.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+        description.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+        IDXGISwapChain1* compositionChain = nullptr;
+        const HRESULT chainResult = factory->CreateSwapChainForComposition(g_pd3dDevice, &description,
+            nullptr, &compositionChain);
+        const bool started =
+            SUCCEEDED(chainResult) && compositionChain != nullptr &&
+            SUCCEEDED(compositionChain->QueryInterface(IID_PPV_ARGS(&g_pSwapChain))) && g_pSwapChain != nullptr &&
+            CreateCompositionPresentation(hWnd);
+        if (compositionChain != nullptr) compositionChain->Release();
+        if (started) {
+            dxgiDevice->Release(); adapter->Release(); factory->Release();
+            Diagnostics::Record("overlay-presentation", "mode=composition swapEffect=flip-sequential");
+            return true;
+        }
+        // Falling back is only safe because the window style and the colorkey are both applied after
+        // this returns; a half-built composition state is torn down here so the caller sees a clean
+        // windowed device either way.
+        if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = nullptr; }
+        if (g_compositionVisual) { g_compositionVisual->Release(); g_compositionVisual = nullptr; }
+        if (g_compositionTarget) { g_compositionTarget->Release(); g_compositionTarget = nullptr; }
+        if (g_compositionDevice) { g_compositionDevice->Release(); g_compositionDevice = nullptr; }
+        Diagnostics::Record("overlay-presentation",
+            "mode=layered-colorkey reason=composition-unavailable hr=" +
+            std::to_string(static_cast<long>(chainResult)));
+    }
+
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
     sd.BufferCount = 2;
@@ -687,15 +995,13 @@ bool CreateDeviceD3D(HWND hWnd)
     sd.Windowed = TRUE;
     sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
-    UINT createDeviceFlags = 0;
-    //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-    D3D_FEATURE_LEVEL featureLevel;
-    const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
-    HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
-    if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
-        res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
-    if (res != S_OK)
+    const HRESULT windowedResult = factory->CreateSwapChain(g_pd3dDevice, &sd, &g_pSwapChain);
+    dxgiDevice->Release(); adapter->Release(); factory->Release();
+    if (FAILED(windowedResult) || g_pSwapChain == nullptr) {
+        CleanupDeviceD3D();
         return false;
+    }
+    Diagnostics::Record("overlay-presentation", "mode=layered-colorkey swapEffect=discard");
 
     if (!CreateRenderTarget()) {
         CleanupDeviceD3D();
@@ -709,6 +1015,9 @@ void CleanupDeviceD3D()
     // Cached views belong to this D3D device and cannot survive a recreation.
     DrawItemBase::itemsTextureData.clear();
     CleanupRenderTarget();
+    if (g_compositionVisual) { g_compositionVisual->Release(); g_compositionVisual = nullptr; }
+    if (g_compositionTarget) { g_compositionTarget->Release(); g_compositionTarget = nullptr; }
+    if (g_compositionDevice) { g_compositionDevice->Release(); g_compositionDevice = nullptr; }
     if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = nullptr; }
     if (g_pd3dDeviceContext) { g_pd3dDeviceContext->Release(); g_pd3dDeviceContext = nullptr; }
     if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = nullptr; }
@@ -728,6 +1037,8 @@ bool CreateRenderTarget()
 
 void CleanupRenderTarget()
 {
+    // The composition path re-acquires this view every frame, so the plain release here is all either
+    // path needs: there is no per-buffer array to keep in step.
     if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
 }
 

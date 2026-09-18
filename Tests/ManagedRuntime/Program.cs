@@ -88,6 +88,23 @@ try
     File.WriteAllText(configPath, "{\"ConfigVersion\":2,\"CaptureWay\":0,\"StatusBarEnabled\":false}");
     Check(new RuntimeConfigurationStore(configPath).Read().CaptureWay == 0,
         "a capture method chosen after the schema change stays BitBlt");
+    // Version 3 promotes the overlay presentation. A stored 0 cannot be told apart from the old
+    // default, so a file written before this bump moves, exactly like the capture method did.
+    Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 1,
+        "a configuration written before the presentation default changed moves to DirectComposition");
+    Check(new RuntimeConfigurationStore(configPath).Read().CaptureWay == 0,
+        "promoting the presentation does not re-promote a capture method chosen afterwards");
+    File.WriteAllText(configPath, "{\"ConfigVersion\":3,\"OverlayPresentMode\":0,\"StatusBarEnabled\":false}");
+    Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 0,
+        "a presentation chosen after the bump stays on the layered window");
+    Check(config.Update(old => old with { OverlayPresentMode = 0 }).OverlayPresentMode == 0 &&
+        config.Read().OverlayPresentMode == 0,
+        "choosing the layered window persists instead of being migrated back to the new default");
+    File.WriteAllText(configPath, "{\"StatusBarEnabled\":false,\"CaptureWay\":1}");
+    var freshDefault = new RuntimeConfigurationStore(configPath).Read();
+    Check(freshDefault.OverlayPresentMode == 1 && freshDefault.CaptureWay == 1,
+        "a file with no schema version at all is treated as the oldest schema and takes both promotions");
+    Check(File.ReadAllText(configPath).Contains("StatusBarEnabled"), "reading a configuration never rewrites it");
     Check(config.Update(old => old with { CaptureWay = 0 }).CaptureWay == 0 && config.Read().CaptureWay == 0,
         "choosing BitBlt persists instead of being migrated back to the new default");
     config.Update(old => old with { AutoReplanEnabled = true });

@@ -10,6 +10,13 @@
                 <StackPanel Spacing="12">
                     <TextBlock Text="事件日志始终保存。诊断截图仅在手动启用后采集。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                     <ToggleSwitch x:Name="Diagnostics_CaptureToggle" Header="采集诊断截图" AutomationProperties.Name="采集诊断截图" Toggled="Diagnostics_CaptureToggle_Toggled" />
+                    <ToggleSwitch x:Name="Diagnostics_OverlayHiddenToggle" Header="隐藏叠加层窗口（仅采集）" AutomationProperties.Name="隐藏叠加层窗口" Toggled="Diagnostics_OverlayHiddenToggle_Toggled" />
+                    <TextBlock Text="隐藏后叠加层不再显示，但画面采集与定位仍在运行：用它对比帧率，可以判断掉帧是否来自叠加层窗口本身。修改会在下次点击「开始探索」后完全生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <ToggleSwitch x:Name="Diagnostics_HoldPresentToggle" Header="暂停叠加层画面更新（窗口仍显示）" AutomationProperties.Name="暂停叠加层画面更新" Toggled="Diagnostics_HoldPresentToggle_Toggled" />
+                    <TextBlock Text="窗口继续显示，但只有状态条时约每 3 秒才更新一次。与前一项分别测试，可以看出代价主要来自「窗口在场」还是「每次刷新画面」。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <NumberBox x:Name="Diagnostics_IsolationBox" Header="隔离开关（逐项定位代价）" AutomationProperties.Name="隔离开关" Minimum="0" Maximum="127" SpinButtonPlacementMode="Compact" ValueChanged="Diagnostics_IsolationBox_ValueChanged" />
+                    <TextBlock Text="按位关闭或切换每帧工作，用来单独量出每一部分的代价：1=关闭画面采集，2=关闭游戏状态检测，4=关闭定位，8=关闭覆盖层绘制，16=关闭覆盖层整屏清屏，32=关闭窗口几何同步，64=改用 DirectComposition 呈现。0 表示全部开启（正常）。脚本 Measure-WorkIsolation.ps1 会提示你逐段设置这个值。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <TextBlock Text="注意：64 改变的是叠加层「怎么贴到屏幕上」，需要在下次点击「开始探索」时才生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                     <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="打开日志" Click="OpenLogs_Click" /><Button Content="复制诊断摘要" Click="CopySummary_Click" /><Button Content="打开崩溃报告" Click="OpenCrashes_Click" /></controls:WrapPanel>
                 </StackPanel>
             </ScrollViewer>
