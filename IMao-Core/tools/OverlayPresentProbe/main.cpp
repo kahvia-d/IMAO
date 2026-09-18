@@ -41,7 +41,10 @@ struct Options {
     int blockHeight = 70;
     int blockMargin = 18;
     float alpha = 0.95f;
-    bool pumpAtDisplayRate = true;
+    // The real overlay presents at about 30 Hz. Presenting at the display rate instead is not the
+    // same experiment - it puts a full-screen composition surface update on every display frame - so
+    // the default matches the overlay and --hz=0 asks for the display rate when the maximum is wanted.
+    int presentHz = 30;
     int holdSeconds = 0;
 };
 
@@ -63,11 +66,11 @@ Options ParseOptions(int argc, char** argv) {
             }
         }
         else if (argument.rfind("--alpha=", 0) == 0) options.alpha = std::stof(value("--alpha"));
+        else if (argument.rfind("--hz=", 0) == 0) options.presentHz = std::max(0, std::stoi(value("--hz")));
         else if (argument.rfind("--hold=", 0) == 0) options.holdSeconds = std::max(0, std::stoi(value("--hold")));
-        else if (argument == "--no-pump") options.pumpAtDisplayRate = false;
         else if (argument == "--help" || argument == "-h") {
-            std::printf("usage: DcompOverlayProbe [--mode=none|dcomp|layered] [--block=WxH] [--alpha=0..1]"
-                " [--hold=seconds] [--no-pump]\n");
+            std::printf("usage: IMaoOverlayPresentProbe [--mode=none|dcomp|layered] [--block=WxH]"
+                " [--alpha=0..1] [--hz=N|0] [--hold=seconds]\n");
             std::exit(0);
         }
     }
@@ -168,6 +171,9 @@ struct ProbeState {
     ComPtr<IDCompositionVisual> compositionVisual;
     UINT width = 0, height = 0;
     unsigned long long presented = 0;
+    /// mode=layered paints with GDI into the window's redirection surface; mode=dcomp presents a
+    /// composition swap chain.
+    bool usesLayeredGdi = false;
 };
 
 /// Reports which step failed with its HRESULT, because "composition setup failed" cannot distinguish
@@ -222,7 +228,39 @@ bool CreateCompositionSurface(ProbeState& state) {
     return true;
 }
 
-/// One frame of the block, in whichever way the mode presents. Paced by the caller.
+/// One frame of the layered colorkey window. GDI is what the colorkey path can actually paint with:
+/// black becomes transparent, everything else is composited. The block is drawn as a plain rectangle
+/// with a stripe, which is enough to make the window visible and therefore present in the composition.
+void DrawLayeredFrame(ProbeState& state, const Options& options, float scale) {
+    HDC target = ::GetDC(state.window);
+    if (target == nullptr) return;
+    const int blockWidth = std::min(static_cast<int>(options.blockWidth * scale), static_cast<int>(state.width));
+    const int blockHeight = static_cast<int>(options.blockHeight * scale);
+    const int left = (static_cast<int>(state.width) - blockWidth) / 2;
+    const int top = static_cast<int>(options.blockMargin * scale);
+
+    RECT background{ 0, 0, static_cast<LONG>(state.width), static_cast<LONG>(state.height) };
+    HBRUSH colorkeyBrush = ::CreateSolidBrush(RGB(0, 0, 0));
+    ::FillRect(target, &background, colorkeyBrush);
+    ::DeleteObject(colorkeyBrush);
+
+    RECT block{ left, top, left + blockWidth, top + blockHeight };
+    HBRUSH blockBrush = ::CreateSolidBrush(RGB(15, 20, 29));
+    ::FillRect(target, &block, blockBrush);
+    ::DeleteObject(blockBrush);
+
+    RECT stripe{ left + blockHeight * 2 / 5, top + blockHeight * 35 / 100,
+        left + blockWidth - blockHeight * 2 / 5, top + blockHeight * 65 / 100 };
+    HBRUSH stripeBrush = ::CreateSolidBrush(RGB(99, 216, 232));
+    ::FillRect(target, &stripe, stripeBrush);
+    ::DeleteObject(stripeBrush);
+
+    ::GdiFlush();
+    ::ReleaseDC(state.window, target);
+    ++state.presented;
+}
+
+
 void DrawCompositionFrame(ProbeState& state, const Options& options, float scale) {
     if (state.compositionSwapChain == nullptr) return;
     state.d2dContext->BeginDraw();
@@ -286,21 +324,27 @@ int Run(const Options& options, HINSTANCE instance) {
     }
     else if (options.mode == "layered") {
         // The colorkey makes pure black transparent, which is exactly how the overlay erases its
-        // background today. Nothing is animated: this mode exists to compare window types, and the
-        // measurement already showed the present rate does not matter.
+        // background today. This mode has to draw the same block the other two draw: an earlier
+        // version of this probe left the layered window blank, which made it fully transparent and
+        // therefore not present in the composition at all - the same situation as mode=none, so the
+        // comparison against it was meaningless. Drawing happens in the frame loop below.
         ::SetLayeredWindowAttributes(state.window, RGB(0, 0, 0), 0, LWA_COLORKEY);
+        state.usesLayeredGdi = true;
     }
 
     const float scale = static_cast<float>(::GetDpiForWindow(game)) / 96.0f;
-    std::printf("mode=%s game=%ux%u at %ld,%ld block=%dx%d alpha=%.2f pump=%d\n",
+    std::printf("mode=%s game=%ux%u at %ld,%ld block=%dx%d alpha=%.2f presentHz=%d\n",
         options.mode.c_str(), width, height, physical.left, physical.top,
-        options.blockWidth, options.blockHeight, options.alpha, options.pumpAtDisplayRate ? 1 : 0);
+        options.blockWidth, options.blockHeight, options.alpha, options.presentHz);
     std::printf("leave this running while PresentMon records; Ctrl+C or --hold to stop\n");
     std::fflush(stdout);
 
-    // The real overlay presents at its own cadence. This probe uses the display refresh rate instead,
-    // which is the harsher case: if composition alone is the cost, this shows it at its maximum.
+    // Pacing matches the overlay's own cadence by default. --hz=0 asks for one iteration per display
+    // frame through DwmFlush(), which is the harsher maximum rather than the shipped behaviour.
     const auto reportAt = std::chrono::steady_clock::now();
+    const auto presentPeriod = options.presentHz > 0
+        ? std::chrono::microseconds(1000000 / options.presentHz) : std::chrono::microseconds::zero();
+    auto nextPresentAt = reportAt;
     while (true) {
         MSG message;
         while (::PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
@@ -310,13 +354,20 @@ int Run(const Options& options, HINSTANCE instance) {
         }
         if (options.holdSeconds > 0 &&
             std::chrono::steady_clock::now() - reportAt >= std::chrono::seconds(options.holdSeconds)) break;
+        if (presentPeriod.count() > 0 && std::chrono::steady_clock::now() < nextPresentAt) {
+            ::MsgWaitForMultipleObjectsEx(0, nullptr,
+                static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                    nextPresentAt - std::chrono::steady_clock::now()).count()), QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+            continue;
+        }
         if (options.mode == "dcomp") DrawCompositionFrame(state, options, scale);
-        if (state.presented % 600 == 1) {
+        else if (state.usesLayeredGdi) DrawLayeredFrame(state, options, scale);
+        if (presentPeriod.count() > 0) nextPresentAt += presentPeriod;
+        else ::DwmFlush(); // One iteration per display frame, like a game.
+        if (state.presented % 300 == 1) {
             std::printf("presented=%llu\n", state.presented);
             std::fflush(stdout);
         }
-        if (options.pumpAtDisplayRate) ::DwmFlush(); // One iteration per display frame, like a game.
-        else std::this_thread::sleep_for(std::chrono::milliseconds(33));
     }
 finished:
     std::printf("stopped after %llu presents\n", state.presented);

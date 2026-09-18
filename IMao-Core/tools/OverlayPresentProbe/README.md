@@ -27,6 +27,11 @@
 | 顶部中央一块 450×70 的圆角色块（对应真实状态条的位置与面积） | 定位、追踪 |
 | 三种模式：`none` / `dcomp` / `layered` | ImGui、标记绘制 |
 
+**三种模式下色块都可见**，包括 `layered`。这一点很关键：2026-09-18 12:23 那轮里
+`layered` 模式**什么都没画**，而 colorkey 让纯黑表面完全透明，于是那个窗口等于不在合成里——
+跟 `mode=none` 是同一件事。所以那一轮拿 `layered` 去对比是**无效的**（详见
+`Docs/GameFrameCostAnalysis_20260918.md` 第 13 节）。
+
 采集与定位**已经单独测出约 10 fps 的代价**，如果放进来会掩盖这里要测的东西，所以不放。
 
 `dcomp` 模式与真实覆盖层的唯一区别就是它要测的那一点：
@@ -52,6 +57,7 @@
 
 ```powershell
 .\scripts\Test-OverlayPresentPath.ps1 -PhaseSeconds 60      # 每段更长
+.\scripts\Test-OverlayPresentPath.ps1 -PresentHz 0          # 按显示刷新率刷，取最大代价
 .\scripts\Test-OverlayPresentPath.ps1 -SkipLayered          # 只跟 none 比
 ```
 
@@ -63,9 +69,9 @@
 .\x64\Release\IMaoOverlayPresentProbe.exe --mode=none    --hold=60
 ```
 
-- `--block=WxH`、`--alpha=0..1` 调整色块；`--no-pump` 关掉逐显示帧节流。
-- 默认用 `DwmFlush()` 让每次循环对齐一个显示帧，这是**更严苛**的情况：如果代价来自合成本身，
-  这样能把它放到最大。
+- `--block=WxH`、`--alpha=0..1` 调整色块。
+- `--hz=N` 控制刷新频率，**默认 30**，与真实覆盖层一致；`--hz=0` 改为用 `DwmFlush()`
+  每次循环对齐一个显示帧（更严苛，用来观察最大值）。
 - 色块是醒目颜色的，**必须能看见**。如果看不到色块，说明设置失败了，那这一轮数据无效
   （"没有代价"和"什么都没画"必须分得清）。
 
@@ -86,8 +92,9 @@
 | `dcomp` 段出现 `Hardware: Independent Flip`，`layered` 段是 `Composed: Flip` | **前提成立**，换贴法确实能恢复独立翻转 | 值得投入完整改造 |
 | 两段都是 `Composed: Flip` | 换贴法**不能**恢复独立翻转 | 探针已经否决了这条路，省下完整改造的工作 |
 | 两段 `PresentMode` 相同，但 `dcomp` 帧时间尾部明显更好 | 部分收益（合成更便宜但没恢复翻转） | 按收益大小决定 |
+| 两段 `PresentMode` 都是 `Independent Flip` | 那么"覆盖层把游戏压回合成"这个前提**不成立**，掉帧另有来源 | 不要再投入呈现路径改造，回去查别的原因 |
 
-注意：对齐时间戳时要记得 PresentMon 的 `--date_time` 列与本地时间的关系
+对齐时间戳时要记得 PresentMon 的 `--date_time` 列与本地时间的关系
 （2026-09-17 那次实测是**快 8 小时**，见 `Docs/GameFrameDropAnalysis_20260917.md`）。
 
 ## 退出

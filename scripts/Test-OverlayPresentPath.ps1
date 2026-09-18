@@ -1,18 +1,20 @@
 # Runs the overlay present-path probe against the live game and records one PresentMon trace across
 # three phases: no overlay, the DirectComposition surface, and the WS_EX_LAYERED colorkey window the
-# overlay uses today. The comparison that answers the question is the PresentMode and the frame-time
-# tail between the last two phases.
+# overlay uses today. All three phases draw the same visible block, so the comparison is between window
+# types rather than between "something on screen" and "nothing on screen".
 #
 # PresentMon needs its own ETW session, so this has to run elevated. Keep the game in the foreground
 # for the whole run: the probe never activates itself, but nothing else may steal focus either.
 #
 # Usage:  .\Test-OverlayPresentPath.ps1
-#         .\Test-OverlayPresentPath.ps1 -PhaseSeconds 60 -ProbeHoldSeconds 55 -SkipLayered
+#         .\Test-OverlayPresentPath.ps1 -PhaseSeconds 60 -PresentHz 0   # display-rate maximum
+#         .\Test-OverlayPresentPath.ps1 -SkipLayered
 [CmdletBinding()]
 param(
     [string]$ProcessName = 'Client-Win64-Shipping.exe',
     [int]$PhaseSeconds = 45,
     [int]$ProbeHoldSeconds = 0,
+    [int]$PresentHz = 30,
     [string]$OutputPath,
     [string]$PresentMonPath,
     [switch]$SkipLayered,
@@ -49,7 +51,7 @@ $record = {
     Write-Host $text -ForegroundColor Cyan
 }
 
-& $record "phases: none -> dcomp -> layered, about $PhaseSeconds s each"
+& $record "phases: none -> dcomp -> layered, about $PhaseSeconds s each, presentHz=$PresentHz"
 & $record "trace:  $OutputPath"
 & $record ("-" * 60)
 
@@ -77,7 +79,7 @@ try {
         }
         else {
             # The probe holds the window itself, so the phase length is enforced in one place.
-            & $probe "--mode=$($phase.mode)" "--hold=$ProbeHoldSeconds" | ForEach-Object { if ($_) { Write-Host "    probe: $_" } }
+            & $probe "--mode=$($phase.mode)" "--hold=$ProbeHoldSeconds" "--hz=$PresentHz" | ForEach-Object { if ($_) { Write-Host "    probe: $_" } }
         }
         & $record "PHASE END   $($phase.name)"
         Start-Sleep -Seconds 2
