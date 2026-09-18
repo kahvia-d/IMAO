@@ -309,6 +309,11 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public Task SetHoldOverlayPresentAsync(bool enabled, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setHoldOverlayPresent", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
 
+    /// Diagnostic only. A bitmask that switches off whole pieces of the per-frame work so each one's
+    /// cost can be measured on its own. Bit values live in IMao-Core/src/Runtime/IsolationSwitches.h.
+    public Task SetIsolationSwitchesAsync(int mask, CancellationToken cancellationToken = default) =>
+        SendCommandAsync("setIsolationSwitches", new Dictionary<string, object?> { ["mask"] = mask }, cancellationToken);
+
     public Task SetRouteNameAsync(string routeName, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setRouteName", new Dictionary<string, object?> { ["routeName"] = routeName }, cancellationToken);
 

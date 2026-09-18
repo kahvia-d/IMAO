@@ -21,6 +21,7 @@
 #include "../Runtime/OverlayWindowBounds.h"
 #include "../Runtime/OverlayBackBufferSize.h"
 #include "../Runtime/MapToolsBridge.h"
+#include "../Runtime/IsolationSwitches.h"
 #include "Routes/DrawRouteOnMap.h"
 #include "Routes/DrawRouteOnMinMap.h"
 
@@ -404,7 +405,7 @@ int ImGuiOverWindows::start()
     // so a frame-rate comparison can tell which of the two the game is actually paying for.
     OverlayPacing::HoldPresentPolicy holdPolicy;
     bool hadMarkersRequested = false;
-    std::uint64_t heldFrames = 0, heldPresents = 0;
+    std::uint64_t heldFrames = 0, heldPresents = 0, skippedOverlayFrames = 0;
     const auto drainMessages = [&]() {
         MSG message;
         while (::PeekMessage(&message, nullptr, 0U, 0U, PM_REMOVE))
@@ -529,17 +530,24 @@ int ImGuiOverWindows::start()
         GameRect = {0, 0, static_cast<LONG>(bufferSize.after.clientWidth),
             static_cast<LONG>(bufferSize.after.clientHeight)};
 
-        // Start the Dear ImGui frame
-        ImGui_ImplDX11_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
-        RuntimeStatusBar::Prepare(h_window);
+        // Start the Dear ImGui frame. Diagnostic isolation skips the whole frame build - the draw-list
+        // work in the block below and the render/hash/present after it - while leaving the window
+        // itself visible and its pacing untouched, so what is measured is this work rather than the
+        // cost of the window existing.
+        const bool buildOverlayFrame = !Isolation::Enabled(Isolation::kOverlayRender);
+        if (!buildOverlayFrame) ++skippedOverlayFrames;
+        if (buildOverlayFrame) {
+            ImGui_ImplDX11_NewFrame();
+            ImGui_ImplWin32_NewFrame();
+            ImGui::NewFrame();
+            RuntimeStatusBar::Prepare(h_window);
+        }
         // Image tracking is the longest stretch of work in this frame; pump before it so a hook
         // callback that arrived during the previous segment runs before the new one begins.
         if (!pump(maxBounds)) break;
 
         // Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-        {
+        if (buildOverlayFrame) {
             const auto frame = app.ReadOverlayFrame();
             const auto capture = app.ReadCapturedFrame();
             const auto visibility = app.ReadOverlayVisibility();
@@ -568,9 +576,10 @@ int ImGuiOverWindows::start()
                     " hiddenByDiagnostic=" + std::to_string(ImGuiOverWindows::KeepWindowHidden() ? 1 : 0) +
                     " presentHeld=" + std::to_string(heldPresents) +
                     " holdDiagnostic=" + std::to_string(ImGuiOverWindows::HoldPresentEnabled() ? 1 : 0) +
+                    " overlayRenderSkipped=" + std::to_string(skippedOverlayFrames) +
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
-                attachedFrames = trackingMisses = 0; skippedPresents = 0; heldPresents = 0;
+                attachedFrames = trackingMisses = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();
             }
             bool drewMap = false, drewMinimap = false;
@@ -628,7 +637,8 @@ int ImGuiOverWindows::start()
 
         // Rendering
         if (!pump(maxTrack)) break;
-        ImGui::Render();
+        // Skipped together with the frame build, because ImGui requires the calls to be paired.
+        if (buildOverlayFrame) ImGui::Render();
         ImDrawData* drawData = ImGui::GetDrawData();
         // The window is the whole game screen, so its cost does not depend on how much is drawn inside
         // it; only whether anything changed does.
@@ -668,7 +678,7 @@ int ImGuiOverWindows::start()
         // when the overlay's own content did not change. A held frame is the diagnostic exception: its
         // whole point is that the compositor keeps showing the previous surface.
         const bool surfaceRecreated = bufferSize.resizeAttempted && SUCCEEDED(bufferSize.resizeResult);
-        if (!holdThisFrame && (surfaceRecreated ||
+        if (buildOverlayFrame && !holdThisFrame && (surfaceRecreated ||
             OverlayPacing::ShouldPresentFrame(contentHash, lastPresentedHash, hasPresented, !overlayWindowHidden))) {
             const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
             g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);

@@ -20,7 +20,8 @@
 [CmdletBinding()]
 param(
     [string]$ProcessName = 'Client-Win64-Shipping.exe',
-    [int]$PhaseSeconds = 45,
+    [int]$PhaseSeconds = 20,
+    [int]$WarmupSeconds = 5,
     [string]$OutputPath,
     [string]$PresentMonPath,
     [switch]$SkipAnalysis
@@ -49,8 +50,8 @@ $record = {
     Write-Host $text -ForegroundColor Cyan
 }
 
-# Three phases plus slack, so the capture is still running while the last one is marked.
-$totalSeconds = $PhaseSeconds * 3 + 30
+# Three phases plus the warm-up each records and drops, plus slack for the manual transitions.
+$totalSeconds = ($PhaseSeconds + $WarmupSeconds) * 3 + 45
 & $record "phases: off -> ON -> off, about $PhaseSeconds s each"
 & $record "make sure both diagnostic switches are OFF before continuing"
 & $record "trace: $OutputPath"
@@ -62,17 +63,20 @@ $capture = Start-FrameTrace -PresentMonPath $PresentMonPath -ProcessName $Proces
 
 $phases = [Collections.Generic.List[object]]::new()
 function Wait-Phase {
-    param([string]$Name)
+    param([string]$Name, [int]$Warmup = 0)
     $start = Get-Date
     & $record "PHASE START $Name"
-    for ($remaining = $PhaseSeconds; $remaining -gt 0; --$remaining) {
+    $total = $PhaseSeconds + $Warmup
+    for ($remaining = $total; $remaining -gt 0; --$remaining) {
         Write-Host ("`r    {0,3} s  ({1})      " -f $remaining, $Name) -NoNewline
         Start-Sleep -Seconds 1
     }
     Write-Host ''
     $end = Get-Date
     & $record "PHASE END   $Name"
-    $phases.Add([pscustomobject]@{ Name = $Name; Start = $start; End = $end })
+    # The overlay's startup work lands at the front of its own phase, so that part of the window is
+    # recorded and then dropped rather than being cut short on screen.
+    $phases.Add([pscustomobject]@{ Name = $Name; Start = $start; End = $end; WarmupSeconds = $Warmup })
 }
 
 try {
@@ -80,15 +84,15 @@ try {
     Write-Host ''
     Write-Host 'Make sure the tool says it is NOT running, then press Enter to start the baseline.' -ForegroundColor Yellow
     [void](Read-Host)
-    Wait-Phase -Name 'off1'
+    Wait-Phase -Name 'off1' -Warmup $WarmupSeconds
 
     Write-Host 'Now click 开始探索 in the tool. Wait until the overlay is actually up (markers or status bar visible), then press Enter.' -ForegroundColor Yellow
     [void](Read-Host)
-    Wait-Phase -Name 'toolOn'
+    Wait-Phase -Name 'toolOn' -Warmup $WarmupSeconds
 
     Write-Host 'Now click 停止探索. Wait until the overlay is gone, then press Enter.' -ForegroundColor Yellow
     [void](Read-Host)
-    Wait-Phase -Name 'off2'
+    Wait-Phase -Name 'off2' -Warmup $WarmupSeconds
 }
 finally {
     if (-not $capture.HasExited) { $capture.WaitForExit(($totalSeconds + 60) * 1000) | Out-Null }

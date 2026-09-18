@@ -103,7 +103,9 @@ function Read-FrameTraceRow {
 function Get-PhaseFrameStats {
     <#
       Splits a trace by wall-clock phase marks and reports the numbers the whole investigation rests
-      on. Phases are given as objects with Name, Start and End local timestamps.
+      on. Phases are given as objects with Name, Start and End local timestamps; an optional
+      WarmupSeconds is dropped from the start of the window, because the seconds right after switching
+      a subsystem off still contain work that was already in flight.
     #>
     param(
         [Parameter(Mandatory)][string]$CsvPath,
@@ -113,7 +115,8 @@ function Get-PhaseFrameStats {
     $rows = @(Read-FrameTraceRow -CsvPath $CsvPath)
     if ($rows.Count -eq 0) { throw "Trace has no rows: $CsvPath" }
     $results = foreach ($phase in $Phases) {
-        $from = $phase.Start + $RecordedOffset
+        $warmup = if ($phase.PSObject.Properties.Name -contains 'WarmupSeconds') { [int]$phase.WarmupSeconds } else { 0 }
+        $from = $phase.Start.AddSeconds($warmup) + $RecordedOffset
         $to = $phase.End + $RecordedOffset
         $frames = New-Object 'System.Collections.Generic.List[double]'
         $modeCounts = @{}

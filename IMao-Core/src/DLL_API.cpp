@@ -16,6 +16,7 @@
 #include "Feature/RuntimeFeatureRepository.h"
 #include "Runtime/RuntimeStatus.h"
 #include "Runtime/StructuredLogger.h"
+#include "Runtime/IsolationSwitches.h"
 #include "util.h"
 #include <condition_variable>
 #include <DbgHelp.h>
@@ -408,6 +409,12 @@ void SetKeepOverlayHidden(bool setValue) {
 
 void SetHoldOverlayPresent(bool setValue) {
     ImGuiOverWindows::SetHoldPresentEnabled(setValue);
+}
+
+void SetIsolationSwitches(int setValue) {
+    const int applied = Isolation::Set(setValue);
+    StructuredLogger::Record("info", "core", "isolation-switches",
+        "mask=" + std::to_string(applied) + " mode=" + Isolation::DescribeAscii(applied));
 }
 
 void SetSavedJsonRouteName(const char* itemId) {

@@ -19,6 +19,7 @@
 #include "../Runtime/RouteGamepadBridge.h"
 #include "../Runtime/MapToolsBridge.h"
 #include "../Runtime/GamepadWorldActions.h"
+#include "../Runtime/IsolationSwitches.h"
 
 #include <Windows.h>
 
@@ -699,6 +700,16 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
             SendAck(events, command, true, enabled
                 ? "已暂停叠加层画面更新（窗口仍然显示）"
                 : "已恢复叠加层画面更新");
+            return true;
+        }
+        if (type == "setIsolationSwitches") {
+            // Diagnostic: switch off whole pieces of the per-frame work so each one's cost can be
+            // measured against a baseline instead of inferred from an aggregate.
+            const int mask = static_cast<int>(command.value("mask", 0));
+            const int applied = Isolation::Set(mask);
+            StructuredLogger::Record("info", "core", "isolation-switches",
+                "mask=" + std::to_string(applied) + " mode=" + Isolation::DescribeAscii(applied));
+            SendAck(events, command, true, std::string("隔离开关已应用：") + Isolation::Describe(applied));
             return true;
         }
         if (type == "setRouteName") {

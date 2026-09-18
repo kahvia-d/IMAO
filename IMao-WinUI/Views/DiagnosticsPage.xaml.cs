@@ -74,6 +74,13 @@ public sealed partial class DiagnosticsPage : Page
         if (sender is ToggleSwitch toggle) _ = coreHost.SetHoldOverlayPresentAsync(toggle.IsOn);
     }
 
+    private void Diagnostics_IsolationBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        // A cleared NumberBox reports NaN; treat that as "no isolation" rather than sending a mask.
+        if (double.IsNaN(args.NewValue)) return;
+        _ = coreHost.SetIsolationSwitchesAsync((int)args.NewValue);
+    }
+
     private void OpenLogs_Click(object sender, RoutedEventArgs e) => OpenDirectory(coreHost.LogDirectory);
     private void OpenCrashes_Click(object sender, RoutedEventArgs e) => OpenDirectory(coreHost.CrashDirectory);
 

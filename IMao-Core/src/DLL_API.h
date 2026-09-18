@@ -25,6 +25,11 @@ extern "C" _declspec(dllexport) void SetKeepOverlayHidden(bool setValue);
 // being presented again, which separates the cost of the window's presence from the cost of
 // presenting into it.
 extern "C" _declspec(dllexport) void SetHoldOverlayPresent(bool setValue);
+
+// Diagnostic only. A bitmask that switches off whole pieces of the per-frame work so each one's cost
+// can be measured on its own instead of inferred from an aggregate. Bit values live in
+// Runtime/IsolationSwitches.h; zero means everything runs normally.
+extern "C" _declspec(dllexport) void SetIsolationSwitches(int setValue);
 extern "C" _declspec(dllexport) void SetSavedJsonRouteName(const char* itemId);
 extern "C" _declspec(dllexport) void LoadJsonRoute();
 extern "C" _declspec(dllexport) void LoadOneJsonRoute(const char* routeName);

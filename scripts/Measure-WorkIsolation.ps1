@@ -1,0 +1,148 @@
+# Attributes the overlay's frame-rate cost to individual pieces of per-frame work, instead of to
+# "capture and localization" as one lump.
+#
+# The whole overlay costs about 26 fps with frames over 20 ms rising from 0.37% to 10.18% (see
+# Docs/GameFrameCostAnalysis_20260918.md section 15). That group contains four independent pieces of
+# work with very different sizes, and the point of this run is to rank them so the work targets the
+# biggest one rather than the most recently discussed one.
+#
+# The overlay cannot be configured from here - it lives in the WinUI app - so this prompts you to set
+# the isolation mask in the tool's diagnostics page at each phase. Everything else is automated.
+#
+# PresentMon needs its own ETW session: run this from an elevated PowerShell.
+#
+# Usage:  .\Measure-WorkIsolation.ps1
+#         .\Measure-WorkIsolation.ps1 -PhaseSeconds 15      # shorter, noisier
+#
+# Before starting: game running, in the foreground, on one scene, and the tool already running the
+# overlay (开始探索 pressed). Leave the mouse and keyboard alone once a phase begins.
+[CmdletBinding()]
+param(
+    [string]$ProcessName = 'Client-Win64-Shipping.exe',
+    [int]$PhaseSeconds = 20,
+    [int]$WarmupSeconds = 5,
+    [string]$OutputPath,
+    [string]$PresentMonPath
+)
+
+$ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'OverlayTrace.Common.ps1')
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($OutputPath)) { $OutputPath = Join-Path $repoRoot 'out\perf\work-isolation.csv' }
+if ([string]::IsNullOrWhiteSpace($PresentMonPath)) { $PresentMonPath = Join-Path $repoRoot 'out\perf\PresentMon-2.5.1.exe' }
+
+Assert-FrameTraceElevated
+if (-not (Test-Path -LiteralPath $PresentMonPath)) { throw "PresentMon not found: $PresentMonPath" }
+if (-not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($ProcessName)) -ErrorAction SilentlyContinue)) {
+    throw "The game ($ProcessName) is not running. Start it, put it in the foreground, then re-run."
+}
+
+# Each phase switches off exactly one piece relative to the baseline, so the difference from the
+# baseline is that piece's cost. The baseline is measured twice, once at the start and once in the
+# middle: if the two disagree the scene or the machine drifted and the whole table is unsafe.
+$sequence = @(
+    [pscustomobject]@{ name = 'baseline-a';        mask = 0;  label = '0  (base)' }
+    [pscustomobject]@{ name = 'no-overlay-render'; mask = 8;  label = '8' }
+    [pscustomobject]@{ name = 'no-localization';   mask = 4;  label = '4' }
+    [pscustomobject]@{ name = 'baseline-b';        mask = 0;  label = '0  (base)' }
+    [pscustomobject]@{ name = 'no-game-state';     mask = 2;  label = '2' }
+    [pscustomobject]@{ name = 'no-capture';        mask = 1;  label = '1' }
+)
+
+$phaseLog = [Collections.Generic.List[string]]::new()
+$record = {
+    param([string]$Line)
+    $stamp = (Get-Date).ToString('HH:mm:ss')
+    $text = "$stamp  $Line"
+    $phaseLog.Add($text)
+    Write-Host $text -ForegroundColor Cyan
+}
+
+$totalSeconds = ($PhaseSeconds + 16) * $sequence.Count + 60
+& $record "work isolation: $($sequence.Count) phases of $PhaseSeconds s (first $WarmupSeconds s dropped as warm-up)"
+& $record "trace: $OutputPath"
+& $record ('-' * 60)
+
+$captureRequestedAt = Get-Date
+$capture = Start-FrameTrace -PresentMonPath $PresentMonPath -ProcessName $ProcessName `
+    -OutputPath $OutputPath -Seconds $totalSeconds
+
+$marks = [Collections.Generic.List[object]]::new()
+try {
+    foreach ($phase in $sequence) {
+        Write-Host ''
+        Write-Host ('=' * 70) -ForegroundColor Yellow
+        Write-Host "PHASE $($phase.name)" -ForegroundColor Yellow
+        Write-Host "  In the tool: 诊断 (Diagnostics) -> 诊断工具 -> 隔离开关, set it to:  $($phase.label)" -ForegroundColor Yellow
+        Write-Host '  Then press Enter here and stay off the mouse and keyboard until the phase ends.' -ForegroundColor Yellow
+        Write-Host ('=' * 70) -ForegroundColor Yellow
+        [void](Read-Host)
+
+        # Settling time so the switch itself and whatever work was in flight do not land in the window.
+        $settle = 4
+        for ($remaining = $settle; $remaining -gt 0; --$remaining) {
+            Write-Host ("`r    settling {0} s " -f $remaining) -NoNewline
+            Start-Sleep -Seconds 1
+        }
+        $start = Get-Date
+        & $record "PHASE START $($phase.name) mask=$($phase.mask)"
+        for ($remaining = $PhaseSeconds + $WarmupSeconds; $remaining -gt 0; --$remaining) {
+            Write-Host ("`r    measuring {0,3} s  ({1})   " -f $remaining, $phase.name) -NoNewline
+            Start-Sleep -Seconds 1
+        }
+        Write-Host ''
+        $end = Get-Date
+        & $record "PHASE END   $($phase.name)"
+        $marks.Add([pscustomobject]@{
+            Name = $phase.name; Start = $start; End = $end
+            WarmupSeconds = $WarmupSeconds; Mask = $phase.mask
+        })
+    }
+}
+finally {
+    if (-not $capture.HasExited) { $capture.WaitForExit(($totalSeconds + 60) * 1000) | Out-Null }
+}
+
+$logPath = [IO.Path]::ChangeExtension($OutputPath, '.phases.txt')
+$phaseLog | Set-Content -LiteralPath $logPath -Encoding utf8
+& $record "phase marks written to $logPath"
+
+if (-not (Test-Path -LiteralPath $OutputPath) -or (Get-Item -LiteralPath $OutputPath).Length -eq 0) {
+    throw 'PresentMon produced no frames. Re-run elevated and confirm no other ETW session holds PresentMon.'
+}
+
+$offset = Get-PresentMonDateTimeOffset -CsvPath $OutputPath -CaptureRequestedAt $captureRequestedAt
+$stats = Get-PhaseFrameStats -CsvPath $OutputPath -Phases $marks.ToArray() -RecordedOffset $offset
+Write-PhaseStats -Stats $stats -ReportPath ([IO.Path]::ChangeExtension($OutputPath, '.stats.txt'))
+
+# The attribution table is the point of the run: each phase's difference from the baseline is what that
+# piece costs the game.
+$baseline = $stats | Where-Object { $_.Phase -eq 'baseline-a' } | Select-Object -First 1
+if ($null -ne $baseline -and $baseline.Fps -gt 0) {
+    Write-Host 'Attribution against baseline-a:' -ForegroundColor Yellow
+    $table = foreach ($stat in $stats) {
+        if ($stat.Fps -le 0) { continue }
+        if ($stat.Phase -eq 'baseline-a') { continue }
+        $delta = $baseline.Fps - $stat.Fps
+        $tail = $baseline.Over20Percent - $stat.Over20Percent
+        [pscustomobject]@{
+            Phase = $stat.Phase
+            'fps' = $stat.Fps
+            'vs baseline' = [math]::Round($delta, 1)
+            '>20ms' = $stat.Over20Percent
+            '>20ms saved' = [math]::Round($tail, 2)
+        }
+    }
+    Write-Host ($table | Format-Table -AutoSize | Out-String)
+
+    $check = $stats | Where-Object { $_.Phase -eq 'baseline-b' } | Select-Object -First 1
+    if ($null -ne $check -and $check.Fps -gt 0) {
+        $drift = [math]::Abs($baseline.Fps - $check.Fps)
+        $verdict = if ($drift -le 3) { 'consistent' } else { 'DRIFTED - treat the table as unsafe' }
+        Write-Host ("baseline-a {0} fps, baseline-b {1} fps, drift {2} fps: {3}" -f `
+            $baseline.Fps, $check.Fps, [math]::Round($drift, 1), $verdict) -ForegroundColor $(if ($drift -le 3) { 'Green' } else { 'Red' })
+    }
+}
+
+Write-Host 'Remember to set the isolation mask back to 0 when you are done.' -ForegroundColor Yellow

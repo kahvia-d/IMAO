@@ -19,6 +19,7 @@
 #include "../Runtime/OverlayPacing.h"
 #include "../Runtime/RoutePlanningService.h"
 #include "../Runtime/RuntimeHotkeys.h"
+#include "../Runtime/IsolationSwitches.h"
 #include "MinimapHudEvidence.h"
 #include "../Coordinate/VisualLocalization/MinimapTerrainEvidence.h"
 
@@ -193,7 +194,10 @@ void App::Thread_Capture() {
             uint64_t sequence = 0;
             auto capturedAt = start;
             try {
-                GetMatSnapshot(false, image, &sequence, &captureRect, &capturedAt).get();
+                // Diagnostic isolation: with capture switched off the loop still runs and still paces
+                // itself, but never asks the game for pixels.
+                if (!Isolation::Enabled(Isolation::kCapture))
+                    GetMatSnapshot(false, image, &sequence, &captureRect, &capturedAt).get();
             } catch (const std::exception& error) {
                 Diagnostics::Record("capture-frame-error", error.what());
             }
@@ -360,7 +364,7 @@ winrt::IAsyncAction App::Start() {
 		// Minimap coordinate recognition is valid only while the gameplay HUD is
 		// visible and focused. A UI generation change invalidates queued OCR.
 		const bool coordinateVisible = isExistMinMap.load() && !isOpenMap.load() &&
-			isWindowFocused.load() && captureFresh;
+			isWindowFocused.load() && captureFresh && !Isolation::Enabled(Isolation::kLocalization);
 		if (coordinateVisible != lastCoordinateVisible) {
 			lastCoordinateVisible = coordinateVisible;
 			++coordinateUiGeneration;
@@ -541,13 +545,21 @@ void App::Thread_DetectGameState() {
 				? "F10 detected; requesting an immediate visual map check"
 				: "M detected; requesting an immediate visual map check");
 		}
-
+		// Diagnostic isolation: skip the per-frame SURF probes and HUD evidence while leaving the state
+		// machine below running, so what is measured is this detection work and not the state tracking.
+		// The evidence the probes would have produced stays false, which is the same shape a frame the
+		// detectors reject already has.
 		int compassPixels = 0;
 		bool minimapVisible = false;
 		bool compassVisible = false;
 		bool mapControlsVisible = false;
 		bool structuralMapEvidence = false;
 		bool minimapHudAbsentLongEnough = false;
+		if (Isolation::Enabled(Isolation::kGameStateDetection)) {
+			GoodMatchSize_IconTask = 0;
+			GoodMatchSize_IconWavePlateCrystal = 0;
+		}
+		else {
 		if (!stateSnapshot.empty()) {
 			minimapVisible = IsExistMinMap(stateSnapshot, stateRect, &minimapMatchCount);
 			compassVisible = IsBigMapCompass(stateSnapshot, stateRect, &compassPixels);
@@ -613,6 +625,7 @@ void App::Thread_DetectGameState() {
 						std::to_string(consecutiveBigMapCompassFrames) + " goldPixels=" + std::to_string(compassPixels));
 				}
 			}
+		}
 		}
 
 		GoodMatchSize_IconTask = minimapMatchCount;
