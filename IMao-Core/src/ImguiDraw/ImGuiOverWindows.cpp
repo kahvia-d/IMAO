@@ -29,6 +29,7 @@
 
 std::atomic<HWND> ImGuiOverWindows::overWindowsHwnd{nullptr};
 std::atomic_bool ImGuiOverWindows::keepWindowHidden{false};
+std::atomic_bool ImGuiOverWindows::holdPresentEnabled{false};
 
 ImGuiOverWindows::ImGuiOverWindows(HWND window, App& app) : h_window(window), app(app) {
     imguiThread = std::thread([this] {
@@ -398,6 +399,12 @@ int ImGuiOverWindows::start()
     std::uint64_t lastPresentedHash = 0, skippedPresents = 0;
     bool hasPresented = false, overlayWindowHidden = false;
     int consecutiveEmptyFrames = 0;
+    // Diagnostic only (Diagnostics > hold the overlay present). Holding a frame whose content is the
+    // status bar alone keeps the window in the composition while skipping the render and the present,
+    // so a frame-rate comparison can tell which of the two the game is actually paying for.
+    OverlayPacing::HoldPresentPolicy holdPolicy;
+    bool hadMarkersRequested = false;
+    std::uint64_t heldFrames = 0, heldPresents = 0;
     const auto drainMessages = [&]() {
         MSG message;
         while (::PeekMessage(&message, nullptr, 0U, 0U, PM_REMOVE))
@@ -432,6 +439,19 @@ int ImGuiOverWindows::start()
 
         RECT GameRect{};
         if (!GetClientRect(h_window, &GameRect)) break;
+        // Decide whether this frame may be held before anything is rendered. A held frame is only ever
+        // one that has nothing to show but the status bar, and the frame that stops having markers is
+        // the one that has to reach the screen and clear them - so the previous frame's need for
+        // markers, not the current one's, is what permits a hold.
+        bool holdThisFrame = false;
+        {
+            const auto markerFrame = app.ReadOverlayFrame();
+            const bool lastFrameNeededMarkers = hadMarkersRequested;
+            hadMarkersRequested = markerFrame && (markerFrame->mapVisible || markerFrame->minimapVisible);
+            holdThisFrame = ImGuiOverWindows::HoldPresentEnabled() &&
+                holdPolicy.ShouldHold(lastFrameNeededMarkers || hadMarkersRequested);
+        }
+        if (holdThisFrame) ++heldFrames;
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         if (!pump(maxWait))
@@ -546,9 +566,11 @@ int ImGuiOverWindows::start()
                     " presentSkipped=" + std::to_string(skippedPresents) +
                     " windowHidden=" + std::to_string(overlayWindowHidden ? 1 : 0) +
                     " hiddenByDiagnostic=" + std::to_string(ImGuiOverWindows::KeepWindowHidden() ? 1 : 0) +
+                    " presentHeld=" + std::to_string(heldPresents) +
+                    " holdDiagnostic=" + std::to_string(ImGuiOverWindows::HoldPresentEnabled() ? 1 : 0) +
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
-                attachedFrames = trackingMisses = 0; skippedPresents = 0;
+                attachedFrames = trackingMisses = 0; skippedPresents = 0; heldPresents = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();
             }
             bool drewMap = false, drewMinimap = false;
@@ -626,23 +648,28 @@ int ImGuiOverWindows::start()
                 Diagnostics::Record("overlay-window-visibility", "visible=0 reason=diagnostic-hidden");
             }
         }
-        else if (hasContent && overlayWindowHidden) {
+        else if (!holdThisFrame && hasContent && overlayWindowHidden) {
             ::ShowWindow(overWindowsHwnd, SW_SHOWNOACTIVATE);
             overlayWindowHidden = false;
             hasPresented = false; // The surface has to be filled again.
             Diagnostics::Record("overlay-window-visibility", "visible=1 reason=content");
         }
-        else if (!hasContent && !overlayWindowHidden && OverlayPacing::ShouldHideIdleOverlay(consecutiveEmptyFrames)) {
+        else if (!holdThisFrame && !hadMarkersRequested && !overlayWindowHidden &&
+            OverlayPacing::ShouldHideIdleOverlay(consecutiveEmptyFrames)) {
+            // The idle hide only fires when this frame and the previous one needed no markers. Using
+            // the vertex count alone would also hide a held frame, which would take the window back out
+            // of the composition and defeat the diagnostic.
             ::ShowWindow(overWindowsHwnd, SW_HIDE);
             overlayWindowHidden = true;
             Diagnostics::Record("overlay-window-visibility", "visible=0 reason=idle");
         }
 
         // A back buffer that was just recreated has undefined content, so the frame has to be drawn even
-        // when the overlay's own content did not change.
+        // when the overlay's own content did not change. A held frame is the diagnostic exception: its
+        // whole point is that the compositor keeps showing the previous surface.
         const bool surfaceRecreated = bufferSize.resizeAttempted && SUCCEEDED(bufferSize.resizeResult);
-        if (surfaceRecreated ||
-            OverlayPacing::ShouldPresentFrame(contentHash, lastPresentedHash, hasPresented, !overlayWindowHidden)) {
+        if (!holdThisFrame && (surfaceRecreated ||
+            OverlayPacing::ShouldPresentFrame(contentHash, lastPresentedHash, hasPresented, !overlayWindowHidden))) {
             const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
             g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
             g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
@@ -663,6 +690,7 @@ int ImGuiOverWindows::start()
         else {
             // The last surface stays on screen, so there is nothing to repaint.
             ++skippedPresents;
+            if (holdThisFrame) ++heldPresents;
         }
 
         // Keep fractional milliseconds and include rendering cost in pacing. The wait keeps servicing

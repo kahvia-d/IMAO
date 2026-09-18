@@ -91,4 +91,33 @@ inline constexpr int kFramesBeforeHidingIdleOverlay = 30;
 inline bool ShouldHideIdleOverlay(int consecutiveEmptyFrames) {
     return consecutiveEmptyFrames >= kFramesBeforeHidingIdleOverlay;
 }
+
+// Diagnostic only. A visible topmost layered window costs the game two different things: the desktop
+// compositor has to keep it in the composition, and every present makes the compositor blend the
+// whole screen again. Holding the presents lets a frame-rate comparison say which of the two a
+// measurement is actually paying for, because a held overlay keeps its window in the composition
+// while skipping the render, the present and everything leading up to them.
+//
+// Markers are never held: their screen position changes with the map, so a held overlay would show
+// them in the wrong place. Only a frame whose content is the status bar alone is a candidate.
+inline constexpr int kHeldFrameInterval = 90; // about three seconds at the overlay rate
+
+struct HoldPresentPolicy {
+    bool holding = false;
+    int heldFrames = 0;
+    /// needsMarkers: whether the frame about to be rendered has markers to draw at a tracked position.
+    /// Those are never held - their screen position moves with the map, so a held overlay would show
+    /// them in the wrong place, and a frame that stopped needing them has to reach the screen to clear
+    /// them. Only a frame with nothing but the status bar is a candidate.
+    bool ShouldHold(bool needsMarkers) {
+        if (holding) {
+            if (++heldFrames >= kHeldFrameInterval) { holding = false; heldFrames = 0; }
+            return holding;
+        }
+        if (needsMarkers) return false;
+        holding = true;
+        heldFrames = 0; // Counted when the next frame asks to hold, so the interval is exact.
+        return true;
+    }
+};
 }

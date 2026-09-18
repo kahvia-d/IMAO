@@ -33,6 +33,13 @@ public:
 	static void SetKeepWindowHidden(bool value) { keepWindowHidden = value; }
 	static bool KeepWindowHidden() { return keepWindowHidden.load(); }
 	static std::atomic_bool keepWindowHidden;
+	// Diagnostic only. While this is set, a frame whose content is the status bar alone is held on the
+	// compositor instead of being re-rendered and re-presented, which separates the cost of the
+	// window's presence in the composition from the cost of presenting into it. Markers are never
+	// held.
+	static void SetHoldPresentEnabled(bool value) { holdPresentEnabled = value; }
+	static bool HoldPresentEnabled() { return holdPresentEnabled.load(); }
+	static std::atomic_bool holdPresentEnabled;
 private:
 	int start();
 	HWND h_window;

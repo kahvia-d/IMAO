@@ -69,6 +69,11 @@ public sealed partial class DiagnosticsPage : Page
         if (sender is ToggleSwitch toggle) _ = coreHost.SetOverlayHiddenAsync(toggle.IsOn);
     }
 
+    private void Diagnostics_HoldPresentToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleSwitch toggle) _ = coreHost.SetHoldOverlayPresentAsync(toggle.IsOn);
+    }
+
     private void OpenLogs_Click(object sender, RoutedEventArgs e) => OpenDirectory(coreHost.LogDirectory);
     private void OpenCrashes_Click(object sender, RoutedEventArgs e) => OpenDirectory(coreHost.CrashDirectory);
 

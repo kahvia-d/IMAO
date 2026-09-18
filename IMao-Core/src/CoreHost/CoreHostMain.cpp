@@ -688,6 +688,19 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
                 : "已恢复叠加层窗口");
             return true;
         }
+        if (type == "setHoldOverlayPresent") {
+            // Diagnostic: keep presenting the same surface for about three seconds at a time while the
+            // window stays visible, so the cost of the composition's presence can be told apart from
+            // the cost of presenting into it. Markers are never held.
+            const bool enabled = command.value("enabled", false);
+            SetHoldOverlayPresent(enabled);
+            StructuredLogger::Record("info", "core", "overlay-present-diagnostic",
+                std::string("holdPresent=") + (enabled ? "1" : "0"));
+            SendAck(events, command, true, enabled
+                ? "已暂停叠加层画面更新（窗口仍然显示）"
+                : "已恢复叠加层画面更新");
+            return true;
+        }
         if (type == "setRouteName") {
             SetSavedJsonRouteName(command.value("routeName", "").c_str());
             SendAck(events, command, true, "路线名称已更新");

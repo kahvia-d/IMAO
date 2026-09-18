@@ -303,6 +303,12 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public Task SetOverlayHiddenAsync(bool enabled, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setOverlayHidden", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
 
+    /// Diagnostic only. Holds a status-bar-only frame on the compositor for about three seconds at a
+    /// time while the window stays visible, which separates the cost of the window's presence from the
+    /// cost of presenting into it. Marker frames are never held.
+    public Task SetHoldOverlayPresentAsync(bool enabled, CancellationToken cancellationToken = default) =>
+        SendCommandAsync("setHoldOverlayPresent", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
+
     public Task SetRouteNameAsync(string routeName, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setRouteName", new Dictionary<string, object?> { ["routeName"] = routeName }, cancellationToken);
 

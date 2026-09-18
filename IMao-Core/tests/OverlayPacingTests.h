@@ -67,4 +67,22 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
         "a short gap between markers keeps the overlay window visible");
     check(OverlayPacing::ShouldHideIdleOverlay(OverlayPacing::kFramesBeforeHidingIdleOverlay),
         "an overlay with nothing to draw for a second is hidden from the compositor");
+
+    // The hold diagnostic keeps the window in the composition while it stops presenting into it.
+    {
+        OverlayPacing::HoldPresentPolicy policy;
+        check(!policy.ShouldHold(true), "a frame that needs markers is never held");
+        check(policy.ShouldHold(false), "a status-bar-only frame may be held");
+        for (int frame = 1; frame < OverlayPacing::kHeldFrameInterval; ++frame)
+            check(policy.ShouldHold(false), "a held frame keeps holding until the interval elapses");
+        check(!policy.ShouldHold(false), "the hold is released once the interval elapses");
+        check(policy.ShouldHold(false), "and the next status-bar-only frame starts a new hold");
+    }
+    {
+        // Releasing on the frame that starts needing markers again is what keeps them off a held surface.
+        OverlayPacing::HoldPresentPolicy policy;
+        check(policy.ShouldHold(false), "a status-bar-only frame starts holding");
+        for (int frame = 1; frame < OverlayPacing::kHeldFrameInterval; ++frame) policy.ShouldHold(false);
+        check(!policy.ShouldHold(true), "the frame that needs markers again is released, not held");
+    }
 }

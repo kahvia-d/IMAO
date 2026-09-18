@@ -406,6 +406,10 @@ void SetKeepOverlayHidden(bool setValue) {
     ImGuiOverWindows::SetKeepWindowHidden(setValue);
 }
 
+void SetHoldOverlayPresent(bool setValue) {
+    ImGuiOverWindows::SetHoldPresentEnabled(setValue);
+}
+
 void SetSavedJsonRouteName(const char* itemId) {
     LoadEditRouteData::SetRouteJsonName(itemId);
 }
