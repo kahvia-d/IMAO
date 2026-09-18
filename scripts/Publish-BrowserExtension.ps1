@@ -111,9 +111,16 @@ $NotesFile = [IO.Path]::GetFullPath($NotesFile, $SourceRoot)
 if (-not (Test-Path -LiteralPath $NotesFile -PathType Leaf)) { throw "Notes file is missing: $NotesFile" }
 
 function Invoke-Gh([string[]]$Arguments) {
-    $result = & gh @Arguments
-    if ($LASTEXITCODE -ne 0) { throw ('GitHub operation failed: gh ' + ($Arguments -join ' ')) }
-    return $result
+    $output = & gh @Arguments 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw ('GitHub operation failed: gh ' + ($Arguments -join ' ') + ' :: ' + (($output | Out-String).Trim()))
+    }
+    return $output
+}
+# A release tag can only be created from a commit the remote already has.
+$remoteCommit = & gh api "repos/$repo/commits/$sourceCommit" --jq '.sha' 2>$null
+if ($LASTEXITCODE -ne 0 -or ([string]$remoteCommit).Trim() -ne $sourceCommit) {
+    throw "Commit $sourceCommit is not on the remote yet; push it before publishing the extension."
 }
 $existing = & gh api "repos/$repo/releases/tags/$tag" 2>$null
 if ($LASTEXITCODE -eq 0) {
