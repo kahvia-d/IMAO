@@ -9,6 +9,10 @@ param(
     [string]$AssetsRoot,
     # Comma-separated, because -File invocation cannot bind a string array.
     [Parameter(Mandatory = $true)][string]$PackRegionId,
+    # Shipped pack directories to leave out of the run root, for a region whose replacement
+    # covers ground the old packs also covered. Registering both would duplicate every
+    # keypoint over that ground.
+    [string]$ExcludePackDir,
     [string]$SourceRoot
 )
 
@@ -74,9 +78,10 @@ $runPacks = Join-Path $runFeatureDatas 'KuroTilePacks'
 $packRegions = @($PackRegionId -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 if ($packRegions.Count -eq 0) { throw 'PackRegionId is empty.' }
 $wanted = [Collections.Generic.HashSet[string]]::new([string[]]$packRegions, [StringComparer]::OrdinalIgnoreCase)
+$excluded = @($ExcludePackDir -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $replaced = [Collections.Generic.List[string]]::new()
 foreach ($entry in @(Get-ChildItem -LiteralPath $sourcePacks -Force)) {
-    if ($wanted.Contains($entry.Name)) { continue }
+    if ($wanted.Contains($entry.Name) -or $excluded -contains $entry.Name) { continue }
     New-LinkedEntry (Join-Path $runPacks $entry.Name) $entry.FullName
 }
 foreach ($region in $packRegions) {
@@ -109,6 +114,7 @@ Write-Host ''
 Write-Host "Test run root ready: $RunRoot" -ForegroundColor Green
 Write-Host "  binaries copied from : $BinaryRoot (its Assets untouched)"
 Write-Host "  rebuilt packs        : $($replaced -join ', ')"
+Write-Host "  excluded old packs   : $($excluded -join ', ')"
 Write-Host "  registered packs     : $($registry.packs -join ', ')"
 Write-Host "  Assets cloned from   : $assetsRoot (untouched)"
 Write-Host "Launch: $RunRoot\IMao-WinUI.exe"

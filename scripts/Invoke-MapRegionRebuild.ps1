@@ -26,6 +26,11 @@ param(
     [switch]$UseShippedReference,
     # Copy each built pack into a runnable output tree's Assets so the runtime loads it.
     [string]$InstallRoot,
+    # Explicit verification anchor, for a region whose captured reference belongs to a
+    # different point than the derived window centre. The anchor and the capture are a pair:
+    # the reference check matches the capture against the tiles around the anchor.
+    [double]$AnchorOverrideX = [double]::NaN,
+    [double]$AnchorOverrideY = [double]::NaN,
     [ValidateRange(1, 4096)][int]$MaxTiles = 1024
 )
 
@@ -189,6 +194,12 @@ foreach ($record in $buildable) {
         $anchorX = [double]$shippedManifest['anchorWorldCoordinate']['x']
         $anchorY = [double]$shippedManifest['anchorWorldCoordinate']['y']
         $referencePath = $shippedReference
+    }
+    if (-not [double]::IsNaN($AnchorOverrideX) -or -not [double]::IsNaN($AnchorOverrideY)) {
+        if ([double]::IsNaN($AnchorOverrideX) -or [double]::IsNaN($AnchorOverrideY)) { throw 'AnchorOverrideX and AnchorOverrideY must be given together.' }
+        if ($buildable.Count -ne 1) { throw 'An anchor override applies to exactly one region; select a single -RegionId.' }
+        $anchorX = $AnchorOverrideX; $anchorY = $AnchorOverrideY
+        Write-Host "  anchor override: ($anchorX, $anchorY)"
     }
     $arguments = @{
         Apply            = $true
