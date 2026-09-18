@@ -246,6 +246,13 @@ winrt::IAsyncAction App::Start() {
 	auto startTime = std::chrono::high_resolution_clock::now();
 	int cycleTime = 100;
     uint64_t lastLocalizedFrame = 0;
+	// The in-game status bar prints this number, so publishing it per frame made the overlay's own
+	// frame content change on every iteration and defeated OverlayPacing::ShouldPresentFrame: the
+	// window was then re-presented - and the whole screen recomposited for the game - even when
+	// nothing else had changed. Report the window's mean instead, once per window.
+	long long frameWindowTotalMs = 0;
+	long long frameWindowSamples = 0;
+	auto frameWindowStartedAt = std::chrono::steady_clock::now();
 	while (!allThreadStopFlag) {
         const auto latest = capturedFrames.Read();
         if (latest->image.empty() || latest->frameId == lastLocalizedFrame) {
@@ -388,7 +395,11 @@ winrt::IAsyncAction App::Start() {
 		PublishOverlayFrame(captured, renderedViewport);
 		auto endTime = std::chrono::high_resolution_clock::now();
 		auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-		RuntimeStatus::SetFrameMilliseconds(static_cast<int>(elapsedTime));
+		frameWindowTotalMs += elapsedTime;
+		if (++frameWindowSamples >= 8 && endTime - frameWindowStartedAt >= std::chrono::seconds(1)) {
+			RuntimeStatus::SetFrameMilliseconds(static_cast<int>(frameWindowTotalMs / frameWindowSamples));
+			frameWindowTotalMs = 0; frameWindowSamples = 0; frameWindowStartedAt = endTime;
+		}
 		if (elapsedTime < cycleTime) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - elapsedTime));
 		}
