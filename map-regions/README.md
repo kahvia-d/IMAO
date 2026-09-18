@@ -135,7 +135,25 @@ pwsh -File scripts\New-MapRegionRegistry.ps1 -TightenRegionId lowervault
 
 重建脚本的补强：`Sync-KuroMapFeaturePack.ps1` 新增 `-TileArchive`（离线、可复现）、`-ResourceVersion`（固定代次，漂移即失败）、`-MaxTiles`（原为硬编码 256）、`-OutputRoot`（产物重定向出仓库）。
 
-## 七、执行顺序
+## 七、可实机测试的构建
+
+运行时有两道硬门禁（`KuroTileFeaturePack.cpp`）：`referenceVerification.passed` 必须为真（第 188 行，否则整包加载失败），且场景必须被批准（`CoordinateStruct.h:140` 的 `scene-validation.json`）。所以"未验证覆盖包"只能离线用，进不了游戏。
+
+**复用旧包的锚点与参考小地图**是让它通过的最短路径：`-UseShippedReference` 会取 `Assets/FeaturesDatas/KuroTilePacks/<同名目录>/` 的 `anchorWorldCoordinate` 和 `reference-minimap.png`。这两者是**观测值**（维护者在游戏里读出的坐标 + 在该处截的小地图），任何管线都推导不出来；而参考验证是可证伪的——配对错了会直接失败，不会静默产出坏包。
+
+实测（第 4 轮）：roysurface `errorPixels=3.18`、darkplain `errorPixels=3.07`（门限 8），且 darkplain 的 `expectedMapCoordinate` 与旧包记录**完全一致**。
+
+**测试树**：不要往 `x64/Release` 或源码 `Assets` 里装包——`x64/Release/Assets` 是**真实目录**（含 `bundled-snapshot.json` 等构建产物），覆盖它会污染源码树和 LFS。用：
+
+```powershell
+pwsh -File scripts\New-MapTestTree.ps1 -PackRegionId darkplain,roysurface
+```
+
+它在 `out/map-test/` 组装一个独立测试根：二进制从 `x64/Release` 复制、未替换的 Assets 条目用链接指向已构建的 Assets、被替换的两个包是真实目录、并重写注册表只列出**实际存在**的目录（注册了却没有目录的包在快照路径下会让整个资源加载抛错——源码注册表里的 `LowerVault`/`TimeRiftRuins` 就是这种情况）。
+
+产物：`out/map-test/IMao-WinUI.exe`（**以管理员身份运行**）。源码树与 `x64/Release` 均不被改动。
+
+## 八、执行顺序
 
 ```powershell
 # 0. 生成/校验注册表
@@ -156,7 +174,7 @@ pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply -RegionId blackshores
 pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply
 ```
 
-## 八、当前状态与未决项
+## 九、当前状态与未决项
 
 **已完成**：注册表（13 地区，校验全绿）；瓦片归档（638 块，跨地区去重）；代次替换取证（302/302 一致）；四个脚本；重建脚本补强；下层金库解除阻塞并**收紧到 9 块、建成完整包**（9008 关键点，`Test-KuroMapFeaturePack.ps1` 通过）；blackshores 试点（28 块、15168 关键点）。
 
@@ -171,7 +189,7 @@ pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply
 4. **覆盖边距 `-CoverageMargin`（默认 2）需要实机确认**。窗口偏小时走路到区域边缘会匹配失败；偏大只是多下几块瓦片。
 5. **上游 41%（326/795）的瓦片不存在**，因为矩形窗口覆盖了不规则地图之外的空白。这与旧包的情况一致（旧包缺失率 20–45%），但需要逐地区复核窗口形状。
 
-## 九、不进 git 的东西
+## 十、不进 git 的东西
 
 `.gitignore` 已忽略 `out/`。此外**不要提交**：
 

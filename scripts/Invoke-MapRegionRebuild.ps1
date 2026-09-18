@@ -19,6 +19,13 @@ param(
     [string]$ReferenceRoot,
     # Treat each reference file as a complete game screenshot and crop the minimap.
     [switch]$ReferenceFullSnapshot,
+    # Reuse a shipped pack's surveyed anchor and its captured reference minimap. An anchor
+    # read off the in-game coordinate display and a minimap captured at that spot are
+    # observations no pipeline can derive; the reference check makes a wrong pairing fail
+    # loudly rather than produce a plausible but uncalibrated pack.
+    [switch]$UseShippedReference,
+    # Copy each built pack into a runnable output tree's Assets so the runtime loads it.
+    [string]$InstallRoot,
     [ValidateRange(1, 4096)][int]$MaxTiles = 1024
 )
 
@@ -157,16 +164,39 @@ function Complete-PackRegion([string]$packDirectory, $tools) {
 
 $tools = $null
 $results = [Collections.Generic.List[object]]::new()
+
+# Shipped packs are matched to a region by directory name. They are the only source of
+# surveyed anchors and captured minimaps.
+$shippedRoot = Join-Path $SourceRoot 'Assets/FeaturesDatas/KuroTilePacks'
+$shippedByRegion = @{}
+foreach ($shippedDirectory in @(Get-ChildItem -LiteralPath $shippedRoot -Directory -ErrorAction SilentlyContinue)) {
+    $shippedByRegion[$shippedDirectory.Name.ToLowerInvariant()] = $shippedDirectory
+}
+if ($UseShippedReference) {
+    Write-Host "Reusing shipped anchors and reference minimaps from $shippedRoot"
+}
 foreach ($record in $buildable) {
     $bounds = $record['tileBounds']
     $anchor = $record['anchor']
+    $currentRegion = [string]$record['id']
+    $anchorX = [double]$anchor['x']
+    $anchorY = [double]$anchor['y']
+    $referencePath = Join-Path $ReferenceRoot "$currentRegion.png"
+    $shipped = if ($shippedByRegion.ContainsKey($currentRegion)) { $shippedByRegion[$currentRegion] } else { $null }
+    $shippedReference = if ($null -ne $shipped) { Join-Path $shipped.FullName 'reference-minimap.png' } else { $null }
+    if ($UseShippedReference -and $null -ne $shipped -and (Test-Path -LiteralPath $shippedReference -PathType Leaf)) {
+        $shippedManifest = Get-Content -LiteralPath (Join-Path $shipped.FullName 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+        $anchorX = [double]$shippedManifest['anchorWorldCoordinate']['x']
+        $anchorY = [double]$shippedManifest['anchorWorldCoordinate']['y']
+        $referencePath = $shippedReference
+    }
     $arguments = @{
         Apply            = $true
-        PackId           = [string]$record['id']
+        PackId           = $currentRegion
         Scene            = [string]$record['scene']
         State            = [int]$record['frame']
-        AnchorWorldX     = [double]$anchor['x']
-        AnchorWorldY     = [double]$anchor['y']
+        AnchorWorldX     = $anchorX
+        AnchorWorldY     = $anchorY
         TileMinX         = [int]$bounds['minX']
         TileMaxX         = [int]$bounds['maxX']
         TileMinY         = [int]$bounds['minY']
@@ -178,11 +208,11 @@ foreach ($record in $buildable) {
     }
     # A region with a captured reference minimap is built as a verified pack; without one
     # the build must explicitly mark the pack unverified rather than imply accuracy.
-    $referencePath = Join-Path $ReferenceRoot "$($record['id']).png"
     if (Test-Path -LiteralPath $referencePath -PathType Leaf) {
         $arguments.ReferencePath = $referencePath
         if ($ReferenceFullSnapshot) { $arguments.ReferenceFullSnapshot = $true }
         Write-Host "  reference minimap: $referencePath"
+        Write-Host "  anchor: ($anchorX, $anchorY)"
     }
     else {
         $arguments.SkipReferenceVerification = $true
@@ -224,4 +254,45 @@ $failed = @($results | Where-Object { $_.Status -ne 'ok' })
 $ok = @($results | Where-Object { $_.Status -eq 'ok' })
 Write-Host "Built $($ok.Count) pack(s), $($failed.Count) failed." -ForegroundColor $(if ($failed.Count) { 'Red' } else { 'Green' })
 Write-Host "Packs are in $OutputRoot. Regenerated features are build products: publish them as resource packages, do not commit them."
-Write-Host 'Next: re-verify each pack with scripts/Test-KuroMapFeaturePack.ps1 -AllowUnverified, then capture a real minimap per region and rebuild without -SkipReferenceVerification.'
+
+if ($InstallRoot -and $ok.Count -gt 0) {
+    $InstallRoot = [IO.Path]::GetFullPath($InstallRoot)
+    $installPacks = Join-Path $InstallRoot 'Assets/FeaturesDatas/KuroTilePacks'
+    if (-not (Test-Path -LiteralPath $installPacks)) {
+        throw "InstallRoot has no staged Assets/FeaturesDatas/KuroTilePacks: $InstallRoot. Build or stage the application first."
+    }
+    $registryPath = Join-Path $InstallRoot 'Assets/FeaturesDatas/kuro-tile-packs.json'
+    if (-not (Test-Path -LiteralPath $registryPath)) { throw "InstallRoot has no tile-pack registry: $registryPath" }
+    $registryDocument = Get-Content -LiteralPath $registryPath -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+    if ([int]$registryDocument['formatVersion'] -ne 1 -or $null -eq $registryDocument['packs']) { throw 'Installed tile-pack registry format is invalid.' }
+    $installed = [Collections.Generic.List[string]]::new()
+    foreach ($result in $ok) {
+        $currentRegion = [string]$result.Region
+        $source = Join-Path $OutputRoot $currentRegion
+        if (-not (Test-Path -LiteralPath (Join-Path $source 'manifest.json'))) { throw "Built pack is missing its manifest: $source" }
+        # Replace the shipped directory in place. A second pack for the same scene would be
+        # merged alongside the first and duplicate every keypoint.
+        $targetName = if ($shippedByRegion.ContainsKey($currentRegion)) { $shippedByRegion[$currentRegion].Name } else { $currentRegion }
+        $target = Join-Path $installPacks $targetName
+        if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+        [IO.Directory]::CreateDirectory($target) | Out-Null
+        Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
+        # Keep the captured reference beside the pack it verified: it is provenance the
+        # source tree does not otherwise carry for a rebuilt pack.
+        $referencePath = Join-Path $ReferenceRoot "$currentRegion.png"
+        if ($UseShippedReference -and $shippedByRegion.ContainsKey($currentRegion)) {
+            $shippedReference = Join-Path $shippedByRegion[$currentRegion].FullName 'reference-minimap.png'
+            if (Test-Path -LiteralPath $shippedReference -PathType Leaf) { Copy-Item -LiteralPath $shippedReference -Destination $target -Force }
+        }
+        elseif (Test-Path -LiteralPath $referencePath -PathType Leaf) { Copy-Item -LiteralPath $referencePath -Destination $target -Force }
+        if ($registryDocument['packs'] -notcontains $targetName) { $registryDocument['packs'] += $targetName }
+        $installed.Add($targetName)
+        Write-Host "Installed $currentRegion -> $target" -ForegroundColor Green
+    }
+    [IO.File]::WriteAllText($registryPath, (($registryDocument | ConvertTo-Json -Depth 8) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
+    Write-Host "Registered: $($installed -join ', ')"
+    Write-Host "Run the application from $InstallRoot to test in game."
+}
+else {
+    Write-Host 'Next: re-verify each pack with scripts/Test-KuroMapFeaturePack.ps1, or pass -InstallRoot to install into a runnable tree.'
+}
