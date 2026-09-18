@@ -28,6 +28,14 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
     check(OverlayPacing::CapturePeriod(false, true) > OverlayPacing::CapturePeriod(false, false),
         "the back-off also applies while the overlay is idle");
     check(OverlayPacing::kFramePeriod >= std::chrono::microseconds(33333), "the overlay presents no faster than its content changes");
+    // The capture session is rate limited at the source, so the interval has to be small enough for
+    // the fastest consumer here; a larger one would only add latency to every marker. Nothing needs
+    // the idle cadence to be honoured by the capture session: a frame that arrives sooner than the
+    // consumer asks for it is simply left unread.
+    check(OverlayPacing::kCaptureMinUpdateInterval <= OverlayPacing::kCaptureActivePeriod,
+        "the capture rate limit never starves the attached-overlay cadence");
+    check(OverlayPacing::kCaptureMinUpdateInterval > std::chrono::microseconds::zero(),
+        "a zero capture interval would still ask the game for every presented frame");
 
     check(OverlayPacing::ShouldPresentFrame(7, 7, true, true) == false,
         "an unchanged overlay frame is not presented again");

@@ -1,6 +1,7 @@
 #include "..\..\pch.h"
 #include "SimpleCapture.h"
 #include "..\..\Runtime\StructuredLogger.h"
+#include "..\..\Runtime\OverlayPacing.h"
 #include <iostream>
 #include <vector>
 #include "include/paddleocr.h"
@@ -10,6 +11,7 @@ using namespace PaddleOCR;
 namespace winrt
 {
     using namespace Windows::Foundation;
+    using namespace Windows::Foundation::Metadata;
     using namespace Windows::Foundation::Numerics;
     using namespace Windows::Graphics;
     using namespace Windows::Graphics::Capture;
@@ -50,6 +52,38 @@ SimpleCapture::SimpleCapture(
     m_session = m_framePool.CreateCaptureSession(m_item);
     m_lastSize = m_item.Size();
     m_framePool.FrameArrived({ this, &SimpleCapture::OnFrameArrived });
+    ApplyMinUpdateInterval();
+}
+
+// Windows Graphics Capture delivers a frame for every frame the game presents. On a 120 Hz game that
+// is 120 full-screen GPU readbacks and 120 owned 14.7 MB copies per second, while the fastest
+// consumer in this process asks for one every 33 ms. MinUpdateInterval moves that ceiling into the
+// capture session, so the frames nobody reads are never copied out of the GPU at all. It is an
+// optional property: on a Windows build without it the session keeps its unthrottled behaviour and
+// the interval recorded here is what the diagnostics attribute the measured readback rate to.
+void SimpleCapture::ApplyMinUpdateInterval()
+{
+    const auto interval = std::chrono::duration_cast<winrt::Windows::Foundation::TimeSpan>(
+        OverlayPacing::kCaptureMinUpdateInterval);
+    try
+    {
+        if (!winrt::ApiInformation::IsPropertyPresent(
+            winrt::name_of<winrt::GraphicsCaptureSession>(), L"MinUpdateInterval"))
+        {
+            StructuredLogger::Record("info", "capture", "capture-wgc-rate-limit",
+                "applied=0 reason=unsupported requestedMs=" +
+                std::to_string(OverlayPacing::kCaptureMinUpdateInterval.count() / 1000.0));
+            return;
+        }
+        m_session.MinUpdateInterval(interval);
+        StructuredLogger::Record("info", "capture", "capture-wgc-rate-limit",
+            "applied=1 intervalMs=" + std::to_string(interval.count() / 10000.0));
+    }
+    catch (const winrt::hresult_error& error)
+    {
+        RecordFrameDiagnostic("capture-wgc-rate-limit-error",
+            "hr=" + std::to_string(static_cast<long>(error.code().value)));
+    }
 }
 
 void SimpleCapture::StartCapture()

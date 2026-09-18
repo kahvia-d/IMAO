@@ -107,6 +107,9 @@ private:
     void ResizeSwapChain();
     bool TryResizeSwapChain(winrt::Windows::Graphics::Capture::Direct3D11CaptureFrame const& frame);
     bool TryUpdatePixelFormat();
+    /// Asks the capture session for frames no faster than the fastest consumer here can use them.
+    /// Never throws: a Windows build without the property must keep capturing, just unthrottled.
+    void ApplyMinUpdateInterval();
     /// Reuses one CPU-readable copy target instead of allocating a staging texture per frame.
     bool EnsureStaging(ID3D11Texture2D* source);
     /// Frame body. It must never throw: an exception escaping the WinRT frame callback terminates the

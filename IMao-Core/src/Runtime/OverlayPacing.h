@@ -32,6 +32,15 @@ inline bool WantsMouseHook(bool mapInteractive, Clock::time_point regionsPublish
 inline constexpr std::chrono::microseconds kCaptureActivePeriod{33333};
 inline constexpr std::chrono::microseconds kCaptureIdlePeriod{80000};
 
+// The fastest rate this process ever consumes captured frames. Windows Graphics Capture otherwise
+// delivers every frame the game presents - on a 120 Hz game that is 120 full GPU readbacks plus a
+// 14.7 MB copy per second for pixels nobody reads - while no consumer here asks for more than
+// kCaptureActivePeriod. Telling the capture session this interval removes that work at the source,
+// and it is deliberately a whole multiple of the display refresh so the frames we do get stay evenly
+// spaced instead of arriving in pairs (measured: pairs of 100-176 ms game frames two seconds apart).
+// It must never be larger than kCaptureActivePeriod, or the promise made above goes unmet.
+inline constexpr std::chrono::microseconds kCaptureMinUpdateInterval{33333};
+
 // A capture that took far longer than usual means the game is struggling to produce the extra frame
 // this tool asks for. Waiting longer before asking again keeps such a stall from repeating back to
 // back (measured: 116-176 ms stalls arrived in pairs two seconds apart).
