@@ -25,8 +25,14 @@ inline constexpr int kOverlayRender = 1 << 3;
 // skipping the clear cannot change what the player sees.
 inline constexpr int kOverlayClear = 1 << 4;
 inline constexpr int kWindowSync = 1 << 5;
+// Not a "switch off" like the others: this one changes how the overlay is presented, from a colorkey
+// layered window over a blt-model swap chain to a DirectComposition visual over a flip-model one. It
+// is the leading explanation for why an equivalent probe window costs 1.8 fps while the real overlay
+// costs 13-16 fps (a blt-model surface needs an extra copy from DWM), and it is measured by comparing
+// the baseline against the baseline with this bit set. Applies when the overlay session starts.
+inline constexpr int kOverlayComposition = 1 << 6;
 inline constexpr int kAll = kCapture | kGameStateDetection | kLocalization | kOverlayRender |
-    kOverlayClear | kWindowSync;
+    kOverlayClear | kWindowSync | kOverlayComposition;
 
 inline std::atomic_int switches{ 0 };
 
@@ -48,6 +54,7 @@ inline const char* Describe(int value) {
     case kOverlayRender: return "关闭覆盖层绘制";
     case kOverlayClear: return "关闭覆盖层整屏清屏";
     case kWindowSync: return "关闭窗口几何同步";
+    case kOverlayComposition: return "改用 DirectComposition 呈现";
     default: return "自定义组合";
     }
 }
@@ -62,7 +69,13 @@ inline const char* DescribeAscii(int value) {
     case kOverlayRender: return "no-overlay-render";
     case kOverlayClear: return "no-overlay-clear";
     case kWindowSync: return "no-window-sync";
+    case kOverlayComposition: return "overlay-composition";
     default: return "custom";
     }
+}
+
+/// True when the overlay should present through DirectComposition instead of a colorkey window.
+inline bool UseOverlayComposition() {
+    return Enabled(kOverlayComposition);
 }
 }

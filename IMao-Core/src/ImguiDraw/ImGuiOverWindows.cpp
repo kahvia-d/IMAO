@@ -3,6 +3,9 @@
 #include "../App/App.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../Base/stb_image.h"
+// DirectComposition presentation for the overlay. dcomp.lib is linked by CMakeLists.txt.
+#include <dcomp.h>
+#pragma comment(lib, "dcomp.lib")
 #include <iostream>
 #include "../ImguiDraw/Items/DrawItemOnMinMap.h"
 #include "../ImguiDraw/Items/DrawItemOnGameMap.h"
@@ -48,13 +51,32 @@ static bool                     g_SwapChainOccluded = false;
 static UINT                     g_ResizeWidth = 0, g_ResizeHeight = 0;
 static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
 
+// DirectComposition presentation. When g_compositionDevice is set the overlay presents through a
+// composition visual instead of a colorkey layered window: the swap chain is a flip-model one created
+// for composition, and each of its buffers needs its own render target view because a flip-model
+// chain rotates which buffer is current. A blt-model surface costs DWM an extra copy, which is the
+// leading explanation for the gap between this overlay and an equivalent probe window.
+static IDCompositionDevice* g_compositionDevice = nullptr;
+static IDCompositionTarget* g_compositionTarget = nullptr;
+static IDCompositionVisual* g_compositionVisual = nullptr;
+static constexpr UINT kMaxSwapChainBuffers = 3;
+static ID3D11RenderTargetView* g_compositionRenderTargets[kMaxSwapChainBuffers] = {};
+static UINT g_compositionRenderTargetCount = 0;
+static UINT g_compositionBufferIndex = 0;
+
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 bool CreateRenderTarget();
 void CleanupRenderTarget();
+/// Rebuilds the per-buffer views after a resize or a new swap chain; composition chains need one view
+/// per buffer.
+bool CreateCompositionRenderTargets();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 constexpr auto kOverlayFramePeriod = OverlayPacing::kFramePeriod; // matches the capture rate
+
+/// True once the composition path is in use for this session.
+bool UsingCompositionPresentation() { return g_compositionDevice != nullptr; }
 
 namespace {
 constexpr auto kOverlayDiagnosticsInterval = std::chrono::seconds(2);
@@ -301,7 +323,14 @@ int ImGuiOverWindows::start()
     // from the previous HWND must never size the new swap chain or viewport.
     g_ResizeWidth = g_ResizeHeight = 0; g_SwapChainOccluded = false;
     g_LastOverlayDiagnosticsAt = {};
-    overWindowsHwnd = ::CreateWindowExW(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
+    // A composition visual needs no redirection bitmap, and asking for one is what makes DWM take the
+    // slower path for the surface. The window style therefore depends on which presentation the
+    // session will use, which is decided before the window exists.
+    const bool useComposition = Isolation::UseOverlayComposition();
+    DWORD overlayStyles = WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
+    if (useComposition) overlayStyles |= WS_EX_NOREDIRECTIONBITMAP;
+    else overlayStyles |= WS_EX_LAYERED;
+    overWindowsHwnd = ::CreateWindowExW(overlayStyles,
         wc.lpszClassName, L"IMao Map Overlay", WS_POPUP, initialOrigin.x, initialOrigin.y,
         initialClient.right, initialClient.bottom, nullptr, nullptr, wc.hInstance, nullptr);
     if (!overWindowsHwnd) return 1;
@@ -376,7 +405,11 @@ int ImGuiOverWindows::start()
 
     //设置透明窗口
     ImVec4 clear_color = ImVec4(0, 0, 0, 0);
-    SetLayeredWindowAttributes(overWindowsHwnd, ImColor(0, 0, 0, 0), 0, LWA_COLORKEY);
+    // The colorkey is the transparent mechanism of the layered path only. A composition surface is
+    // transparent through its own premultiplied alpha, and applying a colorkey to it would make every
+    // black pixel of the overlay disappear.
+    if (!UsingCompositionPresentation())
+        SetLayeredWindowAttributes(overWindowsHwnd, ImColor(0, 0, 0, 0), 0, LWA_COLORKEY);
     //DrawPiPWindows::Initi();
     //std::vector<ID3D11ShaderResourceView*> texturesToRelease; // 用于存储需要释放的纹理
     // Main loop
@@ -502,9 +535,25 @@ int ImGuiOverWindows::start()
         const auto bufferSize = OverlayBackBufferSize::Ensure(overWindowsHwnd, g_pSwapChain, [] {
             if (g_pd3dDeviceContext) g_pd3dDeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
             CleanupRenderTarget();
-        });
+        }, !UsingCompositionPresentation());
         g_ResizeWidth = g_ResizeHeight = 0; // Notifications never serve as size truth.
-        const bool targetReady = bufferSize.Ready() && (g_mainRenderTargetView || CreateRenderTarget());
+        bool targetReady = bufferSize.Ready() && (g_mainRenderTargetView || CreateRenderTarget());
+        // A flip-model chain rotates which buffer is current, so the view has to follow it; the plain
+        // windowed chain always renders into buffer 0 and keeps the one view.
+        if (targetReady && UsingCompositionPresentation()) {
+            if (bufferSize.resizeAttempted && SUCCEEDED(bufferSize.resizeResult)) {
+                if (!CreateCompositionRenderTargets()) {
+                    Diagnostics::Record("overlay-resize-error",
+                        "action=disable-overlay-after-composition-view-rebuild-failed");
+                    stopFlag = true;
+                    break;
+                }
+                hasPresented = false; // The new buffers hold undefined content.
+            }
+            if (g_compositionRenderTargetCount > 0)
+                g_mainRenderTargetView = g_compositionRenderTargets[g_compositionBufferIndex];
+        }
+        targetReady = targetReady && g_mainRenderTargetView != nullptr;
         if (!targetReady) {
             const HRESULT deviceReason = g_pd3dDevice == nullptr ? E_POINTER : g_pd3dDevice->GetDeviceRemovedReason();
             const auto now = std::chrono::steady_clock::now();
@@ -727,6 +776,13 @@ int ImGuiOverWindows::start()
             HRESULT hr = g_pSwapChain->Present(0, 0);
             presentTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - presentStarted).count();
             ++presentCalls;
+            if (UsingCompositionPresentation()) {
+                // A committed visual is what makes the new surface visible; without this the compositor
+                // keeps showing the previous one.
+                if (g_compositionDevice != nullptr) g_compositionDevice->Commit();
+                if (g_compositionRenderTargetCount > 0)
+                    g_compositionBufferIndex = (g_compositionBufferIndex + 1) % g_compositionRenderTargetCount;
+            }
             g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
             RecordOverlayFrameDiagnostics(overWindowsHwnd, hr, bufferSize.after);
             if (FAILED(hr)) {
@@ -760,9 +816,109 @@ int ImGuiOverWindows::start()
 
 // Helper functions
 
+namespace {
+/// Binds whatever the composition path needs after the swap chain exists: one render target view per
+/// buffer, a composition device, and a visual for it.
+bool CreateCompositionPresentation(HWND hWnd)
+{
+    IDXGIDevice* dxgiDevice = nullptr;
+    if (FAILED(g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&dxgiDevice)))) return false;
+    // A composition surface has to be produced promptly; the default frame latency lets the visual lag
+    // the frame the overlay just drew. SetMaximumFrameLatency lives on IDXGIDevice1.
+    IDXGIDevice1* frameLatencyDevice = nullptr;
+    if (SUCCEEDED(dxgiDevice->QueryInterface(IID_PPV_ARGS(&frameLatencyDevice))) && frameLatencyDevice != nullptr) {
+        frameLatencyDevice->SetMaximumFrameLatency(1);
+        frameLatencyDevice->Release();
+    }
+    const HRESULT deviceResult = ::DCompositionCreateDevice(dxgiDevice, IID_PPV_ARGS(&g_compositionDevice));
+    dxgiDevice->Release();
+    if (FAILED(deviceResult) || g_compositionDevice == nullptr) {
+        g_compositionDevice = nullptr;
+        return false;
+    }
+    if (!CreateCompositionRenderTargets()) return false;
+    if (FAILED(g_compositionDevice->CreateTargetForHwnd(hWnd, TRUE, &g_compositionTarget)) ||
+        FAILED(g_compositionDevice->CreateVisual(&g_compositionVisual)) ||
+        FAILED(g_compositionVisual->SetContent(g_pSwapChain)) ||
+        FAILED(g_compositionTarget->SetRoot(g_compositionVisual)) ||
+        FAILED(g_compositionDevice->Commit())) {
+        return false;
+    }
+    return true;
+}
+}
+
 bool CreateDeviceD3D(HWND hWnd)
 {
-    // Setup swap chain
+    // One device for both paths. D3D11_CREATE_DEVICE_BGRA_SUPPORT is only strictly required by the
+    // composition path, but it costs nothing and keeps a single device creation to reason about.
+    UINT createDeviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    D3D_FEATURE_LEVEL featureLevel;
+    const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
+    HRESULT res = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags,
+        featureLevelArray, 2, D3D11_SDK_VERSION, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+    if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
+        res = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags,
+            featureLevelArray, 2, D3D11_SDK_VERSION, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+    if (res != S_OK || g_pd3dDevice == nullptr) return false;
+
+    IDXGIDevice* dxgiDevice = nullptr;
+    IDXGIAdapter* adapter = nullptr;
+    IDXGIFactory2* factory = nullptr;
+    if (FAILED(g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&dxgiDevice))) ||
+        FAILED(dxgiDevice->GetAdapter(&adapter)) ||
+        FAILED(adapter->GetParent(IID_PPV_ARGS(&factory)))) {
+        if (dxgiDevice) dxgiDevice->Release();
+        if (adapter) adapter->Release();
+        if (factory) factory->Release();
+        CleanupDeviceD3D();
+        return false;
+    }
+
+    RECT client{};
+    if (!GetClientRect(hWnd, &client) || client.right <= 0 || client.bottom <= 0) {
+        dxgiDevice->Release(); adapter->Release(); factory->Release();
+        CleanupDeviceD3D();
+        return false;
+    }
+
+    if (Isolation::UseOverlayComposition()) {
+        // Premultiplied alpha is what lets the game show through the parts the overlay does not draw,
+        // which is what the colorkey did in the other path.
+        DXGI_SWAP_CHAIN_DESC1 description{};
+        description.Width = static_cast<UINT>(client.right);
+        description.Height = static_cast<UINT>(client.bottom);
+        description.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        description.SampleDesc.Count = 1;
+        description.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        description.BufferCount = 2;
+        description.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+        description.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+        IDXGISwapChain1* compositionChain = nullptr;
+        const HRESULT chainResult = factory->CreateSwapChainForComposition(g_pd3dDevice, &description,
+            nullptr, &compositionChain);
+        const bool started =
+            SUCCEEDED(chainResult) && compositionChain != nullptr &&
+            SUCCEEDED(compositionChain->QueryInterface(IID_PPV_ARGS(&g_pSwapChain))) && g_pSwapChain != nullptr &&
+            CreateCompositionPresentation(hWnd);
+        if (compositionChain != nullptr) compositionChain->Release();
+        if (started) {
+            dxgiDevice->Release(); adapter->Release(); factory->Release();
+            Diagnostics::Record("overlay-presentation", "mode=composition swapEffect=flip-sequential");
+            return true;
+        }
+        // Falling back is only safe because the window style and the colorkey are both applied after
+        // this returns; a half-built composition state is torn down here so the caller sees a clean
+        // windowed device either way.
+        if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = nullptr; }
+        if (g_compositionVisual) { g_compositionVisual->Release(); g_compositionVisual = nullptr; }
+        if (g_compositionTarget) { g_compositionTarget->Release(); g_compositionTarget = nullptr; }
+        if (g_compositionDevice) { g_compositionDevice->Release(); g_compositionDevice = nullptr; }
+        Diagnostics::Record("overlay-presentation",
+            "mode=layered-colorkey reason=composition-unavailable hr=" +
+            std::to_string(static_cast<long>(chainResult)));
+    }
+
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
     sd.BufferCount = 2;
@@ -779,15 +935,13 @@ bool CreateDeviceD3D(HWND hWnd)
     sd.Windowed = TRUE;
     sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
-    UINT createDeviceFlags = 0;
-    //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-    D3D_FEATURE_LEVEL featureLevel;
-    const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
-    HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
-    if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
-        res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
-    if (res != S_OK)
+    const HRESULT windowedResult = factory->CreateSwapChain(g_pd3dDevice, &sd, &g_pSwapChain);
+    dxgiDevice->Release(); adapter->Release(); factory->Release();
+    if (FAILED(windowedResult) || g_pSwapChain == nullptr) {
+        CleanupDeviceD3D();
         return false;
+    }
+    Diagnostics::Record("overlay-presentation", "mode=layered-colorkey swapEffect=discard");
 
     if (!CreateRenderTarget()) {
         CleanupDeviceD3D();
@@ -801,6 +955,9 @@ void CleanupDeviceD3D()
     // Cached views belong to this D3D device and cannot survive a recreation.
     DrawItemBase::itemsTextureData.clear();
     CleanupRenderTarget();
+    if (g_compositionVisual) { g_compositionVisual->Release(); g_compositionVisual = nullptr; }
+    if (g_compositionTarget) { g_compositionTarget->Release(); g_compositionTarget = nullptr; }
+    if (g_compositionDevice) { g_compositionDevice->Release(); g_compositionDevice = nullptr; }
     if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = nullptr; }
     if (g_pd3dDeviceContext) { g_pd3dDeviceContext->Release(); g_pd3dDeviceContext = nullptr; }
     if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = nullptr; }
@@ -818,9 +975,57 @@ bool CreateRenderTarget()
     return SUCCEEDED(viewResult) && g_mainRenderTargetView != nullptr;
 }
 
+bool CreateCompositionRenderTargets()
+{
+    CleanupRenderTarget();
+    if (g_pSwapChain == nullptr || g_pd3dDevice == nullptr) return false;
+
+    DXGI_SWAP_CHAIN_DESC1 description{};
+    IDXGISwapChain1* modern = nullptr;
+    UINT count = 0;
+    if (SUCCEEDED(g_pSwapChain->QueryInterface(IID_PPV_ARGS(&modern))) && modern != nullptr) {
+        if (SUCCEEDED(modern->GetDesc1(&description))) count = description.BufferCount;
+        modern->Release();
+    }
+    if (count == 0) {
+        DXGI_SWAP_CHAIN_DESC legacy{};
+        if (SUCCEEDED(g_pSwapChain->GetDesc(&legacy))) count = legacy.BufferCount;
+    }
+    if (count == 0 || count > kMaxSwapChainBuffers) return false;
+
+    for (UINT index = 0; index < count; ++index) {
+        ID3D11Texture2D* buffer = nullptr;
+        if (FAILED(g_pSwapChain->GetBuffer(index, IID_PPV_ARGS(&buffer))) || buffer == nullptr) {
+            CleanupRenderTarget();
+            return false;
+        }
+        const HRESULT viewResult = g_pd3dDevice->CreateRenderTargetView(buffer, nullptr,
+            &g_compositionRenderTargets[index]);
+        buffer->Release();
+        if (FAILED(viewResult) || g_compositionRenderTargets[index] == nullptr) {
+            CleanupRenderTarget();
+            return false;
+        }
+        g_compositionRenderTargetCount = index + 1;
+    }
+    g_compositionBufferIndex = 0;
+    g_mainRenderTargetView = g_compositionRenderTargets[0];
+    return true;
+}
+
 void CleanupRenderTarget()
 {
-    if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
+    // g_mainRenderTargetView aliases one of these entries, so it is cleared first and never released
+    // on its own: releasing both would double-free the same view.
+    g_mainRenderTargetView = nullptr;
+    for (UINT index = 0; index < g_compositionRenderTargetCount; ++index) {
+        if (g_compositionRenderTargets[index]) {
+            g_compositionRenderTargets[index]->Release();
+            g_compositionRenderTargets[index] = nullptr;
+        }
+    }
+    g_compositionRenderTargetCount = 0;
+    g_compositionBufferIndex = 0;
 }
 
 // Forward declare message handler from imgui_impl_win32.cpp

@@ -41,21 +41,20 @@ if (-not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($ProcessName
     throw "The game ($ProcessName) is not running. Start it, put it in the foreground, then re-run."
 }
 
-# Each phase switches off exactly one piece relative to the baseline, so the difference from the
-# baseline is that piece's cost. The baseline is measured twice, once at the start and once in the
-# middle: if the two disagree the scene or the machine drifted and the whole table is unsafe.
+# Each phase sets a mask, so each one is measured against the baseline. The baseline is measured twice,
+# once at the start and once at the end: if the two disagree the scene or the machine drifted and the
+# whole table is unsafe.
 #
-# Order matters because a run is long and can be abandoned partway. The first group splits the piece
-# the previous run found dominant - the overlay's own frame work, worth about 13.5 fps and almost all
-# of the >20 ms tail - into its parts. The second group is the rest of the per-frame work.
+# Order matters because a run is long and may be abandoned partway. The first pair is the decisive test
+# of how the overlay is presented - colorkey layered window against DirectComposition - because that is
+# the one change with a mechanism behind it. Everything after is per-frame work.
 $sequence = @(
-    [pscustomobject]@{ name = 'baseline-a';        mask = 0;  label = '0  (base)' }
+    [pscustomobject]@{ name = 'baseline-colorkey'; mask = 0;  label = '0  (base)' }
+    [pscustomobject]@{ name = 'composition';       mask = 64; label = '64' }
     [pscustomobject]@{ name = 'no-overlay-render'; mask = 8;  label = '8' }
-    [pscustomobject]@{ name = 'no-overlay-clear';  mask = 16; label = '16' }
     [pscustomobject]@{ name = 'no-window-sync';    mask = 32; label = '32' }
-    [pscustomobject]@{ name = 'baseline-b';        mask = 0;  label = '0  (base)' }
-    [pscustomobject]@{ name = 'no-localization';   mask = 4;  label = '4' }
-    [pscustomobject]@{ name = 'no-capture';        mask = 1;  label = '1' }
+    [pscustomobject]@{ name = 'no-overlay-clear';  mask = 16; label = '16' }
+    [pscustomobject]@{ name = 'baseline-again';    mask = 0;  label = '0  (base)' }
 )
 
 $phaseLog = [Collections.Generic.List[string]]::new()
@@ -138,12 +137,12 @@ Write-PhaseStats -Stats $stats -ReportPath ([IO.Path]::ChangeExtension($OutputPa
 
 # The attribution table is the point of the run: each phase's difference from the baseline is what that
 # piece costs the game.
-$baseline = $stats | Where-Object { $_.Phase -eq 'baseline-a' } | Select-Object -First 1
+$baseline = $stats | Where-Object { $_.Phase -like 'baseline*' } | Select-Object -First 1
 if ($null -ne $baseline -and $baseline.Fps -gt 0) {
-    Write-Host 'Attribution against baseline-a:' -ForegroundColor Yellow
+    Write-Host "Attribution against $($baseline.Phase):" -ForegroundColor Yellow
     $table = foreach ($stat in $stats) {
         if ($stat.Fps -le 0) { continue }
-        if ($stat.Phase -eq 'baseline-a') { continue }
+        if ($stat.Phase -eq $baseline.Phase) { continue }
         $delta = $baseline.Fps - $stat.Fps
         $tail = $baseline.Over20Percent - $stat.Over20Percent
         [pscustomobject]@{
@@ -156,12 +155,14 @@ if ($null -ne $baseline -and $baseline.Fps -gt 0) {
     }
     Write-Host ($table | Format-Table -AutoSize | Out-String)
 
-    $check = $stats | Where-Object { $_.Phase -eq 'baseline-b' } | Select-Object -First 1
+    $check = $stats | Where-Object { $_.Phase -like 'baseline*' -and $_.Phase -ne $baseline.Phase } |
+        Select-Object -Last 1
     if ($null -ne $check -and $check.Fps -gt 0) {
         $drift = [math]::Abs($baseline.Fps - $check.Fps)
         $verdict = if ($drift -le 3) { 'consistent' } else { 'DRIFTED - treat the table as unsafe' }
-        Write-Host ("baseline-a {0} fps, baseline-b {1} fps, drift {2} fps: {3}" -f `
-            $baseline.Fps, $check.Fps, [math]::Round($drift, 1), $verdict) -ForegroundColor $(if ($drift -le 3) { 'Green' } else { 'Red' })
+        Write-Host ("{0} {1} fps, {2} {3} fps, drift {4} fps: {5}" -f `
+            $baseline.Phase, $baseline.Fps, $check.Phase, $check.Fps, [math]::Round($drift, 1), $verdict) `
+            -ForegroundColor $(if ($drift -le 3) { 'Green' } else { 'Red' })
     }
 }
 
