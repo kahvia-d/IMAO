@@ -3,20 +3,22 @@ namespace IMao_WinUI.Models;
 public sealed record RuntimeConfiguration
 {
     // Bumped when a stored default changes meaning. Version 2 promoted the capture method; version 3
-    // promotes the overlay presentation. A file written before a bump carries a value that was never a
-    // deliberate choice, so the store migrates it once and a player who changes the setting afterwards
-    // is recorded with the current version and never migrated again.
-    public const int CurrentSchemaVersion = 3;
+    // promoted the overlay presentation to DirectComposition; version 4 takes that promotion back,
+    // because the measurement behind it does not describe the presentation that shipped. A file written
+    // before a bump carries a value that was never a deliberate choice, so the store migrates it once
+    // and a player who changes the setting afterwards is recorded with the current version and never
+    // migrated again.
+    public const int CurrentSchemaVersion = 4;
     public int ConfigVersion { get; init; } = CurrentSchemaVersion;
 
     // 1 = Windows Graphics Capture: it never asks the game window to render into a device context, and
     // startup falls back to BitBlt (0) on its own when it cannot produce a first frame.
     public int CaptureWay { get; init; } = 1;
-    // How the overlay puts its surface on screen. 1 = DirectComposition, which measured about +13 fps
-    // with the frames over 20 ms falling from 17.5% to 1.8%, and is the default for new installs and
-    // for installs migrated from an older schema. 0 = colorkey layered window, kept as the fallback a
-    // player can select if their machine renders the composition surface badly.
-    public int OverlayPresentMode { get; init; } = 1;
+    // How the overlay puts its surface on screen. 0 = colorkey layered window, the presentation every
+    // install used before 2026.9.18.1 and the default again. 1 = DirectComposition, offered as an option
+    // but not as a promise: see Docs/GameFrameCostAnalysis_20260918.md section 22 for why the frame-rate
+    // claim that made it the default was withdrawn.
+    public int OverlayPresentMode { get; init; } = 0;
     public int MapUpdateCycle { get; init; } = 80;
     public int MinMapUpdateCycle { get; init; } = 80;
     public bool MapEnabled { get; init; } = true;

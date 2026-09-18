@@ -72,17 +72,21 @@ internal sealed class RuntimeConfigurationStore
     //   Graphics Capture leaves the game's own presentation path alone, so a file without the schema
     //   field is moved to 1.
     //
-    //   version 3 promotes the overlay presentation to DirectComposition, which measured about +13 fps
-    //   with the frames over 20 ms falling from 17.5% to 1.8%. A stored 0 cannot be told apart from the
-    //   old default, so every file written before this bump is moved to it.
+    //   version 3 promoted the overlay presentation to DirectComposition on the strength of a frame-rate
+    //   comparison that could not support it: the two conditions were measured in two consecutive time
+    //   windows on a machine whose drift is as large as the effect, and the composition window that was
+    //   measured did not carry the WS_EX_LAYERED flag the shipped one has. Version 4 therefore moves
+    //   every file written before it back to the layered window. A stored 1 could be that promotion or a
+    //   deliberate choice and the two cannot be told apart, so the default wins; a player who wants the
+    //   composition surface selects it again and is recorded with version 4 from then on.
     //
-    // After either migration the file carries the current version, so a player who chooses the other
-    // value afterwards is never migrated again.
+    // After any migration the file carries the current version, so a player who chooses the other value
+    // afterwards is never migrated again.
     private static RuntimeConfiguration Migrate(RuntimeConfiguration value, int storedVersion)
     {
         var migrated = value;
         if (storedVersion < 2) migrated = migrated with { CaptureWay = 1 };
-        if (storedVersion < 3) migrated = migrated with { OverlayPresentMode = 1 };
+        if (storedVersion < 4) migrated = migrated with { OverlayPresentMode = 0 };
         return migrated;
     }
 

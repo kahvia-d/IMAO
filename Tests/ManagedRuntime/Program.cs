@@ -88,22 +88,26 @@ try
     File.WriteAllText(configPath, "{\"ConfigVersion\":2,\"CaptureWay\":0,\"StatusBarEnabled\":false}");
     Check(new RuntimeConfigurationStore(configPath).Read().CaptureWay == 0,
         "a capture method chosen after the schema change stays BitBlt");
-    // Version 3 promotes the overlay presentation. A stored 0 cannot be told apart from the old
-    // default, so a file written before this bump moves, exactly like the capture method did.
-    Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 1,
-        "a configuration written before the presentation default changed moves to DirectComposition");
-    Check(new RuntimeConfigurationStore(configPath).Read().CaptureWay == 0,
-        "promoting the presentation does not re-promote a capture method chosen afterwards");
-    File.WriteAllText(configPath, "{\"ConfigVersion\":3,\"OverlayPresentMode\":0,\"StatusBarEnabled\":false}");
+    // Version 4 takes back version 3's promotion of the overlay presentation. A file written while
+    // DirectComposition was the default carries a value that was not a deliberate choice, so it moves
+    // back to the layered window exactly like the capture method did.
     Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 0,
-        "a presentation chosen after the bump stays on the layered window");
-    Check(config.Update(old => old with { OverlayPresentMode = 0 }).OverlayPresentMode == 0 &&
-        config.Read().OverlayPresentMode == 0,
-        "choosing the layered window persists instead of being migrated back to the new default");
+        "a configuration written before the presentation default changed moves back to the layered window");
+    Check(new RuntimeConfigurationStore(configPath).Read().CaptureWay == 0,
+        "changing the presentation default does not re-promote a capture method chosen afterwards");
+    File.WriteAllText(configPath, "{\"ConfigVersion\":3,\"OverlayPresentMode\":1,\"StatusBarEnabled\":false}");
+    Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 0,
+        "a configuration written with DirectComposition as the default is moved back to the layered window");
+    File.WriteAllText(configPath, "{\"ConfigVersion\":4,\"OverlayPresentMode\":1,\"StatusBarEnabled\":false}");
+    Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 1,
+        "DirectComposition chosen after the bump is kept");
+    Check(config.Update(old => old with { OverlayPresentMode = 1 }).OverlayPresentMode == 1 &&
+        config.Read().OverlayPresentMode == 1,
+        "choosing DirectComposition persists instead of being migrated back to the default");
     File.WriteAllText(configPath, "{\"StatusBarEnabled\":false,\"CaptureWay\":1}");
     var freshDefault = new RuntimeConfigurationStore(configPath).Read();
-    Check(freshDefault.OverlayPresentMode == 1 && freshDefault.CaptureWay == 1,
-        "a file with no schema version at all is treated as the oldest schema and takes both promotions");
+    Check(freshDefault.OverlayPresentMode == 0 && freshDefault.CaptureWay == 1,
+        "a file with no schema version at all is treated as the oldest schema: the capture method is promoted and the presentation keeps the layered window");
     Check(File.ReadAllText(configPath).Contains("StatusBarEnabled"), "reading a configuration never rewrites it");
     Check(config.Update(old => old with { CaptureWay = 0 }).CaptureWay == 0 && config.Read().CaptureWay == 0,
         "choosing BitBlt persists instead of being migrated back to the new default");
