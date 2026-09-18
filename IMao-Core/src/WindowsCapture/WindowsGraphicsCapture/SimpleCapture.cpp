@@ -335,14 +335,9 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                     // mappedFrame aliases D3D memory and must be copied before Unmap. That copy goes
                     // into the buffer the previous frame already allocated rather than into a fresh
                     // local Mat: at 2560x1440 those frames are 14.7 MB, and building a new one per
-                    // frame churned the allocator for the whole session. The published sequence is
-                    // raised while the same lock is still held, so a consumer can never read the new
-                    // pixels under the old frame id.
+                    // frame churned the allocator for the whole session.
                     try {
-                        std::lock_guard<std::mutex> lock(m_frameMutex);
-                        mappedFrame.copyTo(m_latestFrame);
-                        m_frameCapturedAt = std::chrono::steady_clock::now();
-                        ++m_frameSequence;
+                        mappedFrame.copyTo(m_scratchFrame);
                     }
                     catch (...) {
                         m_d3dContext->Unmap(m_stagingTexture.get(), 0);
@@ -350,6 +345,19 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                     }
                     m_d3dContext->Unmap(m_stagingTexture.get(), 0);
 
+                    // The 14.7 MB copy above must not run under m_frameMutex: the readback waits on the
+                    // GPU for tens of milliseconds, and a consumer blocked on that same lock waited the
+                    // whole time (measured before this split: captureAvgMs 13.6 and captureMaxMs 71.7
+                    // against a readback of about 30 ms). Only the buffer swap and the published
+                    // sequence run under the lock, so a consumer sees either the previous frame or the
+                    // new one and never a half-written buffer.
+                    {
+                        std::lock_guard<std::mutex> lock(m_frameMutex);
+                        using std::swap;
+                        swap(m_latestFrame, m_scratchFrame);
+                        m_frameCapturedAt = std::chrono::steady_clock::now();
+                        ++m_frameSequence;
+                    }
                     m_frameCondition.notify_all();
                     ++m_framesPublished;
                     if (m_framesPublished == 1)

@@ -161,6 +161,9 @@ private:
     ImTextureID                                 m_imguiImTextureID;
 
     cv::Mat m_latestFrame;
+    /// Destination of the readback copy. The copy itself needs no lock - the frame pool callback is
+    /// its only writer - so it runs here and the result is swapped into m_latestFrame under the lock.
+    cv::Mat m_scratchFrame;
     mutable std::mutex m_frameMutex;
     std::condition_variable m_frameCondition;
     std::uint64_t m_frameSequence = 0;
