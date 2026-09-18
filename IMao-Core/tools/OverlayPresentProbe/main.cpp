@@ -157,31 +157,6 @@ const char* ColorNameFor(const std::string& mode) {
     return "none (no window)";
 }
 
-/// Draws the same block the real status bar occupies, so the measured surface covers comparable pixels,
-/// in the phase's own colour.
-void DrawStatusBarBlock(ID2D1DeviceContext* context, ID2D1SolidColorBrush* brush, float scale,
-    float width, float height, const Options& options, const COLORREF blockColor, const COLORREF stripeColor) {
-    const float blockWidth = std::min(options.blockWidth * scale, width);
-    const float blockHeight = options.blockHeight * scale;
-    const float left = (width - blockWidth) / 2.0f;
-    const float top = options.blockMargin * scale;
-    const D2D1_ROUNDED_RECT block{
-        D2D1::RectF(left, top, left + blockWidth, top + blockHeight),
-        std::min(12.0f * scale, blockHeight / 2.0f), std::min(12.0f * scale, blockHeight / 2.0f) };
-    brush->SetColor(D2D1::ColorF(GetRValue(blockColor) / 255.0f, GetGValue(blockColor) / 255.0f,
-        GetBValue(blockColor) / 255.0f, options.alpha));
-    context->FillRoundedRectangle(block, brush);
-    // A deliberately bright stripe: the probe has to be visibly present, or a "no cost" result could
-    // just mean nothing was ever drawn.
-    const D2D1_ROUNDED_RECT stripe{
-        D2D1::RectF(left + blockHeight * 0.4f, top + blockHeight * 0.35f,
-            left + blockWidth - blockHeight * 0.4f, top + blockHeight * 0.65f),
-        blockHeight * 0.15f, blockHeight * 0.15f };
-    brush->SetColor(D2D1::ColorF(GetRValue(stripeColor) / 255.0f, GetGValue(stripeColor) / 255.0f,
-        GetBValue(stripeColor) / 255.0f, options.alpha));
-    context->FillRoundedRectangle(stripe, brush);
-}
-
 /// Everything the probe needs while a window is up. Only mode=dcomp fills the composition members.
 struct ProbeState {
     HWND window = nullptr;
@@ -205,7 +180,69 @@ struct ProbeState {
     COLORREF stripeColor = RGB(255, 255, 255);
     /// In layered mode this is the colorkey, which is why transparent windows erase with black.
     COLORREF windowBackground = RGB(0, 0, 0);
+    /// The block rectangle actually painted, reported once so a misplacement is visible in the log
+    /// instead of only on screen.
+    bool reportedRectangle = false;
 };
+
+/// One placement used by every phase, so a difference between phases is a difference in presentation
+/// and never in geometry. Both draw paths work in device pixels - the composition swap chain bitmap is
+/// created at the window's size and carries its own DPI - so deriving both from these integers means
+/// they cannot disagree by a rounding step.
+struct BlockRect {
+    int left = 0, top = 0, width = 0, height = 0;
+    int stripeLeft = 0, stripeTop = 0, stripeRight = 0, stripeBottom = 0;
+};
+
+BlockRect PlaceBlock(const ProbeState& state, const Options& options, float scale) {
+    BlockRect block;
+    const int surfaceWidth = static_cast<int>(state.width);
+    block.width = std::min(static_cast<int>(options.blockWidth * scale), surfaceWidth);
+    block.height = static_cast<int>(options.blockHeight * scale);
+    block.left = (surfaceWidth - block.width) / 2;
+    block.top = static_cast<int>(options.blockMargin * scale);
+    // A deliberately bright stripe: the probe has to be visibly present, or a "no cost" result could
+    // just mean nothing was ever drawn.
+    block.stripeLeft = block.left + block.height * 2 / 5;
+    block.stripeRight = block.left + block.width - block.height * 2 / 5;
+    block.stripeTop = block.top + block.height * 35 / 100;
+    block.stripeBottom = block.top + block.height * 65 / 100;
+    return block;
+}
+
+/// Draws the block the real status bar occupies, in the phase's own colour, at the shared placement.
+void DrawStatusBarBlock(ID2D1DeviceContext* context, ID2D1SolidColorBrush* brush,
+    const BlockRect& block, const Options& options, COLORREF blockColor, COLORREF stripeColor) {
+    const float radius = std::min(12.0f, block.height / 2.0f);
+    const D2D1_ROUNDED_RECT body{
+        D2D1::RectF(static_cast<float>(block.left), static_cast<float>(block.top),
+            static_cast<float>(block.left + block.width), static_cast<float>(block.top + block.height)),
+        radius, radius };
+    brush->SetColor(D2D1::ColorF(GetRValue(blockColor) / 255.0f, GetGValue(blockColor) / 255.0f,
+        GetBValue(blockColor) / 255.0f, options.alpha));
+    context->FillRoundedRectangle(body, brush);
+    const D2D1_ROUNDED_RECT stripe{
+        D2D1::RectF(static_cast<float>(block.stripeLeft), static_cast<float>(block.stripeTop),
+            static_cast<float>(block.stripeRight), static_cast<float>(block.stripeBottom)),
+        radius / 2.0f, radius / 2.0f };
+    brush->SetColor(D2D1::ColorF(GetRValue(stripeColor) / 255.0f, GetGValue(stripeColor) / 255.0f,
+        GetBValue(stripeColor) / 255.0f, options.alpha));
+    context->FillRoundedRectangle(stripe, brush);
+}
+
+/// Reports the window, the client area and the painted block once, so "the block is in the wrong
+/// place" is a number in the log rather than something to be judged by eye.
+void ReportRectangleOnce(ProbeState& state, const BlockRect& block) {
+    if (state.reportedRectangle) return;
+    state.reportedRectangle = true;
+    RECT window{}, client{};
+    ::GetWindowRect(state.window, &window);
+    ::GetClientRect(state.window, &client);
+    std::printf("geometry: windowRect=%ld,%ld %ldx%ld client=%ldx%ld block=%d,%d %dx%d\n",
+        window.left, window.top, window.right - window.left, window.bottom - window.top,
+        client.right, client.bottom, block.left, block.top, block.width, block.height);
+    std::fflush(stdout);
+}
 
 /// Reports which step failed with its HRESULT, because "composition setup failed" cannot distinguish
 /// a driver that refuses composition from a mistake in this file.
@@ -266,23 +303,20 @@ bool CreateCompositionSurface(ProbeState& state) {
 void DrawGdiFrame(ProbeState& state, const Options& options, float scale) {
     HDC target = ::GetDC(state.window);
     if (target == nullptr) return;
-    const int blockWidth = std::min(static_cast<int>(options.blockWidth * scale), static_cast<int>(state.width));
-    const int blockHeight = static_cast<int>(options.blockHeight * scale);
-    const int left = (static_cast<int>(state.width) - blockWidth) / 2;
-    const int top = static_cast<int>(options.blockMargin * scale);
+    const BlockRect block = PlaceBlock(state, options, scale);
+    ReportRectangleOnce(state, block);
 
     RECT background{ 0, 0, static_cast<LONG>(state.width), static_cast<LONG>(state.height) };
     HBRUSH backgroundBrush = ::CreateSolidBrush(state.windowBackground);
     ::FillRect(target, &background, backgroundBrush);
     ::DeleteObject(backgroundBrush);
 
-    RECT block{ left, top, left + blockWidth, top + blockHeight };
+    RECT body{ block.left, block.top, block.left + block.width, block.top + block.height };
     HBRUSH blockBrush = ::CreateSolidBrush(state.blockColor);
-    ::FillRect(target, &block, blockBrush);
+    ::FillRect(target, &body, blockBrush);
     ::DeleteObject(blockBrush);
 
-    RECT stripe{ left + blockHeight * 2 / 5, top + blockHeight * 35 / 100,
-        left + blockWidth - blockHeight * 2 / 5, top + blockHeight * 65 / 100 };
+    RECT stripe{ block.stripeLeft, block.stripeTop, block.stripeRight, block.stripeBottom };
     HBRUSH stripeBrush = ::CreateSolidBrush(state.stripeColor);
     ::FillRect(target, &stripe, stripeBrush);
     ::DeleteObject(stripeBrush);
@@ -295,10 +329,11 @@ void DrawGdiFrame(ProbeState& state, const Options& options, float scale) {
 
 void DrawCompositionFrame(ProbeState& state, const Options& options, float scale) {
     if (state.compositionSwapChain == nullptr) return;
+    const BlockRect block = PlaceBlock(state, options, scale);
+    ReportRectangleOnce(state, block);
     state.d2dContext->BeginDraw();
     state.d2dContext->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
-    DrawStatusBarBlock(state.d2dContext.Get(), state.brush.Get(), scale,
-        static_cast<float>(state.width), static_cast<float>(state.height), options,
+    DrawStatusBarBlock(state.d2dContext.Get(), state.brush.Get(), block, options,
         state.blockColor, state.stripeColor);
     if (FAILED(state.d2dContext->EndDraw())) return;
     const DXGI_PRESENT_PARAMETERS parameters{};
@@ -326,6 +361,10 @@ int Run(const Options& options, HINSTANCE instance) {
 
     ProbeState state;
     state.game = game;
+    // Both draw paths need the surface size, so it is set once here: leaving it to the composition
+    // branch made the GDI phases place a zero-width block at the left edge.
+    state.width = width;
+    state.height = height;
     if (options.mode != "none") {
         if (!RegisterProbeClass(instance)) { std::printf("RegisterClassExW failed\n"); return 4; }
         state.window = ::CreateWindowExW(WindowStylesFor(options.mode), kWindowClassName,
@@ -353,7 +392,6 @@ int Run(const Options& options, HINSTANCE instance) {
             std::printf("D2D1CreateFactory failed\n");
             return 4;
         }
-        state.width = width; state.height = height;
         if (!CreateCompositionSurface(state)) { std::printf("composition setup failed\n"); return 4; }
     }
     // Every phase that shows a window shows it in its own colour, so the phase running is visible on
