@@ -11,7 +11,8 @@ param(
     [string]$ResourceVersion,
     # Ask the public API for the generation it serves right now and use that.
     [switch]$ResolveCurrentVersion,
-    [string[]]$RegionId = @(),
+    # Comma-separated, because -File invocation cannot bind an array.
+    [string]$RegionId = '',
     [ValidateRange(1, 32)][int]$ThrottleLimit = 8,
     # The public tile set is irregular, so some tiles are legitimately absent: the
     # shipped packs record 20-45% absent inside their own rectangular windows, and a
@@ -70,17 +71,18 @@ if ($substituted) {
     Write-Warning "Tile generation differs from the generation the registry was derived from. The archive will be verified byte-for-byte against the tile hashes recorded in the shipped packs; a single mismatch aborts the run."
 }
 
+$regionIds = @($RegionId -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $selected = @($registry['regions'] | Where-Object { $null -ne $_['tileBounds'] })
-if ($RegionId.Count -gt 0) {
+if ($regionIds.Count -gt 0) {
     $known = @($registry['regions'] | ForEach-Object { [string]$_['id'] })
-    foreach ($id in $RegionId) { if ($known -notcontains $id) { throw "Unknown region id: $id" } }
-    $wanted = [Collections.Generic.HashSet[string]]::new([string[]]$RegionId, [StringComparer]::OrdinalIgnoreCase)
+    foreach ($id in $regionIds) { if ($known -notcontains $id) { throw "Unknown region id: $id" } }
+    $wanted = [Collections.Generic.HashSet[string]]::new([string[]]$regionIds, [StringComparer]::OrdinalIgnoreCase)
     $selected = @($selected | Where-Object { $wanted.Contains([string]$_['id']) })
     if ($selected.Count -eq 0) { throw 'No region matched the requested ids.' }
 }
 
 $unbuildable = @($selected | Where-Object { -not [bool]$_['buildable'] })
-if ($unbuildable.Count -gt 0 -and $RegionId.Count -eq 0) {
+if ($unbuildable.Count -gt 0 -and $regionIds.Count -eq 0) {
     Write-Warning ("Skipping {0} region(s) whose tile window is not trustworthy: {1}" -f $unbuildable.Count,
         (($unbuildable | ForEach-Object { "$($_['id'])($($_['tileConfidence']))" }) -join ', '))
     $selected = @($selected | Where-Object { [bool]$_['buildable'] })

@@ -13,6 +13,9 @@ param(
     # covers ground the old packs also covered. Registering both would duplicate every
     # keypoint over that ground.
     [string]$ExcludePackDir,
+    # Copy the binaries even when the run root already has them. They are locked while the
+    # application is running, and only Assets change between rebuilds.
+    [switch]$RefreshBinaries,
     [string]$SourceRoot
 )
 
@@ -48,12 +51,22 @@ function New-LinkedEntry([string]$LinkPath, [string]$TargetPath) {
 
 # 1. Binaries. Assets is skipped: it is rebuilt below, and in a dev output it is a junction.
 [IO.Directory]::CreateDirectory($RunRoot) | Out-Null
+# Idempotent: the binaries only change when the build output does, and re-copying them
+# fails while the application is running from the run root.
+$copiedBinaries = 0
+$skippedBinaries = 0
 foreach ($entry in @(Get-ChildItem -LiteralPath $BinaryRoot -Force)) {
     if ($entry.Name -eq 'Assets') { continue }
     $destination = Join-Path $RunRoot $entry.Name
+    if (-not $RefreshBinaries) {
+        if ($entry.PSIsContainer) { if (Test-Path -LiteralPath $destination) { ++$skippedBinaries; continue } }
+        elseif ((Test-Path -LiteralPath $destination) -and (Get-Item -LiteralPath $destination).Length -eq $entry.Length) { ++$skippedBinaries; continue }
+    }
     if ($entry.PSIsContainer) { Copy-Item -LiteralPath $entry.FullName -Destination $destination -Recurse -Force }
     else { Copy-Item -LiteralPath $entry.FullName -Destination $destination -Force }
+    ++$copiedBinaries
 }
+Write-Host "  binaries: $copiedBinaries copied, $skippedBinaries already present"
 
 # 2. Assets. Everything links to the source tree except the two levels that must be
 #    replaceable: FeaturesDatas/KuroTilePacks and FeaturesDatas/kuro-tile-packs.json.
@@ -119,7 +132,8 @@ foreach ($package in @($snapshot.packages)) {
     }
 }
 if ($missing.Count -gt 0) {
-    throw ("The bundled snapshot references directories that do not exist, which would abort the resource load and stop the core: " + ($missing -join '; ') + ". Removing a shipped pack directory also requires removing its snapshot entry.")
+    # The rewrite below drops exactly these; the check after it must find nothing missing.
+    Write-Host "  snapshot names $($missing.Count) not-installed directory/ies: $($missing -join ', ')"
 }
 
 # 5. Rewrite the snapshot's package list. CoreHost is always started with
