@@ -50,8 +50,9 @@ $record = {
     Write-Host $text -ForegroundColor Cyan
 }
 
-# Three phases plus the warm-up each records and drops, plus slack for the manual transitions.
-$totalSeconds = ($PhaseSeconds + $WarmupSeconds) * 3 + 45
+# Three phases, each recording a warm-up it does not measure, plus generous slack for the manual
+# transitions. The capture is stopped once the phases are done, so over-budgeting costs nothing.
+$totalSeconds = ($PhaseSeconds + $WarmupSeconds + 60) * 3 + 90
 & $record "phases: off -> ON -> off, about $PhaseSeconds s each"
 & $record "make sure both diagnostic switches are OFF before continuing"
 & $record "trace: $OutputPath"
@@ -64,19 +65,22 @@ $capture = Start-FrameTrace -PresentMonPath $PresentMonPath -ProcessName $Proces
 $phases = [Collections.Generic.List[object]]::new()
 function Wait-Phase {
     param([string]$Name, [int]$Warmup = 0)
+    # The warm-up is recorded and excluded from the measured window rather than being cut short on
+    # screen, so the marks below are already the window the statistics use.
+    for ($remaining = $Warmup; $remaining -gt 0; --$remaining) {
+        Write-Host ("`r    warm-up {0,3} s  ({1})   " -f $remaining, $Name) -NoNewline
+        Start-Sleep -Seconds 1
+    }
     $start = Get-Date
     & $record "PHASE START $Name"
-    $total = $PhaseSeconds + $Warmup
-    for ($remaining = $total; $remaining -gt 0; --$remaining) {
-        Write-Host ("`r    {0,3} s  ({1})      " -f $remaining, $Name) -NoNewline
+    for ($remaining = $PhaseSeconds; $remaining -gt 0; --$remaining) {
+        Write-Host ("`r    measuring {0,3} s  ({1})   " -f $remaining, $Name) -NoNewline
         Start-Sleep -Seconds 1
     }
     Write-Host ''
     $end = Get-Date
     & $record "PHASE END   $Name"
-    # The overlay's startup work lands at the front of its own phase, so that part of the window is
-    # recorded and then dropped rather than being cut short on screen.
-    $phases.Add([pscustomobject]@{ Name = $Name; Start = $start; End = $end; WarmupSeconds = $Warmup })
+    $phases.Add([pscustomobject]@{ Name = $Name; Start = $start; End = $end })
 }
 
 try {
@@ -95,7 +99,8 @@ try {
     Wait-Phase -Name 'off2' -Warmup $WarmupSeconds
 }
 finally {
-    if (-not $capture.HasExited) { $capture.WaitForExit(($totalSeconds + 60) * 1000) | Out-Null }
+    # Everything is measured, so the capture is stopped here rather than being waited out.
+    if (-not $capture.HasExited) { $capture.Kill(); $capture.WaitForExit(30000) | Out-Null }
 }
 
 $logPath = [IO.Path]::ChangeExtension($OutputPath, '.phases.txt')

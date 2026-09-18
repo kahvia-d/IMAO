@@ -21,6 +21,9 @@ param(
     [string]$ProcessName = 'Client-Win64-Shipping.exe',
     [int]$PhaseSeconds = 45,
     [int]$WarmupSeconds = 5,
+    # Time allowed per phase for reading the prompt and changing the mask in the tool, so the capture
+    # budget covers the whole run rather than ending early.
+    [int]$PromptAllowanceSeconds = 45,
     [string]$OutputPath,
     [string]$PresentMonPath
 )
@@ -59,8 +62,14 @@ $record = {
     Write-Host $text -ForegroundColor Cyan
 }
 
-$totalSeconds = ($PhaseSeconds + 16) * $sequence.Count + 60
-& $record "work isolation: $($sequence.Count) phases of $PhaseSeconds s (first $WarmupSeconds s dropped as warm-up)"
+# The capture must outlast the phases even when switching masks takes a while. An earlier version
+# under-counted this - it ignored the warm-up and the player's time to change the mask - and
+# PresentMon's --timed cut the recording off after the third of six phases, so the last three ran
+# with nothing recording them.
+$settleSeconds = 4
+$totalSeconds = $sequence.Count * ($settleSeconds + $WarmupSeconds + $PhaseSeconds + $PromptAllowanceSeconds) + 90
+& $record "work isolation: $($sequence.Count) phases of $PhaseSeconds s measured, each preceded by $settleSeconds s settling and $WarmupSeconds s warm-up that is not measured"
+& $record ("capture budget: {0:N0} s for {1} phases" -f $totalSeconds, $sequence.Count)
 & $record "trace: $OutputPath"
 & $record ('-' * 60)
 
@@ -80,14 +89,19 @@ try {
         [void](Read-Host)
 
         # Settling time so the switch itself and whatever work was in flight do not land in the window.
-        $settle = 4
-        for ($remaining = $settle; $remaining -gt 0; --$remaining) {
+        for ($remaining = $settleSeconds; $remaining -gt 0; --$remaining) {
             Write-Host ("`r    settling {0} s " -f $remaining) -NoNewline
+            Start-Sleep -Seconds 1
+        }
+        # The warm-up is recorded and excluded from the measured window instead of being cut short on
+        # screen, so the phase marks below are already the window the statistics use.
+        for ($remaining = $WarmupSeconds; $remaining -gt 0; --$remaining) {
+            Write-Host ("`r    warm-up  {0} s " -f $remaining) -NoNewline
             Start-Sleep -Seconds 1
         }
         $start = Get-Date
         & $record "PHASE START $($phase.name) mask=$($phase.mask)"
-        for ($remaining = $PhaseSeconds + $WarmupSeconds; $remaining -gt 0; --$remaining) {
+        for ($remaining = $PhaseSeconds; $remaining -gt 0; --$remaining) {
             Write-Host ("`r    measuring {0,3} s  ({1})   " -f $remaining, $phase.name) -NoNewline
             Start-Sleep -Seconds 1
         }
@@ -95,13 +109,14 @@ try {
         $end = Get-Date
         & $record "PHASE END   $($phase.name)"
         $marks.Add([pscustomobject]@{
-            Name = $phase.name; Start = $start; End = $end
-            WarmupSeconds = $WarmupSeconds; Mask = $phase.mask
+            Name = $phase.name; Start = $start; End = $end; Mask = $phase.mask
         })
     }
 }
 finally {
-    if (-not $capture.HasExited) { $capture.WaitForExit(($totalSeconds + 60) * 1000) | Out-Null }
+    # Everything is measured, so the capture is stopped here rather than being waited out: a run that
+    # finishes early should not sit idle until the budget expires.
+    if (-not $capture.HasExited) { $capture.Kill(); $capture.WaitForExit(30000) | Out-Null }
 }
 
 $logPath = [IO.Path]::ChangeExtension($OutputPath, '.phases.txt')
