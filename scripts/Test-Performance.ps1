@@ -24,12 +24,15 @@ function Get-Percentile([double[]]$Values, [double]$Percentile) {
 $converter = Join-Path $repoRoot 'x64\Release\IMaoFeatureConverter.exe'
 $featureBinary = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.imf'
 $featureRuns = [System.Collections.Generic.List[object]]::new()
-if (Test-Path -LiteralPath $converter) {
+if ((Test-Path -LiteralPath $converter) -and (Test-Path -LiteralPath $featureBinary)) {
     for ($index = 0; $index -lt $FeatureLoadRuns; $index++) {
         $json = & $converter '--benchmark' $featureBinary
         if ($LASTEXITCODE -ne 0) { throw 'Feature-load benchmark failed.' }
         $featureRuns.Add(($json | ConvertFrom-Json))
     }
+}
+elseif (-not (Test-Path -LiteralPath $featureBinary)) {
+    Write-Host 'Skipped the base feature-load benchmark: the base database is retired (see archive/retired-base-features).' -ForegroundColor Yellow
 }
 
 $resourceWait = [System.Collections.Generic.List[double]]::new()
