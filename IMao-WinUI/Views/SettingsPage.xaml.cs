@@ -295,18 +295,21 @@ public sealed partial class SettingsPage : Page
 
     /// <summary>
     /// Decides what the row's action button offers right now: 下载 for a region whose bytes are not on this
-    /// machine but can be fetched, 删除 for one that has a local copy. Both are decided per render, because
-    /// the same reused row can go from installed to removed and back.
+    /// machine, 删除 for one that has a local copy. The button is always there for a missing region and only
+    /// disabled until a check has confirmed the region can be fetched, so the interface shows what is
+    /// possible instead of leaving the space empty.
     /// </summary>
     private void UpdateRegionAction(Button action, RegionEntry entry)
     {
-        bool download = entry.State == RegionState.NotInstalled && entry.Downloadable;
+        bool missing = entry.State == RegionState.NotInstalled;
         bool delete = entry.State is RegionState.Bundled or RegionState.Downloaded;
-        action.Visibility = download || delete ? Visibility.Visible : Visibility.Collapsed;
-        action.Content = download ? "下载" : "删除";
-        action.IsEnabled = !updates.Busy && (download ? entry.Downloadable : entry.Deletable);
-        ToolTipService.SetToolTip(action, download
-            ? $"下载该区域（约 {FormatBytes(entry.Size)}）并启用它，退出并重新打开软件后生效。"
+        action.Visibility = missing || delete ? Visibility.Visible : Visibility.Collapsed;
+        action.Content = missing ? "下载" : "删除";
+        action.IsEnabled = !updates.Busy && (missing ? entry.Downloadable : entry.Deletable);
+        ToolTipService.SetToolTip(action, missing
+            ? entry.Downloadable
+                ? $"下载该区域（约 {FormatBytes(entry.Size)}）并启用它，退出并重新打开软件后生效。"
+                : "先点上方「检查更新」，确认能从更新渠道获取这个区域之后即可下载。"
             : entry.Deletable
                 ? $"从磁盘上删除本机副本，腾出 {FormatBytes(entry.Size)}。之后可以再点「下载」取回。"
                 : "这个区域本机没有副本。");

@@ -594,10 +594,27 @@ public sealed class ResourceSnapshotService
     public bool ShipsWithProgram(ResourceRelease release) => release.Packages.Count > 0 && release.Packages.All(package =>
         FindBundledPackage(new SnapshotPackage { Id = package.Id, Version = package.Version, Kind = package.Kind, Sha256 = package.Sha256, Files = package.Files }) is not null);
 
+    /// <summary>
+    /// Resolves where each package's bytes are on this machine.
+    ///
+    /// A descriptor says which packages make up a resource set; it does not get to decide where they live.
+    /// That is a fact about the disk, and it changes while the program runs: a region whose copy was deleted
+    /// and downloaded again moves from the program's directory to the update root, and a program that was
+    /// moved carries its own copies somewhere else. Trusting the recorded path instead is what left a
+    /// downloaded region reported as uninstalled on the bytes it was already sitting on, so the two known
+    /// locations are checked on every read and the recorded value is only a fallback.
+    /// </summary>
     private ResourceSnapshot Rebind(ResourceSnapshot snapshot)
     {
-        if (snapshot.Bundled) return _bundled;
-        var packages = snapshot.Packages.Select(p => FindBundledPackage(p) is { } bundled ? p with { Directory = bundled.Directory } : p).ToList();
+        var packages = snapshot.Packages.Select(p =>
+        {
+            var downloaded = Path.Combine(Root, "packages", p.Id, p.Version);
+            if (Directory.Exists(downloaded)) return p with { Directory = downloaded };
+            if (FindBundledPackage(p) is { } bundled) return p with { Directory = bundled.Directory };
+            // Neither location has it: leave the record alone and let the selection step decide, which keeps
+            // a region whose copy is gone out of the snapshot the host is given.
+            return p;
+        }).ToList();
         return snapshot with { BaselineRoot = _bundled.BaselineRoot, Packages = packages, MapDataRoot = packages.SingleOrDefault(p => p.Kind == "map-data")?.Directory ?? "",
             MapIconRoot = packages.SingleOrDefault(p => p.Kind == "map-icons")?.Directory ?? "",
             MapFeatureRoot = packages.SingleOrDefault(p => p.Kind == "map-features")?.Directory ?? "" };

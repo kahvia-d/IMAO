@@ -39,17 +39,19 @@ internal static class RegionSelectionCheck
         // Point the baseline at the staged installation's own Assets, which is where a real program keeps
         // build-info.json; only the packages this check exercises are relocated to the update root.
         var baselineRoot = assets;
-        // Every pack, not a subset: the native validator requires each scene that needs game validation to
-        // have its approved pack present, so a partial snapshot is rejected for reasons unrelated to
-        // selection. Selection is exercised by removing packs after this control run has passed.
+        // Every pack that is on this machine, not a subset: the native validator requires each scene that
+        // needs game validation to have its approved pack present, so a partial snapshot is rejected for
+        // reasons unrelated to selection. Selection is exercised by removing packs after this control run
+        // has passed.
+        //
+        // A region the player deleted in the app is absent from the staged tree. That is a state the product
+        // produces, not a broken fixture, so it is treated as uninstalled and left out (and reported), rather
+        // than failing the check on a directory copy deep inside.
         var kept = new List<SnapshotPackage>();
+        var absent = new List<string>();
         foreach (var source in bundled.Packages)
         {
-            // A region the player deleted in the app is gone from the staged tree, and the control
-            // descriptor needs every shipped pack. Say so plainly: this used to surface as a
-            // DirectoryNotFoundException from inside the copy, which reads like a bug in the check.
-            if (!Directory.Exists(source.Directory))
-                throw new InvalidDataException($"staged 树缺少资源包 {source.Id}（{source.Directory}）。若在实机里删过该区域，先恢复该目录或重建测试树。");
+            if (!Directory.Exists(source.Directory)) { absent.Add(source.Id); continue; }
             // Exactly the layout InstallReleaseAsync creates for a downloaded package.
             var destination = Path.Combine(root, "packages", source.Id, source.Version);
             CopyTree(source.Directory, destination);
@@ -57,9 +59,11 @@ internal static class RegionSelectionCheck
         }
         var materialized = bundled with { BaselineRoot = baselineRoot, MapDataRoot = kept[0].Directory, Packages = kept };
         evidence.Add($"packs copied into the update root: {string.Join(", ", kept.Select(p => p.Id))}");
+        if (absent.Count > 0) evidence.Add($"not installed on this machine, left out: {string.Join(", ", absent)}");
 
         var keep = materialized.Packages;
-        if (keep.Count < 3) throw new InvalidDataException("The staged tree is missing the region packs this check needs.");
+        if (keep.Count < 3 || keep.All(p => p.Kind != "tile"))
+            throw new InvalidDataException("staged 树里可用的资源包太少，无法做区域选择检查；缺失：" + string.Join(", ", absent));
 
         var descriptor = materialized with
         {
@@ -92,7 +96,10 @@ internal static class RegionSelectionCheck
         evidence.Add($"unfiltered descriptor loads: {snapshots.CurrentRuntimeSnapshot.Packages.Count} packages");
 
         var wanted = deselected.Where(id => id.Length > 0).ToArray();
-        if (wanted.Length == 0) wanted = [descriptor.Packages.First(p => p.Kind == "tile").Id];
+        // A requested region that is not installed on this machine (the player deleted it) cannot be the one
+        // this check deselects, so fall back to one that is present.
+        if (wanted.Length == 0 || wanted.Any(id => descriptor.Packages.All(p => p.Id != id)))
+            wanted = [descriptor.Packages.First(p => p.Kind == "tile").Id];
         await snapshots.SetDeselectedPackagesAsync(wanted);
         // The removed packages are the ones Current now excludes, and none of them may reach the host.
         var removed = snapshots.Current.Packages.Where(p => wanted.Contains(p.Id)).ToList();

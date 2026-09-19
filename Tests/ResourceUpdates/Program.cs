@@ -887,6 +887,42 @@ await Test("the region list reports a re-downloaded region as downloaded, restar
     True(after.Size > 0);
 });
 
+await Test("a snapshot still naming the deleted shipped copy resolves to the downloaded one", async () =>
+{
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();
+    var release = f.RegionCatalog().Resources[0];
+    f.Publish(f.RegionCatalog()); await f.Updates.CheckAsync();
+    await f.Updates.InstallAsync();
+    var next = f.NewSnapshots(); await next.InitializeAsync();
+    await next.ReportHealthyAsync(release.SnapshotId);
+    using var updater = f.NewUpdates(next);
+    await updater.RemoveAsync(["tethys-kurotiles"]);
+    await updater.CheckAsync();
+    await updater.EnsureInstalledAsync(["tethys-kurotiles"]);
+    var copy = Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2");
+    True(Directory.Exists(copy));
+
+    // Exactly the state the real machine was found in: the stored descriptor still names the shipped
+    // directory the player deleted while the downloaded copy sits in the update root. Reading a snapshot has
+    // to resolve where the bytes are from the disk, because the record is what it was packaged with, not
+    // what is on this machine now.
+    var activationPath = Path.Combine(f.Root, "activation.json");
+    var activation = JsonNode.Parse(await File.ReadAllTextAsync(activationPath))!.AsObject();
+    var activePath = activation["activePath"]!.GetValue<string>();
+    var stored = JsonNode.Parse(await File.ReadAllTextAsync(activePath))!.AsObject();
+    foreach (var package in stored["packages"]!.AsArray())
+    {
+        if (package!["id"]!.GetValue<string>() != "tethys-kurotiles") continue;
+        package["directory"] = Path.Combine(f.Root, "baseline", "regions", "tethys-kurotiles");
+    }
+    await File.WriteAllTextAsync(activePath, stored.ToJsonString(UpdateJson.Options));
+
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    var entry = new RegionCatalog(restarted, Path.Combine(f.Root, "baseline")).Build(release).Single(e => e.PackageId == "tethys-kurotiles");
+    Equal(RegionState.Downloaded, entry.State);
+    True(restarted.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+});
+
 await Test("cross-process lock wait honors cancellation", async () =>
 {
     using var f = New(); await f.Initialize(); using var held = new FileStream(Path.Combine(f.Root, ".update.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
