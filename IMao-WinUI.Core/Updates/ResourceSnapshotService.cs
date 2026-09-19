@@ -286,14 +286,11 @@ public sealed class ResourceSnapshotService
     public static bool IsSelectable(SnapshotPackage package) => Array.IndexOf(SelectableKinds, package.Kind) >= 0;
 
     /// <summary>
-    /// The set that applies before the player has chosen anything: every selectable package is active.
-    /// The copies that ship inside the program cost no download, so the default costs the player nothing;
-    /// only a region the program does not ship is ever downloaded, and only once it is selected.
+    /// The set in force for a snapshot. <c>null</c> means the player has not chosen yet, and the default is
+    /// every selectable package active (decision A: the region packs ship inside the program, so they cost
+    /// no download and a fresh installation is usable immediately).
     /// </summary>
-    private static List<string> DefaultDeselected(ResourceSnapshot snapshot) => [];
-
-    /// <summary>The deselected set in force for a snapshot, resolving the not-yet-chosen default.</summary>
-    private List<string> DeselectedFor(ResourceSnapshot snapshot) => _selection.Deselected ?? DefaultDeselected(snapshot);
+    private List<string> DeselectedFor(ResourceSnapshot snapshot) => _selection.Deselected ?? [];
     /// <summary>True when the package may be deselected: a selectable kind that is not a required package.</summary>
     public static bool IsSelectable(ResourceSnapshot snapshot, string packageId) =>
         snapshot.Packages.Any(p => string.Equals(p.Id, packageId, StringComparison.Ordinal) && IsSelectable(p));
