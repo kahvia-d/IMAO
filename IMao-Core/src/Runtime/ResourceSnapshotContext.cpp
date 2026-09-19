@@ -147,6 +147,12 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
         }
         const auto baselineRoot = Root(snapshot, "baselineRoot");
         const auto mapRoot = Root(snapshot, "mapDataRoot");
+        // Optional: an older snapshot has no icon package and keeps the icons in the
+        // map-data root, so an absent or empty field falls back instead of failing.
+        // Root() canonicalises and requires the directory to exist, as it does for mapDataRoot.
+        const auto iconRoot = snapshot.contains("mapIconRoot") && snapshot.at("mapIconRoot").is_string() &&
+            !snapshot.at("mapIconRoot").get<std::string>().empty()
+            ? Root(snapshot, "mapIconRoot") : mapRoot;
         const auto infoPath = baselineRoot.parent_path() / "build-info.json";
         if (strict || fs::exists(infoPath))
             Require(Read(infoPath).value("baselineId", "") == snapshot.at("baselineId").get<std::string>(), "snapshot baseline is incompatible with program resources");
@@ -170,14 +176,16 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
         std::set<std::string> packageIds, packageRoots, tileScenes;
         std::unordered_map<std::string, std::set<std::string>> declaredFiles;
         int mapPackageCount = 0;
+        int iconPackageCount = 0;
         for (const auto& package : snapshot.at("packages")) {
             const auto id = package.at("id").get<std::string>();
             const auto kind = package.at("kind").get<std::string>();
             Require(!id.empty() && packageIds.insert(Lower(id)).second && !package.value("version", "").empty(), "invalid or duplicate package identity");
-            Require(kind == "map-data" || kind == "tile" || kind == "candidate", "unsupported resource package kind");
+            Require(kind == "map-data" || kind == "map-icons" || kind == "tile" || kind == "candidate", "unsupported resource package kind");
             const auto directory = Root(package, "directory");
             Require(packageRoots.insert(Lower(directory.generic_string())).second, "duplicate package directory");
             if (kind == "map-data") { ++mapPackageCount; Require(directory == mapRoot, "map-data root does not match selected package"); }
+            if (kind == "map-icons") { ++iconPackageCount; Require(directory == iconRoot, "map-icons root does not match selected package"); }
             Require(package.contains("files") && package.at("files").is_array(), "package file inventory missing");
             auto& inventory = declaredFiles[Lower(directory.generic_string())];
             Require(!strict || (IsHash(package.value("sha256", "")) && !package.at("files").empty()), "updated package hash or file inventory missing");
@@ -205,7 +213,7 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
                             "package contains an unverified extra file");
                 }
             }
-            if (kind != "map-data") {
+            if (kind != "map-data" && kind != "map-icons") {
                 const auto manifest = Read(directory / "manifest.json");
                 const auto sceneName = manifest.value("scene", "");
                 const auto* scene = Definition(sceneName);
@@ -234,6 +242,7 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
             }
         }
         Require(mapPackageCount <= 1 && (!strict || mapPackageCount == 1), "snapshot must select exactly one updated map-data package");
+        Require(iconPackageCount <= 1, "snapshot must select at most one icon package");
         const auto calibrations = Read(mapRoot / "scene-calibrations.json");
         const auto approvals = Read(mapRoot / "scene-validation.json");
         CheckConfig(calibrations, "scene-calibrations"); CheckConfig(approvals, "scene-validation");
@@ -282,9 +291,9 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
         std::set<std::string> categories;
         CollectCategories(Read(mapRoot / "filter-items.json"), categories);
         CollectCategories(Read(mapRoot / "new-state-filter-items.json"), categories);
-        const auto icons = Read(mapRoot / "icon-manifest.json");
+        const auto icons = Read(iconRoot / "icon-manifest.json");
         Require(icons.value("formatVersion", 0) == 1 && icons.at("icons").is_object(), "invalid icon manifest");
-        for (const auto& [id, file] : icons.at("icons").items()) CheckRegular(mapRoot, Relative(file.get<std::string>()));
+        for (const auto& [id, file] : icons.at("icons").items()) CheckRegular(iconRoot, Relative(file.get<std::string>()));
         const auto scenes = Read(mapRoot / "new-state-item-scenes.json");
         Require(scenes.value("formatVersion", 0) == 1 && scenes.at("items").is_object(), "invalid item scene mapping");
         for (const auto& [id, names] : scenes.at("items").items()) {

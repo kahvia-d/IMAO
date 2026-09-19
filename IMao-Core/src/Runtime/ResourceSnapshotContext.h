@@ -44,6 +44,17 @@ public:
     static std::filesystem::path MapDataRoot() {
         return configured_ ? Path(snapshot_.at("mapDataRoot").get<std::string>()) : BaselineRoot() / "KuroMap";
     }
+    // Icons are an optional separate package. Snapshots written before the split carry no
+    // mapIconRoot and keep icon-manifest.json and icons/ inside the map-data root, so an
+    // absent or empty field must fall back rather than fail.
+    static std::filesystem::path MapIconRoot() {
+        if (configured_) {
+            const auto entry = snapshot_.find("mapIconRoot");
+            if (entry != snapshot_.end() && entry->is_string() && !entry->get<std::string>().empty())
+                return Path(entry->get<std::string>());
+        }
+        return MapDataRoot();
+    }
     static std::string AppVersion() {
         static const std::string version = [] {
             try {

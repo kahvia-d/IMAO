@@ -1,4 +1,4 @@
-﻿#include "DrawItemBase.h"
+#include "DrawItemBase.h"
 #include <fstream>
 #include "../../DLL_API.h"
 #include "../../util.h"
@@ -187,7 +187,9 @@ string DrawItemBase::GetExternalIconPath(const string& itemNameId) {
 
     call_once(manifestLoadOnce, []() {
         try {
-            const fs::path manifestPath = ResourceSnapshotContext::MapDataRoot() / "icon-manifest.json";
+            // Icon paths inside the manifest are relative to the manifest itself, so moving
+            // icon-manifest.json and icons/ into their own package needs only this root change.
+            const fs::path manifestPath = ResourceSnapshotContext::MapIconRoot() / "icon-manifest.json";
             ifstream file(manifestPath);
             if (!file) {
                 return;

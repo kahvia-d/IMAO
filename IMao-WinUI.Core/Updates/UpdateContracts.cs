@@ -111,6 +111,9 @@ public sealed record ResourceSnapshot
     public string? MaxAppVersion { get; init; }
     public string BaselineRoot { get; init; } = "";
     public string MapDataRoot { get; init; } = "";
+    // Optional. Empty means the icons still live inside MapDataRoot, which is how every
+    // snapshot written before the icon package existed behaves.
+    public string MapIconRoot { get; init; } = "";
     public bool Bundled { get; init; }
     public List<SnapshotPackage> Packages { get; init; } = new();
 }

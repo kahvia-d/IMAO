@@ -7,6 +7,8 @@ internal static class ResourceSessionPaths
 {
     public static ResourceSnapshotService? Snapshots { get; private set; }
     public static string MapDataRoot => Snapshots?.Current.MapDataRoot ?? Path.Combine(AppContext.BaseDirectory, "Assets", "KuroMap");
+    /// <summary>An empty snapshot root means the icons are still inside the map-data root.</summary>
+    public static string MapIconRoot => Snapshots?.Current.MapIconRoot is { Length: > 0 } root ? root : MapDataRoot;
     public static void Initialize(ResourceSnapshotService snapshots)
     {
         if (Snapshots is not null) throw new InvalidOperationException("资源会话已经初始化，请重启后切换。");
