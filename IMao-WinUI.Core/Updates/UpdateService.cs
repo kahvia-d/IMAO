@@ -200,12 +200,24 @@ public sealed class UpdateService : IDisposable
         var catalog = UpdateSignature.Verify(_checkedEnvelope, _keys, _allowTestKeys);
         AcceptCatalog(catalog, _checkedEnvelope);
         var release = InstalledRelease(catalog);
-        // The release decides what is installable, not the active snapshot: a region removed earlier is
-        // still offered here, and a region that ships inside the program never needs a download.
+        // The release decides what can be downloaded, but not what can be switched on: a region whose copy is
+        // already on this machine needs no publication entry to be activated, which is what lets a region the
+        // player turned off be turned back on without any network at all.
+        var localOnly = new List<SnapshotPackage>();
         foreach (var id in wanted)
         {
-            var offered = release.Packages.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.Ordinal))
-                ?? throw new InvalidDataException("资源包标识不在当前发布清单中：" + id);
+            var offered = release.Packages.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.Ordinal));
+            if (offered is null)
+            {
+                // The copy has to be on disk: activating a package whose directory is gone would hand the host
+                // a snapshot it refuses, which takes the whole resource set down with it.
+                var local = _snapshots.Current.Packages.FirstOrDefault(p =>
+                    string.Equals(p.Id, id, StringComparison.Ordinal) && Directory.Exists(p.Directory))
+                    ?? throw new InvalidDataException("这个区域本机没有副本，更新渠道也不提供，暂时无法启用：" + id);
+                if (!ResourceSnapshotService.IsSelectable(local)) throw new InvalidDataException("该资源包为必需资源，不能单独安装：" + id);
+                localOnly.Add(local);
+                continue;
+            }
             if (!ResourceSnapshotService.IsSelectable(new SnapshotPackage { Id = offered.Id, Version = offered.Version, Kind = offered.Kind }))
                 throw new InvalidDataException("该资源包为必需资源，不能单独安装：" + id);
         }
@@ -233,7 +245,7 @@ public sealed class UpdateService : IDisposable
         // Activate the requested regions on the active snapshot. This happens before staging so the stored
         // descriptor already names the region that is being reinstalled, which is what lets the narrowed
         // staged snapshot keep it.
-        await _snapshots.AttachPackagesAsync(wanted.Select(id =>
+        var activating = localOnly.Concat(wanted.Where(id => release.Packages.Any(p => string.Equals(p.Id, id, StringComparison.Ordinal))).Select(id =>
         {
             var package = release.Packages.First(p => string.Equals(p.Id, id, StringComparison.Ordinal));
             return new SnapshotPackage
@@ -241,7 +253,8 @@ public sealed class UpdateService : IDisposable
                 Id = package.Id, Version = package.Version, Kind = package.Kind,
                 Directory = PackageDirectory(package), Sha256 = package.Sha256, Files = package.Files
             };
-        }).ToList(), ct).ConfigureAwait(false);
+        })).ToList();
+        await _snapshots.AttachPackagesAsync(activating, ct).ConfigureAwait(false);
         if (needed.Count > 0) await InstallReleaseAsync(release, null, progress, ct, installSet, missing.ToHashSet(StringComparer.Ordinal)).ConfigureAwait(false);
         // The install changed what is on disk, so the host view is recomputed from the expanded snapshot.
         await _snapshots.RefreshRuntimeViewAsync(ct).ConfigureAwait(false);

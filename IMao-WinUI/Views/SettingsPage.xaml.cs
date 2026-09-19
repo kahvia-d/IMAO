@@ -110,18 +110,18 @@ public sealed partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Rebuilds the per-region rows from the running release. Rows are built in code because the list is
-    /// derived from the signed publication, not from a fixed layout.
+    /// Rebuilds the per-region rows from what is installed plus the selection. Rows are built in code
+    /// because the list of regions is a property of the installation, not of a fixed layout.
     /// </summary>
-    private void RenderRegions()
+    private void RenderRegions(bool force = false)
     {
         // A failure while building the region list must not take the settings page, or the program, down with
         // it: the rest of the page is still usable, and the reason ends up in the log.
-        try { RenderRegionsCore(); }
+        try { RenderRegionsCore(force); }
         catch (Exception error)
         {
             AppendStartupLog("region-render-failed " + error);
-            RegionList.Children.Clear();
+            ClearRegionRows();
             RegionSummary.Text = "";
             RegionHint.Visibility = Visibility.Collapsed;
             RegionMessage.IsOpen = true;
@@ -141,15 +141,55 @@ public sealed partial class SettingsPage : Page
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
     }
 
-    private void RenderRegionsCore()
+    /// <summary>
+    /// One region's row, kept between renders so a redraw only rewrites the text and the switch instead of
+    /// tearing the list down and building it again. Rebuilding on every property change is what made the
+    /// switches flicker while a check or an install was running.
+    /// </summary>
+    private sealed class RegionRow
     {
-        AppendStartupLog("region-render-start");
-        var entries = updates.Regions();
-        AppendStartupLog($"region-render-entries count={entries.Count}");
+        public required TextBlock Name { get; init; }
+        public required TextBlock Detail { get; init; }
+        public required ToggleSwitch Toggle { get; init; }
+        public Button? Delete { get; init; }
+    }
+
+    private readonly Dictionary<string, RegionRow> regionRows = new(StringComparer.Ordinal);
+    private readonly List<string> regionRowOrder = [];
+    // A region whose switch the player just moved. While the operation that follows is running, the stored
+    // selection does not yet describe what the player asked for, so the switch must not be snapped back.
+    private readonly HashSet<string> pendingRegionSwitches = new(StringComparer.Ordinal);
+    private IReadOnlyList<RegionEntry>? regionEntries;
+    private DateTimeOffset regionEntriesAt = DateTimeOffset.MinValue;
+    private static readonly TimeSpan RegionEntriesLifetime = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>
+    /// The region list, recomputed no more often than it can meaningfully change. Sizes are read from disk,
+    /// so recomputing on every property change of the update controller made the list stutter while the core
+    /// was loading packs or a download was reporting progress.
+    /// </summary>
+    private IReadOnlyList<RegionEntry> CurrentRegionEntries(bool force)
+    {
+        if (regionEntries is not null && !force)
+        {
+            // During an install the sizes change continuously and the numbers are not worth re-reading for
+            // every progress tick; the list is refreshed once the operation finishes.
+            if (updates.Busy || DateTimeOffset.UtcNow - regionEntriesAt < RegionEntriesLifetime) return regionEntries;
+        }
+        regionEntries = updates.Regions();
+        regionEntriesAt = DateTimeOffset.UtcNow;
+        return regionEntries;
+    }
+
+    private void RenderRegionsCore(bool force)
+    {
+        // The list comes from what is installed plus the selection file, so it is complete on the first
+        // frame. A check only tells us whether a newer copy can be downloaded, which is why nothing here
+        // waits for one.
+        var entries = CurrentRegionEntries(force);
         restoringRegions = true;
         try
         {
-            RegionList.Children.Clear();
             // The core reports what it is doing while it loads the region packs, which is the slowest part
             // of a start and otherwise looks like nothing is happening.
             var status = coreHost.Status;
@@ -159,82 +199,139 @@ public sealed partial class SettingsPage : Page
             RegionCoreState.Visibility = string.IsNullOrEmpty(RegionCoreState.Text) ? Visibility.Collapsed : Visibility.Visible;
             if (entries.Count == 0)
             {
+                ClearRegionRows();
                 RegionSummary.Text = "";
-                RegionHint.Text = updates.Busy
-                    ? "正在读取签名发布清单，稍后这里会列出全部区域。"
-                    : "区域列表来自签名发布清单。点「检查更新」后即可在这里按区域开关；检查也会在启动后自动进行一次。";
+                RegionHint.Text = "没有找到任何区域地图资源。请点「检查更新」或重新安装程序。";
                 RegionHint.Visibility = Visibility.Visible;
+                RenderRegionProgress();
                 return;
             }
+
             var enabled = entries.Count(entry => entry.Selected);
-            var onDisk = entries.Where(entry => entry.Deletable).Sum(entry => entry.Size);
-            var downloaded = updates.DownloadedRegionBytes();
-            RegionSummary.Text = $"已启用 {enabled} / {entries.Count} 个区域  ·  本机副本共 {FormatBytes(onDisk)}"
+            long local = entries.Where(entry => entry.State is RegionState.Bundled or RegionState.Downloaded).Sum(entry => entry.Size);
+            long downloaded = entries.Where(entry => entry.State == RegionState.Downloaded).Sum(entry => entry.Size);
+            var missing = entries.Where(entry => entry.State == RegionState.NotInstalled).ToList();
+            long pending = missing.Where(entry => entry.Selected).Sum(entry => entry.Size);
+            RegionSummary.Text = $"已启用 {enabled} / {entries.Count} 个区域  ·  本机副本共 {FormatBytes(local)}"
                 + (downloaded > 0 ? $"（其中下载来的 {FormatBytes(downloaded)}）" : "")
-                + (entries.Any(entry => entry.State == RegionState.NotInstalled && entry.Selected) ? "  ·  有已启用但尚未安装的区域，重启后会自动补下" : "");
-            RegionHint.Text = entries.Any(entry => entry.Deletable)
-                ? "「停用」只停止加载该区域；「删除」会移除本机副本、腾出空间，之后重新启用会重新下载。"
-                : "区域列表来自签名发布清单。请先点击「检查更新」，之后即可在这里按区域开关。";
+                + (pending > 0 ? $"  ·  已启用但尚未安装的 {FormatBytes(pending)}，启用后会自动下载" : "");
+            RegionHint.Text = (entries.Any(entry => entry.Deletable)
+                ? "「停用」只停止加载该区域，文件保留，重新启用立刻生效；「删除」会移除本机副本、腾出空间，之后重新启用会重新下载。"
+                : "「停用」只停止加载该区域，文件保留，重新启用立刻生效。删除本机副本要先「检查更新」，确认这些资源能从更新渠道重新下载。")
+                + (missing.Count > 0 ? " 未安装的区域在启用时会自动下载。" : "");
             RegionHint.Visibility = Visibility.Visible;
+
+            // A row is only built once. Rows are reused for as long as the same regions are listed; a region
+            // appearing or disappearing is the only thing that changes the structure of the list.
+            if (regionRowOrder.Count != entries.Count || !entries.Select(entry => entry.PackageId).SequenceEqual(regionRowOrder, StringComparer.Ordinal))
+                BuildRegionRows(entries);
+
             foreach (var entry in entries)
             {
-                var label = new TextBlock { Text = entry.Name, VerticalAlignment = VerticalAlignment.Center };
-                var detail = new TextBlock
+                var row = regionRows[entry.PackageId];
+                row.Name.Text = entry.Name;
+                row.Detail.Text = DescribeRegion(entry);
+                // A switch the player just moved keeps its position until the operation it started reports
+                // back; otherwise the first progress tick would visibly snap it back to the old value.
+                if (!pendingRegionSwitches.Contains(entry.PackageId) && row.Toggle.IsOn != entry.Selected) row.Toggle.IsOn = entry.Selected;
+                // Turning a region off always works, and so does turning on anything whose bytes are here. A
+                // region that is neither installed nor offered by the update channel could only fail, so the
+                // switch waits for a check instead of failing after the player moved it.
+                row.Toggle.IsEnabled = !updates.Busy &&
+                    (entry.Selected || entry.State != RegionState.NotInstalled || entry.Downloadable);
+                if (row.Delete is { } delete)
                 {
-                    Text = $"{StateText(entry.State)} · {FormatBytes(entry.Size)}",
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                if (Application.Current.Resources.TryGetValue("IMaoSecondaryTextStyle", out var style) && style is Style textStyle)
-                    detail.Style = textStyle;
-                var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-                text.Children.Add(label);
-                text.Children.Add(detail);
-                var toggle = new ToggleSwitch
-                {
-                    IsOn = entry.Selected,
-                    OnContent = "已启用",
-                    OffContent = "已停用",
-                    Tag = entry.PackageId,
-                    IsEnabled = !updates.Busy,
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                toggle.Toggled += RegionToggle_Toggled;
-                var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
-                actions.Children.Add(toggle);
-                if (entry.Deletable)
-                {
-                    var delete = new Button
-                    {
-                        Content = "删除",
-                        Tag = entry.PackageId,
-                        IsEnabled = !updates.Busy,
-                        VerticalAlignment = VerticalAlignment.Center,
-                    };
-                    if (Application.Current.Resources.TryGetValue("IMaoSecondaryButtonStyle", out var buttonStyle) && buttonStyle is Style secondary)
-                        delete.Style = secondary;
-                    ToolTipService.SetToolTip(delete, $"删除本机副本，腾出 {FormatBytes(entry.Size)}。重新启用该区域时会重新下载。");
-                    delete.Click += RegionDelete_Click;
-                    actions.Children.Add(delete);
+                    delete.IsEnabled = !updates.Busy && entry.Deletable;
+                    ToolTipService.SetToolTip(delete, entry.Deletable
+                        ? $"删除本机副本，腾出 {FormatBytes(entry.Size)}。重新启用该区域时会重新下载。"
+                        : "这些资源目前没有可重新下载的来源，删除后将无法恢复。请先「检查更新」。");
                 }
-                var row = new Grid { ColumnSpacing = 12 };
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                Grid.SetColumn(text, 0);
-                Grid.SetColumn(actions, 1);
-                row.Children.Add(text);
-                row.Children.Add(actions);
-                RegionList.Children.Add(row);
             }
-            AppendStartupLog($"region-render-rows done={entries.Count}");
-            RegionProgress.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
-            RegionProgress.Value = updates.ProgressPercent;
-            RegionProgressText.Text = updates.ProgressText;
-            RegionProgressText.Visibility = string.IsNullOrEmpty(updates.ProgressText) ? Visibility.Collapsed : Visibility.Visible;
-            RegionMessage.IsOpen = updates.Failed;
-            RegionMessage.Severity = InfoBarSeverity.Warning;
-            RegionMessage.Message = updates.Failed ? updates.Message : "";
+            RenderRegionProgress();
         }
         finally { restoringRegions = false; }
+    }
+
+    /// <summary>Builds the row objects for the current region list, replacing any previous ones.</summary>
+    private void BuildRegionRows(IReadOnlyList<RegionEntry> entries)
+    {
+        ClearRegionRows();
+        foreach (var entry in entries)
+        {
+            var label = new TextBlock { Text = entry.Name, VerticalAlignment = VerticalAlignment.Center };
+            var detail = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
+            if (Application.Current.Resources.TryGetValue("IMaoSecondaryTextStyle", out var style) && style is Style textStyle)
+                detail.Style = textStyle;
+            var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+            text.Children.Add(label);
+            text.Children.Add(detail);
+            var toggle = new ToggleSwitch
+            {
+                IsOn = entry.Selected,
+                OnContent = "已启用",
+                OffContent = "已停用",
+                Tag = entry.PackageId,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            toggle.Toggled += RegionToggle_Toggled;
+            var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+            actions.Children.Add(toggle);
+            Button? delete = null;
+            // The button exists whenever a local copy exists, so it does not appear and disappear as the
+            // list is redrawn; whether it can be pressed is decided on each render.
+            if (entry.State is RegionState.Bundled or RegionState.Downloaded)
+            {
+                delete = new Button
+                {
+                    Content = "删除",
+                    Tag = entry.PackageId,
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                if (Application.Current.Resources.TryGetValue("IMaoSecondaryButtonStyle", out var buttonStyle) && buttonStyle is Style secondary)
+                    delete.Style = secondary;
+                delete.Click += RegionDelete_Click;
+                actions.Children.Add(delete);
+            }
+            var row = new Grid { ColumnSpacing = 12 };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Grid.SetColumn(text, 0);
+            Grid.SetColumn(actions, 1);
+            row.Children.Add(text);
+            row.Children.Add(actions);
+            RegionList.Children.Add(row);
+            regionRows[entry.PackageId] = new RegionRow { Name = label, Detail = detail, Toggle = toggle, Delete = delete };
+            regionRowOrder.Add(entry.PackageId);
+        }
+    }
+
+    private void ClearRegionRows()
+    {
+        RegionList.Children.Clear();
+        regionRows.Clear();
+        regionRowOrder.Clear();
+    }
+
+    private void RenderRegionProgress()
+    {
+        RegionProgress.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
+        RegionProgress.Value = updates.ProgressPercent;
+        RegionProgressText.Text = updates.ProgressText;
+        RegionProgressText.Visibility = string.IsNullOrEmpty(updates.ProgressText) ? Visibility.Collapsed : Visibility.Visible;
+        RegionMessage.IsOpen = updates.Failed;
+        RegionMessage.Severity = InfoBarSeverity.Warning;
+        RegionMessage.Message = updates.Failed ? updates.Message : "";
+    }
+
+    /// <summary>
+    /// The second line of a region row: what the local copy is and how big it is. A region that is only
+    /// available for download reports the download size instead, so every row shows a number.
+    /// </summary>
+    private static string DescribeRegion(RegionEntry entry)
+    {
+        if (entry.State == RegionState.NotInstalled)
+            return entry.Downloadable ? $"未安装 · 下载约 {FormatBytes(entry.Size)}" : "未安装";
+        return $"{StateText(entry.State)} · {FormatBytes(entry.Size)}";
     }
 
     private static string StateText(RegionState state) => state switch
@@ -255,8 +352,12 @@ public sealed partial class SettingsPage : Page
     private async void RegionToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (restoringRegions || !IsLoaded || sender is not ToggleSwitch toggle || toggle.Tag is not string packageId) return;
+        // Hold the switch where the player put it for the duration of the operation, then re-read the
+        // selection: if the operation failed, this is what snaps the switch back.
+        pendingRegionSwitches.Add(packageId);
         try { await (toggle.IsOn ? updates.EnableRegionAsync(packageId) : updates.DisableRegionAsync(packageId)); }
         catch (Exception error) { updates.ShowError(error); }
+        finally { pendingRegionSwitches.Remove(packageId); RenderRegions(force: true); }
     }
 
     /// <summary>
@@ -268,6 +369,7 @@ public sealed partial class SettingsPage : Page
         if (restoringRegions || sender is not Button button || button.Tag is not string packageId) return;
         try { await updates.DeleteRegionAsync(packageId); }
         catch (Exception error) { updates.ShowError(error); }
+        finally { RenderRegions(force: true); }
     }
     private async void AutomaticUpdateCheck_Toggled(object sender, RoutedEventArgs e)
     { if (!restoringUpdates && IsLoaded) await updates.SetAutoCheckAsync(AutomaticUpdateCheck.IsOn); }

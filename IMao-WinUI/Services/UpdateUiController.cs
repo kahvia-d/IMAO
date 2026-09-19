@@ -111,19 +111,15 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     });
 
     /// <summary>
-    /// The selectable regions of the running release. Empty until a check has succeeded, because the sizes
-    /// and versions come from the signed publication rather than from anything shipped in the program.
+    /// The selectable regions of this installation. The list is available before any check, because which
+    /// regions exist is a property of what is installed; a check only adds whether each one has a newer
+    /// version available to download.
     /// </summary>
     public IReadOnlyList<RegionEntry> Regions()
     {
-        var release = updater.CurrentRelease;
-        if (release is null) return [];
-        try { return new RegionCatalog(snapshots, ResourceSessionPaths.MapDataRoot).Build(release); }
+        try { return new RegionCatalog(snapshots, ResourceSessionPaths.MapDataRoot).Build(updater.CurrentRelease); }
         catch (Exception error) { ShowError(error); return []; }
     }
-
-    /// <summary>Bytes this installation has downloaded for regions, which is what "downloaded" can mean here.</summary>
-    public long DownloadedRegionBytes() => Regions().Where(region => region.State == RegionState.Downloaded).Sum(region => region.Size);
 
     /// <summary>
     /// Turns a region off and deletes its local copy, which is the action that frees space. The region comes
