@@ -210,6 +210,59 @@ public sealed class ResourceSnapshotService
     }
 
     /// <summary>
+    /// Every package this installation can load: the snapshot that will run after the next restart plus any
+    /// local copy whose package the player turned off.
+    ///
+    /// A deselected package is filtered out of the snapshot the host receives, so without this it would
+    /// vanish from the interface and could never be turned back on. Required packages are included; callers
+    /// filter by kind.
+    /// </summary>
+    public IReadOnlyList<SnapshotPackage> AvailablePackages()
+    {
+        var configured = PendingOrDefault();
+        var packages = configured.Packages.ToDictionary(p => p.Id, StringComparer.Ordinal);
+        foreach (var id in DeselectedFor(configured))
+        {
+            if (packages.ContainsKey(id)) continue;
+            if (TryLocateLocal(id, out var local)) packages[id] = local;
+        }
+        return packages.Values.ToList();
+    }
+
+    /// <summary>Finds a package's copy on disk from any descriptor that still names it.</summary>
+    private bool TryLocateLocal(string packageId, out SnapshotPackage package)
+    {
+        package = null!;
+        foreach (var candidate in DescriptorSources())
+        {
+            var match = candidate.Packages.FirstOrDefault(p =>
+                string.Equals(p.Id, packageId, StringComparison.Ordinal) && Directory.Exists(p.Directory));
+            if (match is null) continue;
+            package = match;
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>Descriptors that may still name a package the current snapshot no longer carries.</summary>
+    private IEnumerable<ResourceSnapshot> DescriptorSources()
+    {
+        if (!string.IsNullOrEmpty(_state.PendingPath) && File.Exists(_state.PendingPath) && _state.PendingPath != _selectedStoredPath)
+        {
+            ResourceSnapshot pending = null!;
+            try { pending = UpdateStorage.Read<ResourceSnapshot>(_state.PendingPath); } catch (Exception ex) when (ex is JsonException or IOException) { }
+            if (pending is not null) yield return pending;
+        }
+        if (!string.IsNullOrEmpty(_selectedStoredPath) && File.Exists(_selectedStoredPath))
+        {
+            ResourceSnapshot active = null!;
+            try { active = UpdateStorage.Read<ResourceSnapshot>(_selectedStoredPath); } catch (Exception ex) { if (ex is JsonException or IOException) { } else throw; }
+            if (active is not null) yield return active;
+        }
+        yield return _bundled;
+    }
+
+    /// <summary>
     /// Adds installed packages to the active snapshot and drops their ids from the deselected set.
     ///
     /// A snapshot may only name packages that are actually on disk, because the native host refuses the

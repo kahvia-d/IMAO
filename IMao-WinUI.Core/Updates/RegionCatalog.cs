@@ -25,6 +25,8 @@ public sealed record RegionEntry
     public RegionState State { get; init; }
     /// <summary>False when the player turned this region off. Selecting it makes it active again.</summary>
     public bool Selected { get; init; }
+    /// <summary>False when the publication does not offer this exact package, so it cannot be downloaded.</summary>
+    public bool Downloadable { get; init; }
 }
 
 /// <summary>
@@ -49,33 +51,53 @@ public sealed class RegionCatalog
     }
 
     /// <summary>
-    /// Lists the selectable regions of a release. Pass the release the installation is running so the
-    /// versions and sizes match what would actually be downloaded.
+    /// Lists the selectable regions this installation can actually load.
+    ///
+    /// The snapshot decides the membership, never the publication on its own: a region the running
+    /// program has no package for cannot be loaded, so offering it would put an entry in the page that
+    /// nothing can act on. A release that predates the running program therefore cannot inject its own
+    /// region list here. The release still supplies the version and the download size, which is what an
+    /// install would fetch.
     /// </summary>
     public IReadOnlyList<RegionEntry> Build(ResourceRelease release)
     {
         var names = ReadNames();
         var deselected = new HashSet<string>(_snapshots.DeselectedPackageIds, StringComparer.Ordinal);
+        var available = _snapshots.AvailablePackages();
+        var released = release.Packages.ToDictionary(p => p.Id, StringComparer.Ordinal);
         var entries = new List<RegionEntry>();
-        foreach (var package in release.Packages)
+        foreach (var package in available)
         {
-            if (!ResourceSnapshotService.IsSelectable(new SnapshotPackage { Id = package.Id, Version = package.Version, Kind = package.Kind })) continue;
-            var bundled = _snapshots.FindBundledPackage(new SnapshotPackage
-            {
-                Id = package.Id, Version = package.Version, Kind = package.Kind, Sha256 = package.Sha256, Files = package.Files
-            }) is not null;
-            var downloaded = !bundled && Directory.Exists(Path.Combine(_snapshots.Root, "packages", package.Id, package.Version));
+            if (!ResourceSnapshotService.IsSelectable(package)) continue;
+            var bundled = _snapshots.FindBundledPackage(package) is not null;
+            var onDisk = bundled || Directory.Exists(package.Directory);
+            // A released descriptor is used only when it describes this very package; otherwise the local
+            // copy is the only truth about it and there is nothing to download.
+            var offer = released.GetValueOrDefault(package.Id) is { } candidate && candidate.Version == package.Version ? candidate : null;
             entries.Add(new RegionEntry
             {
                 PackageId = package.Id,
                 Name = DisplayName(package.Id, names),
-                Version = package.Version,
-                Size = package.Size,
-                State = bundled ? RegionState.Bundled : downloaded ? RegionState.Downloaded : RegionState.NotInstalled,
+                Version = offer?.Version ?? package.Version,
+                Size = offer?.Size ?? LocalSize(package.Directory),
+                State = bundled ? RegionState.Bundled : onDisk ? RegionState.Downloaded : RegionState.NotInstalled,
                 Selected = !deselected.Contains(package.Id),
+                Downloadable = offer is not null,
             });
         }
-        return entries;
+        return entries.OrderBy(entry => entry.Name, StringComparer.CurrentCulture).ToList();
+    }
+
+    /// <summary>Total bytes of a local package copy, for a package the publication does not describe.</summary>
+    private static long LocalSize(string directory)
+    {
+        try
+        {
+            return Directory.Exists(directory)
+                ? Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories).Sum(path => new FileInfo(path).Length)
+                : 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0; }
     }
 
     /// <summary>The package ids of a release that can be individually selected.</summary>

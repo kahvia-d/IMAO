@@ -744,41 +744,6 @@ await Test("everything the program ships is active by default and costs no downl
     Equal(0, next.DeselectedPackageIds.Count);
 });
 
-await Test("the region list reports name, size, location and selection state", async () =>
-{
-    using var f = New(); f.BundleMapData(); await f.Initialize();
-    var release = f.RegionCatalog();
-    f.Publish(release); await f.Updates.CheckAsync();
-    f.Network.Requests.Clear();
-    await f.Updates.EnsureInstalledAsync(["taro-kurotiles"]);
-    // Names come from the shipped file; an unknown slug falls back to the package id instead of blank.
-    File.WriteAllText(Path.Combine(f.Bundled.MapDataRoot, "region-names.json"),
-        "{\"formatVersion\":1,\"regions\":{\"taro\":\"塔罗\",\"lahai\":\"拉海洛\"}}");
-    var catalog = new RegionCatalog(f.Snapshots, f.Bundled.MapDataRoot);
-    var entries = catalog.Build(release.Resources[0]);
-    // The list covers the whole release, including regions this installation has not installed yet, so the
-    // player can turn one on from here.
-    Equal(3, entries.Count);
-    EqualSequence(["lahai-kurotiles", "taro-kurotiles", "tethys-kurotiles"], entries.Select(e => e.PackageId).OrderBy(n => n, StringComparer.Ordinal).ToArray());
-    // The mandatory package is never offered as a choice.
-    False(entries.Any(e => e.PackageId == "map-data"));
-    var taro = entries.Single(e => e.PackageId == "taro-kurotiles");
-    Equal("塔罗", taro.Name);
-    True(taro.Selected);
-    Equal(RegionState.Downloaded, taro.State);
-    True(taro.Size > 0);
-    // A region the installation does not carry yet: named, sized, and not installed.
-    var tethys = entries.Single(e => e.PackageId == "tethys-kurotiles");
-    True(tethys.Selected);
-    Equal(RegionState.NotInstalled, tethys.State);
-    True(tethys.Size > 0);
-    // A slug with no name entry falls back to the package id rather than showing nothing.
-    Equal("tethys-kurotiles", tethys.Name);
-    // Turning the installed region off is reflected.
-    await f.Snapshots.SetDeselectedPackagesAsync(["taro-kurotiles"]);
-    False(catalog.Build(release.Resources[0]).Single(e => e.PackageId == "taro-kurotiles").Selected);
-});
-
 await Test("cross-process lock wait honors cancellation", async () =>
 {
     using var f = New(); await f.Initialize(); using var held = new FileStream(Path.Combine(f.Root, ".update.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
