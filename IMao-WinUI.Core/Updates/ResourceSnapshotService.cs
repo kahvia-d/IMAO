@@ -86,6 +86,18 @@ public sealed class ResourceSnapshotService
         }
         if (_state.BaselineId != _bundled.BaselineId)
             _state = new ActivationState { BaselineId = _bundled.BaselineId, ActivePath = bundledPath };
+        // The program's own resources can change without the baseline or the version changing, which is what
+        // happens whenever the shipped pack layout is rebuilt in place. The recorded path then points at a
+        // descriptor of some earlier layout, and every decision made from it describes resources this
+        // installation no longer has. The recorded bundled descriptor is name-checked against the current one
+        // so that state is dropped rather than honoured.
+        else if (IsRecordedBundledPath(_state.ActivePath) && Path.GetFullPath(_state.ActivePath) != bundledPath)
+        {
+            _state.ActivePath = bundledPath;
+            _state.PreviousPath = null;
+            _state.PendingPath = null;
+            LastNotice = "程序附带资源已更新，已重新采用当前资源。";
+        }
         if (string.IsNullOrEmpty(_state.ActivePath)) _state.ActivePath = bundledPath;
         _selection = ReadSelection();
 
@@ -345,6 +357,10 @@ public sealed class ResourceSnapshotService
 
     /// <summary>True when the package may be deselected: a selectable kind that is not a required package.</summary>
     public static bool IsSelectable(SnapshotPackage package) => Array.IndexOf(SelectableKinds, package.Kind) >= 0;
+
+    /// <summary>True when a recorded path points at a copy of the program's own resources.</summary>
+    private static bool IsRecordedBundledPath(string path) =>
+        !string.IsNullOrEmpty(path) && Path.GetFileName(path).StartsWith("bundled-", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The set in force for a snapshot. <c>null</c> means the player has not chosen yet, and the default is
