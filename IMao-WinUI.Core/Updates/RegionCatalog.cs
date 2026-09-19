@@ -28,8 +28,9 @@ public sealed record RegionEntry
     /// <summary>False when the publication does not offer this exact package, so it cannot be downloaded.</summary>
     public bool Downloadable { get; init; }
     /// <summary>
-    /// True when the local copy may be deleted, which requires that it can be brought back: a region whose
-    /// publication entry is missing would be gone for good, so the interface must not offer that.
+    /// True when a local copy exists, so deleting it frees space. The player decides whether to keep a
+    /// region's bytes; the only consequence is that turning it back on has to download them again, which
+    /// the interface says before the click.
     /// </summary>
     public bool Deletable { get; init; }
 }
@@ -95,7 +96,7 @@ public sealed class RegionCatalog
                 State = state,
                 Selected = !deselected.Contains(package.Id),
                 Downloadable = offer is not null,
-                Deletable = onDisk && offer is not null,
+                Deletable = onDisk,
             });
         }
         return entries.OrderBy(entry => entry.Name, StringComparer.CurrentCulture).ToList();

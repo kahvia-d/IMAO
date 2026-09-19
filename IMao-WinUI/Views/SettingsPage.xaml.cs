@@ -215,9 +215,7 @@ public sealed partial class SettingsPage : Page
             RegionSummary.Text = $"已启用 {enabled} / {entries.Count} 个区域  ·  本机副本共 {FormatBytes(local)}"
                 + (downloaded > 0 ? $"（其中下载来的 {FormatBytes(downloaded)}）" : "")
                 + (pending > 0 ? $"  ·  已启用但尚未安装的 {FormatBytes(pending)}，启用后会自动下载" : "");
-            RegionHint.Text = (entries.Any(entry => entry.Deletable)
-                ? "「停用」只停止加载该区域，文件保留，重新启用立刻生效；「删除」会移除本机副本、腾出空间，之后重新启用会重新下载。"
-                : "「停用」只停止加载该区域，文件保留，重新启用立刻生效。删除本机副本要先「检查更新」，确认这些资源能从更新渠道重新下载。")
+            RegionHint.Text = "「停用」只停止加载该区域，文件保留，重新启用立刻生效；「删除」会把本机副本从磁盘上删掉、腾出空间，之后重新启用会重新下载。"
                 + (missing.Count > 0 ? " 未安装的区域在启用时会自动下载。" : "");
             RegionHint.Visibility = Visibility.Visible;
 
@@ -243,8 +241,8 @@ public sealed partial class SettingsPage : Page
                 {
                     delete.IsEnabled = !updates.Busy && entry.Deletable;
                     ToolTipService.SetToolTip(delete, entry.Deletable
-                        ? $"删除本机副本，腾出 {FormatBytes(entry.Size)}。重新启用该区域时会重新下载。"
-                        : "这些资源目前没有可重新下载的来源，删除后将无法恢复。请先「检查更新」。");
+                        ? $"从磁盘上删除本机副本，腾出 {FormatBytes(entry.Size)}。重新启用该区域时会重新下载。"
+                        : "这个区域本机没有副本。");
                 }
             }
             RenderRegionProgress();

@@ -177,11 +177,12 @@ public sealed class ResourceSnapshotService
     ///
     /// The stored descriptor is deliberately left alone, so the region can be selected again later.
     /// </summary>
+    /// <summary>
+    /// Deselects the named packages and reports which local copies the caller may delete. Whether a copy can
+    /// be downloaded again is not consulted: a player removing a region is asking to free the space, and the
+    /// interface has already said that turning the region back on downloads it.
+    /// </summary>
     public async Task<IReadOnlyList<string>> RemovePackagesAsync(IEnumerable<string> packageIds, CancellationToken ct = default)
-        => await RemovePackagesAsync(packageIds, null, ct).ConfigureAwait(false);
-
-    /// <summary>Overload that only deletes copies the given reinstallable ids can restore.</summary>
-    public async Task<IReadOnlyList<string>> RemovePackagesAsync(IEnumerable<string> packageIds, IReadOnlySet<string>? reinstallable, CancellationToken ct = default)
     {
         EnsureInitialized();
         var configured = PendingOrDefault();
@@ -195,7 +196,7 @@ public sealed class ResourceSnapshotService
         await ApplySelectionAsync(ct).ConfigureAwait(false);
         var removable = wanted
             .Select(id => configured.Packages.First(p => p.Id == id))
-            .Where(p => Directory.Exists(p.Directory) && (reinstallable is null || reinstallable.Contains(p.Id)))
+            .Where(p => Directory.Exists(p.Directory))
             .Select(p => p.Directory)
             .ToList();
         LastNotice = removable.Count > 0
