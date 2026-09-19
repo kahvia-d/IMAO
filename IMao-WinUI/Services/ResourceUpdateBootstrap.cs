@@ -30,6 +30,7 @@ internal static class ResourceUpdateBootstrap
             {
                 BaselineRoot = assets,
                 MapDataRoot = ResolveBundledPath(assets, relative.MapDataRoot),
+                MapIconRoot = string.IsNullOrEmpty(relative.MapIconRoot) ? "" : ResolveBundledPath(assets, relative.MapIconRoot),
                 Packages = relative.Packages.Select(p => p with { Directory = ResolveBundledPath(assets, p.Directory) }).ToList()
             };
         }

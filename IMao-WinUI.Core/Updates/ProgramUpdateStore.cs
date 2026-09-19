@@ -238,6 +238,7 @@ public sealed class ProgramUpdateStore
         var assets = Path.Combine(appDirectory, "Assets");
         var bundled = UpdateStorage.Read<ResourceSnapshot>(Path.Combine(assets, "Updates", "bundled-snapshot.json"));
         var snapshot = bundled with { BaselineRoot = assets, MapDataRoot = UpdateStorage.SafeChild(assets, bundled.MapDataRoot),
+            MapIconRoot = string.IsNullOrEmpty(bundled.MapIconRoot) ? "" : UpdateStorage.SafeChild(assets, bundled.MapIconRoot),
             Packages = bundled.Packages.Select(p => p with { Directory = UpdateStorage.SafeChild(assets, p.Directory) }).ToList() };
         var path = Path.Combine(Directory.GetParent(appDirectory)!.FullName, "preflight.json");
         await UpdateStorage.WriteAsync(path, snapshot, ct);

@@ -227,9 +227,14 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
                 if (strict) {
                     Require(inventory.contains("manifest.json") && inventory.contains("visual-index.imx"), "package manifest or visual index is not in verified inventory");
                     if (kind == "tile") {
-                        const auto file = Relative(manifest.at("features").at("file").get<std::string>()).generic_string();
-                        Require(inventory.contains(Lower(file)), "feature source is not in verified inventory");
+                        // The source XML is a build input that is no longer shipped: it is about
+                        // 75% of a pack and the runtime never opens it. The binary feature pack is
+                        // then the authoritative artefact, so require whichever one is present.
+                        const auto source = Relative(manifest.at("features").at("file").get<std::string>());
+                        const bool sourceShipped = fs::exists(directory / source);
+                        if (sourceShipped) Require(inventory.contains(Lower(source.generic_string())), "feature source is not in verified inventory");
                         if (fs::exists(directory / "features.imf")) Require(inventory.contains("features.imf"), "feature binary is not in verified inventory");
+                        Require(sourceShipped || inventory.contains("features.imf"), "tile package ships neither a feature source nor a feature binary");
                     } else {
                         const auto references = manifest.value("formatVersion", 0) == 1 ? json::array({manifest}) : manifest.at("references");
                         for (const auto& reference : references) {

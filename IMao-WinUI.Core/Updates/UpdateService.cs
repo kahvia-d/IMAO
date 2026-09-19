@@ -348,7 +348,8 @@ public sealed class UpdateService : IDisposable
             {
                 FormatVersion = 2, MinAppVersion = release.MinAppVersion, MaxAppVersion = release.MaxAppVersion,
                 SnapshotId = release.SnapshotId, Sequence = release.Sequence, BaselineId = release.BaselineId,
-                BaselineRoot = _snapshots.Current.BaselineRoot, MapDataRoot = packages.Single(p => p.Kind == "map-data").Directory, Packages = packages
+                BaselineRoot = _snapshots.Current.BaselineRoot, MapDataRoot = packages.Single(p => p.Kind == "map-data").Directory,
+                MapIconRoot = packages.SingleOrDefault(p => p.Kind == "map-icons")?.Directory ?? "", Packages = packages
             };
             progress?.Report(new UpdateProgress("检查资源兼容性", total, total));
             await _snapshots.StageAsync(candidate, ct).ConfigureAwait(false);

@@ -170,7 +170,8 @@ public sealed class MapFilterCatalog
             }
         }
 
-        Dictionary<string, string> icons = ReadIcons(kuroMapDirectory, warnings);
+        // Icons may live in their own package; an empty snapshot root falls back to the map-data root.
+        Dictionary<string, string> icons = ReadIcons(IMao_WinUI.Helpers.ResourceSessionPaths.MapIconRoot, warnings);
         var items = available.Values.Select(source =>
         {
             official.TryGetValue(source.Id, out OfficialItem? metadata);

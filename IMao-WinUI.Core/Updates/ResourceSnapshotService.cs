@@ -201,6 +201,12 @@ public sealed class ResourceSnapshotService
             await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct).ConfigureAwait(false);
         }
         if (snapshot.MapDataRoot != snapshot.Packages.Single(p => p.Kind == "map-data").Directory) throw new InvalidDataException("地图数据目录与资源快照不一致。");
+        // The icon package is optional: when the root is empty the icons stay in the map-data
+        // root, which is how every snapshot written before the split behaves.
+        var iconPackages = snapshot.Packages.Where(p => p.Kind == "map-icons").ToList();
+        if (iconPackages.Count > 1) throw new InvalidDataException("资源快照包含多个图标包。");
+        if (!string.IsNullOrEmpty(snapshot.MapIconRoot) && (iconPackages.Count != 1 || snapshot.MapIconRoot != iconPackages[0].Directory))
+            throw new InvalidDataException("图标目录与资源快照不一致。");
         if (_preflight is not null) await _preflight(await MaterializeAsync(snapshot, path, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         return snapshot;
     }
@@ -223,7 +229,8 @@ public sealed class ResourceSnapshotService
     {
         if (snapshot.Bundled) return _bundled;
         var packages = snapshot.Packages.Select(p => FindBundledPackage(p) is { } bundled ? p with { Directory = bundled.Directory } : p).ToList();
-        return snapshot with { BaselineRoot = _bundled.BaselineRoot, Packages = packages, MapDataRoot = packages.SingleOrDefault(p => p.Kind == "map-data")?.Directory ?? "" };
+        return snapshot with { BaselineRoot = _bundled.BaselineRoot, Packages = packages, MapDataRoot = packages.SingleOrDefault(p => p.Kind == "map-data")?.Directory ?? "",
+            MapIconRoot = packages.SingleOrDefault(p => p.Kind == "map-icons")?.Directory ?? "" };
     }
 
     private async Task<string> MaterializeAsync(ResourceSnapshot snapshot, string storedPath, CancellationToken ct)

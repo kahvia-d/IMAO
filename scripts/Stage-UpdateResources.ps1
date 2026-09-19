@@ -54,11 +54,27 @@ function Get-Sha256([string]$Path) {
     try { return ([BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace('-','').ToLowerInvariant() }
     finally { $algorithm.Dispose(); $stream.Dispose() }
 }
-function Assert-OutputInventory([string]$Source, [string]$Output, [string[]]$Generated = @(), [switch]$Complete) {
+# A staged inventory may be a subtree of the source: the icon package is carved out of
+# Assets/KuroMap, so both halves have to be asserted against the same source tree.
+function Test-InventoryScope([string]$Relative, [string[]]$Only, [string[]]$Skip) {
+    foreach ($entry in $Skip) {
+        $prefix = $entry.TrimEnd('/')
+        if ($Relative -eq $prefix -or $Relative.StartsWith($prefix + '/', [StringComparison]::OrdinalIgnoreCase)) { return $false }
+    }
+    if ($Only.Count -eq 0) { return $true }
+    foreach ($entry in $Only) {
+        $prefix = $entry.TrimEnd('/')
+        if ($Relative -eq $prefix -or $Relative.StartsWith($prefix + '/', [StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    return $false
+}
+function Assert-OutputInventory([string]$Source, [string]$Output, [string[]]$Generated = @(), [switch]$Complete,
+    [string[]]$Only = @(), [string[]]$Skip = @()) {
     $expected = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     $sourcePrefix = [IO.Path]::GetFullPath($Source).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
     foreach ($file in [IO.Directory]::EnumerateFiles($Source, '*', [IO.SearchOption]::AllDirectories)) {
-        [void]$expected.Add($file.Substring($sourcePrefix.Length).Replace('\','/'))
+        $relative = $file.Substring($sourcePrefix.Length).Replace('\','/')
+        if (Test-InventoryScope $relative $Only $Skip) { [void]$expected.Add($relative) }
     }
     foreach ($relative in $Generated) { [void]$expected.Add($relative.Replace('\','/')) }
     $present = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
@@ -73,6 +89,7 @@ function Assert-OutputInventory([string]$Source, [string]$Output, [string[]]$Gen
                 if (([IO.File]::GetAttributes($path) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Staged resource path is a link; use a new output directory.' }
                 if ([IO.Directory]::Exists($path)) { $pending.Push($path); continue }
                 $relative = $path.Substring($outputPrefix.Length).Replace('\','/')
+                if (-not (Test-InventoryScope $relative $Only $Skip)) { continue }
                 if (-not $expected.Contains($relative)) { throw "Unexpected stale resource file '$relative'; use a new output directory. Existing files were not deleted." }
                 [void]$present.Add($relative)
             }
@@ -125,9 +142,20 @@ $assets = Join-Path $Destination 'Assets'
 $mapData = Join-Path $assets 'KuroMap'
 $sceneNames = @('World','Tethys','Fabricatorium','Avinoleum','Lahai','LowerVault','Darkplain','TimeRiftRuins')
 $runtimeFiles = @($sceneNames | ForEach-Object { "runtime/itemsData_$_.json" })
-Assert-OutputInventory (Join-Path $SourceRoot 'Assets/KuroMap') $mapData $runtimeFiles
+$iconData = Join-Path $assets 'KuroMapIcons'
+Assert-OutputInventory (Join-Path $SourceRoot 'Assets/KuroMap') $mapData $runtimeFiles -Skip @('icon-manifest.json', 'icons')
+Assert-OutputInventory (Join-Path $SourceRoot 'Assets/KuroMap') $iconData -Only @('icon-manifest.json', 'icons')
 [IO.Directory]::CreateDirectory($mapData) | Out-Null
 Copy-Item -Path (Join-Path $SourceRoot 'Assets/KuroMap/*') -Destination $mapData -Recurse -Force
+# The icon set is its own package: it is 68% of the map-data bytes, so a points-only change
+# should not cost a full map-data download. Icons are read from the snapshot's mapIconRoot.
+# Copy rather than move: staging must stay idempotent when a build reuses its output
+# directory, and Move-Item fails once the icon copy already exists there.
+[IO.Directory]::CreateDirectory($iconData) | Out-Null
+Copy-Item -LiteralPath (Join-Path $mapData 'icon-manifest.json') -Destination (Join-Path $iconData 'icon-manifest.json') -Force
+Copy-Item -LiteralPath (Join-Path $mapData 'icons') -Destination $iconData -Recurse -Force
+Remove-Item -LiteralPath (Join-Path $mapData 'icon-manifest.json') -Force
+Remove-Item -LiteralPath (Join-Path $mapData 'icons') -Recurse -Force
 $runtime = Join-Path $mapData 'runtime'
 [IO.Directory]::CreateDirectory($runtime) | Out-Null
 foreach ($scene in $sceneNames) {
@@ -153,9 +181,11 @@ foreach ($state in $mapManifest.states) {
     elseif ($state.runtime -ne $name) { throw 'Map-data state identity differs from the compiled scene mapping.' }
 }
 Write-Json $mapManifest (Join-Path $mapData 'manifest.json')
-Assert-OutputInventory (Join-Path $SourceRoot 'Assets/KuroMap') $mapData $runtimeFiles -Complete
+Assert-OutputInventory (Join-Path $SourceRoot 'Assets/KuroMap') $mapData $runtimeFiles -Complete -Skip @('icon-manifest.json', 'icons')
+Assert-OutputInventory (Join-Path $SourceRoot 'Assets/KuroMap') $iconData -Only @('icon-manifest.json', 'icons') -Complete
 $packages = [Collections.Generic.List[object]]::new()
 $packages.Add([ordered]@{id='map-data';version=(Get-BundledPackageVersion $mapData 'map-data');kind='map-data';directory='KuroMap';sha256='';files=@()})
+$packages.Add([ordered]@{id='map-icons';version=(Get-BundledPackageVersion $iconData 'map-icons');kind='map-icons';directory='KuroMapIcons';sha256='';files=@()})
 $tileRegistry = Get-Content -LiteralPath (Join-Path $SourceRoot 'Assets/FeaturesDatas/kuro-tile-packs.json') -Encoding UTF8 -Raw | ConvertFrom-Json
 foreach ($name in $tileRegistry.packs) {
     $relative = "FeaturesDatas/KuroTilePacks/$name"
@@ -205,7 +235,7 @@ foreach ($name in $candidateRegistry.packs) {
     Assert-OutputInventory $sourcePack (Join-Path $assets $relative) -Complete
     $packages.Add([ordered]@{id=[string]$manifest.packId;version=(Get-BundledPackageVersion (Join-Path $assets $relative) ([string]$manifest.packId));kind='candidate';directory=$relative;sha256='';files=@()})
 }
-Write-Json ([ordered]@{formatVersion=1;snapshotId="bundled-$Version";sequence=0;baselineId=$BaselineId;baselineRoot='.';mapDataRoot='KuroMap';bundled=$true;packages=@($packages.ToArray())}) (Join-Path $assets 'Updates/bundled-snapshot.json')
+Write-Json ([ordered]@{formatVersion=1;snapshotId="bundled-$Version";sequence=0;baselineId=$BaselineId;baselineRoot='.';mapDataRoot='KuroMap';mapIconRoot='KuroMapIcons';bundled=$true;packages=@($packages.ToArray())}) (Join-Path $assets 'Updates/bundled-snapshot.json')
 $keyFile = Join-Path $SourceRoot 'Assets/Updates/trusted-keys.json'
 if (Test-Path -LiteralPath $keyFile) { Copy-Item -LiteralPath $keyFile -Destination (Join-Path $assets 'Updates/trusted-keys.json') -Force }
 $baseFiles = @('FeaturesDatas/Map_features.imf','FeaturesDatas/Map_visual_index.imx')
