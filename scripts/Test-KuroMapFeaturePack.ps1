@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$PackRoot = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Assets\FeaturesDatas\KuroTilePacks\Dreamzhou'),
+    [string]$PackRoot = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Assets\FeaturesDatas\KuroTilePacks\tethys'),
     [switch]$AllowUnverified
 )
 

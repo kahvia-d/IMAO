@@ -1,0 +1,303 @@
+{
+  "formatVersion": 1,
+  "packId": "qiqiu-kurotiles",
+  "scene": "World",
+  "sceneId": 1,
+  "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "generatedAtUtc": "2026-09-18T16:56:43.6149912Z",
+  "source": {
+    "static": "https://web-static.kurobbs.com",
+    "state": 8,
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "coordinateTransform": {
+    "originX": 2474.0,
+    "originY": 1957.0,
+    "scale": 1.205
+  },
+  "anchorWorldCoordinate": {
+    "x": 12225.0,
+    "y": 11688.0
+  },
+  "tileRadius": null,
+  "tileBounds": {
+    "minX": 11,
+    "maxX": 18,
+    "minY": -18,
+    "maxY": -10
+  },
+  "tiles": [
+    {
+      "x": 11,
+      "y": -12,
+      "file": "tiles/8_11_-12.png",
+      "sha256": "d4c0d210a5f14e066bf6172320bfda52bd2d6b3875d4cb00636fdedb224f487b"
+    },
+    {
+      "x": 11,
+      "y": -11,
+      "file": "tiles/8_11_-11.png",
+      "sha256": "3f37e353c965bd8bbe786446dd50efe9fcf9d481cbdcabe28fba5dcdbf6eb946"
+    },
+    {
+      "x": 11,
+      "y": -10,
+      "file": "tiles/8_11_-10.png",
+      "sha256": "f1451289b535085608bce6ab1d4bc65adab07fa847443212c3c8c38237d4c8a4"
+    },
+    {
+      "x": 12,
+      "y": -16,
+      "file": "tiles/8_12_-16.png",
+      "sha256": "9ee70313af2783661558562748102e88688c05e228623239ea3df50dce14e0f0"
+    },
+    {
+      "x": 12,
+      "y": -12,
+      "file": "tiles/8_12_-12.png",
+      "sha256": "706d9fdc3d6c7cc03c4721c2cc6c3e4afd31056cb7f06bfb52b2a1fbc2688427"
+    },
+    {
+      "x": 12,
+      "y": -11,
+      "file": "tiles/8_12_-11.png",
+      "sha256": "6a650481333992e3a51b9f702106235bd83b37c3edd930688cf58521a2efa64d"
+    },
+    {
+      "x": 12,
+      "y": -10,
+      "file": "tiles/8_12_-10.png",
+      "sha256": "36b2880e6eda611b6d123dd429f567ee333a7c400bbad34e679049a761e8222c"
+    },
+    {
+      "x": 13,
+      "y": -16,
+      "file": "tiles/8_13_-16.png",
+      "sha256": "eee1c95b57335e52e97d75d01d2623f346d8f4d8ddd346e001cac5fb74399ac0"
+    },
+    {
+      "x": 13,
+      "y": -15,
+      "file": "tiles/8_13_-15.png",
+      "sha256": "ffad89f691d9d5453c0ef8ba57dcee893d3d10d92cba48fa9b117c52b2be7c61"
+    },
+    {
+      "x": 13,
+      "y": -14,
+      "file": "tiles/8_13_-14.png",
+      "sha256": "11e47979ae45cd70e66ed06114a6bc69142b0c6c72292b4037c91f3c325e3f24"
+    },
+    {
+      "x": 13,
+      "y": -13,
+      "file": "tiles/8_13_-13.png",
+      "sha256": "cfb1991a4b78e17c63ddd89e22f8f2a9e3036cfa4fc0d0f4aec014800107d287"
+    },
+    {
+      "x": 13,
+      "y": -12,
+      "file": "tiles/8_13_-12.png",
+      "sha256": "0881115cbe0bdd1ea56bd1697d5f48df5a235bc31f0241759d2b5735a768a4af"
+    },
+    {
+      "x": 13,
+      "y": -11,
+      "file": "tiles/8_13_-11.png",
+      "sha256": "1c8b8af659ca89052bdd5fc014d440d2f52d5f51e2501e01940d065f6a798db1"
+    },
+    {
+      "x": 13,
+      "y": -10,
+      "file": "tiles/8_13_-10.png",
+      "sha256": "629f007176183edbedd0a5c8f035bf66c0c7d5114c74c8e022d34bdb887af8e8"
+    },
+    {
+      "x": 14,
+      "y": -16,
+      "file": "tiles/8_14_-16.png",
+      "sha256": "4bc4581e44a34982fc813e4652da937564c5391479c1b4b52e09ae5a1cd91726"
+    },
+    {
+      "x": 14,
+      "y": -15,
+      "file": "tiles/8_14_-15.png",
+      "sha256": "bd96fec554dc34e24c6c8723757b98c665f0e42bc48a036d6edefa6b01f38cc5"
+    },
+    {
+      "x": 14,
+      "y": -14,
+      "file": "tiles/8_14_-14.png",
+      "sha256": "d91fe0bba6bed15114748718d4b2981622528e0795c7d8e652fa65a8b2f3b14d"
+    },
+    {
+      "x": 14,
+      "y": -13,
+      "file": "tiles/8_14_-13.png",
+      "sha256": "0e661eb538069bf345dc84ad68f85621e32ef2fa025a69a50618be9e32d2e8d1"
+    },
+    {
+      "x": 14,
+      "y": -12,
+      "file": "tiles/8_14_-12.png",
+      "sha256": "959b30a6fd71ab47fbaa0fa1ddf563548f7361780274a13c20ecf384b844c36b"
+    },
+    {
+      "x": 14,
+      "y": -11,
+      "file": "tiles/8_14_-11.png",
+      "sha256": "4069a4da15e7144c592d522dde8766b6ac1c35294e060452d39c7df41873a388"
+    },
+    {
+      "x": 14,
+      "y": -10,
+      "file": "tiles/8_14_-10.png",
+      "sha256": "4b9e947ca8dcfc02d26481936b7fad4dc35ce7f4e6c47c9c8968243e23a16f81"
+    },
+    {
+      "x": 15,
+      "y": -16,
+      "file": "tiles/8_15_-16.png",
+      "sha256": "c6f2912386cc3325678c10a218d4d3b6116ba4a266a4066e2cd781850960c8a0"
+    },
+    {
+      "x": 15,
+      "y": -15,
+      "file": "tiles/8_15_-15.png",
+      "sha256": "64f69c7b5b8b355f36c01c0f1a9e179d326b0d7fb9c39fd61f2e0227e9dbb168"
+    },
+    {
+      "x": 15,
+      "y": -14,
+      "file": "tiles/8_15_-14.png",
+      "sha256": "a33d14a77e9c3824bc6c99aa419fa4926857ed93e1f945942afb03196d1da095"
+    },
+    {
+      "x": 15,
+      "y": -13,
+      "file": "tiles/8_15_-13.png",
+      "sha256": "d7a8488b60d47e1820fd7f5f30d74072687a4686ebf13849655c805b6b7f0dfc"
+    },
+    {
+      "x": 15,
+      "y": -12,
+      "file": "tiles/8_15_-12.png",
+      "sha256": "8d5c50b303e4e42a0a30d9c573469e948d998ec79b23c81cb2b6591e34e37a2d"
+    },
+    {
+      "x": 15,
+      "y": -11,
+      "file": "tiles/8_15_-11.png",
+      "sha256": "8a7b823168eb34db7e0c0bb01159e8ae5f7f7bea54d768ca53f5afd52f7a5f30"
+    },
+    {
+      "x": 15,
+      "y": -10,
+      "file": "tiles/8_15_-10.png",
+      "sha256": "df7ecbc6c2e0e68bad6f8ae015a2f6e558bba90fbc216cc4d2608c5e9dbba6f4"
+    },
+    {
+      "x": 16,
+      "y": -16,
+      "file": "tiles/8_16_-16.png",
+      "sha256": "511f7cb8a6912e9c4c7eb2e56678ecfaff053eef7aedb18efde84e909a6f6efd"
+    },
+    {
+      "x": 16,
+      "y": -15,
+      "file": "tiles/8_16_-15.png",
+      "sha256": "5c4299907f6823fb7c82fcfe1b381f81900e45a17730073dcc5e7a6c09958c66"
+    },
+    {
+      "x": 16,
+      "y": -14,
+      "file": "tiles/8_16_-14.png",
+      "sha256": "02a32ddb55c94317ca82d63b5369f7ed428a1e4d9c17ce8d628f6e694fbcd8f6"
+    },
+    {
+      "x": 16,
+      "y": -13,
+      "file": "tiles/8_16_-13.png",
+      "sha256": "dba67095a1d3d33066d53707b0181175c74f9575f442d18b467b8a47354e13cb"
+    },
+    {
+      "x": 16,
+      "y": -12,
+      "file": "tiles/8_16_-12.png",
+      "sha256": "cf3958205386ab2ae6695b455700d14124973c562879719f6d6deedee51215b0"
+    },
+    {
+      "x": 16,
+      "y": -11,
+      "file": "tiles/8_16_-11.png",
+      "sha256": "150c959f022cfc87559afab9eede2857e238a42aec14a98c3d7f8a4e28bf9b67"
+    },
+    {
+      "x": 17,
+      "y": -15,
+      "file": "tiles/8_17_-15.png",
+      "sha256": "f6492d129008ee214c4051d2681568019217a498cb73d0792e59adf10da91890"
+    },
+    {
+      "x": 17,
+      "y": -14,
+      "file": "tiles/8_17_-14.png",
+      "sha256": "0faad45269372ede8053707938d7cd8d3e958ddc028516655b7ffd662866e3f0"
+    },
+    {
+      "x": 17,
+      "y": -13,
+      "file": "tiles/8_17_-13.png",
+      "sha256": "2957fe65a36932434794d2d560be7be73ed7c1887393eddc772bf4b9e0f04bc4"
+    },
+    {
+      "x": 17,
+      "y": -12,
+      "file": "tiles/8_17_-12.png",
+      "sha256": "05d86b9833e288adee7915d7ef1eac89c7d36cd8b4fb234db4fd3e260b85a9cf"
+    },
+    {
+      "x": 17,
+      "y": -11,
+      "file": "tiles/8_17_-11.png",
+      "sha256": "6f33afb8305ae719120648e5fb3437fff8d6b7031ec37d694558d30c82502651"
+    }
+  ],
+  "missingTileCount": 33,
+  "coordinateBounds": {
+    "maxX": 19395.98046875,
+    "maxY": 19082.388671875,
+    "minX": 13674.123046875,
+    "minY": 12210.14453125
+  },
+  "referenceVerification": {
+    "errorPixels": 3.1407206515693264,
+    "expectedMapCoordinate": {
+      "x": 17205.125,
+      "y": 16041.04
+    },
+    "geometryDiagnostic": {
+      "inliers": 53,
+      "mapX": 17202.793209732303,
+      "mapY": 16039.191524256696,
+      "rotationDegrees": 0.05299889462172716,
+      "scale": 1.0741266182498297
+    },
+    "goodMatches": 69,
+    "mapKeypoints": 1788,
+    "minimapKeypoints": 210,
+    "nearAnchorMatches": 63,
+    "passed": true,
+    "reference": "qiqiu.png",
+    "resultMapCoordinate": {
+      "x": 17202.813193113907,
+      "y": 16038.914047241211
+    }
+  },
+  "features": {
+    "file": "features.yml",
+    "sha256": "727cd7de84f41124cdcb4f3f6d7496645f5c90171381223ae46c396bc146a2ac",
+    "keypointCount": 78101,
+    "extractedKeypointCount": 78101
+  }
+}

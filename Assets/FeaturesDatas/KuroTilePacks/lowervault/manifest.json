@@ -1,0 +1,123 @@
+{
+  "formatVersion": 1,
+  "packId": "lowervault-kurotiles",
+  "scene": "LowerVault",
+  "sceneId": 6,
+  "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "generatedAtUtc": "2026-09-18T18:26:39.2100019Z",
+  "source": {
+    "static": "https://web-static.kurobbs.com",
+    "state": 902,
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "coordinateTransform": {
+    "originX": 0.0,
+    "originY": 0.0,
+    "scale": 1.205
+  },
+  "anchorWorldCoordinate": {
+    "x": 2383.0,
+    "y": 505.0
+  },
+  "tileRadius": null,
+  "tileBounds": {
+    "minX": 1,
+    "maxX": 11,
+    "minY": -5,
+    "maxY": 3
+  },
+  "tiles": [
+    {
+      "x": 2,
+      "y": -1,
+      "file": "tiles/902_2_-1.png",
+      "sha256": "9a9179ccf4f90f00a765bb4a8ec93725fd428bb80ce80f78b7ec7340b465d9db"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "file": "tiles/902_2_0.png",
+      "sha256": "330ca869dbfd7ca04ab397fcd5580931518ce23087040c3a59b88351d2919c99"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "file": "tiles/902_2_1.png",
+      "sha256": "bb6a6ce37530de5b3691f4eac63e7d1b715a7b9bf67b750f7b99603d08d4d905"
+    },
+    {
+      "x": 3,
+      "y": -1,
+      "file": "tiles/902_3_-1.png",
+      "sha256": "fa64d07c5bd917d861fe59d2f11cde6a54dc75e35dfa4431f329ab7dcd0c18fa"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/902_3_0.png",
+      "sha256": "eb4da8a740e3bf9421bb0e16791b1b99077afcb8fd82b05b1a3b8e63e6c22ee3"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "file": "tiles/902_3_1.png",
+      "sha256": "6666ccc81a9f717e32acc6239a548ff077b2662d6f46a3efe3b81b37f6630349"
+    },
+    {
+      "x": 4,
+      "y": -1,
+      "file": "tiles/902_4_-1.png",
+      "sha256": "b4fe9bc70379c6db7c8cf0cb5c0e962ade2ef77d7e9f3c2366c24905884d7a37"
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "file": "tiles/902_4_0.png",
+      "sha256": "f22724700db25d5e153ef3e211d2b9890f04f89304793b33bd819328386993c2"
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "file": "tiles/902_4_1.png",
+      "sha256": "b41d8fb63836f99d81ad334f002f33a68b379782fa751305680b7c868aedc597"
+    }
+  ],
+  "missingTileCount": 90,
+  "coordinateBounds": {
+    "maxX": 3555.154052734375,
+    "maxY": 1241.2926025390625,
+    "minX": 1795.6968994140625,
+    "minY": -827.3427124023438
+  },
+  "referenceVerification": {
+    "errorPixels": 0.43102529439552045,
+    "expectedMapCoordinate": {
+      "x": 2868.7195893597436,
+      "y": 606.2202644412455
+    },
+    "geometryDiagnostic": {
+      "inliers": 25,
+      "mapX": 2869.0697041789963,
+      "mapY": 607.055012304058,
+      "rotationDegrees": -0.021671782276992294,
+      "scale": 1.0755719420286884
+    },
+    "goodMatches": 39,
+    "mapKeypoints": 571,
+    "minimapKeypoints": 140,
+    "nearAnchorMatches": 28,
+    "passed": true,
+    "reference": "lowervault.png",
+    "resultMapCoordinate": {
+      "x": 2868.458744339321,
+      "y": 606.5634009734445
+    }
+  },
+  "features": {
+    "file": "features.yml",
+    "sha256": "1d02262354a444df1ae4e16438eb5f0e2e12ed7a15ca7c5e421e6d03e108e9f7",
+    "keypointCount": 9008,
+    "extractedKeypointCount": 9008
+  }
+}

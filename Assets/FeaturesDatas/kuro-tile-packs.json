@@ -1,14 +1,18 @@
 {
   "formatVersion": 1,
   "packs": [
-    "Dreamzhou",
-    "DreamzhouWest",
-    "BlackShores",
-    "LowerVault",
-    "Darkplain",
-    "TimeRiftRuins",
-    "Tethys",
-    "Lahai",
-    "RoySurface"
+    "jinzhou",
+    "mengzhou",
+    "laguna",
+    "qiqiu",
+    "roysurface",
+    "blackshores",
+    "lahai",
+    "darkplain",
+    "lowervault",
+    "avinoleum",
+    "fabricatorium",
+    "tethys",
+    "timeriftruins"
   ]
 }

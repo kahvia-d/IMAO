@@ -1,0 +1,513 @@
+{
+  "formatVersion": 1,
+  "packId": "fabricatorium-kurotiles",
+  "scene": "Fabricatorium",
+  "sceneId": 3,
+  "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "generatedAtUtc": "2026-09-18T17:15:00.2338570Z",
+  "source": {
+    "static": "https://web-static.kurobbs.com",
+    "state": 905,
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "coordinateTransform": {
+    "originX": 7437.0,
+    "originY": 13783.0,
+    "scale": 1.205
+  },
+  "anchorWorldCoordinate": {
+    "x": -413.0,
+    "y": -30.0
+  },
+  "tileRadius": null,
+  "tileBounds": {
+    "minX": -5,
+    "maxX": 7,
+    "minY": -4,
+    "maxY": 4
+  },
+  "tiles": [
+    {
+      "x": -5,
+      "y": -4,
+      "file": "tiles/905_-5_-4.png",
+      "sha256": "7169cc0cbae7d73b134d1a1042084e74b160dbdbe6ca831c0790425c75f4610b"
+    },
+    {
+      "x": -5,
+      "y": -3,
+      "file": "tiles/905_-5_-3.png",
+      "sha256": "eff2da6079223bdc8b23d80b84ac6d383f13a15b6c92b0066555671201c89b41"
+    },
+    {
+      "x": -5,
+      "y": -2,
+      "file": "tiles/905_-5_-2.png",
+      "sha256": "06c05559761822c662eae2a09a7d589785aff16258d2677518f7c5406ec6aa7f"
+    },
+    {
+      "x": -5,
+      "y": -1,
+      "file": "tiles/905_-5_-1.png",
+      "sha256": "a9d8905801b165a240ce6c6381f9e95fa60e11ab2ddf92c91aaf3b56772ca79b"
+    },
+    {
+      "x": -5,
+      "y": 0,
+      "file": "tiles/905_-5_0.png",
+      "sha256": "4a676c45d7c29897fea47b2e9c686f26f5acb05f052178fde56439b01efa51b9"
+    },
+    {
+      "x": -5,
+      "y": 1,
+      "file": "tiles/905_-5_1.png",
+      "sha256": "7dbadcad332ab8398e5de39822688e7b61b841afebd25536731c889d1ff6a4f7"
+    },
+    {
+      "x": -5,
+      "y": 2,
+      "file": "tiles/905_-5_2.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": -4,
+      "y": -4,
+      "file": "tiles/905_-4_-4.png",
+      "sha256": "1a240e0fdc4c1df5bf66a1242f0a00a539e5e53248a2462b17138a0d2cadd626"
+    },
+    {
+      "x": -4,
+      "y": -2,
+      "file": "tiles/905_-4_-2.png",
+      "sha256": "60f0921a34f01da5c7334113cd1fe8e74e9eb957489db65c00cb4f558d6af2c0"
+    },
+    {
+      "x": -4,
+      "y": -1,
+      "file": "tiles/905_-4_-1.png",
+      "sha256": "e6c9fc0d094cef1dc6911d06c89c80aa27003ad631e86729bc01e5db4e34371f"
+    },
+    {
+      "x": -4,
+      "y": 0,
+      "file": "tiles/905_-4_0.png",
+      "sha256": "95f8c2acff086c237eb61f6b11dd837d2a20cf999d1e8a1d298a8f7ecb49f1a4"
+    },
+    {
+      "x": -4,
+      "y": 1,
+      "file": "tiles/905_-4_1.png",
+      "sha256": "9a164c173c663e9b2a53678a83d5fdd2c97fd8412cbf00867c444269adea1446"
+    },
+    {
+      "x": -3,
+      "y": -3,
+      "file": "tiles/905_-3_-3.png",
+      "sha256": "0d9dd1a8d668006f75d5b8271b428a6201a7f3f12e17f66b3036fe90e47c2502"
+    },
+    {
+      "x": -3,
+      "y": -2,
+      "file": "tiles/905_-3_-2.png",
+      "sha256": "cfc744241407517f9605e2bb651148b8d5367da863993bcc016d207a3de4247c"
+    },
+    {
+      "x": -3,
+      "y": -1,
+      "file": "tiles/905_-3_-1.png",
+      "sha256": "9b7fb5dee1d4c2706b8f0c0dc169e52da98c931a13b5477771b6bf2e619a7fd1"
+    },
+    {
+      "x": -3,
+      "y": 0,
+      "file": "tiles/905_-3_0.png",
+      "sha256": "64d0efcbcb04072fea2ad7e4d298490beeea1cf728d079113cde9fca03107dfc"
+    },
+    {
+      "x": -3,
+      "y": 1,
+      "file": "tiles/905_-3_1.png",
+      "sha256": "e4f01806be6c3915a3100f8800177e6d432cd95f71abd530e3c89fa569f46e34"
+    },
+    {
+      "x": -3,
+      "y": 2,
+      "file": "tiles/905_-3_2.png",
+      "sha256": "4addf3953c59653d379fe715ecabdd61cd282472b6632abf139c67902a37925c"
+    },
+    {
+      "x": -2,
+      "y": -4,
+      "file": "tiles/905_-2_-4.png",
+      "sha256": "c8b03588fac99e64759472c34cafdf7d0f718f1788ac7c5f7247b329ceb1c413"
+    },
+    {
+      "x": -2,
+      "y": -3,
+      "file": "tiles/905_-2_-3.png",
+      "sha256": "229e44da4312d765b90a6dc9bd4533131a9055b78bc7b2a6d52e5be5c9005949"
+    },
+    {
+      "x": -2,
+      "y": -1,
+      "file": "tiles/905_-2_-1.png",
+      "sha256": "b968c04b902371b2b7f7942421dd5c3cbb2e5d19c7a2b62bcc37edc65160e046"
+    },
+    {
+      "x": -2,
+      "y": 0,
+      "file": "tiles/905_-2_0.png",
+      "sha256": "28335ab9d1824a5d83200b0c4d5001f78f329994971c0935afff4fff6631a35d"
+    },
+    {
+      "x": -2,
+      "y": 1,
+      "file": "tiles/905_-2_1.png",
+      "sha256": "02e8c3d267c984b23d9b76330075ff8994b8b80a42ebaaedee79c408494bd19b"
+    },
+    {
+      "x": -2,
+      "y": 2,
+      "file": "tiles/905_-2_2.png",
+      "sha256": "fcdb35e0077f4734ccdf06010f7e63a18887d434520224546ed64435674a4a58"
+    },
+    {
+      "x": -1,
+      "y": -2,
+      "file": "tiles/905_-1_-2.png",
+      "sha256": "78f3ed6bf3d64599cbb069309484568204b69867cd15095852e820d15ad1df7f"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "file": "tiles/905_-1_-1.png",
+      "sha256": "ebbff7dbd98aeed3afaa7c478f8c5016e834fafedba86d760f18a59da105e01b"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "file": "tiles/905_-1_0.png",
+      "sha256": "63cf06caa0ddda1b1faf58bc5c86626a318da495c23a2cf18b8972ede9246045"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "file": "tiles/905_-1_1.png",
+      "sha256": "efa2524fcf026d025343850f2ce18c86c2c306072eed605fa64b3bec8a9d88d4"
+    },
+    {
+      "x": -1,
+      "y": 2,
+      "file": "tiles/905_-1_2.png",
+      "sha256": "d668364f37f55cc7eacf891e498a77ff5dfa80aeadd52f5cc34f45dfbb36a037"
+    },
+    {
+      "x": 0,
+      "y": -4,
+      "file": "tiles/905_0_-4.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 0,
+      "y": -3,
+      "file": "tiles/905_0_-3.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 0,
+      "y": -2,
+      "file": "tiles/905_0_-2.png",
+      "sha256": "3fe5ef5913d7229ae45ae1366d1f348138c3a503ba10ce89e4851fdd15d37eb1"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/905_0_1.png",
+      "sha256": "ebb5b43565f4a4c68c3b8ea6d2278c77d7048347bd82307504e24250210d6950"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "file": "tiles/905_0_2.png",
+      "sha256": "e83feb61e91cfba0a866abcbbbccc38eb52ed2ca6b7715304a23fad4d0a1d32d"
+    },
+    {
+      "x": 1,
+      "y": -4,
+      "file": "tiles/905_1_-4.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 1,
+      "y": -3,
+      "file": "tiles/905_1_-3.png",
+      "sha256": "fb472315af3da63f1e08979cfcf1f6487ec0f02095b51ba73949666ff0ca339e"
+    },
+    {
+      "x": 1,
+      "y": -2,
+      "file": "tiles/905_1_-2.png",
+      "sha256": "c53a38dd5200b0ad4d37eb1864cd061b181aa90cc9d68f59108a24ae8bd4b01b"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "file": "tiles/905_1_-1.png",
+      "sha256": "d571cf6725190d9f7530d7c31a8f9af91e62cbcfee24d9b8fd984a3e9722ced6"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "file": "tiles/905_1_0.png",
+      "sha256": "3ef8a4615d23af19d3237343c7c7b50aa244fb998ff3aadd13c164ecbaae812f"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "file": "tiles/905_1_1.png",
+      "sha256": "4b62d72894cebb59eeebf39432911a499cc9589e2a54f4b25314bcca81e6e364"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "file": "tiles/905_1_2.png",
+      "sha256": "a528747b5e651c1ab6d504aefadd3ddc7e7c2b26fa9ad4e4f29a7aeb3a1e67ce"
+    },
+    {
+      "x": 2,
+      "y": -3,
+      "file": "tiles/905_2_-3.png",
+      "sha256": "8024b96269c1c9c6fbbf22d0c7348923676442ebaf796fda948f6fa8c86c9604"
+    },
+    {
+      "x": 2,
+      "y": -2,
+      "file": "tiles/905_2_-2.png",
+      "sha256": "31a60966427e11e1a9514a5b46c72dc53291e542d4d6d57a88cd8f4035432685"
+    },
+    {
+      "x": 2,
+      "y": -1,
+      "file": "tiles/905_2_-1.png",
+      "sha256": "bb74232e8d7abb605bcc4a35e5c1b5a5ef94c13a0f23671666a93138ad4a13ed"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "file": "tiles/905_2_1.png",
+      "sha256": "eeb261e9633e2664a8a5bc1f47718433d4ffa4e60c360ed7334355c41b1b2f4b"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "file": "tiles/905_2_2.png",
+      "sha256": "29cf31a93853aab1152c24c614c7aa45f8f03d03ca110cb02ad1e5d1fe72fe76"
+    },
+    {
+      "x": 3,
+      "y": -4,
+      "file": "tiles/905_3_-4.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 3,
+      "y": -3,
+      "file": "tiles/905_3_-3.png",
+      "sha256": "ab82af4260ee1c73f858f3e86b976d5cb0a8dffcc24a2e66a0cfa4afa74bbfcf"
+    },
+    {
+      "x": 3,
+      "y": -2,
+      "file": "tiles/905_3_-2.png",
+      "sha256": "fba2005a34cd7cfc20d30817242e3f2d8b568d0ef6f6d8ca353c90c074aaba97"
+    },
+    {
+      "x": 3,
+      "y": -1,
+      "file": "tiles/905_3_-1.png",
+      "sha256": "86dbc74e9b112f44663ca5a2d83b545ebc2713bf1f437eeb54d0303ac01a9628"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/905_3_0.png",
+      "sha256": "dc8eae51767704d1ebcda8a7e51309617c0d957e8736ea9ba29f8e2c2c54ee7f"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "file": "tiles/905_3_1.png",
+      "sha256": "d80bc41b981548ad5cdcf2b34cabb2eda09c171bcdb2ce58b0294e81561862e7"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "file": "tiles/905_3_2.png",
+      "sha256": "cfe626399c12f6a126ddbc66bdeaff00a9b14cb0dfcbafa3f4525c1a505fd584"
+    },
+    {
+      "x": 4,
+      "y": -4,
+      "file": "tiles/905_4_-4.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 4,
+      "y": -3,
+      "file": "tiles/905_4_-3.png",
+      "sha256": "4728d4fd47548e188f78a88175916cd78b4a87cc726736fb8a34e293617c5d76"
+    },
+    {
+      "x": 4,
+      "y": -2,
+      "file": "tiles/905_4_-2.png",
+      "sha256": "fac7545c1bf5d7b9c8516b7750c0f51628ed99e39ba2d5d9219b361f62656ece"
+    },
+    {
+      "x": 4,
+      "y": -1,
+      "file": "tiles/905_4_-1.png",
+      "sha256": "cd7cfe7c159c61c6eab29f8b6611588bee3af86de25732b25f444b9894f1b84a"
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "file": "tiles/905_4_0.png",
+      "sha256": "13f022c25be651441df575094c8d01c1243c8581705b81e3fb1c9c15e27ab5c0"
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "file": "tiles/905_4_1.png",
+      "sha256": "02ef5660cf19b7aac62f8989a06f0f87d2383349a4e10336688787576d4648a9"
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "file": "tiles/905_4_2.png",
+      "sha256": "ee8f9d9555ece7782cb9306cd1e0fa56acab88b99b030de32997fb551f12d9f4"
+    },
+    {
+      "x": 5,
+      "y": -4,
+      "file": "tiles/905_5_-4.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 5,
+      "y": -3,
+      "file": "tiles/905_5_-3.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 5,
+      "y": -2,
+      "file": "tiles/905_5_-2.png",
+      "sha256": "e45de73e93452916edfb08c4af351a388f636901630a10d8e92dfe6923847223"
+    },
+    {
+      "x": 5,
+      "y": -1,
+      "file": "tiles/905_5_-1.png",
+      "sha256": "3268308f42f6d6c90df4a1675dd5fd11e0f99b127d336583d96be0fb464410ce"
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "file": "tiles/905_5_0.png",
+      "sha256": "167bc2ad43bc4b90364c02dbca35fefd1558879376640e023e21efad2d357a12"
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "file": "tiles/905_5_1.png",
+      "sha256": "5d82b3158f6ad6cf21d2cc035abe1db018c30f19755b84130bf7788a773d3482"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "file": "tiles/905_5_2.png",
+      "sha256": "f2450369139ac3bbb8fc1616302d000dd33a2fb23a0d807a69deae335c44cfcf"
+    },
+    {
+      "x": 6,
+      "y": -4,
+      "file": "tiles/905_6_-4.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 6,
+      "y": -3,
+      "file": "tiles/905_6_-3.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 6,
+      "y": -2,
+      "file": "tiles/905_6_-2.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 6,
+      "y": -1,
+      "file": "tiles/905_6_-1.png",
+      "sha256": "e8c7f41e72b83d23f027b45da4f768bb551c74b7a8794bb7ec35833b2ead9b39"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "file": "tiles/905_6_0.png",
+      "sha256": "8a34db5850d837b7a9f9378aaae72eeeb13039df7ed000bac134c6bffc797c23"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "file": "tiles/905_6_1.png",
+      "sha256": "f90fc3443d4c52140b3c230f2b798dff4dabde5c6c3ec5a921d86aa256f224ee"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "file": "tiles/905_6_2.png",
+      "sha256": "101a9d8ca92de68bdc14e6df41adaad91a0bc9de9140e2f98ee449a8695d28a9"
+    }
+  ],
+  "missingTileCount": 43,
+  "coordinateBounds": {
+    "maxX": 12535.8583984375,
+    "maxY": 18364.212890625,
+    "minX": 1324.27734375,
+    "minY": 12190.7998046875
+  },
+  "referenceVerification": {
+    "errorPixels": 2.2053549853958754,
+    "expectedMapCoordinate": {
+      "x": 6939.335,
+      "y": 13746.85
+    },
+    "geometryDiagnostic": {
+      "inliers": 6,
+      "mapX": 6945.155808777819,
+      "mapY": 13746.40586501484,
+      "rotationDegrees": -3.3790657121757373,
+      "scale": 1.1033552994072182
+    },
+    "goodMatches": 20,
+    "mapKeypoints": 497,
+    "minimapKeypoints": 139,
+    "nearAnchorMatches": 7,
+    "passed": true,
+    "reference": "fabricatorium.png",
+    "resultMapCoordinate": {
+      "x": 6941.4978186565895,
+      "y": 13746.418947717419
+    }
+  },
+  "features": {
+    "file": "features.yml",
+    "sha256": "33c6e35eaab3c61bdc77a41a0568deeb6ad566577adaedf1236c8a1c0df6055c",
+    "keypointCount": 25520,
+    "extractedKeypointCount": 25520
+  }
+}

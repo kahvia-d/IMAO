@@ -2,8 +2,12 @@
   "formatVersion": 1,
   "scenes": {
     "LowerVault": {
-      "approved": false,
-      "reason": "等待四点校准、瓦片特征包与实机验证。"
+      "approved": true,
+      "state": 902,
+      "approvedAtUtc": "2026-09-19T02:31:15.6114235Z",
+      "calibrationMaxErrorPixels": 0.8222329599821808,
+      "validationScope": "local-capture-trial",
+      "reason": "local trial only: the four-point calibration was measured from the user's own captures, the pack passes its reference-minimap check, and the user ran it in game; the full four-check verification and the 113-sample regression are still outstanding"
     },
     "Darkplain": {
       "approved": true,
@@ -14,8 +18,12 @@
       "validationScope": "local-capture-trial"
     },
     "TimeRiftRuins": {
-      "approved": false,
-      "reason": "等待四点校准、瓦片特征包与实机验证。"
+      "approved": true,
+      "state": 910,
+      "approvedAtUtc": "2026-09-19T02:31:15.6114235Z",
+      "calibrationMaxErrorPixels": 0.3494691790587125,
+      "validationScope": "local-capture-trial",
+      "reason": "local trial only: the four-point calibration was measured from the user's own captures, the pack passes its reference-minimap check, and the user ran it in game; the full four-check verification and the 113-sample regression are still outstanding"
     }
   }
 }

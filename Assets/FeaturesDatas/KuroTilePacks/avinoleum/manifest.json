@@ -1,0 +1,279 @@
+{
+  "formatVersion": 1,
+  "packId": "avinoleum-kurotiles",
+  "scene": "Avinoleum",
+  "sceneId": 4,
+  "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "generatedAtUtc": "2026-09-18T17:14:43.8203351Z",
+  "source": {
+    "static": "https://web-static.kurobbs.com",
+    "state": 903,
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "coordinateTransform": {
+    "originX": 2433.0,
+    "originY": 9030.0,
+    "scale": 1.205
+  },
+  "anchorWorldCoordinate": {
+    "x": 0.0,
+    "y": 150.0
+  },
+  "tileRadius": null,
+  "tileBounds": {
+    "minX": -3,
+    "maxX": 16,
+    "minY": -15,
+    "maxY": 4
+  },
+  "tiles": [
+    {
+      "x": -2,
+      "y": -2,
+      "file": "tiles/903_-2_-2.png",
+      "sha256": "78dfaabcf6082030d556ed2a3c4fc517384ed73d7beae26103865dd7321b9a6d"
+    },
+    {
+      "x": -2,
+      "y": -1,
+      "file": "tiles/903_-2_-1.png",
+      "sha256": "094c33efba3cad339861213549a50cf0571cc91be5259e936a55edef3b750b44"
+    },
+    {
+      "x": -2,
+      "y": 0,
+      "file": "tiles/903_-2_0.png",
+      "sha256": "e91da9b12002aa6970375e5b41d2f0571d686964564d162104c0555f12f37722"
+    },
+    {
+      "x": -2,
+      "y": 1,
+      "file": "tiles/903_-2_1.png",
+      "sha256": "d312f3391aaed581bcfb1eb722edcba2eb02ebd11a9b29900ec66058a530d0f2"
+    },
+    {
+      "x": -2,
+      "y": 2,
+      "file": "tiles/903_-2_2.png",
+      "sha256": "ea4cc5d0cdd19e1fe6b05a56f89e4874589dfca3fdedde098a13095785f53f34"
+    },
+    {
+      "x": -2,
+      "y": 3,
+      "file": "tiles/903_-2_3.png",
+      "sha256": "0d97cd2ea50d268833ef8d17e5eb28e5fb2b77f96ac1eaa004b2ae6862fdad97"
+    },
+    {
+      "x": -1,
+      "y": -2,
+      "file": "tiles/903_-1_-2.png",
+      "sha256": "c02c2f924aaeff8ecad275d2bbfff3788ae4aeccda82bcb0df30a6cefda71faa"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "file": "tiles/903_-1_-1.png",
+      "sha256": "cf56c628f6f943b2114bfd4ea0a9e658318c2c060e64bf18afa36804abec7cde"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "file": "tiles/903_-1_0.png",
+      "sha256": "26e8a0000a6582c2d78bbe1394eecc583b134ed5082f44aa597a5164a628eb43"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "file": "tiles/903_-1_1.png",
+      "sha256": "455d0e3e77a73ac59d653bc7b22050e6334a7c568c83d82f02d7faadbebcafce"
+    },
+    {
+      "x": -1,
+      "y": 2,
+      "file": "tiles/903_-1_2.png",
+      "sha256": "137d997f42de1d6d1970460ad2483f930629a52f2b397642e7bba64b211ffa3b"
+    },
+    {
+      "x": -1,
+      "y": 3,
+      "file": "tiles/903_-1_3.png",
+      "sha256": "07f9e569a5f7054248988a24d482e90bd50c58ebe7d060964f3a736ff970ce18"
+    },
+    {
+      "x": 0,
+      "y": -2,
+      "file": "tiles/903_0_-2.png",
+      "sha256": "7a7ef05f333dc9dff685c1afd4494cb954c3461b0cbd4b8466de5c9b9bd080cc"
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "file": "tiles/903_0_-1.png",
+      "sha256": "88201089c84c8fb47d8d43f1fe2516b7fd951b1c791ac8a73dab8814e8704776"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/903_0_0.png",
+      "sha256": "73165f7c7802e0b9d623ab1baa6f614aa62bcd194ede2a7e12c85a3fe3c56318"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/903_0_1.png",
+      "sha256": "0305ffa28f4a7a267741e702df2e2c563c7cc573f843a1f4efe79c64a30036e6"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "file": "tiles/903_0_2.png",
+      "sha256": "8910226892ec4bd01f9c720184923caf2ccc6e2ae4bcb8ccf5d6f84ea16f6464"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "file": "tiles/903_0_3.png",
+      "sha256": "5a7648879febc1a2d3932c8cb21a9595d9b414b4d09632302dfded72d7f6b14a"
+    },
+    {
+      "x": 1,
+      "y": -2,
+      "file": "tiles/903_1_-2.png",
+      "sha256": "5261cbc21336c54a550d515f8a600c86e8e6b54f41718c091f711bd51d114b91"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "file": "tiles/903_1_-1.png",
+      "sha256": "e79e3a19dc8981be4b9f7dbe6c3ada23b5e7a41ec37ac0fa646e7fe310576f2c"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "file": "tiles/903_1_0.png",
+      "sha256": "9f229a13152152c10b6ac7e74222a635440d4619c69094a181f32a15f15d44eb"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "file": "tiles/903_1_2.png",
+      "sha256": "132d5a630a9301a8dc39edaef011d10c350d03e81595a5f209993a48d49ca7e3"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "file": "tiles/903_1_3.png",
+      "sha256": "3494e8ffaf8a19a36309d83b32f011e9a64ef6530e757cd649072a9029a6cef3"
+    },
+    {
+      "x": 2,
+      "y": -2,
+      "file": "tiles/903_2_-2.png",
+      "sha256": "a3c2a96b5def0739652b9292da8e5259ddb0ebd50ce34c3a02a6652860c4d04a"
+    },
+    {
+      "x": 2,
+      "y": -1,
+      "file": "tiles/903_2_-1.png",
+      "sha256": "6e33a279325395ebdf0a6cf0a27a875ab97f23a26e6ca5c0cae4d16f8accee10"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "file": "tiles/903_2_0.png",
+      "sha256": "e77d59c934c849293b9caea8bd58daa0f8f3e5f0592246b27055fa8e84af3d5e"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "file": "tiles/903_2_1.png",
+      "sha256": "4fdb6484db9c5b1a70208585ed4a569b5392b0b11c993a08ecbe6f88a776e2ca"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "file": "tiles/903_2_2.png",
+      "sha256": "56b22d41c3d95eac8b18e80fb471c338c4008aa646891131ffbfa2519d6942a3"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "file": "tiles/903_2_3.png",
+      "sha256": "53d9be52b779de4eaf89f95b8681eddeb3fd982595e2cac44e8608beb82cd547"
+    },
+    {
+      "x": 3,
+      "y": -2,
+      "file": "tiles/903_3_-2.png",
+      "sha256": "006071925be0b8adbb5b4d908b3d5415e2902bfc5f19ccb51d7ef4832f28545b"
+    },
+    {
+      "x": 3,
+      "y": -1,
+      "file": "tiles/903_3_-1.png",
+      "sha256": "32efca265105ef699c95eee0ef80f970ccb795b45c53d876767eb5dc291ea658"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/903_3_0.png",
+      "sha256": "03b4dc1845478b150f3efb7439a1df9ca18713e2dd1f266bccbe3865da3a82f0"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "file": "tiles/903_3_1.png",
+      "sha256": "a3469ec9275c3f26c0e255340cab3904fea1846166727190591573dc119725ea"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "file": "tiles/903_3_2.png",
+      "sha256": "28837fe38bb02091b135f47f8c569aeb71c02ee02b64f8607d1c860ef0d9eff7"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "file": "tiles/903_3_3.png",
+      "sha256": "eac6dd9df8582adde3003b330d69d86e8b0f08ed9158a511c089ca1564f1a6f2"
+    }
+  ],
+  "missingTileCount": 365,
+  "coordinateBounds": {
+    "maxX": 3669.13623046875,
+    "maxY": 10520.37109375,
+    "minX": 1119.4337158203125,
+    "minY": 7739.89111328125
+  },
+  "referenceVerification": {
+    "errorPixels": 3.104313546884069,
+    "expectedMapCoordinate": {
+      "x": 2433.0,
+      "y": 9210.75
+    },
+    "geometryDiagnostic": {
+      "inliers": 42,
+      "mapX": 2431.1674606010342,
+      "mapY": 9208.774556215292,
+      "rotationDegrees": 0.02863841378600579,
+      "scale": 1.0757088842019362
+    },
+    "goodMatches": 53,
+    "mapKeypoints": 1098,
+    "minimapKeypoints": 188,
+    "nearAnchorMatches": 48,
+    "passed": true,
+    "reference": "avinoleum.png",
+    "resultMapCoordinate": {
+      "x": 2430.930415008379,
+      "y": 9208.436219422714
+    }
+  },
+  "features": {
+    "file": "features.yml",
+    "sha256": "1901cf8ae73344d2c9c0294ca9fb7887c37fad1a1a1d97adc4771c8fdbb31a84",
+    "keypointCount": 12634,
+    "extractedKeypointCount": 12634
+  }
+}

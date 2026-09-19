@@ -1,8 +1,8 @@
 [CmdletBinding(DefaultParameterSetName = 'Check')]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('LowerVault', 'Darkplain', 'TimeRiftRuins')]
-    [string]$Scene,
+    [ValidateSet('lowervault', 'darkplain', 'timeriftruins')]
+    [string]$Region,
     [Parameter(Mandatory = $true)]
     [string]$GameEvidencePath,
     [Parameter(ParameterSetName = 'Check')]
@@ -18,11 +18,16 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$stateIds = @{ LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910 }
-$sceneIds = @{ LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8 }
+# A pack directory is named after the region it covers, while calibration and validation
+# are keyed by scene name. The two are not interchangeable: the overworld is one scene
+# split across six region packs, so a scene name cannot address a pack directory.
+$regionScenes = @{ lowervault = 'LowerVault'; darkplain = 'Darkplain'; timeriftruins = 'TimeRiftRuins' }
+$Scene = $regionScenes[$Region]
+$stateIds = @{ lowervault = 902; darkplain = 909; timeriftruins = 910 }
+$sceneIds = @{ lowervault = 6; darkplain = 7; timeriftruins = 8 }
 $calibrationPath = Join-Path $repoRoot 'Assets\KuroMap\scene-calibrations.json'
 $validationPath = Join-Path $repoRoot 'Assets\KuroMap\scene-validation.json'
-$packRoot = Join-Path $repoRoot "Assets\FeaturesDatas\KuroTilePacks\$Scene"
+$packRoot = Join-Path $repoRoot "Assets\FeaturesDatas\KuroTilePacks\$Region"
 
 function Write-Utf8Json([object]$Value, [string]$Path) {
     [IO.File]::WriteAllText($Path, (($Value | ConvertTo-Json -Depth 32) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
@@ -41,7 +46,7 @@ if ($null -eq $calibration -or -not [bool]$calibration['passed'] -or [int]$calib
 
 if (-not (Test-Path -LiteralPath $GameEvidencePath)) { throw "Game validation evidence is missing: $GameEvidencePath" }
 $evidence = Get-Content -LiteralPath $GameEvidencePath -Raw | ConvertFrom-Json
-if ($evidence.formatVersion -ne 1 -or [string]$evidence.scene -ne $Scene -or [int]$evidence.state -ne $stateIds[$Scene] -or
+if ($evidence.formatVersion -ne 1 -or [string]$evidence.scene -ne $Scene -or [int]$evidence.state -ne $stateIds[$Region] -or
     [int]$evidence.calibrationPairCount -ne 4) {
     throw 'Game validation evidence has an invalid format, scene, state, or sample count.'
 }
@@ -67,7 +72,7 @@ if ($LocalCaptureTrial) {
     $maps = Get-Content -LiteralPath $evidence.mapReport -Raw | ConvertFrom-Json
     $mini = Get-Content -LiteralPath $evidence.minimapReport -Raw | ConvertFrom-Json
     if (@($maps.samples).Count -ne 4 -or $maps.failed -ne 0 -or
-        @($maps.samples | Where-Object { !$_.accepted -or !$_.correct -or $_.sceneId -ne $sceneIds[$Scene] }).Count -ne 0 -or
+        @($maps.samples | Where-Object { !$_.accepted -or !$_.correct -or $_.sceneId -ne $sceneIds[$Region] }).Count -ne 0 -or
         $mini.processed -ne 4 -or $mini.falseAccepted -ne 0 -or
         $mini.rawStrongCorrect -lt 1 -or $mini.rawStrongCorrect -ne $mini.rawStrong) {
         throw 'Local capture replay does not support enabling this scene.'
@@ -91,7 +96,7 @@ if ($Apply) {
     $validation = Get-Content -LiteralPath $validationPath -Raw | ConvertFrom-Json -AsHashtable
     if ($validation['formatVersion'] -ne 1 -or $null -eq $validation['scenes']) { throw 'Scene validation registry format is invalid.' }
     $validation['scenes'][$Scene] = [ordered]@{
-        approved = $true; state = $stateIds[$Scene]; approvedAtUtc = [DateTime]::UtcNow.ToString('o')
+        approved = $true; state = $stateIds[$Region]; approvedAtUtc = [DateTime]::UtcNow.ToString('o')
         calibrationMaxErrorPixels = [double]$calibration['maxErrorPixels']; gameEvidenceSha256 = $evidenceHash
         validationScope = if ($LocalCaptureTrial) { 'local-capture-trial' } else { 'full-game-validation' }
     }

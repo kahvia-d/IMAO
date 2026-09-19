@@ -1,0 +1,93 @@
+{
+  "formatVersion": 1,
+  "packId": "timeriftruins-kurotiles",
+  "scene": "TimeRiftRuins",
+  "sceneId": 8,
+  "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "generatedAtUtc": "2026-09-18T18:26:52.2362226Z",
+  "source": {
+    "static": "https://web-static.kurobbs.com",
+    "state": 910,
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "coordinateTransform": {
+    "originX": 0.0,
+    "originY": 0.0,
+    "scale": 1.205
+  },
+  "anchorWorldCoordinate": {
+    "x": 115.0,
+    "y": 22.0
+  },
+  "tileRadius": null,
+  "tileBounds": {
+    "minX": -2,
+    "maxX": 3,
+    "minY": -2,
+    "maxY": 3
+  },
+  "tiles": [
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/910_0_0.png",
+      "sha256": "7cee034b79db3e119e2e750b89ed0e90a3859a15b88b5234d497da6938c96939"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/910_0_1.png",
+      "sha256": "fa72c04d724cab5471fea523ebef3443c9e50ab0f0edf9ab55d94bbbd7a48c5a"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "file": "tiles/910_1_0.png",
+      "sha256": "5b5dfaa1d051c03c9fb312d708cd6afd43af92d19a869be20d52e8a37fd9f100"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "file": "tiles/910_1_1.png",
+      "sha256": "758daea39cf4960ca3615cdabe2b79f88ec1aadc26ef682afe046376272ee46c"
+    }
+  ],
+  "missingTileCount": 32,
+  "coordinateBounds": {
+    "maxX": 568.7177124023438,
+    "maxY": 296.5902404785156,
+    "minX": -464.9900817871094,
+    "minY": -345.1979064941406
+  },
+  "referenceVerification": {
+    "errorPixels": 0.12746804782787455,
+    "expectedMapCoordinate": {
+      "x": 136.7233274205845,
+      "y": 24.656292528589574
+    },
+    "geometryDiagnostic": {
+      "inliers": 44,
+      "mapX": 136.92354975897223,
+      "mapY": 23.842072033533626,
+      "rotationDegrees": -0.01920549760042176,
+      "scale": 1.072661642352824
+    },
+    "goodMatches": 56,
+    "mapKeypoints": 899,
+    "minimapKeypoints": 180,
+    "nearAnchorMatches": 54,
+    "passed": true,
+    "reference": "timeriftruins.png",
+    "resultMapCoordinate": {
+      "x": 136.70806370610777,
+      "y": 24.529741660408348
+    }
+  },
+  "features": {
+    "file": "features.yml",
+    "sha256": "05237e33e57c6a59da645d4223043106fe8bd65d98463897dae0aaf2a85d434e",
+    "keypointCount": 2072,
+    "extractedKeypointCount": 2072
+  }
+}

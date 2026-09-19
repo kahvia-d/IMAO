@@ -1,0 +1,237 @@
+{
+  "formatVersion": 1,
+  "packId": "blackshores-kurotiles",
+  "scene": "World",
+  "sceneId": 1,
+  "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "generatedAtUtc": "2026-09-18T16:56:59.7875771Z",
+  "source": {
+    "static": "https://web-static.kurobbs.com",
+    "state": 8,
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "coordinateTransform": {
+    "originX": 2474.0,
+    "originY": 1957.0,
+    "scale": 1.205
+  },
+  "anchorWorldCoordinate": {
+    "x": 3011.0,
+    "y": 1359.0
+  },
+  "tileRadius": null,
+  "tileBounds": {
+    "minX": 2,
+    "maxX": 6,
+    "minY": -3,
+    "maxY": 2
+  },
+  "tiles": [
+    {
+      "x": 2,
+      "y": -3,
+      "file": "tiles/8_2_-3.png",
+      "sha256": "deb040d1cd57e75431cde61f894f91ff15f51a14970e7444d86199bcfc6352e6"
+    },
+    {
+      "x": 2,
+      "y": -2,
+      "file": "tiles/8_2_-2.png",
+      "sha256": "e37c5cbf6992b88826fdef446c5834a6ef9114adac9f33edc9f956d4f2cc18eb"
+    },
+    {
+      "x": 2,
+      "y": -1,
+      "file": "tiles/8_2_-1.png",
+      "sha256": "75ac10d70567bdb6e095fe0a9cf0dc03810e733e77edaff34e2872ed933944bf"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "file": "tiles/8_2_0.png",
+      "sha256": "1da0b8117cfe69ddc7bf38ec542da9a1b6c0962a2ce82c00feb9cfd81aebf1f3"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "file": "tiles/8_2_1.png",
+      "sha256": "24a7973a81bb6e6abff024f82fef3b94b114fd101a085c0f33b2139b572dcab9"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "file": "tiles/8_2_2.png",
+      "sha256": "6643ce1359074fd72547485c4b6c2a681688c53a00bb1f1fc8faab2fa97733d8"
+    },
+    {
+      "x": 3,
+      "y": -3,
+      "file": "tiles/8_3_-3.png",
+      "sha256": "9d069c07f4d5cc16c0578bb055b4edff1b441492462816d7bca61a30afddae2e"
+    },
+    {
+      "x": 3,
+      "y": -2,
+      "file": "tiles/8_3_-2.png",
+      "sha256": "8b4edae0c29b12c4ed6a3508cbb74dbac749552102ba401effb2c22c153086c4"
+    },
+    {
+      "x": 3,
+      "y": -1,
+      "file": "tiles/8_3_-1.png",
+      "sha256": "88b31909ba9075cde39aa7ece10310fc88cedfd6e3e35c182975c7824cfff6bc"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/8_3_0.png",
+      "sha256": "d613545ced42a7a520bcd31d992fe782d06b52854f7cc87aaa85d27fb4da192c"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "file": "tiles/8_3_1.png",
+      "sha256": "38712dfe7bd8a45e5e288a5624bef566066a345998d8fec525d41d1e0a1d7913"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "file": "tiles/8_3_2.png",
+      "sha256": "3fdb695c11398d6365910dc53baf6519f0ee9d72c251327e56c9e5bdad015b1e"
+    },
+    {
+      "x": 4,
+      "y": -3,
+      "file": "tiles/8_4_-3.png",
+      "sha256": "88a42614109fa8d6dc3b3e08c3ab875585d025ab31d1dffb6c666d3b761e96b1"
+    },
+    {
+      "x": 4,
+      "y": -2,
+      "file": "tiles/8_4_-2.png",
+      "sha256": "cb9cdd5edd3f351abfa544cfd9ac878d5d1d61374bb3812680fb03bd4687863d"
+    },
+    {
+      "x": 4,
+      "y": -1,
+      "file": "tiles/8_4_-1.png",
+      "sha256": "bd2893ca1d3298d0fbaef766c534f88eb2a941e13e8c544f01080751d2bda816"
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "file": "tiles/8_4_0.png",
+      "sha256": "223e13b90ff58b1d751372c69c657a4698142a5a620dc6ccba63a95a850981d9"
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "file": "tiles/8_4_1.png",
+      "sha256": "ea002173c8aee08898c760bf353b76199aeeec289a4fdadf25bb7eb02746bc4f"
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "file": "tiles/8_4_2.png",
+      "sha256": "276c8eacb990d4db45fa38003d49a804df3fcb66ae09e3bc3c6f96fcd1fbc990"
+    },
+    {
+      "x": 5,
+      "y": -3,
+      "file": "tiles/8_5_-3.png",
+      "sha256": "67762791c25b635ed157fa0f800519ee5894bf35cc29f066cc19c50fb627530f"
+    },
+    {
+      "x": 5,
+      "y": -2,
+      "file": "tiles/8_5_-2.png",
+      "sha256": "5e6f4d36b404b6eb8517798a5d084b503ee4421562734badf35cc5af9f669c6a"
+    },
+    {
+      "x": 5,
+      "y": -1,
+      "file": "tiles/8_5_-1.png",
+      "sha256": "74abd39258fdb6b6421a5daf17a4723ba322131f35d06460df0a0c2216fa416f"
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "file": "tiles/8_5_0.png",
+      "sha256": "acc44bf69eb0a0d95fc195895c57f32ef696760d883d2fd6545c8846094ed5ce"
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "file": "tiles/8_5_1.png",
+      "sha256": "6beeca389d5e09ff7d81fec2a57ee0654808777d384e3429ee04706527e1079d"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "file": "tiles/8_5_2.png",
+      "sha256": "65e051894989ff6087052a4b0d72c37d5774d6c886530ecee136e9bc13c83fef"
+    },
+    {
+      "x": 6,
+      "y": -3,
+      "file": "tiles/8_6_-3.png",
+      "sha256": "f2b46b1b2c79d58f3fb0939f973cc0c8cdca0052ac6cc8c166ab239ed8d0e8b1"
+    },
+    {
+      "x": 6,
+      "y": -2,
+      "file": "tiles/8_6_-2.png",
+      "sha256": "3e4329a6fb2435172ad6e0367923b46a07ff712a8d77ee1d519c1e7515973940"
+    },
+    {
+      "x": 6,
+      "y": -1,
+      "file": "tiles/8_6_-1.png",
+      "sha256": "bd75ef9b020cd6dbdbc7203b125b6b58e996c2deff0680a94f8ea443ccaf07fb"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "file": "tiles/8_6_0.png",
+      "sha256": "e48c2179f7123fed769f37acb9e846fb38f2d90385cfce04b566f157dd39c880"
+    }
+  ],
+  "missingTileCount": 2,
+  "coordinateBounds": {
+    "maxX": 6540.2021484375,
+    "maxY": 6042.66552734375,
+    "minX": 3509.277587890625,
+    "minY": 218.3694610595703
+  },
+  "referenceVerification": {
+    "errorPixels": 2.5549381573614443,
+    "expectedMapCoordinate": {
+      "x": 6102.255,
+      "y": 3594.5950000000003
+    },
+    "geometryDiagnostic": {
+      "inliers": 25,
+      "mapX": 6099.849625833384,
+      "mapY": 3592.4959319299164,
+      "rotationDegrees": 0.060862225713048605,
+      "scale": 1.071313780667137
+    },
+    "goodMatches": 32,
+    "mapKeypoints": 688,
+    "minimapKeypoints": 107,
+    "nearAnchorMatches": 28,
+    "passed": true,
+    "reference": "blackshores.png",
+    "resultMapCoordinate": {
+      "x": 6100.471267783123,
+      "y": 3592.7657902344413
+    }
+  },
+  "features": {
+    "file": "features.yml",
+    "sha256": "0e1180c118bbabf1500ef2fe2125c0b6006ec31a325c79ac8fb4e05737eb7d4b",
+    "keypointCount": 15168,
+    "extractedKeypointCount": 15168
+  }
+}

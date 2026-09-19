@@ -42,7 +42,10 @@ $packDirectories = if (Test-Path -LiteralPath $registryPath) {
     if ([int]$registry.formatVersion -ne 1 -or $null -eq $registry.packs) { throw 'Kuro tile-pack registry is invalid.' }
     @($registry.packs | ForEach-Object { [string]$_ })
 } else {
-    @('Dreamzhou')
+    # Packs are enumerated from the registry. The legacy single-pack fallback would now
+    # name a pack that no longer exists and would silently emit a visual index whose
+    # per-pack shards are all missing.
+    throw 'Kuro tile-pack registry is missing.'
 }
 foreach ($packDirectory in $packDirectories) {
     if ([string]::IsNullOrWhiteSpace($packDirectory) -or [IO.Path]::GetFileName($packDirectory) -ne $packDirectory) {

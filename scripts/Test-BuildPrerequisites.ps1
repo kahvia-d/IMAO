@@ -80,12 +80,11 @@ if (Test-Path -LiteralPath $kuroRegistryPath) {
             $packDirectory = [string]$packDirectoryValue
             $packRoot = Join-Path $repoRoot (Join-Path 'Assets\FeaturesDatas\KuroTilePacks' $packDirectory)
             $manifestPath = Join-Path $packRoot 'manifest.json'
-            if (-not (Test-Path -LiteralPath $manifestPath)) {
-                # The three new states are intentionally absent until their
-                # public tiles and game screenshots have passed validation.
-                Test-Requirement ($packDirectory -ne 'Dreamzhou') "Missing Kuro tile-pack manifest: $packDirectory"
-                continue
-            }
+            # Every registered pack must now be present: the registry no longer names
+            # packs that are intentionally absent, and the old Dreamzhou exemption would
+            # have masked a missing manifest for a shipped region.
+            Test-Requirement (Test-Path -LiteralPath $manifestPath) "Missing Kuro tile-pack manifest: $packDirectory"
+            if (-not (Test-Path -LiteralPath $manifestPath)) { continue }
             Test-Requirement (Test-Path -LiteralPath (Join-Path $packRoot 'visual-index.imx')) "Missing Kuro visual-index.imx shard: $packDirectory. Run scripts\Build-VisualIndex.ps1."
             Test-Requirement (Test-Path -LiteralPath (Join-Path $packRoot 'features.imf')) "Missing Kuro binary features: $packDirectory. Run scripts\Build-VisualIndex.ps1."
         }
