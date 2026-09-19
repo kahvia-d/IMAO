@@ -149,10 +149,23 @@ if ($pending.Count -gt 0) {
         [IO.Directory]::CreateDirectory((Split-Path -Parent $target.Path)) | Out-Null
         $partial = $target.Path + '.part'
         if (Test-Path -LiteralPath $partial) { Remove-Item -LiteralPath $partial -Force }
-        $output = & curl.exe --fail --silent --show-error --location --proto '=https' --tlsv1.2 `
-            --connect-timeout 15 --max-time 90 --retry 2 --retry-delay 2 `
-            $target.Url --output $partial 2>&1
-        $code = $LASTEXITCODE
+        # curl's own --retry does not cover schannel handshake failures (exit 35), which
+        # this host raises intermittently under concurrent connections; they surfaced as
+        # failed downloads and aborted runs whose only real outcome was a 404. Retry only
+        # the transport codes here: --retry-all-errors would re-request every genuinely
+        # absent tile four extra times, and most of a rectangular window is empty.
+        $output = ''
+        $code = 0
+        foreach ($attempt in 1..4) {
+            $output = & curl.exe --fail --silent --show-error --location --proto '=https' --tlsv1.2 `
+                --connect-timeout 15 --max-time 90 --retry 2 --retry-delay 2 `
+                $target.Url --output $partial 2>&1
+            $code = $LASTEXITCODE
+            if ($code -eq 0) { break }
+            if ($code -notin 35, 28, 56, 7) { break }
+            if (Test-Path -LiteralPath $partial) { Remove-Item -LiteralPath $partial -Force }
+            Start-Sleep -Seconds (2 * $attempt)
+        }
         if ($code -eq 0 -and (Test-Path -LiteralPath $partial)) {
             Move-Item -LiteralPath $partial -Destination $target.Path -Force
             return [pscustomobject]@{ Name = $target.Name; Status = 'ok'; Detail = '' }
@@ -266,7 +279,12 @@ foreach ($id in ($byRegion.Keys | Sort-Object)) {
 $manifestPath = Join-Path $ArchiveRoot 'tiles.manifest.json'
 [IO.File]::WriteAllText($manifestPath, (($manifest | ConvertTo-Json -Depth 8) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
 
-$totalPresent = @($entries | Where-Object { -not $_.Entry['absent'] }).Count
-Write-Host "Archived $totalPresent tiles under $ArchiveRoot/$tileVersion" -ForegroundColor Green
+# $entries holds one row per region-tile request, so a tile two regions share is counted
+# twice (762). $absent is keyed by tile name, so the unique figures are $unique.Count and
+# $unique.Count - $absent.Count (602). Reporting only the per-region sum made a completed
+# run look like it had archived 160 tiles that are not on disk.
+$declaredPresent = @($entries | Where-Object { -not $_.Entry['absent'] }).Count
+$uniquePresent = $unique.Count - $absent.Count
+Write-Host "Archived $uniquePresent unique tiles under $ArchiveRoot/$tileVersion" -ForegroundColor Green
 Write-Host "Wrote $manifestPath" -ForegroundColor Green
-Write-Host "Absent upstream: $($absent.Count) of $($unique.Count)"
+Write-Host "Absent upstream: $($absent.Count) of $($unique.Count); per-region declarations present: $declaredPresent"

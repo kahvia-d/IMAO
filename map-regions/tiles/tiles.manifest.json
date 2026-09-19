@@ -4,7 +4,7 @@
   "tileResourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
   "substituted": true,
   "archiveRoot": "map-regions/tiles/B50F4135DCCC4D8DA87ED33CE95EA31D",
-  "generatedAtUtc": "2026-09-18T14:58:51.1177035Z",
+  "generatedAtUtc": "2026-09-19T02:02:07.1557886Z",
   "tileSize": 1024,
   "verification": {
     "performed": true,
@@ -13,6 +13,2812 @@
     "samples": []
   },
   "regions": {
+    "avinoleum": {
+      "tiles": [
+        {
+          "x": -3,
+          "y": -15,
+          "file": "tiles/903_-3_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -14,
+          "file": "tiles/903_-3_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -13,
+          "file": "tiles/903_-3_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -12,
+          "file": "tiles/903_-3_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -11,
+          "file": "tiles/903_-3_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -10,
+          "file": "tiles/903_-3_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -9,
+          "file": "tiles/903_-3_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -8,
+          "file": "tiles/903_-3_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -7,
+          "file": "tiles/903_-3_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -6,
+          "file": "tiles/903_-3_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -5,
+          "file": "tiles/903_-3_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -4,
+          "file": "tiles/903_-3_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "file": "tiles/903_-3_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -2,
+          "file": "tiles/903_-3_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -1,
+          "file": "tiles/903_-3_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": 0,
+          "file": "tiles/903_-3_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": 1,
+          "file": "tiles/903_-3_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": 2,
+          "file": "tiles/903_-3_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": 3,
+          "file": "tiles/903_-3_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": 4,
+          "file": "tiles/903_-3_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -15,
+          "file": "tiles/903_-2_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -14,
+          "file": "tiles/903_-2_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -13,
+          "file": "tiles/903_-2_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -12,
+          "file": "tiles/903_-2_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -11,
+          "file": "tiles/903_-2_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -10,
+          "file": "tiles/903_-2_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -9,
+          "file": "tiles/903_-2_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -8,
+          "file": "tiles/903_-2_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -7,
+          "file": "tiles/903_-2_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -6,
+          "file": "tiles/903_-2_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -5,
+          "file": "tiles/903_-2_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -4,
+          "file": "tiles/903_-2_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -3,
+          "file": "tiles/903_-2_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "file": "tiles/903_-2_-2.png",
+          "sha256": "78dfaabcf6082030d556ed2a3c4fc517384ed73d7beae26103865dd7321b9a6d",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": -1,
+          "file": "tiles/903_-2_-1.png",
+          "sha256": "094c33efba3cad339861213549a50cf0571cc91be5259e936a55edef3b750b44",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "file": "tiles/903_-2_0.png",
+          "sha256": "e91da9b12002aa6970375e5b41d2f0571d686964564d162104c0555f12f37722",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": 1,
+          "file": "tiles/903_-2_1.png",
+          "sha256": "d312f3391aaed581bcfb1eb722edcba2eb02ebd11a9b29900ec66058a530d0f2",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": 2,
+          "file": "tiles/903_-2_2.png",
+          "sha256": "ea4cc5d0cdd19e1fe6b05a56f89e4874589dfca3fdedde098a13095785f53f34",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": 3,
+          "file": "tiles/903_-2_3.png",
+          "sha256": "0d97cd2ea50d268833ef8d17e5eb28e5fb2b77f96ac1eaa004b2ae6862fdad97",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": 4,
+          "file": "tiles/903_-2_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -15,
+          "file": "tiles/903_-1_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -14,
+          "file": "tiles/903_-1_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -13,
+          "file": "tiles/903_-1_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -12,
+          "file": "tiles/903_-1_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -11,
+          "file": "tiles/903_-1_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -10,
+          "file": "tiles/903_-1_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -9,
+          "file": "tiles/903_-1_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -8,
+          "file": "tiles/903_-1_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -7,
+          "file": "tiles/903_-1_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -6,
+          "file": "tiles/903_-1_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -5,
+          "file": "tiles/903_-1_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -4,
+          "file": "tiles/903_-1_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -3,
+          "file": "tiles/903_-1_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -2,
+          "file": "tiles/903_-1_-2.png",
+          "sha256": "c02c2f924aaeff8ecad275d2bbfff3788ae4aeccda82bcb0df30a6cefda71faa",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "file": "tiles/903_-1_-1.png",
+          "sha256": "cf56c628f6f943b2114bfd4ea0a9e658318c2c060e64bf18afa36804abec7cde",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "file": "tiles/903_-1_0.png",
+          "sha256": "26e8a0000a6582c2d78bbe1394eecc583b134ed5082f44aa597a5164a628eb43",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": 1,
+          "file": "tiles/903_-1_1.png",
+          "sha256": "455d0e3e77a73ac59d653bc7b22050e6334a7c568c83d82f02d7faadbebcafce",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "file": "tiles/903_-1_2.png",
+          "sha256": "137d997f42de1d6d1970460ad2483f930629a52f2b397642e7bba64b211ffa3b",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": 3,
+          "file": "tiles/903_-1_3.png",
+          "sha256": "07f9e569a5f7054248988a24d482e90bd50c58ebe7d060964f3a736ff970ce18",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": 4,
+          "file": "tiles/903_-1_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -15,
+          "file": "tiles/903_0_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -14,
+          "file": "tiles/903_0_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -13,
+          "file": "tiles/903_0_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -12,
+          "file": "tiles/903_0_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -11,
+          "file": "tiles/903_0_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -10,
+          "file": "tiles/903_0_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -9,
+          "file": "tiles/903_0_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -8,
+          "file": "tiles/903_0_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -7,
+          "file": "tiles/903_0_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -6,
+          "file": "tiles/903_0_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -5,
+          "file": "tiles/903_0_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -4,
+          "file": "tiles/903_0_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -3,
+          "file": "tiles/903_0_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -2,
+          "file": "tiles/903_0_-2.png",
+          "sha256": "7a7ef05f333dc9dff685c1afd4494cb954c3461b0cbd4b8466de5c9b9bd080cc",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": -1,
+          "file": "tiles/903_0_-1.png",
+          "sha256": "88201089c84c8fb47d8d43f1fe2516b7fd951b1c791ac8a73dab8814e8704776",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "file": "tiles/903_0_0.png",
+          "sha256": "73165f7c7802e0b9d623ab1baa6f614aa62bcd194ede2a7e12c85a3fe3c56318",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "file": "tiles/903_0_1.png",
+          "sha256": "0305ffa28f4a7a267741e702df2e2c563c7cc573f843a1f4efe79c64a30036e6",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "file": "tiles/903_0_2.png",
+          "sha256": "8910226892ec4bd01f9c720184923caf2ccc6e2ae4bcb8ccf5d6f84ea16f6464",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 3,
+          "file": "tiles/903_0_3.png",
+          "sha256": "5a7648879febc1a2d3932c8cb21a9595d9b414b4d09632302dfded72d7f6b14a",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 4,
+          "file": "tiles/903_0_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -15,
+          "file": "tiles/903_1_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -14,
+          "file": "tiles/903_1_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -13,
+          "file": "tiles/903_1_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -12,
+          "file": "tiles/903_1_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -11,
+          "file": "tiles/903_1_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -10,
+          "file": "tiles/903_1_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -9,
+          "file": "tiles/903_1_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -8,
+          "file": "tiles/903_1_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -7,
+          "file": "tiles/903_1_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -6,
+          "file": "tiles/903_1_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -5,
+          "file": "tiles/903_1_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -4,
+          "file": "tiles/903_1_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -3,
+          "file": "tiles/903_1_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -2,
+          "file": "tiles/903_1_-2.png",
+          "sha256": "5261cbc21336c54a550d515f8a600c86e8e6b54f41718c091f711bd51d114b91",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": -1,
+          "file": "tiles/903_1_-1.png",
+          "sha256": "e79e3a19dc8981be4b9f7dbe6c3ada23b5e7a41ec37ac0fa646e7fe310576f2c",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "file": "tiles/903_1_0.png",
+          "sha256": "9f229a13152152c10b6ac7e74222a635440d4619c69094a181f32a15f15d44eb",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "file": "tiles/903_1_1.png",
+          "sha256": "a7df63f99a5f48c36c6a816f07f8eb619d3ff7477f1c87e9d59b95252c5d0d0e",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "file": "tiles/903_1_2.png",
+          "sha256": "132d5a630a9301a8dc39edaef011d10c350d03e81595a5f209993a48d49ca7e3",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 3,
+          "file": "tiles/903_1_3.png",
+          "sha256": "3494e8ffaf8a19a36309d83b32f011e9a64ef6530e757cd649072a9029a6cef3",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 4,
+          "file": "tiles/903_1_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -15,
+          "file": "tiles/903_2_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -14,
+          "file": "tiles/903_2_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -13,
+          "file": "tiles/903_2_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -12,
+          "file": "tiles/903_2_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -11,
+          "file": "tiles/903_2_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -10,
+          "file": "tiles/903_2_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -9,
+          "file": "tiles/903_2_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -8,
+          "file": "tiles/903_2_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -7,
+          "file": "tiles/903_2_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -6,
+          "file": "tiles/903_2_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -5,
+          "file": "tiles/903_2_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -4,
+          "file": "tiles/903_2_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -3,
+          "file": "tiles/903_2_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -2,
+          "file": "tiles/903_2_-2.png",
+          "sha256": "a3c2a96b5def0739652b9292da8e5259ddb0ebd50ce34c3a02a6652860c4d04a",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": -1,
+          "file": "tiles/903_2_-1.png",
+          "sha256": "6e33a279325395ebdf0a6cf0a27a875ab97f23a26e6ca5c0cae4d16f8accee10",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "file": "tiles/903_2_0.png",
+          "sha256": "e77d59c934c849293b9caea8bd58daa0f8f3e5f0592246b27055fa8e84af3d5e",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "file": "tiles/903_2_1.png",
+          "sha256": "4fdb6484db9c5b1a70208585ed4a569b5392b0b11c993a08ecbe6f88a776e2ca",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "file": "tiles/903_2_2.png",
+          "sha256": "56b22d41c3d95eac8b18e80fb471c338c4008aa646891131ffbfa2519d6942a3",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": 3,
+          "file": "tiles/903_2_3.png",
+          "sha256": "53d9be52b779de4eaf89f95b8681eddeb3fd982595e2cac44e8608beb82cd547",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": 4,
+          "file": "tiles/903_2_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -15,
+          "file": "tiles/903_3_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -14,
+          "file": "tiles/903_3_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -13,
+          "file": "tiles/903_3_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -12,
+          "file": "tiles/903_3_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -11,
+          "file": "tiles/903_3_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -10,
+          "file": "tiles/903_3_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -9,
+          "file": "tiles/903_3_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -8,
+          "file": "tiles/903_3_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -7,
+          "file": "tiles/903_3_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -6,
+          "file": "tiles/903_3_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -5,
+          "file": "tiles/903_3_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -4,
+          "file": "tiles/903_3_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -3,
+          "file": "tiles/903_3_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -2,
+          "file": "tiles/903_3_-2.png",
+          "sha256": "006071925be0b8adbb5b4d908b3d5415e2902bfc5f19ccb51d7ef4832f28545b",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": -1,
+          "file": "tiles/903_3_-1.png",
+          "sha256": "32efca265105ef699c95eee0ef80f970ccb795b45c53d876767eb5dc291ea658",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": 0,
+          "file": "tiles/903_3_0.png",
+          "sha256": "03b4dc1845478b150f3efb7439a1df9ca18713e2dd1f266bccbe3865da3a82f0",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": 1,
+          "file": "tiles/903_3_1.png",
+          "sha256": "a3469ec9275c3f26c0e255340cab3904fea1846166727190591573dc119725ea",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": 2,
+          "file": "tiles/903_3_2.png",
+          "sha256": "28837fe38bb02091b135f47f8c569aeb71c02ee02b64f8607d1c860ef0d9eff7",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": 3,
+          "file": "tiles/903_3_3.png",
+          "sha256": "eac6dd9df8582adde3003b330d69d86e8b0f08ed9158a511c089ca1564f1a6f2",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": 4,
+          "file": "tiles/903_3_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -15,
+          "file": "tiles/903_4_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -14,
+          "file": "tiles/903_4_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -13,
+          "file": "tiles/903_4_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -12,
+          "file": "tiles/903_4_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -11,
+          "file": "tiles/903_4_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -10,
+          "file": "tiles/903_4_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -9,
+          "file": "tiles/903_4_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -8,
+          "file": "tiles/903_4_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -7,
+          "file": "tiles/903_4_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -6,
+          "file": "tiles/903_4_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -5,
+          "file": "tiles/903_4_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -4,
+          "file": "tiles/903_4_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -3,
+          "file": "tiles/903_4_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -2,
+          "file": "tiles/903_4_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -1,
+          "file": "tiles/903_4_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": 0,
+          "file": "tiles/903_4_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": 1,
+          "file": "tiles/903_4_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": 2,
+          "file": "tiles/903_4_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": 3,
+          "file": "tiles/903_4_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": 4,
+          "file": "tiles/903_4_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -15,
+          "file": "tiles/903_5_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -14,
+          "file": "tiles/903_5_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -13,
+          "file": "tiles/903_5_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -12,
+          "file": "tiles/903_5_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -11,
+          "file": "tiles/903_5_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -10,
+          "file": "tiles/903_5_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -9,
+          "file": "tiles/903_5_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -8,
+          "file": "tiles/903_5_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -7,
+          "file": "tiles/903_5_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -6,
+          "file": "tiles/903_5_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -5,
+          "file": "tiles/903_5_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -4,
+          "file": "tiles/903_5_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -3,
+          "file": "tiles/903_5_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -2,
+          "file": "tiles/903_5_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -1,
+          "file": "tiles/903_5_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": 0,
+          "file": "tiles/903_5_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": 1,
+          "file": "tiles/903_5_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": 2,
+          "file": "tiles/903_5_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": 3,
+          "file": "tiles/903_5_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": 4,
+          "file": "tiles/903_5_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -15,
+          "file": "tiles/903_6_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -14,
+          "file": "tiles/903_6_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -13,
+          "file": "tiles/903_6_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -12,
+          "file": "tiles/903_6_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -11,
+          "file": "tiles/903_6_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -10,
+          "file": "tiles/903_6_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -9,
+          "file": "tiles/903_6_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -8,
+          "file": "tiles/903_6_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -7,
+          "file": "tiles/903_6_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -6,
+          "file": "tiles/903_6_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -5,
+          "file": "tiles/903_6_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -4,
+          "file": "tiles/903_6_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -3,
+          "file": "tiles/903_6_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -2,
+          "file": "tiles/903_6_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -1,
+          "file": "tiles/903_6_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": 0,
+          "file": "tiles/903_6_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": 1,
+          "file": "tiles/903_6_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": 2,
+          "file": "tiles/903_6_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": 3,
+          "file": "tiles/903_6_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": 4,
+          "file": "tiles/903_6_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -15,
+          "file": "tiles/903_7_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -14,
+          "file": "tiles/903_7_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -13,
+          "file": "tiles/903_7_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -12,
+          "file": "tiles/903_7_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -11,
+          "file": "tiles/903_7_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -10,
+          "file": "tiles/903_7_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -9,
+          "file": "tiles/903_7_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -8,
+          "file": "tiles/903_7_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -7,
+          "file": "tiles/903_7_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -6,
+          "file": "tiles/903_7_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -5,
+          "file": "tiles/903_7_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -4,
+          "file": "tiles/903_7_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -3,
+          "file": "tiles/903_7_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -2,
+          "file": "tiles/903_7_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -1,
+          "file": "tiles/903_7_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 0,
+          "file": "tiles/903_7_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 1,
+          "file": "tiles/903_7_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 2,
+          "file": "tiles/903_7_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 3,
+          "file": "tiles/903_7_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 4,
+          "file": "tiles/903_7_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -15,
+          "file": "tiles/903_8_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -14,
+          "file": "tiles/903_8_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -13,
+          "file": "tiles/903_8_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -12,
+          "file": "tiles/903_8_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -11,
+          "file": "tiles/903_8_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -10,
+          "file": "tiles/903_8_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -9,
+          "file": "tiles/903_8_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -8,
+          "file": "tiles/903_8_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -7,
+          "file": "tiles/903_8_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -6,
+          "file": "tiles/903_8_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -5,
+          "file": "tiles/903_8_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -4,
+          "file": "tiles/903_8_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -3,
+          "file": "tiles/903_8_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -2,
+          "file": "tiles/903_8_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": -1,
+          "file": "tiles/903_8_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": 0,
+          "file": "tiles/903_8_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": 1,
+          "file": "tiles/903_8_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": 2,
+          "file": "tiles/903_8_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": 3,
+          "file": "tiles/903_8_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 8,
+          "y": 4,
+          "file": "tiles/903_8_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -15,
+          "file": "tiles/903_9_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -14,
+          "file": "tiles/903_9_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -13,
+          "file": "tiles/903_9_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -12,
+          "file": "tiles/903_9_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -11,
+          "file": "tiles/903_9_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -10,
+          "file": "tiles/903_9_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -9,
+          "file": "tiles/903_9_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -8,
+          "file": "tiles/903_9_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -7,
+          "file": "tiles/903_9_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -6,
+          "file": "tiles/903_9_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -5,
+          "file": "tiles/903_9_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -4,
+          "file": "tiles/903_9_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -3,
+          "file": "tiles/903_9_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -2,
+          "file": "tiles/903_9_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": -1,
+          "file": "tiles/903_9_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": 0,
+          "file": "tiles/903_9_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": 1,
+          "file": "tiles/903_9_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": 2,
+          "file": "tiles/903_9_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": 3,
+          "file": "tiles/903_9_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 9,
+          "y": 4,
+          "file": "tiles/903_9_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -15,
+          "file": "tiles/903_10_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -14,
+          "file": "tiles/903_10_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -13,
+          "file": "tiles/903_10_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -12,
+          "file": "tiles/903_10_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -11,
+          "file": "tiles/903_10_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -10,
+          "file": "tiles/903_10_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -9,
+          "file": "tiles/903_10_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -8,
+          "file": "tiles/903_10_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -7,
+          "file": "tiles/903_10_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -6,
+          "file": "tiles/903_10_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -5,
+          "file": "tiles/903_10_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -4,
+          "file": "tiles/903_10_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -3,
+          "file": "tiles/903_10_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -2,
+          "file": "tiles/903_10_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": -1,
+          "file": "tiles/903_10_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": 0,
+          "file": "tiles/903_10_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": 1,
+          "file": "tiles/903_10_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": 2,
+          "file": "tiles/903_10_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": 3,
+          "file": "tiles/903_10_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 10,
+          "y": 4,
+          "file": "tiles/903_10_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -15,
+          "file": "tiles/903_11_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -14,
+          "file": "tiles/903_11_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -13,
+          "file": "tiles/903_11_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -12,
+          "file": "tiles/903_11_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -11,
+          "file": "tiles/903_11_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -10,
+          "file": "tiles/903_11_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -9,
+          "file": "tiles/903_11_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -8,
+          "file": "tiles/903_11_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -7,
+          "file": "tiles/903_11_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -6,
+          "file": "tiles/903_11_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -5,
+          "file": "tiles/903_11_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -4,
+          "file": "tiles/903_11_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -3,
+          "file": "tiles/903_11_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -2,
+          "file": "tiles/903_11_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": -1,
+          "file": "tiles/903_11_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": 0,
+          "file": "tiles/903_11_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": 1,
+          "file": "tiles/903_11_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": 2,
+          "file": "tiles/903_11_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": 3,
+          "file": "tiles/903_11_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 11,
+          "y": 4,
+          "file": "tiles/903_11_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -15,
+          "file": "tiles/903_12_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -14,
+          "file": "tiles/903_12_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -13,
+          "file": "tiles/903_12_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -12,
+          "file": "tiles/903_12_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -11,
+          "file": "tiles/903_12_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -10,
+          "file": "tiles/903_12_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -9,
+          "file": "tiles/903_12_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -8,
+          "file": "tiles/903_12_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -7,
+          "file": "tiles/903_12_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -6,
+          "file": "tiles/903_12_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -5,
+          "file": "tiles/903_12_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -4,
+          "file": "tiles/903_12_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -3,
+          "file": "tiles/903_12_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -2,
+          "file": "tiles/903_12_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": -1,
+          "file": "tiles/903_12_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": 0,
+          "file": "tiles/903_12_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": 1,
+          "file": "tiles/903_12_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": 2,
+          "file": "tiles/903_12_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": 3,
+          "file": "tiles/903_12_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 12,
+          "y": 4,
+          "file": "tiles/903_12_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -15,
+          "file": "tiles/903_13_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -14,
+          "file": "tiles/903_13_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -13,
+          "file": "tiles/903_13_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -12,
+          "file": "tiles/903_13_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -11,
+          "file": "tiles/903_13_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -10,
+          "file": "tiles/903_13_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -9,
+          "file": "tiles/903_13_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -8,
+          "file": "tiles/903_13_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -7,
+          "file": "tiles/903_13_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -6,
+          "file": "tiles/903_13_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -5,
+          "file": "tiles/903_13_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -4,
+          "file": "tiles/903_13_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -3,
+          "file": "tiles/903_13_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -2,
+          "file": "tiles/903_13_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": -1,
+          "file": "tiles/903_13_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": 0,
+          "file": "tiles/903_13_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": 1,
+          "file": "tiles/903_13_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": 2,
+          "file": "tiles/903_13_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": 3,
+          "file": "tiles/903_13_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 13,
+          "y": 4,
+          "file": "tiles/903_13_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -15,
+          "file": "tiles/903_14_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -14,
+          "file": "tiles/903_14_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -13,
+          "file": "tiles/903_14_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -12,
+          "file": "tiles/903_14_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -11,
+          "file": "tiles/903_14_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -10,
+          "file": "tiles/903_14_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -9,
+          "file": "tiles/903_14_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -8,
+          "file": "tiles/903_14_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -7,
+          "file": "tiles/903_14_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -6,
+          "file": "tiles/903_14_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -5,
+          "file": "tiles/903_14_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -4,
+          "file": "tiles/903_14_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -3,
+          "file": "tiles/903_14_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -2,
+          "file": "tiles/903_14_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": -1,
+          "file": "tiles/903_14_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": 0,
+          "file": "tiles/903_14_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": 1,
+          "file": "tiles/903_14_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": 2,
+          "file": "tiles/903_14_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": 3,
+          "file": "tiles/903_14_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 14,
+          "y": 4,
+          "file": "tiles/903_14_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -15,
+          "file": "tiles/903_15_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -14,
+          "file": "tiles/903_15_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -13,
+          "file": "tiles/903_15_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -12,
+          "file": "tiles/903_15_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -11,
+          "file": "tiles/903_15_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -10,
+          "file": "tiles/903_15_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -9,
+          "file": "tiles/903_15_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -8,
+          "file": "tiles/903_15_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -7,
+          "file": "tiles/903_15_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -6,
+          "file": "tiles/903_15_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -5,
+          "file": "tiles/903_15_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -4,
+          "file": "tiles/903_15_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -3,
+          "file": "tiles/903_15_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -2,
+          "file": "tiles/903_15_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": -1,
+          "file": "tiles/903_15_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": 0,
+          "file": "tiles/903_15_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": 1,
+          "file": "tiles/903_15_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": 2,
+          "file": "tiles/903_15_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": 3,
+          "file": "tiles/903_15_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 15,
+          "y": 4,
+          "file": "tiles/903_15_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -15,
+          "file": "tiles/903_16_-15.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -14,
+          "file": "tiles/903_16_-14.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -13,
+          "file": "tiles/903_16_-13.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -12,
+          "file": "tiles/903_16_-12.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -11,
+          "file": "tiles/903_16_-11.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -10,
+          "file": "tiles/903_16_-10.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -9,
+          "file": "tiles/903_16_-9.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -8,
+          "file": "tiles/903_16_-8.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -7,
+          "file": "tiles/903_16_-7.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -6,
+          "file": "tiles/903_16_-6.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -5,
+          "file": "tiles/903_16_-5.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -4,
+          "file": "tiles/903_16_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -3,
+          "file": "tiles/903_16_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -2,
+          "file": "tiles/903_16_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": -1,
+          "file": "tiles/903_16_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": 0,
+          "file": "tiles/903_16_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": 1,
+          "file": "tiles/903_16_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": 2,
+          "file": "tiles/903_16_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": 3,
+          "file": "tiles/903_16_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 16,
+          "y": 4,
+          "file": "tiles/903_16_4.png",
+          "sha256": null,
+          "absent": true
+        }
+      ],
+      "present": 36,
+      "absent": 364
+    },
     "blackshores": {
       "tiles": [
         {
@@ -626,6 +3432,831 @@
       ],
       "present": 25,
       "absent": 31
+    },
+    "fabricatorium": {
+      "tiles": [
+        {
+          "x": -5,
+          "y": -4,
+          "file": "tiles/905_-5_-4.png",
+          "sha256": "7169cc0cbae7d73b134d1a1042084e74b160dbdbe6ca831c0790425c75f4610b",
+          "absent": false
+        },
+        {
+          "x": -5,
+          "y": -3,
+          "file": "tiles/905_-5_-3.png",
+          "sha256": "eff2da6079223bdc8b23d80b84ac6d383f13a15b6c92b0066555671201c89b41",
+          "absent": false
+        },
+        {
+          "x": -5,
+          "y": -2,
+          "file": "tiles/905_-5_-2.png",
+          "sha256": "06c05559761822c662eae2a09a7d589785aff16258d2677518f7c5406ec6aa7f",
+          "absent": false
+        },
+        {
+          "x": -5,
+          "y": -1,
+          "file": "tiles/905_-5_-1.png",
+          "sha256": "a9d8905801b165a240ce6c6381f9e95fa60e11ab2ddf92c91aaf3b56772ca79b",
+          "absent": false
+        },
+        {
+          "x": -5,
+          "y": 0,
+          "file": "tiles/905_-5_0.png",
+          "sha256": "4a676c45d7c29897fea47b2e9c686f26f5acb05f052178fde56439b01efa51b9",
+          "absent": false
+        },
+        {
+          "x": -5,
+          "y": 1,
+          "file": "tiles/905_-5_1.png",
+          "sha256": "7dbadcad332ab8398e5de39822688e7b61b841afebd25536731c889d1ff6a4f7",
+          "absent": false
+        },
+        {
+          "x": -5,
+          "y": 2,
+          "file": "tiles/905_-5_2.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": -5,
+          "y": 3,
+          "file": "tiles/905_-5_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -5,
+          "y": 4,
+          "file": "tiles/905_-5_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -4,
+          "y": -4,
+          "file": "tiles/905_-4_-4.png",
+          "sha256": "1a240e0fdc4c1df5bf66a1242f0a00a539e5e53248a2462b17138a0d2cadd626",
+          "absent": false
+        },
+        {
+          "x": -4,
+          "y": -3,
+          "file": "tiles/905_-4_-3.png",
+          "sha256": "50c5d7da5f0e8e149ecde36bcb21334257fbe4ec553ce118d85f81eefa43ee01",
+          "absent": false
+        },
+        {
+          "x": -4,
+          "y": -2,
+          "file": "tiles/905_-4_-2.png",
+          "sha256": "60f0921a34f01da5c7334113cd1fe8e74e9eb957489db65c00cb4f558d6af2c0",
+          "absent": false
+        },
+        {
+          "x": -4,
+          "y": -1,
+          "file": "tiles/905_-4_-1.png",
+          "sha256": "e6c9fc0d094cef1dc6911d06c89c80aa27003ad631e86729bc01e5db4e34371f",
+          "absent": false
+        },
+        {
+          "x": -4,
+          "y": 0,
+          "file": "tiles/905_-4_0.png",
+          "sha256": "95f8c2acff086c237eb61f6b11dd837d2a20cf999d1e8a1d298a8f7ecb49f1a4",
+          "absent": false
+        },
+        {
+          "x": -4,
+          "y": 1,
+          "file": "tiles/905_-4_1.png",
+          "sha256": "9a164c173c663e9b2a53678a83d5fdd2c97fd8412cbf00867c444269adea1446",
+          "absent": false
+        },
+        {
+          "x": -4,
+          "y": 2,
+          "file": "tiles/905_-4_2.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": -4,
+          "y": 3,
+          "file": "tiles/905_-4_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -4,
+          "y": 4,
+          "file": "tiles/905_-4_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": -4,
+          "file": "tiles/905_-3_-4.png",
+          "sha256": "cada1cdec661c9628f22d0c472f7a7daf4d61c0f2d4284d46d239ac94f1e6283",
+          "absent": false
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "file": "tiles/905_-3_-3.png",
+          "sha256": "0d9dd1a8d668006f75d5b8271b428a6201a7f3f12e17f66b3036fe90e47c2502",
+          "absent": false
+        },
+        {
+          "x": -3,
+          "y": -2,
+          "file": "tiles/905_-3_-2.png",
+          "sha256": "cfc744241407517f9605e2bb651148b8d5367da863993bcc016d207a3de4247c",
+          "absent": false
+        },
+        {
+          "x": -3,
+          "y": -1,
+          "file": "tiles/905_-3_-1.png",
+          "sha256": "9b7fb5dee1d4c2706b8f0c0dc169e52da98c931a13b5477771b6bf2e619a7fd1",
+          "absent": false
+        },
+        {
+          "x": -3,
+          "y": 0,
+          "file": "tiles/905_-3_0.png",
+          "sha256": "64d0efcbcb04072fea2ad7e4d298490beeea1cf728d079113cde9fca03107dfc",
+          "absent": false
+        },
+        {
+          "x": -3,
+          "y": 1,
+          "file": "tiles/905_-3_1.png",
+          "sha256": "e4f01806be6c3915a3100f8800177e6d432cd95f71abd530e3c89fa569f46e34",
+          "absent": false
+        },
+        {
+          "x": -3,
+          "y": 2,
+          "file": "tiles/905_-3_2.png",
+          "sha256": "4addf3953c59653d379fe715ecabdd61cd282472b6632abf139c67902a37925c",
+          "absent": false
+        },
+        {
+          "x": -3,
+          "y": 3,
+          "file": "tiles/905_-3_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -3,
+          "y": 4,
+          "file": "tiles/905_-3_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -4,
+          "file": "tiles/905_-2_-4.png",
+          "sha256": "c8b03588fac99e64759472c34cafdf7d0f718f1788ac7c5f7247b329ceb1c413",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": -3,
+          "file": "tiles/905_-2_-3.png",
+          "sha256": "229e44da4312d765b90a6dc9bd4533131a9055b78bc7b2a6d52e5be5c9005949",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "file": "tiles/905_-2_-2.png",
+          "sha256": "2d59a7a6e016608ca1daf1ac68f26536fac0f73f78229c8e719e3c86c47c5c80",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": -1,
+          "file": "tiles/905_-2_-1.png",
+          "sha256": "b968c04b902371b2b7f7942421dd5c3cbb2e5d19c7a2b62bcc37edc65160e046",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "file": "tiles/905_-2_0.png",
+          "sha256": "28335ab9d1824a5d83200b0c4d5001f78f329994971c0935afff4fff6631a35d",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": 1,
+          "file": "tiles/905_-2_1.png",
+          "sha256": "02e8c3d267c984b23d9b76330075ff8994b8b80a42ebaaedee79c408494bd19b",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": 2,
+          "file": "tiles/905_-2_2.png",
+          "sha256": "fcdb35e0077f4734ccdf06010f7e63a18887d434520224546ed64435674a4a58",
+          "absent": false
+        },
+        {
+          "x": -2,
+          "y": 3,
+          "file": "tiles/905_-2_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": 4,
+          "file": "tiles/905_-2_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -4,
+          "file": "tiles/905_-1_-4.png",
+          "sha256": "6e3af88eb9af8e5e115adda7f0cf70503f71110bdadbbb04d6dccd7bfbe833eb",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": -3,
+          "file": "tiles/905_-1_-3.png",
+          "sha256": "014c2152322a57ee324205982f9eb65b72a57faf486264fa27f9b2436f7029bc",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": -2,
+          "file": "tiles/905_-1_-2.png",
+          "sha256": "78f3ed6bf3d64599cbb069309484568204b69867cd15095852e820d15ad1df7f",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "file": "tiles/905_-1_-1.png",
+          "sha256": "ebbff7dbd98aeed3afaa7c478f8c5016e834fafedba86d760f18a59da105e01b",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "file": "tiles/905_-1_0.png",
+          "sha256": "63cf06caa0ddda1b1faf58bc5c86626a318da495c23a2cf18b8972ede9246045",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": 1,
+          "file": "tiles/905_-1_1.png",
+          "sha256": "efa2524fcf026d025343850f2ce18c86c2c306072eed605fa64b3bec8a9d88d4",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "file": "tiles/905_-1_2.png",
+          "sha256": "d668364f37f55cc7eacf891e498a77ff5dfa80aeadd52f5cc34f45dfbb36a037",
+          "absent": false
+        },
+        {
+          "x": -1,
+          "y": 3,
+          "file": "tiles/905_-1_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": 4,
+          "file": "tiles/905_-1_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -4,
+          "file": "tiles/905_0_-4.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": -3,
+          "file": "tiles/905_0_-3.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": -2,
+          "file": "tiles/905_0_-2.png",
+          "sha256": "3fe5ef5913d7229ae45ae1366d1f348138c3a503ba10ce89e4851fdd15d37eb1",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": -1,
+          "file": "tiles/905_0_-1.png",
+          "sha256": "a308eb5bca1a54a2c76333e5597ecdcdbd4369c23242a304970be90b9c92724f",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "file": "tiles/905_0_0.png",
+          "sha256": "f7d062d40e27aaa4fe06394cb4d7f4b919bbf56f24fad1c7741f61088c97f83e",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "file": "tiles/905_0_1.png",
+          "sha256": "ebb5b43565f4a4c68c3b8ea6d2278c77d7048347bd82307504e24250210d6950",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "file": "tiles/905_0_2.png",
+          "sha256": "e83feb61e91cfba0a866abcbbbccc38eb52ed2ca6b7715304a23fad4d0a1d32d",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 3,
+          "file": "tiles/905_0_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": 4,
+          "file": "tiles/905_0_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -4,
+          "file": "tiles/905_1_-4.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": -3,
+          "file": "tiles/905_1_-3.png",
+          "sha256": "fb472315af3da63f1e08979cfcf1f6487ec0f02095b51ba73949666ff0ca339e",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": -2,
+          "file": "tiles/905_1_-2.png",
+          "sha256": "c53a38dd5200b0ad4d37eb1864cd061b181aa90cc9d68f59108a24ae8bd4b01b",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": -1,
+          "file": "tiles/905_1_-1.png",
+          "sha256": "d571cf6725190d9f7530d7c31a8f9af91e62cbcfee24d9b8fd984a3e9722ced6",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "file": "tiles/905_1_0.png",
+          "sha256": "3ef8a4615d23af19d3237343c7c7b50aa244fb998ff3aadd13c164ecbaae812f",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "file": "tiles/905_1_1.png",
+          "sha256": "4b62d72894cebb59eeebf39432911a499cc9589e2a54f4b25314bcca81e6e364",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "file": "tiles/905_1_2.png",
+          "sha256": "a528747b5e651c1ab6d504aefadd3ddc7e7c2b26fa9ad4e4f29a7aeb3a1e67ce",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 3,
+          "file": "tiles/905_1_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": 4,
+          "file": "tiles/905_1_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -4,
+          "file": "tiles/905_2_-4.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": -3,
+          "file": "tiles/905_2_-3.png",
+          "sha256": "8024b96269c1c9c6fbbf22d0c7348923676442ebaf796fda948f6fa8c86c9604",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": -2,
+          "file": "tiles/905_2_-2.png",
+          "sha256": "31a60966427e11e1a9514a5b46c72dc53291e542d4d6d57a88cd8f4035432685",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": -1,
+          "file": "tiles/905_2_-1.png",
+          "sha256": "bb74232e8d7abb605bcc4a35e5c1b5a5ef94c13a0f23671666a93138ad4a13ed",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "file": "tiles/905_2_0.png",
+          "sha256": "5f68d8fa76068d0953359e91b32c959df1e026f3c8edd70e9e70270e4260dee0",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "file": "tiles/905_2_1.png",
+          "sha256": "eeb261e9633e2664a8a5bc1f47718433d4ffa4e60c360ed7334355c41b1b2f4b",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "file": "tiles/905_2_2.png",
+          "sha256": "29cf31a93853aab1152c24c614c7aa45f8f03d03ca110cb02ad1e5d1fe72fe76",
+          "absent": false
+        },
+        {
+          "x": 2,
+          "y": 3,
+          "file": "tiles/905_2_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": 4,
+          "file": "tiles/905_2_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -4,
+          "file": "tiles/905_3_-4.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": -3,
+          "file": "tiles/905_3_-3.png",
+          "sha256": "ab82af4260ee1c73f858f3e86b976d5cb0a8dffcc24a2e66a0cfa4afa74bbfcf",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": -2,
+          "file": "tiles/905_3_-2.png",
+          "sha256": "fba2005a34cd7cfc20d30817242e3f2d8b568d0ef6f6d8ca353c90c074aaba97",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": -1,
+          "file": "tiles/905_3_-1.png",
+          "sha256": "86dbc74e9b112f44663ca5a2d83b545ebc2713bf1f437eeb54d0303ac01a9628",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": 0,
+          "file": "tiles/905_3_0.png",
+          "sha256": "dc8eae51767704d1ebcda8a7e51309617c0d957e8736ea9ba29f8e2c2c54ee7f",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": 1,
+          "file": "tiles/905_3_1.png",
+          "sha256": "d80bc41b981548ad5cdcf2b34cabb2eda09c171bcdb2ce58b0294e81561862e7",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": 2,
+          "file": "tiles/905_3_2.png",
+          "sha256": "cfe626399c12f6a126ddbc66bdeaff00a9b14cb0dfcbafa3f4525c1a505fd584",
+          "absent": false
+        },
+        {
+          "x": 3,
+          "y": 3,
+          "file": "tiles/905_3_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": 4,
+          "file": "tiles/905_3_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": -4,
+          "file": "tiles/905_4_-4.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 4,
+          "y": -3,
+          "file": "tiles/905_4_-3.png",
+          "sha256": "4728d4fd47548e188f78a88175916cd78b4a87cc726736fb8a34e293617c5d76",
+          "absent": false
+        },
+        {
+          "x": 4,
+          "y": -2,
+          "file": "tiles/905_4_-2.png",
+          "sha256": "fac7545c1bf5d7b9c8516b7750c0f51628ed99e39ba2d5d9219b361f62656ece",
+          "absent": false
+        },
+        {
+          "x": 4,
+          "y": -1,
+          "file": "tiles/905_4_-1.png",
+          "sha256": "cd7cfe7c159c61c6eab29f8b6611588bee3af86de25732b25f444b9894f1b84a",
+          "absent": false
+        },
+        {
+          "x": 4,
+          "y": 0,
+          "file": "tiles/905_4_0.png",
+          "sha256": "13f022c25be651441df575094c8d01c1243c8581705b81e3fb1c9c15e27ab5c0",
+          "absent": false
+        },
+        {
+          "x": 4,
+          "y": 1,
+          "file": "tiles/905_4_1.png",
+          "sha256": "02ef5660cf19b7aac62f8989a06f0f87d2383349a4e10336688787576d4648a9",
+          "absent": false
+        },
+        {
+          "x": 4,
+          "y": 2,
+          "file": "tiles/905_4_2.png",
+          "sha256": "ee8f9d9555ece7782cb9306cd1e0fa56acab88b99b030de32997fb551f12d9f4",
+          "absent": false
+        },
+        {
+          "x": 4,
+          "y": 3,
+          "file": "tiles/905_4_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 4,
+          "y": 4,
+          "file": "tiles/905_4_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": -4,
+          "file": "tiles/905_5_-4.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 5,
+          "y": -3,
+          "file": "tiles/905_5_-3.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 5,
+          "y": -2,
+          "file": "tiles/905_5_-2.png",
+          "sha256": "e45de73e93452916edfb08c4af351a388f636901630a10d8e92dfe6923847223",
+          "absent": false
+        },
+        {
+          "x": 5,
+          "y": -1,
+          "file": "tiles/905_5_-1.png",
+          "sha256": "3268308f42f6d6c90df4a1675dd5fd11e0f99b127d336583d96be0fb464410ce",
+          "absent": false
+        },
+        {
+          "x": 5,
+          "y": 0,
+          "file": "tiles/905_5_0.png",
+          "sha256": "167bc2ad43bc4b90364c02dbca35fefd1558879376640e023e21efad2d357a12",
+          "absent": false
+        },
+        {
+          "x": 5,
+          "y": 1,
+          "file": "tiles/905_5_1.png",
+          "sha256": "5d82b3158f6ad6cf21d2cc035abe1db018c30f19755b84130bf7788a773d3482",
+          "absent": false
+        },
+        {
+          "x": 5,
+          "y": 2,
+          "file": "tiles/905_5_2.png",
+          "sha256": "f2450369139ac3bbb8fc1616302d000dd33a2fb23a0d807a69deae335c44cfcf",
+          "absent": false
+        },
+        {
+          "x": 5,
+          "y": 3,
+          "file": "tiles/905_5_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 5,
+          "y": 4,
+          "file": "tiles/905_5_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": -4,
+          "file": "tiles/905_6_-4.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 6,
+          "y": -3,
+          "file": "tiles/905_6_-3.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 6,
+          "y": -2,
+          "file": "tiles/905_6_-2.png",
+          "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9",
+          "absent": false
+        },
+        {
+          "x": 6,
+          "y": -1,
+          "file": "tiles/905_6_-1.png",
+          "sha256": "e8c7f41e72b83d23f027b45da4f768bb551c74b7a8794bb7ec35833b2ead9b39",
+          "absent": false
+        },
+        {
+          "x": 6,
+          "y": 0,
+          "file": "tiles/905_6_0.png",
+          "sha256": "8a34db5850d837b7a9f9378aaae72eeeb13039df7ed000bac134c6bffc797c23",
+          "absent": false
+        },
+        {
+          "x": 6,
+          "y": 1,
+          "file": "tiles/905_6_1.png",
+          "sha256": "f90fc3443d4c52140b3c230f2b798dff4dabde5c6c3ec5a921d86aa256f224ee",
+          "absent": false
+        },
+        {
+          "x": 6,
+          "y": 2,
+          "file": "tiles/905_6_2.png",
+          "sha256": "101a9d8ca92de68bdc14e6df41adaad91a0bc9de9140e2f98ee449a8695d28a9",
+          "absent": false
+        },
+        {
+          "x": 6,
+          "y": 3,
+          "file": "tiles/905_6_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 6,
+          "y": 4,
+          "file": "tiles/905_6_4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -4,
+          "file": "tiles/905_7_-4.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -3,
+          "file": "tiles/905_7_-3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -2,
+          "file": "tiles/905_7_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": -1,
+          "file": "tiles/905_7_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 0,
+          "file": "tiles/905_7_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 1,
+          "file": "tiles/905_7_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 2,
+          "file": "tiles/905_7_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 3,
+          "file": "tiles/905_7_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 7,
+          "y": 4,
+          "file": "tiles/905_7_4.png",
+          "sha256": null,
+          "absent": true
+        }
+      ],
+      "present": 84,
+      "absent": 33
     },
     "jinzhou": {
       "tiles": [
@@ -7730,6 +11361,264 @@
       ],
       "present": 13,
       "absent": 23
+    },
+    "timeriftruins": {
+      "tiles": [
+        {
+          "x": -2,
+          "y": -2,
+          "file": "tiles/910_-2_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": -1,
+          "file": "tiles/910_-2_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "file": "tiles/910_-2_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": 1,
+          "file": "tiles/910_-2_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": 2,
+          "file": "tiles/910_-2_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -2,
+          "y": 3,
+          "file": "tiles/910_-2_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -2,
+          "file": "tiles/910_-1_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "file": "tiles/910_-1_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "file": "tiles/910_-1_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": 1,
+          "file": "tiles/910_-1_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "file": "tiles/910_-1_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": -1,
+          "y": 3,
+          "file": "tiles/910_-1_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -2,
+          "file": "tiles/910_0_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": -1,
+          "file": "tiles/910_0_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "file": "tiles/910_0_0.png",
+          "sha256": "7cee034b79db3e119e2e750b89ed0e90a3859a15b88b5234d497da6938c96939",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "file": "tiles/910_0_1.png",
+          "sha256": "fa72c04d724cab5471fea523ebef3443c9e50ab0f0edf9ab55d94bbbd7a48c5a",
+          "absent": false
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "file": "tiles/910_0_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 0,
+          "y": 3,
+          "file": "tiles/910_0_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -2,
+          "file": "tiles/910_1_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": -1,
+          "file": "tiles/910_1_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "file": "tiles/910_1_0.png",
+          "sha256": "5b5dfaa1d051c03c9fb312d708cd6afd43af92d19a869be20d52e8a37fd9f100",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "file": "tiles/910_1_1.png",
+          "sha256": "758daea39cf4960ca3615cdabe2b79f88ec1aadc26ef682afe046376272ee46c",
+          "absent": false
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "file": "tiles/910_1_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 1,
+          "y": 3,
+          "file": "tiles/910_1_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -2,
+          "file": "tiles/910_2_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": -1,
+          "file": "tiles/910_2_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "file": "tiles/910_2_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "file": "tiles/910_2_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "file": "tiles/910_2_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 2,
+          "y": 3,
+          "file": "tiles/910_2_3.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -2,
+          "file": "tiles/910_3_-2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": -1,
+          "file": "tiles/910_3_-1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": 0,
+          "file": "tiles/910_3_0.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": 1,
+          "file": "tiles/910_3_1.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": 2,
+          "file": "tiles/910_3_2.png",
+          "sha256": null,
+          "absent": true
+        },
+        {
+          "x": 3,
+          "y": 3,
+          "file": "tiles/910_3_3.png",
+          "sha256": null,
+          "absent": true
+        }
+      ],
+      "present": 4,
+      "absent": 32
     }
   }
 }

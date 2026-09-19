@@ -164,8 +164,25 @@ foreach ($name in $tileRegistry.packs) {
     $manifest = Get-Content -LiteralPath (Join-Path $sourcePack 'manifest.json') -Encoding UTF8 -Raw | ConvertFrom-Json
     if (-not $manifest.referenceVerification.passed) { continue }
     $feature = Join-Path $sourcePack ([string]$manifest.features.file)
-    if (-not (Test-Path -LiteralPath $feature)) { throw "Approved tile pack missing features: $name" }
-    if ((Get-Sha256 $feature) -ne $manifest.features.sha256) { throw "Approved tile feature hash mismatch: $name" }
+    # The runtime reads only features.imf; the source XML/YAML is a build-time input that
+    # is deliberately not shipped, so its provenance is checked through the hash the
+    # binary manifest records rather than through the file itself.
+    $binaryManifestPath = Join-Path $sourcePack 'features.imf.manifest.json'
+    $binaryPath = Join-Path $sourcePack 'features.imf'
+    if (-not (Test-Path -LiteralPath $binaryPath) -or -not (Test-Path -LiteralPath $binaryManifestPath)) {
+        throw "Approved tile pack missing binary features: $name"
+    }
+    $binaryManifest = Get-Content -LiteralPath $binaryManifestPath -Encoding UTF8 -Raw | ConvertFrom-Json
+    $recordedHash = ([string]$manifest.features.sha256).ToLowerInvariant()
+    if (([string]$binaryManifest.sourceXmlSha256).ToLowerInvariant() -ne $recordedHash) {
+        throw "Approved tile binary was not built from the recorded feature source: $name"
+    }
+    if ([int]$binaryManifest.keypointCount -ne [int]$manifest.features.keypointCount) {
+        throw "Approved tile binary keypoint count mismatch: $name"
+    }
+    if ((Test-Path -LiteralPath $feature) -and (Get-Sha256 $feature) -ne $recordedHash) {
+        throw "Approved tile feature hash mismatch: $name"
+    }
     Assert-OutputInventory $sourcePack (Join-Path $assets $relative)
     [IO.Directory]::CreateDirectory((Join-Path $assets $relative)) | Out-Null
     Copy-Item -Path (Join-Path $sourcePack '*') -Destination (Join-Path $assets $relative) -Recurse -Force
