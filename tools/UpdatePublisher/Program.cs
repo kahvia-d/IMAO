@@ -64,6 +64,8 @@ static class Publisher
         return id;
     }
     static string Relative(string root, string full) => Path.GetRelativePath(root, full).Replace('\\', '/');
+    static string Absolute(string assets, string? relative) =>
+        string.IsNullOrEmpty(relative) ? "" : Path.Combine(assets, relative);
     static string SafeFile(string root, string relative)
     {
         UpdateStorage.ValidateRelativePath(relative);
@@ -287,10 +289,15 @@ static class Publisher
         WriteNew(signedFile, Sign(catalog, key, keyId));
         VerifyEnvelope(signedFile, keys, production);
         foreach (var p in packages) VerifyPackage(Path.Combine(output, "packages", $"{p.Id}-{p.Version}.zip"), p);
-        // Validate source snapshot using the same native parser used by installed clients.
+        // Validate source snapshot using the same native parser used by installed clients. The bundled
+        // descriptor is relative on purpose, so every root it names has to be made absolute here; the
+        // optional ones are only present once a layout splits icons or base features into their own
+        // package, and a relative value fails strict validation for the whole snapshot.
         var candidate = snapshot with { FormatVersion = 2, SnapshotId = release.SnapshotId, Sequence = sequence, Bundled = false,
             MinAppVersion = release.MinAppVersion, MaxAppVersion = release.MaxAppVersion,
             BaselineRoot = assets, MapDataRoot = Path.Combine(assets, snapshot.MapDataRoot),
+            MapIconRoot = Absolute(assets, snapshot.MapIconRoot),
+            MapFeatureRoot = Absolute(assets, snapshot.MapFeatureRoot),
             Packages = snapshot.Packages.Select((p, i) => p with { Directory = Path.Combine(assets, p.Directory), Version = packages[i].Version, Sha256 = packages[i].Sha256, Files = packages[i].Files }).ToList() };
         var candidateFile = Path.Combine(output, "preflight-snapshot.json");
         WriteNew(candidateFile, candidate);
