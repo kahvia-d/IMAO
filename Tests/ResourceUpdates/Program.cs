@@ -744,6 +744,62 @@ await Test("everything the program ships is active by default and costs no downl
     Equal(0, next.DeselectedPackageIds.Count);
 });
 
+await Test("turning a program-owned region off keeps it out of the host snapshot", async () =>
+{
+    using var f = New(); f.BundleMapData(); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    await f.Updates.InstallAsync();
+    var descriptors = release.Resources[0].Packages
+        .Where(p => p.Kind == "tile")
+        .Select(p => WithoutFiles(new SnapshotPackage
+        {
+            Id = p.Id, Version = p.Version, Kind = p.Kind,
+            Directory = Path.Combine(f.Root, "packages", p.Id, p.Version),
+            Sha256 = p.Sha256, Files = p.Files,
+        }))
+        .ToList();
+    foreach (var descriptor in descriptors) Directory.CreateDirectory(descriptor.Directory);
+    await f.Snapshots.AttachPackagesAsync(descriptors, CancellationToken.None);
+    await f.Snapshots.SetDeselectedPackagesAsync([]);
+    Equal(4, f.Snapshots.CurrentRuntimeSnapshot.Packages.Count);
+    await f.Snapshots.SetDeselectedPackagesAsync(["tethys-kurotiles"]);
+    Equal(3, f.Snapshots.CurrentRuntimeSnapshot.Packages.Count);
+    False(f.Snapshots.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    // The regression this covers: the packaged snapshot used to be handed to the host whole, so turning a
+    // region off changed the record and nothing else. A restart has to honour it too.
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    Equal(3, restarted.CurrentRuntimeSnapshot.Packages.Count);
+    False(restarted.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    EqualSequence(["tethys-kurotiles"], restarted.DeselectedPackageIds);
+});
+
+await Test("removing a region deletes its local copy and enabling it downloads it again", async () =>
+{
+    using var f = New(); f.BundleMapData(); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    await f.Updates.InstallAsync();
+    var directory = Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2");
+    True(Directory.Exists(directory));
+    var next = f.NewSnapshots(); await next.InitializeAsync();
+    // A launch confirms the snapshot it just adopted; without that the pending trial stays open.
+    await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    using var updater = f.NewUpdates(next);
+    await updater.RemoveAsync(["tethys-kurotiles"]);
+    // Deleted for real, not just turned off.
+    False(Directory.Exists(directory));
+    False(Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(directory)!).Any());
+    EqualSequence(["tethys-kurotiles"], next.DeselectedPackageIds);
+    // Enabling it again downloads exactly that region.
+    await updater.CheckAsync();
+    f.Network.Requests.Clear();
+    await updater.EnsureInstalledAsync(["tethys-kurotiles"]);
+    Equal(1, f.Network.Requests.Count);
+    Equal("tethys-kurotiles", Path.GetFileNameWithoutExtension(f.Network.Requests[0]));
+    True(Directory.Exists(directory));
+});
+
 await Test("cross-process lock wait honors cancellation", async () =>
 {
     using var f = New(); await f.Initialize(); using var held = new FileStream(Path.Combine(f.Root, ".update.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -821,6 +877,11 @@ if (failed.Count > 0) Environment.ExitCode = 1;
 
 static void True(bool value) { if (!value) throw new Exception("Expected true."); }
 static void False(bool value) => True(!value);
+/// <summary>
+/// A synthetic local copy declares no files, so nothing hashes it. Writing the bytes the real zip carries is
+/// the only alternative, and the fixtures do not have them.
+/// </summary>
+static SnapshotPackage WithoutFiles(SnapshotPackage package) => package with { Sha256 = "", Files = [] };
 static string RepositoryRoot()
 {
     var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -155,12 +155,13 @@ public sealed class ResourceSnapshotService
     }
 
     /// <summary>
-    /// Deselects packages and reports which downloaded copies the caller may delete.
+    /// Deselects packages and reports which local copies the caller may delete.
     ///
-    /// The stored descriptor is deliberately left alone. It keeps naming every signed package so the
-    /// player can select the region again later, and <see cref="InitializeAsync"/> already tolerates a
-    /// deselected package whose copy is gone. Copies that ship inside the program are only deselected:
-    /// deleting those would damage the installation and free nothing.
+    /// Both kinds of copy are deletable. A downloaded copy frees the update root; a copy that shipped inside
+    /// the program frees the installation, which is where those bytes actually are. Deleting one is
+    /// recoverable: selecting the region again finds no local copy and downloads it from the publication.
+    ///
+    /// The stored descriptor is deliberately left alone, so the region can be selected again later.
     /// </summary>
     public async Task<IReadOnlyList<string>> RemovePackagesAsync(IEnumerable<string> packageIds, CancellationToken ct = default)
     {
@@ -174,13 +175,12 @@ public sealed class ResourceSnapshotService
         _selection = new PackageSelection { SnapshotId = configured.SnapshotId, Deselected = deselected.ToList() };
         await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
         await ApplySelectionAsync(ct).ConfigureAwait(false);
-        var packagedRoot = Path.GetFullPath(Path.Combine(Root, "packages")) + Path.DirectorySeparatorChar;
         var removable = wanted
             .Select(id => configured.Packages.First(p => p.Id == id))
-            .Where(p => FindBundledPackage(p) is null && p.Directory.StartsWith(packagedRoot, StringComparison.OrdinalIgnoreCase))
+            .Where(p => Directory.Exists(p.Directory))
             .Select(p => p.Directory)
             .ToList();
-        LastNotice = removable.Count > 0 ? "已取消选择并移除下载副本，重启软件后生效。" : "已取消选择，重启软件后生效。";
+        LastNotice = removable.Count > 0 ? "已停用并删除本机副本，重新启用会重新下载，重启软件后生效。" : "已停用，重启软件后生效。";
         return removable;
     }
 
@@ -350,10 +350,12 @@ public sealed class ResourceSnapshotService
 
     // The caller passes an already rebound snapshot: its package directories are final. Rebinding again
     // here would undo that and pull every package back to the bundled installation copy.
-    // The bundled snapshot itself is complete on disk and is handed to the host unchanged.
+    //
+    // The packaged snapshot is narrowed like any other. It was previously handed over whole on the
+    // assumption that the program's own resources are always complete, which silently ignored the player's
+    // choices for exactly those regions: turning one off changed the selection and nothing else.
     private ResourceSnapshot ApplySelection(ResourceSnapshot snapshot)
     {
-        if (snapshot.Bundled) return snapshot;
         var deselected = new HashSet<string>(DeselectedFor(snapshot), StringComparer.Ordinal);
         if (deselected.Count == 0) return snapshot;
         var packages = snapshot.Packages.Where(p => !deselected.Contains(p.Id)).ToList();

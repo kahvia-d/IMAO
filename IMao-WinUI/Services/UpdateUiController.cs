@@ -122,6 +122,16 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     /// <summary>Bytes this installation has downloaded for regions, which is what "downloaded" can mean here.</summary>
     public long DownloadedRegionBytes() => Regions().Where(region => region.State == RegionState.Downloaded).Sum(region => region.Size);
 
+    /// <summary>
+    /// Turns a region off and deletes its local copy, which is the action that frees space. The region comes
+    /// back by being enabled again, which downloads it.
+    /// </summary>
+    public Task DeleteRegionAsync(string packageId) => RunAsync(async ct =>
+    {
+        await updater.RemoveAsync([packageId], ct);
+        Message = "已停用并删除本机副本。重新启用该区域时会重新下载。";
+    });
+
     /// <summary>Turns a region on: downloads it if nothing local carries it, then activates it.</summary>
     public Task EnableRegionAsync(string packageId) => RunAsync(async ct =>
     {
@@ -129,15 +139,15 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         Message = "已启用该区域。请退出并重新打开软件后生效。";
     });
 
-    /// <summary>
-    /// Turns a region off, deleting its downloaded copy. A copy that ships inside the program is only
-    /// deselect, never deleted.
-    /// </summary>
+    /// <summary>Turns a region off without touching its files, so it can be turned on again instantly.</summary>
     public Task DisableRegionAsync(string packageId) => RunAsync(async ct =>
     {
-        await updater.RemoveAsync([packageId], ct);
+        await _snapshotsDeselect(packageId, ct);
         Message = "已停用该区域。请退出并重新打开软件后生效。";
     });
+
+    private Task _snapshotsDeselect(string packageId, CancellationToken ct) => snapshots.SetDeselectedPackagesAsync(
+        [.. snapshots.DeselectedPackageIds.Union([packageId], StringComparer.Ordinal)], ct);
 
     public Task ImportAsync(string path) => RunAsync(async ct =>
     {

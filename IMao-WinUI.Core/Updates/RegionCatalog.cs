@@ -27,6 +27,9 @@ public sealed record RegionEntry
     public bool Selected { get; init; }
     /// <summary>False when the publication does not offer this exact package, so it cannot be downloaded.</summary>
     public bool Downloadable { get; init; }
+    /// <summary>True while a local copy exists, so deleting one would free space. Deleting needs a download
+    /// to come back.</summary>
+    public bool Deletable { get; init; }
 }
 
 /// <summary>
@@ -83,6 +86,7 @@ public sealed class RegionCatalog
                 State = bundled ? RegionState.Bundled : onDisk ? RegionState.Downloaded : RegionState.NotInstalled,
                 Selected = !deselected.Contains(package.Id),
                 Downloadable = offer is not null,
+                Deletable = onDisk,
             });
         }
         return entries.OrderBy(entry => entry.Name, StringComparer.CurrentCulture).ToList();

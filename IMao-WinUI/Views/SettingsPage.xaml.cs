@@ -128,10 +128,14 @@ public sealed partial class SettingsPage : Page
                 return;
             }
             var enabled = entries.Count(entry => entry.Selected);
+            var onDisk = entries.Where(entry => entry.Deletable).Sum(entry => entry.Size);
             var downloaded = updates.DownloadedRegionBytes();
-            RegionSummary.Text = $"已启用 {enabled} / {entries.Count} 个区域  ·  本机已下载 {FormatBytes(downloaded)}"
+            RegionSummary.Text = $"已启用 {enabled} / {entries.Count} 个区域  ·  本机副本共 {FormatBytes(onDisk)}"
+                + (downloaded > 0 ? $"（其中下载来的 {FormatBytes(downloaded)}）" : "")
                 + (entries.Any(entry => entry.State == RegionState.NotInstalled && entry.Selected) ? "  ·  有已启用但尚未安装的区域，重启后会自动补下" : "");
-            RegionHint.Text = "随程序分发的区域（内置）不产生下载量；关闭内置区域只停止加载它，不会删除文件。";
+            RegionHint.Text = entries.Any(entry => entry.Deletable)
+                ? "「停用」只停止加载该区域；「删除」会移除本机副本、腾出空间，之后重新启用会重新下载。"
+                : "区域列表来自签名发布清单。请先点击「检查更新」，之后即可在这里按区域开关。";
             RegionHint.Visibility = Visibility.Visible;
             foreach (var entry in entries)
             {
@@ -156,12 +160,30 @@ public sealed partial class SettingsPage : Page
                     VerticalAlignment = VerticalAlignment.Center,
                 };
                 toggle.Toggled += RegionToggle_Toggled;
+                var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+                actions.Children.Add(toggle);
+                if (entry.Deletable)
+                {
+                    var delete = new Button
+                    {
+                        Content = "删除",
+                        Tag = entry.PackageId,
+                        IsEnabled = !updates.Busy,
+                        VerticalAlignment = VerticalAlignment.Center,
+                    };
+                    if (Application.Current.Resources.TryGetValue("IMaoSecondaryButtonStyle", out var buttonStyle) && buttonStyle is Style secondary)
+                        delete.Style = secondary;
+                    ToolTipService.SetToolTip(delete, $"删除本机副本，腾出 {FormatBytes(entry.Size)}。重新启用该区域时会重新下载。");
+                    delete.Click += RegionDelete_Click;
+                    actions.Children.Add(delete);
+                }
                 var row = new Grid { ColumnSpacing = 12 };
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                 Grid.SetColumn(text, 0);
-                Grid.SetColumn(toggle, 1);
+                Grid.SetColumn(actions, 1);
                 row.Children.Add(text);
+                row.Children.Add(actions);
                 row.Children.Add(toggle);
                 RegionList.Children.Add(row);
             }
@@ -189,12 +211,23 @@ public sealed partial class SettingsPage : Page
 
     /// <summary>
     /// Applies one region's switch. Enabling downloads it when nothing local carries it; disabling stops
-    /// loading it and deletes a downloaded copy.
+    /// loading it without touching the files.
     /// </summary>
     private async void RegionToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (restoringRegions || !IsLoaded || sender is not ToggleSwitch toggle || toggle.Tag is not string packageId) return;
         try { await (toggle.IsOn ? updates.EnableRegionAsync(packageId) : updates.DisableRegionAsync(packageId)); }
+        catch (Exception error) { updates.ShowError(error); }
+    }
+
+    /// <summary>
+    /// Deletes one region's local copy. This is the space-reclaiming action; the region comes back by
+    /// downloading it, which is why it is a separate button rather than the switch.
+    /// </summary>
+    private async void RegionDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (restoringRegions || sender is not Button button || button.Tag is not string packageId) return;
+        try { await updates.DeleteRegionAsync(packageId); }
         catch (Exception error) { updates.ShowError(error); }
     }
     private async void AutomaticUpdateCheck_Toggled(object sender, RoutedEventArgs e)
