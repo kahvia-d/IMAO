@@ -527,6 +527,8 @@ await Test("deselected region packages are absent from the snapshot the native h
     var release = f.RegionCatalog();
     f.Publish(release); await f.Updates.CheckAsync(); await f.Updates.InstallAsync();
     var next = f.NewSnapshots(); await next.InitializeAsync(); await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    // A fresh installation activates nothing selectable; these tests need the explicit choices that follow.
+    await next.SetDeselectedPackagesAsync([]);
     Equal(4, next.Current.Packages.Count);
     Equal(4, next.CurrentRuntimeSnapshot.Packages.Count);
     True(ResourceSnapshotService.IsSelectable(next.Current, "lahai-kurotiles"));
@@ -555,6 +557,8 @@ await Test("the native preflight and a restart only ever see the selected packag
     var release = f.RegionCatalog();
     f.Publish(release); await f.Updates.CheckAsync(); await f.Updates.InstallAsync();
     var next = f.NewSnapshots(); await next.InitializeAsync(); await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    // A fresh installation activates nothing selectable; these tests need the explicit choices that follow.
+    await next.SetDeselectedPackagesAsync([]);
     await next.SetDeselectedPackagesAsync(["tethys-kurotiles"]);
     var preflights = f.PreflightCalls;
     // Selecting a different set of regions must not need the newly deselected package to load again,
@@ -588,6 +592,8 @@ await Test("a deleted copy keeps its region deselected instead of breaking the s
     var release = f.RegionCatalog();
     f.Publish(release); await f.Updates.CheckAsync(); await f.Updates.InstallAsync();
     var next = f.NewSnapshots(); await next.InitializeAsync(); await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    // A fresh installation activates nothing selectable; these tests need the explicit choices that follow.
+    await next.SetDeselectedPackagesAsync([]);
     await next.SetDeselectedPackagesAsync(["tethys-kurotiles"]);
     // An interrupted removal can leave the copy gone while the selection still names it. Validation must
     // not then reject the snapshot and silently hand the player the bundled resources instead.
@@ -719,6 +725,23 @@ await Test("reinstalling a removed region downloads only it again", async () =>
     True(Directory.Exists(directory));
     Equal(0, afterRemoval.DeselectedPackageIds.Count);
     Equal(3, afterRemoval.CurrentRuntimeSnapshot.Packages.Count);
+});
+
+await Test("everything the program ships is active by default and costs no download", async () =>
+{
+    using var f = New(); f.BundleMapData(); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    f.Network.Requests.Clear();
+    await f.Updates.InstallAsync();
+    // Installing the release downloads only what the program does not ship: the mandatory package is
+    // bundled, so the three regions are taken from the publication set.
+    EqualSequence(["lahai-kurotiles", "taro-kurotiles", "tethys-kurotiles"], f.Network.Requests.Select(u => Path.GetFileNameWithoutExtension(u)).OrderBy(n => n, StringComparer.Ordinal).ToArray());
+    // Nothing is deselected yet, so the whole release is active.
+    Equal(0, f.Snapshots.DeselectedPackageIds.Count);
+    var next = f.NewSnapshots(); await next.InitializeAsync();
+    Equal(4, next.CurrentRuntimeSnapshot.Packages.Count);
+    Equal(0, next.DeselectedPackageIds.Count);
 });
 
 await Test("cross-process lock wait honors cancellation", async () =>

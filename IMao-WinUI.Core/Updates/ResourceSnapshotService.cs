@@ -53,8 +53,11 @@ public sealed class ResourceSnapshotService
     /// the descriptor itself when it is already byte-identical to what the host should read.
     /// </summary>
     public string CurrentPath { get; private set; } = "";
-    /// <summary>Package ids the player deselected for the active snapshot. Never contains a required package.</summary>
-    public IReadOnlyList<string> DeselectedPackageIds => _selection.Deselected;
+    /// <summary>
+    /// Package ids the player deselected for the snapshot that will run after the next restart. Never
+    /// contains a required package.
+    /// </summary>
+    public IReadOnlyList<string> DeselectedPackageIds => DeselectedFor(PendingOrDefault());
     public bool HasPending => !string.IsNullOrEmpty(_state.PendingPath);
     public bool CanRollback => !string.IsNullOrEmpty(_state.PreviousPath) && _state.PreviousPath != _state.ActivePath;
     public string LastNotice { get; private set; } = "";
@@ -166,7 +169,7 @@ public sealed class ResourceSnapshotService
         var wanted = ValidateSelection(configured, packageIds);
         await using var gate = await UpdateStorage.LockAsync(Root, ct).ConfigureAwait(false);
         _state = UpdateStorage.Read<ActivationState>(_statePath);
-        var deselected = new SortedSet<string>(_selection.Deselected, StringComparer.Ordinal);
+        var deselected = new SortedSet<string>(DeselectedFor(configured), StringComparer.Ordinal);
         deselected.UnionWith(wanted);
         _selection = new PackageSelection { SnapshotId = configured.SnapshotId, Deselected = deselected.ToList() };
         await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
@@ -225,24 +228,22 @@ public sealed class ResourceSnapshotService
             if (!Current.Packages.Any(p => string.Equals(p.Id, package.Id, StringComparison.Ordinal))) additions.Add(package);
         }
         _state = UpdateStorage.Read<ActivationState>(_statePath);
+        // Resolve the default before expanding: a player who has not chosen yet still has every region
+        // deselected, so the region just installed must be taken out of that default set.
+        var deselected = new SortedSet<string>(DeselectedFor(Current), StringComparer.Ordinal);
+        foreach (var package in packages) deselected.Remove(package.Id);
         if (additions.Count > 0)
         {
             // The descriptor keeps the release identity but lists only the packages that are on disk, so the
             // next launch validates and activates this same snapshot instead of falling back to the bundle.
             Current = Current with { Packages = Current.Packages.Concat(additions).ToList() };
-            CurrentRuntimeSnapshot = ApplySelection(Current);
-            CurrentPath = await MaterializeAsync(CurrentRuntimeSnapshot, _selectedStoredPath, ct).ConfigureAwait(false);
-            if (!string.IsNullOrEmpty(_selectedStoredPath))
-                await UpdateStorage.WriteAsync(_selectedStoredPath, Current, ct).ConfigureAwait(false);
         }
-        var deselected = new SortedSet<string>(_selection.Deselected, StringComparer.Ordinal);
-        foreach (var package in packages) deselected.Remove(package.Id);
-        var selection = new PackageSelection { SnapshotId = Current.SnapshotId, Deselected = deselected.ToList() };
-        if (!selection.Deselected.SequenceEqual(_selection.Deselected, StringComparer.Ordinal))
-        {
-            _selection = selection;
-            await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
-        }
+        _selection = new PackageSelection { SnapshotId = Current.SnapshotId, Deselected = deselected.ToList() };
+        await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
+        CurrentRuntimeSnapshot = ApplySelection(Current);
+        CurrentPath = await MaterializeAsync(CurrentRuntimeSnapshot, _selectedStoredPath, ct).ConfigureAwait(false);
+        if (!string.IsNullOrEmpty(_selectedStoredPath))
+            await UpdateStorage.WriteAsync(_selectedStoredPath, Current, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -283,6 +284,16 @@ public sealed class ResourceSnapshotService
 
     /// <summary>True when the package may be deselected: a selectable kind that is not a required package.</summary>
     public static bool IsSelectable(SnapshotPackage package) => Array.IndexOf(SelectableKinds, package.Kind) >= 0;
+
+    /// <summary>
+    /// The set that applies before the player has chosen anything: every selectable package is active.
+    /// The copies that ship inside the program cost no download, so the default costs the player nothing;
+    /// only a region the program does not ship is ever downloaded, and only once it is selected.
+    /// </summary>
+    private static List<string> DefaultDeselected(ResourceSnapshot snapshot) => [];
+
+    /// <summary>The deselected set in force for a snapshot, resolving the not-yet-chosen default.</summary>
+    private List<string> DeselectedFor(ResourceSnapshot snapshot) => _selection.Deselected ?? DefaultDeselected(snapshot);
     /// <summary>True when the package may be deselected: a selectable kind that is not a required package.</summary>
     public static bool IsSelectable(ResourceSnapshot snapshot, string packageId) =>
         snapshot.Packages.Any(p => string.Equals(p.Id, packageId, StringComparison.Ordinal) && IsSelectable(p));
@@ -292,8 +303,9 @@ public sealed class ResourceSnapshotService
     // The bundled snapshot itself is complete on disk and is handed to the host unchanged.
     private ResourceSnapshot ApplySelection(ResourceSnapshot snapshot)
     {
-        if (snapshot.Bundled || _selection.Deselected.Count == 0) return snapshot;
-        var deselected = new HashSet<string>(_selection.Deselected, StringComparer.Ordinal);
+        if (snapshot.Bundled) return snapshot;
+        var deselected = new HashSet<string>(DeselectedFor(snapshot), StringComparer.Ordinal);
+        if (deselected.Count == 0) return snapshot;
         var packages = snapshot.Packages.Where(p => !deselected.Contains(p.Id)).ToList();
         if (packages.Count == snapshot.Packages.Count) return snapshot;
         // Recompute the three roots from what is left, so a dropped package can never leave a dangling root.
@@ -319,7 +331,7 @@ public sealed class ResourceSnapshotService
     /// </summary>
     private bool PruneSelection()
     {
-        if (_selection.Deselected.Count == 0 || Current.Bundled) return false;
+        if (_selection.Deselected is null || _selection.Deselected.Count == 0 || Current.Bundled) return false;
         var kept = _selection.Deselected.Where(id => IsSelectable(Current, id)).ToList();
         if (kept.Count == _selection.Deselected.Count) return false;
         _selection = _selection with { Deselected = kept };

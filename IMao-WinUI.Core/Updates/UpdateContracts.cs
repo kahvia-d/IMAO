@@ -124,11 +124,14 @@ public sealed record UpdateProgress(string Stage, long Completed, long Total);
 
 /// <summary>
 /// Local, unsigned user choice: which packages of one signed snapshot the player does not want active.
-/// Storing the deselected set rather than the selected one means a package added by a newer snapshot is
-/// available by default instead of silently missing.
 /// </summary>
 public sealed record PackageSelection
 {
     public string SnapshotId { get; init; } = "";
-    public List<string> Deselected { get; init; } = new();
+    /// <summary>
+    /// <c>null</c> means the player has not chosen yet, in which case every selectable package stays active.
+    /// An empty list is that same "everything selected" state written down explicitly; a non-empty list
+    /// names the regions the player turned off.
+    /// </summary>
+    public List<string>? Deselected { get; init; }
 }
