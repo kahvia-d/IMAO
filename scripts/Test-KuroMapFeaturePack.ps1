@@ -41,13 +41,6 @@ foreach ($tile in @($manifest.tiles)) {
     if (-not $ids.Add($id) -or [string]::IsNullOrWhiteSpace([string]$tile.sha256)) { throw "Invalid tile entry: $id" }
 }
 $featurePath = Join-Path $PackRoot ([string]$manifest.features.file)
-if (-not (Test-Path -LiteralPath $featurePath)) { throw "Missing feature XML: $featurePath" }
-$actualHash = (Get-FileHash -LiteralPath $featurePath -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($actualHash -ne [string]$manifest.features.sha256) { throw 'Feature XML SHA-256 mismatch.' }
-$header = (Get-Content -LiteralPath $featurePath -TotalCount 16) -join [Environment]::NewLine
-if ($header -notmatch '<opencv_storage>' -or $header -notmatch '<num_keypoints>(\d+)</num_keypoints>') { throw 'Feature XML header is invalid.' }
-$xmlCount = [int]$Matches[1]
-if ($xmlCount -ne [int]$manifest.features.keypointCount -or $xmlCount -lt 12) { throw 'Feature XML keypoint count does not match manifest.' }
 $binaryPath = Join-Path $PackRoot 'features.imf'
 $binaryManifestPath = Join-Path $PackRoot 'features.imf.manifest.json'
 if (-not (Test-Path -LiteralPath $binaryPath) -or -not (Test-Path -LiteralPath $binaryManifestPath)) {
@@ -55,9 +48,31 @@ if (-not (Test-Path -LiteralPath $binaryPath) -or -not (Test-Path -LiteralPath $
 }
 $binaryManifest = Get-Content -LiteralPath $binaryManifestPath -Raw | ConvertFrom-Json
 if ([string]$binaryManifest.format -ne 'IMAOFT01' -or
-    [int]$binaryManifest.keypointCount -ne $xmlCount -or
     [int]$binaryManifest.descriptorColumns -ne 128 -or
-    ([string]$binaryManifest.sourceXmlSha256).ToLowerInvariant() -ne $actualHash) {
-    throw 'Binary feature manifest does not match the verified XML source.'
+    [int]$binaryManifest.keypointCount -lt 12) {
+    throw 'Binary feature manifest header is invalid.'
 }
-Write-Host "Kuro tile feature pack valid: pack=$($manifest.packId) tiles=$($ids.Count) keypoints=$xmlCount resource=$($manifest.resourceVersion)" -ForegroundColor Green
+# The runtime reads only the binary. The source XML/YAML is a build-time input that is
+# deliberately not shipped (it is ~75% of a pack and CoreHost never opens it), so its
+# provenance is checked through the hash the binary manifest records instead.
+$recordedXmlHash = ([string]$manifest.features.sha256).ToLowerInvariant()
+$binaryXmlHash = ([string]$binaryManifest.sourceXmlSha256).ToLowerInvariant()
+if ([string]::IsNullOrWhiteSpace($recordedXmlHash) -or $binaryXmlHash -ne $recordedXmlHash) {
+    throw 'Binary feature manifest was not built from the XML source recorded in the pack manifest.'
+}
+if ([int]$binaryManifest.keypointCount -ne [int]$manifest.features.keypointCount) {
+    throw 'Binary feature manifest keypoint count does not match the pack manifest.'
+}
+$xmlCount = [int]$binaryManifest.keypointCount
+$featureSourceVerified = 'binary-manifest'
+if (Test-Path -LiteralPath $featurePath) {
+    $actualHash = (Get-FileHash -LiteralPath $featurePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualHash -ne $recordedXmlHash) { throw 'Feature XML SHA-256 mismatch.' }
+    $header = (Get-Content -LiteralPath $featurePath -TotalCount 16) -join [Environment]::NewLine
+    if ($header -notmatch '<opencv_storage>' -or $header -notmatch '<num_keypoints>(\d+)</num_keypoints>') { throw 'Feature XML header is invalid.' }
+    $xmlCount = [int]$Matches[1]
+    if ($xmlCount -ne [int]$manifest.features.keypointCount -or $xmlCount -lt 12) { throw 'Feature XML keypoint count does not match manifest.' }
+    if ([int]$binaryManifest.keypointCount -ne $xmlCount) { throw 'Binary feature manifest does not match the verified XML source.' }
+    $featureSourceVerified = 'source-xml'
+}
+Write-Host "Kuro tile feature pack valid: pack=$($manifest.packId) tiles=$($ids.Count) keypoints=$xmlCount resource=$($manifest.resourceVersion) featureSource=$featureSourceVerified" -ForegroundColor Green

@@ -522,10 +522,22 @@ $json = ($registry | ConvertTo-Json -Depth 12) + [Environment]::NewLine
 $totalPoints = 0
 $overworld = 0
 $tileTotal = 0
+$presentTotal = 0
+$presentRegions = 0
 foreach ($region in $regions) {
     $totalPoints += [int]$region['points']
     if ($region['kind'] -eq 'overworld') { $overworld += [int]$region['points'] }
-    if ($null -ne $region['tileBounds']) { $tileTotal += [int]$region['tileBounds']['count'] }
+    if ($null -ne $region['tileBounds']) {
+        $tileTotal += [int]$region['tileBounds']['count']
+        # archivePresent is only recorded for regions whose tile archive was probed,
+        # so it must be read as a dictionary key: property-style access throws under
+        # Set-StrictMode whenever the key is absent.
+        $present = if ($region['tileBounds'].Contains('archivePresent')) { $region['tileBounds']['archivePresent'] } else { $null }
+        if ($null -ne $present -and $present.Contains('present') -and $null -ne $present['present']) {
+            $presentTotal += [int]$present['present']
+            $presentRegions++
+        }
+    }
 }
 $overCap = @($regions | Where-Object { $null -ne $_['tileBounds'] -and [int]$_['tileBounds']['count'] -gt 256 })
 
@@ -536,16 +548,19 @@ $report.Add("由 ``scripts/New-MapRegionRegistry.ps1`` 生成，数据源 ``Asse
 $report.Add('')
 $report.Add('瓦片换算经过地面真值验证：14 个独立小世界子区域锚点全部落在其既有包的瓦片矩形内。')
 $report.Add('')
-$report.Add('| 地区 | id | 类型 | frame | mapState | 子区域 | 点数 | 瓦片窗口 | 瓦片数 | 置信度 |')
-$report.Add('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |')
+$report.Add('| 地区 | id | 类型 | frame | mapState | 子区域 | 点数 | 瓦片窗口 | 窗口格数 | 实际有图 | 置信度 |')
+$report.Add('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |')
 foreach ($region in $regions) {
     $bounds = if ($null -ne $region.tileBounds) { "x $($region.tileBounds.minX)..$($region.tileBounds.maxX), y $($region.tileBounds.minY)..$($region.tileBounds.maxY)" } else { '—' }
     $count = if ($null -ne $region.tileBounds) { $region.tileBounds.count } else { '—' }
-    $report.Add("| $($region.name) | ``$($region.id)`` | $($region.kind) | $($region.frame) | $($region.mapState) | $(@($region.areas).Count) | $($region.points) | $bounds | $count | $($region.tileConfidence) |")
+    $presentCount = if ($null -ne $region['tileBounds'] -and $region['tileBounds'].Contains('archivePresent')) { $region['tileBounds']['archivePresent']['present'] } else { '—' }
+    $report.Add("| $($region.name) | ``$($region.id)`` | $($region.kind) | $($region.frame) | $($region.mapState) | $(@($region.areas).Count) | $($region.points) | $bounds | $count | $presentCount | $($region.tileConfidence) |")
 }
 $report.Add('')
 $report.Add("- 点位合计：**$totalPoints**（大世界 $overworld）")
-$report.Add("- 瓦片合计：**$tileTotal**（含每侧 $CoverageMargin 块覆盖边距；仅统计可推导窗口的地区）")
+$report.Add("- 窗口格数合计：**$tileTotal**（含每侧 $CoverageMargin 块覆盖边距；仅统计可推导窗口的地区）")
+$report.Add("- 实际有图瓦片：**$presentTotal** 张（$presentRegions 个地区有归档；上游缺失的格子不计入，故小于窗口格数）")
+$report.Add("- 注：**窗口格数不是下载量**。相邻地区在同一坐标平面上窗口会交叠（六个地表地区共用 frame 8），实际唯一瓦片文件数见 ``map-regions/tiles/tiles.manifest.json``。")
 $report.Add("- 触发 256 上限的地区：$(if ($overCap.Count) { ($overCap | ForEach-Object { "$($_['name'])($($_['tileBounds']['count']))" }) -join '、' } else { '无' })")
 $report.Add('')
 $report.Add('瓦片窗口由点位分位数推导后**每侧外扩 ' + $CoverageMargin + ' 块**。分位数只保证覆盖收集品所在处，最小地图匹配必须在玩家能站到的任何位置工作，所以窗口是下界加上行走边距。')
@@ -585,7 +600,7 @@ else {
     Write-Host "Wrote $OutputPath" -ForegroundColor Green
     Write-Host "Wrote $ReportPath" -ForegroundColor Green
 }
-Write-Host "Regions: $($regions.Count)  points: $totalPoints (overworld $overworld)  tiles: $tileTotal  blocked: $($blocked.Count)  uncalibrated: $($uncalibrated.Count)"
+Write-Host "Regions: $($regions.Count)  points: $totalPoints (overworld $overworld)  windowCells: $tileTotal  presentTiles: $presentTotal  blocked: $($blocked.Count)  uncalibrated: $($uncalibrated.Count)"
 foreach ($region in $regions) {
     $count = if ($null -ne $region['tileBounds']) { $region['tileBounds']['count'] } else { '—' }
     Write-Host ("  {0,-14} {1,-14} frame={2,-4} points={3,6} tiles={4,-5} {5}" -f $region['id'], $region['name'], $region['frame'], $region['points'], $count, $region['tileConfidence'])
