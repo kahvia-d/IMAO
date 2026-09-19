@@ -38,7 +38,9 @@ var failed = new List<string>();
 async Task Test(string name, Func<Task> action)
 {
     try { await action(); passed.Add(name); Console.WriteLine("PASS " + name); }
-    catch (Exception ex) { failed.Add(name + ": " + ex); Console.WriteLine("FAIL " + name + ": " + ex.Message); }
+    // The whole exception, stack included: a bare message says what broke but not which step of a
+    // multi-stage install broke, which is the part that costs time to work out afterwards.
+    catch (Exception ex) { failed.Add(name + ": " + ex); Console.WriteLine("FAIL " + name + ": " + ex); }
 }
 Fixture New() => new(Path.Combine(suiteRoot, Guid.NewGuid().ToString("N")));
 
@@ -477,7 +479,9 @@ await Test("unchanged bundled package is verified and reused without download or
 await Test("a release that ships with the program is not offered as a resource update", async () =>
 {
     using var f = New();
-    f.Bundled = f.Bundled with { Packages = [new SnapshotPackage { Id = "map-data", Version = "2026.9.9.2", Kind = "map-data", Directory = f.Bundled.MapDataRoot }] };
+    // The copy has to exist for the program to be considered as shipping it: a descriptor that names a
+    // directory the player deleted means the bytes are not on this machine any more.
+    f.BundleMapData();
     await f.Initialize(); f.Publish(f.Catalog(2));
     var result = await f.Updates.CheckAsync();
     True(result.Resource is null); False(result.RequiresAppUpgrade); True(result.Message.Contains("已是最新版本"));
@@ -800,6 +804,54 @@ await Test("removing a region deletes its local copy and enabling it downloads i
     True(Directory.Exists(directory));
 });
 
+await Test("deleting a copy the program ships makes enabling that region download it again", async () =>
+{
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    f.Network.Requests.Clear();
+    await f.Updates.InstallAsync();
+    // Nothing is downloaded for a region the program already ships.
+    False(f.Network.Requests.Any(url => url.Contains("tethys-kurotiles")));
+    var bundledCopy = Path.Combine(f.Root, "baseline", "regions", "tethys-kurotiles");
+    True(Directory.Exists(bundledCopy));
+    var next = f.NewSnapshots(); await next.InitializeAsync();
+    await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    using var updater = f.NewUpdates(next);
+    await updater.RemoveAsync(["tethys-kurotiles"]);
+    False(Directory.Exists(bundledCopy));
+    // The regression this covers: the bundled descriptor still named the package, so "it ships with the
+    // program" stayed true after the copy was deleted, nothing was downloaded, and the region was reported
+    // as installed while its directory was gone.
+    await updater.CheckAsync();
+    f.Network.Requests.Clear();
+    await updater.EnsureInstalledAsync(["tethys-kurotiles"]);
+    Equal(1, f.Network.Requests.Count);
+    Equal("tethys-kurotiles", Path.GetFileNameWithoutExtension(f.Network.Requests[0]));
+    True(Directory.Exists(Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2")));
+});
+
+await Test("a selected region whose copy is gone never reaches the host snapshot", async () =>
+{
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    await f.Updates.InstallAsync();
+    var bundledCopy = Path.Combine(f.Root, "baseline", "regions", "tethys-kurotiles");
+    var next = f.NewSnapshots(); await next.InitializeAsync();
+    await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    // The region is still selected; only its bytes are gone, which is the state a failed download leaves.
+    Directory.Delete(bundledCopy, true);
+    Equal(0, next.DeselectedPackageIds.Count);
+    // The native loader refuses the whole resource set when one named package will not load, so the file the
+    // host reads must not name a package whose directory is missing.
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    False(restarted.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    var handedToHost = JsonSerializer.Deserialize<ResourceSnapshot>(await File.ReadAllBytesAsync(restarted.CurrentPath), UpdateJson.Options)!;
+    False(handedToHost.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    True(handedToHost.Packages.Any(p => p.Kind == "map-data"));
+});
+
 await Test("cross-process lock wait honors cancellation", async () =>
 {
     using var f = New(); await f.Initialize(); using var held = new FileStream(Path.Combine(f.Root, ".update.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -976,8 +1028,22 @@ sealed class Fixture : IDisposable
             Packages = [new SnapshotPackage { Id = "map-data", Version = version, Kind = "map-data", Directory = Bundled.MapDataRoot, Sha256 = "", Files = [] }]
         };
     }
-    public UpdateService NewUpdates(ResourceSnapshotService snapshots) => new(Build, [Key, PublishedKey], snapshots, _http, true, () => Now, () => FreeBytes);
-    public UpdateCatalog Catalog(long sequence = 2)
+    /// <summary>
+    /// Declares one region as shipping inside the program, the way a shipped region pack does. The copy is a
+    /// real directory under the bundled baseline so a test can delete it, which is what a player removing a
+    /// region actually does.
+    /// </summary>
+    public void BundleRegion(string id, string version = "2026.9.9.2")
+    {
+        var directory = Path.Combine(Root, "baseline", "regions", id);
+        Directory.CreateDirectory(directory);
+        File.WriteAllBytes(Path.Combine(directory, "features.bin"), Encoding.UTF8.GetBytes("{\"region\":\"" + id + "\"}"));
+        Bundled = Bundled with
+        {
+            Packages = [.. Bundled.Packages, new SnapshotPackage { Id = id, Version = version, Kind = "tile", Directory = directory, Sha256 = "", Files = [] }]
+        };
+    }
+    public UpdateService NewUpdates(ResourceSnapshotService snapshots) => new(Build, [Key, PublishedKey], snapshots, _http, true, () => Now, () => FreeBytes);    public UpdateCatalog Catalog(long sequence = 2)
     {
         var package = MakePackage("map-data", "map-data", "2026.9.9." + sequence, "{\"marker\":" + sequence + "}");
         return new UpdateCatalog

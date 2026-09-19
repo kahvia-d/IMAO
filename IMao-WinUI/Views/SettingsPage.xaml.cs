@@ -214,7 +214,7 @@ public sealed partial class SettingsPage : Page
             long pending = missing.Where(entry => entry.Selected).Sum(entry => entry.Size);
             RegionSummary.Text = $"已启用 {enabled} / {entries.Count} 个区域  ·  本机副本共 {FormatBytes(local)}"
                 + (downloaded > 0 ? $"（其中下载来的 {FormatBytes(downloaded)}）" : "")
-                + (pending > 0 ? $"  ·  已启用但尚未安装的 {FormatBytes(pending)}，启用后会自动下载" : "");
+                + (pending > 0 ? $"  ·  已启用但尚未安装的 {FormatBytes(pending)}，关掉再打开该区域即会下载" : "");
             RegionHint.Text = "「停用」只停止加载该区域，文件保留，重新启用立刻生效；「删除」会把本机副本从磁盘上删掉、腾出空间，之后重新启用会重新下载。"
                 + (missing.Count > 0 ? " 未安装的区域在启用时会自动下载。" : "");
             RegionHint.Visibility = Visibility.Visible;

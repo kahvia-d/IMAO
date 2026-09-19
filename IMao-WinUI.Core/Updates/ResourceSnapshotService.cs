@@ -383,8 +383,15 @@ public sealed class ResourceSnapshotService
     private ResourceSnapshot ApplySelection(ResourceSnapshot snapshot)
     {
         var deselected = new HashSet<string>(DeselectedFor(snapshot), StringComparer.Ordinal);
-        if (deselected.Count == 0) return snapshot;
-        var packages = snapshot.Packages.Where(p => !deselected.Contains(p.Id)).ToList();
+        // A selectable package whose copy is gone cannot be loaded, and the native loader refuses the entire
+        // resource set when one named package will not load. Selection alone must therefore never decide what
+        // the host is given: a region the player turned on whose download has not happened yet stays out of
+        // the host snapshot and is shown as uninstalled, instead of taking the whole load down with it. The
+        // packages that define the roots are required packages and are never dropped here.
+        var packages = snapshot.Packages
+            .Where(p => !deselected.Contains(p.Id))
+            .Where(p => !IsSelectable(p) || Directory.Exists(p.Directory))
+            .ToList();
         if (packages.Count == snapshot.Packages.Count) return snapshot;
         // Recompute the three roots from what is left, so a dropped package can never leave a dangling root.
         return snapshot with { Packages = packages,
@@ -467,8 +474,15 @@ public sealed class ResourceSnapshotService
         if (File.Exists(path))
         {
             var existing = Rebind(UpdateStorage.Read<ResourceSnapshot>(path));
-            if (!JsonSerializer.SerializeToUtf8Bytes(existing, UpdateJson.Options).AsSpan().SequenceEqual(JsonSerializer.SerializeToUtf8Bytes(snapshot, UpdateJson.Options)))
+            if (!SameSignedRelease(existing, snapshot))
                 throw new InvalidDataException("同一资源快照标识已存在不同内容。");
+            // The release is the same, but this machine's copies may have moved: a region the player deleted
+            // and downloaded again now lives in the update root instead of the program's directory. Rewriting
+            // keeps the stored descriptor pointing at bytes that exist, which is what ReadAndValidateAsync
+            // checks next; identical bytes are left alone.
+            if (!JsonSerializer.SerializeToUtf8Bytes(existing, UpdateJson.Options).AsSpan()
+                    .SequenceEqual(JsonSerializer.SerializeToUtf8Bytes(snapshot, UpdateJson.Options)))
+                await UpdateStorage.WriteAsync(path, snapshot, ct).ConfigureAwait(false);
         }
         else await UpdateStorage.WriteAsync(path, snapshot, ct).ConfigureAwait(false);
         await ReadAndValidateAsync(path, ct).ConfigureAwait(false);
@@ -478,6 +492,22 @@ public sealed class ResourceSnapshotService
         await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
         LastNotice = "资源已安装，重启软件后生效。";
     }
+
+    /// <summary>
+    /// True when two materializations describe the same signed release. Local paths are deliberately
+    /// ignored: whether a package's copy sits inside the program or in the update root is a property of this
+    /// machine, not of the release, and the same release can legitimately be staged twice with a region moved
+    /// between the two after the player deleted and re-downloaded it.
+    /// </summary>
+    private static bool SameSignedRelease(ResourceSnapshot left, ResourceSnapshot right) =>
+        left.FormatVersion == right.FormatVersion && left.SnapshotId == right.SnapshotId &&
+        left.Sequence == right.Sequence && left.BaselineId == right.BaselineId &&
+        left.MinAppVersion == right.MinAppVersion && left.MaxAppVersion == right.MaxAppVersion &&
+        JsonSerializer.SerializeToUtf8Bytes(
+            left.Packages.Select(p => p with { Directory = "" }).OrderBy(p => p.Id, StringComparer.Ordinal).ToList(), UpdateJson.Options)
+            .AsSpan().SequenceEqual(
+        JsonSerializer.SerializeToUtf8Bytes(
+            right.Packages.Select(p => p with { Directory = "" }).OrderBy(p => p.Id, StringComparer.Ordinal).ToList(), UpdateJson.Options));
 
     private async Task<ResourceSnapshot> ReadAndValidateAsync(string path, CancellationToken ct)
     {
@@ -540,9 +570,13 @@ public sealed class ResourceSnapshotService
     /// so identity is the only thing it can be matched on. Requiring a hash here made every package the
     /// program already ships look missing, which would re-download the whole resource set and would report
     /// a release that ships with the program as an update.
+    ///
+    /// The descriptor describes what the program was packaged with, not what is on disk now: the player may
+    /// have deleted a region's copy. A match therefore only counts while the directory is still there,
+    /// which is what makes a deleted bundled region download again instead of being reported as present.
     /// </summary>
     internal SnapshotPackage? FindBundledPackage(SnapshotPackage package) => _bundled.Packages.FirstOrDefault(p =>
-        p.Id == package.Id && p.Version == package.Version && p.Kind == package.Kind &&
+        p.Id == package.Id && p.Version == package.Version && p.Kind == package.Kind && Directory.Exists(p.Directory) &&
         (string.IsNullOrEmpty(p.Sha256) || (!string.IsNullOrEmpty(package.Sha256) && p.Sha256.Equals(package.Sha256, StringComparison.OrdinalIgnoreCase) &&
          JsonSerializer.SerializeToUtf8Bytes(p.Files, UpdateJson.Options).AsSpan().SequenceEqual(JsonSerializer.SerializeToUtf8Bytes(package.Files, UpdateJson.Options)))));
 

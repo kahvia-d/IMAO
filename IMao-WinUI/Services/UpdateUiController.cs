@@ -131,9 +131,16 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         Message = "已停用并删除本机副本。重新启用该区域时会重新下载。";
     });
 
-    /// <summary>Turns a region on: downloads it if nothing local carries it, then activates it.</summary>
+    /// <summary>
+    /// Turns a region on: downloads it if nothing local carries it, then activates it.
+    ///
+    /// A region whose copy was deleted has to come from the signed publication, so the check that fetches
+    /// that publication is part of enabling rather than a separate errand the player is expected to know
+    /// about. Without one the operation could only refuse, which is what "请先检查更新" used to mean.
+    /// </summary>
     public Task EnableRegionAsync(string packageId) => RunAsync(async ct =>
     {
+        if (updater.CurrentRelease is null) await updater.CheckAsync(automatic: false, ct);
         await updater.EnsureInstalledAsync([packageId], Progress(), ct);
         Message = "已启用该区域。请退出并重新打开软件后生效。";
     });
