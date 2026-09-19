@@ -149,13 +149,21 @@ public partial class App : Application
         try
         {
             if (ProgramLaunchSession.IsManaged) programLease = ProgramLauncher.AcquireChildLease(installRoot);
+            // This runs before the window is interactive, so it is the one place a slow or blocked step
+            // looks like a frozen program. Record how long it takes and what it did, because "the core keeps
+            // loading" is otherwise indistinguishable from a hang.
+            var startupTimer = System.Diagnostics.Stopwatch.StartNew();
+            Trace($"resource-init-start root={installRoot}");
             var snapshots = GetService<ResourceSnapshotService>();
             await snapshots.InitializeAsync();
             ResourceSessionPaths.Initialize(snapshots);
             ResourcesInitialized = true;
+            Trace($"resource-init-done elapsedMs={startupTimer.ElapsedMilliseconds} snapshot={snapshots.Current.SnapshotId} "
+                + $"packages={snapshots.CurrentRuntimeSnapshot.Packages.Count} pending={snapshots.HasPending} notice={snapshots.LastNotice}");
         }
         catch (Exception error)
         {
+            Trace("resource-init-failed " + error);
             MainWindow.Content = new TextBlock { Text = "地图资源初始化失败：" + error.Message + "\n请重新安装完整程序包后再试。", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(32) };
             MainWindow.Activate();
             return;
@@ -235,5 +243,20 @@ public partial class App : Application
             if (MainWindow.Content is UIElement content) content.IsHitTestVisible = true;
             GetService<UpdateUiController>().ShowError(error);
         }
+    }
+
+    /// <summary>
+    /// Appends one line to the startup log. Startup work happens before the window is usable, so a slow step
+    /// there is only diagnosable from a log; logging never throws into startup.
+    /// </summary>
+    private static void Trace(string line)
+    {
+        try
+        {
+            string directory = Path.Combine(UserDataPaths.Root, "Logs");
+            Directory.CreateDirectory(directory);
+            File.AppendAllText(Path.Combine(directory, "startup.log"), $"{DateTimeOffset.UtcNow:O} {line}{Environment.NewLine}");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
     }
 }

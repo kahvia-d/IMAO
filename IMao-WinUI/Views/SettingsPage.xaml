@@ -31,6 +31,7 @@
                 <TextBlock Text="地图区域" Style="{StaticResource IMaoSectionTitleStyle}" />
                 <TextBlock Text="每个区域是一份独立的特征包：关掉的区域不再加载，定位范围相应缩小。随程序分发的区域不占用下载量；下载来的区域在关闭时可以一并删除本机副本，之后重新打开会重新下载它一个。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <TextBlock x:Name="RegionSummary" Style="{StaticResource IMaoBodyTextStyle}" />
+                <TextBlock x:Name="RegionCoreState" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <StackPanel x:Name="RegionList" Spacing="6" />
                 <TextBlock x:Name="RegionHint" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <ProgressBar x:Name="RegionProgress" Minimum="0" Maximum="100" Visibility="Collapsed" />

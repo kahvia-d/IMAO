@@ -158,12 +158,18 @@ public sealed class ResourceSnapshotService
     /// Deselects packages and reports which local copies the caller may delete.
     ///
     /// Both kinds of copy are deletable. A downloaded copy frees the update root; a copy that shipped inside
-    /// the program frees the installation, which is where those bytes actually are. Deleting one is
-    /// recoverable: selecting the region again finds no local copy and downloads it from the publication.
+    /// the program frees the installation, which is where those bytes actually are. The caller must be able
+    /// to put the package back, so it passes the ids the publication can supply: deleting a copy that nothing
+    /// can restore would leave the region permanently unavailable rather than merely uninstalled. When no
+    /// publication is available the packages are deselected only, and the reported list stays empty.
     ///
     /// The stored descriptor is deliberately left alone, so the region can be selected again later.
     /// </summary>
     public async Task<IReadOnlyList<string>> RemovePackagesAsync(IEnumerable<string> packageIds, CancellationToken ct = default)
+        => await RemovePackagesAsync(packageIds, null, ct).ConfigureAwait(false);
+
+    /// <summary>Overload that only deletes copies the given reinstallable ids can restore.</summary>
+    public async Task<IReadOnlyList<string>> RemovePackagesAsync(IEnumerable<string> packageIds, IReadOnlySet<string>? reinstallable, CancellationToken ct = default)
     {
         EnsureInitialized();
         var configured = PendingOrDefault();
@@ -177,10 +183,12 @@ public sealed class ResourceSnapshotService
         await ApplySelectionAsync(ct).ConfigureAwait(false);
         var removable = wanted
             .Select(id => configured.Packages.First(p => p.Id == id))
-            .Where(p => Directory.Exists(p.Directory))
+            .Where(p => Directory.Exists(p.Directory) && (reinstallable is null || reinstallable.Contains(p.Id)))
             .Select(p => p.Directory)
             .ToList();
-        LastNotice = removable.Count > 0 ? "已停用并删除本机副本，重新启用会重新下载，重启软件后生效。" : "已停用，重启软件后生效。";
+        LastNotice = removable.Count > 0
+            ? "已停用并删除本机副本，重新启用会重新下载，重启软件后生效。"
+            : "已停用，重启软件后生效。";
         return removable;
     }
 

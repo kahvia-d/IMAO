@@ -71,7 +71,7 @@ public sealed partial class SettingsPage : Page
     private void CoreHost_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(CoreHostService.Configuration)) { RenderBindings(); RestoreGamepad(); RestoreRuntime(); }
-        else if (e.PropertyName == nameof(CoreHostService.Status)) RestoreRuntime();
+        else if (e.PropertyName == nameof(CoreHostService.Status)) { RestoreRuntime(); if (RegionList is not null) RenderRegions(); }
     }
 
     private void Updates_Changed(object? sender, PropertyChangedEventArgs e) => RenderUpdates();
@@ -120,10 +120,19 @@ public sealed partial class SettingsPage : Page
         try
         {
             RegionList.Children.Clear();
+            // The core reports what it is doing while it loads the region packs, which is the slowest part
+            // of a start and otherwise looks like nothing is happening.
+            var status = coreHost.Status;
+            RegionCoreState.Text = status.ResourcesReady
+                ? ""
+                : $"核心：{status.DisplayState}（{status.Message}）";
+            RegionCoreState.Visibility = string.IsNullOrEmpty(RegionCoreState.Text) ? Visibility.Collapsed : Visibility.Visible;
             if (entries.Count == 0)
             {
                 RegionSummary.Text = "";
-                RegionHint.Text = "区域列表来自签名发布清单。请先点击「检查更新」，之后即可在这里按区域开关。";
+                RegionHint.Text = updates.Busy
+                    ? "正在读取签名发布清单，稍后这里会列出全部区域。"
+                    : "区域列表来自签名发布清单。点「检查更新」后即可在这里按区域开关；检查也会在启动后自动进行一次。";
                 RegionHint.Visibility = Visibility.Visible;
                 return;
             }
@@ -184,7 +193,6 @@ public sealed partial class SettingsPage : Page
                 Grid.SetColumn(actions, 1);
                 row.Children.Add(text);
                 row.Children.Add(actions);
-                row.Children.Add(toggle);
                 RegionList.Children.Add(row);
             }
             RegionProgress.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;

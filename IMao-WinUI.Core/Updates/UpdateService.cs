@@ -255,7 +255,11 @@ public sealed class UpdateService : IDisposable
     public async Task RemoveAsync(IEnumerable<string> packageIds, CancellationToken ct = default)
     {
         EnsureAvailable();
-        var removable = await _snapshots.RemovePackagesAsync(packageIds, ct).ConfigureAwait(false);
+        // Deleting a copy is only offered for packages the publication can supply again. With no verified
+        // publication this turns into a plain deselect, because deleting bytes nothing can restore would make
+        // the region permanently unavailable instead of merely uninstalled.
+        var reinstallable = _checkedEnvelope is null ? null : ReinstallableIds();
+        var removable = await _snapshots.RemovePackagesAsync(packageIds, reinstallable, ct).ConfigureAwait(false);
         await using var gate = await UpdateStorage.LockAsync(_snapshots.Root, ct).ConfigureAwait(false);
         foreach (var directory in removable)
         {
@@ -265,6 +269,24 @@ public sealed class UpdateService : IDisposable
             var receipt = directory + ".receipt.json";
             if (File.Exists(receipt)) File.Delete(receipt);
         }
+    }
+
+    /// <summary>
+    /// The ids the verified publication can supply for the running snapshot, which is the set a deleted
+    /// local copy can be restored from.
+    /// </summary>
+    private IReadOnlySet<string> ReinstallableIds()
+    {
+        try
+        {
+            var release = InstalledRelease(UpdateSignature.Verify(_checkedEnvelope!, _keys, _allowTestKeys));
+            return release.Packages
+                .Where(p => _snapshots.Current.Packages.Any(local =>
+                    string.Equals(local.Id, p.Id, StringComparison.Ordinal) && local.Version == p.Version))
+                .Select(p => p.Id)
+                .ToHashSet(StringComparer.Ordinal);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException) { return new HashSet<string>(StringComparer.Ordinal); }
     }
 
     /// <summary>
