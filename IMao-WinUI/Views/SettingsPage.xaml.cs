@@ -115,7 +115,37 @@ public sealed partial class SettingsPage : Page
     /// </summary>
     private void RenderRegions()
     {
+        // A failure while building the region list must not take the settings page, or the program, down with
+        // it: the rest of the page is still usable, and the reason ends up in the log.
+        try { RenderRegionsCore(); }
+        catch (Exception error)
+        {
+            AppendStartupLog("region-render-failed " + error);
+            RegionList.Children.Clear();
+            RegionSummary.Text = "";
+            RegionHint.Visibility = Visibility.Collapsed;
+            RegionMessage.IsOpen = true;
+            RegionMessage.Severity = InfoBarSeverity.Error;
+            RegionMessage.Message = "区域列表渲染失败：" + error.Message;
+        }
+    }
+
+    private static void AppendStartupLog(string line)
+    {
+        try
+        {
+            string directory = Path.Combine(Helpers.UserDataPaths.Root, "Logs");
+            Directory.CreateDirectory(directory);
+            File.AppendAllText(Path.Combine(directory, "startup.log"), $"{DateTimeOffset.UtcNow:O} {line}{Environment.NewLine}");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+    }
+
+    private void RenderRegionsCore()
+    {
+        AppendStartupLog("region-render-start");
         var entries = updates.Regions();
+        AppendStartupLog($"region-render-entries count={entries.Count}");
         restoringRegions = true;
         try
         {
@@ -195,6 +225,7 @@ public sealed partial class SettingsPage : Page
                 row.Children.Add(actions);
                 RegionList.Children.Add(row);
             }
+            AppendStartupLog($"region-render-rows done={entries.Count}");
             RegionProgress.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
             RegionProgress.Value = updates.ProgressPercent;
             RegionProgressText.Text = updates.ProgressText;

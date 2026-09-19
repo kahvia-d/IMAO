@@ -9,6 +9,9 @@ public sealed class UpdateUiController : INotifyPropertyChanged
 {
     private readonly UpdateService updater;
     private readonly ResourceSnapshotService snapshots;
+    // Changes are published from whichever thread finished the work; a background check completes on a pool
+    // thread. Subscribers rebuild visuals, so the notification has to arrive on the interface thread.
+    private readonly Microsoft.UI.Dispatching.DispatcherQueue? dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
     private CancellationTokenSource? operation;
     private ProgramUpdateStore? programs;
     private Func<Task>? restartProgram;
@@ -218,7 +221,13 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         finally { operation.Dispose(); operation = null; Busy = false; idle.TrySetResult(true); Changed(); }
     }
 
-    private void Changed() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(""));
+    private void Changed() => Dispatch(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("")));
+
+    private void Dispatch(Action action)
+    {
+        if (dispatcher is null || dispatcher.HasThreadAccess) action();
+        else dispatcher.TryEnqueue(() => action());
+    }
 
     /// <summary>Appends one line to the update log; logging never hides the original outcome.</summary>
     private static void Audit(string line)

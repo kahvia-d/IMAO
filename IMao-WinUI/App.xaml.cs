@@ -118,8 +118,10 @@ public partial class App : Application
 
     private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
-        // TODO: Log and handle exceptions as appropriate.
-        // https://docs.microsoft.com/windows/windows-app-sdk/api/winrt/microsoft.ui.xaml.application.unhandledexception.
+        // An unhandled XAML exception kills the process with 0xc000027b and leaves nothing behind, which is
+        // exactly what makes "it just closes" impossible to diagnose. Record it, then let it fail: silently
+        // continuing from a broken visual tree is worse than stopping.
+        Trace("unhandled-exception " + e.Message + Environment.NewLine + e.Exception);
     }
 
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
