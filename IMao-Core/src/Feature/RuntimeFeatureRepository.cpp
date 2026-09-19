@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <chrono>
 #include <limits>
+#include <map>
 
 namespace {
 long long ElapsedMilliseconds(const std::chrono::steady_clock::time_point start) {
@@ -22,6 +23,13 @@ long long ElapsedMilliseconds(const std::chrono::steady_clock::time_point start)
 
 bool MergeVisualShard(MapVisualIndex& base, const MapVisualIndex& shard,
     std::uint32_t featureRowBase, std::string& error) {
+    // Every shard is built against the one shared vocabulary, so the first shard of a layout
+    // that selects no base index supplies both the words and their identity. Without this a
+    // base-less snapshot could never merge a pack and visual locating would stay disabled.
+    if (base.vocabulary.empty()) {
+        base.vocabulary = shard.vocabulary.clone();
+        base.vocabularySha256 = shard.vocabularySha256;
+    }
     if (base.vocabularySha256 != shard.vocabularySha256 ||
         base.vocabulary.size() != shard.vocabulary.size()) {
         error = "optional visual shard vocabulary does not match the base index";
@@ -70,6 +78,24 @@ bool FinalizeMergedVisualIndex(MapVisualIndex& index, std::string& error) {
 bool AppendFeatureBatch(ImageFeatureData& destination,
     const std::vector<const ImageFeatureData*>& additions, std::string& error) {
     if (additions.empty()) return true;
+    // A snapshot that selects no base atlas arrives here empty: the first usable pack then
+    // seeds the map instead of being rejected as an incomplete base. The seed also defines
+    // the descriptor shape every later pack has to match. It is a copy, so that same pack
+    // must be skipped below - counting or appending it again would duplicate its rows and
+    // shift every later pack's row base away from what its visual shard recorded.
+    const ImageFeatureData* seeded = nullptr;
+    if (destination.imgKeypoints.empty() || destination.imgDescriptors.empty()) {
+        for (const auto* addition : additions) {
+            if (addition == nullptr || addition->imgKeypoints.empty() || addition->imgDescriptors.empty()) continue;
+            if (addition->imgDescriptors.rows != static_cast<int>(addition->imgKeypoints.size())) {
+                error = "optional map feature descriptors are incompatible with their keypoints";
+                return false;
+            }
+            destination = *addition;
+            seeded = addition;
+            break;
+        }
+    }
     if (destination.imgKeypoints.empty() || destination.imgDescriptors.empty() ||
         destination.imgDescriptors.rows != static_cast<int>(destination.imgKeypoints.size())) {
         error = "base map feature data is incomplete";
@@ -78,7 +104,7 @@ bool AppendFeatureBatch(ImageFeatureData& destination,
 
     std::size_t totalKeypoints = destination.imgKeypoints.size();
     for (const auto* addition : additions) {
-        if (addition == nullptr || addition->imgKeypoints.empty() || addition->imgDescriptors.empty()) continue;
+        if (addition == nullptr || addition == seeded || addition->imgKeypoints.empty() || addition->imgDescriptors.empty()) continue;
         if (addition->imgDescriptors.rows != static_cast<int>(addition->imgKeypoints.size()) ||
             addition->imgDescriptors.type() != destination.imgDescriptors.type() ||
             addition->imgDescriptors.cols != destination.imgDescriptors.cols) {
@@ -103,6 +129,7 @@ bool AppendFeatureBatch(ImageFeatureData& destination,
         destination.imgDescriptors.type());
     int row = 0;
     const auto append = [&merged, &row](const ImageFeatureData& source) {
+        if (source.imgKeypoints.empty() || source.imgDescriptors.empty()) return;
         merged.imgKeypoints.insert(merged.imgKeypoints.end(), source.imgKeypoints.begin(), source.imgKeypoints.end());
         const auto nextRow = row + source.imgDescriptors.rows;
         source.imgDescriptors.copyTo(merged.imgDescriptors.rowRange(row, nextRow));
@@ -110,7 +137,8 @@ bool AppendFeatureBatch(ImageFeatureData& destination,
     };
     append(destination);
     for (const auto* addition : additions) {
-        if (addition != nullptr && !addition->imgKeypoints.empty() && !addition->imgDescriptors.empty()) {
+        if (addition != nullptr && addition != seeded &&
+            !addition->imgKeypoints.empty() && !addition->imgDescriptors.empty()) {
             append(*addition);
         }
     }
@@ -184,14 +212,19 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         bool sourceImfHashReady = FeatureBinaryCodec::Load(
             mapFeatureRoot / "Map_features.imf", loaded->map, failure, nullptr, &sourceImfSha);
         const auto baselineRows = loaded->map.imgKeypoints.size();
+        // The base atlas became optional once every region shipped as its own pack: the
+        // packs carry their own features and visual index, so a snapshot that selects no
+        // map-features package simply runs without the legacy atlas. Keep the error and
+        // the zero baseline identity because the exclusion manifests are bound to them.
         if (!sourceImfHashReady) {
 #ifdef IMAO_ALLOW_XML_FEATURE_FALLBACK
             Diagnostics::Record("resource-load", "stage=map-imf failed fallback=xml error=" + failure);
             if (!FeatureLoader::loadFeaturesFromXML((mapFeatureRoot / "Map_features.yml").string(), loaded->map)) {
-                throw std::runtime_error("map IMF and XML fallback both failed: " + failure);
+                Diagnostics::Record("resource-load",
+                    "stage=map-imf absent fallback=failed error=" + failure);
             }
 #else
-            throw std::runtime_error(failure);
+            Diagnostics::Record("resource-load", "stage=map-imf absent error=" + failure);
 #endif
         }
         Diagnostics::Record("resource-load", "stage=map-features durationMs=" +
@@ -213,6 +246,9 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         }
         else {
             visualError = failure;
+            // Without a base index there are no base tiles to distinguish, so every tile
+            // that arrives later is judged by its own scene id alone.
+            loaded->baseVisualTileCount = 0;
         }
 
         if (!FeatureLoader::loadFeatures((featureRoot / "IconTask_Features.yml").string(), loaded->iconTask) ||
@@ -242,7 +278,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 MapVisualIndex shard;
                 const auto firstShardTile = static_cast<std::uint32_t>(loaded->visualIndex.tiles.size());
                 std::string shardError;
-                const bool shardReady = loaded->visualIndexReady &&
+                const bool shardReady =
                     MapVisualIndexCodec::Load(kuro.directoryPath / "visual-index.imx",
                         kuro.sourceSha256, static_cast<std::uint32_t>(kuro.featureData.imgKeypoints.size()),
                         shard, shardError) &&
@@ -254,6 +290,10 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 else {
                     loaded->kuroVisualShards.push_back({
                         kuro.sceneId, firstShardTile, static_cast<std::uint32_t>(shard.tiles.size()) });
+                    // The pack shards are self-contained: when no base index was selected the
+                    // first merged shard becomes the whole index, and without this the
+                    // repository would report no visual index at all and disable locating.
+                    loaded->visualIndexReady = true;
                 }
                 if (kuro.featureData.imgKeypoints.size() >
                     std::numeric_limits<std::uint32_t>::max() - mergedFeatureRows) {
@@ -295,7 +335,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 MapVisualIndex shard;
                 std::string shardError;
                 const auto sourcePath = candidate.directoryPath / "manifest.json";
-                const bool shardReady = loaded->visualIndexReady &&
+                const bool shardReady =
                     MapVisualIndexCodec::LoadManifestShard(candidate.directoryPath / "visual-index.imx",
                         sourcePath, static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size()),
                         shard, shardError) &&
@@ -303,6 +343,10 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 if (!shardReady) {
                     loaded->visualIndexReady = false;
                     visualError += " candidate shard " + candidate.packId + ": " + shardError;
+                }
+                else {
+                    // Same rule as the tile packs: a merged shard is a usable index on its own.
+                    loaded->visualIndexReady = true;
                 }
                 if (candidate.featureData.imgKeypoints.size() >
                     std::numeric_limits<std::uint32_t>::max() - mergedFeatureRows) {
@@ -349,6 +393,25 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 std::to_string(ElapsedMilliseconds(finalizeStart)) + " ready=" +
                 std::to_string(loaded->visualIndexReady) + " postings=" +
                 std::to_string(loaded->visualIndex.postings.size()) + " error=" + finalizeError);
+        }
+
+        // Scene composition of the merged index. A layout that selects no base atlas has no
+        // base tiles to retag as World, so a scene missing here is a packaging fault rather
+        // than a calibration one - this is what made a duplicated first pack visible.
+        {
+            std::map<int, std::size_t> sceneTiles;
+            for (std::size_t index = 0; index < loaded->visualIndex.tiles.size(); ++index) {
+                const int tileScene = index < loaded->baseVisualTileCount ? 1
+                    : loaded->visualIndex.tiles[index].sceneId;
+                ++sceneTiles[tileScene];
+            }
+            std::string composition = "baseVisualTileCount=" + std::to_string(loaded->baseVisualTileCount) +
+                " tiles=" + std::to_string(loaded->visualIndex.tiles.size()) +
+                " mergedKeypoints=" + std::to_string(loaded->map.imgKeypoints.size()) +
+                " shards=" + std::to_string(loaded->kuroVisualShards.size());
+            for (const auto& [scene, count] : sceneTiles)
+                composition += " scene" + std::to_string(scene) + "=" + std::to_string(count);
+            Diagnostics::Record("resource-load", "stage=visual-index-composition " + composition);
         }
 
         Diagnostics::Record("resource-load", "stage=visual-index durationMs=" +

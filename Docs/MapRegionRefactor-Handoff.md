@@ -174,6 +174,71 @@ x64\Release\IMao-CoreHost.exe --check-resource-snapshot <绝对路径候选快�
 #    期望 {"error":"","resourcesReady":true,"viewportReady":true,"visualReady":true}
 ```
 
+### 第四节只说了四处，实际需要六处（已实测，勿删）
+
+上面的四处**不够**。按第四节原样做出来的构建，预检会失败：
+
+```
+{"error":"地图视觉索引不可用：feature binary cannot be opened: ...Map_features.imf
+  Kuro shard Darkplain:  Kuro shard Tethys: ...","visualReady":false}
+```
+
+原因是第四节第 2 点描述不完整——只把 `visualIndexReady` 设成 `true` 解决不了
+**包分片本身进不去**的问题：
+
+**5. `RuntimeFeatureRepository.cpp:272` / `:329`：`shardReady` 不能再用 `loaded->visualIndexReady` 做前置条件**
+
+```cpp
+const bool shardReady = loaded->visualIndexReady &&     // ← 无基础库时短路，分片永远不载入
+    MapVisualIndexCodec::Load(kuro.directoryPath / "visual-index.imx", ...) && ...
+```
+
+这个门是**循环依赖**：无基础库时 `visualIndexReady` 初始为 `false`，于是第一个分片就短路，
+`visualIndexReady` 永远等不到被设成 `true`。必须去掉这个前置条件，让每个分片无条件尝试
+载入，成功后再把 `visualIndexReady` 置 `true`。候选包（`:329`）同理，而且它原来**只**
+把 `visualIndexReady` 设 `false`，没有对应的成功分支。
+
+**6. `MergeVisualShard`：空词表时要接管分片的词表（数据和哈希都要）**
+
+```cpp
+if (base.vocabulary.empty()) {
+    base.vocabulary = shard.vocabulary.clone();
+    base.vocabularySha256 = shard.vocabularySha256;   // ← 只 clone 词表仍然会失败
+}
+```
+
+14 个 `.imx`（基础库 + 13 个区域包）的 `vocabularySha256` 已实测**全部相同**
+（`8bd80ebd3cfe727538d65a0ccc8c17c043b80c70b5c721f4ac0e1436669a7c33`），
+所以第一个分片的词表就是全局词表。**只 clone 词表数据而不同步 `vocabularySha256`，
+下一次比较仍是零哈希、依旧抛 "vocabulary does not match"** —— 这个坑踩过。
+
+**7.（附带）`AppendFeatureBatch` 会拒绝空基础库**
+
+```cpp
+if (destination.imgKeypoints.empty() || destination.imgDescriptors.empty() ||
+    destination.imgDescriptors.rows != ...) { error = "base map feature data is incomplete"; return false; }
+```
+
+无基础库时 `loaded->map` 是空的，这里会直接失败。需要让第一个可用包**充当种子**
+（同时由它定义后续包必须匹配的描述子形状）。
+
+### 本轮已完成的实测结论（2026-09-19）
+
+- 四处 + 上面 5/6/7 落地后：`58 snapshot checks, 0 failed`；
+  无基础库预检 `{"error":"","resourcesReady":true,"viewportReady":true,"visualReady":true}`，
+  带基础库的同一棵树预检也 `true`（无回归）。
+- **对照组（把 5/6/7 退回原样重编）**：无基础库树 **FAIL**、
+  带基础库树 **PASS**。这证明失败确实来自"没有基础库"，而不是别的改动。
+- 单独去掉第 3 点的守卫（`if (baselineRows == 0) return;`）会立刻得到
+  `Legacy feature exclusion baseline hash mismatch` —— 拉海洛/泰缇斯之底两个包
+  （只有它们带 `legacyBaseExclusions`，分别 109,540 / 3,818 行）确实会命中。
+- 搭树脚本：`scripts/New-NoBaselineMapTestTree.ps1`（含 `-WriteCandidateSnapshot`
+  生成第七节要求的 strict v2 候选快照）。
+  **注意**：run root 的 Assets 是从安装树硬链接/junction 过来的，
+  清理时**绝不能用 `Remove-Item -Recurse`**——它会删穿 junction 把安装树清空，
+  必须按 reparse point 逐个 unlink（脚本里已处理，并有文件数前后校验）。
+
+
 ---
 
 ## 五、必须知道的坑

@@ -13,6 +13,11 @@ inline void ApplyLegacyFeatureExclusions(RuntimeFeatureResources& resources,
     const auto manifest = nlohmann::json::parse(input);
     if (!manifest.contains("legacyBaseExclusions")) return;
     const auto& record = manifest.at("legacyBaseExclusions");
+    // These records retire identified rows of the legacy atlas. A snapshot that selects no
+    // base atlas has no rows to retire: the exclusion vector would stay empty and
+    // FeatureRowEnabled would accept everything, which is already the intended behaviour.
+    // Without this guard the zero baseline identity would fail both checks below.
+    if (baselineRows == 0) return;
     if (record.at("baseFeatureSha256").get<std::string>() != FeatureBinaryCodec::Sha256Hex(baselineHash))
         throw std::runtime_error("Legacy feature exclusion baseline hash mismatch");
     if (record.at("replacementFeatureSha256").get<std::string>() != manifest.at("features").at("sha256").get<std::string>())
