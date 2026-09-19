@@ -124,7 +124,7 @@ git status --porcelain=v1 # 期望无输出
 2. ~~**`EnsureInstalledAsync` / `RemoveAsync`**~~ —— **已完成**，见下节。
 3. ~~**UI 列表 + 按钮**~~ —— **已完成**（见"第 3 片落地说明"）。界面效果仍需用户在实机确认。
 4. **实机验收**：取消选中某区域 → 重启 → 该区域不再加载；重新选中 → 只下载它一个。
-   其中"重新下载"这一半依赖重新发布 `updates/stable.json`（见第 3 片说明末条）。
+   线上渠道已就绪（sequence 14 提供全部 13 个区域包），因此"重新下载"这一半现在可测。
 
 ### 第 2 片落地说明（实测中改掉的设计）
 
@@ -159,14 +159,9 @@ git status --porcelain=v1 # 期望无输出
   不再报错，而是直接把它移出 `Deselected` 并刷新宿主快照——所以**自带区域停用后再启用
   完全不需要网络**。反之，若本机副本已被删除且清单也不提供，则明确报错而不是把宿主
   指向一个空目录（那会让整份资源加载失败）。
-- **删除按钮的可用性 = 能不能再拿回来**。只有清单提供同 id 同版本的包时才可删
-  （`Deletable`）；否则按钮禁用并提示先"检查更新"。这是**当前实机的主要限制**：
-  已发布的 `updates/stable.json`（sequence 13）还是旧布局（8 个包，
-  `dreamzhou-kurotiles` / `dreamzhouwest-kurotiles` / 已删除的候选包），
-  而程序自带的是 `bundled-2026.9.18.2` 的 13 个新包（`jinzhou`/`mengzhou`/…）。
-  两边 id 与版本都对不上 → 现在所有区域 `Downloadable=false`、`Deletable=false`，
-  能停用/启用（本地副本），但**删不掉、也下不到**。要打通"删除 → 重新下载"闭环，
-  必须**重新发布 `updates/stable.json`**（重新签名，指向新的 13 包布局）。
+- **删除按钮的可用性 = 本机是否有副本**。区域包想删就删：删掉之后重新启用会重新下载
+  （发布渠道已同步，见第五节）。判定"能不能再拿回来"曾经被写进 `Deletable`，
+  但玩家关心的是磁盘空间，所以现在只看本机副本是否存在。
 
 ### 默认选择（已拍板：方案 A）
 
@@ -243,18 +238,20 @@ out\map-test\IMao-WinUI.exe      # 以管理员运行、游戏开着、16:9
 资源清单同时重发：`min-app-version` 指向新程序版本，旧客户端根本看不到它，
 也就不会被喂它不认识的布局。
 
-发布链路上被这次重构打断、已修好的两处：
+发布链路上被这次重构打断、已修好的三处（都是同一类：构造绝对快照时漏了可选根）：
 
 1. **`UpdateSignature.ValidateCatalog` 不认 `map-icons`**。白名单只有
    `map-data|tile|candidate`，而 staged 快照里**始终**带着图标包，
    于是 `prepare` 直接报"资源包标识重复或类型不受支持"——**任何资源更新都发不出去**。
    现在白名单加上 `map-icons`（`RequiredKinds` 早就把它当作快照可携带的类型，
    快照侧也一直在校验图标根），发布器自测里那份镜像校验同步更新。
-2. **两处手工构造绝对快照的脚本漏了 `mapIconRoot`**：
-   `scripts/Test-ProgramReleasePackage.ps1`（程序包验收探针）与
-   `scripts/Restore-BundledResources.ps1`。原生 `Root()` 要求绝对路径，
+2. **`scripts/Test-ProgramReleasePackage.ps1`（程序包验收探针）与
+   `scripts/Restore-BundledResources.ps1` 漏了 `mapIconRoot`**。原生 `Root()` 要求绝对路径，
    相对值会让整份快照以 `invalid resource directory: mapIconRoot` 被拒——
    程序包验收会因此失败。已按"可选根也要绝对化"统一处理（含 `mapFeatureRoot`）。
+3. **`tools/UpdatePublisher/Program.cs` 的 `prepare` 预检快照同样漏了它**。
+   这一处是真正卡住发布的那一处：包已经全部打好、清单已经签好，
+   最后卡在原生 strict 预检（`nativePassed=false`）。同一个 `Absolute()` 处理。
 
 私钥位置（`Docs/ResourceUpdates.md:33-51` 描述的那个重定向坑，实测就在这里）：
 
@@ -264,3 +261,21 @@ C:\Users\Kahvia\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Loc
 
 实测它在本机 DPAPI（当前用户）下可解开，且与 `Assets/Updates/trusted-keys.json`
 里的公钥逐字节匹配，因此生产签名可用。
+
+### 已发布：sequence 14 / v2026.9.19.1
+
+`2026.9.19.1` 已经作为**程序 + 资源同发**上线：
+
+- 程序包 `IMao-v2026.9.19.1-windows-x64.zip` 881,343,690 字节，构建提交 `0aa9873`
+  （`Build-ReleaseCandidate.ps1` 全新原生重编 + WinUI 发布 + 程序包验收）。
+- 资源 `resources-2026.9.19.1`（sequence 14，`min-app-version` = 2026.9.19.1）：
+  `map-data` + `map-icons` + 13 个区域包 = 15 个包，离线包 495,032,405 字节。
+  旧布局（`dreamzhou*`、已删除的候选包）随同一 baseline 的快照一起退场。
+- 发布校验：18 个附件逐个按 GitHub 报告的 digest 与复核哈希比对，再对每个公开 URL
+  做 HEAD 可达性检查；`updates/channel-state.json` 先烧序号（maxSequence=14），
+  再用 compare-and-swap 推进 `updates/stable.json`，回读字节与签名清单哈希一致。
+- 线上清单用**随程序发布的公钥**独立验签通过：`sequence 14`、`appVersion 2026.9.19.1`、
+  `snapshotIds [resources-2026.9.19.1]`。
+- tag `v2026.9.19.1` 指向构建提交 `0aa9873`；它之后的三个提交是两处测试/工具修复
+  加一处行为等价的 `MapFilterCatalog` 重构（生产调用点不传新参数），
+  因此 tag 与 main 的差异对程序行为没有影响。
