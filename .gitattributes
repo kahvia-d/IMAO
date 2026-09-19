@@ -1,7 +1,11 @@
 # The v1.0.2 map-feature database is archived out of the packaged asset tree: every region pack now carries
 # its own calibrated features, so the program no longer ships it. It stays in LFS because the archived
-# binaries are still large and the repository has to remain cloneable.
-archive/retired-base-features/** filter=lfs diff=lfs merge=lfs -text
+# binaries are still large and the repository has to remain cloneable. Patterns are per extension on purpose:
+# a directory-wide '**' rule also turns the README beside them into an LFS pointer, which makes it
+# undiffable and unreadable in a plain checkout.
+archive/retired-base-features/*.imf filter=lfs diff=lfs merge=lfs -text
+archive/retired-base-features/*.imx filter=lfs diff=lfs merge=lfs -text
+archive/retired-base-features/*.manifest.json filter=lfs diff=lfs merge=lfs -text
 # The XML source of the archived feature database stays in the asset tree: it is a build input for
 # rebuilding the binaries above and release staging already excludes it.
 Assets/FeaturesDatas/Map_features.yml filter=lfs diff=lfs merge=lfs -text
