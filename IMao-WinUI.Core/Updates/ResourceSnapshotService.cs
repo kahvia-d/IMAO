@@ -301,8 +301,9 @@ public sealed class ResourceSnapshotService
             if (!Current.Packages.Any(p => string.Equals(p.Id, package.Id, StringComparison.Ordinal))) additions.Add(package);
         }
         _state = UpdateStorage.Read<ActivationState>(_statePath);
-        // Resolve the default before expanding: a player who has not chosen yet still has every region
-        // deselected, so the region just installed must be taken out of that default set.
+        // A player who has not chosen yet has nothing deselected, which means every region is active. Writing
+        // the choice out turns that default into an explicit list, so the region just installed stays active
+        // no matter how the default is interpreted later.
         var deselected = new SortedSet<string>(DeselectedFor(Current), StringComparer.Ordinal);
         foreach (var package in packages) deselected.Remove(package.Id);
         if (additions.Count > 0)
