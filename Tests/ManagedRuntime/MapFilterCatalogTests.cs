@@ -39,7 +39,9 @@ internal static class MapFilterCatalogTests
             new("unknown", "兼容旧类型", "legacy"),
             new("a", "Later Duplicate", "wrong")
         ];
-        MapFilterCatalog catalog = MapFilterCatalog.Load(available, root);
+        // The fixture keeps catalogs and icons in one directory, which is the pre-split layout; the icon
+        // package root is passed explicitly because the running snapshot is not what a test is testing.
+        MapFilterCatalog catalog = MapFilterCatalog.Load(available, root, root);
         check(catalog.Items.Count == 4 && catalog.Items.Select(item => item.Id).Distinct().Count() == 4,
             "filter catalog retains every available point ID exactly once");
         check(catalog.Categories.SelectMany(group => group.Items).Select(item => item.Id).ToHashSet()
@@ -65,7 +67,7 @@ internal static class MapFilterCatalogTests
         check(catalog.HasOfficialCatalog && catalog.LastError.Contains("catalog-broken.json"),
             "one damaged catalog reports a warning while other states remain usable");
 
-        MapFilterCatalog missing = MapFilterCatalog.Load(available, Path.Combine(testRoot, "missing-catalogs"));
+        MapFilterCatalog missing = MapFilterCatalog.Load(available, Path.Combine(testRoot, "missing-catalogs"), Path.Combine(testRoot, "missing-catalogs"));
         check(!missing.HasOfficialCatalog && missing.Items.Count == 4 && missing.Categories.Single().Name == "补充分类" &&
             missing.LastError.Length > 0 && missing.CharacterGroups.Count == 0,
             "missing offline catalogs preserve all filters and expose a warning");
@@ -74,7 +76,7 @@ internal static class MapFilterCatalogTests
         Directory.CreateDirectory(Path.Combine(damagedRoot, "catalogs"));
         File.WriteAllText(Path.Combine(damagedRoot, "catalogs", "catalog-8.json"), "{}");
         File.WriteAllText(Path.Combine(damagedRoot, "icon-manifest.json"), "invalid");
-        MapFilterCatalog damaged = MapFilterCatalog.Load(available, damagedRoot);
+        MapFilterCatalog damaged = MapFilterCatalog.Load(available, damagedRoot, damagedRoot);
         check(damaged.Items.Count == 4 && damaged.Categories.Single().Items.Count == 4 && damaged.Warnings.Count == 2,
             "damaged metadata and icons never remove available point types");
     }

@@ -91,7 +91,7 @@ public sealed class MapFilterCatalog
         HasOfficialCatalog = hasOfficialCatalog;
     }
 
-    public static MapFilterCatalog Load(IEnumerable<MapFilterSourceItem> availableItems, string? kuroMapDirectory = null)
+    public static MapFilterCatalog Load(IEnumerable<MapFilterSourceItem> availableItems, string? kuroMapDirectory = null, string? mapIconDirectory = null)
     {
         ArgumentNullException.ThrowIfNull(availableItems);
         var available = new Dictionary<string, MapFilterSourceItem>(StringComparer.Ordinal);
@@ -99,6 +99,10 @@ public sealed class MapFilterCatalog
             if (!string.IsNullOrWhiteSpace(source.Id)) available.TryAdd(source.Id, source);
 
         kuroMapDirectory ??= IMao_WinUI.Helpers.ResourceSessionPaths.MapDataRoot;
+        // The icon set has its own package root, which is the same directory as the map data only for
+        // layouts that predate the split. Both roots are parameters so a caller can point the catalog at
+        // a fixture, and the defaults come from the running snapshot.
+        mapIconDirectory ??= IMao_WinUI.Helpers.ResourceSessionPaths.MapIconRoot;
         var warnings = new List<string>();
         var official = new Dictionary<string, OfficialItem>(StringComparer.Ordinal);
         var shortcuts = new Dictionary<string, Shortcut>(StringComparer.Ordinal);
@@ -171,7 +175,7 @@ public sealed class MapFilterCatalog
         }
 
         // Icons may live in their own package; an empty snapshot root falls back to the map-data root.
-        Dictionary<string, string> icons = ReadIcons(IMao_WinUI.Helpers.ResourceSessionPaths.MapIconRoot, warnings);
+        Dictionary<string, string> icons = ReadIcons(mapIconDirectory, warnings);
         var items = available.Values.Select(source =>
         {
             official.TryGetValue(source.Id, out OfficialItem? metadata);
