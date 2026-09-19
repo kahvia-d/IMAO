@@ -139,7 +139,7 @@ static class Publisher
             foreach (var p in r.Packages)
             {
                 Id(p.Id); FourPartVersion(p.Version);
-                if (!seen.Add(p.Id) || p.Kind is not ("map-data" or "tile" or "candidate") || p.Size <= 0 || !Regex.IsMatch(p.Sha256, "^[a-fA-F0-9]{64}$") || p.Files.Count == 0) throw new InvalidDataException("Invalid or duplicate package.");
+                if (!seen.Add(p.Id) || p.Kind is not ("map-data" or "map-icons" or "tile" or "candidate") || p.Size <= 0 || !Regex.IsMatch(p.Sha256, "^[a-fA-F0-9]{64}$") || p.Files.Count == 0) throw new InvalidDataException("Invalid or duplicate package.");
                 RequireGithub(p.Url, true);
                 var identity = p.Id + "/" + p.Version;
                 if (identities.TryGetValue(identity, out var hash) && hash != p.Sha256) throw new InvalidDataException("Same package version has different content.");

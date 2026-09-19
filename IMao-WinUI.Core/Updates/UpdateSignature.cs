@@ -55,7 +55,11 @@ public static class UpdateSignature
             {
                 UpdateStorage.ValidateId(package.Id);
                 RequireVersion(package.Version);
-                if (!ids.Add(package.Id) || package.Kind is not ("map-data" or "tile" or "candidate") || (package.Kind == "map-data") != (package.Id == "map-data"))
+                // The icon set is published like any other package: it is carved out of map-data so a
+                // points-only change does not cost the icon bytes, and RequiredKinds already treats it as
+                // something a snapshot may carry. Older clients reject this kind, which is why a release
+                // that ships it must also require the program version that understands it.
+                if (!ids.Add(package.Id) || package.Kind is not ("map-data" or "map-icons" or "tile" or "candidate") || (package.Kind == "map-data") != (package.Id == "map-data"))
                     throw new InvalidDataException("资源包标识重复或类型不受支持。");
                 ValidateUrl(package.Url, asset: true);
                 if (package.Size <= 0 || package.Size > 64L * 1024 * 1024 * 1024 || !IsHash(package.Sha256) || package.Files is null || package.Files.Count is < 1 or > 100000)
