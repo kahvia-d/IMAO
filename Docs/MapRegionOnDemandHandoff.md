@@ -228,6 +228,14 @@ out\map-test\IMao-WinUI.exe      # 以管理员运行、游戏开着、16:9
 `RuntimeFeatureRepository` 现在会通过 `Diagnostics::Record` 记录
 `stage=visual-index-composition`（各场景瓦片数），这是排查"某个场景没进索引"的第一手信息。
 
+**刷新 `out\map-test` 时只拷这两个文件**：`Assets/Updates/bundled-snapshot.json` 与
+`trusted-keys.json`。**绝不能整目录拷 `Assets/Updates\*`**：那棵是无基础库（no-base-atlas）
+测试树，`scripts/New-NoBaselineMapTestTree.ps1:176` 明确要求
+`Assets/Updates/baseline-files.json` **不存在**——它一旦出现，原生校验就会去检查
+被刻意删掉的 `Map_features.imf` / `Map_visual_index.imx`，整份快照以
+`resource file missing or uses reparse point` 被拒（区域选择检查随之变红）。
+这是本次实测踩到的坑：树本身没问题，是刷新方式错了。
+
 ---
 
 ## 五、发布 2026.9.19.1（区域重构必须随程序发布）
@@ -279,3 +287,12 @@ C:\Users\Kahvia\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Loc
 - tag `v2026.9.19.1` 指向构建提交 `0aa9873`；它之后的三个提交是两处测试/工具修复
   加一处行为等价的 `MapFilterCatalog` 重构（生产调用点不传新参数），
   因此 tag 与 main 的差异对程序行为没有影响。
+
+### 交付给实机验收的树
+
+`out\map-test` 已刷到 2026.9.19.1（二进制、`Assets/Updates/bundled-snapshot.json`、
+原生 CoreHost 全部对齐；`Assets` 下的 `KuroMap`/`KuroMapIcons` 等仍是到 `x64\Release` 的
+联接）。**12 个区域包仍是目录联接**，所以对它们点「删除」会被
+`UpdateStorage.RejectLink` 拒绝（"资源目录不能包含符号链接或目录联接"）——这是保护源数据的
+设计，不是缺陷。为了让"删除 → 重新下载"能在实机跑通，**特地把 `tethys` 换成了真实拷贝**：
+对「泰缇斯之底」删除 → 变未安装 → 重新启用会从线上只下载 `tethys-kurotiles` 这一个包。
