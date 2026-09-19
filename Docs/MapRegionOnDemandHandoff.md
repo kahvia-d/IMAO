@@ -326,3 +326,27 @@ C:\Users\Kahvia\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Loc
 **待办（用户已定）**：等实机验证通过后再补发 **2026.9.19.2**（修复只动托管代码与测试，
 原生与 13 个区域包字节未变，可沿用旧 URL，只需重传程序 ZIP 与离线包 + 推进 sequence 15）；
 **不做**"启动时自动补下缺失区域"，保持手动关掉再打开。
+
+### 第三轮实机反馈（`0ba18fe`）：快照里的"位置"没跟着搬
+
+用户报"下载过了、重启后仍显示未安装，再点下载也不再下载"。根因不在下载，而在
+**`AttachPackagesAsync` 只追加它还不认识的包，从不更新已存在包的位置**：
+
+- 删除自带副本后重新下载，字节从**程序目录**落到 **update 根目录**；
+- 但快照里那一条还是老路径（程序目录），于是界面按 `Directory.Exists(老路径)` 判定
+  **未安装**；而再点一次下载时 `FindBundled` 为 null、update 根已存在 → 只校验不下载，
+  所以"看起来下过了、却没有生效"。宿主侧则由上一轮的 `ApplySelection` 兜住（剔除缺目录的包），
+  所以核心能起来，只是那一行永远显示未安装。
+- 修复：`AttachPackagesAsync` 对已在快照中的包**替换其 `Directory`**（仅本机路径变化，
+  签名身份/哈希/文件清单不变；`StageAsync` 的"同一快照标识"比较已按签名内容判断，配合得上）。
+- 钉住它的测试：`the region list reports a re-downloaded region as downloaded, restart included`
+  —— 直接读 UI 的数据源 `RegionCatalog`，走"自带 → 删除 → 下载 → 重启"并断言每一步的
+  `RegionState`（修之前必红：下载后即报 NotInstalled）。
+
+同一轮还改了两处交互/测试：
+
+- **未安装的行改为显示「下载」按钮**（原来是「删除」，且因为行缓存复用，状态变了按钮不跟着变）。
+  现在按钮在**每次渲染**时按状态决定：有副本→「删除」，未安装且可下载→「下载」；
+  点「下载」= 下载并启用该区域（不必再靠"关掉再打开开关"）。
+- `RegionSelectionCheck` 在 staged 树缺包时**明确报出缺哪个包**：实机上删过区域后跑测试，
+  以前会在目录拷贝里抛 `DirectoryNotFoundException`，看起来像检查本身坏了。
