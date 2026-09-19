@@ -1,0 +1,19 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "map-regions/regions.json",
+  "regions": {
+    "jinzhou": "今州",
+    "mengzhou": "梦州",
+    "laguna": "拉古那",
+    "qiqiu": "七丘",
+    "roysurface": "冰原地表",
+    "blackshores": "黑海岸群岛",
+    "lahai": "拉海洛",
+    "darkplain": "黯原",
+    "lowervault": "下层金库",
+    "avinoleum": "阿维纽林",
+    "fabricatorium": "隐海试验场",
+    "tethys": "泰缇斯之底",
+    "timeriftruins": "时隙废都"
+  }
+}

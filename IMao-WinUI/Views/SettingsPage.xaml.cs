@@ -3,6 +3,7 @@ using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
 using IMao_WinUI.Core.KuroSync;
+using IMao_WinUI.Core.Updates;
 using IMao_WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -31,6 +32,7 @@ public sealed partial class SettingsPage : Page
     private const string KuroSyncShowAllKey = KuroSyncSettings.ShowAllRegions;
     private bool kuroSyncWorldExpanded;
     private bool restoringUpdates;
+    private bool restoringRegions = true;
     public SettingsViewModel ViewModel { get; }
     private static readonly int[] SupportedKeys = Enumerable.Range(0, 124).Where(RuntimeConfiguration.IsSupportedHotkey).ToArray();
 
@@ -102,8 +104,98 @@ public sealed partial class SettingsPage : Page
             ResourceUpdateNotes.Visibility = string.IsNullOrEmpty(updates.Notes) ? Visibility.Collapsed : Visibility.Visible;
             ResourceUpdateMessage.Severity = updates.Failed ? InfoBarSeverity.Warning : updates.HasPending ? InfoBarSeverity.Success : InfoBarSeverity.Informational;
             ResourceUpdateMessage.Message = updates.ProgramPending && !updates.Failed ? "程序更新已准备完成，可点击“退出并更新”，也可稍后重新打开。" : updates.HasPending && !updates.Failed ? "资源已准备完成，退出并重新打开软件后生效。" : updates.Message;
+            RenderRegions();
         }
         finally { restoringUpdates = false; }
+    }
+
+    /// <summary>
+    /// Rebuilds the per-region rows from the running release. Rows are built in code because the list is
+    /// derived from the signed publication, not from a fixed layout.
+    /// </summary>
+    private void RenderRegions()
+    {
+        var entries = updates.Regions();
+        restoringRegions = true;
+        try
+        {
+            RegionList.Children.Clear();
+            if (entries.Count == 0)
+            {
+                RegionSummary.Text = "";
+                RegionHint.Text = "区域列表来自签名发布清单。请先点击「检查更新」，之后即可在这里按区域开关。";
+                RegionHint.Visibility = Visibility.Visible;
+                return;
+            }
+            var enabled = entries.Count(entry => entry.Selected);
+            var downloaded = updates.DownloadedRegionBytes();
+            RegionSummary.Text = $"已启用 {enabled} / {entries.Count} 个区域  ·  本机已下载 {FormatBytes(downloaded)}"
+                + (entries.Any(entry => entry.State == RegionState.NotInstalled && entry.Selected) ? "  ·  有已启用但尚未安装的区域，重启后会自动补下" : "");
+            RegionHint.Text = "随程序分发的区域（内置）不产生下载量；关闭内置区域只停止加载它，不会删除文件。";
+            RegionHint.Visibility = Visibility.Visible;
+            foreach (var entry in entries)
+            {
+                var label = new TextBlock { Text = entry.Name, VerticalAlignment = VerticalAlignment.Center };
+                var detail = new TextBlock
+                {
+                    Text = $"{StateText(entry.State)} · {FormatBytes(entry.Size)}",
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                if (Application.Current.Resources.TryGetValue("IMaoSecondaryTextStyle", out var style) && style is Style textStyle)
+                    detail.Style = textStyle;
+                var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+                text.Children.Add(label);
+                text.Children.Add(detail);
+                var toggle = new ToggleSwitch
+                {
+                    IsOn = entry.Selected,
+                    OnContent = "已启用",
+                    OffContent = "已停用",
+                    Tag = entry.PackageId,
+                    IsEnabled = !updates.Busy,
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                toggle.Toggled += RegionToggle_Toggled;
+                var row = new Grid { ColumnSpacing = 12 };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                Grid.SetColumn(text, 0);
+                Grid.SetColumn(toggle, 1);
+                row.Children.Add(text);
+                row.Children.Add(toggle);
+                RegionList.Children.Add(row);
+            }
+            RegionProgress.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
+            RegionProgress.Value = updates.ProgressPercent;
+            RegionProgressText.Text = updates.ProgressText;
+            RegionProgressText.Visibility = string.IsNullOrEmpty(updates.ProgressText) ? Visibility.Collapsed : Visibility.Visible;
+            RegionMessage.IsOpen = updates.Failed;
+            RegionMessage.Severity = InfoBarSeverity.Warning;
+            RegionMessage.Message = updates.Failed ? updates.Message : "";
+        }
+        finally { restoringRegions = false; }
+    }
+
+    private static string StateText(RegionState state) => state switch
+    {
+        RegionState.Bundled => "内置",
+        RegionState.Downloaded => "已下载",
+        _ => "未下载",
+    };
+
+    private static string FormatBytes(long bytes) => bytes >= 1048576
+        ? $"{bytes / 1048576.0:F1} MB"
+        : bytes > 0 ? $"{bytes / 1024.0:F0} KB" : "0 MB";
+
+    /// <summary>
+    /// Applies one region's switch. Enabling downloads it when nothing local carries it; disabling stops
+    /// loading it and deletes a downloaded copy.
+    /// </summary>
+    private async void RegionToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (restoringRegions || !IsLoaded || sender is not ToggleSwitch toggle || toggle.Tag is not string packageId) return;
+        try { await (toggle.IsOn ? updates.EnableRegionAsync(packageId) : updates.DisableRegionAsync(packageId)); }
+        catch (Exception error) { updates.ShowError(error); }
     }
     private async void AutomaticUpdateCheck_Toggled(object sender, RoutedEventArgs e)
     { if (!restoringUpdates && IsLoaded) await updates.SetAutoCheckAsync(AutomaticUpdateCheck.IsOn); }

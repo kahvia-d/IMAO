@@ -107,6 +107,38 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         Message = "地图资源已准备完成。请退出并重新打开软件后启用。";
     });
 
+    /// <summary>
+    /// The selectable regions of the running release. Empty until a check has succeeded, because the sizes
+    /// and versions come from the signed publication rather than from anything shipped in the program.
+    /// </summary>
+    public IReadOnlyList<RegionEntry> Regions()
+    {
+        var release = updater.CurrentRelease;
+        if (release is null) return [];
+        try { return new RegionCatalog(snapshots, ResourceSessionPaths.MapDataRoot).Build(release); }
+        catch (Exception error) { ShowError(error); return []; }
+    }
+
+    /// <summary>Bytes this installation has downloaded for regions, which is what "downloaded" can mean here.</summary>
+    public long DownloadedRegionBytes() => Regions().Where(region => region.State == RegionState.Downloaded).Sum(region => region.Size);
+
+    /// <summary>Turns a region on: downloads it if nothing local carries it, then activates it.</summary>
+    public Task EnableRegionAsync(string packageId) => RunAsync(async ct =>
+    {
+        await updater.EnsureInstalledAsync([packageId], Progress(), ct);
+        Message = "已启用该区域。请退出并重新打开软件后生效。";
+    });
+
+    /// <summary>
+    /// Turns a region off, deleting its downloaded copy. A copy that ships inside the program is only
+    /// deselect, never deleted.
+    /// </summary>
+    public Task DisableRegionAsync(string packageId) => RunAsync(async ct =>
+    {
+        await updater.RemoveAsync([packageId], ct);
+        Message = "已停用该区域。请退出并重新打开软件后生效。";
+    });
+
     public Task ImportAsync(string path) => RunAsync(async ct =>
     {
         await updater.ImportOfflineAsync(path, Progress(), ct);

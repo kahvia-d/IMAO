@@ -172,6 +172,20 @@ public sealed class UpdateService : IDisposable
     }
 
     /// <summary>
+    /// The release this installation is running, or null before a successful check. The settings page needs
+    /// it to list the regions with the sizes the publication actually declares.
+    /// </summary>
+    public ResourceRelease? CurrentRelease
+    {
+        get
+        {
+            if (_checkedEnvelope is null) return null;
+            try { return InstalledRelease(UpdateSignature.Verify(_checkedEnvelope, _keys, _allowTestKeys)); }
+            catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException) { return null; }
+        }
+    }
+
+    /// <summary>
     /// Installs only the named packages of the running release, which is what a player selecting one more
     /// region should pay for. Bundled copies are verified in place and never re-downloaded.
     /// </summary>

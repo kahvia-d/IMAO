@@ -114,24 +114,6 @@
         Condition="'@(KuroMapAssets)' != ''" />
 </Target>
 
-<Target Name="CopyCandidateFeaturePackAssets" AfterTargets="CopyFilesToOutputDirectory">
-  <ItemGroup>
-    <CandidateFeaturePackRegistry Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\candidate-packs.json" />
-    <CandidateFeaturePackAssets Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\*Candidate\*">
-      <PackDirectory>$([System.IO.Path]::GetFileName($([System.IO.Path]::GetDirectoryName('%(FullPath)'))))</PackDirectory>
-    </CandidateFeaturePackAssets>
-  </ItemGroup>
-  <MakeDir Directories="$(TargetDir)Assets\FeaturesDatas" Condition="Exists('$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\candidate-packs.json')" />
-  <Copy SourceFiles="@(CandidateFeaturePackRegistry)"
-        DestinationFiles="@(CandidateFeaturePackRegistry->'$(TargetDir)Assets\FeaturesDatas\%(Filename)%(Extension)')"
-        SkipUnchangedFiles="true"
-        Condition="'@(CandidateFeaturePackRegistry)' != ''" />
-  <Copy SourceFiles="@(CandidateFeaturePackAssets)"
-        DestinationFiles="@(CandidateFeaturePackAssets->'$(TargetDir)Assets\FeaturesDatas\%(PackDirectory)\%(Filename)%(Extension)')"
-        SkipUnchangedFiles="true"
-        Condition="'@(CandidateFeaturePackAssets)' != ''" />
-</Target>
-
 <Target Name="CopyKuroTileFeaturePackAssets" AfterTargets="CopyFilesToOutputDirectory">
   <ItemGroup>
     <KuroTileFeaturePackRegistry Include="$(MSBuildProjectDirectory)\..\Assets\FeaturesDatas\kuro-tile-packs.json" />
