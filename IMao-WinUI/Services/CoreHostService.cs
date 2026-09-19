@@ -52,15 +52,32 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     // A reader belongs to one process and never reads fields of its successor.
     private sealed class Session
     {
+        private readonly Queue<string> standardError = new();
         public required Process Process { get; init; }
         public required NamedPipeClientStream Pipe { get; init; }
         public StreamReader? Reader { get; set; }
         public StreamWriter? Writer { get; set; }
         public Task? ReaderTask { get; set; }
+        public Task? StandardErrorTask { get; set; }
         public CancellationTokenSource Stop { get; } = new();
         public ConcurrentDictionary<string, TaskCompletionSource<bool>> Pending { get; } = new();
         public ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> MarkerPending { get; } = new();
         public ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> RoutePending { get; } = new();
+
+        /// <summary>Keeps the last few stderr lines so an early exit can say why it happened.</summary>
+        public void RecordStandardError(string line)
+        {
+            lock (standardError)
+            {
+                standardError.Enqueue(line);
+                while (standardError.Count > 4) standardError.Dequeue();
+            }
+        }
+
+        public string StandardErrorTail()
+        {
+            lock (standardError) return string.Join(" / ", standardError);
+        }
     }
 
     [ObservableProperty] private CoreRuntimeStatus status = new();
@@ -93,7 +110,11 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             Process = new Process { StartInfo = new ProcessStartInfo
             {
                 FileName = path, WorkingDirectory = hostDirectory,
-                UseShellExecute = false, CreateNoWindow = true
+                UseShellExecute = false, CreateNoWindow = true,
+                // Redirected so a host that dies before it can open the pipe leaves a reason behind.
+                // A refusal that happens during resource validation is printed and then the process
+                // exits, which used to be completely silent.
+                RedirectStandardError = true
             } },
             Pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
         };
@@ -108,8 +129,11 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         try
         {
             if (!session.Process.Start()) throw new IOException("无法启动 CoreHost");
-            // A snapshot launch verifies its full file inventory before exposing IPC.
-            await session.Pipe.ConnectAsync(resourceSnapshots is null ? 5000 : 180000, cancellationToken);
+            session.StandardErrorTask = DrainStandardErrorAsync(session);
+            // A host that refuses its resource snapshot exits without ever opening the pipe. Waiting out the
+            // whole connect budget left the interface on "正在启动 CoreHost" for three minutes with nothing to
+            // show and no way to tell what happened, so the wait races the process and reports the exit.
+            await ConnectOrExitAsync(session, resourceSnapshots is null ? 5000 : 180000, cancellationToken);
             session.Reader = new StreamReader(session.Pipe, new UTF8Encoding(false), false, 64 * 1024, leaveOpen: true);
             session.Writer = new StreamWriter(session.Pipe, new UTF8Encoding(false), 64 * 1024, leaveOpen: true);
             OnSessionUi(session, () => { IsConnected = true; LastFault = string.Empty; ApplyRoutePlanning(new(), reset: true); });
@@ -525,6 +549,62 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Waits for the host to open its pipe, giving up as soon as the process is gone. The exit code is the
+    /// only thing a host that fails during resource validation can leave behind, so it is reported with the
+    /// stderr tail that was captured alongside it.
+    /// </summary>
+    private static async Task ConnectOrExitAsync(Session session, int timeoutMs, CancellationToken cancellationToken)
+    {
+        using var attempt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        Task connect = session.Pipe.ConnectAsync(timeoutMs, attempt.Token);
+        Task exit = session.Process.WaitForExitAsync(CancellationToken.None);
+        if (await Task.WhenAny(connect, exit).ConfigureAwait(false) == connect || connect.IsCompletedSuccessfully)
+        {
+            attempt.Cancel();
+            await connect.ConfigureAwait(false);
+            return;
+        }
+        attempt.Cancel();
+        // The connect is left cancelled rather than awaited: its rejection is reported by the exit instead,
+        // and observing it here keeps it from surfacing as an unobserved task later.
+        _ = connect.ContinueWith(task => _ = task.Exception, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
+        int code = -1;
+        try { code = session.Process.ExitCode; } catch (InvalidOperationException) { }
+        // The reason is printed just before the exit, so give the drain a moment to record it before the
+        // message is built; the stream is already closed at this point, so this normally completes at once.
+        if (session.StandardErrorTask is { } drain) await Task.WhenAny(drain, Task.Delay(250)).ConfigureAwait(false);
+        string reason = session.StandardErrorTail();
+        throw new IOException($"CoreHost 启动后立即退出（退出码 {code}）" + (reason.Length > 0 ? "：" + reason : ""));
+    }
+
+    /// <summary>
+    /// Keeps the host's stderr drained into a log file. Draining is what makes the redirection safe: an
+    /// unread pipe buffer would block the host, and a log kept on disk is the only record of a failure that
+    /// happens before the host's own diagnostics are running.
+    /// </summary>
+    private async Task DrainStandardErrorAsync(Session session)
+    {
+        try
+        {
+            string? line;
+            while ((line = await session.Process.StandardError.ReadLineAsync().ConfigureAwait(false)) is not null)
+            {
+                string text = line.Trim();
+                if (text.Length == 0) continue;
+                session.RecordStandardError(text);
+                try
+                {
+                    Directory.CreateDirectory(LogDirectory);
+                    await File.AppendAllTextAsync(Path.Combine(LogDirectory, "corehost-stderr.log"),
+                        $"{DateTimeOffset.Now:O} {text}{Environment.NewLine}").ConfigureAwait(false);
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+            }
+        }
+        catch (Exception error) when (error is IOException or ObjectDisposedException or InvalidOperationException) { }
+    }
+
     private async Task CloseLockedAsync()
     {
         Session? session = active;
@@ -534,6 +614,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         // Closing the pipe cancels blocked reads/writes and makes the host shut down.
         session.Pipe.Dispose();
         if (session.ReaderTask is not null) await session.ReaderTask.ConfigureAwait(false);
+        if (session.StandardErrorTask is { } drain) await Task.WhenAny(drain, Task.Delay(1000)).ConfigureAwait(false);
         try { session.Writer?.Dispose(); } catch (IOException) { } catch (ObjectDisposedException) { }
         session.Reader?.Dispose();
         try
