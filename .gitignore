@@ -8,6 +8,9 @@ IMao-Core/tools/VisualIndexBuilder/*
 x64/
 Debug/
 bin/
+# A `dotnet build -r win-x64` of IMao-WinUI writes its output here instead of bin/,
+# because the project overrides OutDir for the self-contained publish.
+/Release/
 .vs/
 IMao-WinUI/obj
 IMao-WinUI.Core/obj

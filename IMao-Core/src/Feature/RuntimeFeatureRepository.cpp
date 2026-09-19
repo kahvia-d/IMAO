@@ -175,15 +175,19 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
     std::string failure;
     try {
         const auto featureRoot = (ResourceSnapshotContext::Configured() ? ResourceSnapshotContext::BaselineRoot() : assetRoot) / "FeaturesDatas";
+        // The base map features may live in their own package; MapFeatureRoot falls back to
+        // featureRoot, so this is the same directory for every layout written before the split.
+        const auto mapFeatureRoot = ResourceSnapshotContext::Configured()
+            ? ResourceSnapshotContext::MapFeatureRoot() : featureRoot;
         const auto mapStart = std::chrono::steady_clock::now();
         std::array<std::uint8_t, 32> sourceImfSha{};
         bool sourceImfHashReady = FeatureBinaryCodec::Load(
-            featureRoot / "Map_features.imf", loaded->map, failure, nullptr, &sourceImfSha);
+            mapFeatureRoot / "Map_features.imf", loaded->map, failure, nullptr, &sourceImfSha);
         const auto baselineRows = loaded->map.imgKeypoints.size();
         if (!sourceImfHashReady) {
 #ifdef IMAO_ALLOW_XML_FEATURE_FALLBACK
             Diagnostics::Record("resource-load", "stage=map-imf failed fallback=xml error=" + failure);
-            if (!FeatureLoader::loadFeaturesFromXML((featureRoot / "Map_features.yml").string(), loaded->map)) {
+            if (!FeatureLoader::loadFeaturesFromXML((mapFeatureRoot / "Map_features.yml").string(), loaded->map)) {
                 throw std::runtime_error("map IMF and XML fallback both failed: " + failure);
             }
 #else
@@ -200,7 +204,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         std::string visualError;
         if (sourceImfHashReady) {
             loaded->visualIndexReady = MapVisualIndexCodec::Load(
-                featureRoot / "Map_visual_index.imx", sourceImfSha,
+                mapFeatureRoot / "Map_visual_index.imx", sourceImfSha,
                 static_cast<std::uint32_t>(loaded->map.imgKeypoints.size()),
                 loaded->visualIndex, visualError);
             if (loaded->visualIndexReady) {

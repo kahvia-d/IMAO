@@ -55,6 +55,17 @@ public:
         }
         return MapDataRoot();
     }
+    // The base map features are an optional separate package. Snapshots written before the
+    // split carry no mapFeatureRoot and keep Map_features.imf and Map_visual_index.imx under
+    // the baseline's FeaturesDatas directory, so an absent field falls back to that.
+    static std::filesystem::path MapFeatureRoot() {
+        if (configured_) {
+            const auto entry = snapshot_.find("mapFeatureRoot");
+            if (entry != snapshot_.end() && entry->is_string() && !entry->get<std::string>().empty())
+                return Path(entry->get<std::string>());
+        }
+        return BaselineRoot() / "FeaturesDatas";
+    }
     static std::string AppVersion() {
         static const std::string version = [] {
             try {

@@ -153,11 +153,18 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
         const auto iconRoot = snapshot.contains("mapIconRoot") && snapshot.at("mapIconRoot").is_string() &&
             !snapshot.at("mapIconRoot").get<std::string>().empty()
             ? Root(snapshot, "mapIconRoot") : mapRoot;
+        // Optional, same fallback rule: without the field the base map features stay under the
+        // baseline's FeaturesDatas directory, which is where every older layout keeps them.
+        const auto featureRoot = snapshot.contains("mapFeatureRoot") && snapshot.at("mapFeatureRoot").is_string() &&
+            !snapshot.at("mapFeatureRoot").get<std::string>().empty()
+            ? Root(snapshot, "mapFeatureRoot") : baselineRoot / "FeaturesDatas";
         const auto infoPath = baselineRoot.parent_path() / "build-info.json";
         if (strict || fs::exists(infoPath))
             Require(Read(infoPath).value("baselineId", "") == snapshot.at("baselineId").get<std::string>(), "snapshot baseline is incompatible with program resources");
         const auto baselineFilesPath = baselineRoot / "Updates" / "baseline-files.json";
-        if (fs::exists(baselineFilesPath)) {
+        const bool baselineManifestPresent = fs::exists(baselineFilesPath);
+        bool baselineCarriesFeatures = false;
+        if (baselineManifestPresent) {
             const auto baselineFiles = Read(baselineFilesPath);
             Require(baselineFiles.value("baselineId", "") == snapshot.at("baselineId").get<std::string>() &&
                 baselineFiles.contains("files") && baselineFiles.at("files").is_array(), "invalid baseline integrity manifest");
@@ -169,23 +176,25 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
                 const auto hash = file.at("sha256").get<std::string>();
                 Require(IsHash(hash) && Sha256File(baselineRoot / relative) == Lower(hash), "baseline resource SHA-256 mismatch");
             }
-            Require(baseInventory.contains("featuresdatas/map_features.imf") && baseInventory.contains("featuresdatas/map_visual_index.imx"),
-                "baseline integrity manifest must include map features and visual index");
+            baselineCarriesFeatures = baseInventory.contains("featuresdatas/map_features.imf") &&
+                baseInventory.contains("featuresdatas/map_visual_index.imx");
         }
         Require(snapshot.contains("packages") && snapshot.at("packages").is_array(), "snapshot packages are required");
         std::set<std::string> packageIds, packageRoots, tileScenes;
         std::unordered_map<std::string, std::set<std::string>> declaredFiles;
         int mapPackageCount = 0;
         int iconPackageCount = 0;
+        int featurePackageCount = 0;
         for (const auto& package : snapshot.at("packages")) {
             const auto id = package.at("id").get<std::string>();
             const auto kind = package.at("kind").get<std::string>();
             Require(!id.empty() && packageIds.insert(Lower(id)).second && !package.value("version", "").empty(), "invalid or duplicate package identity");
-            Require(kind == "map-data" || kind == "map-icons" || kind == "tile" || kind == "candidate", "unsupported resource package kind");
+            Require(kind == "map-data" || kind == "map-icons" || kind == "map-features" || kind == "tile" || kind == "candidate", "unsupported resource package kind");
             const auto directory = Root(package, "directory");
             Require(packageRoots.insert(Lower(directory.generic_string())).second, "duplicate package directory");
             if (kind == "map-data") { ++mapPackageCount; Require(directory == mapRoot, "map-data root does not match selected package"); }
             if (kind == "map-icons") { ++iconPackageCount; Require(directory == iconRoot, "map-icons root does not match selected package"); }
+            if (kind == "map-features") { ++featurePackageCount; Require(directory == featureRoot, "map-features root does not match selected package"); }
             Require(package.contains("files") && package.at("files").is_array(), "package file inventory missing");
             auto& inventory = declaredFiles[Lower(directory.generic_string())];
             Require(!strict || (IsHash(package.value("sha256", "")) && !package.at("files").empty()), "updated package hash or file inventory missing");
@@ -213,7 +222,7 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
                             "package contains an unverified extra file");
                 }
             }
-            if (kind != "map-data" && kind != "map-icons") {
+            if (kind != "map-data" && kind != "map-icons" && kind != "map-features") {
                 const auto manifest = Read(directory / "manifest.json");
                 const auto sceneName = manifest.value("scene", "");
                 const auto* scene = Definition(sceneName);
@@ -248,6 +257,12 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
         }
         Require(mapPackageCount <= 1 && (!strict || mapPackageCount == 1), "snapshot must select exactly one updated map-data package");
         Require(iconPackageCount <= 1, "snapshot must select at most one icon package");
+        Require(featurePackageCount <= 1, "snapshot must select at most one map-features package");
+        // The base map features have to be reachable: either the baseline carries them or a
+        // map-features package does. Only a baseline manifest that exists makes this a
+        // requirement, so a layout without one keeps behaving exactly as before.
+        Require(!baselineManifestPresent || baselineCarriesFeatures || featurePackageCount == 1,
+            "baseline integrity manifest must include map features and visual index");
         const auto calibrations = Read(mapRoot / "scene-calibrations.json");
         const auto approvals = Read(mapRoot / "scene-validation.json");
         CheckConfig(calibrations, "scene-calibrations"); CheckConfig(approvals, "scene-validation");

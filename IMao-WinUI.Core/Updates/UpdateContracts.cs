@@ -114,6 +114,8 @@ public sealed record ResourceSnapshot
     // Optional. Empty means the icons still live inside MapDataRoot, which is how every
     // snapshot written before the icon package existed behaves.
     public string MapIconRoot { get; init; } = "";
+    // Optional. Empty means the base map features still live in the baseline's FeaturesDatas.
+    public string MapFeatureRoot { get; init; } = "";
     public bool Bundled { get; init; }
     public List<SnapshotPackage> Packages { get; init; } = new();
 }

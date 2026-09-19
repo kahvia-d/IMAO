@@ -207,6 +207,10 @@ public sealed class ResourceSnapshotService
         if (iconPackages.Count > 1) throw new InvalidDataException("资源快照包含多个图标包。");
         if (!string.IsNullOrEmpty(snapshot.MapIconRoot) && (iconPackages.Count != 1 || snapshot.MapIconRoot != iconPackages[0].Directory))
             throw new InvalidDataException("图标目录与资源快照不一致。");
+        var featurePackages = snapshot.Packages.Where(p => p.Kind == "map-features").ToList();
+        if (featurePackages.Count > 1) throw new InvalidDataException("资源快照包含多个基础地图特征包。");
+        if (!string.IsNullOrEmpty(snapshot.MapFeatureRoot) && (featurePackages.Count != 1 || snapshot.MapFeatureRoot != featurePackages[0].Directory))
+            throw new InvalidDataException("基础地图特征目录与资源快照不一致。");
         if (_preflight is not null) await _preflight(await MaterializeAsync(snapshot, path, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         return snapshot;
     }
@@ -230,7 +234,8 @@ public sealed class ResourceSnapshotService
         if (snapshot.Bundled) return _bundled;
         var packages = snapshot.Packages.Select(p => FindBundledPackage(p) is { } bundled ? p with { Directory = bundled.Directory } : p).ToList();
         return snapshot with { BaselineRoot = _bundled.BaselineRoot, Packages = packages, MapDataRoot = packages.SingleOrDefault(p => p.Kind == "map-data")?.Directory ?? "",
-            MapIconRoot = packages.SingleOrDefault(p => p.Kind == "map-icons")?.Directory ?? "" };
+            MapIconRoot = packages.SingleOrDefault(p => p.Kind == "map-icons")?.Directory ?? "",
+            MapFeatureRoot = packages.SingleOrDefault(p => p.Kind == "map-features")?.Directory ?? "" };
     }
 
     private async Task<string> MaterializeAsync(ResourceSnapshot snapshot, string storedPath, CancellationToken ct)
