@@ -151,7 +151,10 @@ public sealed partial class SettingsPage : Page
         public required TextBlock Name { get; init; }
         public required TextBlock Detail { get; init; }
         public required ToggleSwitch Toggle { get; init; }
-        public Button? Delete { get; init; }
+        /// <summary>删除 or 下载, decided on every render: a region can be removed and re-downloaded while the row stays.</summary>
+        public required Button Action { get; init; }
+        /// <summary>What this row currently describes, so its button knows which operation it is offering.</summary>
+        public RegionEntry? Entry { get; set; }
     }
 
     private readonly Dictionary<string, RegionRow> regionRows = new(StringComparer.Ordinal);
@@ -214,9 +217,9 @@ public sealed partial class SettingsPage : Page
             long pending = missing.Where(entry => entry.Selected).Sum(entry => entry.Size);
             RegionSummary.Text = $"已启用 {enabled} / {entries.Count} 个区域  ·  本机副本共 {FormatBytes(local)}"
                 + (downloaded > 0 ? $"（其中下载来的 {FormatBytes(downloaded)}）" : "")
-                + (pending > 0 ? $"  ·  已启用但尚未安装的 {FormatBytes(pending)}，关掉再打开该区域即会下载" : "");
-            RegionHint.Text = "「停用」只停止加载该区域，文件保留，重新启用立刻生效；「删除」会把本机副本从磁盘上删掉、腾出空间，之后重新启用会重新下载。"
-                + (missing.Count > 0 ? " 未安装的区域在启用时会自动下载。" : "");
+                + (pending > 0 ? $"  ·  已启用但尚未安装的 {FormatBytes(pending)}，点行尾「下载」即可获取" : "");
+            RegionHint.Text = "「停用」只停止加载该区域，文件保留，重新启用立刻生效；「删除」会把本机副本从磁盘上删掉、腾出空间，之后点「下载」可以再取回。"
+                + (missing.Count > 0 ? " 未安装的区域行尾是「下载」。" : "");
             RegionHint.Visibility = Visibility.Visible;
 
             // A row is only built once. Rows are reused for as long as the same regions are listed; a region
@@ -237,13 +240,8 @@ public sealed partial class SettingsPage : Page
                 // switch waits for a check instead of failing after the player moved it.
                 row.Toggle.IsEnabled = !updates.Busy &&
                     (entry.Selected || entry.State != RegionState.NotInstalled || entry.Downloadable);
-                if (row.Delete is { } delete)
-                {
-                    delete.IsEnabled = !updates.Busy && entry.Deletable;
-                    ToolTipService.SetToolTip(delete, entry.Deletable
-                        ? $"从磁盘上删除本机副本，腾出 {FormatBytes(entry.Size)}。重新启用该区域时会重新下载。"
-                        : "这个区域本机没有副本。");
-                }
+                row.Entry = entry;
+                UpdateRegionAction(row.Action, entry);
             }
             RenderRegionProgress();
         }
@@ -274,22 +272,14 @@ public sealed partial class SettingsPage : Page
             toggle.Toggled += RegionToggle_Toggled;
             var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
             actions.Children.Add(toggle);
-            Button? delete = null;
-            // The button exists whenever a local copy exists, so it does not appear and disappear as the
-            // list is redrawn; whether it can be pressed is decided on each render.
-            if (entry.State is RegionState.Bundled or RegionState.Downloaded)
-            {
-                delete = new Button
-                {
-                    Content = "删除",
-                    Tag = entry.PackageId,
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                if (Application.Current.Resources.TryGetValue("IMaoSecondaryButtonStyle", out var buttonStyle) && buttonStyle is Style secondary)
-                    delete.Style = secondary;
-                delete.Click += RegionDelete_Click;
-                actions.Children.Add(delete);
-            }
+            // One button per row whose job depends on the state: it deletes bytes that are here and downloads
+            // the ones that are not. Building it once and deciding on every render is what keeps a reused row
+            // from keeping a button that no longer applies.
+            var action = new Button { Tag = entry.PackageId, VerticalAlignment = VerticalAlignment.Center };
+            if (Application.Current.Resources.TryGetValue("IMaoSecondaryButtonStyle", out var buttonStyle) && buttonStyle is Style secondary)
+                action.Style = secondary;
+            action.Click += RegionAction_Click;
+            actions.Children.Add(action);
             var row = new Grid { ColumnSpacing = 12 };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -298,9 +288,28 @@ public sealed partial class SettingsPage : Page
             row.Children.Add(text);
             row.Children.Add(actions);
             RegionList.Children.Add(row);
-            regionRows[entry.PackageId] = new RegionRow { Name = label, Detail = detail, Toggle = toggle, Delete = delete };
+            regionRows[entry.PackageId] = new RegionRow { Name = label, Detail = detail, Toggle = toggle, Action = action };
             regionRowOrder.Add(entry.PackageId);
         }
+    }
+
+    /// <summary>
+    /// Decides what the row's action button offers right now: 下载 for a region whose bytes are not on this
+    /// machine but can be fetched, 删除 for one that has a local copy. Both are decided per render, because
+    /// the same reused row can go from installed to removed and back.
+    /// </summary>
+    private void UpdateRegionAction(Button action, RegionEntry entry)
+    {
+        bool download = entry.State == RegionState.NotInstalled && entry.Downloadable;
+        bool delete = entry.State is RegionState.Bundled or RegionState.Downloaded;
+        action.Visibility = download || delete ? Visibility.Visible : Visibility.Collapsed;
+        action.Content = download ? "下载" : "删除";
+        action.IsEnabled = !updates.Busy && (download ? entry.Downloadable : entry.Deletable);
+        ToolTipService.SetToolTip(action, download
+            ? $"下载该区域（约 {FormatBytes(entry.Size)}）并启用它，退出并重新打开软件后生效。"
+            : entry.Deletable
+                ? $"从磁盘上删除本机副本，腾出 {FormatBytes(entry.Size)}。之后可以再点「下载」取回。"
+                : "这个区域本机没有副本。");
     }
 
     private void ClearRegionRows()
@@ -359,13 +368,19 @@ public sealed partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Deletes one region's local copy. This is the space-reclaiming action; the region comes back by
-    /// downloading it, which is why it is a separate button rather than the switch.
+    /// The row's one action button. A region whose bytes are here is deleted; one that is only available from
+    /// the channel is downloaded and turned on, which is what the player asking for it means. Downloading no
+    /// longer requires knowing to toggle the switch off and on again.
     /// </summary>
-    private async void RegionDelete_Click(object sender, RoutedEventArgs e)
+    private async void RegionAction_Click(object sender, RoutedEventArgs e)
     {
         if (restoringRegions || sender is not Button button || button.Tag is not string packageId) return;
-        try { await updates.DeleteRegionAsync(packageId); }
+        if (!regionRows.TryGetValue(packageId, out var row) || row.Entry is not { } entry) return;
+        try
+        {
+            if (entry.State == RegionState.NotInstalled) await updates.EnableRegionAsync(packageId);
+            else await updates.DeleteRegionAsync(packageId);
+        }
         catch (Exception error) { updates.ShowError(error); }
         finally { RenderRegions(force: true); }
     }

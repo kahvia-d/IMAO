@@ -45,6 +45,11 @@ internal static class RegionSelectionCheck
         var kept = new List<SnapshotPackage>();
         foreach (var source in bundled.Packages)
         {
+            // A region the player deleted in the app is gone from the staged tree, and the control
+            // descriptor needs every shipped pack. Say so plainly: this used to surface as a
+            // DirectoryNotFoundException from inside the copy, which reads like a bug in the check.
+            if (!Directory.Exists(source.Directory))
+                throw new InvalidDataException($"staged 树缺少资源包 {source.Id}（{source.Directory}）。若在实机里删过该区域，先恢复该目录或重建测试树。");
             // Exactly the layout InstallReleaseAsync creates for a downloaded package.
             var destination = Path.Combine(root, "packages", source.Id, source.Version);
             CopyTree(source.Directory, destination);

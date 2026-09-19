@@ -142,7 +142,7 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     {
         if (updater.CurrentRelease is null) await updater.CheckAsync(automatic: false, ct);
         await updater.EnsureInstalledAsync([packageId], Progress(), ct);
-        Message = "已启用该区域。请退出并重新打开软件后生效。";
+        Message = "已启用该区域，副本已就绪。请退出并重新打开软件后生效。";
     });
 
     /// <summary>Turns a region off without touching its files, so it can be turned on again instantly.</summary>

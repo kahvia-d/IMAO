@@ -852,6 +852,41 @@ await Test("a selected region whose copy is gone never reaches the host snapshot
     True(handedToHost.Packages.Any(p => p.Kind == "map-data"));
 });
 
+await Test("the region list reports a re-downloaded region as downloaded, restart included", async () =>
+{
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();
+    var release = f.RegionCatalog().Resources[0];
+    f.Publish(f.RegionCatalog()); await f.Updates.CheckAsync();
+    await f.Updates.InstallAsync();
+    // The settings page reads exactly this: the region list built from what is installed.
+    RegionEntry Entry(ResourceSnapshotService snapshots) =>
+        new RegionCatalog(snapshots, Path.Combine(f.Root, "baseline")).Build(release).Single(e => e.PackageId == "tethys-kurotiles");
+    Equal(RegionState.Bundled, Entry(f.Snapshots).State);
+
+    var next = f.NewSnapshots(); await next.InitializeAsync();
+    await next.ReportHealthyAsync(release.SnapshotId);
+    using var updater = f.NewUpdates(next);
+    await updater.RemoveAsync(["tethys-kurotiles"]);
+    var removed = Entry(next);
+    Equal(RegionState.NotInstalled, removed.State);
+    True(removed.Downloadable);
+
+    await updater.CheckAsync();
+    await updater.EnsureInstalledAsync(["tethys-kurotiles"]);
+    Equal(RegionState.Downloaded, Entry(next).State);
+    var copy = Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2");
+    True(Directory.Exists(copy));
+
+    // A restart is where the reported state used to fall back to uninstalled even though the bytes
+    // were on disk, because the snapshot still resolved the region to the deleted shipped copy.
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    var after = Entry(restarted);
+    Equal(RegionState.Downloaded, after.State);
+    True(after.Selected);
+    True(after.Deletable);
+    True(after.Size > 0);
+});
+
 await Test("cross-process lock wait honors cancellation", async () =>
 {
     using var f = New(); await f.Initialize(); using var held = new FileStream(Path.Combine(f.Root, ".update.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);

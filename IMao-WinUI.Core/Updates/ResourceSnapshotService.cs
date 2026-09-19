@@ -284,35 +284,41 @@ public sealed class ResourceSnapshotService
     }
 
     /// <summary>
-    /// Adds installed packages to the active snapshot and drops their ids from the deselected set.
+    /// Places the given packages in the active snapshot and drops their ids from the deselected set.
     ///
     /// A snapshot may only name packages that are actually on disk, because the native host refuses the
     /// whole resource set when one of them will not load. So a per-region install expands the snapshot by
     /// exactly the regions it just installed, and every other region stays out of it until it is installed.
+    ///
+    /// A package that is already named gets its directory replaced when it moved. That is what happens when
+    /// the player deletes a copy the program ships and downloads the region again: the bytes leave the
+    /// program's directory for the update root, and a snapshot still naming the old location would leave the
+    /// region looking uninstalled on disk it is sitting on. Only the local path changes here; the signed
+    /// identity, hash and file inventory of the release are untouched.
     ///
     /// The caller holds the update lock for the whole install transaction.
     /// </summary>
     internal async Task AttachPackagesAsync(IEnumerable<SnapshotPackage> packages, CancellationToken ct)
     {
         EnsureInitialized();
-        var additions = new List<SnapshotPackage>();
-        foreach (var package in packages)
-        {
+        var requested = packages.ToList();
+        foreach (var package in requested)
             if (!IsSelectable(package)) throw new InvalidDataException("不是可安装的区域包：" + package.Id);
-            if (!Current.Packages.Any(p => string.Equals(p.Id, package.Id, StringComparison.Ordinal))) additions.Add(package);
-        }
+        var placements = requested.ToDictionary(package => package.Id, StringComparer.Ordinal);
+        var updated = Current.Packages
+            .Select(existing => placements.TryGetValue(existing.Id, out var placement) ? placement : existing)
+            .ToList();
+        foreach (var package in requested)
+            if (!Current.Packages.Any(existing => string.Equals(existing.Id, package.Id, StringComparison.Ordinal))) updated.Add(package);
         _state = UpdateStorage.Read<ActivationState>(_statePath);
         // A player who has not chosen yet has nothing deselected, which means every region is active. Writing
         // the choice out turns that default into an explicit list, so the region just installed stays active
         // no matter how the default is interpreted later.
         var deselected = new SortedSet<string>(DeselectedFor(Current), StringComparer.Ordinal);
-        foreach (var package in packages) deselected.Remove(package.Id);
-        if (additions.Count > 0)
-        {
-            // The descriptor keeps the release identity but lists only the packages that are on disk, so the
-            // next launch validates and activates this same snapshot instead of falling back to the bundle.
-            Current = Current with { Packages = Current.Packages.Concat(additions).ToList() };
-        }
+        foreach (var package in requested) deselected.Remove(package.Id);
+        // The descriptor keeps the release identity but names the copies that are on disk, so the next launch
+        // validates and activates this same snapshot instead of falling back to the bundle.
+        if (!updated.SequenceEqual(Current.Packages)) Current = Current with { Packages = updated };
         _selection = new PackageSelection { SnapshotId = Current.SnapshotId, Deselected = deselected.ToList() };
         await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
         CurrentRuntimeSnapshot = ApplySelection(Current);
