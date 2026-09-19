@@ -18,13 +18,21 @@ for($i=0;$i -lt $scenes.Count;$i++) {
     Write-Fixture "IMao-Core/src/Resource/itemsData_$($scenes[$i]).json" '[]'
 }
 Write-Fixture 'Assets/KuroMap/manifest.json' ($manifest | ConvertTo-Json -Depth 8)
+# The icon set is carved out of KuroMap into its own package before staging, so the fixture has to
+# carry one; staging copies these two entries out and deletes them from the map-data tree.
+Write-Fixture 'Assets/KuroMap/icon-manifest.json' '{"formatVersion":1,"icons":[]}'
+Write-Fixture 'Assets/KuroMap/icons/icon-0001.png' 'fixture-icon'
 Write-Fixture 'Assets/FeaturesDatas/Map_features.imf' 'fixture-base-features'
 Write-Fixture 'Assets/FeaturesDatas/Map_visual_index.imx' 'fixture-base-visual'
 Write-Fixture 'Assets/FeaturesDatas/kuro-tile-packs.json' '{"formatVersion":1,"packs":["Fixture"]}'
 Write-Fixture 'Assets/FeaturesDatas/candidate-packs.json' '{"formatVersion":1,"packs":[]}'
 Write-Fixture 'Assets/FeaturesDatas/KuroTilePacks/Fixture/features.yml' 'fixture-tile-features'
 $tileHash=(Get-FileHash -LiteralPath (Join-Path $source 'Assets/FeaturesDatas/KuroTilePacks/Fixture/features.yml') -Algorithm SHA256).Hash.ToLowerInvariant()
-Write-Fixture 'Assets/FeaturesDatas/KuroTilePacks/Fixture/manifest.json' (@{formatVersion=1;packId='fixture';referenceVerification=@{passed=$true};features=@{file='features.yml';sha256=$tileHash}} | ConvertTo-Json -Depth 8)
+# An approved pack also needs its compiled binary and the provenance manifest that ties it to the
+# feature source, because staging refuses a pack whose binary was not built from the recorded source.
+Write-Fixture 'Assets/FeaturesDatas/KuroTilePacks/Fixture/features.imf' 'fixture-tile-binary'
+Write-Fixture 'Assets/FeaturesDatas/KuroTilePacks/Fixture/features.imf.manifest.json' (@{formatVersion=1;sourceXmlSha256=$tileHash;keypointCount=7} | ConvertTo-Json -Depth 8)
+Write-Fixture 'Assets/FeaturesDatas/KuroTilePacks/Fixture/manifest.json' (@{formatVersion=1;packId='fixture';referenceVerification=@{passed=$true};features=@{file='features.yml';sha256=$tileHash;keypointCount=7}} | ConvertTo-Json -Depth 8)
 & git init --quiet $source
 if ($LASTEXITCODE -ne 0) { throw 'Fixture repository initialization failed.' }
 & git -C $source add -- Version.props Assets IMao-Core
