@@ -350,3 +350,31 @@ C:\Users\Kahvia\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Loc
   点「下载」= 下载并启用该区域（不必再靠"关掉再打开开关"）。
 - `RegionSelectionCheck` 在 staged 树缺包时**明确报出缺哪个包**：实机上删过区域后跑测试，
   以前会在目录拷贝里抛 `DirectoryNotFoundException`，看起来像检查本身坏了。
+
+### 第四层：程序自带的描述符又把位置丢了一次（`6793c74`、`6916eae`）
+
+- 现场（实机状态文件）：`activation.json` 的 `activePath` 指向
+  `snapshots/bundled-<hash>.json`（`bundled=true, formatVersion=1`），其中 tethys 的
+  `directory` **已经是我上一轮写进去的 update 根**（`packages/tethys-kurotiles/2026.9.19.1`
+  8 文件 6.5 MB 确实在），可重启后界面仍报"未安装"。
+- 原因：`ReadAndValidateAsync` 的 bundled 分支**在 `Rebind` 之前就 `return _bundled`**
+  （注释是"用当前安装路径，支持程序目录被搬走"）→ 记录里的 update 根被丢掉，tethys 回到
+  已被删除的程序目录 → `ApplySelection` 把它当"不可加载"排除（`startup.log` 里
+  `packages=2` 就是证据）→ 界面未安装；再点下载时字节已在 update 根，只校验不下载。
+  也就是说：**写进去的位置，读的时候被 bundled 分支抹掉了**。
+- 修复：bundled 分支不再原样返回 `_bundled`——身份取自程序自带清单，程序不自带的包取自记录，
+  **位置一律按磁盘解析**（update 根优先 → 程序目录 → 保留）。这与 `Rebind` 的解析规则一致。
+- 对照实验（把该分支退回 `return _bundled`）：新测试报
+  `Expected Downloaded; actual NotInstalled`，与实机现象一致；修复后 81/81。
+- 两条新测试分别钉住两层：v2 快照的位置解析、bundled 快照的位置解析。
+
+**设计结论（回答"是否干脆不区分内置/下载"）**
+
+- 统一放进程序目录：程序装在 `Program Files` 时**不可写**，而且把"程序自带内容"变成可写数据，
+  升级/修复与玩家手改会互相踩——不可行。
+- 统一放进 update 根（区域包不再随程序分发）：就是被否掉的方案 B，首启必须下载 536 MB。
+- 真正的错因**不是"有两个位置"，而是"把本机绝对路径当成长期事实"**。快照 =
+  签名的发布身份 + 本机位置；身份可以持久化，**位置必须每次按磁盘解析**。前三轮那一族 bug
+  （副本存在性、位置更新、staged 标识比较、bundled 分支）都是同一个病根，
+  这条规则落进 `Rebind` 与 bundled 分支后才算收口。
+- 交互：未安装的行**始终显示「下载」**，未确认可从渠道获取时置灰，点过「检查更新」后自动可点。
