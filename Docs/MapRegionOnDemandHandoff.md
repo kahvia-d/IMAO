@@ -378,3 +378,38 @@ C:\Users\Kahvia\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Loc
   （副本存在性、位置更新、staged 标识比较、bundled 分支）都是同一个病根，
   这条规则落进 `Rebind` 与 bundled 分支后才算收口。
 - 交互：未安装的行**始终显示「下载」**，未确认可从渠道获取时置灰，点过「检查更新」后自动可点。
+
+### 第五层：没有哪个区域包"必须保留"（原生规则的作用域被纠正）
+
+实机把 12 个区域全部停用后，核心起不来，`Logs/corehost-stderr.log` 直接给出原因：
+
+```
+resource snapshot rejected: approved new scene requires a passed calibration and explicit verified tile package
+```
+
+- 规则位置：`IMao-Core/src/Runtime/ResourceSnapshotContext.cpp` 的场景准入循环——
+  **只要场景被 `scene-validation.json` 标为 approved，快照里就必须有它的瓦片包**。
+  当时 `approved=true` 的只有 `LowerVault` / `Darkplain` / `TimeRiftRuins` 三个
+  （`CoordinateStruct.h:82` 里 `requiresGameValidation=true` 的那三个）。
+- 这条规则的**本意是拦发布事故**（"场景批准上线了，却忘了打包"），针对的是**程序自带的完整布局**；
+  把它套在**玩家选择后的子集快照**上，就变成"玩家不许卸载这三个区域"——**规则被用错了场合**。
+- 运行时并不需要这条约束：`Scene::IsRuntimeApproved` 只是查表，而所有使用点都是
+  "未批准就跳过"，`GlobalVisualLocalizer` 还额外要求 `shard.tileCount != 0`——
+  **没装这个区域 = 没有瓦片 = 该场景自然不参与定位**。
+- 改动：原生只再要求"已批准 ⇒ 校准通过"；包在不在场交给运行时的"无瓦片即跳过"。
+  `tileScenes` 随之删除（它只有这一处用途）。
+- **防护没有丢，只换了位置**：`tools/UpdatePublisher` 的 `prepare` 增加了
+  "已批准的每个场景都必须随本次发布附带瓦片包"的检查，并在发布器自测里加了断言
+  （19 → 21 项）。
+- 证据（同一份"只有 3 个包"的快照）：
+
+  | 快照 | 旧 CoreHost | 新 CoreHost |
+  |---|---|---|
+  | map-data + map-icons + 泰缇斯 | 拒绝 | `resourcesReady: true` |
+  | map-data + map-icons + 黯原 | 拒绝 | `resourcesReady: true` |
+
+  原生测试 59/59、托管 81/81、发布器 21/21。
+- **边界提醒**：`out\map-test` 是**无基础库**布局（没有 `Map_features.imf`）。
+  在这种树里把区域包删到一个不剩，视觉索引组装会因缺基础库失败
+  （`feature binary cannot be opened: …Map_features.imf`）；真实安装自带基础库，不受此限。
+- 结论：**没有任何区域包必须保留**——玩家可以停用或删除任意区域，剩下的场景照常工作。

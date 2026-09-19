@@ -160,7 +160,16 @@ int main() {
     Reject(fixture.Snapshot(), "icon reference containment", "resource path");
     Write(fixture.map / "icon-manifest.json", {{"formatVersion", 1}, {"icons", {{"item", "icons/item.png"}}}});
     Write(fixture.map / "scene-validation.json", {{"formatVersion", 1}, {"scenes", {{"Darkplain", {{"approved", true}}}}}});
-    Reject(fixture.Snapshot(), "new scene cannot bypass verification", "approved new scene requires");
+    // An approved scene whose package this snapshot does not carry is accepted: that is exactly the state a
+    // player creates by uninstalling the region, and the scene simply takes no part in locating (its shards
+    // hold no tiles, and every consumer skips a shard without tiles).
+    Write(fixture.map / "scene-calibrations.json", {{"formatVersion", 1}, {"scenes", {{"Darkplain", {{"passed", true}, {"maxErrorPixels", 1},
+        {"coordinateTransform", {{"originX", 1}, {"originY", 2}, {"scale", 1.205}}}}}}}});
+    const bool approvedWithoutPackage = Validate(fixture.Snapshot(), error);
+    Check(approvedWithoutPackage, "approved scene without its package is accepted: " + error);
+    // What may never happen is approving a scene whose calibration has not passed.
+    Write(fixture.map / "scene-calibrations.json", {{"formatVersion", 1}, {"scenes", {{"Darkplain", {{"passed", false}}}}}});
+    Reject(fixture.Snapshot(), "approved scene still requires a passed calibration", "approved new scene requires a passed calibration");
     Write(fixture.map / "scene-validation.json", {{"formatVersion", 1}, {"scenes", json::object()}});
     Write(fixture.map / "scene-calibrations.json", {{"formatVersion", 1}, {"scenes", {{"World", {{"passed", true}, {"maxErrorPixels", 99}, {"coordinateTransform", {{"originX", 1}, {"originY", 2}, {"scale", 1.205}}}}}}}});
     Reject(fixture.Snapshot(), "bad calibration cannot silently fall back", "invalid passed");

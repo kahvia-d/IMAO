@@ -238,6 +238,7 @@ static class Publisher
             if (previous.Sequence >= sequence) throw new InvalidDataException("Catalog sequence must increase.");
         }
         var packages = new List<ResourcePackage>();
+        var packagedScenes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var p in snapshot.Packages)
         {
             var source = SafeFile(assets, p.Directory.Replace('\\', '/'));
@@ -245,6 +246,8 @@ static class Publisher
             {
                 using var manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(source, "manifest.json")));
                 if (!manifest.RootElement.GetProperty("referenceVerification").GetProperty("passed").GetBoolean()) throw new InvalidDataException("Cannot publish an unverified tile pack.");
+                if (manifest.RootElement.TryGetProperty("scene", out var scene) && scene.ValueKind == JsonValueKind.String)
+                    packagedScenes.Add(scene.GetString() ?? "");
             }
             var prior = previous?.Resources.SelectMany(r => r.Packages).LastOrDefault(q => q.Id == p.Id);
             if (prior is not null && prior.Kind != p.Kind) throw new InvalidDataException("A package ID cannot change its resource kind.");
@@ -260,6 +263,20 @@ static class Publisher
             }
             if (previous?.Resources.SelectMany(r => r.Packages).Any(q => q.Id == built.Id && q.Version == built.Version && q.Sha256 != built.Sha256) == true) throw new InvalidDataException("Package version reuse with different content is forbidden.");
             packages.Add(built);
+        }
+        // The native loader no longer refuses a snapshot that is missing an approved scene's pack, because a
+        // player who uninstalls that region produces exactly that state on purpose. The release-time accident
+        // it used to catch — a scene approved for release whose pack was not shipped — is caught here instead,
+        // where it belongs and where it can still be fixed.
+        var approvalsPath = Path.Combine(SafeFile(assets, snapshot.MapDataRoot.Replace('\\', '/')), "scene-validation.json");
+        if (File.Exists(approvalsPath))
+        {
+            using var approvals = JsonDocument.Parse(File.ReadAllBytes(approvalsPath));
+            if (approvals.RootElement.TryGetProperty("scenes", out var scenes) && scenes.ValueKind == JsonValueKind.Object)
+                foreach (var scene in scenes.EnumerateObject())
+                    if (scene.Value.TryGetProperty("approved", out var approved) && approved.ValueKind == JsonValueKind.True &&
+                        !packagedScenes.Contains(scene.Name))
+                        throw new InvalidDataException($"已批准的场景没有随本资源发布瓦片包：{scene.Name}");
         }
         var release = new ResourceRelease { SnapshotId = "resources-" + version, Sequence = sequence, BaselineId = build.BaselineId,
             MinAppVersion = o.GetValueOrDefault("min-app-version", build.AppVersion), MaxAppVersion = o.GetValueOrDefault("max-app-version"),
@@ -405,6 +422,15 @@ static class Publisher
         if (preflight.FormatVersion != 2 || preflight.Bundled || preflight.MinAppVersion != second.Resources.Single().MinAppVersion || preflight.MaxAppVersion != second.Resources.Single().MaxAppVersion)
             throw new Exception("Native preflight must carry the external snapshot schema and program compatibility bounds.");
         passed.Add("external v2 preflight preserves signed program compatibility bounds");
+        // The native loader no longer refuses a snapshot that is missing an approved scene's pack, because a
+        // player who uninstalls that region produces that state on purpose. The release-time accident it used
+        // to catch has to still be caught, here.
+        File.WriteAllText(Path.Combine(app, "Assets", "KuroMap", "scene-validation.json"),
+            "{\"formatVersion\":1,\"scenes\":{\"Darkplain\":{\"approved\":true}}}");
+        options["output"] = Path.Combine(root, "approved-without-pack");
+        Reject("approved scene without a shipped pack is refused", () => Prepare(options).GetAwaiter().GetResult());
+        File.Delete(Path.Combine(app, "Assets", "KuroMap", "scene-validation.json"));
+        passed.Add("approved scene without a shipped pack is refused at release time");
         if (second.Resources.Single().Packages.Single(p => p.Id == "map-data").Version != "2026.9.9.1" || second.Resources.Single().Packages.Single(p => p.Id == "fixture-feature").Version != "2026.9.9.2") throw new Exception("Differential package identity preservation failed.");
         if (second.App.Url != "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/fixture-1") throw new Exception("Resource-only release changed program identity.");
         using (var offline = ZipFile.OpenRead(Path.Combine(root, "second", "resources-2026.9.9.2-offline.zip")))

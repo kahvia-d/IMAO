@@ -180,7 +180,7 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
                 baseInventory.contains("featuresdatas/map_visual_index.imx");
         }
         Require(snapshot.contains("packages") && snapshot.at("packages").is_array(), "snapshot packages are required");
-        std::set<std::string> packageIds, packageRoots, tileScenes;
+        std::set<std::string> packageIds, packageRoots;
         std::unordered_map<std::string, std::set<std::string>> declaredFiles;
         int mapPackageCount = 0;
         int iconPackageCount = 0;
@@ -231,7 +231,6 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
                     Require(manifest.at("source").at("state").get<int>() == scene->kuroStateId, "feature package state does not match scene");
                 if (kind == "tile") {
                     Require(manifest.value("referenceVerification", json::object()).value("passed", false), "tile package field reference is not verified");
-                    tileScenes.insert(sceneName);
                 }
                 if (strict) {
                     Require(inventory.contains("manifest.json") && inventory.contains("visual-index.imx"), "package manifest or visual index is not in verified inventory");
@@ -280,8 +279,14 @@ bool ResourceSnapshotValidation::Validate(const json& snapshot, std::string& err
             if (approval != approvals.at("scenes").end()) Require(approval->contains("approved") && approval->at("approved").is_boolean(), "invalid scene approval");
             if (scene.requiresGameValidation && approval != approvals.at("scenes").end() && approval->at("approved").get<bool>()) {
                 const auto calibration = calibrations.at("scenes").find(scene.name);
-                Require(calibration != calibrations.at("scenes").end() && calibration->value("passed", false) && tileScenes.contains(scene.name),
-                    "approved new scene requires a passed calibration and explicit verified tile package");
+                // An approved new scene still needs a passed calibration, which is what stops an unverified
+                // scene from being switched on. It does not need its tile package to be in this snapshot:
+                // a region the player has not installed takes no part in locating anyway (its shards carry no
+                // tiles and the search skips them), while demanding the package here made uninstalling a
+                // region refuse the whole resource set. A release that approves a scene and forgets to ship
+                // its pack is caught by the publisher instead, where it belongs.
+                Require(calibration != calibrations.at("scenes").end() && calibration->value("passed", false),
+                    "approved new scene requires a passed calibration");
             }
         }
         const auto manifest = Read(mapRoot / "manifest.json");
