@@ -8,32 +8,61 @@ namespace IMao_WinUI.Core.Updates;
 /// <summary>Fixes one snapshot for the lifetime of this process. Installation never changes Current.</summary>
 public sealed class ResourceSnapshotService
 {
+    /// <summary>Package kinds that cannot be deselected. Their roots define where the client reads maps from.</summary>
+    public static readonly string[] RequiredKinds = ["map-data", "map-icons", "map-features"];
+    /// <summary>Package kinds the player may select per region. Only whole packages can be toggled.</summary>
+    public static readonly string[] SelectableKinds = ["tile"];
+
     private readonly ResourceSnapshot _bundled;
     private readonly Version _appVersion;
     private readonly Func<string, CancellationToken, Task>? _preflight;
+    private readonly string _coreHostPath;
     private readonly string _statePath;
+    private readonly string _selectionPath;
     private ActivationState _state = new();
+    private PackageSelection _selection = new();
     private string? _attemptToken;
     private string _selectedStoredPath = "";
     private bool _initialized;
 
-    public ResourceSnapshotService(string root, ResourceSnapshot bundledSnapshot, string appVersion, Func<string, CancellationToken, Task>? preflight = null)
+    public ResourceSnapshotService(string root, ResourceSnapshot bundledSnapshot, string appVersion, Func<string, CancellationToken, Task>? preflight = null, string? coreHostPath = null)
     {
         Root = Path.GetFullPath(root);
         _appVersion = UpdateSignature.RequireVersion(appVersion);
         _bundled = bundledSnapshot with { Bundled = true };
         _preflight = preflight;
+        _coreHostPath = coreHostPath ?? "";
         _statePath = Path.Combine(Root, "activation.json");
+        _selectionPath = Path.Combine(Root, "selection.json");
         Current = _bundled;
+        CurrentRuntimeSnapshot = _bundled;
     }
 
     public string Root { get; }
     public ResourceSnapshot Bundled => _bundled;
+    /// <summary>The signed snapshot with every package it offers, whether or not the player selected it.</summary>
     public ResourceSnapshot Current { get; private set; }
+    /// <summary>
+    /// Exactly what the native host is given: <see cref="Current"/> narrowed to the selected packages.
+    /// A deselectable package that is not selected never reaches the host, so neither the runtime gate
+    /// (any registered package must load) nor its directory has to exist.
+    /// </summary>
+    public ResourceSnapshot CurrentRuntimeSnapshot { get; private set; }
+    /// <summary>
+    /// The file handed to CoreHost: <see cref="CurrentRuntimeSnapshot"/> written with absolute paths, or
+    /// the descriptor itself when it is already byte-identical to what the host should read.
+    /// </summary>
     public string CurrentPath { get; private set; } = "";
+    /// <summary>Package ids the player deselected for the active snapshot. Never contains a required package.</summary>
+    public IReadOnlyList<string> DeselectedPackageIds => _selection.Deselected;
     public bool HasPending => !string.IsNullOrEmpty(_state.PendingPath);
     public bool CanRollback => !string.IsNullOrEmpty(_state.PreviousPath) && _state.PreviousPath != _state.ActivePath;
     public string LastNotice { get; private set; } = "";
+    /// <summary>
+    /// Why the active snapshot was refused, when it was. The user-facing notice stays friendly, but a
+    /// diagnosis must not be thrown away: "recovered the bundled resources" hides which check failed.
+    /// </summary>
+    public string LastFailure { get; private set; } = "";
 
     public async Task InitializeAsync(CancellationToken ct = default)
     {
@@ -55,9 +84,10 @@ public sealed class ResourceSnapshotService
         if (_state.BaselineId != _bundled.BaselineId)
             _state = new ActivationState { BaselineId = _bundled.BaselineId, ActivePath = bundledPath };
         if (string.IsNullOrEmpty(_state.ActivePath)) _state.ActivePath = bundledPath;
+        _selection = ReadSelection();
 
         var selectedPath = _state.ActivePath;
-        try { Current = await ReadAndValidateAsync(selectedPath, ct).ConfigureAwait(false); }
+        try { Current = await ReadAndValidateAsync(BundledSourcePath(selectedPath, bundledPath), ct).ConfigureAwait(false); }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var previous = _state.PreviousPath;
@@ -66,10 +96,11 @@ public sealed class ResourceSnapshotService
             if (!string.IsNullOrEmpty(previous))
             {
                 try { Current = await ReadAndValidateAsync(previous, ct).ConfigureAwait(false); selectedPath = previous; }
-                catch (Exception previousError) when (previousError is not OperationCanceledException) { }
+                catch (Exception previousError) when (previousError is not OperationCanceledException) { LastFailure = previousError.Message; }
             }
             _state.ActivePath = selectedPath;
             _state.PreviousPath = null;
+            LastFailure = ex.Message;
             LastNotice = "当前资源校验失败，已恢复可用资源版本。";
         }
 
@@ -106,14 +137,102 @@ public sealed class ResourceSnapshotService
                 _state.PendingPath = null;
                 _state.Attempt = null;
                 _attemptToken = null;
+                LastFailure = ex.Message;
                 LastNotice = "待启用资源校验失败，继续使用上一成功版本。";
             }
         }
         _selectedStoredPath = selectedPath;
-        CurrentPath = await MaterializeAsync(Current, selectedPath, ct).ConfigureAwait(false);
+        // A deselected package whose copy is gone stays deselected: the removal action may have been
+        // interrupted halfway, and only a download can restore it. Validating it anyway would reject the
+        // whole snapshot instead and silently drop back to the bundled resources.
+        if (PruneSelection()) await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
+        await ApplySelectionAsync(ct).ConfigureAwait(false);
         await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
         _initialized = true;
     }
+
+    /// <summary>
+    /// Replaces the set of deselected packages for the running snapshot and re-materializes the file the
+    /// native host reads. The caller must restart the software for the change to reach a running host.
+    /// </summary>
+    public async Task SetDeselectedPackagesAsync(IEnumerable<string> packageIds, CancellationToken ct = default)
+    {
+        EnsureInitialized();
+        if (Current.Bundled) throw new InvalidOperationException("程序附带资源始终可用，无法取消选择。");
+        var wanted = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var id in packageIds)
+        {
+            if (string.IsNullOrWhiteSpace(id) || !Current.Packages.Any(p => string.Equals(p.Id, id, StringComparison.Ordinal)))
+                throw new InvalidDataException("资源包标识不属于当前资源快照：" + id);
+            if (!IsSelectable(Current, id)) throw new InvalidDataException("该资源包为必需资源，不能取消选择：" + id);
+            wanted.Add(id);
+        }
+        await using var gate = await UpdateStorage.LockAsync(Root, ct).ConfigureAwait(false);
+        _state = UpdateStorage.Read<ActivationState>(_statePath);
+        _selection = new PackageSelection { SnapshotId = Current.SnapshotId, Deselected = wanted.ToList() };
+        await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
+        await ApplySelectionAsync(ct).ConfigureAwait(false);
+        LastNotice = "区域选择已保存，重启软件后生效。";
+    }
+
+    /// <summary>True when the package may be deselected: a selectable kind that is not a required package.</summary>
+    public static bool IsSelectable(SnapshotPackage package) => Array.IndexOf(SelectableKinds, package.Kind) >= 0;
+
+    /// <summary>True when the package may be deselected: a selectable kind that is not a required package.</summary>
+    public static bool IsSelectable(ResourceSnapshot snapshot, string packageId) =>
+        snapshot.Packages.Any(p => string.Equals(p.Id, packageId, StringComparison.Ordinal) && IsSelectable(p));
+
+    // The caller passes an already rebound snapshot: its package directories are final. Rebinding again
+    // here would undo that and pull every package back to the bundled installation copy.
+    // The bundled snapshot itself is complete on disk and is handed to the host unchanged.
+    private ResourceSnapshot ApplySelection(ResourceSnapshot snapshot)
+    {
+        if (snapshot.Bundled || _selection.Deselected.Count == 0) return snapshot;
+        var deselected = new HashSet<string>(_selection.Deselected, StringComparer.Ordinal);
+        var packages = snapshot.Packages.Where(p => !deselected.Contains(p.Id)).ToList();
+        if (packages.Count == snapshot.Packages.Count) return snapshot;
+        // Recompute the three roots from what is left, so a dropped package can never leave a dangling root.
+        return snapshot with { Packages = packages,
+            MapDataRoot = packages.SingleOrDefault(p => p.Kind == "map-data")?.Directory ?? "",
+            MapIconRoot = packages.SingleOrDefault(p => p.Kind == "map-icons")?.Directory ?? "",
+            MapFeatureRoot = packages.SingleOrDefault(p => p.Kind == "map-features")?.Directory ?? "" };
+    }
+
+    private async Task ApplySelectionAsync(CancellationToken ct)
+    {
+        CurrentRuntimeSnapshot = ApplySelection(Current);
+        CurrentPath = await MaterializeAsync(CurrentRuntimeSnapshot, _selectedStoredPath, ct).ConfigureAwait(false);
+    }
+
+    private PackageSelection ReadSelection() => UpdateStorage.Read<PackageSelection>(_selectionPath);
+
+    /// <summary>
+    /// Drops deselected ids whose package copy is no longer on disk, so an interrupted removal cannot
+    /// make the active snapshot unloadable. Returns true when the stored selection had to change.
+    /// </summary>
+    private bool PruneSelection()
+    {
+        if (_selection.Deselected.Count == 0 || Current.Bundled) return false;
+        // Current is already rebound, so its directories are the ones this installation would load.
+        var kept = new List<string>();
+        foreach (var id in _selection.Deselected)
+        {
+            if (!IsSelectable(Current, id)) continue;
+            if (!Directory.Exists(Current.Packages.First(p => p.Id == id).Directory)) continue;
+            kept.Add(id);
+        }
+        if (kept.Count == _selection.Deselected.Count) return false;
+        _selection = _selection with { Deselected = kept };
+        return true;
+    }
+
+    /// <summary>
+    /// A copy of this installation may be launched from a different folder, which invalidates every
+    /// absolute path recorded in the bundled activation state. Only that one descriptor is rebound to
+    /// where it now lives; an installed snapshot must stay exactly where the update wrote it.
+    /// </summary>
+    private static string BundledSourcePath(string storedPath, string bundledPath) =>
+        Path.GetFullPath(storedPath).EndsWith(Path.GetFileName(bundledPath), StringComparison.OrdinalIgnoreCase) ? bundledPath : storedPath;
 
     public async Task ReportHealthyAsync(string coreSnapshotId, CancellationToken ct = default)
     {
@@ -145,15 +264,15 @@ public sealed class ResourceSnapshotService
         LastNotice = "已准备回退，重启软件后生效。";
     }
 
-    // Caller holds the update lock for the entire install transaction.
+    // The caller holds the update lock for the entire install transaction.
     internal async Task StageAsync(ResourceSnapshot snapshot, CancellationToken ct)
     {
         EnsureInitialized();
         _state = UpdateStorage.Read<ActivationState>(_statePath);
         if (_state.Attempt is not null && UpdateStorage.IsProcessAlive(_state.Attempt.ProcessId, _state.Attempt.ProcessStartUtcTicks)) throw new InvalidOperationException("新资源仍在启动验证，请稍后重试。");
         UpdateStorage.ValidateId(snapshot.SnapshotId);
-        // Keep validated v2 descriptors separate so a legacy v1 descriptor cannot
-        // prevent re-importing the same signed release with its version requirements.
+        // The stored descriptor always keeps every signed package, so re-selecting a region later is
+        // possible even after its downloaded copy was deleted. Narrowing happens when the host is served.
         var path = Path.Combine(Root, "snapshots", "v2", snapshot.SnapshotId + ".json");
         if (File.Exists(path))
         {
@@ -191,27 +310,36 @@ public sealed class ResourceSnapshotService
         if ((maximum is not null && maximum < minimum) || _appVersion < minimum || (maximum is not null && _appVersion > maximum))
             throw new InvalidDataException("资源快照与当前程序版本不兼容。");
         snapshot = Rebind(snapshot);
-        if (snapshot.Packages.Count(p => p.Kind == "map-data") != 1) throw new InvalidDataException("资源快照地图数据包无效。");
+        // Narrow to the player's selection before anything below inspects packages. Every check then
+        // describes exactly what the native host will be given, which is what makes a deselected
+        // region's downloaded copy removable instead of a reason to fail validation.
+        var runtime = ApplySelection(snapshot);
+        if (runtime.Packages.Count(p => p.Kind == "map-data") != 1) throw new InvalidDataException("资源快照地图数据包无效。");
         var packagesRoot = Path.GetFullPath(Path.Combine(Root, "packages")) + Path.DirectorySeparatorChar;
-        foreach (var package in snapshot.Packages)
+        foreach (var package in runtime.Packages)
         {
             var directory = Path.GetFullPath(package.Directory);
             var bundledPackage = FindBundledPackage(package);
             if (!directory.StartsWith(packagesRoot, StringComparison.OrdinalIgnoreCase) && (bundledPackage is null || directory != Path.GetFullPath(bundledPackage.Directory))) throw new InvalidDataException("资源包路径超出安装目录。");
             await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct).ConfigureAwait(false);
         }
-        if (snapshot.MapDataRoot != snapshot.Packages.Single(p => p.Kind == "map-data").Directory) throw new InvalidDataException("地图数据目录与资源快照不一致。");
+        if (runtime.MapDataRoot != runtime.Packages.Single(p => p.Kind == "map-data").Directory) throw new InvalidDataException("地图数据目录与资源快照不一致。");
         // The icon package is optional: when the root is empty the icons stay in the map-data
         // root, which is how every snapshot written before the split behaves.
-        var iconPackages = snapshot.Packages.Where(p => p.Kind == "map-icons").ToList();
+        var iconPackages = runtime.Packages.Where(p => p.Kind == "map-icons").ToList();
         if (iconPackages.Count > 1) throw new InvalidDataException("资源快照包含多个图标包。");
-        if (!string.IsNullOrEmpty(snapshot.MapIconRoot) && (iconPackages.Count != 1 || snapshot.MapIconRoot != iconPackages[0].Directory))
+        if (!string.IsNullOrEmpty(runtime.MapIconRoot) && (iconPackages.Count != 1 || runtime.MapIconRoot != iconPackages[0].Directory))
             throw new InvalidDataException("图标目录与资源快照不一致。");
-        var featurePackages = snapshot.Packages.Where(p => p.Kind == "map-features").ToList();
+        var featurePackages = runtime.Packages.Where(p => p.Kind == "map-features").ToList();
         if (featurePackages.Count > 1) throw new InvalidDataException("资源快照包含多个基础地图特征包。");
-        if (!string.IsNullOrEmpty(snapshot.MapFeatureRoot) && (featurePackages.Count != 1 || snapshot.MapFeatureRoot != featurePackages[0].Directory))
+        if (!string.IsNullOrEmpty(runtime.MapFeatureRoot) && (featurePackages.Count != 1 || runtime.MapFeatureRoot != featurePackages[0].Directory))
             throw new InvalidDataException("基础地图特征目录与资源快照不一致。");
-        if (_preflight is not null) await _preflight(await MaterializeAsync(snapshot, path, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+        if (_preflight is not null)
+        {
+            // The trial validates exactly what the native host will be given: the signed snapshot
+            // narrowed to the selected packages, written with absolute paths.
+            await _preflight(await MaterializeAsync(runtime, path, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+        }
         return snapshot;
     }
 

@@ -14,6 +14,12 @@ if (args.FirstOrDefault() == "real-offline")
     return;
 }
 
+if (args.FirstOrDefault() == "region-selection")
+{
+    await RegionSelectionCheck.RunAsync(args[1], args.Length > 2 ? args[2].Split(',') : [], args.Length > 3 ? args[3] : "out/region-selection-evidence");
+    return;
+}
+
 if (args.FirstOrDefault() is "child-activate" or "child-preflight-crash")
 {
     var bundled = JsonSerializer.Deserialize<ResourceSnapshot>(File.ReadAllBytes(args[2]), UpdateJson.Options)!;
@@ -515,6 +521,94 @@ await Test("offline reused bundled payload still requires exact archive hash ver
     await ThrowsAsync<InvalidDataException>(() => f.Updates.ImportOfflineAsync(f.WriteOffline(catalog)));
     False(f.Snapshots.HasPending); Equal(0, f.Network.Requests.Count); Equal("bundled-data", File.ReadAllText(Path.Combine(directory, "markers.json")));
 });
+await Test("deselected region packages are absent from the snapshot the native host receives", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync(); await f.Updates.InstallAsync();
+    var next = f.NewSnapshots(); await next.InitializeAsync(); await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    Equal(4, next.Current.Packages.Count);
+    Equal(4, next.CurrentRuntimeSnapshot.Packages.Count);
+    True(ResourceSnapshotService.IsSelectable(next.Current, "lahai-kurotiles"));
+    False(ResourceSnapshotService.IsSelectable(next.Current, "map-data"));
+    await next.SetDeselectedPackagesAsync(["lahai-kurotiles", "tethys-kurotiles"]);
+    EqualSequence(["lahai-kurotiles", "tethys-kurotiles"], next.DeselectedPackageIds);
+    Equal(2, next.CurrentRuntimeSnapshot.Packages.Count);
+    False(next.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "lahai-kurotiles"));
+    False(next.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    Equal("map-data", next.CurrentRuntimeSnapshot.Packages[0].Id);
+    // Current keeps every signed package so the interface can still list and re-select a region.
+    Equal(4, next.Current.Packages.Count);
+    var materialized = JsonSerializer.Deserialize<ResourceSnapshot>(File.ReadAllBytes(next.CurrentPath), UpdateJson.Options)!;
+    Equal(2, materialized.Packages.Count);
+    False(materialized.Packages.Any(p => p.Id == "lahai-kurotiles"));
+    True(f.Network.Requests.Contains(f.PackageUrl("lahai-kurotiles")));
+    // A required package must never be deselectable, or the snapshot can no longer resolve its map root.
+    await ThrowsAsync<InvalidDataException>(() => next.SetDeselectedPackagesAsync(["map-data"]));
+    await ThrowsAsync<InvalidDataException>(() => next.SetDeselectedPackagesAsync(["not-in-snapshot"]));
+    EqualSequence(["lahai-kurotiles", "tethys-kurotiles"], next.DeselectedPackageIds);
+});
+
+await Test("the native preflight and a restart only ever see the selected packages", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync(); await f.Updates.InstallAsync();
+    var next = f.NewSnapshots(); await next.InitializeAsync(); await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    await next.SetDeselectedPackagesAsync(["tethys-kurotiles"]);
+    var preflights = f.PreflightCalls;
+    // Selecting a different set of regions must not need the newly deselected package to load again,
+    // and the surviving copy must not be touched by validation.
+    await next.SetDeselectedPackagesAsync(["tethys-kurotiles", "lahai-kurotiles"]);
+    Equal(preflights, f.PreflightCalls);
+    Equal(2, next.CurrentRuntimeSnapshot.Packages.Count);
+    Equal(Path.Combine(f.Root, "packages", "map-data", "2026.9.9.2"), next.CurrentRuntimeSnapshot.MapDataRoot);
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    Equal(release.Resources[0].SnapshotId, restarted.Current.SnapshotId);
+    EqualSequence(["lahai-kurotiles", "tethys-kurotiles"], restarted.DeselectedPackageIds);
+    Equal(2, restarted.CurrentRuntimeSnapshot.Packages.Count);
+    False(restarted.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    // What the native host is handed is exactly the narrowed snapshot.
+    var inspected = f.LastPreflightSnapshot!;
+    Equal(Path.Combine(f.Root, "packages", "map-data", "2026.9.9.2"), inspected.MapDataRoot);
+    var handed = JsonSerializer.Deserialize<ResourceSnapshot>(File.ReadAllBytes(restarted.CurrentPath), UpdateJson.Options)!;
+    Equal(2, handed.Packages.Count);
+    False(handed.Packages.Any(p => p.Id == "lahai-kurotiles"));
+    True(handed.Packages.All(p => Path.IsPathRooted(p.Directory)));
+});
+
+await Test("a deleted copy keeps its region deselected instead of breaking the snapshot", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync(); await f.Updates.InstallAsync();
+    var next = f.NewSnapshots(); await next.InitializeAsync(); await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    await next.SetDeselectedPackagesAsync(["tethys-kurotiles"]);
+    // An interrupted removal can leave the copy gone while the selection still names it. Validation must
+    // not then reject the snapshot and silently hand the player the bundled resources instead.
+    Directory.Delete(Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2"), true);
+    var healed = f.NewSnapshots(); await healed.InitializeAsync();
+    Equal(release.Resources[0].SnapshotId, healed.Current.SnapshotId);
+    False(healed.LastNotice.Contains("已恢复可用资源版本"));
+    Equal(0, healed.DeselectedPackageIds.Count);
+    Equal(4, healed.CurrentRuntimeSnapshot.Packages.Count);
+    // The missing copy can be selected again, and a reinstall restores exactly the missing package.
+    await healed.SetDeselectedPackagesAsync([]);
+    f.Network.Requests.Clear();
+    using var updater = f.NewUpdates(healed);
+    await updater.ImportOfflineAsync(f.WriteOffline(release));
+    True(f.Network.Requests.Count == 0);
+    True(Directory.Exists(Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2")));
+});
+
+await Test("a bundled snapshot ignores selection because its packages are already installed", async () =>
+{
+    using var f = New(); await f.Initialize();
+    True(f.Snapshots.Current.Bundled);
+    await ThrowsAsync<InvalidOperationException>(() => f.Snapshots.SetDeselectedPackagesAsync(["map-data"]));
+    Equal(f.Bundled.SnapshotId, f.Snapshots.CurrentRuntimeSnapshot.SnapshotId);
+});
+
 await Test("cross-process lock wait honors cancellation", async () =>
 {
     using var f = New(); await f.Initialize(); using var held = new FileStream(Path.Combine(f.Root, ".update.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -603,6 +697,10 @@ static string RepositoryRoot()
     throw new Exception("Repository root containing updates/stable.json was not found.");
 }
 static void Equal<T>(T expected, T actual) { if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"Expected {expected}; actual {actual}."); }
+static void EqualSequence(IEnumerable<string> expected, IEnumerable<string> actual)
+{
+    if (!expected.SequenceEqual(actual, StringComparer.Ordinal)) throw new Exception($"Expected [{string.Join(", ", expected)}]; actual [{string.Join(", ", actual)}].");
+}
 static void Throws<T>(Action action) where T : Exception { try { action(); } catch (T) { return; } throw new Exception("Expected " + typeof(T).Name); }
 static async Task ThrowsAsync<T>(Func<Task> action) where T : Exception { try { await action(); } catch (T) { return; } throw new Exception("Expected " + typeof(T).Name); }
 
@@ -647,6 +745,8 @@ sealed class Fixture : IDisposable
     public long FreeBytes { get; set; } = long.MaxValue;
     public bool PreflightFails { get; set; }
     public int PreflightCalls { get; private set; }
+    /// <summary>Exactly what the native preflight was handed, so a test can inspect what the host would load.</summary>
+    public ResourceSnapshot? LastPreflightSnapshot { get; private set; }
     public Fixture(string root)
     {
         Root = root; Directory.CreateDirectory(root); _http = new HttpClient(Network);
@@ -655,7 +755,17 @@ sealed class Fixture : IDisposable
         Bundled = new ResourceSnapshot { SnapshotId = "bundled", BaselineId = Build.BaselineId, BaselineRoot = Path.Combine(root, "baseline"), MapDataRoot = Path.Combine(root, "baseline/data"), Bundled = true };
     }
     public async Task Initialize() { Snapshots = NewSnapshots(); await Snapshots.InitializeAsync(); Updates = NewUpdates(Snapshots); }
-    public ResourceSnapshotService NewSnapshots(string? appVersion = null) => new(Root, Bundled, appVersion ?? Build.AppVersion, (_, ct) => { ct.ThrowIfCancellationRequested(); PreflightCalls++; if (PreflightFails) throw new InvalidDataException("Injected preflight failure."); return Task.CompletedTask; });
+    public ResourceSnapshotService NewSnapshots(string? appVersion = null) => new(Root, Bundled, appVersion ?? Build.AppVersion, (path, ct) => { ct.ThrowIfCancellationRequested(); PreflightCalls++; LastPreflightSnapshot = JsonSerializer.Deserialize<ResourceSnapshot>(File.ReadAllBytes(path), UpdateJson.Options); if (PreflightFails) throw new InvalidDataException("Injected preflight failure."); return Task.CompletedTask; });
+    /// <summary>One release offering the mandatory map-data package plus three independent region packs.</summary>
+    public UpdateCatalog RegionCatalog(long sequence = 2)
+    {
+        var release = Catalog(sequence).Resources[0];
+        // A .json payload whose text is itself valid JSON: the native host parses every .json file it is
+        // told about, so a pack that claims a JSON file must contain JSON.
+        return Catalog(sequence) with { Resources = [release with { Packages = [MakePackage("map-data", "map-data", "2026.9.9.2", "{\"map\":\"data\"}"), MakeRegionPackage("taro-kurotiles"), MakeRegionPackage("lahai-kurotiles"), MakeRegionPackage("tethys-kurotiles")] }] };
+    }
+    public ResourcePackage MakeRegionPackage(string id) => MakePackage(id, "tile", "2026.9.9.2", "{\"region\":\"" + id + "\"}");
+    public string PackageUrl(string id) => $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/2026.9.9.2/{id}.zip";
     public UpdateService NewUpdates(ResourceSnapshotService snapshots) => new(Build, [Key, PublishedKey], snapshots, _http, true, () => Now, () => FreeBytes);
     public UpdateCatalog Catalog(long sequence = 2)
     {

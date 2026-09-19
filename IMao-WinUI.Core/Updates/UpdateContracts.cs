@@ -121,3 +121,14 @@ public sealed record ResourceSnapshot
 }
 
 public sealed record UpdateProgress(string Stage, long Completed, long Total);
+
+/// <summary>
+/// Local, unsigned user choice: which packages of one signed snapshot the player does not want active.
+/// Storing the deselected set rather than the selected one means a package added by a newer snapshot is
+/// available by default instead of silently missing.
+/// </summary>
+public sealed record PackageSelection
+{
+    public string SnapshotId { get; init; } = "";
+    public List<string> Deselected { get; init; } = new();
+}

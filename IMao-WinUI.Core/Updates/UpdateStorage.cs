@@ -101,7 +101,7 @@ internal static class UpdateStorage
         while (!string.IsNullOrEmpty(node))
         {
             if ((File.Exists(node) || Directory.Exists(node)) && (File.GetAttributes(node) & FileAttributes.ReparsePoint) != 0)
-                throw new InvalidDataException("资源目录不能包含符号链接或目录联接。");
+                throw new InvalidDataException("资源目录不能包含符号链接或目录联接：" + node);
             var parent = Path.GetDirectoryName(node);
             if (parent == node) break;
             node = parent;
