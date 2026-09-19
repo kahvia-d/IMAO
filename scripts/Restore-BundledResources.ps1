@@ -14,6 +14,12 @@ $snapshot = Get-Content -LiteralPath (Join-Path $assets 'Updates/bundled-snapsho
 if (!$snapshot.bundled -or $snapshot.formatVersion -ne 1) { throw 'Invalid bundled snapshot.' }
 $snapshot.baselineRoot = $assets
 $snapshot.mapDataRoot = Join-Path $assets $snapshot.mapDataRoot
+# Optional roots must be absolute as well; a relative one is rejected by the native validator.
+foreach ($opt in @('mapIconRoot','mapFeatureRoot')) {
+    $value = ''
+    if ($snapshot.PSObject.Properties.Name -contains $opt) { $value = [string]$snapshot.$opt }
+    if ($value) { $snapshot.$opt = Join-Path $assets $value }
+}
 foreach ($package in $snapshot.packages) { $package.directory = Join-Path $assets $package.directory }
 $candidate = Join-Path $evidence 'bundled-runtime.json'
 $snapshot | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $candidate -Encoding utf8

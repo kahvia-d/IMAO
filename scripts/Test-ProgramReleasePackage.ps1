@@ -22,6 +22,14 @@ $before = @(Get-ChildItem -LiteralPath $PackageRoot -Recurse -File | ForEach-Obj
 $snapshot = Get-Content -LiteralPath (Join-Path $PackageRoot 'Assets/Updates/bundled-snapshot.json') -Raw | ConvertFrom-Json
 $snapshot.baselineRoot = Join-Path $PackageRoot 'Assets'
 $snapshot.mapDataRoot = Join-Path $PackageRoot "Assets/$($snapshot.mapDataRoot)"
+# Every optional root has to be made absolute too: the native validator requires absolute
+# directories and canonicalises them, so a relative one fails the whole snapshot. The icon root is
+# only present once the layout splits icons out of map-data.
+foreach ($opt in @('mapIconRoot','mapFeatureRoot')) {
+    $value = ''
+    if ($snapshot.PSObject.Properties.Name -contains $opt) { $value = [string]$snapshot.$opt }
+    if ($value) { $snapshot.$opt = Join-Path $PackageRoot "Assets/$value" }
+}
 foreach ($p in $snapshot.packages) { $p.directory = Join-Path $PackageRoot "Assets/$($p.directory)" }
 $snapshotPath = Join-Path $OutputRoot 'snapshot.json'
 [IO.File]::WriteAllText($snapshotPath,($snapshot | ConvertTo-Json -Depth 30),[Text.UTF8Encoding]::new($false))

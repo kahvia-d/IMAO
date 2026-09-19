@@ -232,3 +232,35 @@ out\map-test\IMao-WinUI.exe      # 以管理员运行、游戏开着、16:9
 **绝对路径 strict 候选快照**，可直接拿来跑 `--check-resource-snapshot`。
 `RuntimeFeatureRepository` 现在会通过 `Diagnostics::Record` 记录
 `stage=visual-index-composition`（各场景瓦片数），这是排查"某个场景没进索引"的第一手信息。
+
+---
+
+## 五、发布 2026.9.19.1（区域重构必须随程序发布）
+
+区域重构**不能只发资源**：新布局要新的 CoreHost 与新的区域注册表，而线上程序还是
+`f8a3f7b`（区域重构之前——图标还在 `map-data` 里、区域包还是旧的 7 个，
+而程序版本 `2026.9.18.2` 已发布且不可变）。所以必须抬版本号、重发程序，
+资源清单同时重发：`min-app-version` 指向新程序版本，旧客户端根本看不到它，
+也就不会被喂它不认识的布局。
+
+发布链路上被这次重构打断、已修好的两处：
+
+1. **`UpdateSignature.ValidateCatalog` 不认 `map-icons`**。白名单只有
+   `map-data|tile|candidate`，而 staged 快照里**始终**带着图标包，
+   于是 `prepare` 直接报"资源包标识重复或类型不受支持"——**任何资源更新都发不出去**。
+   现在白名单加上 `map-icons`（`RequiredKinds` 早就把它当作快照可携带的类型，
+   快照侧也一直在校验图标根），发布器自测里那份镜像校验同步更新。
+2. **两处手工构造绝对快照的脚本漏了 `mapIconRoot`**：
+   `scripts/Test-ProgramReleasePackage.ps1`（程序包验收探针）与
+   `scripts/Restore-BundledResources.ps1`。原生 `Root()` 要求绝对路径，
+   相对值会让整份快照以 `invalid resource directory: mapIconRoot` 被拒——
+   程序包验收会因此失败。已按"可选根也要绝对化"统一处理（含 `mapFeatureRoot`）。
+
+私钥位置（`Docs/ResourceUpdates.md:33-51` 描述的那个重定向坑，实测就在这里）：
+
+```
+C:\Users\Kahvia\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Local\WWMAP-TOOLS-Publisher\release-signing-key.json
+```
+
+实测它在本机 DPAPI（当前用户）下可解开，且与 `Assets/Updates/trusted-keys.json`
+里的公钥逐字节匹配，因此生产签名可用。
