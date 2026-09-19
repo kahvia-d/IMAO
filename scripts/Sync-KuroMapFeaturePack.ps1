@@ -268,9 +268,9 @@ try {
     Write-Utf8Json $tileManifest $tileManifestPath
     $featurePath = Join-Path $generatedDir 'features.yml'
     $builderReportPath = Join-Path $generatedDir 'builder-report.json'
-    if ([string]::IsNullOrWhiteSpace($ReferencePath) -and $PackId -eq 'Dreamzhou' -and -not $SkipReferenceVerification) {
-        $ReferencePath = Join-Path $repoRoot 'Assets\FeaturesDatas\DreamzhouCandidate\reference--6725--919.png'
-    }
+    # A caller that verifies its reference must pass -ReferencePath explicitly. The old implicit
+    # default pointed at the retired DreamzhouCandidate pack; regions now build with
+    # -UseShippedReference, which reads each region pack's own reference-minimap.png.
     $referencePath = if ($SkipReferenceVerification) { '' } else { $ReferencePath }
     if (-not $SkipReferenceVerification -and -not (Test-Path -LiteralPath $referencePath)) {
         throw "Missing reference minimap: $referencePath"

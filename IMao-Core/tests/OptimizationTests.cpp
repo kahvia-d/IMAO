@@ -648,11 +648,6 @@ void TestManifestShardLineEndings() {
     Expect(MapVisualIndexCodec::Save(indexPath, fixture, error), "legacy CRLF shard should save");
     Expect(MapVisualIndexCodec::LoadManifestShard(indexPath, manifest, 1, output, error),
         "a shard originally generated from CRLF must remain supported");
-#ifdef IMAO_SOURCE_DIR
-    const auto pack = std::filesystem::path(IMAO_SOURCE_DIR) / "Assets/FeaturesDatas/DreamzhouCandidate";
-    Expect(MapVisualIndexCodec::LoadManifestShard(pack / "visual-index.imx", pack / "manifest.json",
-        532, output, error), "shipped candidate index should load: " + error);
-#endif
 }
 }
 

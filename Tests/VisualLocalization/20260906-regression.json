@@ -51,54 +51,6 @@
       "session": "20260906-210857"
     },
     {
-      "id": "reference-west",
-      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--7690---176-full.png",
-      "fullSnapshot": true,
-      "expected": {
-        "mapY": 1744.92,
-        "sceneId": 1,
-        "tolerance": 12,
-        "mapX": -6792.45
-      },
-      "session": "reference-west"
-    },
-    {
-      "id": "reference-west-confirmation",
-      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--7690---176-full.png",
-      "fullSnapshot": true,
-      "expected": {
-        "mapY": 1744.92,
-        "sceneId": 1,
-        "tolerance": 12,
-        "mapX": -6792.45
-      },
-      "session": "reference-west",
-      "mustPublish": true
-    },
-    {
-      "id": "reference-east",
-      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--6725--919.png",
-      "expected": {
-        "mapY": 849.605,
-        "sceneId": 1,
-        "tolerance": 12,
-        "mapX": -5629.625000000001
-      },
-      "session": "reference-east"
-    },
-    {
-      "id": "reference-east-confirmation",
-      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--6725--919.png",
-      "expected": {
-        "mapY": 849.605,
-        "sceneId": 1,
-        "tolerance": 12,
-        "mapX": -5629.625000000001
-      },
-      "session": "reference-east",
-      "mustPublish": true
-    },
-    {
       "id": "20260906-153705-1_minimap-feature-source",
       "session": "20260906-153705",
       "image": "Tests/VisualLocalization/20260906-regression/20260906-153705-1_minimap-feature-source.png"

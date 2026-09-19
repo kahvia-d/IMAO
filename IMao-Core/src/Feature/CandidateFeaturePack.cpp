@@ -185,11 +185,10 @@ std::vector<CandidateFeaturePackStatus> CandidateFeaturePack::LoadRegisteredCand
     const std::filesystem::path featureRoot(featureDataRoot);
     const std::filesystem::path registryPath = featureRoot / "candidate-packs.json";
     std::vector<CandidateFeaturePackStatus> result;
-    if (!std::filesystem::exists(registryPath)) {
-        // Keep older staged builds usable while their assets are updated.
-        result.push_back(LoadCandidate(featureDataRoot, "DreamzhouCandidate"));
-        return result;
-    }
+    // A layout without a candidate registry simply ships no curated candidates. The previous
+    // fallback loaded a hard-coded DreamzhouCandidate directory by name, which would now name a
+    // pack that no longer exists and has been superseded by the mengzhou region pack.
+    if (!std::filesystem::exists(registryPath)) return result;
 
     try {
         std::ifstream input(registryPath);

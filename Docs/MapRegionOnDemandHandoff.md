@@ -92,9 +92,14 @@ git status --porcelain=v1 # 期望无输出
 |---|---|
 | `map-data` | `ResourceSnapshotService.cs:194` 要求 `Count(kind=="map-data") == 1`，且 `:203` 要求 `MapDataRoot` 等于它的目录 |
 | `map-icons` / `map-features` | 对应根要能解析（若该布局用了它们） |
-| `dreamzhou-curated-locations` | 手工精选点位，仅 7 MB |
 
 → **可选的正好是 13 个区域包**，与"按区域按需"完全对应。
+
+> **2026-09-19 更新**：原来这张表里还有一行 `dreamzhou-curated-locations`（候选包，7 MB），
+> 现已**删除**——`mengzhou-kurotiles` 区域包取代了它。实测见
+> `Docs/CandidatePackRedundancy.md`。随之删除的还有 `candidate-packs.json` 注册表、
+> 两个候选包检查脚本，以及 `CandidateFeaturePack.cpp` 里按名字兜底加载它的那段。
+> 因此第二节那个"候选包是否也允许取消"的问题**作废**。
 
 ### 两个必须处理的坑
 
@@ -122,9 +127,9 @@ git status --porcelain=v1 # 期望无输出
    必须由用户在实机上看效果。
 4. **实机验收**：取消选中某区域 → 重启 → 该区域不再加载；重新选中 → 只下载它一个。
 
-### 需要用户拍板的两个点
+### 需要用户拍板的一个点
 
-- **候选包（`dreamzhou-curated-locations`）是否也允许取消？**
+- ~~**候选包（`dreamzhou-curated-locations`）是否也允许取消？**~~ —— 该包已删除，此问题作废。
 - **默认选择是"全部 13 个区域"，还是只有某一个子集？**（影响首次安装后的默认下载量）
 
 ---

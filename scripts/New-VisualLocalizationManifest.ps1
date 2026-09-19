@@ -93,9 +93,9 @@ foreach ($session in $sessions) {
     }
 }
 
-# Curated references are independently anchored live minimap samples. Keeping
-# every registered pack in the normal regression manifest catches a stale or
-# omitted optional shard before it reaches a Debug/Release package.
+# Curated references are independently anchored live minimap samples. No curated candidate pack
+# ships today, so this is empty in the current layout; it still covers every registered pack, which
+# catches a stale or omitted optional shard before it reaches a Debug/Release package.
 $candidateRegistryPath = Join-Path $repoRoot 'Assets\FeaturesDatas\candidate-packs.json'
 if (Test-Path -LiteralPath $candidateRegistryPath) {
     $candidateRegistry = Get-Content -LiteralPath $candidateRegistryPath -Raw | ConvertFrom-Json

@@ -219,21 +219,27 @@ foreach ($name in $tileRegistry.packs) {
     Assert-OutputInventory $sourcePack (Join-Path $assets $relative) -Complete
     $packages.Add([ordered]@{id=[string]$manifest.packId;version=(Get-BundledPackageVersion (Join-Path $assets $relative) ([string]$manifest.packId));kind='tile';directory=$relative;sha256='';files=@()})
 }
-$candidateRegistry = Get-Content -LiteralPath (Join-Path $SourceRoot 'Assets/FeaturesDatas/candidate-packs.json') -Encoding UTF8 -Raw | ConvertFrom-Json
-foreach ($name in $candidateRegistry.packs) {
-    $relative = "FeaturesDatas/$name"
-    $sourcePack = Join-Path $SourceRoot "Assets/$relative"
-    $manifest = Get-Content -LiteralPath (Join-Path $sourcePack 'manifest.json') -Encoding UTF8 -Raw | ConvertFrom-Json
-    if (-not (Test-Path -LiteralPath (Join-Path $sourcePack 'visual-index.imx'))) { throw "Candidate pack missing visual index: $name" }
-    foreach ($reference in $manifest.references) {
-        $referenceFile = Join-Path $sourcePack ([string]$reference.reference.image)
-        if ((Get-Sha256 $referenceFile) -ne $reference.reference.sha256) { throw "Candidate reference hash mismatch: $name" }
+# Curated candidate packs are optional and none ship today: the mengzhou region pack superseded the
+# Dreamzhou curated candidate. A registry that names packs is still staged when one is present.
+$candidateRegistryPath = Join-Path $SourceRoot 'Assets/FeaturesDatas/candidate-packs.json'
+if (Test-Path -LiteralPath $candidateRegistryPath) {
+    $candidateRegistry = Get-Content -LiteralPath $candidateRegistryPath -Encoding UTF8 -Raw | ConvertFrom-Json
+    foreach ($name in $candidateRegistry.packs) {
+        $relative = "FeaturesDatas/$name"
+        $sourcePack = Join-Path $SourceRoot "Assets/$relative"
+        $manifest = Get-Content -LiteralPath (Join-Path $sourcePack 'manifest.json') -Encoding UTF8 -Raw | ConvertFrom-Json
+        if (-not (Test-Path -LiteralPath (Join-Path $sourcePack 'visual-index.imx'))) { throw "Candidate pack missing visual index: $name" }
+        $references = if ($null -ne $manifest.PSObject.Properties['references']) { @($manifest.references) } else { @() }
+        foreach ($reference in $references) {
+            $referenceFile = Join-Path $sourcePack ([string]$reference.reference.image)
+            if ((Get-Sha256 $referenceFile) -ne $reference.reference.sha256) { throw "Candidate reference hash mismatch: $name" }
+        }
+        Assert-OutputInventory $sourcePack (Join-Path $assets $relative)
+        [IO.Directory]::CreateDirectory((Join-Path $assets $relative)) | Out-Null
+        Copy-Item -Path (Join-Path $sourcePack '*') -Destination (Join-Path $assets $relative) -Recurse -Force
+        Assert-OutputInventory $sourcePack (Join-Path $assets $relative) -Complete
+        $packages.Add([ordered]@{id=[string]$manifest.packId;version=(Get-BundledPackageVersion (Join-Path $assets $relative) ([string]$manifest.packId));kind='candidate';directory=$relative;sha256='';files=@()})
     }
-    Assert-OutputInventory $sourcePack (Join-Path $assets $relative)
-    [IO.Directory]::CreateDirectory((Join-Path $assets $relative)) | Out-Null
-    Copy-Item -Path (Join-Path $sourcePack '*') -Destination (Join-Path $assets $relative) -Recurse -Force
-    Assert-OutputInventory $sourcePack (Join-Path $assets $relative) -Complete
-    $packages.Add([ordered]@{id=[string]$manifest.packId;version=(Get-BundledPackageVersion (Join-Path $assets $relative) ([string]$manifest.packId));kind='candidate';directory=$relative;sha256='';files=@()})
 }
 Write-Json ([ordered]@{formatVersion=1;snapshotId="bundled-$Version";sequence=0;baselineId=$BaselineId;baselineRoot='.';mapDataRoot='KuroMap';mapIconRoot='KuroMapIcons';bundled=$true;packages=@($packages.ToArray())}) (Join-Path $assets 'Updates/bundled-snapshot.json')
 $keyFile = Join-Path $SourceRoot 'Assets/Updates/trusted-keys.json'

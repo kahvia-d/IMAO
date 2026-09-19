@@ -131,9 +131,13 @@ try {
             $visualShards.Add("Assets\FeaturesDatas\KuroTilePacks\$kuroDirectory\visual-index.imx")
         }
     }
-    $candidateRegistry = Get-Content -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\candidate-packs.json') -Raw | ConvertFrom-Json
-    foreach ($candidateDirectory in @($candidateRegistry.packs)) {
-        $visualShards.Add("Assets\FeaturesDatas\$candidateDirectory\visual-index.imx")
+    # Optional: curated candidate packs are only present when a candidate registry names them.
+    $candidateRegistryPath = Join-Path $repoRoot 'Assets\FeaturesDatas\candidate-packs.json'
+    if (Test-Path -LiteralPath $candidateRegistryPath) {
+        $candidateRegistry = Get-Content -LiteralPath $candidateRegistryPath -Raw | ConvertFrom-Json
+        foreach ($candidateDirectory in @($candidateRegistry.packs)) {
+            $visualShards.Add("Assets\FeaturesDatas\$candidateDirectory\visual-index.imx")
+        }
     }
     foreach ($visualShard in $visualShards) {
         $stagedShard = Join-Path $outputDirectory $visualShard

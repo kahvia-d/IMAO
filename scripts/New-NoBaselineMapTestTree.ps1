@@ -176,8 +176,9 @@ foreach ($name in $removedFeatureFiles) {
 if (Test-Path -LiteralPath (Join-Path $runAssets "Updates/$baselineManifestName")) {
     throw "baseline-files.json must not exist in a no-base-atlas run root"
 }
+# candidate-packs.json is deliberately absent: no curated candidate pack ships any more.
 foreach ($required in @('FeaturesDatas/IconTask_Features.yml', 'FeaturesDatas/IconWavePlateCrystal_Features.yml',
-    'FeaturesDatas/candidate-packs.json', 'KuroMap/scene-validation.json', 'Updates/bundled-snapshot.json')) {
+    'KuroMap/scene-validation.json', 'Updates/bundled-snapshot.json')) {
     if (-not (Test-Path -LiteralPath (Join-Path $runAssets $required))) {
         throw "The no-base-atlas run root is missing a required non-package file: $required"
     }

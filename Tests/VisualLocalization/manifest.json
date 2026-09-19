@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "x64/Debug/Diagnostics",
-  "sampleCount": 113,
+  "sampleCount": 111,
   "bootstrapCount": 61,
   "continuityCount": 23,
   "syntheticCount": 27,
@@ -794,32 +794,6 @@
       "kind": "bootstrap",
       "image": "x64/Debug/Diagnostics/20260824-124646/47_minimap-bootstrap-crop.png",
       "expected": null
-    },
-    {
-      "id": "dreamzhou-curated--6725--919",
-      "session": "dreamzhou-curated-locations",
-      "kind": "curated-positive",
-      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--6725--919.png",
-      "expected": {
-        "sceneId": 1,
-        "mapX": -5629.625000000001,
-        "mapY": 849.605,
-        "tolerance": 12.0,
-        "source": "curated-visual-verified"
-      }
-    },
-    {
-      "id": "dreamzhou-curated--8519--292",
-      "session": "dreamzhou-curated-locations",
-      "kind": "curated-positive",
-      "image": "Assets/FeaturesDatas/DreamzhouCandidate/reference--8519--292.png",
-      "expected": {
-        "sceneId": 1,
-        "mapX": -7791.395,
-        "mapY": 1605.1399999999999,
-        "tolerance": 12.0,
-        "source": "curated-visual-verified"
-      }
     },
     {
       "id": "20260824-095239-3_minimap-bootstrap-crop-synthetic-rotate37",

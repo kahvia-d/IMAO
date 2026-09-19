@@ -85,10 +85,11 @@ try {
         Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_visual_index.imx')
         Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_visual_index.manifest.json')
         Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'kuro-tile-packs.json')
-        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'candidate-packs.json')
+        # Curated candidate packs and their registry are optional; none ship today.
+        Get-Item -Path (Join-Path $nativeFeatureDirectory 'candidate-packs.json') -ErrorAction SilentlyContinue
         Get-ChildItem -LiteralPath $nativeFeatureDirectory -Directory | Where-Object { $_.Name -like '*Candidate' } |
             ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Recurse -File }
-    )
+    ) | Where-Object { $null -ne $_ }
     $kuroRegistry = Get-Content -LiteralPath (Join-Path $nativeFeatureDirectory 'kuro-tile-packs.json') -Raw | ConvertFrom-Json
     foreach ($kuroDirectoryValue in @($kuroRegistry.packs)) {
         $kuroDirectory = [string]$kuroDirectoryValue

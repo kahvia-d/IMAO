@@ -94,7 +94,8 @@ if (Test-Path -LiteralPath $kuroRegistryPath) {
     }
 }
 $candidateRegistryPath = Join-Path $repoRoot 'Assets\FeaturesDatas\candidate-packs.json'
-Test-Requirement (Test-Path -LiteralPath $candidateRegistryPath) 'Missing candidate-packs.json. Restore the registered candidate feature packs.'
+# Optional. A layout without curated candidate packs ships no registry, which is the current state:
+# the mengzhou region pack superseded the Dreamzhou curated candidate.
 if (Test-Path -LiteralPath $candidateRegistryPath) {
     try {
         $candidateRegistry = Get-Content -LiteralPath $candidateRegistryPath -Raw | ConvertFrom-Json
