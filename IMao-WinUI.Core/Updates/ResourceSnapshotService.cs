@@ -152,24 +152,130 @@ public sealed class ResourceSnapshotService
     }
 
     /// <summary>
-    /// Replaces the set of deselected packages for the running snapshot and re-materializes the file the
-    /// native host reads. The caller must restart the software for the change to reach a running host.
+    /// Deselects packages and reports which downloaded copies the caller may delete.
+    ///
+    /// The stored descriptor is deliberately left alone. It keeps naming every signed package so the
+    /// player can select the region again later, and <see cref="InitializeAsync"/> already tolerates a
+    /// deselected package whose copy is gone. Copies that ship inside the program are only deselected:
+    /// deleting those would damage the installation and free nothing.
     /// </summary>
-    public async Task SetDeselectedPackagesAsync(IEnumerable<string> packageIds, CancellationToken ct = default)
+    public async Task<IReadOnlyList<string>> RemovePackagesAsync(IEnumerable<string> packageIds, CancellationToken ct = default)
     {
         EnsureInitialized();
-        if (Current.Bundled) throw new InvalidOperationException("程序附带资源始终可用，无法取消选择。");
+        var configured = PendingOrDefault();
+        var wanted = ValidateSelection(configured, packageIds);
+        await using var gate = await UpdateStorage.LockAsync(Root, ct).ConfigureAwait(false);
+        _state = UpdateStorage.Read<ActivationState>(_statePath);
+        var deselected = new SortedSet<string>(_selection.Deselected, StringComparer.Ordinal);
+        deselected.UnionWith(wanted);
+        _selection = new PackageSelection { SnapshotId = configured.SnapshotId, Deselected = deselected.ToList() };
+        await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
+        await ApplySelectionAsync(ct).ConfigureAwait(false);
+        var packagedRoot = Path.GetFullPath(Path.Combine(Root, "packages")) + Path.DirectorySeparatorChar;
+        var removable = wanted
+            .Select(id => configured.Packages.First(p => p.Id == id))
+            .Where(p => FindBundledPackage(p) is null && p.Directory.StartsWith(packagedRoot, StringComparison.OrdinalIgnoreCase))
+            .Select(p => p.Directory)
+            .ToList();
+        LastNotice = removable.Count > 0 ? "已取消选择并移除下载副本，重启软件后生效。" : "已取消选择，重启软件后生效。";
+        return removable;
+    }
+
+    /// <summary>Resolves requested ids against the snapshot that will run after the next restart.</summary>
+    private static SortedSet<string> ValidateSelection(ResourceSnapshot configured, IEnumerable<string> packageIds)
+    {
         var wanted = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var id in packageIds)
         {
-            if (string.IsNullOrWhiteSpace(id) || !Current.Packages.Any(p => string.Equals(p.Id, id, StringComparison.Ordinal)))
+            if (string.IsNullOrWhiteSpace(id) || !configured.Packages.Any(p => string.Equals(p.Id, id, StringComparison.Ordinal)))
                 throw new InvalidDataException("资源包标识不属于当前资源快照：" + id);
-            if (!IsSelectable(Current, id)) throw new InvalidDataException("该资源包为必需资源，不能取消选择：" + id);
+            if (!IsSelectable(configured, id)) throw new InvalidDataException("该资源包为必需资源，不能删除：" + id);
             wanted.Add(id);
         }
-        await using var gate = await UpdateStorage.LockAsync(Root, ct).ConfigureAwait(false);
+        return wanted;
+    }
+
+    /// <summary>
+    /// The snapshot the player is configuring. A staged snapshot is what the next launch runs, so a region
+    /// installed during this session is selectable before the restart that activates it.
+    /// </summary>
+    private ResourceSnapshot PendingOrDefault()
+    {
+        if (string.IsNullOrEmpty(_state.PendingPath) || !File.Exists(_state.PendingPath)) return Current;
+        var pending = Rebind(UpdateStorage.Read<ResourceSnapshot>(_state.PendingPath));
+        return pending.Bundled || pending.FormatVersion != 2 ? Current : pending;
+    }
+
+    /// <summary>
+    /// Adds installed packages to the active snapshot and drops their ids from the deselected set.
+    ///
+    /// A snapshot may only name packages that are actually on disk, because the native host refuses the
+    /// whole resource set when one of them will not load. So a per-region install expands the snapshot by
+    /// exactly the regions it just installed, and every other region stays out of it until it is installed.
+    ///
+    /// The caller holds the update lock for the whole install transaction.
+    /// </summary>
+    internal async Task AttachPackagesAsync(IEnumerable<SnapshotPackage> packages, CancellationToken ct)
+    {
+        EnsureInitialized();
+        var additions = new List<SnapshotPackage>();
+        foreach (var package in packages)
+        {
+            if (!IsSelectable(package)) throw new InvalidDataException("不是可安装的区域包：" + package.Id);
+            if (!Current.Packages.Any(p => string.Equals(p.Id, package.Id, StringComparison.Ordinal))) additions.Add(package);
+        }
         _state = UpdateStorage.Read<ActivationState>(_statePath);
-        _selection = new PackageSelection { SnapshotId = Current.SnapshotId, Deselected = wanted.ToList() };
+        if (additions.Count > 0)
+        {
+            // The descriptor keeps the release identity but lists only the packages that are on disk, so the
+            // next launch validates and activates this same snapshot instead of falling back to the bundle.
+            Current = Current with { Packages = Current.Packages.Concat(additions).ToList() };
+            CurrentRuntimeSnapshot = ApplySelection(Current);
+            CurrentPath = await MaterializeAsync(CurrentRuntimeSnapshot, _selectedStoredPath, ct).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(_selectedStoredPath))
+                await UpdateStorage.WriteAsync(_selectedStoredPath, Current, ct).ConfigureAwait(false);
+        }
+        var deselected = new SortedSet<string>(_selection.Deselected, StringComparer.Ordinal);
+        foreach (var package in packages) deselected.Remove(package.Id);
+        var selection = new PackageSelection { SnapshotId = Current.SnapshotId, Deselected = deselected.ToList() };
+        if (!selection.Deselected.SequenceEqual(_selection.Deselected, StringComparer.Ordinal))
+        {
+            _selection = selection;
+            await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Recomputes the file the native host reads and rewrites the stored descriptor from the active
+    /// snapshot. Called after an install or removal changed what is on disk.
+    ///
+    /// The caller holds the update lock.
+    /// </summary>
+    internal async Task RefreshRuntimeViewAsync(CancellationToken ct)
+    {
+        EnsureInitialized();
+        CurrentRuntimeSnapshot = ApplySelection(Current);
+        CurrentPath = await MaterializeAsync(CurrentRuntimeSnapshot, _selectedStoredPath, ct).ConfigureAwait(false);
+        if (!string.IsNullOrEmpty(_selectedStoredPath))
+            await UpdateStorage.WriteAsync(_selectedStoredPath, Current, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Replaces the set of deselected packages for the snapshot that will run after the next restart.</summary>
+    public async Task SetDeselectedPackagesAsync(IEnumerable<string> packageIds, CancellationToken ct = default)
+    {
+        EnsureInitialized();
+        await using var gate = await UpdateStorage.LockAsync(Root, ct).ConfigureAwait(false);
+        await SetDeselectedPackagesLockedAsync(packageIds, ct).ConfigureAwait(false);
+    }
+
+    // Caller holds the update lock. UpdateService owns that lock for a whole install transaction, so it
+    // must use this entry point instead of the one that takes the lock again.
+    internal async Task SetDeselectedPackagesLockedAsync(IEnumerable<string> packageIds, CancellationToken ct = default)
+    {
+        var configured = PendingOrDefault();
+        var wanted = ValidateSelection(configured, packageIds);
+        _state = UpdateStorage.Read<ActivationState>(_statePath);
+        _selection = new PackageSelection { SnapshotId = configured.SnapshotId, Deselected = wanted.ToList() };
         await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
         await ApplySelectionAsync(ct).ConfigureAwait(false);
         LastNotice = "区域选择已保存，重启软件后生效。";
@@ -177,7 +283,6 @@ public sealed class ResourceSnapshotService
 
     /// <summary>True when the package may be deselected: a selectable kind that is not a required package.</summary>
     public static bool IsSelectable(SnapshotPackage package) => Array.IndexOf(SelectableKinds, package.Kind) >= 0;
-
     /// <summary>True when the package may be deselected: a selectable kind that is not a required package.</summary>
     public static bool IsSelectable(ResourceSnapshot snapshot, string packageId) =>
         snapshot.Packages.Any(p => string.Equals(p.Id, packageId, StringComparison.Ordinal) && IsSelectable(p));
@@ -207,20 +312,15 @@ public sealed class ResourceSnapshotService
     private PackageSelection ReadSelection() => UpdateStorage.Read<PackageSelection>(_selectionPath);
 
     /// <summary>
-    /// Drops deselected ids whose package copy is no longer on disk, so an interrupted removal cannot
-    /// make the active snapshot unloadable. Returns true when the stored selection had to change.
+    /// Drops deselected ids that the snapshot no longer offers at all, so a selection naming packages from
+    /// an older resource version cannot linger. A deselected package whose copy is absent is expected: that
+    /// is what removal does, and the snapshot already excludes it, so the record is kept and selecting the
+    /// region again is what restores the copy.
     /// </summary>
     private bool PruneSelection()
     {
         if (_selection.Deselected.Count == 0 || Current.Bundled) return false;
-        // Current is already rebound, so its directories are the ones this installation would load.
-        var kept = new List<string>();
-        foreach (var id in _selection.Deselected)
-        {
-            if (!IsSelectable(Current, id)) continue;
-            if (!Directory.Exists(Current.Packages.First(p => p.Id == id).Directory)) continue;
-            kept.Add(id);
-        }
+        var kept = _selection.Deselected.Where(id => IsSelectable(Current, id)).ToList();
         if (kept.Count == _selection.Deselected.Count) return false;
         _selection = _selection with { Deselected = kept };
         return true;
@@ -343,11 +443,18 @@ public sealed class ResourceSnapshotService
         return snapshot;
     }
 
+    /// <summary>
+    /// Resolves a package to the copy that ships inside the program, when there is one.
+    ///
+    /// A bundled descriptor deliberately carries no hash and no file inventory (see the packaging rules),
+    /// so identity is the only thing it can be matched on. Requiring a hash here made every package the
+    /// program already ships look missing, which would re-download the whole resource set and would report
+    /// a release that ships with the program as an update.
+    /// </summary>
     internal SnapshotPackage? FindBundledPackage(SnapshotPackage package) => _bundled.Packages.FirstOrDefault(p =>
         p.Id == package.Id && p.Version == package.Version && p.Kind == package.Kind &&
-        ((string.IsNullOrEmpty(p.Sha256) && p.Files.Count == 0) ||
-         (!string.IsNullOrEmpty(p.Sha256) && p.Sha256.Equals(package.Sha256, StringComparison.OrdinalIgnoreCase) &&
-          JsonSerializer.SerializeToUtf8Bytes(p.Files, UpdateJson.Options).AsSpan().SequenceEqual(JsonSerializer.SerializeToUtf8Bytes(package.Files, UpdateJson.Options)))));
+        (string.IsNullOrEmpty(p.Sha256) || (!string.IsNullOrEmpty(package.Sha256) && p.Sha256.Equals(package.Sha256, StringComparison.OrdinalIgnoreCase) &&
+         JsonSerializer.SerializeToUtf8Bytes(p.Files, UpdateJson.Options).AsSpan().SequenceEqual(JsonSerializer.SerializeToUtf8Bytes(package.Files, UpdateJson.Options)))));
 
     /// <summary>
     /// True when every package of the release is the copy that ships inside this program, so installing

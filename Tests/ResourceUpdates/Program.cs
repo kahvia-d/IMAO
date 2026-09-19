@@ -568,6 +568,11 @@ await Test("the native preflight and a restart only ever see the selected packag
     EqualSequence(["lahai-kurotiles", "tethys-kurotiles"], restarted.DeselectedPackageIds);
     Equal(2, restarted.CurrentRuntimeSnapshot.Packages.Count);
     False(restarted.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    // A region that is deselected from another snapshot is not offered here and must not linger.
+    var foreign = new PackageSelection { SnapshotId = release.Resources[0].SnapshotId, Deselected = ["tethys-kurotiles", "no-such-region"] };
+    await File.WriteAllTextAsync(Path.Combine(f.Root, "selection.json"), JsonSerializer.Serialize(foreign, UpdateJson.Options));
+    var cleaned = f.NewSnapshots(); await cleaned.InitializeAsync();
+    EqualSequence(["tethys-kurotiles"], cleaned.DeselectedPackageIds);
     // What the native host is handed is exactly the narrowed snapshot.
     var inspected = f.LastPreflightSnapshot!;
     Equal(Path.Combine(f.Root, "packages", "map-data", "2026.9.9.2"), inspected.MapDataRoot);
@@ -590,23 +595,130 @@ await Test("a deleted copy keeps its region deselected instead of breaking the s
     var healed = f.NewSnapshots(); await healed.InitializeAsync();
     Equal(release.Resources[0].SnapshotId, healed.Current.SnapshotId);
     False(healed.LastNotice.Contains("已恢复可用资源版本"));
-    Equal(0, healed.DeselectedPackageIds.Count);
-    Equal(4, healed.CurrentRuntimeSnapshot.Packages.Count);
-    // The missing copy can be selected again, and a reinstall restores exactly the missing package.
-    await healed.SetDeselectedPackagesAsync([]);
+    // The region stays deselected: a missing copy is what removal produces, not a reason to forget it.
+    EqualSequence(["tethys-kurotiles"], healed.DeselectedPackageIds);
+    Equal(3, healed.CurrentRuntimeSnapshot.Packages.Count);
+    False(healed.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    // Selecting it again downloads exactly that region and restores the copy.
     f.Network.Requests.Clear();
     using var updater = f.NewUpdates(healed);
-    await updater.ImportOfflineAsync(f.WriteOffline(release));
-    True(f.Network.Requests.Count == 0);
+    await updater.CheckAsync();
+    f.Network.Requests.Clear();
+    await updater.EnsureInstalledAsync(["tethys-kurotiles"]);
+    Equal(1, f.Network.Requests.Count);
+    Equal("tethys-kurotiles", Path.GetFileNameWithoutExtension(f.Network.Requests[0]));
     True(Directory.Exists(Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2")));
+    Equal(0, healed.DeselectedPackageIds.Count);
 });
 
-await Test("a bundled snapshot ignores selection because its packages are already installed", async () =>
+await Test("a bundled snapshot hands every package it ships to the host", async () =>
 {
-    using var f = New(); await f.Initialize();
+    using var f = New(); f.BundleMapData(); await f.Initialize();
     True(f.Snapshots.Current.Bundled);
-    await ThrowsAsync<InvalidOperationException>(() => f.Snapshots.SetDeselectedPackagesAsync(["map-data"]));
+    // A required package is never selectable, and an id the bundled snapshot does not name is refused.
+    await ThrowsAsync<InvalidDataException>(() => f.Snapshots.SetDeselectedPackagesAsync(["map-data"]));
+    await ThrowsAsync<InvalidDataException>(() => f.Snapshots.SetDeselectedPackagesAsync(["not-in-snapshot"]));
     Equal(f.Bundled.SnapshotId, f.Snapshots.CurrentRuntimeSnapshot.SnapshotId);
+    Equal(1, f.Snapshots.CurrentRuntimeSnapshot.Packages.Count);
+});
+
+await Test("installing one more region downloads only that region", async () =>
+{
+    using var f = New(); f.BundleMapData(); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    f.Network.Requests.Clear();
+    await f.Updates.EnsureInstalledAsync(["taro-kurotiles"]);
+    // Only the requested region came down: the mandatory map-data package ships with the program and is
+    // verified in place, and the two untouched regions were not paid for.
+    EqualSequence(["taro-kurotiles"], f.Network.Requests.Select(u => Path.GetFileNameWithoutExtension(u)).ToArray());
+    True(Directory.Exists(Path.Combine(f.Root, "packages", "taro-kurotiles", "2026.9.9.2")));
+    False(Directory.Exists(Path.Combine(f.Root, "packages", "lahai-kurotiles", "2026.9.9.2")));
+    False(Directory.Exists(Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2")));
+    Equal(0, f.Snapshots.DeselectedPackageIds.Count);
+    // The stored descriptor still names every signed package, so the other regions stay selectable later.
+    var stored = JsonSerializer.Deserialize<ResourceSnapshot>(await File.ReadAllBytesAsync(Path.Combine(f.Root, "snapshots", "v2", release.Resources[0].SnapshotId + ".json")), UpdateJson.Options)!;
+    Equal(2, stored.Packages.Count);
+    // The trial the native preflight performed already saw the program's own map-data plus the new region.
+    Equal(2, f.LastPreflightSnapshot!.Packages.Count);
+    True(f.LastPreflightSnapshot.Packages.Any(p => p.Id == "map-data"));
+    True(f.LastPreflightSnapshot.Packages.Any(p => p.Id == "taro-kurotiles"));
+    False(f.LastPreflightSnapshot.Packages.Any(p => p.Id == "lahai-kurotiles"));
+    // Idempotent: asking for the same set again downloads nothing. map-data resolves to the bundled copy
+    // and the already-installed region is reused after its receipt is verified.
+    f.Network.Requests.Clear();
+    await f.Updates.EnsureInstalledAsync(["taro-kurotiles"]);
+    Equal(0, f.Network.Requests.Count);
+});
+
+await Test("removing a region deletes its copy and the snapshot still loads", async () =>
+{
+    using var f = New(); f.BundleMapData(); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    await f.Updates.EnsureInstalledAsync(["taro-kurotiles", "tethys-kurotiles"]);
+    // The install is pending, exactly like a resource-update install: the running session keeps the
+    // bundled resources and the next launch verifies the new snapshot before adopting it.
+    True(f.Snapshots.HasPending);
+    var stagedPath = Path.Combine(f.Root, "snapshots", "v2", release.Resources[0].SnapshotId + ".json");
+    var staged = JsonSerializer.Deserialize<ResourceSnapshot>(await File.ReadAllBytesAsync(stagedPath), UpdateJson.Options)!;
+    EqualSequence(["map-data", "taro-kurotiles", "tethys-kurotiles"], staged.Packages.Select(p => p.Id).OrderBy(n => n, StringComparer.Ordinal).ToArray());
+    var next = f.NewSnapshots(); await next.InitializeAsync();
+    Equal(3, next.CurrentRuntimeSnapshot.Packages.Count);
+    var directory = Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2");
+    True(Directory.Exists(directory));
+    using var updater = f.NewUpdates(next);
+    await updater.RemoveAsync(["tethys-kurotiles"]);
+    // The copy is gone, the selection records it, and the stored descriptor keeps it for a later reinstall.
+    False(Directory.Exists(directory));
+    False(File.Exists(directory + ".receipt.json"));
+    EqualSequence(["tethys-kurotiles"], next.DeselectedPackageIds);
+    Equal(2, next.CurrentRuntimeSnapshot.Packages.Count);
+    var stored = JsonSerializer.Deserialize<ResourceSnapshot>(await File.ReadAllBytesAsync(Path.Combine(f.Root, "snapshots", "v2", release.Resources[0].SnapshotId + ".json")), UpdateJson.Options)!;
+    Equal(3, stored.Packages.Count);
+    // A staged snapshot only becomes the active one after the launch that verified it reports healthy.
+    await next.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    // Restart: the removed region must not be required, and the survivors must still load natively.
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    if (restarted.Current.SnapshotId != release.Resources[0].SnapshotId)
+        throw new InvalidDataException("restart fell back to the bundled resources: " + restarted.LastFailure);
+    False(restarted.LastNotice.Contains("已恢复可用资源版本"));
+    EqualSequence(["tethys-kurotiles"], restarted.DeselectedPackageIds);
+    Equal(2, restarted.CurrentRuntimeSnapshot.Packages.Count);
+    Equal(2, f.LastPreflightSnapshot!.Packages.Count);
+    False(f.LastPreflightSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    // A required package can never be removed, and neither can something outside the snapshot.
+    await ThrowsAsync<InvalidDataException>(() => updater.RemoveAsync(["map-data"]));
+    await ThrowsAsync<InvalidDataException>(() => updater.RemoveAsync(["not-in-snapshot"]));
+});
+
+await Test("reinstalling a removed region downloads only it again", async () =>
+{
+    using var f = New(); f.BundleMapData(); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    await f.Updates.EnsureInstalledAsync(["taro-kurotiles", "tethys-kurotiles"]);
+    // The pending snapshot is the one the next verified launch adopts.
+    var restartedSession = f.NewSnapshots(); await restartedSession.InitializeAsync();
+    await restartedSession.ReportHealthyAsync(release.Resources[0].SnapshotId);
+    var next = f.NewSnapshots(); await next.InitializeAsync();
+    using var updater = f.NewUpdates(next);
+    await updater.RemoveAsync(["tethys-kurotiles"]);
+    var directory = Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2");
+    False(Directory.Exists(directory));
+    // A new session, as the restart after the removal would be.
+    var afterRemoval = f.NewSnapshots(); await afterRemoval.InitializeAsync();
+    EqualSequence(["tethys-kurotiles"], afterRemoval.DeselectedPackageIds);
+    using var reinstalling = f.NewUpdates(afterRemoval);
+    await reinstalling.CheckAsync();
+    f.Network.Requests.Clear();
+    await reinstalling.EnsureInstalledAsync(["tethys-kurotiles"]);
+    // Exactly one package came down, and only after the player asked for that region again.
+    Equal(1, f.Network.Requests.Count);
+    Equal("tethys-kurotiles", Path.GetFileNameWithoutExtension(f.Network.Requests[0]));
+    True(Directory.Exists(directory));
+    Equal(0, afterRemoval.DeselectedPackageIds.Count);
+    Equal(3, afterRemoval.CurrentRuntimeSnapshot.Packages.Count);
 });
 
 await Test("cross-process lock wait honors cancellation", async () =>
@@ -766,6 +878,20 @@ sealed class Fixture : IDisposable
     }
     public ResourcePackage MakeRegionPackage(string id) => MakePackage(id, "tile", "2026.9.9.2", "{\"region\":\"" + id + "\"}");
     public string PackageUrl(string id) => $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/2026.9.9.2/{id}.zip";
+    /// <summary>
+    /// Declares the mandatory package as shipping inside the program, mirroring a real bundled descriptor:
+    /// it lists the package but deliberately carries no hash and no file inventory, because those describe
+    /// the published zip and the program does not ship a zip.
+    /// </summary>
+    public void BundleMapData(string version = "2026.9.9.2")
+    {
+        Directory.CreateDirectory(Bundled.MapDataRoot);
+        File.WriteAllBytes(Path.Combine(Bundled.MapDataRoot, "markers.json"), Encoding.UTF8.GetBytes("{\"map\":\"data\"}"));
+        Bundled = Bundled with
+        {
+            Packages = [new SnapshotPackage { Id = "map-data", Version = version, Kind = "map-data", Directory = Bundled.MapDataRoot, Sha256 = "", Files = [] }]
+        };
+    }
     public UpdateService NewUpdates(ResourceSnapshotService snapshots) => new(Build, [Key, PublishedKey], snapshots, _http, true, () => Now, () => FreeBytes);
     public UpdateCatalog Catalog(long sequence = 2)
     {
