@@ -104,6 +104,17 @@ foreach ($region in $packRegions) {
     $shipped = @(Get-ChildItem -LiteralPath $sourcePacks -Directory | Where-Object { $_.Name -ieq $region })
     $targetName = if ($shipped.Count -eq 1) { $shipped[0].Name } else { $region }
     $target = Join-Path $runPacks $targetName
+    foreach ($existing in @([IO.Directory]::GetDirectories($runPacks, $targetName))) {
+        if ([IO.Path]::GetFileName($existing) -ceq $targetName) { continue }
+        # A previous run created this pack under an older spelling - the packs used to be named
+        # after their scene. Windows would silently reuse that directory, leaving the snapshot
+        # with a name a case-sensitive clone cannot resolve. Rename through a temporary name
+        # because Windows refuses a case-only move.
+        $temporary = "$target.rename-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
+        [IO.Directory]::Move($existing, $temporary)
+        [IO.Directory]::Move($temporary, $target)
+        Write-Host ("Canonicalised pack directory: {0} -> {1}" -f [IO.Path]::GetFileName($existing), $targetName)
+    }
     [IO.Directory]::CreateDirectory($target) | Out-Null
     Copy-Item -Path (Join-Path $built '*') -Destination $target -Recurse -Force
     if ($shipped.Count -eq 1) {
@@ -141,6 +152,28 @@ if ($missing.Count -gt 0) {
 #    kuro-tile-packs.json: a pack that is not named here never loads. New regions must be
 #    added and packs whose directory was left out must be dropped. snapshotId is preserved
 #    so the activation record already on disk still validates and no user data is cleared.
+# Windows is case-insensitive, so a snapshot inherited from an earlier staging run can name a
+# directory whose real spelling differs - the region packs were renamed from scene names to
+# lower-case region ids. Resolve every segment to the name that is actually on disk, because a
+# case-sensitive clone cannot find a package whose directory is spelled differently and would
+# then refuse to load any resources at all.
+function Get-CanonicalRelativeDirectory([string]$Root, [string]$Relative) {
+    $current = [IO.Path]::GetFullPath($Root)
+    $names = [Collections.Generic.List[string]]::new()
+    foreach ($segment in ($Relative -split '[\\/]')) {
+        if ([string]::IsNullOrWhiteSpace($segment) -or $segment -eq '.') { continue }
+        if ($segment -eq '..') { throw "Package directory escapes the run root: $Relative" }
+        $probe = Join-Path $current $segment
+        if (-not [IO.Directory]::Exists($probe)) { return $Relative }
+        $real = @([IO.Directory]::GetDirectories($current, $segment)) |
+            Where-Object { [IO.Path]::GetFileName($_) -ieq $segment } | Select-Object -First 1
+        $name = if ($real) { [IO.Path]::GetFileName($real) } else { $segment }
+        $names.Add($name)
+        $current = Join-Path $current $name
+    }
+    return ($names -join '/')
+}
+
 $kept = [Collections.Generic.List[object]]::new()
 $named = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 foreach ($package in @($snapshot.packages)) {
@@ -148,6 +181,11 @@ foreach ($package in @($snapshot.packages)) {
     if (-not (Test-Path -LiteralPath (Join-Path $runAssets ([string]$package.directory)))) {
         Write-Host "  dropped from snapshot: $($package.id)"
         continue
+    }
+    $canonical = Get-CanonicalRelativeDirectory $runAssets ([string]$package.directory)
+    if ($canonical -cne [string]$package.directory) {
+        Write-Host "  canonicalised package directory: $($package.directory) -> $canonical"
+        $package.directory = $canonical
     }
     $kept.Add($package)
     if ([string]$package.kind -eq 'tile') { [void]$named.Add(($package.directory -split '/')[-1]) }
