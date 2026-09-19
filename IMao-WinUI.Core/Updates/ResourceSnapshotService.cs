@@ -526,7 +526,17 @@ public sealed class ResourceSnapshotService
         if (snapshot.Bundled)
         {
             if (snapshot.FormatVersion != 1 || snapshot.SnapshotId != _bundled.SnapshotId) throw new InvalidDataException("程序附带资源标识不符。");
-            return _bundled; // Use the current installation paths, including after moving the application folder.
+            // The descriptor says which packages the program was packaged with; where each one lives now is a
+            // fact about this machine. Returning _bundled verbatim was the last place a recorded location
+            // outranked the disk: after the player deleted a shipped copy and downloaded the region, the
+            // shipped directory came back and the downloaded copy was reported as missing. Identities come
+            // from the program, packages the program does not ship come from the record, and every location
+            // is resolved from the disk.
+            var recorded = snapshot.Packages.ToDictionary(package => package.Id, StringComparer.Ordinal);
+            var packages = _bundled.Packages.Select(package => recorded.TryGetValue(package.Id, out var kept) ? kept : package).ToList();
+            foreach (var extra in snapshot.Packages)
+                if (!_bundled.Packages.Any(package => string.Equals(package.Id, extra.Id, StringComparison.Ordinal))) packages.Add(extra);
+            return Rebind(_bundled with { Packages = packages });
         }
         // Version 1 external snapshots did not retain the signed application requirements.
         // Fail closed; version 2 also makes older clients reject snapshots they cannot validate.

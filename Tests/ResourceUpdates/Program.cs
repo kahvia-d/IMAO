@@ -923,6 +923,34 @@ await Test("a snapshot still naming the deleted shipped copy resolves to the dow
     True(restarted.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
 });
 
+await Test("a shipped region that was deleted and downloaded is found without activating a v2 snapshot", async () =>
+{
+    // The path the real machine was on: no resource release was ever activated, so the active descriptor is
+    // the program's own one, and the settings page reads that. The shipped copy is deleted and the region is
+    // downloaded, which places its bytes in the update root while the descriptor still names the program.
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();
+    var release = f.RegionCatalog().Resources[0];
+    f.Publish(f.RegionCatalog()); await f.Updates.CheckAsync();
+    True(f.Snapshots.Current.Bundled);
+    await f.Updates.RemoveAsync(["tethys-kurotiles"]);
+    False(Directory.Exists(Path.Combine(f.Root, "baseline", "regions", "tethys-kurotiles")));
+    await f.Updates.EnsureInstalledAsync(["tethys-kurotiles"]);
+    var copy = Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2");
+    True(Directory.Exists(copy));
+
+    // Downloading stages a v2 snapshot for the next launch to adopt. The machine was found with no pending
+    // snapshot at all and the program's own descriptor still active, so drop it and read that state.
+    var pendingActivation = JsonNode.Parse(await File.ReadAllTextAsync(Path.Combine(f.Root, "activation.json")))!.AsObject();
+    pendingActivation["pendingPath"] = null;
+    await File.WriteAllTextAsync(Path.Combine(f.Root, "activation.json"), pendingActivation.ToJsonString(UpdateJson.Options));
+
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    True(restarted.Current.Bundled);
+    var entry = new RegionCatalog(restarted, Path.Combine(f.Root, "baseline")).Build(release).Single(e => e.PackageId == "tethys-kurotiles");
+    Equal(RegionState.Downloaded, entry.State);
+    Equal(copy, restarted.CurrentRuntimeSnapshot.Packages.Single(p => p.Id == "tethys-kurotiles").Directory);
+});
+
 await Test("cross-process lock wait honors cancellation", async () =>
 {
     using var f = New(); await f.Initialize(); using var held = new FileStream(Path.Combine(f.Root, ".update.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
