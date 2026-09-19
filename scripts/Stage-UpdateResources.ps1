@@ -244,9 +244,20 @@ if (Test-Path -LiteralPath $candidateRegistryPath) {
 Write-Json ([ordered]@{formatVersion=1;snapshotId="bundled-$Version";sequence=0;baselineId=$BaselineId;baselineRoot='.';mapDataRoot='KuroMap';mapIconRoot='KuroMapIcons';bundled=$true;packages=@($packages.ToArray())}) (Join-Path $assets 'Updates/bundled-snapshot.json')
 $keyFile = Join-Path $SourceRoot 'Assets/Updates/trusted-keys.json'
 if (Test-Path -LiteralPath $keyFile) { Copy-Item -LiteralPath $keyFile -Destination (Join-Path $assets 'Updates/trusted-keys.json') -Force }
-$baseFiles = @('FeaturesDatas/Map_features.imf','FeaturesDatas/Map_visual_index.imx')
-$hashes = @($baseFiles | ForEach-Object { $p=Join-Path $SourceRoot "Assets/$_"; [ordered]@{path=$_;sha256=(Get-Sha256 $p)} })
-Write-Json ([ordered]@{baselineId=$BaselineId;files=$hashes}) (Join-Path $assets 'Updates/baseline-files.json')
+# The base map features are retired once both files are gone from the source tree; every region pack carries
+# its own calibrated features and the runtime tolerates the base set being absent. While they are still there
+# the manifest keeps verifying them, and once they are not, a manifest left behind by an earlier run into the
+# same output directory is removed: it would name files that no longer exist and the native loader refuses a
+# snapshot whose integrity manifest lists a missing file.
+$baseFiles = @('FeaturesDatas/Map_features.imf','FeaturesDatas/Map_visual_index.imx') |
+    Where-Object { Test-Path -LiteralPath (Join-Path $SourceRoot "Assets/$_") }
+$baselineManifest = Join-Path $assets 'Updates/baseline-files.json'
+if ($baseFiles.Count -gt 0) {
+    $hashes = @($baseFiles | ForEach-Object { $p=Join-Path $SourceRoot "Assets/$_"; [ordered]@{path=$_;sha256=(Get-Sha256 $p)} })
+    Write-Json ([ordered]@{baselineId=$BaselineId;files=$hashes}) $baselineManifest
+} elseif (Test-Path -LiteralPath $baselineManifest) {
+    Remove-Item -LiteralPath $baselineManifest -Force
+}
 $sourceAfter = Get-ResourceBuildProvenance $SourceRoot $SourceCommit
 Assert-ResourceBuildUnchanged $sourceBefore $sourceAfter
 Write-Json ([ordered]@{appVersion=$Version;baselineId=$BaselineId;sourceCommit=$SourceCommit;sourceDirty=$sourceAfter.sourceDirty;sourceTreeSha256=$sourceAfter.sourceTreeSha256}) (Join-Path $Destination 'build-info.json')

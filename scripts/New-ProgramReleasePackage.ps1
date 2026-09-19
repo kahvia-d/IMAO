@@ -98,8 +98,15 @@ $unwanted = @(Get-ChildItem -LiteralPath $package -Recurse -File | Where-Object 
     $_.FullName -match '(?i)[\\/](SavedPoints|SavedRoutes|Logs|diagnostics|obj|\.git|ResourceUpdates|ProgramUpdates)[\\/]|\.pdb$|\.log$|\.user$|[\\/]Map_features\.yml$|[\\/]imgui\.ini$|[\\/]IMao.*Tests\.exe$|private.*key|signing-key|\.pfx$|\.pem$'
 })
 if ($unwanted.Count) { throw ('Private/development files in program package: ' + ($unwanted.Name -join ', ')) }
-foreach ($relative in @('IMao-WinUI.exe','IMao-WinUI.dll','IMao-WinUI.Core.dll','IMao-CoreHost.exe','coreclr.dll','hostfxr.dll','hostpolicy.dll','Microsoft.ui.xaml.dll','Microsoft.WindowsAppRuntime.dll','resources.pri','vcomp140.dll','msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll','Assets/FeaturesDatas/Map_features.imf','Assets/FeaturesDatas/Map_visual_index.imx','Assets/Updates/bundled-snapshot.json','build-info.json')) {
+foreach ($relative in @('IMao-WinUI.exe','IMao-WinUI.dll','IMao-WinUI.Core.dll','IMao-CoreHost.exe','coreclr.dll','hostfxr.dll','hostpolicy.dll','Microsoft.ui.xaml.dll','Microsoft.WindowsAppRuntime.dll','resources.pri','vcomp140.dll','msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll','Assets/Updates/bundled-snapshot.json','build-info.json')) {
     if (-not (Test-Path -LiteralPath (Join-Path $package $relative) -PathType Leaf)) { throw "Missing runtime file: $relative" }
+}
+# The base map features are retired when they are not in the source tree; the pack simply leaves without them.
+# A copy that is present must be complete, because the runtime loads the pair together.
+foreach ($relative in @('Assets/FeaturesDatas/Map_features.imf','Assets/FeaturesDatas/Map_visual_index.imx')) {
+    $present = Test-Path -LiteralPath (Join-Path $package $relative) -PathType Leaf
+    $expected = Test-Path -LiteralPath (Join-Path $SourceRoot $relative) -PathType Leaf
+    if ($present -ne $expected) { throw "Base map feature packaging does not match the source tree: $relative" }
 }
 $runtime = Get-Content -LiteralPath (Join-Path $package 'IMao-WinUI.runtimeconfig.json') -Raw | ConvertFrom-Json
 if (-not $runtime.runtimeOptions.includedFrameworks -or $runtime.runtimeOptions.frameworks -or $runtime.runtimeOptions.framework) { throw 'Program package must include its .NET runtime.' }

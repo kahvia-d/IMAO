@@ -413,3 +413,38 @@ resource snapshot rejected: approved new scene requires a passed calibration and
   在这种树里把区域包删到一个不剩，视觉索引组装会因缺基础库失败
   （`feature binary cannot be opened: …Map_features.imf`）；真实安装自带基础库，不受此限。
 - 结论：**没有任何区域包必须保留**——玩家可以停用或删除任意区域，剩下的场景照常工作。
+
+### 第六层：基础库（`Map_features.imf` / `Map_visual_index.imx`）的退役状态
+
+先纠正一个容易误解的说法：**"程序自带基础库"只是当前发布状态，不是必需**。
+
+- 现状：`Assets/FeaturesDatas/Map_features.imf`（127.4 MB）与 `Map_visual_index.imx`（22.9 MB）
+  **仍在源码与产物里**，并被 `Assets/Updates/baseline-files.json` 登记。退役这一步此前**没有落地**。
+- **它确实可以删，已有实测**：`out\map-test` 就是**无基础库**布局（`New-NoBaselineMapTestTree.ps1`
+  刻意不写 `baseline-files.json`、删掉这两个文件），在同一棵树上：
+
+  | 快照 | 基础库 | 结果 |
+  |---|---|---|
+  | 13 个区域包全在 | 无 | `resourcesReady: true` |
+  | 只留 1 个区域包 | 无 | `resourcesReady: true` |
+
+  实机日志也印证运行时**容忍缺失**：`stage=visual-index … ready=1
+  error=feature binary cannot be opened: …Map_features.imf`（只是记录，不是失败）。
+- 运行时也不需要改：`ResourceSnapshotContext` 的 `baselineManifestPresent=false` 分支本来就允许
+  没有基础库；`baselineCarriesFeatures || featurePackageCount == 1` 那条要求只在
+  `baseline-files.json` 存在时才生效。
+- **已完成的"可选化"（行为对当前发布逐字节不变）**：
+  - `scripts/Stage-UpdateResources.ps1`：只登记**存在**的基础库文件；两个都不在时**不生成**
+    `baseline-files.json`，并清掉旧输出目录里遗留的那份（否则它会指向不存在的文件、让原生拒绝整份快照）。
+  - `scripts/Build-IMao.ps1`：基础库只要求"源里有就必须 staged 出来"，不再强制存在。
+  - `scripts/Test-BuildPrerequisites.ps1`：改为**配对检查**（两者同时在或同时不在）。
+  - `scripts/New-ProgramReleasePackage.ps1`：程序包不再强制含这两个文件；若源里有而包里没有则报错。
+  - `scripts/Test-ResourceUpdateStaging.ps1`：fixture 改成**退役形态**（不写基础库），并新增断言
+    "退役后不得生成 baseline integrity manifest"（7 → 8 项回归）。
+  - 验证：基础库仍在时 staging 结果与构建产物**逐字节一致**；退役形态 8/8 通过。
+- **还剩一步（不可逆，等实机）**：删掉 `Assets/FeaturesDatas/Map_features.imf` 与
+  `Map_visual_index.imx`（LFS 跟踪，历史仍在）。程序包因此立减 **150.3 MB**。
+- **唯一还没证明的那半**：定位精度。配准结论是"区域包覆盖基础库 88.4%，未匹配 11.6% 且为散布孔洞
+  → 不能证明零风险"，只有实机定位能定论。"能加载"已经证实，"定位不退化"要靠实机。
+- 另注：`Assets/FeaturesDatas/Map_features.yml`（基础库的 XML 源）**不随程序发布**
+  （`Build-IMao.ps1` 明确要求 release staging 不得含它），只用于重建 `.imf`，是否一并清理另议。

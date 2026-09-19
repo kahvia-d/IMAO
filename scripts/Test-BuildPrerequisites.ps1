@@ -68,8 +68,12 @@ if (-not [string]::IsNullOrWhiteSpace($OpenCvDir)) {
 }
 
 Test-Requirement (Test-Path -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.yml')) 'Missing archived runtime assets. Run Git LFS pull or restore Assets/.'
-Test-Requirement (Test-Path -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.imf')) 'Missing Map_features.imf. Build and run IMaoFeatureConverter before creating a Release package.'
-Test-Requirement (Test-Path -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\Map_visual_index.imx')) 'Missing Map_visual_index.imx. Run scripts\Build-VisualIndex.ps1 before creating a Release package.'
+# The base map features are being retired: every region pack now carries its own calibrated features and the
+# runtime tolerates the base set being absent. A checkout that still has them keeps using them, so they are
+# only required to be a matching pair — both present (still shipping them) or both absent (retired).
+$baseFeatureBinary = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.imf'
+$baseVisualIndex = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_visual_index.imx'
+Test-Requirement ((Test-Path -LiteralPath $baseFeatureBinary) -eq (Test-Path -LiteralPath $baseVisualIndex)) 'Map_features.imf and Map_visual_index.imx must both be present or both be absent.'
 $kuroRegistryPath = Join-Path $repoRoot 'Assets\FeaturesDatas\kuro-tile-packs.json'
 Test-Requirement (Test-Path -LiteralPath $kuroRegistryPath) 'Missing kuro-tile-packs.json. Restore the tile-pack registry.'
 if (Test-Path -LiteralPath $kuroRegistryPath) {

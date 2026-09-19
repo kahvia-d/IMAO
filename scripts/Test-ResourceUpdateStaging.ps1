@@ -22,8 +22,9 @@ Write-Fixture 'Assets/KuroMap/manifest.json' ($manifest | ConvertTo-Json -Depth 
 # carry one; staging copies these two entries out and deletes them from the map-data tree.
 Write-Fixture 'Assets/KuroMap/icon-manifest.json' '{"formatVersion":1,"icons":[]}'
 Write-Fixture 'Assets/KuroMap/icons/icon-0001.png' 'fixture-icon'
-Write-Fixture 'Assets/FeaturesDatas/Map_features.imf' 'fixture-base-features'
-Write-Fixture 'Assets/FeaturesDatas/Map_visual_index.imx' 'fixture-base-visual'
+# The base map features are retired from this fixture on purpose: the region packs carry their own features
+# now, and a retired base set must stage without producing a baseline integrity manifest (a manifest naming
+# files that no longer exist would make the native loader refuse the whole snapshot).
 Write-Fixture 'Assets/FeaturesDatas/kuro-tile-packs.json' '{"formatVersion":1,"packs":["Fixture"]}'
 Write-Fixture 'Assets/FeaturesDatas/candidate-packs.json' '{"formatVersion":1,"packs":[]}'
 Write-Fixture 'Assets/FeaturesDatas/KuroTilePacks/Fixture/features.yml' 'fixture-tile-features'
@@ -54,6 +55,10 @@ function Invoke-Stage([string]$Name,[bool]$ExpectFailure) {
 Invoke-Stage 'clean' $false
 Invoke-Stage 'clean' $false
 $passed.Add('PS5 unchanged restage accepted')
+if (Test-Path -LiteralPath (Join-Path $OutputRoot 'clean/Assets/Updates/baseline-files.json')) {
+    throw 'A retired base feature set must not stage a baseline integrity manifest.'
+}
+$passed.Add('retired base features stage without a baseline integrity manifest')
 $direct = Join-Path $OutputRoot 'direct-caller'
 Push-Location $OutputRoot
 try { & $scriptPath -SourceRoot 'fixture-source' -Destination 'direct-caller' -SourceCommit $fixtureCommit }

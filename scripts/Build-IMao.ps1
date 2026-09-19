@@ -117,11 +117,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Release asset staging failed.' }
     $coreHost = Join-Path $outputDirectory 'IMao-CoreHost.exe'
     if (-not (Test-Path -LiteralPath $coreHost)) { throw "Missing C++ build output: $coreHost" }
-    $binaryFeatures = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_features.imf'
-    $visualIndex = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_visual_index.imx'
     $xmlFeatures = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_features.yml'
-    if (-not (Test-Path -LiteralPath $binaryFeatures)) { throw "Missing staged binary map features: $binaryFeatures" }
-    if (-not (Test-Path -LiteralPath $visualIndex)) { throw "Missing staged visual map index: $visualIndex" }
+    # The base map features are retired when the source tree no longer carries them: the region packs provide
+    # the features and the runtime tolerates their absence. While they are present, they must arrive staged.
+    foreach ($baseName in @('Map_features.imf','Map_visual_index.imx')) {
+        $baseSource = Join-Path $repoRoot "Assets\FeaturesDatas\$baseName"
+        $baseStaged = Join-Path $outputDirectory "Assets\FeaturesDatas\$baseName"
+        if ((Test-Path -LiteralPath $baseSource) -and -not (Test-Path -LiteralPath $baseStaged)) { throw "Missing staged base map feature: $baseStaged" }
+    }
     $visualShards = [Collections.Generic.List[string]]::new()
     $kuroRegistry = Get-Content -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\kuro-tile-packs.json') -Raw | ConvertFrom-Json
     foreach ($kuroDirectoryValue in @($kuroRegistry.packs)) {
