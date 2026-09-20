@@ -379,7 +379,8 @@ public ProgramPackage { ... 现有字段不变 ...; public List<ProgramShard> Sh
 
 ## 12. 分阶段实现与每阶段验证（评审调整顺序）
 
-**阶段 1–4 已完成（2026-09-20）**，阶段 5–6 未开始。
+**阶段 1–6 已完成（2026-09-20）**：`v2026.9.20.1` 已按 §5.4 路线 A 发布（见 §12.1），
+下一个版本改用分片发布。
 
 1. ✅ **契约 + 分片映射表 + 校验**
    - `UpdateContracts.cs`：`ProgramPackage.Shards` 与 `ProgramShard`（`Id/Url/Size/Sha256/Files`，
@@ -424,10 +425,29 @@ public ProgramPackage { ... 现有字段不变 ...; public List<ProgramShard> Sh
    未变片保留旧 URL、资源-only 发布核对全部已发布 URL、本地字节/长度/缺失/描述符不符/无分片清单均被
    拒），并已挂到 `scripts/Test-Runtime.ps1`；对真实 prepared 输出跑同一函数得到**上传清单预览**
    （7 片 + 描述符全部绑定、0 个保留）。
-5. **端到端**：一次真实程序更新（本地 + 线上各一次），记录实际下载字节数与旧值对比。
-   **需要用户执行**（本机无法代做：要提交改动、用该提交重跑原生+WinUI 候选构建、再用生产私钥发布）；
-   逐条命令、前置检查与发布后验证已写进 `Docs/ResourceUpdates.md` 的「过渡版与分片版的发布差异」。
-6. **收尾**：文档（`Docs/ProgramUpdates.md` 已在阶段 3/4 更新）+ 一次正式发布（见上）。
+5. ✅ **端到端（过渡版已线上发布，2026-09-20）**：按 §5.4 路线 A 发布了
+   **`v2026.9.20.1` / sequence 16**——整包程序发布，把认识分片的客户端送到所有已安装副本。
+   - 源码提交 `0a1be01`（`f39b60a` 实现 + `0a1be01` 定版），从干净树构建候选
+     `out/release-candidate-2026.9.20.1`（1222 文件 / 1179.4 MB，zip 716.7 MB，`sourceDirty=false`），
+     新 `IMao-WinUI.Core.dll` 含 `ProgramDownloadTarget`、`.19.2` 的不含（确认客户端确实换新）。
+   - 生产 `prepare`（真私钥 + `--core-host` 原生预检）→ `production/nativePassed/programPrepared` 全真，
+     `verify` 通过；15 个资源包全部沿用旧 URL（新增资源附件 0 个）。
+   - `Publish-ResourceUpdate.ps1` 上传 3 个附件（`update.json`、离线包 472.1 MB、程序 zip 716.7 MB），
+     逐个按远程 digest 复核，18 个 URL 公开可达，`updates/channel-state.json`=16、
+     `updates/stable.json`=16（appVersion 2026.9.20.1，程序包仍是整包、`shards=0`）。
+   - 发布后核对：从客户端实际使用的渠道地址取回 `stable.json`，用生产公钥 `verify-manifest` 通过；
+     程序 zip 的匿名 HEAD 返回 200 且 `Content-Length` 与签名 `size` 完全相等（751478002）。
+   - **待实测**：客户端真正下载的字节数（下次在装了 `2026.9.20.1` 的机器上发一个分片版本即可对比）。
+6. ✅ **收尾**：`Docs/ProgramUpdates.md`、`Docs/ResourceUpdates.md`（新增「过渡版与分片版的发布差异」）
+   与本文档已同步；`v2026.9.20.1` 已正式发布。**下一个版本的发布改用 `--program-shards true`**
+   （并可带 `-ManualInstallZip` 供全新安装）。
+
+### 12.1 发布记录
+
+| 版本 | 日期 | 路线 | 清单 | 附件 | 结果 |
+|---|---|---|---|---|---|
+| `2026.9.20.1` | 2026-09-20 | A（整包过渡） | sequence 16，`shards=0` | update.json + 离线包 + 程序 zip（3 个） | 已发布，stable=16 |
+| 下一个 | 待定 | 分片 | `shards=7` + 描述符 | 变化片 + 描述符（+ 可选整包 zip） | 待发布 |
 
 ## 13. 评审结论与待决项
 
