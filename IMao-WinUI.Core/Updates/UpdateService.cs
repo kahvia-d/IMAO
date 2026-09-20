@@ -77,13 +77,13 @@ public sealed class UpdateService : IDisposable
         AcceptCatalog(catalog, envelope);
         if (UpdateSignature.RequireVersion(catalog.App.Version) <= UpdateSignature.RequireVersion(_build.AppVersion))
             throw new InvalidOperationException("没有比当前程序更新的版本。");
-        await programs.PrepareAsync(envelope, async (package, output, token) =>
+        await programs.PrepareAsync(envelope, async (target, output, token) =>
         {
-            using var response = await GetResponseAsync(new Uri(package.Url), token).ConfigureAwait(false);
-            if (response.Content.Headers.ContentLength is long size && size != package.Size) throw new InvalidDataException("程序包下载大小与签名清单不符。");
+            using var response = await GetResponseAsync(new Uri(target.Url), token).ConfigureAwait(false);
+            if (response.Content.Headers.ContentLength is long size && size != target.Size) throw new InvalidDataException("程序包下载大小与签名清单不符。");
             await using var input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-            await CopyVerifiedAsync(input, output, package.Size, package.Sha256,
-                n => progress?.Report(new UpdateProgress("下载新版程序", n, package.Size)), token).ConfigureAwait(false);
+            await CopyVerifiedAsync(input, output, target.Size, target.Sha256,
+                n => progress?.Report(new UpdateProgress("下载新版程序 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size)), token).ConfigureAwait(false);
         }, progress, ct).ConfigureAwait(false);
     }
 

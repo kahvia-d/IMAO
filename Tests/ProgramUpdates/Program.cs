@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using IMao_WinUI.Core.Updates;
 
@@ -47,6 +48,53 @@ if (args.FirstOrDefault() == "child")
     await Task.Delay(200);
     return 0;
 }
+if (args.FirstOrDefault() == "real-program")
+{
+    // Opt-in end-to-end check against a real prepared release: the client fetches the real shard set and
+    // assembles it, and a machine that already holds those bytes must download nothing at all.
+    var preparedRoot = Path.GetFullPath(args[1]);
+    var registry = JsonSerializer.Deserialize<TrustedUpdateKeys>(File.ReadAllText(args[2]), UpdateJson.Options)!;
+    var work = Path.GetFullPath(args[3]); Directory.CreateDirectory(work);
+    var realEnvelope = File.ReadAllBytes(Path.Combine(preparedRoot, "update.json"));
+    var realCatalog = UpdateSignature.Verify(realEnvelope, registry.Keys, true);
+    var realPackage = realCatalog.App.Package ?? throw new Exception("the prepared release has no program package");
+    async Task<(ProgramUpdateStore Store, List<string> Requested)> Run(string name, bool populateFromReassembly)
+    {
+        var root = Path.Combine(work, name); Directory.CreateDirectory(root);
+        if (populateFromReassembly)
+        {
+            var source = Path.Combine(preparedRoot, "program-reassembly");
+            foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+            {
+                var destination = Path.Combine(root, Path.GetRelativePath(source, file));
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                File.Copy(file, destination);
+            }
+        }
+        var store = new ProgramUpdateStore(root, registry.Keys, "", true, (_, _) => Task.CompletedTask);
+        var requested = new List<string>();
+        var watch = Stopwatch.StartNew();
+        await store.PrepareAsync(realEnvelope, async (item, output, ct) =>
+        {
+            requested.Add(item.Name);
+            // Archived under the published asset name, which the signed URL always ends with.
+            await using var input = File.OpenRead(Path.Combine(preparedRoot, "program", Path.GetFileName(new Uri(item.Url).AbsolutePath)));
+            await input.CopyToAsync(output, ct);
+        });
+        Console.WriteLine($"{name}: prepared in {watch.Elapsed.TotalSeconds:N1}s, fetched {requested.Count} archive(s), pending={store.ReadState().Pending}");
+        var launch = await store.BeginLaunchAsync();
+        await store.ConfirmHealthyAsync(launch.Id);
+        Console.WriteLine($"{name}: verified and committed {store.ReadState().Current}");
+        return (store, requested);
+    }
+    var (fresh, freshFetched) = await Run("install-fresh", false);
+    if (freshFetched.Count != realPackage.Shards.Count) throw new Exception($"a fresh installation must fetch all {realPackage.Shards.Count} shards, fetched {freshFetched.Count}");
+    if (fresh.ReadState().Current.Length == 0) throw new Exception("the fresh installation did not commit");
+    var (reused, reusedFetched) = await Run("install-reuse", true);
+    if (reusedFetched.Count != 0) throw new Exception("an installation that already holds every byte must download nothing: " + string.Join(",", reusedFetched));
+    Console.WriteLine($"real program release: {realPackage.Shards.Count} shards fetched once, {realPackage.Files.Count} files reused with zero downloads.");
+    return 0;
+}
 var output = Path.GetFullPath(args[0]); Directory.CreateDirectory(output);
 var passed = new List<string>();
 async Task Test(string name, Func<Task> action) { await action(); passed.Add(name); Console.WriteLine("PASS " + name); }
@@ -80,7 +128,7 @@ ProgramUpdateStore Store(Func<string, CancellationToken, Task>? preflight = null
     File.WriteAllText(Path.Combine(root, "user-sentinel.txt"), "preserve me");
     return new(root, [key], build1.AppVersion, true, preflight ?? ((_, _) => Task.CompletedTask), space);
 }
-async Task Download(ProgramPackage p, Stream target, CancellationToken ct) { await using var input = File.OpenRead(archive); await input.CopyToAsync(target, ct); }
+async Task Download(ProgramDownloadTarget item, Stream output, CancellationToken ct) { await using var input = File.OpenRead(archive); await input.CopyToAsync(output, ct); }
 ProcessStartInfo Child(string path, string mode = "healthy")
 {
     var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
@@ -147,6 +195,162 @@ await Test("duplicate file traversal ADS reserved and conflicting paths rejected
     }
 });
 await Test("map package policy still rejects executable files", () => Reject(() => { UpdateSignature.ValidateResourceFile(package.Files.First(f => f.Path.EndsWith(".exe"))); return Task.CompletedTask; }));
+ProgramShard Shard(string id, int skip, int take) => new()
+{
+    Id = id,
+    Url = $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/v2026.9.9.5/program-{id}.zip",
+    Size = 1024,
+    Sha256 = new string('c', 64),
+    Files = [.. package.Files.Skip(skip).Take(take).Select(f => f.Path)],
+};
+var sharded = package with { Shards = [Shard("ui", 0, 4), Shard("runtime", 4, package.Files.Count - 4)] };
+await Test("shard partition of the signed program file list is accepted", () => { UpdateSignature.ValidateCatalog(catalog with { App = catalog.App with { Package = sharded } }); return Task.CompletedTask; });
+await Test("shards are a complete partition of the program file list or they are refused", async () =>
+{
+    void Bad(ProgramPackage changed) => ProgramPackageValidation.Validate(changed);
+    // Missing coverage, repeated shard id, one path in two shards, a path the file list never declared,
+    // an empty shard, a foreign download host, an impossible size, a malformed hash, too many shards.
+    await Reject(() => { Bad(package with { Shards = [Shard("ui", 0, 4)] }); return Task.CompletedTask; });
+    await Reject(() => { Bad(package with { Shards = [Shard("ui", 0, 4), Shard("ui", 4, package.Files.Count - 4)] }); return Task.CompletedTask; });
+    await Reject(() => { Bad(package with { Shards = [sharded.Shards[0] with { Files = [.. sharded.Shards[0].Files, sharded.Shards[1].Files[0]] }, sharded.Shards[1]] }); return Task.CompletedTask; });
+    await Reject(() => { Bad(package with { Shards = [sharded.Shards[0] with { Files = [.. sharded.Shards[0].Files, "Assets/NotInManifest.json"] }, sharded.Shards[1]] }); return Task.CompletedTask; });
+    await Reject(() => { Bad(package with { Shards = [sharded.Shards[0] with { Files = [] }, sharded.Shards[1]] }); return Task.CompletedTask; });
+    await Reject(() => { Bad(package with { Shards = [sharded.Shards[0] with { Url = "https://example.com/program-ui.zip" }, sharded.Shards[1]] }); return Task.CompletedTask; });
+    await Reject(() => { Bad(package with { Shards = [sharded.Shards[0] with { Size = 0 }, sharded.Shards[1]] }); return Task.CompletedTask; });
+    await Reject(() => { Bad(package with { Shards = [sharded.Shards[0] with { Sha256 = "not-a-hash" }, sharded.Shards[1]] }); return Task.CompletedTask; });
+    await Reject(() => { Bad(package with { Shards = [.. Enumerable.Range(0, 17).Select(i => Shard("s" + i, 0, 1))] }); return Task.CompletedTask; });
+});
+await Test("shard manifest survives the signed JSON round-trip", () =>
+{
+    var verified = UpdateSignature.Verify(Sign(catalog with { App = catalog.App with { Package = sharded } }), [key], true);
+    Assert(verified.App.Package!.Shards.Count == 2 && verified.App.Package.Shards[1].Files.Count == package.Files.Count - 4);
+    return Task.CompletedTask;
+});
+// A shard release is assembled from whichever shards this machine still has and downloads the rest. The
+// fixture packs a small program tree into four shards with a deterministic packer.
+string[] shardIds = ["ui", "core", "runtime", "assets-map-data"];
+var shardBuild1 = new BuildInfo { AppVersion = "2026.9.10.1", SourceCommit = new string('c', 40), BaselineId = "baseline-1" };
+var shardBuild2 = shardBuild1 with { AppVersion = "2026.9.10.2" };
+var shardBuild3 = shardBuild1 with { AppVersion = "2026.9.10.3" };
+string ShardOf(string path) => path switch
+{
+    "Assets/KuroMap/points.json" => "assets-map-data",
+    "System.Private.CoreLib.dll" => "runtime",
+    "IMao-CoreHost.exe" => "core",
+    _ => "ui",
+};
+Dictionary<string, byte[]> ShardTree(BuildInfo build, string marker) => new(StringComparer.OrdinalIgnoreCase)
+{
+    ["IMao-WinUI.exe"] = Encoding.UTF8.GetBytes("ui:" + marker),
+    ["IMao-WinUI.dll"] = Encoding.UTF8.GetBytes("ui-dll:" + marker),
+    ["IMao-CoreHost.exe"] = Encoding.UTF8.GetBytes("core:" + marker),
+    ["IMao-Launcher.exe"] = Encoding.UTF8.GetBytes("launcher:" + marker),
+    ["build-info.json"] = JsonSerializer.SerializeToUtf8Bytes(build, UpdateJson.Options),
+    ["Assets/Updates/bundled-snapshot.json"] = "{\"formatVersion\":1}"u8.ToArray(),
+    ["Assets/Updates/trusted-keys.json"] = JsonSerializer.SerializeToUtf8Bytes(new TrustedUpdateKeys { Keys = [key] }, UpdateJson.Options),
+    ["Assets/KuroMap/points.json"] = Encoding.UTF8.GetBytes("points:" + marker),
+    ["System.Private.CoreLib.dll"] = Encoding.UTF8.GetBytes("runtime:" + marker),
+};
+(ProgramPackage Package, Dictionary<string, string> Served, Dictionary<string, string> Names) ShardPackage(BuildInfo build, string tag, Dictionary<string, byte[]> tree)
+{
+    var records = tree.OrderBy(kv => kv.Key, StringComparer.Ordinal)
+        .Select(kv => new ResourceFile { Path = kv.Key, Size = kv.Value.Length, Sha256 = Convert.ToHexString(SHA256.HashData(kv.Value)).ToLowerInvariant() }).ToList();
+    var shards = new List<ProgramShard>();
+    var served = new Dictionary<string, string>(StringComparer.Ordinal);
+    var names = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (var id in shardIds)
+    {
+        var paths = records.Where(f => ShardOf(f.Path) == id).Select(f => f.Path).ToList();
+        var path = Path.Combine(output, "shard-payload", tag, $"IMao-v{build.AppVersion}-{id}.zip");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        // The same release is built once per test that needs it; an existing archive already holds it.
+        if (!File.Exists(path))
+        using (var zip = new ZipArchive(new FileStream(path, FileMode.CreateNew), ZipArchiveMode.Create))
+        {
+            foreach (var relative in paths)
+            {
+                var entry = zip.CreateEntry(relative); entry.LastWriteTime = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                using var entryStream = entry.Open(); entryStream.Write(tree[relative]);
+            }
+        }
+        var url = $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/{tag}/IMao-v{build.AppVersion}-{id}.zip";
+        served[url] = path; names[id] = url;
+        shards.Add(new() { Id = id, Url = url, Size = new FileInfo(path).Length, Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant(), Files = paths });
+    }
+    return (new ProgramPackage { SourceCommit = build.SourceCommit, BaselineId = build.BaselineId, Size = 1, Sha256 = new string('d', 64),
+        Url = $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/{tag}/IMao-v{build.AppVersion}-shards.json", Files = records, Shards = shards }, served, names);
+}
+Func<ProgramDownloadTarget, Stream, CancellationToken, Task> Serve(Dictionary<string, string> served, List<string> requested)
+{
+    return async (item, outputStream, ct) =>
+    {
+        requested.Add(item.Url);
+        await using var input = File.OpenRead(served[item.Url]);
+        await input.CopyToAsync(outputStream, ct);
+    };
+}
+UpdateCatalog ShardCatalog(BuildInfo build, string tag, ProgramPackage pkg, long sequence) =>
+    new() { Sequence = sequence, App = new ProgramRelease { Version = build.AppVersion, Url = $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/{tag}", Package = pkg } };
+await Test("shard release downloads every shard once and assembles a verified program", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var requested = new List<string>();
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Serve(served, requested));
+    Assert(requested.Count == shardIds.Length && requested.Distinct().Count() == shardIds.Length, "every shard of a fresh installation is fetched exactly once");
+    Assert(store.ReadState().Pending is not null && store.ReadState().Current == "");
+    var install = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(install.Id);
+    Assert(store.ReadState().Current == install.Id);
+});
+await Test("an unchanged shard is copied from the running program while only changed shards download", async () =>
+{
+    var store = Store(); var treeA = ShardTree(shardBuild1, "v1");
+    var (pkgA, servedA, _) = ShardPackage(shardBuild1, "v1.0.1", treeA);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkgA, 10)), Serve(servedA, []));
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    // Version two changes the map data and (through build-info.json) the ui shard; core and runtime stay.
+    var treeB = ShardTree(shardBuild2, "v1");
+    treeB["Assets/KuroMap/points.json"] = Encoding.UTF8.GetBytes("points:v2");
+    var (pkgB, servedB, namesB) = ShardPackage(shardBuild2, "v1.0.2", treeB);
+    var requested = new List<string>();
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild2, "v1.0.2", pkgB, 11)), Serve(servedB, requested));
+    var fetched = requested.Select(url => namesB.Single(n => n.Value == url).Key).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+    Assert(fetched.SequenceEqual(new[] { "assets-map-data", "ui" }.OrderBy(x => x, StringComparer.Ordinal)), "only the changed and the version-stamped shard are downloaded: " + string.Join(",", fetched));
+    var second = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(second.Id);
+    Assert(store.ReadState().Current == second.Id && store.ReadState().Previous == launch.Id);
+});
+await Test("a corrupted local copy forces that shard to download instead of being reused", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkgA, servedA, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkgA, 10)), Serve(servedA, []));
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    // Damage a file whose shard the next release would otherwise skip, without touching the other files.
+    var damaged = Path.Combine(store.AppDirectory(store.ReadState().Current), "System.Private.CoreLib.dll");
+    File.WriteAllBytes(damaged, "corrupted"u8.ToArray());
+    var treeC = ShardTree(shardBuild3, "v1");
+    var (pkgC, servedC, namesC) = ShardPackage(shardBuild3, "v1.0.3", treeC);
+    var requested = new List<string>();
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild3, "v1.0.3", pkgC, 12)), Serve(servedC, requested));
+    var fetched = requested.Select(url => namesC.Single(n => n.Value == url).Key).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+    Assert(fetched.SequenceEqual(new[] { "runtime", "ui" }.OrderBy(x => x, StringComparer.Ordinal)), "the damaged shard is downloaded again: " + string.Join(",", fetched));
+    var launch2 = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch2.Id);
+    Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch2.Id), "System.Private.CoreLib.dll")).AsSpan().SequenceEqual(treeC["System.Private.CoreLib.dll"]));
+});
+await Test("a manually installed copy without a signed manifest proves reuse by hashing", async () =>
+{
+    var store = Store(); var tree = ShardTree(build1, "manual");
+    foreach (var file in tree)
+    {
+        var path = Path.Combine(store.InstallRoot, file.Key.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!); File.WriteAllBytes(path, file.Value);
+    }
+    var (pkg, served, _) = ShardPackage(build1, "v0.9.9", tree);
+    var requested = new List<string>();
+    await store.PrepareAsync(Sign(ShardCatalog(build1, "v0.9.9", pkg, 12)), (item, _, _) => { requested.Add(item.Url); return Task.FromException(new Exception("no download may be needed")); });
+    Assert(requested.Count == 0 && store.ReadState().Pending is not null, "an installation that already holds every byte downloads nothing");
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+});
 await Test("malicious ZIP traversal duplicate extra missing and symlink entries rejected", async () =>
 {
     foreach (var kind in new[] { "traversal", "duplicate", "extra", "missing", "symlink" })

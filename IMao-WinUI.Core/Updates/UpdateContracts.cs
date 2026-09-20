@@ -60,6 +60,25 @@ public sealed record ProgramPackage
     public long Size { get; init; }
     public string Sha256 { get; init; } = "";
     public List<ResourceFile> Files { get; init; } = new();
+    /// <summary>
+    /// Optional transport partition of <see cref="Files"/>. Empty keeps the whole-archive path every
+    /// release used before shards existed. Sizes and hashes for a shard's files stay authoritative in
+    /// <see cref="Files"/>, so a shard name is never a second source of truth for a file's identity.
+    /// </summary>
+    public List<ProgramShard> Shards { get; init; } = new();
+}
+
+/// <summary>
+/// One downloadable piece of a program release. <see cref="Files"/> names paths that must exist in
+/// <see cref="ProgramPackage.Files"/>; together the shards must cover that list exactly once each.
+/// </summary>
+public sealed record ProgramShard
+{
+    public string Id { get; init; } = "";
+    public string Url { get; init; } = "";
+    public long Size { get; init; }
+    public string Sha256 { get; init; } = "";
+    public List<string> Files { get; init; } = new();
 }
 
 public sealed record ResourceRelease
@@ -121,6 +140,13 @@ public sealed record ResourceSnapshot
 }
 
 public sealed record UpdateProgress(string Stage, long Completed, long Total);
+
+/// <summary>
+/// One program archive a client has to fetch: the whole package for a release that predates shards, or a
+/// single shard for a shard release. The store decides which ones are still needed and the caller only
+/// moves the bytes, so the download path does not have to know how a release is partitioned.
+/// </summary>
+public sealed record ProgramDownloadTarget(string Name, string Url, long Size, string Sha256);
 
 /// <summary>
 /// Local, unsigned user choice: which packages of one signed snapshot the player does not want active.

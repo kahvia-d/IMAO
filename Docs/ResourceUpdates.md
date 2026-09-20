@@ -105,6 +105,19 @@ $appRoot = 'out/release-2026.9.9.4/IMao-v2026.9.9.4-windows-x64'
 
 后续资源版本使用更高的 `--sequence` 与四段 `--resource-version`，通过 `--previous` 传入当前正式签名清单；可使用 `--notes-file`、`--min-app-version` 和 `--max-app-version`。内容完全相同的包沿用旧版本及下载地址，只发布变化包。不要给仅资源发布添加 `--program-release true`。保留其他仍受支持的基础资源版本在原清单中，`prepare` 自动保留其他基础资源的快照条目。
 
+程序发布默认仍用整包 ZIP。改为分片发布时把 `--program-zip` 换成 `--program-shards true`：`prepare` 直接从 `--app-root` 读出权威文件清单并按 `ShardMap` 的路径规则切分，签名清单里的整包字段指向一个小的分片描述符，客户端只下载变化的片。
+
+```powershell
+& $dotnet $publisher prepare --app-root $appRoot `
+  --private-key $privateKey --public-key Assets/Updates/trusted-keys.json `
+  --output out/maps-2026.9.10.1 --sequence 2 --resource-version 2026.9.10.1 `
+  --tag v2026.9.10.1 --program-release true --program-shards true `
+  --previous updates/stable.json `
+  --core-host "$appRoot/IMao-CoreHost.exe"
+```
+
+`--app-root` 里出现未归类的新文件会直接失败（必须先在 `tools/UpdatePublisher/ShardMap.cs` 里显式归类，避免它悄悄落进大分片）。片 zip 用固定条目顺序与时间戳打包，内容不变的片在本地重打一遍并断言字节一致后**沿用上一版的 URL 与资产名**，只有变化的片指向本次 tag。签名前 `prepare` 会把所有片重新组装回一棵树并交给原有的程序包验收（`VerifyDirectoryAsync`），不通过就不签名；`release-report.json` 的 `program.shards` 列出每个片的名字、大小与哈希。发布脚本逐片按签名清单绑定后上传。
+
 ```powershell
 & $dotnet $publisher prepare --app-root $appRoot `
   --private-key $privateKey --public-key Assets/Updates/trusted-keys.json `
@@ -116,6 +129,14 @@ $appRoot = 'out/release-2026.9.9.4/IMao-v2026.9.9.4-windows-x64'
   --public-key Assets/Updates/trusted-keys.json
 & $dotnet $publisher self-test --output out/publisher-test-new-run
 ```
+
+`shard-map` 在真实暂存根上检查程序分片的路径规则：未识别路径会直接失败（新增文件必须先在 `tools/UpdatePublisher/ShardMap.cs` 里显式归类，不允许悄悄落进大分片），同时校验每个片非空、必需程序文件都存在，并打印每片的文件数与字节数。
+
+```powershell
+& $dotnet $publisher shard-map --app-root $appRoot --report out/program-shards.json
+```
+
+分片边界、决策与实施阶段见 [ProgramShardIncrementalPlan.md](ProgramShardIncrementalPlan.md)。
 
 新资源必须先同步到构建输入，再重新生成暂存资源快照。`prepare` 读取指定 `app-root`，不会联网抓取上游地图，也不会推断或自动开放新地图。离线包包括目标基础资源对应快照所需的全部可更新包；其他基础资源客户端需要与其程序兼容的离线包。
 
@@ -147,6 +168,67 @@ $env:HTTPS_PROXY = 'http://127.0.0.1:7890'; $env:HTTP_PROXY = $env:HTTPS_PROXY
 ```
 
 创建草稿之前，还会比较已验证的线上稳定清单与候选清单：共同包 ID 与版本的归档哈希、大小、类型、完整文件清单必须一致；已有基础资源版本的条目不得丢失，程序版本不得倒退。忘记 `--previous` 时不能绕过这些检查。可执行 `scripts/Test-ResourceCatalogTransition.ps1 -OutputRoot out/catalog-transition-test-new-run` 运行本地清单迁移回归。
+
+分片程序发布同样在创建草稿前完成本地绑定：`scripts/ResourceUpdateAssets.ps1` 逐个核对签名清单里每个分片与描述符的本地长度和 SHA-256，只上传指向本次 tag 的归档；未变分片保留它已发布的旧 URL，并和"只带过去程序"的资源-only 发布一起进入公开可达性检查。`-ProgramZip` 与分片发布互斥。可执行 `scripts/Test-ProgramShardReleaseAssets.ps1 -OutputRoot out/program-shard-assets-new-run` 运行本地绑定回归；带上 `-RealPreparedRoot <准备目录>` 可以在上传前预览真实归档的上传清单（它会读取该目录的 `update.json` 与 `release-report.json`，只做本地校验，不联网）。
+
+### 过渡版与分片版的发布差异
+
+首个带分片能力的客户端必须先到达用户手里：线上 `2026.9.19.2` 是在分片实现之前构建的，它不认识 `Shards`。所以**过渡版仍按整包发布**（清单里没有 `Shards`），所有客户端会自动升级到"认识分片的客户端"；**再下一个版本**才用分片。两条路线都必须在发行页保留一份完整 zip，因为分片时代的新用户首次安装只能靠它。
+
+发布前逐项确认（本机现状写在这里，动手前重跑一遍）：
+
+```powershell
+git branch --show-current                 # 必须是发布分支
+git status --short                        # 必须为空：候选构建要求干净工作区
+git log --oneline -1                      # 与 -SourceCommit 一致
+(Get-Content Version.props -Raw) -match '<IMaoVersion>([^<]+)</IMaoVersion>' | Out-Null; $Matches[1]   # 新版本号
+$privateKey = Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/release-signing-key.json'
+Test-Path -LiteralPath $privateKey        # 必须是 True；找到的是 DPAPI 加密的生产私钥
+```
+
+`$privateKey` 失效时按上文「找不到发布私钥」一节搜索（重定向路径在 `Packages` 下 5 层），**不要重新 `init-key`**。本机实测位置与验证方式记录在 [MapRegionOnDemandHandoff.md](MapRegionOnDemandHandoff.md) 的「私钥位置」一节：主位置的那份与 `Assets/Updates/trusted-keys.json` 里的 `wwmap-production-2026` 逐字节匹配，DPAPI 当前用户可解封。
+
+**过渡版（首个带分片能力的版本，推荐路线）**——`prepare` 用整包输入：
+
+```powershell
+$appRoot = 'out/release-<版本>/IMao-v<版本>-windows-x64'
+& $dotnet $publisher prepare --app-root $appRoot `
+  --private-key $privateKey --public-key Assets/Updates/trusted-keys.json `
+  --output out/maps-<版本> --sequence 16 --resource-version <版本> `
+  --tag v<版本> --program-release true --program-zip "$appRoot.zip" `
+  --previous updates/stable.json --core-host "$appRoot/IMao-CoreHost.exe"
+& $dotnet $publisher verify --input out/maps-<版本> --public-key Assets/Updates/trusted-keys.json
+& scripts/Publish-ResourceUpdate.ps1 -PreparedRoot out/maps-<版本> -NotesFile out/program-release-notes.md `
+  -ProgramZip "$appRoot.zip"
+```
+
+**分片版（过渡版之后的常规发布）**——`prepare` 用分片输入，发布时另外附一份完整 zip 供新用户首次安装：
+
+```powershell
+& $dotnet $publisher prepare --app-root $appRoot `
+  --private-key $privateKey --public-key Assets/Updates/trusted-keys.json `
+  --output out/maps-<版本> --sequence <上一个+1> --resource-version <版本> `
+  --tag v<版本> --program-release true --program-shards true `
+  --previous updates/stable.json --core-host "$appRoot/IMao-CoreHost.exe"
+& $dotnet $publisher shard-map --app-root $appRoot --report out/maps-<版本>/shard-map.json
+& $dotnet $publisher verify --input out/maps-<版本> --public-key Assets/Updates/trusted-keys.json
+# 上传前预览：每个分片与描述符都按签名清单核对本地字节，并列出真正要上传的归档
+& scripts/Test-ProgramShardReleaseAssets.ps1 -OutputRoot (Join-Path 'out' ('shard-preview-' + [guid]::NewGuid().ToString('N'))) `
+  -RealPreparedRoot out/maps-<版本>
+& scripts/Publish-ResourceUpdate.ps1 -PreparedRoot out/maps-<版本> -NotesFile out/program-release-notes.md `
+  -ManualInstallZip "$appRoot.zip"
+```
+
+`-ProgramZip` 与分片发布互斥；分片发布时给了 `-ProgramZip` 会直接拒绝。`-ManualInstallZip` 不写进签名清单（清单里是分片与描述符），它与本次发布的绑定靠同名 `.report.json`（`passed`、`sourceDirty=false`、`sourceCommit`、`version`、大小与 SHA-256 全部核对）。没有 `-ManualInstallZip` 时脚本会提示"本次没有任何可供全新安装的归档"。那份 zip 不必每个版本都重传：任何一份认识分片的完整 zip 都能自动增量升级到最新。
+
+发布后：
+
+```powershell
+git pull                                  # 取回脚本刚推进的 updates/stable.json 与 channel-state.json
+(Get-Content updates/stable.json -Raw | ConvertFrom-Json).payload   # 看一眼新序号
+```
+
+再让客户端实测一次并记录字节数：过渡版应看到普通整包升级；分片版应只在 `ui`(+ 本次改动片) 上花流量（§4 的实测表：最常见 ≈30 MB，改点位/攻略 ≈1.6 MB）。释放大体积证据用 `scripts/Compact-ReleaseArtifacts.ps1`。
 
 如果附件上传或公开下载失败，稳定清单保持原值。排查网络后可对同一准备目录重试，不需要重新签名或替换已有资源。日志和验证输出留在准备目录，不记录私钥或认证令牌。清单推进之后客户端下次检查才会看见更新；已有运行实例仍固定使用当前快照。发布完成后可运行 `scripts/Compact-ReleaseArtifacts.ps1` 归档这些证据并释放候选与准备目录里可重建的大体积产物（`-WhatIf` 先预览，`-RetainFull N` 保留最近 N 个目录完整；归档会逐文件校验哈希并写入 `archive-manifest.json`，`scripts/Test-CompactReleaseArtifacts.ps1` 覆盖归档、保留与越界拒绝）。发布字节本身仍可从对应 GitHub 发行重新下载，并与归档的 `release-report.json` 哈希对账。
 

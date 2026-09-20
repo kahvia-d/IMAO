@@ -41,6 +41,38 @@ public static class ProgramPackageValidation
                 if (paths.Contains(parent)) throw new InvalidDataException("程序文件与目录路径冲突。");
             }
         }
+        ValidateShards(package, paths);
+    }
+
+    /// <summary>
+    /// A shard list is a partition, not an inventory: it may only name paths that the authoritative
+    /// <see cref="ProgramPackage.Files"/> already declares, and it has to cover them exactly once.
+    /// An empty list means the release ships as one archive, which is how every release before shards
+    /// existed behaves, so it stays valid.
+    /// </summary>
+    private static void ValidateShards(ProgramPackage package, HashSet<string> paths)
+    {
+        if (package.Shards is null || package.Shards.Count == 0) return;
+        if (package.Shards.Count > 16) throw new InvalidDataException("程序分片数量过多。");
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var assigned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var shard in package.Shards)
+        {
+            if (shard is null) throw new InvalidDataException("程序分片清单包含空记录。");
+            if (shard.Id.Length is 0 or > 40 || !shard.Id.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.'))
+                throw new InvalidDataException("程序分片标识无效。");
+            if (!ids.Add(shard.Id)) throw new InvalidDataException("程序分片标识重复。");
+            UpdateSignature.ValidateUrl(shard.Url, asset: true);
+            if (shard.Size <= 0 || shard.Size >= 2L * 1024 * 1024 * 1024 || !UpdateSignature.IsHash(shard.Sha256))
+                throw new InvalidDataException("程序分片大小、哈希或下载地址无效。");
+            if (shard.Files is null || shard.Files.Count == 0) throw new InvalidDataException("程序分片必须包含文件。");
+            foreach (var path in shard.Files)
+            {
+                if (path is null || !paths.Contains(path)) throw new InvalidDataException("程序分片包含程序文件清单之外的文件。");
+                if (!assigned.Add(path)) throw new InvalidDataException("同一个程序文件不能被分配到多个分片。");
+            }
+        }
+        if (assigned.Count != paths.Count) throw new InvalidDataException("程序分片没有覆盖完整的程序文件清单。");
     }
 
     public static async Task ExtractAsync(string archive, string destination, ProgramPackage package, CancellationToken ct = default)
@@ -50,7 +82,41 @@ public static class ProgramPackageValidation
         if (Directory.Exists(destination)) throw new IOException("程序候选目录已经存在。");
         UpdateStorage.RejectLink(destination);
         using var zip = ZipFile.OpenRead(archive);
-        var expected = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        var entries = ReadArchiveEntries(zip, package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase));
+        Directory.CreateDirectory(destination);
+        await ExtractEntriesAsync(destination, package.Files, entries, ct);
+    }
+
+    /// <summary>
+    /// Extracts one shard into a directory that other shards also write into, so a caller can assemble a
+    /// complete program from several downloads. The archive's own size and hash are checked, its entries
+    /// must be exactly the paths the shard declared, and the parsing rules are the same ones the
+    /// whole-archive path uses. The destination may already exist; a path another shard already wrote
+    /// fails instead of being overwritten.
+    /// </summary>
+    public static async Task ExtractShardAsync(string archive, string destination, ProgramPackage package, string shardId, CancellationToken ct = default)
+    {
+        Validate(package);
+        var shard = package.Shards?.FirstOrDefault(s => s.Id.Equals(shardId, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException("程序分片不属于此程序包。");
+        await UpdateStorage.VerifyFileAsync(archive, new ResourceFile { Path = shard.Id + ".zip", Size = shard.Size, Sha256 = shard.Sha256 }, ct);
+        var declared = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        var ordered = new List<ResourceFile>(shard.Files.Count);
+        foreach (var path in shard.Files) ordered.Add(declared.TryGetValue(path, out var file) ? file : throw new InvalidDataException("程序分片包含程序文件清单之外的文件。"));
+        UpdateStorage.RejectLink(destination);
+        using var zip = ZipFile.OpenRead(archive);
+        var entries = ReadArchiveEntries(zip, ordered.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase));
+        Directory.CreateDirectory(destination);
+        await ExtractEntriesAsync(destination, ordered, entries, ct);
+    }
+
+    /// <summary>
+    /// Reads a program archive against the file list that has to be inside it. Every rejection that stops
+    /// a hostile archive from escaping the destination or smuggling in a file the signed manifest never
+    /// named lives here, so the whole-archive and the shard paths cannot drift apart.
+    /// </summary>
+    private static Dictionary<string, ZipArchiveEntry> ReadArchiveEntries(ZipArchive zip, Dictionary<string, ResourceFile> expected)
+    {
         var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in zip.Entries)
@@ -70,8 +136,12 @@ public static class ProgramPackageValidation
             entries.Add(name, entry);
         }
         if (entries.Count != expected.Count) throw new InvalidDataException("程序压缩包缺少文件。");
-        Directory.CreateDirectory(destination);
-        foreach (var file in package.Files)
+        return entries;
+    }
+
+    private static async Task ExtractEntriesAsync(string destination, IReadOnlyList<ResourceFile> files, Dictionary<string, ZipArchiveEntry> entries, CancellationToken ct)
+    {
+        foreach (var file in files)
         {
             ct.ThrowIfCancellationRequested();
             var target = UpdateStorage.SafeChild(destination, file.Path);

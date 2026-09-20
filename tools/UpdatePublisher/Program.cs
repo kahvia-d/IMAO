@@ -19,13 +19,14 @@ static class Publisher
     {
         try
         {
-            if (args.Length == 0) throw new ArgumentException("Commands: init-key, prepare, verify, self-test. See Docs/ResourceUpdates.md.");
+            if (args.Length == 0) throw new ArgumentException("Commands: init-key, prepare, verify, shard-map, self-test. See Docs/ResourceUpdates.md.");
             var options = Parse(args.Skip(1).ToArray());
             switch (args[0])
             {
                 case "init-key": InitKey(options); break;
                 case "prepare": await Prepare(options); break;
                 case "verify": Verify(options); break;
+                case "shard-map": ShardMapReport(options); break;
                 case "verify-manifest":
                     var verified = VerifyEnvelope(Required(options, "input"), Read<TrustedUpdateKeys>(Required(options, "public-key")), options.GetValueOrDefault("test") != "true");
                     Console.WriteLine(JsonSerializer.Serialize(new { verified.Sequence, appVersion = verified.App.Version, snapshotIds = verified.Resources.Select(r => r.SnapshotId) }, Json));
@@ -223,6 +224,8 @@ static class Publisher
         var sourceTreeSha256 = provenance.RootElement.TryGetProperty("sourceTreeSha256", out var treeHash) ? treeHash.GetString() : null;
         if (!Regex.IsMatch(build.SourceCommit, "^[a-f0-9]{40}$") || build.BaselineId != snapshot.BaselineId) throw new InvalidDataException("Build metadata must have a real source SHA and matching baseline.");
         var production = o.GetValueOrDefault("test") != "true";
+        if (o.GetValueOrDefault("program-shards") == "true" && o.GetValueOrDefault("program-release") != "true")
+            throw new ArgumentException("--program-shards only applies to a program release; pass --program-release true as well.");
         using var key = LoadPrivate(Required(o, "private-key"), production, out var keyId);
         var keys = Read<TrustedUpdateKeys>(Required(o, "public-key"));
         var trusted = keys.Keys.Single(k => k.KeyId == keyId);
@@ -284,21 +287,31 @@ static class Publisher
         var resources = previous?.Resources.Where(r => r.BaselineId != release.BaselineId).ToList() ?? [];
         resources.Add(release);
         var app = previous?.App ?? new ProgramRelease { Version = build.AppVersion, Url = "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/" + tag, Notes = "首次支持程序与地图资源更新。" };
+        // Positive signal for the release script: only a preparation that built the program itself may
+        // upload program archives; a resource-only release carries the published program forward.
+        var programPrepared = false;
         if (o.GetValueOrDefault("program-release") == "true")
         {
             ProgramPackage? program = null;
-            if (o.TryGetValue("program-zip", out var programZip))
+            if (o.GetValueOrDefault("program-shards") == "true")
+            {
+                if (o.ContainsKey("program-zip")) throw new ArgumentException("A shard release inventories --app-root itself; do not also pass --program-zip.");
+                program = await BuildProgramShards(appRoot, build, output, baseUrl, previous);
+            }
+            else if (o.TryGetValue("program-zip", out var programZip))
             {
                 program = await ProgramPackageValidation.DescribeAsync(programZip, build, baseUrl + "/" + Uri.EscapeDataString(Path.GetFileName(programZip)));
                 // Validate the exact ZIP bytes to be signed, rather than trusting a neighboring report.
                 var verifiedProgram = Path.Combine(output, "program-verification");
                 await ProgramPackageValidation.ExtractAsync(programZip, verifiedProgram, program);
                 await ProgramPackageValidation.VerifyDirectoryAsync(verifiedProgram, new ProgramRelease { Version = build.AppVersion, Package = program });
-                if (previous?.App.Version == build.AppVersion && previous.App.Package is not null && previous.App.Package.Sha256 != program.Sha256)
-                    throw new InvalidDataException("The published program version is immutable. Increment the version before rebuilding.");
             }
-            else if (production) throw new InvalidDataException("Program releases require --program-zip with the complete tested application archive.");
+            else if (production) throw new InvalidDataException("Program releases require --program-zip with the complete tested application archive, or --program-shards true with --app-root.");
+            // A published program version is immutable: the same version may not describe different bytes.
+            if (program is not null && previous?.App.Version == build.AppVersion && previous.App.Package is not null && !SameProgramContent(previous.App.Package, program))
+                throw new InvalidDataException("The published program version is immutable. Increment the version before rebuilding.");
             app = new() { Version = build.AppVersion, Url = "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/" + tag, Notes = release.Notes, Package = program };
+            programPrepared = program is not null;
         }
         var catalog = new UpdateCatalog { Sequence = sequence, App = app, Resources = resources };
         ValidateCatalog(catalog);
@@ -342,12 +355,148 @@ static class Publisher
         if (new FileInfo(offline).Length >= 2L * 1024 * 1024 * 1024 || packages.Any(p => p.Size >= 2L * 1024 * 1024 * 1024))
             throw new InvalidOperationException("A GitHub Releases attachment must be smaller than 2 GiB. Split the resource distribution before publishing this release.");
         WriteNew(Path.Combine(output, "release-report.json"), new { formatVersion = 1, production, sourceCommit = build.SourceCommit, sourceDirty, sourceTreeSha256, appVersion = build.AppVersion, baselineId = build.BaselineId,
-            tag, sequence, snapshotId = release.SnapshotId, nativePassed, signedManifestSha256 = Hash(signedFile),
+            tag, sequence, snapshotId = release.SnapshotId, nativePassed, programPrepared, signedManifestSha256 = Hash(signedFile),
             assets = packages.Select(p => new { name = $"{p.Id}-{p.Version}.zip", sha256 = p.Sha256, size = p.Size, url = p.Url }).ToArray(),
+            // A shard release publishes several attachments plus a descriptor; the release script binds each
+            // one to the identity the signed catalog names, exactly as it does for resource packages.
+            program = app.Package is null ? null : new { url = app.Package.Url, name = Path.GetFileName(new Uri(app.Package.Url).AbsolutePath), size = app.Package.Size, sha256 = app.Package.Sha256,
+                files = app.Package.Files.Count, shards = app.Package.Shards.Select(s => new { id = s.Id, name = Path.GetFileName(new Uri(s.Url).AbsolutePath), url = s.Url, size = s.Size, sha256 = s.Sha256, files = s.Files.Count }).ToArray() },
             offline = new { name = Path.GetFileName(offline), size = new FileInfo(offline).Length, sha256 = Hash(offline) } });
         Console.WriteLine($"Prepared {packages.Count} signed resource packages, offline archive and validation report. No remote publication occurred.");
     }
     static bool FileListsEqual(List<ResourceFile> a, List<ResourceFile> b) => a.Count == b.Count && a.OrderBy(x => x.Path, StringComparer.Ordinal).SequenceEqual(b.OrderBy(x => x.Path, StringComparer.Ordinal));
+    /// <summary>
+    /// Whether a program release describes the same bytes as the one already published under that version.
+    /// Shard URLs are not content, so a re-prepare of identical content under another tag is not a change.
+    /// </summary>
+    static bool SameProgramContent(ProgramPackage prior, ProgramPackage current) =>
+        prior.Shards.Count > 0 && current.Shards.Count > 0 ? FileListsEqual(prior.Files, current.Files) : prior.Sha256 == current.Sha256;
+    /// <summary>
+    /// Inventories a staged program root and groups it by shard. An unclassified path, a missing required
+    /// file or an empty shard is refused here, so nothing downstream has to guess whether the tree was
+    /// complete or whether a new file quietly joined a large shard.
+    /// </summary>
+    static (List<ResourceFile> Files, Dictionary<string, List<ResourceFile>> Shards) ClassifyProgramRoot(string appRoot)
+    {
+        var root = Path.GetFullPath(appRoot);
+        if (!Directory.Exists(root)) throw new IOException("App root does not exist.");
+        var paths = Directory.GetFiles(root, "*", SearchOption.AllDirectories).OrderBy(p => Relative(root, p), StringComparer.Ordinal).ToArray();
+        if (paths.Length == 0) throw new InvalidDataException("Empty app root.");
+        var files = new List<ResourceFile>(paths.Length);
+        foreach (var path in paths)
+        {
+            UpdateStorage.RejectLink(path);
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException($"Unapproved link: {Relative(root, path)}");
+            files.Add(new() { Path = Relative(root, path), Size = new FileInfo(path).Length, Sha256 = Hash(path) });
+        }
+        var (shards, unclassified) = ShardMap.Group(files);
+        if (unclassified.Count > 0)
+            throw new InvalidDataException($"{unclassified.Count} program file(s) have no shard rule, add them to ShardMap deliberately: {string.Join(", ", unclassified.Take(10))}");
+        var staged = files.Select(f => f.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var required in ProgramPackageValidation.RequiredFiles)
+            if (!staged.Contains(required)) throw new InvalidDataException($"App root is missing a required program file: {required}");
+        foreach (var id in ShardMap.Ids)
+            if (shards[id].Count == 0) throw new InvalidDataException($"Shard {id} has no files; update ShardMap if the layout genuinely changed.");
+        return (files, shards);
+    }
+    /// <summary>
+    /// Packs one shard with the rules that make identical content produce identical bytes: entries already
+    /// sorted by path, a fixed timestamp and one compression level. The differential branch depends on it.
+    /// </summary>
+    static void PackShard(string destination, string appRoot, List<ResourceFile> files)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        using var archive = new ZipArchive(new FileStream(destination, FileMode.CreateNew), ZipArchiveMode.Create);
+        foreach (var file in files)
+        {
+            var entry = archive.CreateEntry(file.Path, CompressionLevel.Optimal);
+            entry.LastWriteTime = ZipEpoch;
+            using var input = File.OpenRead(SafeFile(appRoot, file.Path));
+            using var target = entry.Open();
+            input.CopyTo(target);
+        }
+    }
+    static void VerifyShard(string file, ProgramPackage package, ProgramShard shard)
+    {
+        if (new FileInfo(file).Length != shard.Size || !string.Equals(Hash(file), shard.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException($"Shard hash or size mismatch: {shard.Id}");
+        var declared = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        using var zip = ZipFile.OpenRead(file);
+        var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var e in zip.Entries)
+        {
+            SafeFile(Path.GetTempPath(), e.FullName);
+            if (!entries.TryAdd(e.FullName, e) || (e.ExternalAttributes >> 16 & 0xF000) == 0xA000) throw new InvalidDataException("Duplicate ZIP entry or symbolic link.");
+        }
+        if (entries.Count != shard.Files.Count) throw new InvalidDataException($"Unexpected or missing ZIP files in shard {shard.Id}.");
+        foreach (var path in shard.Files)
+        {
+            if (!declared.TryGetValue(path, out var expected)) throw new InvalidDataException($"Shard {shard.Id} names a file outside the signed inventory.");
+            if (!entries.TryGetValue(path, out var e) || e.Length != expected.Size) throw new InvalidDataException($"ZIP file size mismatch in shard {shard.Id}.");
+            using var stream = e.Open();
+            if (!string.Equals(Convert.ToHexString(SHA256.HashData(stream)), expected.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException($"ZIP file hash mismatch in shard {shard.Id}.");
+        }
+    }
+    /// <summary>
+    /// Turns a staged program root into the shard set of a signed program release. Shards whose files are
+    /// unchanged keep the identity and URL they were published with, so they are neither re-uploaded nor
+    /// re-downloaded. The release is only accepted after its shards have been reassembled and verified by
+    /// the same verifier an installed program is checked with.
+    /// </summary>
+    static async Task<ProgramPackage> BuildProgramShards(string appRoot, BuildInfo build, string output, string baseUrl, UpdateCatalog? previous)
+    {
+        var (files, shards) = ClassifyProgramRoot(appRoot);
+        var priorPackage = previous?.App.Package;
+        var priorFiles = priorPackage?.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        var built = new List<ProgramShard>(ShardMap.Ids.Length);
+        foreach (var id in ShardMap.Ids)
+        {
+            var prior = priorPackage?.Shards.FirstOrDefault(s => s.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            List<ResourceFile>? priorList = null;
+            if (prior is not null && priorFiles is not null && prior.Files.Count == shards[id].Count)
+            {
+                priorList = new List<ResourceFile>(prior.Files.Count);
+                foreach (var path in prior.Files)
+                {
+                    if (!priorFiles.TryGetValue(path, out var record)) { priorList = null; break; }
+                    priorList.Add(record);
+                }
+            }
+            var reusable = prior is not null && priorList is not null && FileListsEqual(priorList, shards[id]);
+            // An identical shard keeps its published asset name, so a retained URL always names a real file.
+            var name = reusable ? Path.GetFileName(new Uri(prior!.Url).AbsolutePath) : $"IMao-v{build.AppVersion}-{id}.zip";
+            var destination = Path.Combine(output, "program", name);
+            PackShard(destination, appRoot, shards[id]);
+            var sha256 = Hash(destination);
+            if (reusable)
+            {
+                if (!string.Equals(sha256, prior!.Sha256, StringComparison.OrdinalIgnoreCase) || new FileInfo(destination).Length != prior.Size)
+                    throw new InvalidDataException($"Unchanged shard {id} produced a different archive; use the matching deterministic packer.");
+                built.Add(prior);
+                continue;
+            }
+            built.Add(new() { Id = id, Url = baseUrl + "/" + Uri.EscapeDataString(name), Size = new FileInfo(destination).Length, Sha256 = sha256, Files = shards[id].Select(f => f.Path).ToList() });
+        }
+        // Clients that predate shards follow the whole-package pointer, so it has to name real, hash-matched
+        // bytes. It names this small descriptor instead of an archive that is never uploaded: such a client
+        // downloads a few kilobytes and then refuses the release, instead of starting an 840 MB download.
+        var pointerName = $"IMao-v{build.AppVersion}-shards.json";
+        var pointerPath = Path.Combine(output, "program", pointerName);
+        var program = new ProgramPackage { SourceCommit = build.SourceCommit, BaselineId = build.BaselineId, Url = baseUrl + "/" + Uri.EscapeDataString(pointerName), Files = files, Shards = built };
+        WriteNew(pointerPath, new { formatVersion = 1, appVersion = build.AppVersion, sourceCommit = build.SourceCommit, baselineId = build.BaselineId,
+            note = "程序以分片发布：不支持分片的旧客户端请从发行页手动安装完整程序包。",
+            totalFiles = files.Count, totalSize = files.Sum(f => f.Size),
+            shards = built.Select(s => new { id = s.Id, name = Path.GetFileName(new Uri(s.Url).AbsolutePath), url = s.Url, size = s.Size, sha256 = s.Sha256, files = s.Files.Count }).ToArray() });
+        program = program with { Size = new FileInfo(pointerPath).Length, Sha256 = Hash(pointerPath) };
+        ProgramPackageValidation.Validate(program);
+        // The regression that makes shards safe: assemble the release from the shard archives that will be
+        // uploaded and run the verifier every installed program is checked by on the result.
+        var reassembly = Path.Combine(output, "program-reassembly");
+        foreach (var shard in program.Shards)
+            await ProgramPackageValidation.ExtractShardAsync(Path.Combine(output, "program", Path.GetFileName(new Uri(shard.Url).AbsolutePath)), reassembly, program, shard.Id);
+        await ProgramPackageValidation.VerifyDirectoryAsync(reassembly, new ProgramRelease { Version = build.AppVersion, Package = program });
+        Console.WriteLine($"Prepared {program.Shards.Count} program shards ({program.Shards.Sum(s => s.Size) / (1024.0 * 1024.0):N1} MB compressed) and verified their reassembly.");
+        return program;
+    }
     static void AddFile(ZipArchive zip, string source, string name, CompressionLevel compression)
     {
         var entry = zip.CreateEntry(name, compression); entry.LastWriteTime = ZipEpoch;
@@ -359,7 +508,35 @@ static class Publisher
         var catalog = VerifyEnvelope(Path.Combine(root, "update.json"), Read<TrustedUpdateKeys>(Required(o, "public-key")), o.GetValueOrDefault("test") != "true");
         var selected = o.TryGetValue("snapshot-id", out var id) ? catalog.Resources.Single(r => r.SnapshotId == id) : catalog.Resources.OrderByDescending(r => r.Sequence).First();
         foreach (var p in selected.Packages) VerifyPackage(Path.Combine(root, "packages", $"{p.Id}-{p.Version}.zip"), p);
+        // A prepared output holds every shard it publishes, including the ones retained from an earlier
+        // release, so each one can be checked against the identity the signed catalog names for it.
+        if (catalog.App.Package is { Shards.Count: > 0 } program && Directory.Exists(Path.Combine(root, "program")))
+        {
+            foreach (var shard in program.Shards) VerifyShard(Path.Combine(root, "program", Path.GetFileName(new Uri(shard.Url).AbsolutePath)), program, shard);
+            var pointer = Path.Combine(root, "program", Path.GetFileName(new Uri(program.Url).AbsolutePath));
+            if (new FileInfo(pointer).Length != program.Size || !string.Equals(Hash(pointer), program.Sha256, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Program shard descriptor does not match the signed pointer.");
+            Console.WriteLine($"Verified {program.Shards.Count} program shards and their descriptor.");
+        }
         Console.WriteLine($"Verified signature and {selected.Packages.Count} complete resource packages for {selected.SnapshotId}.");
+    }
+
+    /// <summary>
+    /// Classifies a staged program root with <see cref="ShardMap"/> and refuses anything the table does
+    /// not recognize. This is the reviewable form of the shard boundaries: it runs on a real app root
+    /// before any archive exists, so a boundary mistake is found while it still costs nothing.
+    /// </summary>
+    static void ShardMapReport(Dictionary<string, string> o)
+    {
+        var root = Path.GetFullPath(Required(o, "app-root"));
+        var (files, shards) = ClassifyProgramRoot(root);
+        var report = ShardMap.Ids.Select(id => new { id, files = shards[id].Count, size = shards[id].Sum(f => f.Size) }).ToArray();
+        var total = report.Sum(r => r.size);
+        Console.WriteLine($"Shard map for {root}");
+        Console.WriteLine($"  {files.Count} files, {total / (1024.0 * 1024.0):N1} MB total");
+        foreach (var entry in report) Console.WriteLine($"  {entry.id,-18} {entry.files,5} files {entry.size / (1024.0 * 1024.0),9:N2} MB");
+        if (o.TryGetValue("report", out var reportPath))
+            WriteNew(Path.GetFullPath(reportPath), new { formatVersion = 1, appRoot = root, totalFiles = files.Count, totalSize = total, shards = report });
     }
     static void SelfTest(string root)
     {
@@ -455,6 +632,107 @@ static class Publisher
         Prepare(options).GetAwaiter().GetResult();
         if (VerifyEnvelope(Path.Combine(root, "retained-program", "update.json"), keys, false).App.Package?.Sha256 != programCatalog.App.Package!.Sha256) throw new Exception("Resource-only release lost signed program metadata.");
         passed.Add("resource-only release preserves signed program inventory");
+        // Shard boundaries decide what every future program update has to download, so the table itself
+        // is asserted here, before any archive exists.
+        // Every file whose bytes are stamped with the release version has to sit in the smallest shard.
+        // One of them landing in runtime would make every release re-download that whole shard.
+        foreach (var stamped in new[] { "build-info.json", "launcher-build-info.json", "Assets/Updates/bundled-snapshot.json", "Assets/Updates/trusted-keys.json",
+            "IMao-WinUI.exe", "IMao-WinUI.dll", "IMao-WinUI.Core.dll", "IMao-WinUI.deps.json", "IMao-WinUI.runtimeconfig.json", "KuroSyncBridge.exe", "IMao-Launcher.exe", "resources.pri" })
+            if (ShardMap.IdFor(stamped) != ShardMap.Ui) throw new Exception($"A file that changes with every release is not in the ui shard: {stamped}");
+        foreach (var required in ProgramPackageValidation.RequiredFiles)
+            if (ShardMap.IdFor(required) is null) throw new Exception($"Required file has no shard rule: {required}");
+        if (ShardMap.IdFor("IMao-CoreHost.exe") != ShardMap.Core || ShardMap.IdFor("common.dll") != ShardMap.Core) throw new Exception("CoreHost shard mapping changed.");
+        if (ShardMap.IdFor("System.Private.CoreLib.dll") != ShardMap.Runtime || ShardMap.IdFor("paddle_inference.dll") != ShardMap.Runtime) throw new Exception("Native runtime payload must map to the runtime shard.");
+        if (ShardMap.IdFor("zh-CN/Microsoft.ui.xaml.dll.mui") != ShardMap.Runtime || ShardMap.IdFor("Microsoft.UI.Xaml/foo.xbf") != ShardMap.Runtime) throw new Exception("Locale and Windows App SDK payload must map to the runtime shard.");
+        if (ShardMap.IdFor("Assets/FeaturesDatas/KuroTilePacks/Darkplain/features.imf") != ShardMap.AssetsTiles || ShardMap.IdFor("Assets/FeaturesDatas/kuro-tile-packs.json") != ShardMap.AssetsTiles)
+            throw new Exception("Tile packs and their registry must map to the tile shard.");
+        if (ShardMap.IdFor("Assets/KuroMap/points.json") != ShardMap.AssetsMapData || ShardMap.IdFor("Assets/KuroMapIcons/icons/a.png") != ShardMap.AssetsMapIcons)
+            throw new Exception("Map data and map icons must stay in separate shards.");
+        if (ShardMap.IdFor("Assets/models/ocr.json") != ShardMap.AssetsMisc || ShardMap.IdFor("Assets/Fonts/a.ttf") != ShardMap.AssetsMisc || ShardMap.IdFor("Assets/th.jpg") != ShardMap.AssetsMisc)
+            throw new Exception("Miscellaneous assets must share one shard.");
+        if (ShardMap.IdFor("IMao-WinUI.Unknown.dll") is not null || ShardMap.IdFor("KuroSyncBridge.Unknown.exe") is not null || ShardMap.IdFor("Assets/newdir/file.json") is not null || ShardMap.IdFor("Assets/KuroMapExtra/file.json") is not null)
+            throw new Exception("Unclassified files must not be assigned to a shard.");
+        passed.Add("shard table pins every release-changing file to the smallest shard and refuses unknown paths");
+        var shardApp = Path.Combine(root, "shard-app");
+        foreach (var sample in new[] { "IMao-WinUI.exe", "IMao-CoreHost.exe", "common.dll", "System.Private.CoreLib.dll", "paddle_inference.dll", "zh-CN/app.mui",
+            "Assets/KuroMap/points.json", "Assets/KuroMapIcons/icons/a.png", "Assets/FeaturesDatas/KuroTilePacks/Darkplain/features.imf",
+            "Assets/FeaturesDatas/kuro-tile-packs.json", "Assets/models/ocr.json", "Assets/Fonts/a.ttf", "Assets/th.jpg" })
+        {
+            var path = Path.Combine(shardApp, sample); Directory.CreateDirectory(Path.GetDirectoryName(path)!); File.WriteAllText(path, "fixture:" + sample);
+        }
+        foreach (var required in ProgramPackageValidation.RequiredFiles)
+        {
+            var path = Path.Combine(shardApp, required); Directory.CreateDirectory(Path.GetDirectoryName(path)!); File.WriteAllText(path, "fixture:" + required);
+        }
+        var shardReportFile = Path.Combine(root, "shard-report.json");
+        ShardMapReport(new Dictionary<string, string> { ["app-root"] = shardApp, ["report"] = shardReportFile });
+        var shardReport = Read<JsonElement>(shardReportFile);
+        var shardRows = shardReport.GetProperty("shards").EnumerateArray().ToDictionary(r => r.GetProperty("id").GetString()!, r => r.GetProperty("files").GetInt32());
+        var shardAppFiles = Directory.GetFiles(shardApp, "*", SearchOption.AllDirectories).Length;
+        if (shardRows.Count != ShardMap.Ids.Length || shardRows.Values.Sum() != shardAppFiles || shardRows.Values.Any(v => v == 0))
+            throw new Exception("Shard map report must classify every staged file exactly once across every shard.");
+        passed.Add("shard map covers a fixture program root and reports every shard");
+        Reject("app root with an unclassified project file is refused", () => ShardMapReport(new Dictionary<string, string> { ["app-root"] = app }));
+        // A shard program release inventories the staged root itself and only signs after reassembling the
+        // shards it will upload, so the fixture needs the descriptors the real staging writes.
+        var shardReleaseApp = Path.Combine(root, "shard-release-app");
+        foreach (var sample in new[] { "IMao-WinUI.exe", "IMao-WinUI.dll", "IMao-Launcher.exe", "IMao-CoreHost.exe", "common.dll", "System.Private.CoreLib.dll", "paddle_inference.dll",
+            "zh-CN/app.mui", "Assets/KuroMap/points.json", "Assets/KuroMapIcons/icons/a.png", "Assets/FeaturesDatas/KuroTilePacks/Darkplain/features.imf",
+            "Assets/models/ocr.json", "Assets/Fonts/a.ttf", "Assets/th.jpg" })
+        {
+            var path = Path.Combine(shardReleaseApp, sample); Directory.CreateDirectory(Path.GetDirectoryName(path)!); File.WriteAllText(path, "fixture:" + sample);
+        }
+        var shardBuildFile = Path.Combine(shardReleaseApp, "build-info.json");
+        File.WriteAllText(shardBuildFile, JsonSerializer.Serialize(new { appVersion = "2026.9.9.5", baselineId = "test-baseline", sourceCommit = new string('a', 40), sourceDirty = true }, Json));
+        WriteNew(Path.Combine(shardReleaseApp, "Assets", "Updates", "bundled-snapshot.json"), new ResourceSnapshot { SnapshotId = "bundled-test", BaselineId = "test-baseline", BaselineRoot = ".", MapDataRoot = "KuroMap", Bundled = true,
+            Packages = [new() { Id = "map-data", Kind = "map-data", Version = "2026.9.9.5", Directory = "KuroMap" }] });
+        WriteNew(Path.Combine(shardReleaseApp, "Assets", "Updates", "trusted-keys.json"), keys);
+        var shardOptions = new Dictionary<string, string>(options) { ["app-root"] = shardReleaseApp, ["output"] = Path.Combine(root, "shard-release"), ["previous"] = Path.Combine(root, "retained-program", "update.json"),
+            ["sequence"] = "5", ["resource-version"] = "2026.9.9.5", ["tag"] = "fixture-3", ["program-release"] = "true", ["program-shards"] = "true" };
+        shardOptions.Remove("program-zip");
+        Prepare(shardOptions).GetAwaiter().GetResult();
+        var shardCatalog = VerifyEnvelope(Path.Combine(root, "shard-release", "update.json"), keys, false);
+        var shardPackage = shardCatalog.App.Package ?? throw new Exception("A shard release must sign a program package.");
+        var inventory = shardPackage.Files.Select(f => f.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var covered = shardPackage.Shards.SelectMany(s => s.Files).ToList();
+        if (shardPackage.Shards.Count != ShardMap.Ids.Length || covered.Count != inventory.Count || !covered.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(inventory))
+            throw new Exception("Signed shards must partition the signed program file list exactly.");
+        var pointerName = $"IMao-v{shardCatalog.App.Version}-shards.json";
+        if (shardPackage.Url != $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/fixture-3/{pointerName}" ||
+            shardPackage.Size != new FileInfo(Path.Combine(root, "shard-release", "program", pointerName)).Length)
+            throw new Exception("The whole-package pointer must name the real shard descriptor under this tag.");
+        foreach (var shard in shardPackage.Shards) VerifyShard(Path.Combine(root, "shard-release", "program", Path.GetFileName(new Uri(shard.Url).AbsolutePath)), shardPackage, shard);
+        if (!File.Exists(Path.Combine(root, "shard-release", "program-reassembly", "build-info.json")))
+            throw new Exception("A shard release must be verified by reassembling its shards.");
+        passed.Add("shard program release signs a complete partition and reassembles into a verified tree");
+        // Differential reuse: every shard is unchanged, so every shard keeps the URL it was published with
+        // even though this release has a new tag and sequence.
+        shardOptions["previous"] = Path.Combine(root, "shard-release", "update.json"); shardOptions["output"] = Path.Combine(root, "shard-release-2");
+        shardOptions["sequence"] = "6"; shardOptions["tag"] = "fixture-4"; shardOptions["resource-version"] = "2026.9.9.6";
+        Prepare(shardOptions).GetAwaiter().GetResult();
+        var reused = VerifyEnvelope(Path.Combine(root, "shard-release-2", "update.json"), keys, false).App.Package!;
+        if (!reused.Shards.Select(s => s.Url).SequenceEqual(shardPackage.Shards.Select(s => s.Url)))
+            throw new Exception("An unchanged shard must keep the URL it was published with.");
+        passed.Add("unchanged shards retain their published URL under a new tag");
+        // Only the shard whose content changed may move to the new release.
+        File.WriteAllText(Path.Combine(shardReleaseApp, "Assets", "KuroMap", "points.json"), "{\"changed\":true}");
+        File.WriteAllText(shardBuildFile, JsonSerializer.Serialize(new { appVersion = "2026.9.9.6", baselineId = "test-baseline", sourceCommit = new string('a', 40), sourceDirty = true }, Json));
+        shardOptions["previous"] = Path.Combine(root, "shard-release-2", "update.json"); shardOptions["output"] = Path.Combine(root, "shard-release-3");
+        shardOptions["sequence"] = "7"; shardOptions["tag"] = "fixture-5"; shardOptions["resource-version"] = "2026.9.9.7";
+        Prepare(shardOptions).GetAwaiter().GetResult();
+        var changed = VerifyEnvelope(Path.Combine(root, "shard-release-3", "update.json"), keys, false).App.Package!;
+        // build-info.json is stamped with the version, so the ui shard has to move with every release; the
+        // map-data shard moves because its content changed; everything else stays on its published URL.
+        var expectedMoves = new[] { ShardMap.AssetsMapData, ShardMap.Ui }.OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        var moved = changed.Shards.Where(s => s.Url.Contains("/fixture-5/", StringComparison.Ordinal)).Select(s => s.Id).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        if (!moved.SequenceEqual(expectedMoves)) throw new Exception("Only the changed shard and the version-stamped ui shard may move: " + string.Join(", ", moved));
+        foreach (var shard in changed.Shards.Where(s => !expectedMoves.Contains(s.Id)))
+            if (!shard.Url.Contains("/fixture-3/", StringComparison.Ordinal)) throw new Exception($"Unchanged shard {shard.Id} lost its published URL: {shard.Url}");
+        passed.Add("only the changed shard and the version-stamped ui shard move to the new release tag");
+        // Republishing the same program version with different bytes stays refused, with shards present.
+        File.WriteAllText(Path.Combine(shardReleaseApp, "Assets", "KuroMap", "points.json"), "{\"changed\":\"again\"}");
+        shardOptions["previous"] = Path.Combine(root, "shard-release-3", "update.json"); shardOptions["output"] = Path.Combine(root, "shard-release-4"); shardOptions["sequence"] = "8";
+        Reject("republishing a program version with different shard content is refused", () => Prepare(shardOptions).GetAwaiter().GetResult());
         options["output"] = Path.Combine(root, "test-key-production"); options["test"] = "false";
         Reject("production prepare rejects test private key", () => Prepare(options).GetAwaiter().GetResult());
         WriteNew(Path.Combine(root, "test-report.json"), new { passed = passed.Count, tests = passed });

@@ -71,7 +71,7 @@ public sealed class ProgramUpdateStore
     public string AppDirectory(string id) => id.Length == 0 ? InstallRoot : Path.Combine(VersionRoot(id), "app");
     private Task SaveAsync(ProgramUpdateState state, CancellationToken ct) => UpdateStorage.WriteAsync(StatePath, state, ct);
 
-    public async Task PrepareAsync(byte[] envelope, Func<ProgramPackage, Stream, CancellationToken, Task> download,
+    public async Task PrepareAsync(byte[] envelope, Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download,
         IProgress<UpdateProgress>? progress = null, CancellationToken ct = default)
     {
         var catalog = UpdateSignature.Verify(envelope, keys, testKeys);
@@ -99,24 +99,26 @@ public sealed class ProgramUpdateStore
         var final = VersionRoot(id);
         if (!Directory.Exists(final))
         {
-            long required = checked(package.Size + package.Files.Sum(f => f.Size) + 128L * 1024 * 1024);
+            // Reusing bytes already on this machine is the point of shards, so what has to be fetched is
+            // decided before anything is downloaded. A shard is skipped only when the manifest of the
+            // program this installation is running names every one of its files byte-identically; an
+            // installation with no signed manifest yet (the original manual copy) starts with every shard
+            // planned as a download and proves reuse file by file while it copies.
+            var reuseRoot = state.Current.Length > 0 ? AppDirectory(state.Current) : InstallRoot;
+            var installed = InstalledFiles(state);
+            long required = checked(PlannedDownload(package, installed) + package.Files.Sum(f => f.Size) + 128L * 1024 * 1024);
             if (freeBytes() < required) throw new IOException("安装目录所在磁盘空间不足，当前程序未改变。");
             var transaction = UpdateStorage.SafeChild(Root, "staging/" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(transaction);
             try
             {
-            var archive = Path.Combine(transaction, "program.zip");
-            await using (var stream = new FileStream(archive, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.Asynchronous))
-                await download(package, stream, ct);
-            progress?.Report(new UpdateProgress("校验并解压新版程序", 0, 0));
             var app = Path.Combine(transaction, "app");
-            await ProgramPackageValidation.ExtractAsync(archive, app, package, ct);
+            await AssembleAsync(package, app, transaction, reuseRoot, installed, download, progress, ct);
+            progress?.Report(new UpdateProgress("校验新版程序", 0, 0));
             await ProgramPackageValidation.VerifyDirectoryAsync(app, catalog.App, ct);
             progress?.Report(new UpdateProgress("检查新版程序的地图资源", 0, 0));
             await preflight(app, ct);
             await File.WriteAllBytesAsync(Path.Combine(transaction, "update.json"), envelope, ct);
-            // Scratch archives are owned by this transaction; never remove an installed version.
-            File.Delete(archive);
             Directory.CreateDirectory(Path.GetDirectoryName(final)!);
             await UpdateStorage.MoveDirectoryAsync(transaction, final, ct);
             }
@@ -138,6 +140,158 @@ public sealed class ProgramUpdateStore
         if (package.LauncherProtocol != ProgramPackageValidation.LauncherProtocol || id != release.Version + "-" + package.Sha256.ToLowerInvariant()[..16]) throw new InvalidDataException("程序版本目录与签名不匹配。");
         await ProgramPackageValidation.VerifyDirectoryAsync(AppDirectory(id), release, ct);
         return release;
+    }
+
+    /// <summary>
+    /// File records of the program this installation is running, read from the signed manifest stored with
+    /// it. Null means no signed manifest is available, which is the original manually installed copy; reuse
+    /// is then decided by hashing the files while they are copied instead of by these records.
+    /// </summary>
+    private List<ResourceFile>? InstalledFiles(ProgramUpdateState state)
+    {
+        if (state.Current.Length == 0) return null;
+        try
+        {
+            var manifest = Path.Combine(VersionRoot(state.Current), "update.json");
+            UpdateStorage.RejectLink(manifest);
+            if (!File.Exists(manifest) || new FileInfo(manifest).Length > UpdateSignature.MaxManifestBytes) return null;
+            return UpdateSignature.Verify(File.ReadAllBytes(manifest), keys, testKeys).App.Package?.Files;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or JsonException or UnauthorizedAccessException)
+        {
+            // Without trustworthy records the update still works; it just cannot plan a skip.
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Bytes this release still has to fetch: a shard is skipped only when the previous signed manifest
+    /// names every one of its files with the same size and hash, because anything less than that would
+    /// mean trusting an unverified local copy.
+    /// </summary>
+    private static long PlannedDownload(ProgramPackage package, List<ResourceFile>? prior)
+    {
+        if (package.Shards.Count == 0) return package.Size;
+        if (prior is null) return package.Shards.Sum(s => s.Size);
+        var declared = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        var known = prior.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        long total = 0;
+        foreach (var shard in package.Shards)
+        {
+            var reusable = true;
+            foreach (var path in shard.Files)
+            {
+                if (!declared.TryGetValue(path, out var file) || !known.TryGetValue(path, out var was) ||
+                    was.Size != file.Size || !was.Sha256.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase)) { reusable = false; break; }
+            }
+            if (!reusable) total += shard.Size;
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// Builds the staged program tree from local bytes and downloads. Every reused file is hashed while it
+    /// is copied, so a locally damaged file makes only its own shard fall back to a download; a failed
+    /// shard download fails the whole preparation with the installed program untouched.
+    /// </summary>
+    private async Task AssembleAsync(ProgramPackage package, string app, string transaction, string reuseRoot, List<ResourceFile>? prior,
+        Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download, IProgress<UpdateProgress>? progress, CancellationToken ct)
+    {
+        if (package.Shards.Count == 0)
+        {
+            var archive = Path.Combine(transaction, "program.zip");
+            await DownloadAsync(download, new ProgramDownloadTarget("program.zip", package.Url, package.Size, package.Sha256), archive, ct);
+            progress?.Report(new UpdateProgress("校验并解压新版程序", 0, 0));
+            await ProgramPackageValidation.ExtractAsync(archive, app, package, ct);
+            TryDelete(archive);
+            return;
+        }
+        progress?.Report(new UpdateProgress("检查可复用的本机文件", 0, 0));
+        var known = prior?.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        var index = 0;
+        foreach (var shard in package.Shards)
+        {
+            index++;
+            if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, ct)) continue;
+            var archive = Path.Combine(transaction, "shards", shard.Id + ".zip");
+            Directory.CreateDirectory(Path.GetDirectoryName(archive)!);
+            await DownloadAsync(download, new ProgramDownloadTarget(shard.Id + ".zip", shard.Url, shard.Size, shard.Sha256), archive, ct);
+            progress?.Report(new UpdateProgress($"校验并解压新版程序（{index}/{package.Shards.Count}）", 0, 0));
+            await ProgramPackageValidation.ExtractShardAsync(archive, app, package, shard.Id, ct);
+            TryDelete(archive);
+        }
+    }
+
+    private static async Task DownloadAsync(Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download, ProgramDownloadTarget target, string path, CancellationToken ct)
+    {
+        await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.Asynchronous);
+        await download(target, stream, ct);
+    }
+
+    /// <summary>
+    /// Copies one shard's files from the program this installation is running. Returns false - after
+    /// removing whatever it already wrote - so the caller downloads that shard instead.
+    /// </summary>
+    private static async Task<bool> TryReuseShardAsync(ProgramPackage package, ProgramShard shard, string reuseRoot,
+        Dictionary<string, ResourceFile>? known, string app, CancellationToken ct)
+    {
+        var declared = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        if (known is not null)
+        {
+            foreach (var path in shard.Files)
+            {
+                if (!declared.TryGetValue(path, out var file) || !known.TryGetValue(path, out var was) ||
+                    was.Size != file.Size || !was.Sha256.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase)) return false;
+            }
+        }
+        var copied = new List<string>(shard.Files.Count);
+        foreach (var path in shard.Files)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (await TryCopyVerifiedAsync(UpdateStorage.SafeChild(reuseRoot, path), UpdateStorage.SafeChild(app, path), declared[path], ct))
+            {
+                copied.Add(path);
+                continue;
+            }
+            foreach (var written in copied) TryDelete(UpdateStorage.SafeChild(app, written));
+            return false;
+        }
+        return true;
+    }
+
+    private static async Task<bool> TryCopyVerifiedAsync(string source, string target, ResourceFile expected, CancellationToken ct)
+    {
+        try
+        {
+            UpdateStorage.RejectLink(source);
+            if (!File.Exists(source) || new FileInfo(source).Length != expected.Size) return false;
+            UpdateStorage.RejectLink(target);
+            if (File.Exists(target)) return false; // A path is written once; another shard already owns it.
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            await using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            await using (var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.Asynchronous))
+            {
+                var buffer = new byte[131072];
+                int count;
+                while ((count = await input.ReadAsync(buffer, ct)) != 0)
+                {
+                    hash.AppendData(buffer, 0, count);
+                    await output.WriteAsync(buffer.AsMemory(0, count), ct);
+                }
+            }
+            if (Convert.ToHexString(hash.GetHashAndReset()).Equals(expected.Sha256, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { }
+        TryDelete(target);
+        return false;
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private void RemoveScratch(string directory)

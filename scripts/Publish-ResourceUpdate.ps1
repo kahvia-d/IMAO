@@ -6,12 +6,17 @@ param(
     [string]$Dotnet,
     [string]$PublicKey,
     [string]$PublisherDll,
-    [string]$ProgramZip
+    [string]$ProgramZip,
+    # First-install archive of a shard release: uploaded for a brand-new installation, not named by the
+    # signed catalog. Pass this instead of -ProgramZip when the catalog publishes shards.
+    [string]$ManualInstallZip
 )
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer is required.' }
+if ($ProgramZip -and $ManualInstallZip) { throw 'Pass -ProgramZip for a whole-archive program release, or -ManualInstallZip for the first-install archive of a shard release, not both.' }
 $sourceRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'ResourceUpdateCatalog.ps1')
+. (Join-Path $PSScriptRoot 'ResourceUpdateAssets.ps1')
 if (-not $Dotnet) { $Dotnet = Join-Path $sourceRoot 'tools/dotnet-sdk-8.0.424/dotnet.exe' }
 if (-not $PublicKey) { $PublicKey = Join-Path $sourceRoot 'Assets/Updates/trusted-keys.json' }
 if (-not $PublisherDll) { $PublisherDll = Join-Path $sourceRoot 'tools/UpdatePublisher/bin/Release/net8.0/UpdatePublisher.dll' }
@@ -32,7 +37,9 @@ function Invoke-Gh([string[]]$Arguments) {
 $tag = [string]$report.tag
 $envelope = Get-Content -LiteralPath $manifest -Raw -Encoding UTF8 | ConvertFrom-Json
 $catalog = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($envelope.payload)) | ConvertFrom-Json
-if ($catalog.app.url -eq "https://github.com/$repo/releases/tag/$tag" -and -not $ProgramZip) { throw 'A program release needs -ProgramZip with its verified archive report.' }
+$shardRelease = $null -ne $catalog.app.package -and @($catalog.app.package.shards).Count -gt 0
+if ($catalog.app.url -eq "https://github.com/$repo/releases/tag/$tag" -and -not $ProgramZip -and -not $shardRelease) { throw 'A program release needs -ProgramZip with its verified archive report, or a signed shard program package.' }
+$retainedProgramAssets = @()
 $assets = [Collections.Generic.List[object]]::new()
 foreach ($asset in $report.assets) {
     # Unchanged packages keep their old release URL; do not upload them into a new tag.
@@ -41,7 +48,25 @@ foreach ($asset in $report.assets) {
 }
 $assets.Add([pscustomobject]@{path=$manifest;name='update.json';sha256=$report.signedManifestSha256})
 $assets.Add([pscustomobject]@{path=(Join-Path $PreparedRoot $report.offline.name);name=$report.offline.name;sha256=$report.offline.sha256})
-if ($ProgramZip) {
+if ($shardRelease) {
+    if ($ProgramZip) { throw 'A shard program release ships no whole archive; do not pass -ProgramZip.' }
+    if ($report.programPrepared) {
+        # Each shard archive and the descriptor are bound to the identity the signed catalog names for them,
+        # and only the ones this release owns are uploaded; an unchanged shard keeps its older release URL.
+        $programAssets = Get-ProgramShardAssets $catalog $PreparedRoot $repo $tag
+        foreach ($asset in $programAssets.Upload) { $assets.Add([pscustomobject]@{ path = $asset.path; name = $asset.name; sha256 = $asset.sha256 }) }
+        $retainedProgramAssets = @($programAssets.Retained)
+        Write-Host ("program release: {0} archive(s) to upload, {1} retained from earlier releases" -f $programAssets.Upload.Count, $programAssets.Retained.Count)
+    } else {
+        # This preparation only carried the published program forward; every archive stays where it is, but
+        # clients still follow those URLs, so their reachability is checked below.
+        $retainedProgramAssets = @(Get-RetainedProgramAssets $catalog $repo $tag)
+        Write-Host ("program release carried forward: {0} archive(s) keep their published URL" -f $retainedProgramAssets.Count)
+    }
+    if ($report.programPrepared -and -not $ManualInstallZip) {
+        Write-Host 'note: no -ManualInstallZip given, so this release carries no archive a brand-new installation can start from.' -ForegroundColor Yellow
+    }
+} elseif ($ProgramZip) {
     $programReport = Get-Content -LiteralPath ([IO.Path]::ChangeExtension($ProgramZip, '.report.json')) -Raw | ConvertFrom-Json
     if (-not $programReport.passed -or $programReport.sourceDirty -ne $false -or $programReport.sourceCommit -ne $report.sourceCommit -or $programReport.version -ne $report.appVersion) { throw 'Program archive lacks a matching clean-source package validation report.' }
     if ((Get-FileHash -LiteralPath $ProgramZip -Algorithm SHA256).Hash -ne $programReport.sha256) { throw 'Program archive changed after verification.' }
@@ -52,6 +77,11 @@ if ($ProgramZip) {
         throw 'Program archive is not bound to this release by the signed update catalog.'
     }
     $assets.Add([pscustomobject]@{path=[IO.Path]::GetFullPath($ProgramZip);name=[IO.Path]::GetFileName($ProgramZip);sha256=$programReport.sha256})
+}
+if ($ManualInstallZip) {
+    $manual = Assert-ManualInstallArchive $ManualInstallZip $report
+    $assets.Add([pscustomobject]@{ path = $manual.path; name = $manual.name; sha256 = $manual.sha256 })
+    Write-Host ("first-install archive: {0} ({1:N1} MB)" -f $manual.name, ([IO.FileInfo]::new($manual.path).Length / 1MB))
 }
 foreach ($asset in $assets) {
     if ((Get-Item -LiteralPath $asset.path).Length -ge 2GB) { throw "GitHub release attachments must be smaller than 2 GiB: $($asset.name)" }
@@ -194,6 +224,8 @@ try {
     # URL rather than at this tag.
     $publicChecks += @($report.assets | Where-Object { ([Uri]$_.url).AbsolutePath -notlike "/$repo/releases/download/$tag/*" } |
         ForEach-Object { [pscustomobject]@{name=$_.name;url=[string]$_.url} })
+    # Program archives retained from an earlier release answer at their own URL, never at this tag.
+    $publicChecks += @($retainedProgramAssets | ForEach-Object { [pscustomobject]@{name=$_.name;url=[string]$_.url} })
     foreach ($asset in $publicChecks) {
         $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Head, [string]$asset.url)
         $response = $client.SendAsync($request).GetAwaiter().GetResult()
