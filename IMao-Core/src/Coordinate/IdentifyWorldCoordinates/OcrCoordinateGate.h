@@ -37,6 +37,10 @@ struct Reading {
     int sceneId = 0;
     Coordinate mapCoordinate{};   // 已换算到 imgMap 空间
     float score = 0.f;
+    // 没有可信先验时场景是未知的：上层用地图像素在候选场景之间做了裁决，且胜出差距很大。
+    // 这种读数可以直接发布、不必再等"连续两次"——裁决本身已经能排除丢负号那类错误
+    // （正确的符号变体会在像素上明显赢过错误变体）。
+    bool arbitrated = false;
 };
 
 struct Lock {
@@ -73,16 +77,19 @@ inline double DistanceUnits(const Coordinate& a, const Coordinate& b, double sce
     return std::hypot(a.x - b.x, a.y - b.y) / std::max(sceneScale, 1e-6);
 }
 
-// 无状态预检：这一条读数在几何上站不站得住（分数够、有先验、场景一致、不超预算）。
+// 无状态预检：这一条读数在几何上站不站得住。有先验时要求场景一致且不超位移预算；
+// **没有先验时只剩分数要求**——场景与位置由上层的地图像素裁决给出（Reading::arbitrated），
+// 那种裁决本身就能排掉丢负号那类错误。
 // 调用方用它从一帧里的多个候选（原始读数 + 解析器给出的符号/分隔符修复候选）里挑出
 // **一条**交给 Feed —— 一帧只能喂一条，否则同一次读数的多个变体会被算成"连续多次一致"。
 inline bool Acceptable(const Reading& reading, const Lock& lock, const Config& config,
     double* jumpUnits = nullptr) {
     double jump = 0.0;
-    const bool ok = reading.valid && reading.score >= config.minimumScore && lock.valid &&
-        lock.sceneId == reading.sceneId &&
-        (jump = DistanceUnits(reading.mapCoordinate, lock.mapCoordinate, lock.sceneScale)) <=
-            config.maximumJumpUnits;
+    bool ok = reading.valid && reading.score >= config.minimumScore;
+    if (ok && lock.valid) {
+        jump = DistanceUnits(reading.mapCoordinate, lock.mapCoordinate, lock.sceneScale);
+        ok = lock.sceneId == reading.sceneId && jump <= config.maximumJumpUnits;
+    }
     if (jumpUnits != nullptr) *jumpUnits = jump;
     return ok;
 }
@@ -100,10 +107,29 @@ inline Decision Gate::Feed(const Reading& reading, const Lock& lock) {
         return decision;
     }
     if (!lock.valid) {
-        // 没有上次可信位置时，"这个坐标和我知道的位置对得上吗"无从判断，而且场景未知时
-        // 同一个数字串在不同场景里指向不同的地方。这种情况仍然只把坐标当搜索提示。
-        agreements_ = 0;
-        decision.reason = "no-lock";
+        // 没有可信先验：位移无从比较。此时靠两件事——上层的地图像素裁决（arbitrated），
+        // 以及连续读数之间的一致性；不满足就只把坐标当搜索提示。
+        const bool agrees = agreements_ > 0 &&
+            DistanceUnits(reading.mapCoordinate, last_.mapCoordinate, 1.205) <=
+                config_.agreementToleranceUnits && last_.sceneId == reading.sceneId;
+        if (!agrees) {
+            agreements_ = 1;
+            last_ = reading;
+            decision.agreementCount = agreements_;
+            if (reading.arbitrated) {
+                decision.kind = Decision::Kind::Publish;
+                decision.reason = "arbitrated";
+                return decision;
+            }
+            decision.kind = Decision::Kind::Pending;
+            decision.reason = "pending-no-lock";
+            return decision;
+        }
+        ++agreements_;
+        last_ = reading;
+        decision.agreementCount = agreements_;
+        decision.kind = Decision::Kind::Publish;
+        decision.reason = reading.arbitrated ? "arbitrated" : "confirmed-no-lock";
         return decision;
     }
     if (lock.sceneId != reading.sceneId) {

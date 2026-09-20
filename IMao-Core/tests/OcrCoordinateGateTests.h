@@ -67,12 +67,28 @@ inline void TestOcrCoordinateGate(void (*check)(bool, const std::string&)) {
     auto afterJunk = garbage.Feed(reading(-49.0, -305.0, 0.313f), lock(-49.0, -305.0));
     check(afterJunk.agreementCount == 0, "a rejected reading clears the agreement streak");
 
-    // 没有可信先验时不发布（场景未知时同一个数字串指向不同的地方）
+    // 没有可信先验：位移无从比较，靠"场景由地图像素裁决" + 连续一致
     Gate noLock;
     Lock empty;
     auto unanchored = noLock.Feed(reading(-49.0, -305.0, 0.95f), empty);
-    check(unanchored.kind == Decision::Kind::Ignore && unanchored.reason == "no-lock",
-        "without a trusted prior the coordinate stays a search hint only");
+    check(unanchored.kind == Decision::Kind::Pending && unanchored.reason == "pending-no-lock",
+        "without a trusted prior one read is still only a hint");
+    auto anchored = noLock.Feed(reading(-49.5, -306.0, 0.94f), empty);
+    check(anchored.Publishable() && anchored.reason == "confirmed-no-lock",
+        "two agreeing reads publish even without a trusted prior");
+    // 裁决过的读数可以直接发布（场景与符号变体都由地图像素选出来了）
+    Gate arbitratedGate;
+    auto arbitrated = reading(-49.0, -305.0, 0.95f);
+    arbitrated.arbitrated = true;
+    auto decided = arbitratedGate.Feed(arbitrated, empty);
+    check(decided.Publishable() && decided.reason == "arbitrated",
+        "a pixel-arbitrated reading publishes on its own");
+    // 无先验时两条读数对不上（例如中途丢了负号）要重新计数
+    Gate flipNoLock;
+    flipNoLock.Feed(reading(-49.0, -305.0, 0.95f), empty);
+    auto flippedNoLock = flipNoLock.Feed(reading(-49.0, 305.0, 0.95f), empty);
+    check(!flippedNoLock.Publishable() && flippedNoLock.agreementCount == 1,
+        "a sign flip between reads restarts the streak when there is no prior");
 
     // 场景不一致（切换场景/传送）时重新开始
     Gate switched;

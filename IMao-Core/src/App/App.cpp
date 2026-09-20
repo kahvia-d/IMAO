@@ -1093,8 +1093,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			// distance to that same trusted position, so those repairs are candidates too -
 			// they used to be dropped here along with the search hints.
 			const auto lockState = coordinateRecovery.State();
-			const bool lockDoubtful = lockState == CoordinateLockState::Suspect ||
-				lockState == CoordinateLockState::Recovering;
+			// 触发条件不能只看恢复控制器：实测过一次会话从头到尾 lock=0 scene=0
+			// （工具根本没锁上过，控制器还在 Uninitialized），那时用户看到的就是"正在恢复定位"。
+			const bool lockDoubtful = !playerLocationLock.valid ||
+				lockState == CoordinateLockState::Suspect || lockState == CoordinateLockState::Recovering;
 			if (!ocrAssistEnabled || !lockDoubtful) {
 				ocrCoordinateGate.Reset();
 			}
@@ -1122,13 +1124,67 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						return left->previousDistance < right->previousDistance;
 					});
 				ordered.insert(ordered.end(), repaired.begin(), repaired.end());
+				// 没有可信先验时场景是未知的（同一个数字串在不同场景里指向不同的地方），
+				// 让地图像素在已批准的场景之间裁决：实测乘霄山正确处 0.56~0.65、别处 ~0.0，
+				// 差距极大，足以在候选之间选出正确的场景（也顺带排掉符号变体里的错项）。
+				constexpr double kArbitrationFloor = 0.35;
+				constexpr double kArbitrationMargin = 0.20;
+				auto arbitrate = [&](const Coordinate& position, int& sceneId, double& best, double& second) {
+					sceneId = 0;
+					best = -1.0;
+					second = -1.0;
+					for (const int candidateScene : Scene::sceneIds) {
+						if (!Scene::IsRuntimeApproved(candidateScene)) continue;
+						if (Scene::Find(candidateScene) == nullptr) continue;
+						const auto mapped = MapCoordinate::IdentifyCoorToImgMapCoord(position, candidateScene);
+						const auto dense = DenseMapConfirmer::Confirm(normalizedMinimap, candidateScene,
+							{ mapped.x, mapped.y }, Scene::MinimapScale(candidateScene));
+						if (!dense.available) continue;
+						if (dense.score > best) {
+							second = best;
+							best = dense.score;
+							sceneId = candidateScene;
+						}
+						else if (dense.score > second) {
+							second = dense.score;
+						}
+					}
+				};
+				int arbitrations = 0;
 				for (const auto* candidate : ordered) {
 					OcrCoordinateGate::Reading reading;
 					reading.valid = true;
-					reading.sceneId = lock.valid ? lock.sceneId : 0;
-					reading.mapCoordinate =
-						MapCoordinate::IdentifyCoorToImgMapCoord(candidate->Position(), reading.sceneId);
 					reading.score = candidate->modelScore;
+					const std::string world = std::to_string(candidate->x) + "," + std::to_string(candidate->y);
+					if (lock.valid) {
+						reading.sceneId = lock.sceneId;
+						reading.mapCoordinate =
+							MapCoordinate::IdentifyCoorToImgMapCoord(candidate->Position(), reading.sceneId);
+					}
+					else {
+						if (arbitrations >= 2) break;   // 一次读数最多裁决两个变体，别把恢复态拖住
+						++arbitrations;
+						double best = 0.0;
+						double second = 0.0;
+						int sceneId = 0;
+						arbitrate(candidate->Position(), sceneId, best, second);
+						const double margin = best - std::max(second, 0.0);
+						if (sceneId == 0 || best < kArbitrationFloor || margin < kArbitrationMargin) {
+							Diagnostics::Record("coordinate-publish-rejected", "reason=no-scene world=" + world +
+								" score=" + std::to_string(reading.score) +
+								" best=" + std::to_string(best) + " second=" + std::to_string(second) +
+								" margin=" + std::to_string(margin) +
+								" correction=" + (candidate->correction.empty() ? "none" : candidate->correction));
+							continue;
+						}
+						reading.sceneId = sceneId;
+						reading.mapCoordinate = MapCoordinate::IdentifyCoorToImgMapCoord(candidate->Position(), sceneId);
+						reading.arbitrated = true;
+						Diagnostics::Record("coordinate-scene-arbitrated", "scene=" + std::to_string(sceneId) +
+							" world=" + world + " best=" + std::to_string(best) +
+							" second=" + std::to_string(second) + " margin=" + std::to_string(margin) +
+							" correction=" + (candidate->correction.empty() ? "none" : candidate->correction));
+					}
 					double jumpUnits = 0.0;
 					if (!OcrCoordinateGate::Acceptable(reading, lock, ocrCoordinateGate.Settings(), &jumpUnits)) {
 						continue;
@@ -1144,9 +1200,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						Diagnostics::Record("coordinate-publish", "scene=" + std::to_string(reading.sceneId) +
 							" map=" + std::to_string(reading.mapCoordinate.x) + "," +
 							std::to_string(reading.mapCoordinate.y) +
-							" world=" + std::to_string(candidate->x) + "," + std::to_string(candidate->y) +
+							" world=" + world +
 							" score=" + std::to_string(reading.score) +
 							" correction=" + (candidate->correction.empty() ? "none" : candidate->correction) +
+							" arbitrated=" + std::to_string(reading.arbitrated) +
+							" reason=" + decision.reason +
 							" jumpUnits=" + std::to_string(decision.jumpUnits) +
 							" agreements=" + std::to_string(decision.agreementCount) +
 							" request=" + std::to_string(ocrResult.requestId));
@@ -1154,9 +1212,9 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					}
 					else {
 						Diagnostics::Record("coordinate-publish-rejected", "reason=" + decision.reason +
-							" scene=" + std::to_string(reading.sceneId) +
-							" world=" + std::to_string(candidate->x) + "," + std::to_string(candidate->y) +
+							" scene=" + std::to_string(reading.sceneId) + " world=" + world +
 							" score=" + std::to_string(reading.score) +
+							" correction=" + (candidate->correction.empty() ? "none" : candidate->correction) +
 							" jumpUnits=" + std::to_string(decision.jumpUnits) +
 							" agreements=" + std::to_string(decision.agreementCount) +
 							" request=" + std::to_string(ocrResult.requestId));
