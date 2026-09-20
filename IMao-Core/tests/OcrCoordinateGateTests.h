@@ -33,14 +33,15 @@ inline void TestOcrCoordinateGate(void (*check)(bool, const std::string&)) {
     // 走路时的连续读数：两次一致（相差 1.2 单位）后才发布
     Gate gate;
     auto first = gate.Feed(reading(-49.0, -305.0, 0.897f), lock(-48.0, -304.0));
-    check(!first.Publishable() && first.kind == Decision::Kind::Pending,
-        "coordinates need a second agreeing read before they publish");
-    auto second = gate.Feed(reading(-49.5, -306.0, 0.938f), lock(-48.0, -304.0));
-    check(second.Publishable() && second.agreementCount == 2,
-        "two agreeing coordinate reads inside the budget publish a position");
-    // 有迟滞后继续一致就继续发布（走路时坐标一直在变，不能要求"完全相同"）
-    auto third = gate.Feed(reading(-52.0, -307.0, 0.912f), lock(-48.0, -304.0));
-    check(third.Publishable(), "a still-agreeing follow-up keeps publishing while walking");
+    check(first.Publishable(), "with a trusted prior a scored read inside the budget publishes");
+    // 走路：读数间隔十几秒、位移几百单位，仍然必须发布（泰缇斯之底的实测症状）
+    auto walked = gate.Feed(reading(-390.0, 1144.0, 0.935f), lock(-338.0, 974.0));
+    check(walked.Publishable() && walked.jumpUnits > 100.0,
+        "walking hundreds of units between reads must not be read as disagreement (" +
+        std::to_string(walked.jumpUnits) + " units)");
+    auto farther = gate.Feed(reading(-427.0, 1292.0, 0.976f), lock(-338.0, 974.0));
+    check(farther.Publishable() && farther.jumpUnits < 600.0,
+        "a read inside the jump budget keeps publishing while moving");
 
     // 丢负号：连续两次都是 +430/-431，但真值在 -433 附近 —— 位移预算必须挡住它
     Gate flipped;
@@ -101,11 +102,7 @@ inline void TestOcrCoordinateGate(void (*check)(bool, const std::string&)) {
     Gate drifted;
     drifted.Feed(reading(0.0, 0.0, 0.95f), lock(0.0, 0.0));
     auto drift = drifted.Feed(reading(100.0, 0.0, 0.95f), lock(0.0, 0.0));
-    check(drift.kind == Decision::Kind::Pending && drift.reason == "disagree" &&
-        drift.agreementCount == 1,
-        "a read that disagrees with the previous one restarts the streak");
-    auto settled = drifted.Feed(reading(101.0, 0.0, 0.95f), lock(0.0, 0.0));
-    check(settled.Publishable(), "the streak publishes again once reads agree");
+    check(drift.Publishable(), "with a prior, even a large but in-budget step publishes");
 
     // 无效读数（这一帧没读到）清零
     Gate missing;

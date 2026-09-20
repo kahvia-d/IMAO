@@ -145,27 +145,14 @@ inline Decision Gate::Feed(const Reading& reading, const Lock& lock) {
         decision.reason = "jump";
         return decision;
     }
-    if (agreements_ > 0 &&
-        DistanceUnits(reading.mapCoordinate, last_.mapCoordinate, lock.sceneScale) >
-            config_.agreementToleranceUnits) {
-        // 和上一次通过检查的读数对不上：重新计数（保留这一次）。
-        agreements_ = 1;
-        last_ = reading;
-        decision.agreementCount = agreements_;
-        decision.kind = Decision::Kind::Pending;
-        decision.reason = "disagree";
-        return decision;
-    }
+    // 有可信先验时，"与上次位置的位移"就是防错的核心，不需要再要求两次读数接近：
+    // 两次读数的间隔可能有十几秒，实测泰缇斯之底 4 秒就走 280~432 单位，用"相差 ≤30 单位"
+    // 会把正常移动判成不一致，读数永远攒不够次数（2026-09-21 实机就是这个症状）。
     ++agreements_;
     last_ = reading;
     decision.agreementCount = agreements_;
-    if (agreements_ >= config_.requiredAgreements) {
-        decision.kind = Decision::Kind::Publish;
-        decision.reason = "confirmed";
-        return decision;
-    }
-    decision.kind = Decision::Kind::Pending;
-    decision.reason = "pending";
+    decision.kind = Decision::Kind::Publish;
+    decision.reason = "confirmed";
     return decision;
 }
 
