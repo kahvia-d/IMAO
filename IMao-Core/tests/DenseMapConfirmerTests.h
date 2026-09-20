@@ -89,6 +89,9 @@ inline void TestDenseMapConfirmer(void (*check)(bool, const std::string&)) {
     query.convertTo(query, CV_8U);
 
     const auto accepted = DenseMapConfirmer::Confirm(query, 1, prior, 1.0, root);
+    std::cout << "dense confirm cold:  " << accepted.detail << '\n';
+    const auto warm = DenseMapConfirmer::Confirm(query, 1, prior, 1.0, root);
+    std::cout << "dense confirm warm:  " << warm.detail << '\n';
     check(accepted.available && accepted.accepted,
         "dense confirm accepts the position the minimap was taken from (score=" +
         std::to_string(accepted.score) + ")");
@@ -98,6 +101,15 @@ inline void TestDenseMapConfirmer(void (*check)(bool, const std::string&)) {
         "dense confirm accepts the right position with a margin over the threshold (score=" +
         std::to_string(accepted.score) + ", threshold=" +
         std::to_string(DenseMapConfirmer::MinimumScore) + ")");
+
+    // The localizer hands over a colour image.  Demanding single channel here made the
+    // first release of this confirmer report "input-unusable" on every call in game.
+    cv::Mat colour;
+    cv::cvtColor(query, colour, cv::COLOR_GRAY2BGR);
+    const auto coloured = DenseMapConfirmer::Confirm(colour, 1, prior, 1.0, root);
+    check(coloured.available && coloured.accepted && std::abs(coloured.score - accepted.score) < 1e-6,
+        "dense confirm accepts the colour minimap the localizer passes (score=" +
+        std::to_string(coloured.score) + ")");
 
     // A hundred world units away the true terrain is outside the +-64 pixel window.
     const double mapPixelsPerUnitOff = 100.0 * mapPixelsPerUnit;

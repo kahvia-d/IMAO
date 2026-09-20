@@ -30,8 +30,9 @@ struct Result {
     std::string detail;
 };
 
-// `normalizedMinimap` is the grey minimap the localizer already normalises (its own
-// resolution decides the template size); `prior` is a map-space coordinate, the same
+// `normalizedMinimap` is the minimap the localizer already normalises to 184 square -
+// a colour image, and converted to grey here the same way the feature path converts it;
+// 1, 3 and 4 channel inputs are all accepted; `prior` is a map-space coordinate, the same
 // space as VisualLocalizationCandidate::mapCenter; `terrainScale` is the scene's
 // minimap scale.
 Result Confirm(const cv::Mat& normalizedMinimap, int sceneId, const cv::Point2d& prior,

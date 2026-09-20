@@ -33,21 +33,32 @@ constexpr int kSearchRadius = 64;
 constexpr double kMinimumCoverage = 0.9;
 
 std::mutex cacheMutex;
-std::unordered_map<std::string, cv::Mat> tileCache;
-constexpr std::size_t kCacheLimit = 12;
+struct CachedTile {
+    cv::Mat image;
+    std::uint64_t lastUsed = 0;
+};
+std::unordered_map<std::string, CachedTile> tileCache;
+std::uint64_t cacheClock = 0;
+// A window touches at most four tiles, and a decode costs about as much as the
+// correlation itself, so the cache has to survive the player walking: the first version
+// wiped all twelve entries on overflow, which made almost every confirmation cold again.
+constexpr std::size_t kCacheLimit = 48;
 
 std::string TileKey(int state, int x, int y) {
     return std::to_string(state) + ":" + std::to_string(x) + ":" + std::to_string(y);
 }
 
-// Decoded tiles are 1 MB each and a confirmation touches at most four of them, so a
-// small cache turns the per-frame cost into the correlation alone.
+// Decoded tiles are 1 MB each, so a modest cache turns the per-frame cost into the
+// correlation alone.  Least recently used goes first.
 cv::Mat LoadTile(const std::filesystem::path& root, int state, int x, int y) {
     const auto key = TileKey(state, x, y);
     {
         std::scoped_lock lock(cacheMutex);
         const auto found = tileCache.find(key);
-        if (found != tileCache.end()) return found->second;
+        if (found != tileCache.end()) {
+            found->second.lastUsed = ++cacheClock;
+            return found->second.image;
+        }
     }
     const auto path = root / std::to_string(state) /
         (std::to_string(state) + "_" + std::to_string(x) + "_" + std::to_string(y) + ".png");
@@ -55,8 +66,14 @@ cv::Mat LoadTile(const std::filesystem::path& root, int state, int x, int y) {
     if (!loaded.empty() && loaded.type() != CV_8U) loaded.convertTo(loaded, CV_8U);
     {
         std::scoped_lock lock(cacheMutex);
-        if (tileCache.size() >= kCacheLimit) tileCache.clear();
-        tileCache[key] = loaded;
+        if (tileCache.size() >= kCacheLimit) {
+            auto oldest = tileCache.begin();
+            for (auto entry = tileCache.begin(); entry != tileCache.end(); ++entry) {
+                if (entry->second.lastUsed < oldest->second.lastUsed) oldest = entry;
+            }
+            tileCache.erase(oldest);
+        }
+        tileCache[key] = CachedTile{ loaded, ++cacheClock };
     }
     return loaded;
 }
@@ -76,6 +93,17 @@ struct GridAxis {
     int tile = 0;
     int pixel = 0;
 };
+
+// The localizer hands over the minimap it normalised, which is a colour crop resized to
+// 184 square - not the grey it extracts features from.  Convert it the same way the
+// feature path does, so both see the same picture.
+cv::Mat ToGray(const cv::Mat& image) {
+    cv::Mat gray;
+    if (image.channels() == 1) gray = image;
+    else if (image.channels() == 4) cv::cvtColor(image, gray, cv::COLOR_BGRA2GRAY);
+    else cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+    return gray;
+}
 
 GridAxis ColumnOf(double mapX) {
     const int tile = static_cast<int>(std::floor(mapX / kTileSize)) + 1;
@@ -129,11 +157,22 @@ Result Confirm(const cv::Mat& normalizedMinimap, int sceneId, const cv::Point2d&
         result.detail = stream.str();
         return result;
     };
-    if (normalizedMinimap.empty() || normalizedMinimap.channels() != 1 || !(terrainScale > 0.0) ||
+    if (normalizedMinimap.empty() || !(terrainScale > 0.0) ||
         !std::isfinite(prior.x) || !std::isfinite(prior.y)) return finish("reason=input-unusable");
     const auto* scene = Scene::Find(sceneId);
     if (scene == nullptr || scene->kuroStateId <= 0) return finish("reason=unknown-scene");
     if (referenceRoot.empty()) return finish("reason=no-reference");
+    // Note the channel count here: the localizer's normalised minimap is a colour image,
+    // and refusing it as "unusable" made a whole release of this confirmer never run once.
+    if (normalizedMinimap.channels() != 1 && normalizedMinimap.channels() != 3 &&
+        normalizedMinimap.channels() != 4) return finish("reason=input-unusable");
+    cv::Mat gray = ToGray(normalizedMinimap);
+    if (gray.depth() != CV_8U) {
+        cv::Mat converted;
+        gray.convertTo(converted, CV_8U);
+        gray = converted;
+    }
+    if (gray.empty()) return finish("reason=input-unusable");
 
     // Map pixels per minimap pixel: the tiles are 1024 px per 850 world units and the
     // normalised minimap covers kNormalizedMinimapSize * terrainScale world units.
@@ -158,20 +197,32 @@ Result Confirm(const cv::Mat& normalizedMinimap, int sceneId, const cv::Point2d&
 
     cv::Mat window = cv::Mat::zeros(side, side, CV_8U);
     long long covered = 0;
-    int loadedX = std::numeric_limits<int>::min(), loadedY = std::numeric_limits<int>::min();
-    cv::Mat tile;
+    // At most two tiles per axis intersect a window this size, so load them up front:
+    // four lookups instead of one per pixel.
+    const int columnTiles[2] = {columns[0].tile, columns[side - 1].tile};
+    const int rowTiles[2] = {rows[0].tile, rows[side - 1].tile};
+    cv::Mat tiles[2][2];
+    for (int a = 0; a < 2; ++a) {
+        for (int b = 0; b < 2; ++b) {
+            tiles[a][b] = LoadTile(referenceRoot, scene->kuroStateId, columnTiles[a], rowTiles[b]);
+        }
+    }
     for (int j = 0; j < side; ++j) {
+        const auto& row = rows[j];
+        const int b = row.tile == rowTiles[0] ? 0 : 1;
         uchar* destination = window.ptr<uchar>(j);
+        int current = -1;
+        const uchar* source = nullptr;
         for (int i = 0; i < side; ++i) {
             const auto& column = columns[i];
-            const auto& row = rows[j];
-            if (column.tile != loadedX || row.tile != loadedY) {
-                tile = LoadTile(referenceRoot, scene->kuroStateId, column.tile, row.tile);
-                loadedX = column.tile;
-                loadedY = row.tile;
+            const int a = column.tile == columnTiles[0] ? 0 : 1;
+            if (a != current) {
+                current = a;
+                const cv::Mat& tile = tiles[a][b];
+                source = tile.empty() || row.pixel >= tile.rows ? nullptr : tile.ptr<uchar>(row.pixel);
             }
-            if (tile.empty()) continue;
-            destination[i] = tile.at<uchar>(row.pixel, column.pixel);
+            if (source == nullptr) continue;
+            destination[i] = source[column.pixel];
             ++covered;
         }
     }
@@ -179,7 +230,7 @@ Result Confirm(const cv::Mat& normalizedMinimap, int sceneId, const cv::Point2d&
 
     // The template: the minimap at map scale, masked to the ring the runtime trusts.
     cv::Mat templateImage;
-    cv::resize(normalizedMinimap, templateImage, cv::Size(templateWidth, templateHeight), 0.0, 0.0, cv::INTER_LINEAR);
+    cv::resize(gray, templateImage, cv::Size(templateWidth, templateHeight), 0.0, 0.0, cv::INTER_LINEAR);
     templateImage.convertTo(templateImage, CV_32F);
     cv::Mat mask = cv::Mat::zeros(templateHeight, templateWidth, CV_32F);
     const double innerRadius = kPlayerMarkerRadius / kNormalizedMinimapSize * templateWidth;
