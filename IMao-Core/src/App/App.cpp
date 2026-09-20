@@ -1106,6 +1106,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					lock.valid = true;
 					lock.sceneId = playerLocationLock.sceneId;
 					lock.mapCoordinate = playerLocationLock.mapCoordinate;
+					lock.secondsSinceLock = std::max(0.0,
+						std::chrono::duration<double>(now - playerLocationLock.confirmedAt).count());
 					if (const auto* lockedScene = Scene::Find(playerLocationLock.sceneId)) {
 						lock.sceneScale = lockedScene->scale;
 					}
@@ -1160,8 +1162,14 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						reading.sceneId = lock.sceneId;
 						reading.mapCoordinate =
 							MapCoordinate::IdentifyCoorToImgMapCoord(candidate->Position(), reading.sceneId);
+						double probeJump = 0.0;
+						if (!OcrCoordinateGate::Acceptable(reading, lock, ocrCoordinateGate.Settings(), &probeJump)) {
+							// 几何上说不通（超预算 / 场景不同：载具高速或跨图传送）→ 这一次按
+							// 没有可信先验处理，走下面的地图像素裁决（裁决赢家可无视场景与位移）。
+							lock.valid = false;
+						}
 					}
-					else {
+					if (!lock.valid) {
 						if (arbitrations >= 2) break;   // 一次读数最多裁决两个变体，别把恢复态拖住
 						++arbitrations;
 						double best = 0.0;

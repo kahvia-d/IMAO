@@ -27,6 +27,9 @@ struct Config {
     float minimumScore = 0.85f;
     // 与上次可信位置的位移预算（世界单位）。走路量级远小于它，丢负号/传送远大于它。
     double maximumJumpUnits = 600.0;
+    // 载具/滑翔可以很快：读数间隔实测 5~20 秒，所以预算必须随间隔放大，
+    // 否则"正常高速移动"会被当成"跳变"。400 单位/秒远高于实测的 70 单位/秒。
+    double maximumSpeedUnitsPerSecond = 400.0;
     // 连续两次读数之间允许的差（世界单位）：走路时坐标本身在变，所以不是要求完全相同。
     double agreementToleranceUnits = 30.0;
     int requiredAgreements = 2;
@@ -48,6 +51,7 @@ struct Lock {
     int sceneId = 0;
     Coordinate mapCoordinate{};
     double sceneScale = 1.205;    // 该场景的 imgMap 像素/世界单位，用于把位移换回单位
+    double secondsSinceLock = 0.0; // 距这个可信位置多久：预算随它放大（载具/滑翔）
 };
 
 struct Decision {
@@ -82,13 +86,19 @@ inline double DistanceUnits(const Coordinate& a, const Coordinate& b, double sce
 // 那种裁决本身就能排掉丢负号那类错误。
 // 调用方用它从一帧里的多个候选（原始读数 + 解析器给出的符号/分隔符修复候选）里挑出
 // **一条**交给 Feed —— 一帧只能喂一条，否则同一次读数的多个变体会被算成"连续多次一致"。
+// 位移预算：固定下限，并按"距上次可信位置的时间"放大（载具/滑翔/长间隔读数）。
+inline double JumpBudgetUnits(const Config& config, const Lock& lock) {
+    return std::max(config.maximumJumpUnits,
+        lock.secondsSinceLock * config.maximumSpeedUnitsPerSecond);
+}
+
 inline bool Acceptable(const Reading& reading, const Lock& lock, const Config& config,
     double* jumpUnits = nullptr) {
     double jump = 0.0;
     bool ok = reading.valid && reading.score >= config.minimumScore;
-    if (ok && lock.valid) {
+    if (ok && lock.valid && !reading.arbitrated) {
         jump = DistanceUnits(reading.mapCoordinate, lock.mapCoordinate, lock.sceneScale);
-        ok = lock.sceneId == reading.sceneId && jump <= config.maximumJumpUnits;
+        ok = lock.sceneId == reading.sceneId && jump <= JumpBudgetUnits(config, lock);
     }
     if (jumpUnits != nullptr) *jumpUnits = jump;
     return ok;
@@ -132,13 +142,23 @@ inline Decision Gate::Feed(const Reading& reading, const Lock& lock) {
         decision.reason = reading.arbitrated ? "arbitrated" : "confirmed-no-lock";
         return decision;
     }
+    if (reading.arbitrated) {
+        // 地图像素已经在候选场景/符号变体里选出赢家（乘霄山 0.56~0.65 对别处 ~0.0）。
+        // 传送换图时场景与位移都会"对不上"，这时裁决就是正确路径。
+        ++agreements_;
+        last_ = reading;
+        decision.agreementCount = agreements_;
+        decision.kind = Decision::Kind::Publish;
+        decision.reason = "arbitrated";
+        return decision;
+    }
     if (lock.sceneId != reading.sceneId) {
         agreements_ = 0;
         decision.reason = "scene-changed";
         return decision;
     }
     decision.jumpUnits = DistanceUnits(reading.mapCoordinate, lock.mapCoordinate, lock.sceneScale);
-    if (decision.jumpUnits > config_.maximumJumpUnits) {
+    if (decision.jumpUnits > JumpBudgetUnits(config_, lock)) {
         // 丢负号、逗号误读、或者真的传送（传送时上层会换 generation，正常不会走到这里）。
         agreements_ = 0;
         decision.kind = Decision::Kind::Reject;
