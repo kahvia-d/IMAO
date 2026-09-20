@@ -473,6 +473,11 @@ public ProgramPackage { ... 现有字段不变 ...; public List<ProgramShard> Sh
   项目内的旧副本），现在两处都指向仓库唯一的 `Assets/WindowIcon.ico`；启动器此前完全没有应用图标。
 - **线上增量实测**（`Tests/ProgramUpdates` 的 `live-program` 模式，真实清单 + 真实 URL + 真实 HTTP）：
   1.3 GB 的本地安装树只下载 **56.14 MB / 2 片**（`ui`+`core`）后通过整树校验并提交，见 §10。
+- **证据目录**：本节引用的 `out/shard-phase*`、`out/icon-check`、`out/live-incremental` 等临时目录已于
+  同日清理（`out/` 从 42.8 GB 降到 0.8 GB）；发布产物的关键证据（`update.json`、`release-report.json`、
+  构建收据、日志、发布核对文件，共 52 个）用 `scripts/Compact-ReleaseArtifacts.ps1` 逐文件哈希校验后
+  归档在 `out/evidence/<产物名>/`，图标修复的前后对照图在 `out/evidence/icon-fix-2026.9.20.2/`。
+  已发布字节本身随时可从对应 GitHub 发行重新下载。
 
 ## 13. 评审结论与待决项
 
