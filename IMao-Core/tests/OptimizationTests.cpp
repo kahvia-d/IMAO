@@ -13,6 +13,7 @@
 #include "MinimapTrackingGeometryTests.h"
 #include "ImageAnchoredOverlayTests.h"
 #include "MinimapHudEvidenceTests.h"
+#include "DenseMapConfirmerTests.h"
 #include "Runtime/SnapshotChannel.h"
 #include "Runtime/FrameState.h"
 #include "Feature/Match/ExactDescriptorMatcher.h"
@@ -972,6 +973,7 @@ int main(int argc, char** argv) {
     TestMinimapTrackingGeometry(Expect);
     TestImageAnchoredOverlay(Expect);
     TestMinimapHudEvidence(Expect);
+    TestDenseMapConfirmer(Expect);
     TestFineViewportMotion(Expect);
 	TestMapUiStateController();
 	TestMapCompassVisualDetector();

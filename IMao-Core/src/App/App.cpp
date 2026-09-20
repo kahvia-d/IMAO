@@ -22,6 +22,7 @@
 #include "../Runtime/IsolationSwitches.h"
 #include "MinimapHudEvidence.h"
 #include "../Coordinate/VisualLocalization/MinimapTerrainEvidence.h"
+#include "../Coordinate/VisualLocalization/DenseMapConfirmer.h"
 
 #include <cctype>
 #include <cstdlib>
@@ -1191,12 +1192,23 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		const auto& globalCandidate = result.candidates.front();
 		if (!GlobalVisualLocalizer::TrackNearby(normalizedMinimap, minMapFeatureData,
 			globalCandidate.sceneId, globalCandidate.mapCenter, 64.0, candidate)) {
-			Diagnostics::Record("visual-localization-revalidate", "accepted=false scene=" +
-				std::to_string(globalCandidate.sceneId) + " request=" + std::to_string(result.requestId));
-			globalVisualConfirmation.Reset();
-			coordinateRecovery.OnRecognitionFailure();
-			RuntimeStatus::SetLocalization("recovering", {}, "小地图候选位置复核失败，正在重试");
-			return false;
+			// The candidate came from the index; the map pixels can still vouch for it when
+			// the frame is too flat for the sparse re-check to find its own correspondences.
+			const auto dense = DenseMapConfirmer::Confirm(normalizedMinimap, globalCandidate.sceneId,
+				{ globalCandidate.mapCenter.x, globalCandidate.mapCenter.y },
+				Scene::MinimapScale(globalCandidate.sceneId));
+			Diagnostics::Record("dense-confirm", "where=revalidate scene=" +
+				std::to_string(globalCandidate.sceneId) + " available=" + std::to_string(dense.available) +
+				" accepted=" + std::to_string(dense.accepted) + " " + dense.detail);
+			if (dense.accepted) candidate = globalCandidate;
+			else {
+				Diagnostics::Record("visual-localization-revalidate", "accepted=false scene=" +
+					std::to_string(globalCandidate.sceneId) + " request=" + std::to_string(result.requestId));
+				globalVisualConfirmation.Reset();
+				coordinateRecovery.OnRecognitionFailure();
+				RuntimeStatus::SetLocalization("recovering", {}, "小地图候选位置复核失败，正在重试");
+				return false;
+			}
 		}
 		candidate.ocrHintMatched = globalCandidate.ocrHintMatched;
 		// Repeated three-point translation votes can agree on the same wrong
@@ -1308,6 +1320,25 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			hint.position.sceneId, { hint.position.x, hint.position.y }, 256.0, candidate);
         bool supported = matched && HasReacquisitionSupport(candidate.affineEstimated,
             candidate.inlierCount, candidate.inlierRatio, candidate.coveredQuadrants);
+        // Flat terrain can leave the feature pack with almost nothing to match (a reported
+        // frame carried 30 keypoints where ordinary ones carry 64-151). The hint itself is
+        // trusted, so let the map's own pixels confirm it before the hint is given up on.
+        if (!supported) {
+            const auto dense = DenseMapConfirmer::Confirm(normalizedMinimap, hint.position.sceneId,
+                { hint.position.x, hint.position.y }, Scene::MinimapScale(hint.position.sceneId));
+            Diagnostics::Record("dense-confirm", "where=resume source=" +
+                std::string(MinimapResumePolicy::SourceName(hint.source)) +
+                " scene=" + std::to_string(hint.position.sceneId) +
+                " available=" + std::to_string(dense.available) +
+                " accepted=" + std::to_string(dense.accepted) + " " + dense.detail);
+            if (dense.accepted) {
+                candidate = {};
+                candidate.sceneId = hint.position.sceneId;
+                candidate.mapCenter = { hint.position.x, hint.position.y };
+                candidate.quality = VisualLocalizationQuality::Marginal;
+                supported = true;
+            }
+        }
         if (!supported && hint.source == MinimapResumeSource::MapViewport && !viewportMinimapReference.empty()) {
             MinimapTerrainEvidence::Motion motion;
             supported = MinimapTerrainEvidence::TrackContours(viewportMinimapReference, normalizedMinimap, motion, 24, true);
@@ -1425,11 +1456,29 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 
 	VisualLocalizationCandidate tracked;
 	const auto trackingStart = std::chrono::steady_clock::now();
-	const bool continuityAccepted = GlobalVisualLocalizer::TrackLocal(
+	bool continuityAccepted = GlobalVisualLocalizer::TrackLocal(
 		normalizedMinimap, minMapFeatureData, playerCurrentSceneId, lastPlayerImgMapCoordinate, tracked, minimapTerrainScale);
 	Diagnostics::Record("visual-local-tracking-time", "durationMs=" + std::to_string(
 		std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - trackingStart).count()) +
 		" accepted=" + std::to_string(continuityAccepted));
+	if (!continuityAccepted && now - lastDenseConfirmAt >= std::chrono::milliseconds(250)) {
+		// The position we are standing on is the strongest prior there is: if the feature
+		// pack cannot follow this frame, ask the map pixels whether we are still here.
+		lastDenseConfirmAt = now;
+		const auto dense = DenseMapConfirmer::Confirm(normalizedMinimap, playerCurrentSceneId,
+			{ lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y },
+			Scene::MinimapScale(playerCurrentSceneId));
+		Diagnostics::Record("dense-confirm", "where=tracking scene=" + std::to_string(playerCurrentSceneId) +
+			" available=" + std::to_string(dense.available) + " accepted=" + std::to_string(dense.accepted) +
+			" " + dense.detail);
+		if (dense.accepted) {
+			tracked = {};
+			tracked.sceneId = playerCurrentSceneId;
+			tracked.mapCenter = lastPlayerImgMapCoordinate;
+			tracked.quality = VisualLocalizationQuality::Marginal;
+			continuityAccepted = true;
+		}
+	}
 	if (continuityAccepted || tryContourTracking()) {
 		if (continuityAccepted) commitVisualPosition(tracked, false);
 		outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);

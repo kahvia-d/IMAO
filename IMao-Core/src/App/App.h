@@ -278,6 +278,10 @@ private:
 	std::uint64_t visualHintVersion = 0;
 	std::vector<VisualMapHint> latestOcrHints;
 	CoordinateRecoveryController::Clock::time_point lastVisualSubmitAt{};
+	// Confirming the current position from the map's own pixels costs tens of milliseconds,
+	// and while the feature tracker is failing it would otherwise run on every frame. Four
+	// attempts a second is far more than a standing player needs.
+	CoordinateRecoveryController::Clock::time_point lastDenseConfirmAt{};
 	// Updated only by a confirmed visual position. It lets the next minimap
 	// frame discard pixels that changed because of the heading wedge or the
 	// transparent game scene under the minimap.

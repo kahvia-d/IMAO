@@ -302,6 +302,7 @@ add_executable(IMaoOptimizationTests
     IMao-Core/src/App/WorldSearchPrior.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateRecoveryController.cpp
+    IMao-Core/src/Coordinate/VisualLocalization/DenseMapConfirmer.cpp
     IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
     IMao-Core/src/Feature/VisualIndex/MapVisualIndex.cpp
 )
