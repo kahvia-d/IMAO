@@ -133,8 +133,6 @@ struct Session {
     Observation source;
     Intent intent = Intent::Complete;
     std::uint64_t revision = 0, chooserHwnd = 0, chooserGeneration = 0, registrationRevision = 0;
-    bool consumed = false;
-    std::string consumedKey;
     std::string Validate(const Observation& current, std::uint64_t currentFilter,
         std::uint64_t requestedRevision, const std::string& profile, const std::string& scene,
         const std::string& key, Clock::time_point now = Clock::now()) const {
@@ -148,7 +146,9 @@ struct Session {
         const auto matches = [&](const Candidate& item) { return !item.item.isSaved && Key(item.item) == key && Includes(item, intent); };
         if (std::none_of(source.candidates.begin(), source.candidates.end(), matches)) return "not-a-selection-candidate";
         if (std::none_of(current.candidates.begin(), current.candidates.end(), matches)) return "nearby-point-no-longer-eligible";
-        if (consumed && key != consumedKey) return "selection-already-consumed";
+        // One submission does not consume the list: a player completing several nearby
+        // points in a row validates every one of them on its own. Idempotence is kept
+        // per point by the caller's saved results, not by refusing every later point.
         return {};
     }
 };

@@ -2,12 +2,15 @@ namespace IMao_WinUI.Models;
 
 public enum GamepadInputMode { Disabled, Map, List, Detail, Menu, Image, Gameplay }
 public readonly record struct GamepadInputContext(GamepadInputMode Mode, string Token, bool CanComplete = false,
-    GamepadButtons EntryButton = GamepadButtons.LB);
+    GamepadButtons EntryButton = GamepadButtons.LB, bool CanCollectAll = false);
 public enum GamepadAction
 {
     OpenAssistant, Up, Down, Left, Right, Accept, Back, PreviousPage, NextPage,
     OpenRouteMenu, Complete, ScrollUp, ScrollDown, ScrollLeft, ScrollRight,
-    OpenToolbar, CompleteCurrent, ToggleGuide
+    OpenToolbar, CompleteCurrent, ToggleGuide,
+    // The nearby completion list: hold to collect every listed point; the guide detail
+    // page: one press enlarges the picture; the enlarged picture: trigger zoom.
+    CompleteAll, ExpandImage, ZoomIn, ZoomOut
 }
 
 [Flags]
@@ -78,6 +81,13 @@ public sealed class GamepadInputInterpreter
         if (context.Mode == GamepadInputMode.Gameplay)
             return Gameplay(sample, context.CanComplete);
 
+        // The enlarged guide picture zooms with the triggers, which repeat while held.
+        // Every other screen keeps treating a trigger press as "cancel the gesture".
+        if (context.Mode == GamepadInputMode.Image)
+        {
+            if (sample.LeftTrigger > 30) return Repeat(GamepadAction.ZoomOut, now);
+            if (sample.RightTrigger > 30) return Repeat(GamepadAction.ZoomIn, now);
+        }
         if (sample.LeftTrigger > 30 || sample.RightTrigger > 30 ||
             (sample.Buttons & (GamepadButtons.Menu | GamepadButtons.View | GamepadButtons.L3 | GamepadButtons.R3)) != 0)
         {
@@ -85,22 +95,24 @@ public sealed class GamepadInputInterpreter
             return new(WaitingForRelease: true);
         }
 
-        // Completion is unavailable outside one explicitly selected detail page.
-        if ((sample.Buttons & GamepadButtons.X) != 0)
-        {
-            pendingRelease = GamepadButtons.None; repeating = null;
-            if (sample.Buttons == GamepadButtons.X && sample.AxesNeutral &&
-                context.Mode == GamepadInputMode.Detail && context.CanComplete)
-                return Hold(GamepadAction.Complete, now);
-            holdAction = null; waiting = true;
-            return new(WaitingForRelease: true);
-        }
+        // Two deliberate holds write something and are therefore holds rather than taps:
+        // A on a point detail completes it, X over the nearby completion list collects
+        // the whole group. The press stays a pending tap as well, so releasing early still
+        // emits the plain A (accept) instead of being swallowed.
+        if (sample.AxesNeutral && sample.Buttons == GamepadButtons.A &&
+            context.Mode == GamepadInputMode.Detail && context.CanComplete)
+        { pendingRelease = GamepadButtons.A; repeating = null; return Hold(GamepadAction.Complete, now); }
+        if (sample.AxesNeutral && sample.Buttons == GamepadButtons.X &&
+            context.Mode == GamepadInputMode.List && context.CanCollectAll)
+        { pendingRelease = GamepadButtons.X; repeating = null; return Hold(GamepadAction.CompleteAll, now); }
         holdAction = null;
 
         // Discrete actions fire on release. A close/accept press cannot survive into
         // the newly activated window. Mixed button presses are deliberately cancelled.
-        const GamepadButtons discrete = GamepadButtons.A | GamepadButtons.B | GamepadButtons.Y |
+        // X joins them on a detail page, where one press enlarges the guide picture.
+        GamepadButtons discrete = GamepadButtons.A | GamepadButtons.B | GamepadButtons.Y |
             GamepadButtons.LB | GamepadButtons.RB;
+        if (context.Mode == GamepadInputMode.Detail) discrete |= GamepadButtons.X;
         if (pendingRelease != GamepadButtons.None)
         {
             if (sample.Neutral)
@@ -232,6 +244,15 @@ public sealed class GamepadInputInterpreter
         return new(action, 1, true);
     }
 
+    /// <summary>An analog control used as a repeated discrete step (the zoom triggers).</summary>
+    private GamepadInputUpdate Repeat(GamepadAction action, long now)
+    {
+        if (repeating != action) { repeating = action; repeatAt = now + 260; return new(action); }
+        if (now < repeatAt) return default;
+        repeatAt = now + 130;
+        return new(action);
+    }
+
     private static bool IsSingle(GamepadButtons value) => ((ushort)value & ((ushort)value - 1)) == 0;
     private static bool IsScroll(GamepadAction value) => value is GamepadAction.ScrollUp or GamepadAction.ScrollDown or
         GamepadAction.ScrollLeft or GamepadAction.ScrollRight;
@@ -241,6 +262,7 @@ public sealed class GamepadInputInterpreter
         GamepadButtons.A => GamepadAction.Accept,
         GamepadButtons.B => GamepadAction.Back,
         GamepadButtons.Y when mode is GamepadInputMode.List or GamepadInputMode.Detail => GamepadAction.OpenRouteMenu,
+        GamepadButtons.X when mode == GamepadInputMode.Detail => GamepadAction.ExpandImage,
         GamepadButtons.LB when mode is GamepadInputMode.Detail or GamepadInputMode.Image => GamepadAction.PreviousPage,
         GamepadButtons.RB when mode is GamepadInputMode.Detail or GamepadInputMode.Image => GamepadAction.NextPage,
         _ => null

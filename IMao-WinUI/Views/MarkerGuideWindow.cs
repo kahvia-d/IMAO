@@ -44,24 +44,25 @@ public sealed class MarkerGuideWindow : Window
     private int pictureIndex;
     private string? currentImagePath;
     private bool completing;
-    private ContentDialog? imageDialog;
-    private Image? enlargedPicture;
-    private TextBlock? enlargedStatus;
-    private ScrollViewer? enlargedScroll;
-    private TextBlock? enlargedGamepadHint;
+    /// <summary>The enlarged picture lives in its own half-screen window; it is created once.</summary>
+    private GuideImageWindow? imageWindow;
+    private RectInt32? lastGameBounds;
     private readonly TextBlock gamepadHint = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
     private readonly ProgressBar gamepadHold = new() { Minimum = 0, Maximum = 1, Height = 5, Visibility = Visibility.Collapsed };
     private bool gamepadMode;
-    private int imageCommand;
     private readonly SubclassProcedure nonClientProcedure;
     private long generation;
 
     public bool IsClosed { get; private set; }
     internal bool IsGuideVisible { get; private set; }
     internal MarkerSelection? Selection => selected;
-    internal bool IsGamepadImageOpen => imageDialog is not null;
-    internal bool CanCompleteGamepad => gamepadMode && IsGuideVisible && imageDialog is null && selected?.Completed == false && !completing;
-    internal string GamepadViewToken => $"{generation}:{pictureIndex}:{(imageDialog is null ? "detail" : "image")}";
+    internal bool IsGamepadImageOpen => imageWindow is not null;
+    /// <summary>The enlarged picture's HWND while it is open, so gamepad focus can follow it.</summary>
+    internal nint ImageWindowHandle => imageWindow?.Handle ?? 0;
+    /// <summary>Raised when the enlarged picture opens or closes, so the core can follow the front window.</summary>
+    internal Action<Window, bool>? ImageWindowChanged { get; set; }
+    internal bool CanCompleteGamepad => gamepadMode && IsGuideVisible && imageWindow is null && selected?.Completed == false && !completing;
+    internal string GamepadViewToken => $"{generation}:{pictureIndex}:{(imageWindow is null ? "detail" : "image")}";
     internal Func<long, Task>? ContentDismiss { get; set; }
 
     internal void SetReturnState(string message)
@@ -184,6 +185,7 @@ public sealed class MarkerGuideWindow : Window
         HideImageDialog();
         generation = selectionGeneration;
         completing = false;
+        lastGameBounds = gameBounds;
         SetGamepadHoldProgress(0);
         selectionCancellation = new CancellationTokenSource();
         var token = selectionCancellation.Token;
@@ -237,19 +239,13 @@ public sealed class MarkerGuideWindow : Window
 
     private void HideImageDialog()
     {
-        var dialog = imageDialog;
-        imageDialog = null;
-        enlargedPicture = null;
-        enlargedStatus = null;
-        enlargedScroll = null;
-        enlargedGamepadHint = null;
-        dialog?.Hide();
+        CloseImageWindow();
     }
 
     private void SetPictureStatus(string message)
     {
         pictureStatus.Text = message;
-        if (enlargedStatus is not null) enlargedStatus.Text = message;
+        imageWindow?.SetStatus(message);
     }
 
     internal void SetPagingHotkeys(int previousKey, int nextKey)
@@ -321,13 +317,18 @@ public sealed class MarkerGuideWindow : Window
         int index = pictureIndex;
         var detail = currentDetail;
         picture.Source = null;
-        if (enlargedPicture is not null) enlargedPicture.Source = null;
         currentImagePath = null;
         enlarge.IsEnabled = false;
         previous.IsEnabled = index > 0;
         next.IsEnabled = index + 1 < detail.PictureUrls.Length;
         picturePage.Text = $"{index + 1} / {detail.PictureUrls.Length}";
-        if (imageDialog is not null) imageDialog.Title = $"攻略图片 · {index + 1}/{detail.PictureUrls.Length}";
+        // An already open picture follows the page the guide is on: title now, bitmap when
+        // it arrives, blank in between instead of showing the previous page's image.
+        if (imageWindow is { } openImage)
+        {
+            openImage.SetTitle($"攻略图片 · {index + 1}/{detail.PictureUrls.Length}");
+            openImage.SetSource(null);
+        }
         SetPictureStatus("正在加载图片…");
         try
         {
@@ -347,10 +348,7 @@ public sealed class MarkerGuideWindow : Window
             picture.Source = bitmap;
             currentImagePath = path;
             bitmap.UriSource = new Uri(path);
-            if (enlargedPicture is not null)
-            {
-                enlargedPicture.Source = bitmap;
-            }
+            imageWindow?.SetSource(bitmap);
         }
         catch (OperationCanceledException) { }
         catch (Exception) { if (!token.IsCancellationRequested && !IsClosed) SetPictureStatus("图片暂时无法加载，可刷新或在库街区查看"); }
@@ -358,45 +356,37 @@ public sealed class MarkerGuideWindow : Window
 
     private async Task ShowEnlargedAsync()
     {
-        if (currentImagePath is null || root.XamlRoot is null || imageDialog is not null) return;
-        var large = new Image { Source = new BitmapImage(new Uri(currentImagePath)), Stretch = Stretch.Uniform,
-            Width = Math.Max(200, root.ActualWidth - 56) };
-        var scroll = new ScrollViewer { Content = large, ZoomMode = ZoomMode.Enabled, MaxZoomFactor = 5,
-            MinZoomFactor = 1, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = Math.Max(160, root.ActualHeight - 210) };
-        var zoomIn = new Button { Content = "放大 +" };
-        var zoomOut = new Button { Content = "缩小 −" };
-        zoomIn.Click += (_, _) => scroll.ChangeView(null, null, Math.Min(5, scroll.ZoomFactor * 1.4f));
-        zoomOut.Click += (_, _) => scroll.ChangeView(null, null, Math.Max(1, scroll.ZoomFactor / 1.4f));
-        var zoomButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        zoomButtons.Children.Add(zoomOut);
-        zoomButtons.Children.Add(zoomIn);
-        var content = new StackPanel { Spacing = 10 };
-        var imageNotice = new TextBlock { Text = pictureStatus.Text, TextWrapping = TextWrapping.Wrap };
-        content.Children.Add(imageNotice);
-        var controllerHint = new TextBlock { TextWrapping = TextWrapping.Wrap, Visibility = gamepadMode ? Visibility.Visible : Visibility.Collapsed };
-        content.Children.Add(controllerHint);
-        content.Children.Add(zoomButtons);
-        content.Children.Add(scroll);
-        var dialog = new ContentDialog { XamlRoot = root.XamlRoot, Title = $"攻略图片 · {pictureIndex + 1}/{currentDetail!.PictureUrls.Length}", Content = content, CloseButtonText = "关闭" };
-        enlargedPicture = large;
-        enlargedStatus = imageNotice;
-        enlargedScroll = scroll;
-        enlargedGamepadHint = controllerHint;
-        imageCommand = 1;
-        UpdateImageGamepadHint();
-        imageDialog = dialog;
-        try { await dialog.ShowAsync(); }
-        catch (Exception) { if (ReferenceEquals(imageDialog, dialog)) status.Text = "暂时无法打开图片"; }
-        finally { if (ReferenceEquals(imageDialog, dialog)) { imageDialog = null; enlargedPicture = null; enlargedStatus = null;
-            enlargedScroll = null; enlargedGamepadHint = null; } }
+        if (currentImagePath is null) return;
+        imageWindow ??= CreateImageWindow();
+        imageWindow.ShowImage(currentImagePath,
+            $"攻略图片 · {pictureIndex + 1}/{currentDetail?.PictureUrls.Length ?? 1}",
+            pictureStatus.Text, lastGameBounds, gamepadMode);
+        if (ImageWindowChanged is { } changed) changed(imageWindow, true);
+        await Task.CompletedTask;
+    }
+
+    private GuideImageWindow CreateImageWindow()
+    {
+        var window = new GuideImageWindow { Dismissed = CloseImageWindow };
+        return window;
+    }
+
+    /// <summary>Hides the enlarged picture and hands the front-window registration back to the guide.</summary>
+    private void CloseImageWindow()
+    {
+        var window = imageWindow;
+        if (window is null) return;
+        imageWindow = null;
+        window.HideImage();
+        if (ImageWindowChanged is { } changed) changed(window, false);
     }
 
     internal void SetGamepadMode(bool enabled)
     {
         gamepadMode = enabled;
         gamepadHint.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
-        gamepadHint.Text = "A 放大图片 · B 返回列表 · LB/RB 翻图 · 右摇杆滚动 · 按住 X 完成";
+        gamepadHint.Text = "X 放大图片 · B 返回列表 · LB/RB 翻图 · 右摇杆滚动 · 长按 A 完成";
+        if (!enabled && imageWindow is not null) CloseImageWindow();
         SetGamepadHoldProgress(0);
         UpdateCompletionButton();
     }
@@ -414,36 +404,19 @@ public sealed class MarkerGuideWindow : Window
     internal void HandleGamepadViewAction(GamepadAction action)
     {
         if (!gamepadMode || !IsGuideVisible) return;
-        if (action == GamepadAction.Accept)
+        // X opens the enlarged picture; the triggers zoom it; the sticks and D-pad pan.
+        if (action == GamepadAction.ExpandImage)
         {
-            if (imageDialog is null)
-            {
-                // ShowAsync completes only when the dialog closes; do not block controller dispatch.
-                if (enlarge.IsEnabled) _ = ShowEnlargedAsync();
-            }
-            else if (imageCommand == 2) HideImageDialog();
-            else if (enlargedScroll is { } imageScroll)
-                imageScroll.ChangeView(null, null, Math.Clamp(imageScroll.ZoomFactor * (imageCommand == 0 ? 1 / 1.4f : 1.4f), 1, 5));
+            if (imageWindow is null && enlarge.IsEnabled) _ = ShowEnlargedAsync();
             return;
         }
-        if (imageDialog is not null && action is GamepadAction.Up or GamepadAction.Down or GamepadAction.Left or GamepadAction.Right)
-        {
-            imageCommand = Math.Clamp(imageCommand + (action is GamepadAction.Up or GamepadAction.Left ? -1 : 1), 0, 2);
-            UpdateImageGamepadHint();
-            return;
-        }
-        var target = enlargedScroll ?? contentScroll;
+        if (action == GamepadAction.ZoomIn) { imageWindow?.ChangeZoom(1.4); return; }
+        if (action == GamepadAction.ZoomOut) { imageWindow?.ChangeZoom(1 / 1.4); return; }
+        var target = imageWindow?.View ?? contentScroll;
         double dx = action == GamepadAction.ScrollLeft ? -80 : action == GamepadAction.ScrollRight ? 80 : 0;
         double dy = action is GamepadAction.ScrollUp or GamepadAction.Up ? -90 : action is GamepadAction.ScrollDown or GamepadAction.Down ? 90 : 0;
         if (dx != 0 || dy != 0) target.ChangeView(Math.Clamp(target.HorizontalOffset + dx, 0, target.ScrollableWidth),
             Math.Clamp(target.VerticalOffset + dy, 0, target.ScrollableHeight), null, true);
-    }
-
-    private void UpdateImageGamepadHint()
-    {
-        if (enlargedGamepadHint is null) return;
-        var labels = new[] { "缩小", "放大", "关闭大图" };
-        enlargedGamepadHint.Text = $"方向键选择：{labels[imageCommand]} · A 确认 · B 返回 · 右摇杆平移 · LB/RB 翻图";
     }
 
     internal Task CompleteCurrentAsync() => SaveCompletionAsync(true);

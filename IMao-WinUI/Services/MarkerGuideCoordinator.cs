@@ -15,6 +15,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private readonly MarkerDetailService details;
     private MarkerGuideWindow? guide;
     private Window? chooser;
+    /// <summary>The point the core's guide-window registration currently describes.</summary>
+    private MarkerSelection? registeredSelection;
+    private long registeredGeneration;
     private readonly MarkerGuideSession session = new();
     private readonly SemaphoreSlim registrationLock = new(1, 1);
     private CancellationTokenSource connectionRequests = new();
@@ -62,6 +65,11 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private IntPtr chooserGameWindow;
     private int chooserGamepadIndex;
     private readonly List<(Button Button, Func<Task> Invoke)> chooserActions = [];
+    /// <summary>Set while a nearby completion list is open: how long X has been held, and what it runs.</summary>
+    private ProgressBar? chooserHold;
+    private Func<Task>? chooserCollectAll;
+    /// <summary>True when the open candidate list completes points, so X collects the group.</summary>
+    private bool chooserCompletesNearby;
     internal Func<nint, GamepadHandoffLease?>? AcquireGamepadHandoff { get; set; }
     private Window? returnWindow;
     private GamepadWindowIdentity returnGameIdentity, returnSourceIdentity;
@@ -91,16 +99,17 @@ public sealed class MarkerGuideCoordinator : IDisposable
         if (IsStandaloneGamepadGuideOpen)
         {
             if (chooserGamepad && chooser is { } choices && IsForeground(choices) && !chooserGamepadOpening)
-                return new(GamepadInputMode.List, $"choices:{selectionGeneration}:{chooserActions.Count}:{chooserActionGeneration}");
-            if (!standaloneGamepadOpening && guide is { IsGuideVisible: true } direct && IsForeground(direct))
+                return new(GamepadInputMode.List, $"choices:{selectionGeneration}:{chooserActions.Count}:{chooserActionGeneration}",
+                    CanCollectAll: chooserCompletesNearby);
+            if (!standaloneGamepadOpening && IsGuideForeground() && guide is { } direct)
                 return new(direct.IsGamepadImageOpen ? GamepadInputMode.Image : GamepadInputMode.Detail,
                     $"guide:{standaloneGamepadGeneration}:{session.Selection?.PointId}:{direct.GamepadViewToken}",
                     !gamepadBusy && direct.CanCompleteGamepad);
             return new(GamepadInputMode.Disabled, "guide:unfocused");
         }
         if (!IsGamepadSessionOpen) return new(GamepadInputMode.Disabled, "closed");
-        if (gamepadGuideGeneration != 0 && session.IsCurrent(gamepadGuideGeneration) &&
-            guide is { IsGuideVisible: true } current && IsForeground(current))
+        if (gamepadGuideGeneration != 0 && session.IsCurrent(gamepadGuideGeneration) && IsGuideForeground() &&
+            guide is { } current)
             return new(current.IsGamepadImageOpen ? GamepadInputMode.Image : GamepadInputMode.Detail,
                 $"gamepad:{gamepadGeneration}:{gamepadProfile}:{gamepadScene}:{session.Selection?.PointId}:{gamepadGuideGeneration}:{current.GamepadViewToken}:{(gamepadGuideRouteId is null ? "" : core.RoutePlanning.Active?.Id)}",
                 !gamepadBusy && current.CanCompleteGamepad && (gamepadGuideRouteId is null || core.RoutePlanning.Active?.Id == gamepadGuideRouteId));
@@ -226,6 +235,15 @@ public sealed class MarkerGuideCoordinator : IDisposable
             }
             else if (action is GamepadAction.Up or GamepadAction.Left) MoveGamepadChoice(-1);
             else if (action is GamepadAction.Down or GamepadAction.Right) MoveGamepadChoice(1);
+            else if (action == GamepadAction.CompleteAll)
+            {
+                // Held X over the list collects every listed point at once.
+                if (chooserCollectAll is { } collect)
+                {
+                    if (chooserHold is { } hold) hold.Visibility = Visibility.Collapsed;
+                    await collect();
+                }
+            }
             else if (action == GamepadAction.Accept)
             {
                 var entries = ActiveGamepadChoices();
@@ -289,6 +307,14 @@ public sealed class MarkerGuideCoordinator : IDisposable
 
     public void SetGamepadHoldProgress(double value)
     {
+        // The nearby completion list shows its own hold, because holding X there collects
+        // the whole group instead of completing the one point a detail page shows.
+        if (chooserGamepad && chooserHold is { } hold)
+        {
+            hold.Value = double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 0;
+            hold.Visibility = hold.Value > 0 ? Visibility.Visible : Visibility.Collapsed;
+            return;
+        }
         if (IsStandaloneGamepadGuideOpen || gamepadGuideGeneration != 0 && session.IsCurrent(gamepadGuideGeneration))
             guide?.SetGamepadHoldProgress(GetGamepadInputContext().CanComplete ? value : 0);
     }
@@ -836,7 +862,10 @@ public sealed class MarkerGuideCoordinator : IDisposable
         if (guide is null || guide.IsClosed)
         {
             guide = new MarkerGuideWindow(details, SetCompletionAsync, dismissedGeneration => CloseGuide(dismissedGeneration))
-            { ContentDismiss = DismissGuideFromContentAsync };
+            {
+                ContentDismiss = DismissGuideFromContentAsync,
+                ImageWindowChanged = (window, opened) => _ = GuideImageWindowChangedAsync(window, opened),
+            };
             var window = guide;
             window.Closed += async (_, _) =>
             {
@@ -909,6 +938,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
 
     private Task RegisterWindowAsync(Window window, MarkerSelection? selection = null, long generation = 0)
     {
+        // Remembered so the enlarged picture can be registered with the same identity and
+        // hand the registration back to the guide when it closes.
+        if (selection is not null) { registeredSelection = selection; registeredGeneration = generation; }
         registeredWindow = window;
         registration = selection is null ? ReferenceEquals(window, gamepadAssistant)
             ? new { hwnd = WindowHandle(window), assistantGeneration = gamepadGeneration }
@@ -937,6 +969,35 @@ public sealed class MarkerGuideCoordinator : IDisposable
             }
         }
         finally { registrationLock.Release(); }
+    }
+
+    /// <summary>
+    /// The enlarged picture is a window of its own, so it becomes the window the core's guide
+    /// shortcuts and focus checks follow while it is open, and the guide takes it back after.
+    /// </summary>
+    private async Task GuideImageWindowChangedAsync(Window window, bool opened)
+    {
+        if (disposed) return;
+        try
+        {
+            if (opened) await RegisterWindowAsync(window, registeredSelection, registeredGeneration);
+            else if (registeredSelection is { } selection && session.IsCurrent(registeredGeneration) &&
+                guide is { IsClosed: false, IsGuideVisible: true } back)
+            {
+                await RegisterWindowAsync(back, selection, registeredGeneration);
+                back.Activate();
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception e) { if (!disposed) core.ReportUserError("攻略大图窗口状态未更新：" + e.Message); }
+    }
+
+    /// <summary>True while the guide, or the enlarged picture it opened, owns the foreground.</summary>
+    private bool IsGuideForeground()
+    {
+        if (guide is not { IsGuideVisible: true } current) return false;
+        if (IsForeground(current)) return true;
+        return current.IsGamepadImageOpen && GetForegroundWindow() == (IntPtr)current.ImageWindowHandle;
     }
 
     private async Task UnregisterWindowAsync(Window window)
@@ -1058,6 +1119,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
         bool controller = Flag(page, "gamepad");
         bool nearby = Long(page, "nearbySession") > 0;
         bool complete = nearby && Text(page, "intent") == "complete";
+        chooserCompletesNearby = complete;
         string intent = complete ? "complete" : "guide";
         var game = controller || nearby ? new IntPtr(Long(page, "gameHwnd")) : IntPtr.Zero;
         if ((controller || nearby) && (!IsWindow(game) || GetForegroundWindow() != game)) return;
@@ -1092,18 +1154,47 @@ public sealed class MarkerGuideCoordinator : IDisposable
             "选择附近点位查看攻略。", TextWrapping = TextWrapping.Wrap });
         var rows = new StackPanel { Spacing = 8 };
         var more = new Button { Content = "加载更多点位", Visibility = Visibility.Collapsed };
+        // The list deliberately stays open after a click so a player can complete one
+        // nearby point after another, which means every row remembers its own state.
+        var rowSelections = new Dictionary<Button, MarkerSelection>();
+        var completedKeys = new HashSet<string>(StringComparer.Ordinal);
+        static string Key(MarkerSelection value) => $"{value.StateId}:{value.PointId}";
+        var collect = new Button { Content = "一键收集本组全部点位", HorizontalAlignment = HorizontalAlignment.Stretch,
+            Visibility = Visibility.Collapsed };
+        var collectHint = new TextBlock { Text = "手柄：长按 X 一键收集 · A 完成高亮的点 · B 返回", FontSize = 12, Opacity = 0.75,
+            TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
+        var hold = new ProgressBar { Minimum = 0, Maximum = 1, Height = 5, Visibility = Visibility.Collapsed };
+        chooserHold = hold;
         var notice = new TextBlock { TextWrapping = TextWrapping.Wrap };
-        list.Children.Add(rows); list.Children.Add(more); list.Children.Add(notice);
+        list.Children.Add(rows); list.Children.Add(more); list.Children.Add(collect); list.Children.Add(collectHint);
+        list.Children.Add(hold); list.Children.Add(notice);
         bool IsCurrent() => generation == selectionGeneration && !disposed && ReferenceEquals(chooser, window);
+        void RefreshCollectState()
+        {
+            int remaining = rowSelections.Count(entry => !completedKeys.Contains(Key(entry.Value)));
+            collect.IsEnabled = remaining > 0 && !chooserBusy;
+            collect.Content = remaining > 0 ? $"一键收集本组全部点位（还有 {remaining} 个）" : "本组点位已全部完成";
+        }
         void SetChoicesEnabled(bool enabled)
         {
-            foreach (var row in rows.Children.OfType<Button>()) row.IsEnabled = enabled;
+            foreach (var row in rows.Children.OfType<Button>())
+                row.IsEnabled = enabled && !(rowSelections.TryGetValue(row, out var value) && completedKeys.Contains(Key(value)));
             more.IsEnabled = enabled;
+            collect.IsEnabled = enabled && rowSelections.Any(entry => !completedKeys.Contains(Key(entry.Value)));
+        }
+        void MarkRowDone(Button button, MarkerSelection value)
+        {
+            completedKeys.Add(Key(value));
+            button.IsEnabled = false;
+            if (button.Content is TextBlock text) text.Text = "✓ 已完成 · " + text.Text;
+            else button.Content = "✓ 已完成 · " + button.Content;
+            RefreshCollectState();
         }
         void CloseChoices()
         {
             if (!IsCurrent()) return;
             chooserGamepad = chooserGamepadOpening = false; chooserActions.Clear();
+            chooserHold = null; chooserCollectAll = null;
             selectionGeneration++; chooser = null; window.Close();
         }
         Func<Task>? singleGuide = null;
@@ -1137,9 +1228,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
                                 if (Text(point, "pointId") != selection.PointId || Integer(point, "stateId") != selection.StateId || !Flag(point, "completed"))
                                     throw new InvalidOperationException("保存结果的点位身份不一致，请刷新进度后确认。");
                                 core.ReportGamepadDiagnostic("nearby-completed", $"revision={revision} point={selection.StateId}:{selection.PointId}");
-                                notice.Text = "所选点位已保存。";
-                                if (IsForeground(window)) await ReturnBeforeCloseAsync(window, chooserGameIdentity, CloseChoices);
-                                else CloseChoices();
+                                // Stay open: the player usually has several nearby points to mark.
+                                MarkRowDone(button, selection);
+                                notice.Text = $"已保存：{selection.NameId}。可以继续点击其它点位，或点「一键收集」。";
                                 return;
                             }
                             chosen = ReadSelection(result.GetProperty("selection"));
@@ -1173,6 +1264,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                     }
                 }
                 if (nearby && !complete && Integer(page, "total") == 1) singleGuide = ChooseAsync;
+                rowSelections[button] = selection;
                 button.Click += async (_, _) => await ChooseAsync();
                 // The load-more action stays after the visible point rows, including appended pages.
                 if (controller) chooserActions.Insert(Math.Max(0, chooserActions.Count - 1), (button, ChooseAsync));
@@ -1185,7 +1277,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
             if (!IsCurrent()) return;
             more.Visibility = result.TryGetProperty("hasMore", out var hasMore) && hasMore.GetBoolean() ? Visibility.Visible : Visibility.Collapsed;
             notice.Text = $"已显示 {loaded} / {Integer(result, "total")} 个点位";
-            if (controller) { notice.Text += complete ? " · 左摇杆选择 / A 完成此点 / B 返回" : " · 左摇杆选择 / A 查看 / B 返回"; MoveGamepadChoice(0); }
+            if (controller) { notice.Text += complete ? " · 左摇杆选择 / A 完成此点 / 长按 X 一键收集 / B 返回" : " · 左摇杆选择 / A 查看 / B 返回"; MoveGamepadChoice(0); }
+            RefreshCollectState();
         }
         async Task LoadMoreAsync()
         {
@@ -1201,6 +1294,47 @@ public sealed class MarkerGuideCoordinator : IDisposable
         }
         more.Click += async (_, _) => await LoadMoreAsync();
         if (controller) chooserActions.Add((more, LoadMoreAsync));
+        // One button for the whole group; the core validates every point exactly like a
+        // single submit, so a point that left the group or went stale is simply skipped.
+        async Task CollectAllAsync()
+        {
+            if (!IsCurrent() || chooserBusy || (nearby && !IsForeground(window))) return;
+            chooserBusy = true; chooserActionGeneration++;
+            SetChoicesEnabled(false);
+            try
+            {
+                var result = await core.ExecuteMarkerAsync("markerCompleteNearbyAll", new
+                { profileId, selectionRevision = revision, chooserHwnd = WindowHandle(window), chooserGeneration = generation },
+                    connectionRequests.Token);
+                if (!IsCurrent()) return;
+                var done = result.TryGetProperty("completed", out var collected) && collected.ValueKind == JsonValueKind.Array
+                    ? collected.EnumerateArray().Select(entry => entry.GetString() ?? "").ToHashSet(StringComparer.Ordinal)
+                    : new HashSet<string>(StringComparer.Ordinal);
+                int skipped = result.TryGetProperty("skipped", out var left) && left.ValueKind == JsonValueKind.Array ? left.GetArrayLength() : 0;
+                foreach (var (button, value) in rowSelections)
+                    if (done.Contains(Key(value))) MarkRowDone(button, value);
+                core.ReportGamepadDiagnostic("nearby-collect-all", $"revision={revision} completed={done.Count} skipped={skipped}");
+                notice.Text = done.Count == 0 ? "没有可收集的点位：本组点位可能已经完成或已离开范围。"
+                    : $"已收集 {done.Count} 个点位" + (skipped > 0 ? $"，{skipped} 个已离开范围未处理" : "") + "。";
+            }
+            catch (Exception e)
+            {
+                core.ReportGamepadDiagnostic("nearby-collect-failed", $"revision={revision} {e.Message}");
+                if (IsCurrent()) notice.Text = NearbyFailureMessage(e.Message);
+                core.ReportUserError("一键收集未完成：" + NearbyFailureMessage(e.Message));
+            }
+            finally
+            {
+                if (IsCurrent()) { chooserBusy = false; chooserActionGeneration++; SetChoicesEnabled(returnWindow is null); RefreshCollectState(); }
+            }
+        }
+        if (complete)
+        {
+            collect.Visibility = collectHint.Visibility = Visibility.Visible;
+            collect.Click += async (_, _) => await CollectAllAsync();
+            chooserCollectAll = CollectAllAsync;
+            if (controller) chooserActions.Add((collect, CollectAllAsync));
+        }
         window.Content = new ScrollViewer { Content = list, RequestedTheme = ElementTheme.Dark,
             Background = GamepadWindowChrome.Brush("IMaoCanvasBrush", 0x10151D),
             Foreground = GamepadWindowChrome.Brush("IMaoTextBrush", 0xE7F0F7) };
@@ -1214,7 +1348,12 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 new(client.X, client.Y, client.Width, client.Height),
                 new(work.X, work.Y, work.Width, work.Height), bounds.Dpi / 96.0));
         }
-        window.Closed += async (_, _) => { if (ReferenceEquals(chooser, window)) chooser = null; await UnregisterWindowAsync(window); };
+        window.Closed += async (_, _) =>
+        {
+            if (ReferenceEquals(chooser, window)) chooser = null;
+            chooserHold = null; chooserCollectAll = null; chooserCompletesNearby = false;
+            await UnregisterWindowAsync(window);
+        };
         await RegisterWindowAsync(window);
         if (generation != selectionGeneration || disposed || !ReferenceEquals(chooser, window)) { window.Close(); return; }
         if (nearby)

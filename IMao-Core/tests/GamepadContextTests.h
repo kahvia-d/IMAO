@@ -204,6 +204,28 @@ inline void TestGamepadContext(void (*check)(bool, const std::string&)) {
     if (NearbySelection::ValidateSingleSelection(initialNearby, replayed, 7, NearbySelection::Intent::Complete, start).empty()) ++singleWrites;
     check(singleWrites == 1, "repeated nearby frames cannot re-complete the already persisted single point");
 
+    // The completion list deliberately stays open, so completing one point must leave the
+    // next one committable: a submission validates its own point instead of consuming the
+    // whole session, while a point the list never offered stays refused.
+    ItemMarkerFrame pair; pair.profileId = "local"; pair.sceneName = "World";
+    pair.radius = 120; pair.markerRadius = 3; pair.filterRevision = 9;
+    ItemDatas firstPoint = markers.markers.front();
+    firstPoint.itemId = "first"; firstPoint.itemMapROC = {4, 0}; firstPoint.screenCoordiante = {4, 0};
+    ItemDatas secondPoint = firstPoint;
+    secondPoint.itemId = "second"; secondPoint.itemMapROC = {13, 0}; secondPoint.screenCoordiante = {13, 0};
+    pair.markers = {firstPoint, secondPoint};
+    model.Begin(6, 777, 456);
+    model.ObserveUi(6, "local", false, false, true, true, start, 500ms, start);
+    model.ObserveMinimap(6, "local", pair, {0, 0}, start, start + 500ms, start, 1.0);
+    const auto pairNearby = model.ReadNearby("local", start);
+    const NearbySelection::Session pairSession{pairNearby, NearbySelection::Intent::Complete, 41};
+    check(pairSession.Validate(pairNearby, 9, 41, "local", "World", "1:first", start).empty() &&
+        pairSession.Validate(pairNearby, 9, 41, "local", "World", "1:second", start).empty(),
+        "completing one nearby point leaves the next one committable in the same list");
+    check(pairSession.Validate(pairNearby, 9, 41, "local", "World", "1:absent", start) == "not-a-selection-candidate",
+        "a point the open list never offered is still refused");
+    model.End(6);
+
     // The trigger range is the player's setting and both keys carry their own value.
     ItemMarkerFrame ranged; ranged.radius = 120; ranged.markerRadius = 3; ranged.filterRevision = 7;
     ItemDatas rangePoint = markers.markers.front();

@@ -52,7 +52,9 @@ static json markerCandidates = json::array();
 static std::string candidatesProfile, candidatesScene;
 static std::uint64_t candidatesRevision = 0;
 static std::optional<NearbySelection::Session> nearbySelection;
-static json nearbySelectionResult;
+// What each point of the open candidate list already answered, so a lost response can
+// be retried without writing twice while the next point is still a new request.
+static std::map<std::string, json> nearbySelectionResults;
 static std::atomic_uint64_t markerFilterRevision{1};
 static std::mutex nearbyOperationMutex;
 static std::uint64_t markerGuideRegistrationRevision = 0;
@@ -422,15 +424,41 @@ static json HandleNearbyCommand(const json& command) {
     if (selection.chooserHwnd != requestedWindow || selection.chooserGeneration != requestedGeneration ||
         selection.registrationRevision != markerGuideRegistrationRevision || GetForegroundWindow() != window ||
         !IsWindowVisible(window) || IsIconic(window)) return reject("nearby-window-changed");
-    const auto intent = type == "markerCompleteNearbyCandidate" ? NearbySelection::Intent::Complete : NearbySelection::Intent::Guide;
+    const auto intent = type == "markerCompleteNearbyAll" ? NearbySelection::Intent::Complete :
+        type == "markerCompleteNearbyCandidate" ? NearbySelection::Intent::Complete : NearbySelection::Intent::Guide;
     if (selection.intent != intent) return reject("nearby-intent-mismatch");
-    const auto key = std::to_string(command.at("stateId").get<int>()) + ":" + command.at("pointId").get<std::string>();
-    // A response may be lost after persistence. Repeating the exact completed
-    // request returns its saved response without touching another point.
-    if (selection.consumed) {
-        if (selection.consumedKey == key) return nearbySelectionResult;
-        return reject("selection-already-consumed");
+    if (type == "markerCompleteNearbyAll") {
+        // One button for the whole list: every point is validated exactly like a single
+        // submit, and one that left the group, went stale or was completed meanwhile is
+        // skipped instead of written.
+        json completed = json::array(), skipped = json::array(), failed = json::array();
+        for (const auto& candidate : selection.source.candidates) {
+            if (!NearbySelection::Includes(candidate, NearbySelection::Intent::Complete)) continue;
+            const auto candidateKey = NearbySelection::Key(candidate.item);
+            if (nearbySelectionResults.contains(candidateKey)) { completed.push_back(candidateKey); continue; }
+            const auto candidateFailure = selection.Validate(current, DrawItemBase::MarkerFilterRevision(),
+                selection.revision, profile, current.sceneName, candidateKey);
+            if (!candidateFailure.empty() || DrawItemBase::IsPointCompleted(current.sceneName, candidate.item)) {
+                skipped.push_back(candidateKey); continue;
+            }
+            json candidatePoint{{"type", "markerSetCompletion"}, {"profileId", profile}, {"sceneName", current.sceneName},
+                {"nameId", candidate.item.nameId}, {"stateId", candidate.item.layer.stateId},
+                {"pointId", candidate.item.itemId}, {"completed", true}};
+            const auto candidateResult = DrawItemBase::HandleMarkerCommand(candidatePoint);
+            if (!candidateResult.value("accepted", false)) { failed.push_back(candidateKey); continue; }
+            completed.push_back(candidateKey);
+            nearbySelectionResults[candidateKey] = candidateResult;
+        }
+        StructuredLogger::Record("info", "gamepad", "nearby-collect-all", "revision=" + std::to_string(selection.revision) +
+            " completed=" + std::to_string(completed.size()) + " skipped=" + std::to_string(skipped.size()) +
+            " failed=" + std::to_string(failed.size()));
+        return {{"accepted", true}, {"message", ""}, {"data", {{"completed", completed}, {"skipped", skipped}, {"failed", failed}}}};
     }
+    const auto key = std::to_string(command.at("stateId").get<int>()) + ":" + command.at("pointId").get<std::string>();
+    // A response may be lost after persistence. Repeating the exact same request returns
+    // its saved response; a different point is a new request, because the list stays open
+    // so the player can complete one nearby point after another.
+    if (const auto saved = nearbySelectionResults.find(key); saved != nearbySelectionResults.end()) return saved->second;
     const auto failure = selection.Validate(current, DrawItemBase::MarkerFilterRevision(),
         command.at("selectionRevision").get<std::uint64_t>(), profile, command.value("sceneName", ""), key);
     if (!failure.empty()) return reject(failure);
@@ -449,9 +477,8 @@ static json HandleNearbyCommand(const json& command) {
         point["type"] = "markerSetCompletion"; point["completed"] = true;
         result = DrawItemBase::HandleMarkerCommand(point);
     }
-    if (intent == NearbySelection::Intent::Complete && result.value("accepted", false)) {
-        selection.consumed = true; selection.consumedKey = key; nearbySelectionResult = result;
-    }
+    if (intent == NearbySelection::Intent::Complete && result.value("accepted", false))
+        nearbySelectionResults[key] = result;
     StructuredLogger::Record("info", "gamepad", "nearby-submit-result", type + " revision=" +
         std::to_string(selection.revision) + " point=" + key + " accepted=" + std::to_string(result.value("accepted", false)));
     return result;
@@ -461,7 +488,7 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
     if (!markerStore) return {{"accepted", false}, {"message", "marker-store-unavailable"}, {"data", json::object()}};
     const auto nearbyType = command.value("type", "");
     if (nearbyType == "markerBindNearbyCandidates" || nearbyType == "markerResolveNearbyCandidate" ||
-        nearbyType == "markerCompleteNearbyCandidate") return HandleNearbyCommand(command);
+        nearbyType == "markerCompleteNearbyCandidate" || nearbyType == "markerCompleteNearbyAll") return HandleNearbyCommand(command);
     auto normalized = command;
     const auto type = command.value("type", "");
     // Validate before saving so a malformed correlation field cannot result in
@@ -534,7 +561,7 @@ void DrawItemBase::PublishMarkerCandidates(const std::string& profileId, const s
     json event;
     {
         std::scoped_lock lock(markerCandidatesMutex);
-        nearbySelection.reset(); nearbySelectionResult = nullptr;
+        nearbySelection.reset(); nearbySelectionResults.clear();
         markerCandidates = std::move(candidates);
         candidatesProfile = profileId; candidatesScene = sceneName; ++candidatesRevision;
         json page = json::array();
@@ -561,7 +588,7 @@ json DrawItemBase::PublishNearbyCandidates(NearbySelection::Observation observat
         }
         candidatesProfile = observation.profileId; candidatesScene = observation.sceneName; ++candidatesRevision;
         nearbySelection = NearbySelection::Session{std::move(observation), intent, candidatesRevision};
-        nearbySelectionResult = nullptr;
+        nearbySelectionResults.clear();
         json page = json::array();
         for (std::size_t i = 0; i < std::min<std::size_t>(100, markerCandidates.size()); ++i) page.push_back(markerCandidates[i]);
         event = {{"type", "markerCandidates"}, {"intent", intent == NearbySelection::Intent::Complete ? "complete" : "guide"},
@@ -587,7 +614,7 @@ void DrawItemBase::ClearMarkerCandidates(bool force) {
         // Overlay visibility cleanup must not expire a user's reading time.
         // Submit independently requires the registered window and a fresh fix.
         if (nearbySelection && !force) return;
-        nearbySelection.reset(); nearbySelectionResult = nullptr;
+        nearbySelection.reset(); nearbySelectionResults.clear();
         changed = !markerCandidates.empty(); markerCandidates = json::array();
         candidatesProfile.clear(); candidatesScene.clear(); ++candidatesRevision;
     }

@@ -318,9 +318,10 @@ public sealed partial class SettingsPage : Page
             Content = rows,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            // Open by default: the list is the content of this card, and a hidden default would make the
-            // regions look missing. What the player closes stays closed for the rest of the session.
-            IsExpanded = regionGroupExpanded.GetValueOrDefault(country, true),
+            // Collapsed by default: thirteen rows at once is what made the list hard to read, and a
+            // country header still says what it holds. What the player opens or closes is remembered
+            // for the rest of the session.
+            IsExpanded = regionGroupExpanded.GetValueOrDefault(country, false),
         };
         RegionList.Children.Add(expander);
         return new RegionGroup { Expander = expander, Summary = summary, Rows = rows };

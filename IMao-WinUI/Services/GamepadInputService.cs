@@ -228,7 +228,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             if (Math.Abs(lastHold - update.HoldProgress) > .015 || (lastHold != 0 && update.HoldProgress == 0))
             { lastHold = update.HoldProgress; guides.SetGamepadHoldProgress(lastHold); }
             if (guides.IsGamepadSessionOpen || guides.IsStandaloneGamepadGuideOpen)
-                SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" : "点位助手 · A 确认 / B 返回 / 按住 X 完成当前点");
+                SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" : "点位助手 · A 确认 / B 返回 / X 放大图片 / 长按 A 完成当前点");
             else if (context.Mode == GamepadInputMode.Map)
                 SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" :
                     $"手柄 {selectedDevice + 1} 已连接 · LB 地图工具台 / RB 点位助手");

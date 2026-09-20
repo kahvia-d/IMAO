@@ -212,20 +212,51 @@ internal static class GamepadInputTests
 
     private static void VerifyCompletion(Action<bool, string> check)
     {
+        // Completion is a deliberate hold on A; releasing early is still the plain accept.
         var run = new InputRun(Detail);
-        check(run.Hold(GamepadButtons.X, 550).All(update => update.Action is null) &&
-            run.Step(GamepadButtons.None).Action is null,
-            "gamepad releasing X before the threshold never completes a point");
-        check(run.Hold(GamepadButtons.X, 600).Count(update => update.Action == GamepadAction.Complete) == 1,
-            "gamepad X completes exactly one selected eligible point after a full hold");
-        check(run.Hold(GamepadButtons.X, 1000).All(update => update.Action is null),
-            "gamepad continued X hold cannot repeat completion");
+        check(run.Hold(GamepadButtons.A, 550).All(update => update.Action is null) &&
+            run.Step(GamepadButtons.None).Action == GamepadAction.Accept,
+            "gamepad releasing A before the threshold never completes a point and stays an accept");
+        check(run.Hold(GamepadButtons.A, 600).Count(update => update.Action == GamepadAction.Complete) == 1,
+            "gamepad A completes exactly one selected eligible point after a full hold");
+        check(run.Hold(GamepadButtons.A, 1000).All(update => update.Action is null),
+            "gamepad continued A hold cannot repeat completion");
         run.Context = Detail with { Token = "point:8:1409980210964680704" };
-        check(run.Hold(GamepadButtons.X, 1000).All(update => update.Action is null),
-            "gamepad holding X across a selected point change cannot complete the next point");
+        check(run.Hold(GamepadButtons.A, 1000).All(update => update.Action is null),
+            "gamepad holding A across a selected point change cannot complete the next point");
         run.Step(GamepadButtons.None);
-        check(run.Hold(GamepadButtons.X, 600).Last().Action == GamepadAction.Complete,
-            "gamepad a newly selected point requires release and a new full X hold");
+        check(run.Hold(GamepadButtons.A, 600).Last().Action == GamepadAction.Complete,
+            "gamepad a newly selected point requires release and a new full A hold");
+
+        // X is the enlarged picture on a detail page and the collect-all hold over the
+        // nearby candidate list; neither completes a point.
+        run = new InputRun(Detail);
+        check(run.Hold(GamepadButtons.X, 700).All(update => update.Action is null) &&
+            run.Step(GamepadButtons.None).Action == GamepadAction.ExpandImage,
+            "gamepad X opens the enlarged picture and never completes a point");
+        run = new InputRun(List with { CanCollectAll = true });
+        check(run.Hold(GamepadButtons.X, 600).Last().Action == GamepadAction.CompleteAll,
+            "gamepad holding X over the completion list collects the whole group");
+        run = new InputRun(List);
+        check(run.Hold(GamepadButtons.X, 800).All(update => update.Action is null) &&
+            run.Step(GamepadButtons.None).Action is null,
+            "gamepad X without a collectable list stays silent");
+        run = new InputRun(List with { CanCollectAll = true });
+        check(run.Hold(GamepadButtons.X, 300).All(update => update.Action is null) &&
+            run.Step(GamepadButtons.None).Action is null,
+            "gamepad releasing X before the threshold collects nothing");
+
+        // The triggers zoom the enlarged picture; every other screen still cancels on them.
+        var zoomIn = Sample(GamepadButtons.None) with { RightTrigger = 255 };
+        var zoomOut = Sample(GamepadButtons.None) with { LeftTrigger = 255 };
+        run = new InputRun(new GamepadInputContext(GamepadInputMode.Image, "image"));
+        check(run.Step(zoomOut).Action == GamepadAction.ZoomOut && run.Step(zoomIn, 100).Action == GamepadAction.ZoomIn,
+            "gamepad triggers zoom the enlarged picture out and in");
+        int zooms = 0;
+        for (int elapsed = 0; elapsed < 400; elapsed += 50) if (run.Step(zoomIn, 50).Action == GamepadAction.ZoomIn) ++zooms;
+        check(zooms > 0, "a held zoom trigger keeps zooming instead of firing once");
+        check(run.Hold(GamepadButtons.A, 700).All(update => update.Action is null),
+            "gamepad holding A over the enlarged picture never completes a point");
 
         foreach (var context in new[]
         {
@@ -235,43 +266,43 @@ internal static class GamepadInputTests
         })
         {
             run = new InputRun(context);
-            check(run.Hold(GamepadButtons.X, 800).All(update => update.Action is null),
-                $"gamepad X cannot complete in {context.Mode} with eligibility {context.CanComplete}");
+            check(run.Hold(GamepadButtons.A, 800).All(update => update.Action != GamepadAction.Complete),
+                $"gamepad A cannot complete in {context.Mode} with eligibility {context.CanComplete}");
         }
         foreach (var interference in new[]
         {
-            Sample(GamepadButtons.X | GamepadButtons.A), Sample(GamepadButtons.X | GamepadButtons.B),
-            Sample(GamepadButtons.X | GamepadButtons.Up), Sample(GamepadButtons.X) with { LeftX = 15000 },
-            Sample(GamepadButtons.X) with { RightY = -15000 }, Sample(GamepadButtons.X) with { LeftTrigger = 255 }
+            Sample(GamepadButtons.A | GamepadButtons.X), Sample(GamepadButtons.A | GamepadButtons.B),
+            Sample(GamepadButtons.A | GamepadButtons.Up), Sample(GamepadButtons.A) with { LeftX = 15000 },
+            Sample(GamepadButtons.A) with { RightY = -15000 }, Sample(GamepadButtons.A) with { LeftTrigger = 255 }
         })
         {
             run = new InputRun(Detail);
-            run.Hold(GamepadButtons.X, 300);
+            run.Hold(GamepadButtons.A, 300);
             var cancelled = run.Step(interference);
             check(cancelled.Action is null && cancelled.HoldProgress == 0 && cancelled.WaitingForRelease &&
-                run.Hold(GamepadButtons.X, 700).All(update => update.Action is null),
+                run.Hold(GamepadButtons.A, 700).All(update => update.Action != GamepadAction.Complete),
                 "gamepad mixed buttons, stick movement or trigger cancel completion until neutral");
         }
         run = new InputRun(Detail);
-        run.Hold(GamepadButtons.X, 300);
+        run.Hold(GamepadButtons.A, 300);
         run.Context = Detail with { CanComplete = false };
-        check(run.Step(GamepadButtons.X).WaitingForRelease,
+        check(run.Step(GamepadButtons.A).WaitingForRelease,
             "gamepad losing completion eligibility cancels partial hold immediately");
         run.Context = Detail;
-        check(run.Hold(GamepadButtons.X, 700).All(update => update.Action is null),
-            "gamepad restored completion eligibility cannot reuse the existing X hold");
+        check(run.Hold(GamepadButtons.A, 700).All(update => update.Action != GamepadAction.Complete),
+            "gamepad restored completion eligibility cannot reuse the existing A hold");
         run.Step(GamepadButtons.None);
-        check(run.Hold(GamepadButtons.X, 600).Last().Action == GamepadAction.Complete,
+        check(run.Hold(GamepadButtons.A, 600).Last().Action == GamepadAction.Complete,
             "gamepad restored completion eligibility accepts a fresh full gesture");
 
         run = new InputRun(Detail);
-        run.Hold(GamepadButtons.X, 300);
-        run.Step(Sample(GamepadButtons.X) with { RightX = 16000, LeftY = -16000 });
+        run.Hold(GamepadButtons.A, 300);
+        run.Step(Sample(GamepadButtons.A) with { RightX = 16000, LeftY = -16000 });
         run.Step(Sample(GamepadButtons.None) with { RightX = 16000 });
-        check(run.Hold(GamepadButtons.X, 700).All(update => update.Action is null),
-            "gamepad releasing X with a stick still displaced does not rearm completion");
+        check(run.Hold(GamepadButtons.A, 700).All(update => update.Action != GamepadAction.Complete),
+            "gamepad releasing A with a stick still displaced does not rearm completion");
         run.Step(GamepadButtons.None);
-        check(run.Hold(GamepadButtons.X, 600).Last().Action == GamepadAction.Complete,
+        check(run.Hold(GamepadButtons.A, 600).Last().Action == GamepadAction.Complete,
             "gamepad completion rearms only after both buttons and axes are neutral");
     }
 
@@ -281,10 +312,13 @@ internal static class GamepadInputTests
         {
             (GamepadButtons.A, GamepadAction.Accept), (GamepadButtons.B, GamepadAction.Back),
             (GamepadButtons.Y, GamepadAction.OpenRouteMenu),
+            (GamepadButtons.X, GamepadAction.ExpandImage),
             (GamepadButtons.LB, GamepadAction.PreviousPage), (GamepadButtons.RB, GamepadAction.NextPage)
         })
         {
-            var run = new InputRun(Detail);
+            // A is the completion hold on an eligible detail page, so its tap semantics are
+            // measured where a hold cannot take the press over.
+            var run = new InputRun(button == GamepadButtons.A ? Detail with { CanComplete = false } : Detail);
             check(run.Hold(button, 700).All(update => update.Action is null) &&
                 run.Step(GamepadButtons.None).Action == expected && run.Step(GamepadButtons.None).Action is null,
                 $"gamepad {button} emits one {expected} on release only");
@@ -312,35 +346,36 @@ internal static class GamepadInputTests
     {
         foreach (string boundary in new[] { "focus loss", "scene change", "disconnect", "controller change", "sampling pause", "clock rollback" })
         {
+            // A is the completion hold, so a boundary has to cancel its progress.
             var run = new InputRun(Detail);
-            run.Hold(GamepadButtons.X, 300);
+            run.Hold(GamepadButtons.A, 300);
             GamepadInputUpdate cancelled;
             switch (boundary)
             {
                 case "focus loss":
                     run.Context = new(GamepadInputMode.Disabled, "unfocused");
-                    cancelled = run.Step(GamepadButtons.X);
+                    cancelled = run.Step(GamepadButtons.A);
                     run.Context = Detail;
                     break;
                 case "scene change":
                     run.Context = Detail with { Token = "scene:new:point:same" };
-                    cancelled = run.Step(GamepadButtons.X);
+                    cancelled = run.Step(GamepadButtons.A);
                     break;
                 case "disconnect":
-                    cancelled = run.Step(Sample(GamepadButtons.X) with { Connected = false });
+                    cancelled = run.Step(Sample(GamepadButtons.A) with { Connected = false });
                     break;
                 case "controller change":
                     run.DeviceId = 1;
-                    cancelled = run.Step(GamepadButtons.X);
+                    cancelled = run.Step(GamepadButtons.A);
                     break;
-                case "sampling pause": cancelled = run.Step(GamepadButtons.X, 251); break;
-                default: cancelled = run.Step(GamepadButtons.X, -1); break;
+                case "sampling pause": cancelled = run.Step(GamepadButtons.A, 251); break;
+                default: cancelled = run.Step(GamepadButtons.A, -1); break;
             }
             check(cancelled.Action is null && cancelled.WaitingForRelease && cancelled.HoldProgress == 0 &&
-                run.Hold(GamepadButtons.X, 700).All(update => update.Action is null),
+                run.Hold(GamepadButtons.A, 700).All(update => update.Action is null),
                 $"gamepad {boundary} cancels a partly completed hold and requires release");
             run.Step(GamepadButtons.None);
-            check(run.Hold(GamepadButtons.X, 600).Last().Action == GamepadAction.Complete,
+            check(run.Hold(GamepadButtons.A, 600).Last().Action == GamepadAction.Complete,
                 $"gamepad a fresh full gesture works after {boundary} recovery");
         }
         var reset = new InputRun(Detail);
