@@ -102,7 +102,23 @@ std::string CoordinateCandidateParser::Normalize(const std::string& utf8Text) {
         normalizedWhitespace.push_back(static_cast<char>(character));
         pendingSpace = false;
     }
-    return normalizedWhitespace;
+    // OCR occasionally splits a number: -439,1283,52 comes back as "-439,1283,5 2" at
+    // 0.94-0.98 confidence, which the strict three-number format rejects as four.  A space
+    // between two digits is not a separator in this text, so it is joined rather than lost.
+    // Measured before this: one publish in eight reads of a coordinate that was correct
+    // every single time (2026-09-21 02:00).
+    std::string joined;
+    joined.reserve(normalizedWhitespace.size());
+    for (std::size_t index = 0; index < normalizedWhitespace.size(); ++index) {
+        const char character = normalizedWhitespace[index];
+        const bool joinsDigits = character == ' ' && !joined.empty() &&
+            index + 1 < normalizedWhitespace.size() &&
+            joined.back() >= '0' && joined.back() <= '9' &&
+            normalizedWhitespace[index + 1] >= '0' && normalizedWhitespace[index + 1] <= '9';
+        if (joinsDigits) continue;
+        joined.push_back(character);
+    }
+    return joined;
 }
 
 std::vector<CoordinateCandidate> CoordinateCandidateParser::Parse(const std::string& utf8Text, float score,
