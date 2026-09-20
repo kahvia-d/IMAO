@@ -9,14 +9,18 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <mutex>
 #include <sstream>
 #include <unordered_map>
+#include <vector>
 
 namespace DenseMapConfirmer {
 namespace {
-// The tile raster: 1024 pixels per 850 world units, as the packs' manifests record.
-constexpr double kTilePixelsPerUnit = 1024.0 / 850.0;
+// The tile archive is the game's own grid: one 1024-pixel tile per 850 world units, as
+// the packs' manifests record.
+constexpr int kTileSize = 1024;
+constexpr double kTilePixelsPerUnit = kTileSize / 850.0;
 // The minimap is normalised to a square before features are extracted; the mask radii
 // below are expressed in that same space (42 = the player arrow, 80 = the terrain ring).
 constexpr double kNormalizedMinimapSize = 184.0;
@@ -55,6 +59,32 @@ cv::Mat LoadTile(const std::filesystem::path& root, int state, int x, int y) {
         tileCache[key] = loaded;
     }
     return loaded;
+}
+
+// Where a map pixel lives on the game's tile grid.  The archive is cut the way the game
+// names its tiles, and that is not a plain mosaic of the map raster:
+//   * the column block grows with map x, and tile 0 starts one whole tile to the left of
+//     the map origin (the game's tileX = floor(gameX / 850 + 1));
+//   * the row block counts *down* from the map origin, so the row inside a tile is
+//     map y plus a whole tile per block index (the game's tileY = ceil(-gameY / 850)).
+// Row order is what makes this worth spelling out: reading a tile the way a mosaic of the
+// map image would put it lands on the vertically mirrored piece of terrain.  The measured
+// evidence is in MEMORY: the archive's own seams continue under this rule and not under
+// the mirrored one, and the shipped feature packs - which localise correctly in game -
+// are built with it.
+struct GridAxis {
+    int tile = 0;
+    int pixel = 0;
+};
+
+GridAxis ColumnOf(double mapX) {
+    const int tile = static_cast<int>(std::floor(mapX / kTileSize)) + 1;
+    return {tile, static_cast<int>(std::floor(mapX)) + kTileSize - kTileSize * tile};
+}
+
+GridAxis RowOf(double mapY) {
+    const int tile = static_cast<int>(std::ceil(-mapY / kTileSize));
+    return {tile, static_cast<int>(std::floor(mapY)) + kTileSize * tile};
 }
 
 std::string Numbers(double score, double peak, double offsetX, double offsetY) {
@@ -105,34 +135,44 @@ Result Confirm(const cv::Mat& normalizedMinimap, int sceneId, const cv::Point2d&
     if (scene == nullptr || scene->kuroStateId <= 0) return finish("reason=unknown-scene");
     if (referenceRoot.empty()) return finish("reason=no-reference");
 
-    // Map pixels per minimap pixel: the tiles are 1.2047 px per world unit and the
-    // normalised minimap covers kNormalizedMinimapSize * terrainScale units.
+    // Map pixels per minimap pixel: the tiles are 1024 px per 850 world units and the
+    // normalised minimap covers kNormalizedMinimapSize * terrainScale world units.
     const double scale = kTilePixelsPerUnit * terrainScale;
     const int templateWidth = static_cast<int>(std::lround(normalizedMinimap.cols * scale));
     const int templateHeight = static_cast<int>(std::lround(normalizedMinimap.rows * scale));
     if (templateWidth < 32 || templateHeight < 32) return finish("reason=template-too-small");
 
-    // The reference window, centred on the prior, in map pixels.
+    // The prior arrives as a map-image coordinate (scene->scale * world + scene->origin),
+    // the space VisualLocalizationCandidate::mapCenter uses; the archive is indexed in map
+    // pixels.
+    const double mapX = kTilePixelsPerUnit * (prior.x - scene->originX) / scene->scale;
+    const double mapY = kTilePixelsPerUnit * (prior.y - scene->originY) / scene->scale;
+
+    // The reference window, centred on the prior, in map pixels.  Each row and column of
+    // the window lands on its own tile and pixel; resolving them once keeps the copy below
+    // a straight read and touches at most four tiles.
     const int side = std::max(templateWidth, templateHeight) + 2 * kSearchRadius;
-    const int originX = static_cast<int>(std::lround(prior.x - side / 2.0));
-    const int originY = static_cast<int>(std::lround(prior.y - side / 2.0));
+    std::vector<GridAxis> rows(side), columns(side);
+    for (int j = 0; j < side; ++j) rows[j] = RowOf(mapY - side / 2.0 + j);
+    for (int i = 0; i < side; ++i) columns[i] = ColumnOf(mapX - side / 2.0 + i);
+
     cv::Mat window = cv::Mat::zeros(side, side, CV_8U);
     long long covered = 0;
-    for (int j = 0; j < 2; ++j) {
-        for (int i = 0; i < 2; ++i) {
-            const int tileX = static_cast<int>(std::floor(originX / 1024.0)) + i;
-            const int tileY = static_cast<int>(std::floor(originY / 1024.0)) + j;
-            const cv::Mat tile = LoadTile(referenceRoot, scene->kuroStateId, tileX, tileY);
-            const int destinationX = tileX * 1024 - originX, destinationY = tileY * 1024 - originY;
-            const int sourceX = std::max(0, -destinationX), sourceY = std::max(0, -destinationY);
-            const int targetX = std::max(0, destinationX), targetY = std::max(0, destinationY);
-            const int width = std::min(1024 - sourceX, side - targetX);
-            const int height = std::min(1024 - sourceY, side - targetY);
-            if (width <= 0 || height <= 0) continue;
-            if (tile.empty() || tile.cols < 1024 || tile.rows < 1024) continue;
-            tile(cv::Rect(sourceX, sourceY, width, height))
-                .copyTo(window(cv::Rect(targetX, targetY, width, height)));
-            covered += static_cast<long long>(width) * height;
+    int loadedX = std::numeric_limits<int>::min(), loadedY = std::numeric_limits<int>::min();
+    cv::Mat tile;
+    for (int j = 0; j < side; ++j) {
+        uchar* destination = window.ptr<uchar>(j);
+        for (int i = 0; i < side; ++i) {
+            const auto& column = columns[i];
+            const auto& row = rows[j];
+            if (column.tile != loadedX || row.tile != loadedY) {
+                tile = LoadTile(referenceRoot, scene->kuroStateId, column.tile, row.tile);
+                loadedX = column.tile;
+                loadedY = row.tile;
+            }
+            if (tile.empty()) continue;
+            destination[i] = tile.at<uchar>(row.pixel, column.pixel);
+            ++covered;
         }
     }
     if (covered < kMinimumCoverage * side * side) return finish("reason=reference-incomplete");
@@ -174,8 +214,11 @@ Result Confirm(const cv::Mat& normalizedMinimap, int sceneId, const cv::Point2d&
     double peak = 0.0;
     cv::Point peakAt;
     cv::minMaxLoc(score, nullptr, &peak, nullptr, &peakAt);
-    // The template's top-left corner sits kSearchRadius from the window's corner when the
-    // prior is the centre, so that cell is the correlation *at the prior*.
+    // The window is centred on the prior, so the cell whose template centre is the prior
+    // is the correlation *at the prior*: that is the number the decision uses, because the
+    // position is trusted from the prior and this only measures how well the map agrees
+    // there.  The peak is recorded for diagnosis and deliberately not used as a position -
+    // it wanders by tens of pixels on a frame whose prior is already right.
     const int priorX = std::max(0, std::min(score.cols - 1, (side - templateWidth) / 2));
     const int priorY = std::max(0, std::min(score.rows - 1, (side - templateHeight) / 2));
     result.available = true;
@@ -183,8 +226,7 @@ Result Confirm(const cv::Mat& normalizedMinimap, int sceneId, const cv::Point2d&
     result.peakScore = peak;
     result.peakOffsetX = peakAt.x - priorX;
     result.peakOffsetY = peakAt.y - priorY;
-    const double offset = std::hypot(result.peakOffsetX, result.peakOffsetY);
-    result.accepted = result.score >= MinimumScore && offset <= MaximumPeakOffsetPixels;
+    result.accepted = result.score >= MinimumScore;
     return finish(Numbers(result.score, result.peakScore, result.peakOffsetX, result.peakOffsetY));
 }
 }

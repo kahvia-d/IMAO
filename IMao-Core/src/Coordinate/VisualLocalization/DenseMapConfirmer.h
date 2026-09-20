@@ -24,7 +24,7 @@ struct Result {
     bool available = false;  // false when the reference imagery or the inputs are missing
     bool accepted = false;
     double score = 0.0;                          // correlation at the prior
-    double peakScore = 0.0;                      // best correlation in the window
+    double peakScore = 0.0;                      // best correlation in the window, diagnostic
     double peakOffsetX = 0.0, peakOffsetY = 0.0; // that peak, in map pixels, from the prior
     double milliseconds = 0.0;
     std::string detail;
@@ -47,11 +47,12 @@ Result Confirm(const cv::Mat& normalizedMinimap, int sceneId, const cv::Point2d&
 // tried: next to the executable, then the resource baseline root.
 std::filesystem::path ReferenceRoot();
 
-// Correlation at the prior that counts as a confirmation. Set from the offline replay of
-// the reported frame: the correct prior scored 0.783 there, a prior 41 units off scored
-// 0.56-0.64 and one 100 units off scored 0.011.
+// Correlation at the prior that counts as a confirmation. Measured on the reported frame
+// against the real archive: 0.81 at the position the OCR coordinate names, 0.44 with the
+// prior 100 world units out in y, and 0.04-0.05 with it 100 units out in x, with blank and
+// noise minimaps landing at zero. 0.68 sits in that gap with room on both sides. Only the
+// correlation at the prior is tested: the position itself is taken from the prior, and the
+// best peak in the window was measured to wander tens of pixels even when the prior is
+// right, so it is reported but never trusted.
 inline constexpr double MinimumScore = 0.68;
-// How far the best peak may sit from the prior before the confirmation is refused: the
-// terrain has to agree *at the prior*, not merely somewhere nearby.
-inline constexpr double MaximumPeakOffsetPixels = 50.0;
 }
