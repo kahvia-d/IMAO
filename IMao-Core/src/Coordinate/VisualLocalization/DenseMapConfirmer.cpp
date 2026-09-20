@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <limits>
 #include <mutex>
 #include <sstream>
 #include <unordered_map>
@@ -219,7 +218,8 @@ Result Confirm(const cv::Mat& normalizedMinimap, int sceneId, const cv::Point2d&
             if (a != current) {
                 current = a;
                 const cv::Mat& tile = tiles[a][b];
-                source = tile.empty() || row.pixel >= tile.rows ? nullptr : tile.ptr<uchar>(row.pixel);
+                source = tile.cols >= kTileSize && tile.rows >= kTileSize
+                    ? tile.ptr<uchar>(row.pixel) : nullptr;
             }
             if (source == nullptr) continue;
             destination[i] = source[column.pixel];
