@@ -33,6 +33,16 @@ public sealed record RegionEntry
     /// the interface says before the click.
     /// </summary>
     public bool Deletable { get; init; }
+    /// <summary>
+    /// The Kuro country this region belongs to — the same grouping the official map site lists regions
+    /// under. Empty when the shipped names file does not say, which the page shows as one last group
+    /// instead of hiding the region.
+    /// </summary>
+    public string Country { get; init; } = "";
+    /// <summary>Where the country sits in the published order. Unknown countries sort after the known ones.</summary>
+    public int CountryOrder { get; init; } = int.MaxValue;
+    /// <summary>Where the region sits inside its country, as the map-region registry orders them.</summary>
+    public int Order { get; init; } = int.MaxValue;
 }
 
 /// <summary>
@@ -66,7 +76,7 @@ public sealed class RegionCatalog
     /// </summary>
     public IReadOnlyList<RegionEntry> Build(ResourceRelease? release)
     {
-        var names = ReadNames();
+        var labels = ReadLabels();
         var deselected = new HashSet<string>(_snapshots.DeselectedPackageIds, StringComparer.Ordinal);
         var available = _snapshots.AvailablePackages();
         var released = release is null
@@ -85,10 +95,14 @@ public sealed class RegionCatalog
             // copy is the only truth about it and there is nothing to download.
             var offer = released.GetValueOrDefault(package.Id) is { } candidate && candidate.Version == package.Version ? candidate : null;
             var state = bundled ? RegionState.Bundled : onDisk ? RegionState.Downloaded : RegionState.NotInstalled;
+            var label = Describe(package.Id, labels);
             entries.Add(new RegionEntry
             {
                 PackageId = package.Id,
-                Name = DisplayName(package.Id, names),
+                Name = label.Name,
+                Country = label.Country,
+                CountryOrder = label.CountryOrder,
+                Order = label.Order,
                 Version = offer?.Version ?? package.Version,
                 // The publication reports the packed download size; the local copy is what occupies the disk.
                 // A bundled region never reports its download size, because selecting one downloads nothing.
@@ -99,7 +113,11 @@ public sealed class RegionCatalog
                 Deletable = onDisk,
             });
         }
-        return entries.OrderBy(entry => entry.Name, StringComparer.CurrentCulture).ToList();
+        // Grouped the way the official map lists them: countries in their published order, regions in the
+        // registry's order inside each country. The page renders groups in this same order, so one sort
+        // here decides both.
+        return entries.OrderBy(entry => entry.CountryOrder).ThenBy(entry => entry.Order)
+            .ThenBy(entry => entry.Name, StringComparer.CurrentCulture).ToList();
     }
 
     /// <summary>Total bytes of a local package copy, for a package the publication does not describe.</summary>
@@ -120,32 +138,72 @@ public sealed class RegionCatalog
         .Select(p => p.Id)
         .ToList();
 
-    private static string DisplayName(string packageId, IReadOnlyDictionary<string, string> names)
+    /// <summary>The region id behind a region package id ("jinzhou-kurotiles" → "jinzhou").</summary>
+    private static string RegionId(string packageId) =>
+        packageId.EndsWith(Suffix, StringComparison.Ordinal) ? packageId[..^Suffix.Length] : packageId;
+
+    /// <summary>What the shipped region-names.json says about one region, with the fallbacks the page needs.</summary>
+    private static (string Name, string Country, int CountryOrder, int Order) Describe(string packageId, Labels labels)
     {
-        var regionId = packageId.EndsWith(Suffix, StringComparison.Ordinal)
-            ? packageId[..^Suffix.Length]
-            : packageId;
-        return names.TryGetValue(regionId, out var name) && name.Length > 0 ? name : packageId;
+        // A region the labels do not name still gets a row: the package id is what the page showed before
+        // the labels existed, and hiding a region would also hide its switch.
+        if (!labels.Regions.TryGetValue(RegionId(packageId), out var label)) return (packageId, "", int.MaxValue, int.MaxValue);
+        var name = label.Name.Length > 0 ? label.Name : packageId;
+        return label.CountryId > 0 && labels.Countries.TryGetValue(label.CountryId, out var country)
+            ? (name, country.Name, country.Order, label.Order)
+            : (name, "", int.MaxValue, label.Order);
     }
 
-    private IReadOnlyDictionary<string, string> ReadNames()
+    private sealed record RegionLabel(string Name, int CountryId, int Order);
+    private sealed record CountryLabel(string Name, int Order);
+    private sealed class Labels
+    {
+        public Dictionary<string, RegionLabel> Regions { get; } = new(StringComparer.Ordinal);
+        public Dictionary<int, CountryLabel> Countries { get; } = new();
+    }
+
+    /// <summary>
+    /// Reads the shipped labels. Format version 2 also carries the Kuro country each region belongs to,
+    /// which is what lets the settings page group the list the way the official map does; version 1
+    /// (one bare name per region) is still read, so either half can be older than the other.
+    /// </summary>
+    private Labels ReadLabels()
     {
         // A missing or unreadable names file only costs prettier labels, so it must never break the page.
+        var labels = new Labels();
         try
         {
             var path = Path.Combine(_mapDataRoot, "region-names.json");
-            if (!File.Exists(path)) return new Dictionary<string, string>(StringComparer.Ordinal);
+            if (!File.Exists(path)) return labels;
             using var document = JsonDocument.Parse(File.ReadAllBytes(path));
-            if (!document.RootElement.TryGetProperty("regions", out var regions) || regions.ValueKind != JsonValueKind.Object)
-                return new Dictionary<string, string>(StringComparer.Ordinal);
-            var names = new Dictionary<string, string>(StringComparer.Ordinal);
+            var root = document.RootElement;
+            if (root.TryGetProperty("countries", out var countries) && countries.ValueKind == JsonValueKind.Object)
+                foreach (var property in countries.EnumerateObject())
+                {
+                    if (!int.TryParse(property.Name, out int countryId) || property.Value.ValueKind != JsonValueKind.Object) continue;
+                    var name = Text(property.Value, "name");
+                    if (name.Length > 0) labels.Countries[countryId] = new CountryLabel(name, (int)Number(property.Value, "order", int.MaxValue));
+                }
+            if (!root.TryGetProperty("regions", out var regions) || regions.ValueKind != JsonValueKind.Object) return labels;
             foreach (var property in regions.EnumerateObject())
-                if (property.Value.ValueKind == JsonValueKind.String) names[property.Name] = property.Value.GetString() ?? "";
-            return names;
+            {
+                if (property.Value.ValueKind == JsonValueKind.String)
+                {
+                    labels.Regions[property.Name] = new RegionLabel(property.Value.GetString() ?? "", 0, int.MaxValue);
+                    continue;
+                }
+                if (property.Value.ValueKind != JsonValueKind.Object) continue;
+                labels.Regions[property.Name] = new RegionLabel(Text(property.Value, "name"),
+                    (int)Number(property.Value, "countryId", 0), (int)Number(property.Value, "order", int.MaxValue));
+            }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
-        {
-            return new Dictionary<string, string>(StringComparer.Ordinal);
-        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { }
+        return labels;
     }
+
+    private static string Text(JsonElement value, string name) =>
+        value.TryGetProperty(name, out var property) && property.ValueKind == JsonValueKind.String ? property.GetString() ?? "" : "";
+
+    private static long Number(JsonElement value, string name, long fallback) =>
+        value.TryGetProperty(name, out var property) && property.TryGetInt64(out long number) ? number : fallback;
 }

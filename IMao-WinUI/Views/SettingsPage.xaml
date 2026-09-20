@@ -29,7 +29,7 @@
         <Border Style="{StaticResource IMaoCardStyle}">
             <StackPanel Spacing="12">
                 <TextBlock Text="地图区域" Style="{StaticResource IMaoSectionTitleStyle}" />
-                <TextBlock Text="每个区域是一份独立的特征包：关掉的区域不再加载，定位范围相应缩小。随程序分发的区域不占用下载量；不需要的区域可以直接删掉本机副本腾出空间，之后重新打开会重新下载它一个。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock Text="每个区域是一份独立的特征包：关掉的区域不再加载，定位范围相应缩小。随程序分发的区域不占用下载量；不需要的区域可以直接删掉本机副本腾出空间，之后重新打开会重新下载它一个。列表按库街区大地图的国家分组，点国家标题可以折叠整组。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <TextBlock x:Name="RegionSummary" Style="{StaticResource IMaoBodyTextStyle}" />
                 <TextBlock x:Name="RegionCoreState" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <StackPanel x:Name="RegionList" Spacing="6" />

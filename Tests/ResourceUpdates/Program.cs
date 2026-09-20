@@ -887,6 +887,39 @@ await Test("the region list reports a re-downloaded region as downloaded, restar
     True(after.Size > 0);
 });
 
+await Test("the region list is grouped by Kuro country in the published order", async () =>
+{
+    using var f = New(); f.BundleMapData();
+    f.BundleRegion("tethys-kurotiles"); f.BundleRegion("taro-kurotiles"); f.BundleRegion("lahai-kurotiles");
+    // The shipped labels carry the country each region belongs to; one region is deliberately missing
+    // from the file, because that is what a region newer than the labels looks like.
+    var labels = Path.Combine(f.Bundled.MapDataRoot, "region-names.json");
+    File.WriteAllText(labels, """
+        {"formatVersion":2,
+         "countries":{"4":{"name":"罗伊冰原","order":4},"900":{"name":"黑海岸","order":2}},
+         "regions":{"tethys":{"name":"泰缇斯之底","countryId":900,"order":12},
+                    "lahai":{"name":"拉海洛","countryId":4,"order":7}}}
+        """);
+    await f.Initialize();
+    var release = f.RegionCatalog().Resources[0];
+    IReadOnlyList<RegionEntry> Build() => new RegionCatalog(f.Snapshots, f.Bundled.MapDataRoot).Build(release);
+    var entries = Build();
+    // 黑海岸 (order 2) before 罗伊冰原 (order 4), and the unnamed region keeps its own last group: an
+    // unknown country must never hide a region from the list the player turns regions on in.
+    True(entries.Select(entry => entry.Country).SequenceEqual(["黑海岸", "罗伊冰原", ""]));
+    Equal("泰缇斯之底", entries[0].Name);
+    Equal("拉海洛", entries[1].Name);
+    Equal("taro-kurotiles", entries[2].Name);
+    Equal(entries.Count, 3);
+
+    // A version 1 file (a bare name per region) still names regions: the program and the map-data package
+    // it loads can be one version apart, and labels must never be the reason a page breaks.
+    File.WriteAllText(labels, "{\"formatVersion\":1,\"regions\":{\"taro\":\"塔罗\"}}");
+    var legacy = Build().Single(entry => entry.PackageId == "taro-kurotiles");
+    Equal("塔罗", legacy.Name);
+    Equal("", legacy.Country);
+});
+
 await Test("a snapshot still naming the deleted shipped copy resolves to the downloaded one", async () =>
 {
     using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();

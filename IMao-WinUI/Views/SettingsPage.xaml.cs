@@ -159,6 +159,20 @@ public sealed partial class SettingsPage : Page
 
     private readonly Dictionary<string, RegionRow> regionRows = new(StringComparer.Ordinal);
     private readonly List<string> regionRowOrder = [];
+    /// <summary>
+    /// One country's collapsible group, kept between renders exactly like the rows inside it: a group the
+    /// player collapsed stays collapsed while a check or an install rewrites the list.
+    /// </summary>
+    private sealed class RegionGroup
+    {
+        public required Expander Expander { get; init; }
+        public required TextBlock Summary { get; init; }
+        public required StackPanel Rows { get; init; }
+    }
+
+    private readonly Dictionary<string, RegionGroup> regionGroups = new(StringComparer.Ordinal);
+    /// <summary>What the player opened or closed, by country. Rebuilding the groups must not reopen them.</summary>
+    private readonly Dictionary<string, bool> regionGroupExpanded = new(StringComparer.Ordinal);
     // A region whose switch the player just moved. While the operation that follows is running, the stored
     // selection does not yet describe what the player asked for, so the switch must not be snapped back.
     private readonly HashSet<string> pendingRegionSwitches = new(StringComparer.Ordinal);
@@ -223,10 +237,13 @@ public sealed partial class SettingsPage : Page
             RegionHint.Visibility = Visibility.Visible;
 
             // A row is only built once. Rows are reused for as long as the same regions are listed; a region
-            // appearing or disappearing is the only thing that changes the structure of the list.
-            if (regionRowOrder.Count != entries.Count || !entries.Select(entry => entry.PackageId).SequenceEqual(regionRowOrder, StringComparer.Ordinal))
+            // appearing, disappearing or moving to another country is the only thing that changes the
+            // structure of the list.
+            if (regionRowOrder.Count != entries.Count || !entries.Select(RegionRowKey).SequenceEqual(regionRowOrder, StringComparer.Ordinal))
                 BuildRegionRows(entries);
 
+            // Totals per country, so a collapsed group still says what it holds.
+            var groups = new Dictionary<string, (int Enabled, int Total, long Local)>(StringComparer.Ordinal);
             foreach (var entry in entries)
             {
                 var row = regionRows[entry.PackageId];
@@ -242,55 +259,108 @@ public sealed partial class SettingsPage : Page
                     (entry.Selected || entry.State != RegionState.NotInstalled || entry.Downloadable);
                 row.Entry = entry;
                 UpdateRegionAction(row.Action, entry);
+                string key = RegionGroupKey(entry);
+                var totals = groups.GetValueOrDefault(key);
+                groups[key] = (totals.Enabled + (entry.Selected ? 1 : 0), totals.Total + 1,
+                    totals.Local + (entry.State is RegionState.Bundled or RegionState.Downloaded ? entry.Size : 0));
+            }
+            foreach (var (country, group) in regionGroups)
+            {
+                var totals = groups.GetValueOrDefault(country);
+                group.Summary.Text = totals.Total == 0 ? "" : $"已启用 {totals.Enabled} / {totals.Total}"
+                    + (totals.Local > 0 ? $"  ·  本机 {FormatBytes(totals.Local)}" : "");
             }
             RenderRegionProgress();
         }
         finally { restoringRegions = false; }
     }
 
-    /// <summary>Builds the row objects for the current region list, replacing any previous ones.</summary>
+    /// <summary>
+    /// Builds the row objects for the current region list, replacing any previous ones. Rows are grouped
+    /// under the Kuro country they belong to, in the order the catalog sorted them, each group collapsible:
+    /// that is how the official map lists regions, and it keeps thirteen rows from filling the page.
+    /// </summary>
     private void BuildRegionRows(IReadOnlyList<RegionEntry> entries)
     {
+        // Remember what the player opened or closed before the groups go away: rebuilding the structure
+        // must not reopen a country they collapsed.
+        foreach (var (country, previous) in regionGroups) regionGroupExpanded[country] = previous.Expander.IsExpanded;
         ClearRegionRows();
         foreach (var entry in entries)
         {
-            var label = new TextBlock { Text = entry.Name, VerticalAlignment = VerticalAlignment.Center };
-            var detail = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
-            if (Application.Current.Resources.TryGetValue("IMaoSecondaryTextStyle", out var style) && style is Style textStyle)
-                detail.Style = textStyle;
-            var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-            text.Children.Add(label);
-            text.Children.Add(detail);
-            var toggle = new ToggleSwitch
-            {
-                IsOn = entry.Selected,
-                OnContent = "已启用",
-                OffContent = "已停用",
-                Tag = entry.PackageId,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            toggle.Toggled += RegionToggle_Toggled;
-            var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
-            actions.Children.Add(toggle);
-            // One button per row whose job depends on the state: it deletes bytes that are here and downloads
-            // the ones that are not. Building it once and deciding on every render is what keeps a reused row
-            // from keeping a button that no longer applies.
-            var action = new Button { Tag = entry.PackageId, VerticalAlignment = VerticalAlignment.Center };
-            if (Application.Current.Resources.TryGetValue("IMaoSecondaryButtonStyle", out var buttonStyle) && buttonStyle is Style secondary)
-                action.Style = secondary;
-            action.Click += RegionAction_Click;
-            actions.Children.Add(action);
-            var row = new Grid { ColumnSpacing = 12 };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            Grid.SetColumn(text, 0);
-            Grid.SetColumn(actions, 1);
-            row.Children.Add(text);
-            row.Children.Add(actions);
-            RegionList.Children.Add(row);
-            regionRows[entry.PackageId] = new RegionRow { Name = label, Detail = detail, Toggle = toggle, Action = action };
-            regionRowOrder.Add(entry.PackageId);
+            string country = RegionGroupKey(entry);
+            if (!regionGroups.TryGetValue(country, out var group)) regionGroups[country] = group = BuildRegionGroup(country);
+            group.Rows.Children.Add(BuildRegionRow(entry));
+            regionRowOrder.Add(RegionRowKey(entry));
         }
+    }
+
+    private static string RegionGroupKey(RegionEntry entry) => entry.Country.Length > 0 ? entry.Country : "其他区域";
+    private static string RegionRowKey(RegionEntry entry) => RegionGroupKey(entry) + "\u001f" + entry.PackageId;
+
+    /// <summary>One country's group: a header that stays readable while collapsed, and the rows beneath it.</summary>
+    private RegionGroup BuildRegionGroup(string country)
+    {
+        var name = new TextBlock { Text = country, VerticalAlignment = VerticalAlignment.Center,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+        var summary = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
+        if (Application.Current.Resources.TryGetValue("IMaoSecondaryTextStyle", out var style) && style is Style textStyle)
+            summary.Style = textStyle;
+        var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
+        header.Children.Add(name);
+        header.Children.Add(summary);
+        var rows = new StackPanel { Spacing = 6 };
+        var expander = new Expander
+        {
+            Header = header,
+            Content = rows,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            // Open by default: the list is the content of this card, and a hidden default would make the
+            // regions look missing. What the player closes stays closed for the rest of the session.
+            IsExpanded = regionGroupExpanded.GetValueOrDefault(country, true),
+        };
+        RegionList.Children.Add(expander);
+        return new RegionGroup { Expander = expander, Summary = summary, Rows = rows };
+    }
+
+    private Grid BuildRegionRow(RegionEntry entry)
+    {
+        var label = new TextBlock { Text = entry.Name, VerticalAlignment = VerticalAlignment.Center };
+        var detail = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
+        if (Application.Current.Resources.TryGetValue("IMaoSecondaryTextStyle", out var style) && style is Style textStyle)
+            detail.Style = textStyle;
+        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        text.Children.Add(label);
+        text.Children.Add(detail);
+        var toggle = new ToggleSwitch
+        {
+            IsOn = entry.Selected,
+            OnContent = "已启用",
+            OffContent = "已停用",
+            Tag = entry.PackageId,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        toggle.Toggled += RegionToggle_Toggled;
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        actions.Children.Add(toggle);
+        // One button per row whose job depends on the state: it deletes bytes that are here and downloads
+        // the ones that are not. Building it once and deciding on every render is what keeps a reused row
+        // from keeping a button that no longer applies.
+        var action = new Button { Tag = entry.PackageId, VerticalAlignment = VerticalAlignment.Center };
+        if (Application.Current.Resources.TryGetValue("IMaoSecondaryButtonStyle", out var buttonStyle) && buttonStyle is Style secondary)
+            action.Style = secondary;
+        action.Click += RegionAction_Click;
+        actions.Children.Add(action);
+        var row = new Grid { ColumnSpacing = 12 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(text, 0);
+        Grid.SetColumn(actions, 1);
+        row.Children.Add(text);
+        row.Children.Add(actions);
+        regionRows[entry.PackageId] = new RegionRow { Name = label, Detail = detail, Toggle = toggle, Action = action };
+        return row;
     }
 
     /// <summary>
@@ -320,6 +390,7 @@ public sealed partial class SettingsPage : Page
         RegionList.Children.Clear();
         regionRows.Clear();
         regionRowOrder.Clear();
+        regionGroups.Clear();
     }
 
     private void RenderRegionProgress()

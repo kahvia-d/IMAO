@@ -1,19 +1,25 @@
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "generatedFrom": "map-regions/regions.json",
+  "countries": {
+    "1": { "name": "瑝珑", "order": 1 },
+    "900": { "name": "黑海岸", "order": 2 },
+    "3": { "name": "黎那汐塔", "order": 3 },
+    "4": { "name": "罗伊冰原", "order": 4 }
+  },
   "regions": {
-    "jinzhou": "今州",
-    "mengzhou": "梦州",
-    "laguna": "拉古那",
-    "qiqiu": "七丘",
-    "roysurface": "冰原地表",
-    "blackshores": "黑海岸群岛",
-    "lahai": "拉海洛",
-    "darkplain": "黯原",
-    "lowervault": "下层金库",
-    "avinoleum": "阿维纽林",
-    "fabricatorium": "隐海试验场",
-    "tethys": "泰缇斯之底",
-    "timeriftruins": "时隙废都"
+    "jinzhou": { "name": "今州", "countryId": 1, "order": 1 },
+    "mengzhou": { "name": "梦州", "countryId": 1, "order": 2 },
+    "laguna": { "name": "拉古那", "countryId": 3, "order": 3 },
+    "qiqiu": { "name": "七丘", "countryId": 3, "order": 4 },
+    "roysurface": { "name": "冰原地表", "countryId": 4, "order": 5 },
+    "blackshores": { "name": "黑海岸群岛", "countryId": 900, "order": 6 },
+    "lahai": { "name": "拉海洛", "countryId": 4, "order": 7 },
+    "darkplain": { "name": "黯原", "countryId": 4, "order": 8 },
+    "lowervault": { "name": "下层金库", "countryId": 3, "order": 9 },
+    "avinoleum": { "name": "阿维纽林", "countryId": 3, "order": 10 },
+    "fabricatorium": { "name": "隐海试验场", "countryId": 3, "order": 11 },
+    "tethys": { "name": "泰缇斯之底", "countryId": 900, "order": 12 },
+    "timeriftruins": { "name": "时隙废都", "countryId": 900, "order": 13 }
   }
 }
