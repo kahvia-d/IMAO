@@ -39,3 +39,5 @@
 
 ### 开发
 [如何编译项目](Docs/Build_zh-Hans.md)
+
+全部设计、审计与历史记录见[文档索引](Docs/README.md)（`Docs/` 下按构建、更新、地图数据、界面、审计分类，一次性记录归档在 `Docs/archive/`）。
