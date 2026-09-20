@@ -22,6 +22,24 @@ internal static class KuroSyncTests
         var firstSync = KuroProgressMerge.Plan(null, new Dictionary<string, bool> { ["a"] = true }, new Dictionary<string, bool> { ["b"] = true });
         check(firstSync.RequiresInitialChoice, "missing baseline never silently merges account progress");
 
+        // Regression: the settings page decides whether "应用同步" is clickable from
+        // the preview, and an upload-only difference — local completions the cloud
+        // lacks, nothing to fetch — is exactly the case that used to leave the button
+        // grey while the table showed 待推送. Both directions are work; the automatic
+        // pass reads the same property so the two cannot drift apart again.
+        var uploadOnly = new KuroSyncComparison([new KuroSyncRegionComparison(8, "大世界", ["a"], true, 3, 1, 1, 2)], ["a"], []);
+        check(uploadOnly.ToFetch == 0 && uploadOnly.ToUpload == 2 && uploadOnly.NeedsApply,
+            "an upload-only preview still reports work to apply");
+        var fetchOnly = new KuroSyncComparison([new KuroSyncRegionComparison(8, "大世界", ["a", "b"], true, 1, 3, 1, 0)], ["a", "b"], []);
+        check(fetchOnly.ToUpload == 0 && fetchOnly.ToFetch == 2 && fetchOnly.NeedsApply,
+            "a download-only preview reports work to apply");
+        var settled = new KuroSyncComparison([new KuroSyncRegionComparison(8, "大世界", ["a"], true, 2, 2, 2, 0)], ["a"], []);
+        check(!settled.NeedsApply, "an initialized comparison that already agrees has nothing to apply");
+        var noBaseline = new KuroSyncComparison([new KuroSyncRegionComparison(905, "隐海试验场", ["a"], false, 0, 1, 0, 0)], ["a"], []);
+        check(noBaseline.NeedsApply, "a region that still needs its first baseline reports work to apply");
+        var untouched = new KuroSyncComparison([new KuroSyncRegionComparison(905, "隐海试验场", [], true, 0, 0, 0, 0)], [], []);
+        check(!untouched.NeedsApply, "a region with nothing on either side has nothing to apply");
+
         check(KuroNativeBridgeProtocol.TryValidate(new KuroNativeBridgeRequest(1, "storeCredential", "kuro_12345", "secret-token"), out _),
             "native bridge accepts a bounded credential transfer");
         check(!KuroNativeBridgeProtocol.TryValidate(new KuroNativeBridgeRequest(2, "storeCredential", "kuro_12345", "secret-token"), out _),

@@ -109,9 +109,7 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
             }
             int state = await settings.ReadSettingAsync<int?>(KuroSyncSettings.State) ?? 0;
             var comparison = await sync.PreviewAsync(profile, state == 0 ? null : state, cancellationToken);
-            bool pending = comparison.ToFetch > 0 || comparison.ToUpload > 0 ||
-                comparison.Regions.Any(region => !region.Initialized && region.CloudIds.Count > 0);
-            if (!pending)
+            if (!comparison.NeedsApply)
             {
                 schedule.RecordSuccess();
                 LastResult = $"{DateTime.Now:HH:mm} 已是最新（本地 {comparison.LocalCompleted} · 云端 {comparison.CloudCompleted}）";

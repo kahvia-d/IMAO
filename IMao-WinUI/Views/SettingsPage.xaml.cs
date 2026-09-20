@@ -580,7 +580,7 @@ public sealed partial class SettingsPage : Page
         {
             var plan = await kuroSync.PreviewAsync(profile, stateId == 0 ? null : stateId);
             kuroSyncComparison = plan;
-            KuroSyncApplyButton.IsEnabled = plan.RegionsNeedingSync > 0;
+            KuroSyncApplyButton.IsEnabled = plan.NeedsApply;
             await SaveKuroSyncStateAsync(profile, stateId);
             RenderKuroSyncComparison(plan);
             ShowKuroSync(InfoBarSeverity.Success, $"预览完成：本地 {plan.LocalCompleted} 个已完成、库街区 {plan.CloudCompleted} 个已完成；待拉取 {plan.ToFetch} 个、待推送 {plan.ToUpload} 个。");

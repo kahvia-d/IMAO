@@ -44,7 +44,16 @@ public sealed record KuroSyncComparison(
     /// <summary>库街区已标记完成、本地未标记。</summary>
     public int ToFetch => CloudCompleted - BothCompleted;
     public int Unmapped => UnmappedIds.Count;
-    public int RegionsNeedingSync => Regions.Count(region => region.ToFetch > 0 || (!region.Initialized && region.CloudIds.Count > 0));
+    /// <summary>
+    /// True when applying this comparison would write something: there are cloud
+    /// completions to fetch, local completions waiting for the upload direction, or
+    /// a region that still needs its first baseline. Both directions count — an
+    /// upload-only difference is still work. The apply button and the automatic
+    /// pass read this one property, so the two can never disagree again about
+    /// whether there is anything to do.
+    /// </summary>
+    public bool NeedsApply => ToFetch > 0 || ToUpload > 0 ||
+        Regions.Any(region => !region.Initialized && region.CloudIds.Count > 0);
 }
 
 public sealed record KuroSyncApplyResult(int Regions, int Fetched, int PendingLocal, int Pushed);
