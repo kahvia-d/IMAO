@@ -22,7 +22,11 @@
     <SupportedLanguages>en-US;zh-CN</SupportedLanguages>
     <GenerateAllLanguageResourcePacks>false</GenerateAllLanguageResourcePacks>
     <GenerateResourceResourcePacks>false</GenerateResourceResourcePacks>
-    <ApplicationIcon>Assets/WindowIcon.ico</ApplicationIcon>
+    <!-- The repository asset is the icon's single source of truth: release staging copies it into the
+         packaged Assets directory and the window icon is loaded from there at runtime. Embedding it into
+         the executable from a second copy is what left IMao-WinUI.exe showing an older icon, so the
+         application icon now points at the same file the package ships. -->
+    <ApplicationIcon>..\Assets\WindowIcon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
