@@ -25,6 +25,7 @@ try
     RoutePlanningTests.Run(Check);
     GamepadInputTests.Run(root, Check);
     GamepadDiagnosticTests.Run(root, Check);
+    GuidePlacementTests.Run(Check);
     await KuroAutoSyncTests.RunAsync(root, Check);
     await MarkerGuideSessionTests.RunAsync(Check);
     await MarkerDetailTests.RunAsync(root, Check);

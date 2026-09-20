@@ -64,6 +64,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private long chooserActionGeneration;
     private IntPtr chooserGameWindow;
     private int chooserGamepadIndex;
+    /// <summary>The entry the highlight is on, so completing a row cannot shift it by one.</summary>
+    private Button? chooserHighlight;
     private readonly List<(Button Button, Func<Task> Invoke)> chooserActions = [];
     /// <summary>Set while a nearby completion list is open: how long X has been held, and what it runs.</summary>
     private ProgressBar? chooserHold;
@@ -1136,7 +1138,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
         chooserGamepad = controller; chooserGamepadOpening = controller;
         chooserBusy = false; chooserActionGeneration++;
         chooserGameWindow = game; chooserGameIdentity = GamepadWindowIdentity.Capture(game);
-        chooserGamepadIndex = 0; chooserActions.Clear();
+        chooserGamepadIndex = 0; chooserHighlight = null; chooserActions.Clear();
         if (controller && window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter)
             presenter.IsAlwaysOnTop = true;
         var list = new StackPanel { Spacing = 10, Padding = new Thickness(20) };
@@ -1194,6 +1196,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
         {
             if (!IsCurrent()) return;
             chooserGamepad = chooserGamepadOpening = false; chooserActions.Clear();
+            chooserHighlight = null;
             chooserHold = null; chooserCollectAll = null;
             selectionGeneration++; chooser = null; window.Close();
         }
@@ -1260,7 +1263,14 @@ public sealed class MarkerGuideCoordinator : IDisposable
                     }
                     finally
                     {
-                        if (IsCurrent()) { chooserBusy = false; chooserActionGeneration++; SetChoicesEnabled(returnWindow is null); }
+                        if (IsCurrent())
+                        {
+                            chooserBusy = false; chooserActionGeneration++;
+                            SetChoicesEnabled(returnWindow is null);
+                            // The completed row just left the active set: keep the highlight on the
+                            // row it was on, which is now the next unfinished one.
+                            if (controller) RefreshGamepadChoice();
+                        }
                     }
                 }
                 if (nearby && !complete && Integer(page, "total") == 1) singleGuide = ChooseAsync;
@@ -1325,7 +1335,12 @@ public sealed class MarkerGuideCoordinator : IDisposable
             }
             finally
             {
-                if (IsCurrent()) { chooserBusy = false; chooserActionGeneration++; SetChoicesEnabled(returnWindow is null); RefreshCollectState(); }
+                if (IsCurrent())
+                {
+                    chooserBusy = false; chooserActionGeneration++; SetChoicesEnabled(returnWindow is null);
+                    RefreshCollectState();
+                    if (controller) RefreshGamepadChoice();
+                }
             }
         }
         if (complete)
@@ -1351,7 +1366,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
         window.Closed += async (_, _) =>
         {
             if (ReferenceEquals(chooser, window)) chooser = null;
-            chooserHold = null; chooserCollectAll = null; chooserCompletesNearby = false;
+            chooserHold = null; chooserCollectAll = null; chooserCompletesNearby = false; chooserHighlight = null;
             await UnregisterWindowAsync(window);
         };
         await RegisterWindowAsync(window);
@@ -1392,12 +1407,50 @@ public sealed class MarkerGuideCoordinator : IDisposable
 
     private List<(Button Button, Func<Task> Invoke)> ActiveGamepadChoices() => chooserActions
         .Where(entry => entry.Button.IsEnabled && entry.Button.Visibility == Visibility.Visible).ToList();
+    /// <summary>
+    /// Moves the highlight by one entry. The entry is remembered by identity, not by index,
+    /// because the list keeps growing and shrinking under the highlight: a row that was just
+    /// completed disappears from the active entries, and an index that survived that would
+    /// point one row too far.
+    /// </summary>
     private void MoveGamepadChoice(int delta)
     {
         var entries = ActiveGamepadChoices();
         if (entries.Count == 0) return;
-        chooserGamepadIndex = Math.Clamp(chooserGamepadIndex + delta, 0, entries.Count - 1);
-        var selected = entries[chooserGamepadIndex].Button;
+        int index = ActiveGamepadChoiceIndex(entries);
+        chooserGamepadIndex = Math.Clamp(index + delta, 0, entries.Count - 1);
+        ApplyGamepadChoice(entries[chooserGamepadIndex].Button);
+    }
+
+    /// <summary>
+    /// Repaints the highlight on whatever entry the remembered one became. Call this after the
+    /// active set changes (a row completed, a page loaded): the highlighted row keeps the
+    /// highlight, and a highlighted row that disappeared hands it to the next one.
+    /// </summary>
+    private void RefreshGamepadChoice()
+    {
+        var entries = ActiveGamepadChoices();
+        if (entries.Count == 0) return;
+        chooserGamepadIndex = ActiveGamepadChoiceIndex(entries);
+        ApplyGamepadChoice(entries[chooserGamepadIndex].Button);
+    }
+
+    /// <summary>Where the remembered highlight sits now; if it is gone, where it used to be.</summary>
+    private int ActiveGamepadChoiceIndex(List<(Button Button, Func<Task> Invoke)> entries)
+    {
+        if (chooserHighlight is { } highlighted)
+        {
+            int index = entries.FindIndex(entry => ReferenceEquals(entry.Button, highlighted));
+            if (index >= 0) return index;
+            // The highlighted row left the list: the index it occupied now holds the row that
+            // followed it, which is the next thing the player can act on.
+        }
+        return Math.Clamp(chooserGamepadIndex, 0, entries.Count - 1);
+    }
+
+    private void ApplyGamepadChoice(Button selected)
+    {
+        chooserHighlight = selected;
         foreach (var entry in chooserActions)
         {
             entry.Button.BorderThickness = new Thickness(ReferenceEquals(entry.Button, selected) ? 3 : 1);

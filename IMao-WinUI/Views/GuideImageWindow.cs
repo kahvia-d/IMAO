@@ -25,6 +25,9 @@ public sealed class GuideImageWindow : Window
     private readonly TextBlock status;
     private readonly GamepadWindowChrome chrome;
     private bool closed;
+    private RectInt32? anchor;
+    private RectInt32 workArea;
+    private BitmapImage? currentBitmap;
 
     internal ScrollViewer View => scroll;
     internal nint Handle => WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -93,18 +96,59 @@ public sealed class GuideImageWindow : Window
         hint.Text = gamepad
             ? "LT 缩小 · RT 放大 · 右摇杆/方向键平移 · B 返回攻略"
             : "滚轮或按钮缩放 · 滚动条平移 · Esc 关闭";
-        picture.Source = new BitmapImage(new Uri(path));
-        scroll.ChangeView(0, 0, 1f, true);
-        var area = gameBounds is { } game
+        anchor = gameBounds;
+        workArea = gameBounds is { } game
             ? DisplayArea.GetFromRect(game, DisplayAreaFallback.Nearest).WorkArea
             : DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
-        AppWindow.MoveAndResize(GuidePlacement.CenteredHalf(gameBounds, area));
+        // Open at the half-screen frame, then take the picture's own aspect as soon as the
+        // decoder reports its size: the height stays put and the width follows the picture.
+        picture.Width = double.NaN;
+        picture.Height = double.NaN;
+        AppWindow.MoveAndResize(GuidePlacement.CenteredHalf(anchor, workArea));
+        FitToPicture();
+        scroll.ChangeView(0, 0, 1f, true);
+        Show(path);
         Activate();
     }
 
     internal void SetStatus(string value) => status.Text = value;
     internal void SetTitle(string value) => title.Text = value;
-    internal void SetSource(ImageSource? source) => picture.Source = source;
+
+    internal void SetSource(ImageSource? source)
+    {
+        if (source is BitmapImage bitmap)
+        {
+            bitmap.ImageOpened += (_, _) => FitToPicture();
+            currentBitmap = bitmap;
+        }
+        picture.Source = source;
+        FitToPicture();
+    }
+
+    /// <summary>
+    /// Sizes the window and the picture box to the picture's aspect: the window keeps the height
+    /// its own rule gives it and takes the width the picture needs, so a tall picture is not
+    /// cropped and a wide one is not squeezed into a fixed width.
+    /// </summary>
+    private void FitToPicture()
+    {
+        if (closed) return;
+        int pixelWidth = 0, pixelHeight = 0;
+        if (currentBitmap is { PixelWidth: > 0, PixelHeight: > 0 } bitmap)
+        { pixelWidth = bitmap.PixelWidth; pixelHeight = bitmap.PixelHeight; }
+        int chromeHeight = scroll.ActualHeight > 0 ? Math.Max(0, AppWindow.Size.Height - (int)Math.Round(scroll.ActualHeight)) : 132;
+        int chromeWidth = Math.Max(0, AppWindow.Size.Width - (int)Math.Round(scroll.ActualWidth > 0 ? scroll.ActualWidth : AppWindow.Size.Width));
+        // Before the decoder reports a size, the half-screen frame is the best guess available.
+        if (pixelWidth == 0 || pixelHeight == 0)
+        {
+            AppWindow.MoveAndResize(GuidePlacement.CenteredHalf(anchor, workArea));
+            return;
+        }
+        var layout = GuidePlacement.PictureFrame(anchor, workArea, pixelWidth, pixelHeight, chromeWidth, chromeHeight);
+        picture.Width = layout.ImageWidth;
+        picture.Height = layout.ImageHeight;
+        AppWindow.MoveAndResize(layout.Window);
+    }
 
     internal void ChangeZoom(double factor)
     {
@@ -116,6 +160,18 @@ public sealed class GuideImageWindow : Window
     {
         if (closed) return;
         AppWindow.Hide();
+    }
+
+    private void Show(string path)
+    {
+        var bitmap = new BitmapImage();
+        // The decoder reports the pixel size asynchronously, which is the moment the window can
+        // take the picture's aspect. Until then it keeps the half-screen frame it opened with.
+        bitmap.ImageOpened += (_, _) => FitToPicture();
+        bitmap.ImageFailed += (_, _) => status.Text = "图片无法显示，可在库街区查看";
+        bitmap.UriSource = new Uri(path);
+        currentBitmap = bitmap;
+        picture.Source = bitmap;
     }
 
     private Task CloseFromChromeAsync()

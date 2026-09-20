@@ -21,3 +21,9 @@ namespace Windows.Storage
     }
     public class ApplicationDataContainer { public IDictionary<string, object> Values { get; } = new Dictionary<string, object>(); }
 }
+// The placement rules are pure arithmetic over screen rectangles; the WinRT struct is the only
+// platform type they need, so they are compiled and tested here rather than only on a real screen.
+namespace Windows.Graphics
+{
+    public readonly record struct RectInt32(int X, int Y, int Width, int Height);
+}
