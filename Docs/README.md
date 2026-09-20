@@ -17,6 +17,12 @@
 其他相关位置:仓库根的 `MEMORY.md`(跨对话长期记忆,**不进 git**)；`out/evidence/`(发布产物的小证据归档,
 由 `scripts/Compact-ReleaseArtifacts.ps1` 生成,含 `archive-manifest.json`)；`updates/stable.json`(线上签名清单)。
 
+## 待办与未完成
+
+| 文档 | 内容 |
+|---|---|
+| [`OpenWork.md`](OpenWork.md) | 跨领域未完成项汇总（帧率、识别与资源、工程健壮性、更新系统、代码 TODO），带优先级与出处；每周或每次发布前过一遍 |
+
 ## 构建与编译
 
 | 文档 | 内容 |
