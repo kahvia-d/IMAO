@@ -24,6 +24,7 @@
 #include "../Coordinate/VisualLocalization/MinimapTerrainEvidence.h"
 #include "../Coordinate/VisualLocalization/DenseMapConfirmer.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
@@ -1081,6 +1082,86 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					Diagnostics::Record("legacy-localization-result", "mode=" + localizationDiagnosticsMode +
 						" ocr=" + std::to_string(candidate.x) + "," + std::to_string(candidate.y) +
 						" scene=" + std::to_string(legacyScene) + " published=false");
+				}
+			}
+			// The readout is the only source that knows the position outright, so while the
+			// visual lock is doubtful it may publish one directly - through a gate built from
+			// the measured error modes (OcrCoordinateGate.h): a lost minus sign still scores
+			// 0.98 and repeats itself, so score and agreement alone cannot catch it; the jump
+			// budget against the last trusted position can.  The parser already repairs signs
+			// and separators ("sign-fallback", "internal-minus-as-separator") and computes the
+			// distance to that same trusted position, so those repairs are candidates too -
+			// they used to be dropped here along with the search hints.
+			const auto lockState = coordinateRecovery.State();
+			const bool lockDoubtful = lockState == CoordinateLockState::Suspect ||
+				lockState == CoordinateLockState::Recovering;
+			if (!ocrAssistEnabled || !lockDoubtful) {
+				ocrCoordinateGate.Reset();
+			}
+			else {
+				OcrCoordinateGate::Lock lock;
+				if (playerLocationLock.valid) {
+					lock.valid = true;
+					lock.sceneId = playerLocationLock.sceneId;
+					lock.mapCoordinate = playerLocationLock.mapCoordinate;
+					if (const auto* lockedScene = Scene::Find(playerLocationLock.sceneId)) {
+						lock.sceneScale = lockedScene->scale;
+					}
+				}
+				std::vector<const CoordinateCandidate*> ordered;
+				std::vector<const CoordinateCandidate*> repaired;
+				for (const auto& candidate : ocrResult.candidates) {
+					(candidate.correction.empty() ? ordered : repaired).push_back(&candidate);
+				}
+				std::sort(ordered.begin(), ordered.end(),
+					[](const CoordinateCandidate* left, const CoordinateCandidate* right) {
+						return left->modelScore > right->modelScore;
+					});
+				std::sort(repaired.begin(), repaired.end(),
+					[](const CoordinateCandidate* left, const CoordinateCandidate* right) {
+						return left->previousDistance < right->previousDistance;
+					});
+				ordered.insert(ordered.end(), repaired.begin(), repaired.end());
+				for (const auto* candidate : ordered) {
+					OcrCoordinateGate::Reading reading;
+					reading.valid = true;
+					reading.sceneId = lock.valid ? lock.sceneId : 0;
+					reading.mapCoordinate =
+						MapCoordinate::IdentifyCoorToImgMapCoord(candidate->Position(), reading.sceneId);
+					reading.score = candidate->modelScore;
+					double jumpUnits = 0.0;
+					if (!OcrCoordinateGate::Acceptable(reading, lock, ocrCoordinateGate.Settings(), &jumpUnits)) {
+						continue;
+					}
+					// Exactly one reading per frame: the gate counts frames, so feeding the
+					// variants of a single read would fake an agreement.
+					const auto decision = ocrCoordinateGate.Feed(reading, lock);
+					if (decision.Publishable()) {
+						VisualLocalizationCandidate published;
+						published.sceneId = reading.sceneId;
+						published.mapCenter = reading.mapCoordinate;
+						published.quality = VisualLocalizationQuality::Marginal;
+						Diagnostics::Record("coordinate-publish", "scene=" + std::to_string(reading.sceneId) +
+							" map=" + std::to_string(reading.mapCoordinate.x) + "," +
+							std::to_string(reading.mapCoordinate.y) +
+							" world=" + std::to_string(candidate->x) + "," + std::to_string(candidate->y) +
+							" score=" + std::to_string(reading.score) +
+							" correction=" + (candidate->correction.empty() ? "none" : candidate->correction) +
+							" jumpUnits=" + std::to_string(decision.jumpUnits) +
+							" agreements=" + std::to_string(decision.agreementCount) +
+							" request=" + std::to_string(ocrResult.requestId));
+						commitVisualPosition(published, false);
+					}
+					else {
+						Diagnostics::Record("coordinate-publish-rejected", "reason=" + decision.reason +
+							" scene=" + std::to_string(reading.sceneId) +
+							" world=" + std::to_string(candidate->x) + "," + std::to_string(candidate->y) +
+							" score=" + std::to_string(reading.score) +
+							" jumpUnits=" + std::to_string(decision.jumpUnits) +
+							" agreements=" + std::to_string(decision.agreementCount) +
+							" request=" + std::to_string(ocrResult.requestId));
+					}
+					break;
 				}
 			}
 		}

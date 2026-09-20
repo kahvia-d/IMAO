@@ -11,6 +11,7 @@
 #include "..\Diagnostics\Diagnostics.h"
 #include "..\Feature\RuntimeFeatureRepository.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateRecoveryController.h"
+#include "..\Coordinate\IdentifyWorldCoordinates\OcrCoordinateGate.h"
 #include "..\Coordinate\VisualLocalization\GlobalVisualLocalizer.h"
 #include "MapUiStateController.h"
 #include "MapUiVisualDetector.h"
@@ -298,6 +299,11 @@ private:
     // OCR may bound visual searches after repeated failures; text never
     // publishes a position or supplies scene identity by itself.
     bool ocrAssistEnabled = true;
+    // The game's own coordinate readout is the only source that knows the position outright,
+    // so while the visual lock is doubtful it may publish one directly - but only through
+    // this gate (score, jump budget, agreement streak).  See OcrCoordinateGate.h for the
+    // measured error modes that shaped it.
+    OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
 	// initialized.  It is warmed in the background after a visual lock, or

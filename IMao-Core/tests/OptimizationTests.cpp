@@ -14,6 +14,7 @@
 #include "ImageAnchoredOverlayTests.h"
 #include "MinimapHudEvidenceTests.h"
 #include "DenseMapConfirmerTests.h"
+#include "OcrCoordinateGateTests.h"
 #include "Runtime/SnapshotChannel.h"
 #include "Runtime/FrameState.h"
 #include "Feature/Match/ExactDescriptorMatcher.h"
@@ -974,6 +975,7 @@ int main(int argc, char** argv) {
     TestImageAnchoredOverlay(Expect);
     TestMinimapHudEvidence(Expect);
     TestDenseMapConfirmer(Expect);
+    TestOcrCoordinateGate(Expect);
     TestFineViewportMotion(Expect);
 	TestMapUiStateController();
 	TestMapCompassVisualDetector();
