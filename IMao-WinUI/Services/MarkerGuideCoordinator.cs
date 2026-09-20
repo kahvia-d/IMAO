@@ -769,6 +769,17 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 var nearby = await core.ExecuteMarkerAsync("markerGetNearbyGuide", new { profileId }, request.Token);
                 if (!session.IsCurrent(generation) || disposed) return;
                 CloseGuide(generation);
+                // An unambiguous nearest point comes back resolved, so pressing the key
+                // opens its guide without showing a list of one.
+                if (Text(nearby, "profileId") == profileId && nearby.TryGetProperty("selection", out var single) &&
+                    single.ValueKind == JsonValueKind.Object)
+                {
+                    var resolved = ReadSelection(single);
+                    if (resolved.StateId <= 0 || resolved.PointId.Length == 0)
+                        core.ReportUserError("附近点位身份无效，请靠近标记后重试。");
+                    else await ShowAsync(resolved);
+                    return;
+                }
                 if (Text(nearby, "profileId") == profileId && nearby.TryGetProperty("candidates", out _))
                     await ShowCandidatesAsync(nearby);
                 return;

@@ -50,6 +50,17 @@ internal static class RoutePlanningTests
             check(payload["guidePreviousImageKey"] is 33 && payload["guideNextImageKey"] is 34 &&
                 RuntimeConfiguration.HotkeyName(33) == "PageUp" && RuntimeConfiguration.HotkeyName(34) == "PageDown",
                 "guide paging uses named PageUp/PageDown choices and the canonical configuration protocol fields");
+            // The trigger ranges are new fields: a file written before them must keep the
+            // 15 pixels the keys always used, and the protocol carries both values.
+            check(store.Read() is { CompletionRangePixels: 15, GuideRangePixels: 15 } &&
+                payload["completionRangePixels"] is 15 && payload["guideRangePixels"] is 15,
+                "an older configuration gains the 15-pixel trigger ranges without a schema bump");
+            bool refusedRange = false;
+            try { store.Update(old => old with { CompletionRangePixels = 4 }); } catch (ArgumentException) { refusedRange = true; }
+            bool refusedGuideRange = false;
+            try { store.Update(old => old with { GuideRangePixels = 121 }); } catch (ArgumentException) { refusedGuideRange = true; }
+            check(refusedRange && refusedGuideRange && store.Read() is { CompletionRangePixels: 15, GuideRangePixels: 15 },
+                "a trigger range outside 5-120 pixels is refused and never reaches the saved file");
             string migrationPath = Path.Combine(directory, "customized-legacy.json");
             File.WriteAllText(migrationPath, "{\"NearestCompletionKey\":65,\"ManualRouteKey\":66,\"CurrentTargetGuideKey\":118,\"StatusBarEnabled\":false}");
             var migrated = new RuntimeConfigurationStore(migrationPath);
@@ -631,6 +642,12 @@ internal static class RoutePlanningTests
             check(await ConfigureAsync(new() { ["nearestCompletionKey"] = 65, ["manualRouteKey"] = 66,
                 ["currentTargetGuideKey"] = 117, ["statusBarEnabled"] = false, ["mapEnabled"] = true }),
                 "native host accepts valid raw hotkey configuration independently of managed validation");
+            check(await ConfigureAsync(new() { ["completionRangePixels"] = 40, ["guideRangePixels"] = 25 }),
+                "native host accepts a player-chosen nearby trigger range for each key");
+            check(!await ConfigureAsync(new() { ["completionRangePixels"] = 4 }) &&
+                !await ConfigureAsync(new() { ["guideRangePixels"] = 121 }) &&
+                !await ConfigureAsync(new() { ["completionRangePixels"] = 15.5 }),
+                "native host refuses a trigger range outside 5-120 pixels or of the wrong type");
             check(!await ConfigureAsync(new() { ["guideNextImageKey"] = 33 }) &&
                 !await ConfigureAsync(new() { ["currentTargetGuideKey"] = 34 }),
                 "raw legacy configuration retains PageUp/PageDown defaults and checks their collisions with all actions");

@@ -51,6 +51,11 @@ struct ItemMarkerFrame {
     std::vector<ItemDatas> markers;
     Coordinate center;
     double radius = 0.0;
+    // Drawn marker radius in the same screen space as the marker coordinates. The
+    // nearby selection decides whether two icons overlap by this value, so what the
+    // player sees stacked is exactly what asks for a choice. Zero means the frame
+    // was never drawn, and the caller then keeps every candidate instead of guessing.
+    double markerRadius = 0.0;
     std::string profileId = "local";
     std::uint64_t filterRevision = 0;
 };

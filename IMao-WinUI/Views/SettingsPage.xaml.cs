@@ -33,6 +33,8 @@ public sealed partial class SettingsPage : Page
     private bool kuroSyncWorldExpanded;
     private bool restoringUpdates;
     private bool restoringRegions = true;
+    /// <summary>Set while a trigger-range write is in flight, so the two boxes cannot race each other.</summary>
+    private bool savingRange;
     public SettingsViewModel ViewModel { get; }
     private static readonly int[] SupportedKeys = Enumerable.Range(0, 124).Where(RuntimeConfiguration.IsSupportedHotkey).ToArray();
 
@@ -611,6 +613,8 @@ public sealed partial class SettingsPage : Page
         Setting_SetVisibleSavedPoints.IsOn = value.SavedPointsEnabled;
         ToggleSwitch_StatusBar.IsOn = value.StatusBarEnabled;
         AutomaticReplan.IsOn = value.AutoReplanEnabled;
+        CompletionRangePixels.Value = value.CompletionRangePixels;
+        GuideRangePixels.Value = value.GuideRangePixels;
         restoringRuntime = false;
     }
     private async Task SaveRuntimeAsync(Func<Task<bool>> update)
@@ -635,6 +639,30 @@ public sealed partial class SettingsPage : Page
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 16 and <= 1000) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(minMapUpdateCycle: (int)e.NewValue)); }
     private async void UpdateMapItemDataCycle_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 16 and <= 1000) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(mapUpdateCycle: (int)e.NewValue)); }
+    private async void CompletionRange_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
+    { if (double.IsFinite(e.NewValue) && e.NewValue is >= 5 and <= 120) await SaveRangeAsync(() => coreHost.ConfigureAsync(completionRangePixels: (int)e.NewValue)); }
+    private async void GuideRange_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
+    { if (double.IsFinite(e.NewValue) && e.NewValue is >= 5 and <= 120) await SaveRangeAsync(() => coreHost.ConfigureAsync(guideRangePixels: (int)e.NewValue)); }
+
+    /// <summary>
+    /// Saves one trigger range and reports the result in the 操作优化 card. The range is
+    /// read by the core the moment the next key press is handled, so there is nothing to
+    /// restart; the failure case is a rejected configure, which is worth saying out loud.
+    /// </summary>
+    private async Task SaveRangeAsync(Func<Task<bool>> update)
+    {
+        if (restoringRuntime || savingRange || !IsLoaded) return;
+        savingRange = true; CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = false;
+        try
+        {
+            bool applied = await update();
+            RangeMessage.Severity = applied ? InfoBarSeverity.Success : InfoBarSeverity.Warning;
+            RangeMessage.Message = applied ? "触发范围已保存并立即生效。" : "触发范围未应用：" + coreHost.LastFault;
+            RangeMessage.IsOpen = !applied;
+        }
+        catch (Exception error) { RangeMessage.Severity = InfoBarSeverity.Error; RangeMessage.Message = error.Message; RangeMessage.IsOpen = true; }
+        finally { savingRange = false; CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = true; RestoreRuntime(); }
+    }
     private async void ToggleSwitch_MinMapShowItem(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(minMapEnabled: Setting_MinMapShowItem.IsOn));
     private async void ToggleSwitch_MapShowItem(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(mapEnabled: Setting_MapShowItem.IsOn));
     private async void ToggleSwitch_SetVisibleSavedPoints(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(savedPointsEnabled: Setting_SetVisibleSavedPoints.IsOn));

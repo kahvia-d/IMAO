@@ -34,6 +34,11 @@ public sealed record RuntimeConfiguration
     public bool GamepadEnabled { get; init; }
     public int GamepadControllerIndex { get; init; } = -1;
     public GamepadButtons GamepadEntryButton { get; init; } = GamepadButtons.LB;
+    // How far from the player arrow (in minimap screen pixels) the completion key and
+    // the guide key look for the nearest point they act on. 15 is what the tool always
+    // used; the two keys are measured separately because they do different things.
+    public int CompletionRangePixels { get; init; } = 15;
+    public int GuideRangePixels { get; init; } = 15;
 
     public void Validate()
     {
@@ -43,6 +48,8 @@ public sealed record RuntimeConfiguration
             throw new ArgumentException("刷新间隔必须在 16–1000 毫秒之间");
         if (GamepadControllerIndex is < -1 or > 3)
             throw new ArgumentException("手柄编号必须为自动选择或 1–4");
+        if (CompletionRangePixels is < 5 or > 120 || GuideRangePixels is < 5 or > 120)
+            throw new ArgumentException("触发范围必须在 5–120 像素之间");
         if (GamepadEntryButton is not (GamepadButtons.LB or GamepadButtons.RB))
             throw new ArgumentException("手柄助手入口仅支持 LB 或 RB");
         var keys = new[] { NearestCompletionKey, ManualRouteKey, CurrentTargetGuideKey, GuidePreviousImageKey, GuideNextImageKey };
@@ -75,6 +82,7 @@ public sealed record RuntimeConfiguration
         ["statusBarEnabled"] = StatusBarEnabled, ["autoReplanEnabled"] = AutoReplanEnabled,
         ["nearestCompletionKey"] = NearestCompletionKey,
         ["manualRouteKey"] = ManualRouteKey, ["currentTargetGuideKey"] = CurrentTargetGuideKey,
-        ["guidePreviousImageKey"] = GuidePreviousImageKey, ["guideNextImageKey"] = GuideNextImageKey
+        ["guidePreviousImageKey"] = GuidePreviousImageKey, ["guideNextImageKey"] = GuideNextImageKey,
+        ["completionRangePixels"] = CompletionRangePixels, ["guideRangePixels"] = GuideRangePixels
     };
 }

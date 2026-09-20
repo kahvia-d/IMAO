@@ -116,4 +116,6 @@ bool DrawItemOnGameMap::HasVisibleItems() {
     return !centerPointNearItemsData.empty();
 }
 
-ItemMarkerFrame DrawItemOnGameMap::Snapshot() { std::scoped_lock lock(PointNearItemsDataMutex); return {senceName, centerPointNearItemsData, {}, 0.0, DrawItemBase::MarkerProfile(), mapFilterRevision}; }
+// The big map selects through the gamepad cursor, so its frame carries no drawn marker
+// radius: the nearby rule would keep every candidate rather than guess two icons apart.
+ItemMarkerFrame DrawItemOnGameMap::Snapshot() { std::scoped_lock lock(PointNearItemsDataMutex); return {senceName, centerPointNearItemsData, {}, 0.0, 0.0, DrawItemBase::MarkerProfile(), mapFilterRevision}; }

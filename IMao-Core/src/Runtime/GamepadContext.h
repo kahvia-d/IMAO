@@ -95,7 +95,7 @@ public:
         if (!view_.sceneName.empty() && view_.sceneName != frame.sceneName) ++view_.generation;
         view_.sceneName = frame.sceneName;
         Location sample{profile, frame.sceneName, locatedAt, freshUntil,
-            NearbySelection::Collect(frame, playerROC, pixelsPerMapUnit), frame.filterRevision};
+            NearbySelection::Collect(frame, playerROC, pixelsPerMapUnit), frame.filterRevision, frame.markerRadius};
         recent_ = std::move(sample);
     }
 
@@ -125,6 +125,7 @@ public:
         result.profileId = view_.profileId; result.sceneName = view_.sceneName;
         if (!recent_) return result;
         result.filterRevision = recent_->filterRevision;
+        result.markerRadius = recent_->markerRadius;
         result.locatedAt = recent_->locatedAt; result.freshUntil = recent_->freshUntil;
         result.available = view_.running && view_.observable && view_.gameplay && !mapSession_ &&
             recent_->profile == profile && recent_->scene == view_.sceneName && now >= recent_->locatedAt &&
@@ -138,6 +139,7 @@ private:
         Clock::time_point locatedAt, freshUntil;
         std::vector<Candidate> candidates;
         std::uint64_t filterRevision = 0;
+        double markerRadius = 0;
     };
     bool ActiveLocked(std::uint64_t session) const { return view_.running && view_.session == session; }
     void ProfileLocked(const std::string& profile) {

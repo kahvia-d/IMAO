@@ -98,7 +98,19 @@
                     <Button x:Name="ResetShortcuts" Content="恢复默认" Click="ResetShortcuts_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                 </controls:WrapPanel>
                 <InfoBar x:Name="ShortcutMessage" IsOpen="False" IsClosable="True" />
-                <TextBlock Text="完成键在游戏中处理小地图附近点，在攻略中只处理当前展示点。多个候选必须先选择，不会批量完成。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock Text="完成键在游戏中处理小地图附近点，在攻略中只处理当前展示点。快捷键默认作用于范围内离你最近的一个点位；只有两个标记的图标在小地图上互相压住时，才会列出让你选，而且不会批量完成。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource IMaoCardStyle}">
+            <StackPanel Spacing="16">
+                <TextBlock Text="操作优化" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <TextBlock Text="快捷键只在小地图上离玩家箭头够近的点位里找目标：在这个范围内取离你最近的一个。嫌不够灵敏就调大，嫌容易误触就调小。单位是小地图上的像素（默认 15），修改立即生效。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <controls:WrapPanel HorizontalSpacing="16" VerticalSpacing="12">
+                    <NumberBox x:Name="CompletionRangePixels" Header="完成点位触发范围 · 像素" Minimum="5" Maximum="120" SmallChange="5" ValueChanged="CompletionRange_ValueChanged" SpinButtonPlacementMode="Compact" Width="215" />
+                    <NumberBox x:Name="GuideRangePixels" Header="查看攻略触发范围 · 像素" Minimum="5" Maximum="120" SmallChange="5" ValueChanged="GuideRange_ValueChanged" SpinButtonPlacementMode="Compact" Width="215" />
+                </controls:WrapPanel>
+                <InfoBar x:Name="RangeMessage" IsOpen="False" IsClosable="True" />
+                <TextBlock Text="范围内有两个以上点位、且它们的图标在小地图上互相压住时，会先列出这些点让你选一个；图标没有压在一起时直接用最近的那个，不再多问一步。查看攻略只是打开窗口，不会改动任何进度。" Style="{StaticResource IMaoSecondaryTextStyle}" />
             </StackPanel>
         </Border>
         <Expander Header="库街区点位进度同步" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">

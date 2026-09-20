@@ -457,6 +457,8 @@ bool ApplyConfigure(const json& command) {
     const auto saved = boolean("savedPointsEnabled");
     const auto bar = boolean("statusBarEnabled");
     const auto autoReplan = boolean("autoReplanEnabled");
+    const auto completionRange = integer("completionRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
+    const auto guideRange = integer("guideRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
     const auto hotkeys = RuntimeHotkeys::ValidateConfiguration(command);
     if (capture) SetCaptureWay(*capture);
     if (present) SetOverlayPresentMode(*present);
@@ -467,6 +469,9 @@ bool ApplyConfigure(const json& command) {
     if (saved) SetVisibleSavedPoints(*saved);
     if (bar) RuntimeStatus::SetStatusBarEnabled(*bar);
     if (autoReplan) RoutePlanningService::SetAutoReplanEnabled(*autoReplan);
+    if (completionRange || guideRange)
+        NearbySelection::Ranges::Apply(completionRange.value_or(NearbySelection::Ranges::Completion()),
+            guideRange.value_or(NearbySelection::Ranges::Guide()));
     RuntimeHotkeys::Apply(hotkeys);
     return true;
 }

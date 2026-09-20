@@ -1,4 +1,4 @@
-﻿#include "DrawItemOnMinMap.h"
+#include "DrawItemOnMinMap.h"
 #include "../../Runtime/RuntimeHotkeys.h"
 #include "../../Runtime/RoutePlanningService.h"
 #include "DrawMarkerInteraction.h"
@@ -42,6 +42,9 @@ vector<ItemDatas> DrawItemOnMinMap::nearItemsDatas;
 std::mutex DrawItemOnMinMap::markerMutex;
 Coordinate minMapCenterPoint;
 double minMapClipRadius = 0.0;
+// The radius the minimap draws each marker icon with. The nearby selection compares
+// icon positions with it, so "stacked on screen" and "needs a choice" are one rule.
+double minMapMarkerRadius = 0.0;
 std::uint64_t minMapFilterRevision = 0;
 string DrawItemOnMinMap::senceName = "World";
 std::shared_ptr<const vector<ItemsDatas>> DrawItemOnMinMap::itemsDatas_StoragePtr;
@@ -55,6 +58,7 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & play
     std::scoped_lock lock(markerMutex);
     minMapFilterRevision = DrawItemBase::MarkerFilterRevision();
     minMapClipRadius = minMapRadius;
+    minMapMarkerRadius = std::max(8.0, w_Rect.right * 0.012 / 2);
     minMapCenterPoint = ScreenCoordinate::MinMapCircleCenterScreenCoordinate(w_Rect);
     if(GetBasicDataBySenceId(SceneId)) {
         nearItemsDatas = GetAndFilterItemsData(w_Rect, playerROC, minMapRadius, terrainScale);
@@ -134,7 +138,9 @@ nlohmann::json DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamep
     std::erase_if(observation.candidates, [&](const auto& candidate) {
         return !NearbySelection::Includes(candidate, intent) || DrawItemBase::IsPointCompleted(observation.sceneName, candidate.item);
     });
-    if (guide) NearbySelection::KeepNearestGuideGroup(observation.candidates);
+    // The nearest point inside the player's own range wins on its own; only icons the
+    // minimap actually stacks on top of each other ask which one was meant.
+    observation.candidates = NearbySelection::Resolve(observation.candidates, intent, NearbySelection::OverlapDiameter(observation));
     if (observation.candidates.empty()) {
         DrawItemBase::NotifyNearby(guide ? "附近小范围内没有未完成点位，请靠近标记后重试。" :
             "完成范围内没有符合当前筛选的未完成点位。", guide ? "guide-empty" : "complete-empty"); return nlohmann::json::object();
@@ -150,13 +156,24 @@ nlohmann::json DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamep
             "complete-single point=" + NearbySelection::Key(item) + " accepted=" + std::to_string(result.value("accepted", false)) + " reason=" + reason);
         return nlohmann::json::object();
     }
+    // A guide key press with a caller waiting for the answer (the F8 path) opens the
+    // unambiguous nearest point directly. The gamepad path has no correlated caller,
+    // so it still publishes the point and lets its chooser open it.
+    if (guide && observation.candidates.size() == 1 && !publish) {
+        const auto resolved = DrawItemBase::ResolveNearbyGuide(observation);
+        if (!resolved.contains("selection")) DrawItemBase::NotifyNearby("附近点位或位置已变化，请重新操作。", "guide-single-rejected");
+        return resolved;
+    }
     return DrawItemBase::PublishNearbyCandidates(std::move(observation), intent, gamepad, publish);
 }
 
 void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
     DrawItemBase::UpdateMarkerContext(frame.sceneName);
     if (frame.profileId != DrawItemBase::MarkerProfile()) return;
-    const float radius = std::max(8.0f, rect.right * 0.012f / 2);
+    // The frame records the radius its icons were measured with; a frame that never
+    // went through the nearby update (a test fixture) still draws with the same formula.
+    const float radius = frame.markerRadius > 0 ? static_cast<float>(frame.markerRadius)
+        : std::max(8.0f, rect.right * 0.012f / 2);
     std::vector<MarkerLayoutPoint> points;
     for (std::size_t index = 0; index < frame.markers.size(); ++index) {
         const auto& item = frame.markers[index];
@@ -181,4 +198,4 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
     }
 }
 
-ItemMarkerFrame DrawItemOnMinMap::Snapshot() { std::scoped_lock lock(markerMutex); return {senceName, nearItemsDatas, minMapCenterPoint, minMapClipRadius, DrawItemBase::MarkerProfile(), minMapFilterRevision}; }
+ItemMarkerFrame DrawItemOnMinMap::Snapshot() { std::scoped_lock lock(markerMutex); return {senceName, nearItemsDatas, minMapCenterPoint, minMapClipRadius, minMapMarkerRadius, DrawItemBase::MarkerProfile(), minMapFilterRevision}; }

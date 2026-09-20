@@ -138,21 +138,39 @@ inline void TestGamepadContext(void (*check)(bool, const std::string&)) {
     point.itemId = "outside"; point.itemMapROC = {120.001, 0}; boundaries.markers.push_back(point);
     boundaries.markers.push_back(boundaries.markers.front());
     auto collected = NearbySelection::Collect(boundaries, {0, 0}, 1.0);
-    auto guideGroup = collected;
-    NearbySelection::KeepNearestGuideGroup(guideGroup);
-    check(guideGroup.size() == 1 && guideGroup.front().item.itemId == "within", "guide excludes exact radius and minimap-wide points");
+    // An unknown drawn radius (a frame that was never drawn) keeps every candidate, so
+    // the caller has to ask instead of guessing which icons are apart.
+    auto guideGroup = NearbySelection::Resolve(collected, NearbySelection::Intent::Guide, 0.0);
+    check(guideGroup.size() == 1 && guideGroup.front().item.itemId == "within",
+        "each key resolves only the nearest point inside its own 15-pixel range");
     auto groupPoint = point; groupPoint.isSaved = false;
     std::vector<NearbySelection::Candidate> group;
     for (int x : {2, 7, 12, -3}) {
         groupPoint.itemId = std::to_string(x); groupPoint.itemMapROC = {double(x), 0};
+        groupPoint.screenCoordiante = {double(x), 0};
         group.push_back({groupPoint, double(std::abs(x)), double(std::abs(x))});
     }
-    NearbySelection::KeepNearestGuideGroup(group);
-    check(group.size() == 3 && std::none_of(group.begin(), group.end(), [](const auto& c) { return c.item.itemId == "12"; }),
-        "guide groups only immediate neighbours of nearest, never a transitive chain");
+    // Icons drawn 3 px wide overlap within 2 * 3 + 2: 7 and -3 are stacked with the
+    // nearest (2), while 12 is a separate icon and never joins the group.
+    auto overlap = NearbySelection::Resolve(group, NearbySelection::Intent::Complete, 8.0);
+    check(overlap.size() == 3 && std::none_of(overlap.begin(), overlap.end(), [](const auto& c) { return c.item.itemId == "12"; }),
+        "an icon group is bounded by the drawn distance and never chains across the minimap");
     group.front().item.isSaved = true;
-    NearbySelection::KeepNearestGuideGroup(group);
-    check(group.size() == 1 && group.front().item.itemId == "-3", "completed nearest is excluded before choosing the next anchor");
+    auto afterCompleted = NearbySelection::Resolve(group, NearbySelection::Intent::Complete, 8.0);
+    check(afterCompleted.size() == 1 && afterCompleted.front().item.itemId == "-3",
+        "a completed nearest is excluded before the next anchor is chosen");
+    // Two points inside the range but drawn apart are no longer a question: the key
+    // acts on the nearest one, and only a real icon overlap asks which was meant.
+    std::vector<NearbySelection::Candidate> spread;
+    for (double x : {4, 13}) {
+        groupPoint.itemId = std::to_string(static_cast<int>(x)); groupPoint.itemMapROC = {x, 0};
+        groupPoint.screenCoordiante = {x, 0};
+        spread.push_back({groupPoint, x, x});
+    }
+    check(NearbySelection::Resolve(spread, NearbySelection::Intent::Complete, 8.0).size() == 1,
+        "a point inside the range whose icon is clearly apart never forces a choice");
+    check(NearbySelection::Resolve(spread, NearbySelection::Intent::Complete, 20.0).size() == 2,
+        "a point whose icon overlaps the nearest one asks which was meant");
     check(collected.size() == 3 && NearbySelection::Includes(collected[0], NearbySelection::Intent::Complete) &&
         !NearbySelection::Includes(collected[1], NearbySelection::Intent::Complete) && collected.back().distance == 120,
         "shared nearby collector uses strict completion <15, inclusive map distance <=120 and deduplicates point identity");
@@ -165,24 +183,50 @@ inline void TestGamepadContext(void (*check)(bool, const std::string&)) {
     boundaries.radius = 0;
     check(NearbySelection::Collect(boundaries, {0, 0}, 1.0).empty(), "unknown minimap bounds never authorize nearby targets");
 
-    check(NearbySelection::ValidateSingleCompletion(initialNearby, initialNearby, 7, start).empty(),
+    check(NearbySelection::ValidateSingleSelection(initialNearby, initialNearby, 7, NearbySelection::Intent::Complete, start).empty(),
         "single completion accepts a fresh re-read only while the same canonical point remains uniquely eligible");
     auto overlapping = initialNearby;
     auto entering = overlapping.candidates.back(); entering.item.itemId = "entering"; entering.distance = entering.screenDistance = 4;
     overlapping.candidates.push_back(entering);
-    check(NearbySelection::ValidateSingleCompletion(initialNearby, overlapping, 7, start) == "nearby-single-selection-changed",
-        "a second point entering the 15-pixel circle before commit rejects direct completion and requires a new choice");
+    check(NearbySelection::ValidateSingleSelection(initialNearby, overlapping, 7, NearbySelection::Intent::Complete, start) == "nearby-single-selection-changed",
+        "a second point entering the completion range before commit rejects direct completion and requires a new choice");
     auto replaced = initialNearby; replaced.candidates.front().item.itemId = "replacement";
-    check(!NearbySelection::ValidateSingleCompletion(initialNearby, replaced, 7, start).empty(),
+    check(!NearbySelection::ValidateSingleSelection(initialNearby, replaced, 7, NearbySelection::Intent::Complete, start).empty(),
         "a different now-unique point cannot replace the identity chosen by the original shortcut");
-    check(!NearbySelection::ValidateSingleCompletion(initialNearby, initialNearby, 7, start + 500ms).empty(),
+    check(!NearbySelection::ValidateSingleSelection(initialNearby, initialNearby, 7, NearbySelection::Intent::Complete, start + 500ms).empty(),
         "a player observation expiring between initial resolution and the single write is rejected");
     auto replayed = initialNearby;
     int singleWrites = 0;
-    if (NearbySelection::ValidateSingleCompletion(initialNearby, replayed, 7, start).empty()) ++singleWrites;
+    if (NearbySelection::ValidateSingleSelection(initialNearby, replayed, 7, NearbySelection::Intent::Complete, start).empty()) ++singleWrites;
     // The production entry refreshes this durable state even when localization
     // has not published another frame, so the exact same source cannot write twice.
     replayed.candidates.front().item.isSaved = true;
-    if (NearbySelection::ValidateSingleCompletion(initialNearby, replayed, 7, start).empty()) ++singleWrites;
+    if (NearbySelection::ValidateSingleSelection(initialNearby, replayed, 7, NearbySelection::Intent::Complete, start).empty()) ++singleWrites;
     check(singleWrites == 1, "repeated nearby frames cannot re-complete the already persisted single point");
+
+    // The trigger range is the player's setting and both keys carry their own value.
+    ItemMarkerFrame ranged; ranged.radius = 120; ranged.markerRadius = 3; ranged.filterRevision = 7;
+    ItemDatas rangePoint = markers.markers.front();
+    ItemDatas seven = rangePoint; seven.itemId = "seven"; seven.itemMapROC = {7, 0}; seven.screenCoordiante = {7, 0};
+    ItemDatas twenty = rangePoint; twenty.itemId = "twenty"; twenty.itemMapROC = {20, 0}; twenty.screenCoordiante = {20, 0};
+    ranged.markers = {seven, twenty};
+    const auto inRange = NearbySelection::Collect(ranged, {0, 0}, 1.0);
+    check(NearbySelection::Ranges::Completion() == 15 && NearbySelection::Ranges::Guide() == 15,
+        "both keys start at the 15 pixels the tool always used");
+    NearbySelection::Ranges::Apply(5, 5);
+    check(NearbySelection::Ranges::Completion() == 5 && NearbySelection::Ranges::Guide() == 5,
+        "a configured range is what the keys measure against");
+    check(NearbySelection::Resolve(inRange, NearbySelection::Intent::Complete, 8.0).empty(),
+        "a narrowed range leaves a point seven pixels away out of reach");
+    NearbySelection::Ranges::Apply(40, 40);
+    check(NearbySelection::Resolve(inRange, NearbySelection::Intent::Complete, 8.0).size() == 1,
+        "a widened range reaches the nearest point, which is drawn apart from the other one");
+    bool refusedLow = false, refusedHigh = false;
+    try { NearbySelection::Ranges::Apply(4, 15); } catch (const std::invalid_argument&) { refusedLow = true; }
+    try { NearbySelection::Ranges::Apply(15, 121); } catch (const std::invalid_argument&) { refusedHigh = true; }
+    check(refusedLow && refusedHigh && NearbySelection::Ranges::Completion() == 40 && NearbySelection::Ranges::Guide() == 40,
+        "a range outside 5-120 is refused without changing the applied value");
+    NearbySelection::Ranges::Apply(NearbySelection::DefaultRangePixels, NearbySelection::DefaultRangePixels);
+    check(NearbySelection::Ranges::Completion() == 15 && NearbySelection::Ranges::Guide() == 15,
+        "the default range is restored for whatever runs next");
 }

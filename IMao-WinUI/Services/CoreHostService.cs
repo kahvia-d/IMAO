@@ -229,7 +229,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         int? guidePreviousImageKey = null, int? guideNextImageKey = null,
         bool? gamepadEnabled = null, int? gamepadControllerIndex = null,
         GamepadButtons? gamepadEntryButton = null, bool? autoReplanEnabled = null,
-        bool? expectedAutoReplanEnabled = null, string? expectedAutoReplanProfile = null)
+        bool? expectedAutoReplanEnabled = null, string? expectedAutoReplanProfile = null,
+        int? completionRangePixels = null, int? guideRangePixels = null)
     {
         await lifecycleLock.WaitAsync(cancellationToken);
         try
@@ -261,7 +262,9 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     GuideNextImageKey = guideNextImageKey ?? old.GuideNextImageKey,
                     GamepadEnabled = gamepadEnabled ?? old.GamepadEnabled,
                     GamepadControllerIndex = gamepadControllerIndex ?? old.GamepadControllerIndex,
-                    GamepadEntryButton = gamepadEntryButton ?? old.GamepadEntryButton
+                    GamepadEntryButton = gamepadEntryButton ?? old.GamepadEntryButton,
+                    CompletionRangePixels = completionRangePixels ?? old.CompletionRangePixels,
+                    GuideRangePixels = guideRangePixels ?? old.GuideRangePixels
                 });
                 OnUi(() => OnPropertyChanged(nameof(Configuration)));
             }

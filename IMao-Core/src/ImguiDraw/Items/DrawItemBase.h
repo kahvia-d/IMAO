@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <string>
 #include <nlohmann/json.hpp>
 #include "Windows.h"
@@ -45,6 +45,9 @@ public:
         bool gamepad = false, std::uint64_t gameHwnd = 0);
     static json PublishNearbyCandidates(NearbySelection::Observation observation, NearbySelection::Intent intent, bool gamepad, bool publish = true);
     static json CompleteNearbySingle(const NearbySelection::Observation& initial);
+    // Resolves the one eligible nearby point of a guide key press that has a caller
+    // waiting for it, so an unambiguous nearest point opens without a chooser window.
+    static json ResolveNearbyGuide(const NearbySelection::Observation& initial);
     static std::uint64_t MarkerFilterRevision();
     static void NotifyNearby(const std::string& message, const std::string& outcome);
     static void UpdateMarkerContext(const std::string& sceneName);

@@ -327,29 +327,62 @@ bool DrawItemBase::IsPointCompleted(const string& scene, const ItemDatas& item) 
 std::string DrawItemBase::MarkerProfile() { return markerStore ? markerStore->Profile() : "local"; }
 std::uint64_t DrawItemBase::MarkerFilterRevision() { return markerFilterRevision.load(); }
 
-json DrawItemBase::CompleteNearbySingle(const NearbySelection::Observation& initial) {
+// One nearby point a key press may act on, re-resolved under the operation lock.
+struct NearbyTarget {
+    bool accepted = false;
+    std::string reason;
+    NearbySelection::Candidate candidate;
+    std::string profileId, sceneName;
+};
+
+// A repeated frame is not permission to repeat a choice: the arrow moving on,
+// another icon starting to overlap the chosen one, or a changed filter, account,
+// scene or expired position all refuse instead of inheriting the original point.
+static NearbyTarget ResolveNearbyTarget(const NearbySelection::Observation& initial, NearbySelection::Intent intent) {
     std::scoped_lock operationLock(nearbyOperationMutex);
-    const auto reject = [](const std::string& reason) {
-        StructuredLogger::Record("info", "gamepad", "nearby-single-rejected", reason);
-        return json{{"accepted", false}, {"message", reason}, {"data", json::object()}};
-    };
-    if (initial.profileId != MarkerProfile()) return reject("nearby-context-changed");
+    const auto reject = [](const std::string& reason) { return NearbyTarget{false, reason}; };
+    if (initial.profileId != DrawItemBase::MarkerProfile()) return reject("nearby-context-changed");
     auto current = GamepadContextSnapshot::Shared().ReadNearby(initial.profileId);
-    // A repeated frame is not permission to repeat a write. Refresh durable
-    // completion under the same operation lock used for chooser/filter changes.
-    std::erase_if(current.candidates, [&](const auto& item) { return IsPointCompleted(current.sceneName, item.item); });
-    const auto failure = NearbySelection::ValidateSingleCompletion(initial, current, MarkerFilterRevision());
+    // Refresh durable completion under the same operation lock used for chooser and
+    // filter changes, so a point completed meanwhile is never written twice.
+    std::erase_if(current.candidates, [&](const auto& item) { return DrawItemBase::IsPointCompleted(current.sceneName, item.item); });
+    const auto failure = NearbySelection::ValidateSingleSelection(initial, current, DrawItemBase::MarkerFilterRevision(), intent);
     if (!failure.empty()) return reject(failure);
     const auto game = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(current.gameHwnd));
     DWORD pid = 0;
-    if (!IsMarkerGameFocused(game) || !IsWindowVisible(game) || IsIconic(game) ||
+    if (!DrawItemBase::IsMarkerGameFocused(game) || !IsWindowVisible(game) || IsIconic(game) ||
         !GetWindowThreadProcessId(game, &pid) || pid != current.gameProcessId) return reject("nearby-game-changed");
-    const auto selected = std::find_if(current.candidates.begin(), current.candidates.end(),
-        [](const auto& item) { return NearbySelection::Includes(item, NearbySelection::Intent::Complete); });
-    const auto& item = selected->item;
-    return HandleMarkerCommand({{"type", "markerSetCompletion"}, {"profileId", current.profileId},
-        {"sceneName", current.sceneName}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
+    const auto group = NearbySelection::Resolve(current.candidates, intent, NearbySelection::OverlapDiameter(current));
+    if (group.size() != 1) return reject("nearby-single-selection-changed");
+    return {true, "", group.front(), current.profileId, current.sceneName};
+}
+
+json DrawItemBase::CompleteNearbySingle(const NearbySelection::Observation& initial) {
+    const auto target = ResolveNearbyTarget(initial, NearbySelection::Intent::Complete);
+    if (!target.accepted) {
+        StructuredLogger::Record("info", "gamepad", "nearby-single-rejected", target.reason);
+        return json{{"accepted", false}, {"message", target.reason}, {"data", json::object()}};
+    }
+    const auto& item = target.candidate.item;
+    return HandleMarkerCommand({{"type", "markerSetCompletion"}, {"profileId", target.profileId},
+        {"sceneName", target.sceneName}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
         {"pointId", item.itemId}, {"completed", true}});
+}
+
+// A guide writes nothing, so the resolved identity is returned to its caller in the
+// same flat shape the candidate page uses; an empty object means the point or the
+// position changed and the player has to press the key again.
+json DrawItemBase::ResolveNearbyGuide(const NearbySelection::Observation& initial) {
+    const auto target = ResolveNearbyTarget(initial, NearbySelection::Intent::Guide);
+    if (!target.accepted) {
+        StructuredLogger::Record("info", "gamepad", "nearby-single-rejected", target.reason);
+        return json::object();
+    }
+    const auto& item = target.candidate.item;
+    return {{"profileId", target.profileId}, {"sceneName", target.sceneName}, {"intent", "guide"},
+        {"selection", {{"profileId", target.profileId}, {"sceneName", target.sceneName}, {"nameId", item.nameId},
+            {"pointId", item.itemId}, {"stateId", item.layer.stateId}, {"countryId", item.layer.countryId},
+            {"floorId", item.layer.floorId}, {"level", item.layer.level}, {"completed", false}}}};
 }
 
 static json HandleNearbyCommand(const json& command) {

@@ -1,9 +1,11 @@
 #pragma once
 #include "../Domain/MapData.h"
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -11,8 +13,37 @@
 namespace NearbySelection {
 using Clock = std::chrono::steady_clock;
 enum class Intent { Complete, Guide };
-inline constexpr double CompletionPixels = 15.0;
+// The key acts on the nearest eligible point inside the player's own range, and the
+// range is the one part of that rule a player can move: 15 pixels is what the tool
+// always used, and the two keys measure their own distance from the player arrow.
+inline constexpr int DefaultRangePixels = 15;
+inline constexpr int MinimumRangePixels = 5;
+inline constexpr int MaximumRangePixels = 120;
+// How far a guide candidate may sit from the player in map units at all; the pixel
+// range above is what decides whether the key actually acts on it.
 inline constexpr double GuideMapDistance = 120.0;
+
+// One packed atomic publishes both ranges together to the polling, IPC and overlay
+// threads, exactly like the hotkey bindings.
+class Ranges {
+public:
+    static int Completion() { return static_cast<int>(packed_.load() & 0xFFFFu); }
+    static int Guide() { return static_cast<int>((packed_.load() >> 16) & 0xFFFFu); }
+    static double Pixels(Intent intent) { return intent == Intent::Guide ? Guide() : Completion(); }
+    static void Validate(int completion, int guide) {
+        if (completion < MinimumRangePixels || completion > MaximumRangePixels ||
+            guide < MinimumRangePixels || guide > MaximumRangePixels)
+            throw std::invalid_argument("触发范围必须在 5–120 像素之间");
+    }
+    static void Apply(int completion, int guide) {
+        Validate(completion, guide);
+        packed_.store(static_cast<std::uint64_t>(completion) | (static_cast<std::uint64_t>(guide) << 16));
+    }
+private:
+    inline static std::atomic<std::uint64_t> packed_{static_cast<std::uint64_t>(DefaultRangePixels) |
+        (static_cast<std::uint64_t>(DefaultRangePixels) << 16)};
+};
+
 struct Candidate { ItemDatas item; double distance = 0, screenDistance = 0; };
 struct Observation {
     bool available = false;
@@ -21,27 +52,60 @@ struct Observation {
     std::string profileId, sceneName;
     Clock::time_point locatedAt{}, freshUntil{};
     std::vector<Candidate> candidates;
+    // Drawn marker radius of the observed frame; zero when it was never drawn.
+    double markerRadius = 0;
 };
 inline std::string Key(const ItemDatas& item) { return std::to_string(item.layer.stateId) + ":" + item.itemId; }
 inline bool Includes(const Candidate& item, Intent intent) {
-    return !item.item.isSaved && std::isfinite(item.screenDistance) && item.screenDistance < CompletionPixels;
+    return !item.item.isSaved && std::isfinite(item.screenDistance) && item.screenDistance < Ranges::Pixels(intent);
 }
-// Only direct neighbours of the nearest point belong to its guide choice.
-// Never grow a transitive chain across the minimap.
-inline void KeepNearestGuideGroup(std::vector<Candidate>& candidates) {
-    std::erase_if(candidates, [](const auto& item) { return !Includes(item, Intent::Guide); });
-    if (candidates.empty()) return;
-    const auto nearest = *std::min_element(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
-        if (a.distance != b.distance) return a.distance < b.distance;
-        return Key(a.item) < Key(b.item);
-    });
-    std::erase_if(candidates, [&](const auto& item) {
-        const double scale = nearest.distance > 0 ? nearest.screenDistance / nearest.distance :
-            item.distance > 0 ? item.screenDistance / item.distance : 1.0;
-        return std::hypot(item.item.itemMapROC.x - nearest.item.itemMapROC.x,
-            item.item.itemMapROC.y - nearest.item.itemMapROC.y) * scale > 6.0;
-    });
+
+// The nearest eligible point, with the tie-break the candidate list is sorted by.
+inline const Candidate* Nearest(const std::vector<Candidate>& candidates) {
+    const Candidate* best = nullptr;
+    for (const auto& item : candidates)
+        if (best == nullptr || item.distance < best->distance ||
+            (item.distance == best->distance && Key(item.item) < Key(best->item))) best = &item;
+    return best;
 }
+
+// The points whose icons overlap the anchor's icon. `markerDiameter` is the drawn
+// icon diameter plus the layout gap, so this is exactly the set the minimap stacks
+// under one badge — and it is a bounded group, never a chain across the minimap.
+// An unknown diameter (zero) keeps every candidate: a caller that cannot prove two
+// icons are apart must ask the player, never pick one of them.
+inline std::vector<Candidate> OverlapGroup(const std::vector<Candidate>& candidates, const Candidate& anchor,
+    double markerDiameter) {
+    if (!(markerDiameter > 0) || !std::isfinite(markerDiameter)) return candidates;
+    std::vector<Candidate> group;
+    for (const auto& item : candidates)
+        if (std::hypot(item.item.screenCoordiante.x - anchor.item.screenCoordiante.x,
+            item.item.screenCoordiante.y - anchor.item.screenCoordiante.y) <= markerDiameter) group.push_back(item);
+    return group;
+}
+
+inline std::vector<Candidate> Eligible(const std::vector<Candidate>& candidates, Intent intent) {
+    std::vector<Candidate> result;
+    for (const auto& item : candidates) if (Includes(item, intent)) result.push_back(item);
+    return result;
+}
+
+// The diameter the minimap stacks icons by (drawn radius * 2 plus the layout gap), or
+// zero when the frame was never drawn — which makes the overlap group every candidate.
+inline double OverlapDiameter(const Observation& observation) {
+    return observation.markerRadius > 0 ? observation.markerRadius * 2 + 2 : 0.0;
+}
+
+// The nearby rule, in one place: the nearest eligible point inside the player's
+// range, or that point's whole icon-overlap group when it is not alone. Returns an
+// empty group when nothing is in range.
+inline std::vector<Candidate> Resolve(const std::vector<Candidate>& candidates, Intent intent, double markerDiameter) {
+    auto eligible = Eligible(candidates, intent);
+    const auto* nearest = Nearest(eligible);
+    if (nearest == nullptr) return {};
+    return OverlapGroup(eligible, *nearest, markerDiameter);
+}
+
 inline std::vector<Candidate> Collect(const ItemMarkerFrame& frame, const Coordinate& playerROC,
     double pixelsPerMapUnit = 0) {
     std::vector<Candidate> result;
@@ -89,17 +153,23 @@ struct Session {
     }
 };
 
-inline std::string ValidateSingleCompletion(const Observation& source, const Observation& current,
-    std::uint64_t currentFilter, Clock::time_point now = Clock::now()) {
-    const auto eligible = [](const Candidate& item) { return !item.item.isSaved && Includes(item, Intent::Complete); };
-    if (std::count_if(source.candidates.begin(), source.candidates.end(), eligible) != 1)
-        return "nearby-single-selection-changed";
-    const auto selected = std::find_if(source.candidates.begin(), source.candidates.end(), eligible);
-    const Session selection{source, Intent::Complete, 1};
-    const auto failure = selection.Validate(current, currentFilter, 1, source.profileId, source.sceneName, Key(selected->item), now);
+// Re-checks, under the caller's operation lock, that the point a key press resolved
+// is still the one a fresh observation resolves. Refresh durable completion before
+// calling this: the arrow moving on, another icon starting to overlap the chosen one,
+// a changed filter, account, scene or expired position all refuse the write rather
+// than inherit the original choice.
+inline std::string ValidateSingleSelection(const Observation& source, const Observation& current,
+    std::uint64_t currentFilter, Intent intent, Clock::time_point now = Clock::now()) {
+    const auto resolved = Resolve(source.candidates, intent, OverlapDiameter(source));
+    if (resolved.size() != 1) return "nearby-single-selection-changed";
+    const auto selected = resolved.front();
+    const Session selection{source, intent, 1};
+    const auto failure = selection.Validate(current, currentFilter, 1, source.profileId, source.sceneName,
+        Key(selected.item), now);
     if (!failure.empty()) return failure;
-    if (std::count_if(current.candidates.begin(), current.candidates.end(), eligible) != 1)
-        return "nearby-single-selection-changed";
+    const auto currentResolved = Resolve(current.candidates, intent, OverlapDiameter(current));
+    if (currentResolved.size() != 1) return "nearby-single-selection-changed";
+    if (Key(currentResolved.front().item) != Key(selected.item)) return "nearby-point-no-longer-nearest";
     return {};
 }
 }
