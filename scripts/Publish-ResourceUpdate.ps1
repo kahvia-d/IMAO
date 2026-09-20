@@ -47,7 +47,11 @@ foreach ($asset in $report.assets) {
     $assets.Add([pscustomobject]@{path=(Join-Path $PreparedRoot "packages/$($asset.name)");name=$asset.name;sha256=$asset.sha256})
 }
 $assets.Add([pscustomobject]@{path=$manifest;name='update.json';sha256=$report.signedManifestSha256})
-$assets.Add([pscustomobject]@{path=(Join-Path $PreparedRoot $report.offline.name);name=$report.offline.name;sha256=$report.offline.sha256})
+if ($null -ne $report.offline) {
+    $assets.Add([pscustomobject]@{path=(Join-Path $PreparedRoot $report.offline.name);name=$report.offline.name;sha256=$report.offline.sha256})
+} else {
+    Write-Host 'resource set unchanged: this release carries no offline archive (the last published one still matches the current resource set)'
+}
 if ($shardRelease) {
     if ($ProgramZip) { throw 'A shard program release ships no whole archive; do not pass -ProgramZip.' }
     if ($report.programPrepared) {

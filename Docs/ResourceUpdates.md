@@ -97,7 +97,7 @@ $appRoot = 'out/release-2026.9.9.4/IMao-v2026.9.9.4-windows-x64'
   --core-host "$appRoot/IMao-CoreHost.exe"
 ```
 
-`prepare` 生成 `update.json`、`packages/*.zip`、完整离线集合包、候选快照、原生检查日志及 `release-report.json`。它拒绝覆盖已有输出目录。ZIP 使用固定文件顺序与时间戳，包清单含每个文件大小和 SHA-256。生产准备必须通过实际 CoreHost `--check-resource-snapshot`。发布附件（包括离线集合与程序 ZIP）必须小于 2 GiB，工具超限即拒绝；规模超过此限时需先调整分发方案。[GitHub 附件限制](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
+`prepare` 生成 `update.json`、`packages/*.zip`、候选快照、原生检查日志及 `release-report.json`；**只有当本次发布确实引入了新的资源包时**，才另外打包完整离线集合包（`resources-<版本>-offline.zip`）。所有资源包都沿用上一版时不再重复打包——那份集合与上一次发布的内容逐字节相同，重新上传只是几百 MB 的重复流量；需要时用 `--with-offline true` 强制生成。它拒绝覆盖已有输出目录。ZIP 使用固定文件顺序与时间戳，包清单含每个文件大小和 SHA-256。生产准备必须通过实际 CoreHost `--check-resource-snapshot`。发布附件（包括离线集合与程序 ZIP）必须小于 2 GiB，工具超限即拒绝；规模超过此限时需先调整分发方案。[GitHub 附件限制](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
 
 暂存资源时核对地图数据与所选特征包的完整文件名清单。重复构建可沿用内容一致的输出目录；若源文件已删除而输出仍有旧文件，会停止并要求换用新的输出目录，保留旧文件，不自动删除或把旧资料签入新资源包。可执行 `scripts/Test-ResourceUpdateStaging.ps1 -OutputRoot out/staging-test-new-run` 检查 Windows PowerShell 5 的重复暂存和旧文件拒绝行为。
 
@@ -220,6 +220,8 @@ $appRoot = 'out/release-<版本>/IMao-v<版本>-windows-x64'
 ```
 
 `-ProgramZip` 与分片发布互斥；分片发布时给了 `-ProgramZip` 会直接拒绝。`-ManualInstallZip` 不写进签名清单（清单里是分片与描述符），它与本次发布的绑定靠同名 `.report.json`（`passed`、`sourceDirty=false`、`sourceCommit`、`version`、大小与 SHA-256 全部核对）。没有 `-ManualInstallZip` 时脚本会提示"本次没有任何可供全新安装的归档"。那份 zip 不必每个版本都重传：任何一份认识分片的完整 zip 都能自动增量升级到最新。
+
+离线集合包按同一原则处理：`release-report.json` 的 `offline` 为 `null` 时（本次没有任何新资源包）发布脚本不上传它，只会打印"resource set unchanged"，并把上一次发布的离线包作为当前完整的离线交付物继续使用；确实需要一份新的就用 `prepare --with-offline true` 重新准备。
 
 发布后：
 

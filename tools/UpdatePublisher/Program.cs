@@ -242,6 +242,10 @@ static class Publisher
         }
         var packages = new List<ResourcePackage>();
         var packagedScenes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // True when at least one resource package is new in this release. Published package bytes are reused
+        // as they are, so a release that reuses every package ships exactly the resource set the previous
+        // release already published.
+        var resourceChanged = false;
         foreach (var p in snapshot.Packages)
         {
             var source = SafeFile(assets, p.Directory.Replace('\\', '/'));
@@ -264,6 +268,7 @@ static class Publisher
                 if (!string.Equals(generated, retained, StringComparison.OrdinalIgnoreCase)) File.Move(generated, retained);
                 built = prior;
             }
+            else resourceChanged = true;
             if (previous?.Resources.SelectMany(r => r.Packages).Any(q => q.Id == built.Id && q.Version == built.Version && q.Sha256 != built.Sha256) == true) throw new InvalidDataException("Package version reuse with different content is forbidden.");
             packages.Add(built);
         }
@@ -346,13 +351,26 @@ static class Publisher
             nativePassed = true;
         }
         if (production && !nativePassed) throw new InvalidOperationException("Production preparation requires --core-host and successful native preflight.");
+        // An offline archive is one file carrying every package of this release, for players who import it
+        // without any network access. When this release retains every published package, that file would
+        // repeat the several hundred megabytes the previous release already published, so it is only built
+        // when the resource set actually changed, or when the caller asks for it explicitly.
+        var offlineNeeded = o.GetValueOrDefault("with-offline") == "true" || resourceChanged;
         var offline = Path.Combine(output, $"resources-{version}-offline.zip");
-        using (var zip = new ZipArchive(new FileStream(offline, FileMode.CreateNew), ZipArchiveMode.Create))
+        if (offlineNeeded)
         {
-            AddFile(zip, signedFile, "update.json", CompressionLevel.Optimal);
-            foreach (var p in packages) { var name = $"{p.Id}-{p.Version}.zip"; AddFile(zip, Path.Combine(output, "packages", name), "packages/" + name, CompressionLevel.NoCompression); }
+            using (var zip = new ZipArchive(new FileStream(offline, FileMode.CreateNew), ZipArchiveMode.Create))
+            {
+                AddFile(zip, signedFile, "update.json", CompressionLevel.Optimal);
+                foreach (var p in packages) { var name = $"{p.Id}-{p.Version}.zip"; AddFile(zip, Path.Combine(output, "packages", name), "packages/" + name, CompressionLevel.NoCompression); }
+            }
+            if (new FileInfo(offline).Length >= 2L * 1024 * 1024 * 1024) throw new InvalidOperationException("A GitHub Releases attachment must be smaller than 2 GiB. Split the resource distribution before publishing this release.");
         }
-        if (new FileInfo(offline).Length >= 2L * 1024 * 1024 * 1024 || packages.Any(p => p.Size >= 2L * 1024 * 1024 * 1024))
+        else
+        {
+            Console.WriteLine("Every resource package is unchanged, so no offline archive was built; pass --with-offline true to build one anyway.");
+        }
+        if (packages.Any(p => p.Size >= 2L * 1024 * 1024 * 1024))
             throw new InvalidOperationException("A GitHub Releases attachment must be smaller than 2 GiB. Split the resource distribution before publishing this release.");
         WriteNew(Path.Combine(output, "release-report.json"), new { formatVersion = 1, production, sourceCommit = build.SourceCommit, sourceDirty, sourceTreeSha256, appVersion = build.AppVersion, baselineId = build.BaselineId,
             tag, sequence, snapshotId = release.SnapshotId, nativePassed, programPrepared, signedManifestSha256 = Hash(signedFile),
@@ -361,8 +379,8 @@ static class Publisher
             // one to the identity the signed catalog names, exactly as it does for resource packages.
             program = app.Package is null ? null : new { url = app.Package.Url, name = Path.GetFileName(new Uri(app.Package.Url).AbsolutePath), size = app.Package.Size, sha256 = app.Package.Sha256,
                 files = app.Package.Files.Count, shards = app.Package.Shards.Select(s => new { id = s.Id, name = Path.GetFileName(new Uri(s.Url).AbsolutePath), url = s.Url, size = s.Size, sha256 = s.Sha256, files = s.Files.Count }).ToArray() },
-            offline = new { name = Path.GetFileName(offline), size = new FileInfo(offline).Length, sha256 = Hash(offline) } });
-        Console.WriteLine($"Prepared {packages.Count} signed resource packages, offline archive and validation report. No remote publication occurred.");
+            offline = offlineNeeded ? new { name = Path.GetFileName(offline), size = new FileInfo(offline).Length, sha256 = Hash(offline) } : null });
+        Console.WriteLine($"Prepared {packages.Count} signed resource packages{(offlineNeeded ? ", offline archive" : "")} and validation report. No remote publication occurred.");
     }
     static bool FileListsEqual(List<ResourceFile> a, List<ResourceFile> b) => a.Count == b.Count && a.OrderBy(x => x.Path, StringComparer.Ordinal).SequenceEqual(b.OrderBy(x => x.Path, StringComparer.Ordinal));
     /// <summary>
@@ -632,6 +650,19 @@ static class Publisher
         Prepare(options).GetAwaiter().GetResult();
         if (VerifyEnvelope(Path.Combine(root, "retained-program", "update.json"), keys, false).App.Package?.Sha256 != programCatalog.App.Package!.Sha256) throw new Exception("Resource-only release lost signed program metadata.");
         passed.Add("resource-only release preserves signed program inventory");
+        // A release that retains every published package ships exactly the resource set the previous release
+        // already published, so it must not rebuild the offline archive; an explicit request still does.
+        if (Read<JsonElement>(Path.Combine(root, "retained-program", "release-report.json")).GetProperty("offline").ValueKind != JsonValueKind.Null)
+            throw new Exception("A release with no resource change must not build another offline archive.");
+        if (File.Exists(Path.Combine(root, "retained-program", "resources-2026.9.9.4-offline.zip")))
+            throw new Exception("A release with no resource change must not write an offline archive.");
+        passed.Add("a release whose resource packages are all retained builds no offline archive");
+        options["previous"] = Path.Combine(root, "second", "update.json"); options["output"] = Path.Combine(root, "forced-offline"); options["sequence"] = "9"; options["with-offline"] = "true";
+        Prepare(options).GetAwaiter().GetResult();
+        if (!File.Exists(Path.Combine(root, "forced-offline", "resources-2026.9.9.4-offline.zip")))
+            throw new Exception("--with-offline must build the offline archive on request.");
+        passed.Add("--with-offline builds the offline archive on request");
+        options.Remove("with-offline");
         // Shard boundaries decide what every future program update has to download, so the table itself
         // is asserted here, before any archive exists.
         // Every file whose bytes are stamped with the release version has to sit in the smallest shard.
