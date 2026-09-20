@@ -95,6 +95,35 @@ if (args.FirstOrDefault() == "real-program")
     Console.WriteLine($"real program release: {realPackage.Shards.Count} shards fetched once, {realPackage.Files.Count} files reused with zero downloads.");
     return 0;
 }
+if (args.FirstOrDefault() == "live-program")
+{
+    // Opt-in check against the live channel: an installation that already runs the previous release must
+    // fetch only the shards whose files differ, straight from the published URLs, and still end up with a
+    // tree that passes the same verifier every installed program is checked by.
+    var scratch = Path.GetFullPath(args[1]);
+    var liveKeys = JsonSerializer.Deserialize<TrustedUpdateKeys>(File.ReadAllText(args[2]), UpdateJson.Options)!;
+    using var liveHttp = new HttpClient();
+    var liveEnvelope = await liveHttp.GetByteArrayAsync("https://raw.githubusercontent.com/kahvia-d/WWMAP-TOOLS/main/updates/stable.json").ConfigureAwait(false);
+    var liveCatalog = UpdateSignature.Verify(liveEnvelope, liveKeys.Keys); // production keys, no test fallback
+    var livePackage = liveCatalog.App.Package ?? throw new Exception("the live catalog has no program package");
+    var liveStore = new ProgramUpdateStore(scratch, liveKeys.Keys, "", false, (_, _) => Task.CompletedTask);
+    var fetched = new List<(string Name, long Size)>();
+    var liveWatch = Stopwatch.StartNew();
+    await liveStore.PrepareAsync(liveEnvelope, async (item, output, ct) =>
+    {
+        fetched.Add((item.Name, item.Size));
+        Console.WriteLine($"  fetching {item.Name} ({item.Size / (1024.0 * 1024.0):N2} MB)");
+        using var response = await liveHttp.GetAsync(item.Url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        await using var input = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        await input.CopyToAsync(output, ct).ConfigureAwait(false);
+    }).ConfigureAwait(false);
+    var liveLaunch = await liveStore.BeginLaunchAsync().ConfigureAwait(false);
+    await liveStore.ConfirmHealthyAsync(liveLaunch.Id).ConfigureAwait(false);
+    Console.WriteLine($"live {liveCatalog.App.Version}: {livePackage.Shards.Count} shards published, fetched {fetched.Count} " +
+        $"({fetched.Sum(f => f.Size) / (1024.0 * 1024.0):N2} MB) in {liveWatch.Elapsed.TotalSeconds:N1}s, committed {liveStore.ReadState().Current}");
+    return 0;
+}
 var output = Path.GetFullPath(args[0]); Directory.CreateDirectory(output);
 var passed = new List<string>();
 async Task Test(string name, Func<Task> action) { await action(); passed.Add(name); Console.WriteLine("PASS " + name); }
