@@ -166,7 +166,8 @@ json StatusEvent() {
         { "minimapRawKeypoints", status.minimapRawKeypoints },
         { "minimapRetainedKeypoints", status.minimapRetainedKeypoints },
         { "minimapDynamicMaskPercent", status.minimapDynamicMaskPercent },
-        { "statusBarEnabled", status.statusBarEnabled }
+        { "statusBarEnabled", status.statusBarEnabled },
+        { "statusBallEnabled", status.statusBallEnabled }
     };
 }
 
@@ -457,6 +458,7 @@ bool ApplyConfigure(const json& command) {
     const auto mini = boolean("minMapEnabled");
     const auto saved = boolean("savedPointsEnabled");
     const auto bar = boolean("statusBarEnabled");
+    const auto ball = boolean("statusBallEnabled");
     const auto autoReplan = boolean("autoReplanEnabled");
     const auto completionRange = integer("completionRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
     const auto guideRange = integer("guideRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
@@ -469,6 +471,7 @@ bool ApplyConfigure(const json& command) {
     if (mini) EnabledMinMapShowItem(*mini);
     if (saved) SetVisibleSavedPoints(*saved);
     if (bar) RuntimeStatus::SetStatusBarEnabled(*bar);
+    if (ball) RuntimeStatus::SetStatusBallEnabled(*ball);
     if (autoReplan) RoutePlanningService::SetAutoReplanEnabled(*autoReplan);
     if (completionRange || guideRange)
         NearbySelection::Ranges::Apply(completionRange.value_or(NearbySelection::Ranges::Completion()),

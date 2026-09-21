@@ -25,6 +25,7 @@
 #include "../Runtime/OverlayBackBufferSize.h"
 #include "../Runtime/MapToolsBridge.h"
 #include "../Runtime/IsolationSwitches.h"
+#include "../Runtime/RuntimeStatus.h"
 #include "Routes/DrawRouteOnMap.h"
 #include "Routes/DrawRouteOnMinMap.h"
 
@@ -843,20 +844,25 @@ int ImGuiOverWindows::start()
             presented.mapVisible = drewMap;
             presented.minimapVisible = drewMinimap;
             app.PublishPresentedOverlay(std::move(presented));
-            if (miniOverlay && !fullStatusBar) {
-                // The window covers only the minimap, so the status becomes one ball in its corner. It is
-                // placed from the HUD's nominal minimap rectangle rather than from the frame's last known
-                // circle: before the first successful localization there is no circle yet, and the state
-                // is exactly what the ball has to be able to report. Its radius follows the client width
-                // like the marker radius does, so it stays proportionate at every resolution and DPI, and
-                // the corner it sits in is inside the padding the window already has.
+            // The full bar belongs to the style that has room for it. The minimal style never draws it -
+            // not even over the big map, where it would be the only thing on screen - and shows the ball
+            // only while the minimap itself is the state, so neither survives a transition into a state
+            // whose HUD has not been recognized yet.
+            const bool ballWanted = !fullStatusBar && frame->minimapVisible &&
+                RuntimeStatus::Snapshot().statusBallEnabled;
+            if (ballWanted) {
+                // Placed from the HUD's nominal minimap rectangle rather than from the frame's last known
+                // circle: only that one describes where the minimap is before the first localization. Its
+                // radius follows the client width like the marker radius does, so it stays proportionate
+                // at every resolution and DPI, and the corner it sits in is inside the padding the window
+                // already has.
                 const auto minimap = ScreenCoordinate::SpecifyScreenCoordinate(GameRect, GameWindowsScreenData::MinMapScreenData);
                 const float ball = std::max(8.0f, static_cast<float>(GameRect.right) * 0.011f / 2.0f);
                 RuntimeStatusBar::DrawCompact(
                     static_cast<float>(std::max(minimap.leftPoint.x, minimap.rightPoint.x)) - ball,
                     static_cast<float>(std::max(minimap.topPoint.y, minimap.bottomPoint.y)) - ball, ball);
             }
-            else RuntimeStatusBar::Draw(h_window);
+            else if (fullStatusBar) RuntimeStatusBar::Draw(h_window);
             //DrawPiPWindows::DrawImgui();
             Notification::DrawInfo();
             //Debug::DebugWindow(io,app);

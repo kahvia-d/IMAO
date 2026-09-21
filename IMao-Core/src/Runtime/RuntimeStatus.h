@@ -24,6 +24,9 @@ struct RuntimeStatusSnapshot {
     int minimapDynamicMaskPercent = 0;
     bool gameFocused = false;
     bool statusBarEnabled = true;
+    // The minimal overlay style has no bar, only a ball at the minimap's corner. It is off unless the
+    // player asks for it, so the minimal style shows the markers and nothing else by default.
+    bool statusBallEnabled = false;
 };
 
 // One small, synchronized status model powers the IPC client and the in-game
@@ -42,6 +45,7 @@ public:
     static void SetLastGoodAgeMilliseconds(int milliseconds);
     static void SetMinimapFeatureStats(int rawKeypoints, int retainedKeypoints, int dynamicMaskPercent);
     static void SetStatusBarEnabled(bool enabled);
+    static void SetStatusBallEnabled(bool enabled);
     static void SetMessage(std::string message);
     static void SetLocalizationHint(std::string hint);
 
