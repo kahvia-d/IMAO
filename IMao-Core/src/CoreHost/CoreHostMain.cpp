@@ -159,6 +159,7 @@ json StatusEvent() {
         { "sequence", status.sequence }, { "coreState", status.coreState },
         { "gameState", status.gameState }, { "localization", status.localization },
         { "quality", status.quality }, { "message", status.message },
+        { "hint", status.hint },
         { "minimapMarkers", status.minimapMarkers }, { "mapMarkers", status.mapMarkers },
         { "frameMilliseconds", status.frameMilliseconds }, { "gameFocused", status.gameFocused },
         { "lastGoodAgeMilliseconds", status.lastGoodAgeMilliseconds },

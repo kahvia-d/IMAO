@@ -964,6 +964,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		if (visual && candidate.sceneId > 0)
 			coordinateTrust.NoteVisualMatch(candidate.sceneId, candidate.mapCenter,
 				std::chrono::duration<double>(now.time_since_epoch()).count());
+		// A visual match names the region, so the "open the big map" instruction is answered.
+		if (coordinateTrust.HasScene()) RuntimeStatus::SetLocalizationHint({});
         if (recognition || playerCurrentSceneId != candidate.sceneId)
             minimapTerrainScale = Scene::MinimapScale(candidate.sceneId);
         if(recognition || playerCurrentSceneId != candidate.sceneId) ++routeFixContinuity;
@@ -1248,6 +1250,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 							" correction=" + (candidate->correction.empty() ? "none" : candidate->correction) +
 							" arbitrated=" + std::to_string(reading.arbitrated) +
 							" reason=" + decision.reason +
+							" stalling=" + std::to_string(LocalTrackingStalled(now)) +
 							" jumpUnits=" + std::to_string(decision.jumpUnits) +
 							" agreements=" + std::to_string(decision.agreementCount) +
 							" request=" + std::to_string(ocrResult.requestId));
@@ -1576,6 +1579,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 
 	if (coordinateRecovery.ShouldRequestRecognition()) {
 		if (!coordinateRecoveryStartedAt.has_value()) coordinateRecoveryStartedAt = now;
+		// Without a named region the readout cannot publish at all: the same number means a
+		// different place in every scene, and the big map is the only thing that shows which
+		// scene the player is standing in.  Say that instead of showing "recovering" forever.
+		RuntimeStatus::SetLocalizationHint(coordinateTrust.HasScene() ? std::string{} :
+			"请打开一次大地图以确定所在区域");
 		if (!minimapFeaturesReady) {
 			RuntimeStatus::SetLocalization("recovering", {}, "小地图特征不足，等待清晰画面");
 		}
@@ -1622,6 +1630,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	// still for the whole escalation window.
 	if (LocalTrackingStalled(now)) {
 		if (ocrAssistEnabled && !ocrPreloadStarted) ensureOcrRuntime();
+		// The readout can only refresh the position once the region is known, so a stall in an
+		// unnamed region is the same "open the big map" situation as a recovery there.
+		RuntimeStatus::SetLocalizationHint(coordinateTrust.HasScene() ? std::string{} :
+			"请打开一次大地图以确定所在区域");
 		submitOcrRead(true);
 	}
 
@@ -1969,6 +1981,7 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
 		Diagnostics::Record("coordinate-region-confirmed", "source=big-map scene=" +
 			std::to_string(sceneId) + " world=" + std::to_string(regionCenter.x) + "," +
 			std::to_string(regionCenter.y));
+		RuntimeStatus::SetLocalizationHint({});
 	}
 	Diagnostics::Record("map-viewport-result", "accepted=true scope=" +
 		std::string(MapViewportLocalizer::ScopeName(result.scope)) + " scene=" + std::to_string(sceneId) +

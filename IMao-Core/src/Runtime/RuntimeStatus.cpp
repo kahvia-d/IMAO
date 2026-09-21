@@ -88,3 +88,10 @@ void RuntimeStatus::SetMessage(std::string message) {
     status.message = std::move(message);
     TouchLocked();
 }
+
+void RuntimeStatus::SetLocalizationHint(std::string hint) {
+    std::scoped_lock lock(mutex);
+    if (status.hint == hint) return;
+    status.hint = std::move(hint);
+    TouchLocked();
+}

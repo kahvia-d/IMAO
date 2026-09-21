@@ -11,6 +11,10 @@ struct RuntimeStatusSnapshot {
     std::string localization = "waiting";
     std::string quality = "";
     std::string message = "正在启动核心";
+    // An action the player can take to unblock localization.  The in-game status bar has room
+    // for one line of it, and "the markers are frozen" is not something a message channel that
+    // scrolls with notifications can explain.
+    std::string hint = "";
     int minimapMarkers = 0;
     int mapMarkers = 0;
     int frameMilliseconds = 0;
@@ -39,6 +43,7 @@ public:
     static void SetMinimapFeatureStats(int rawKeypoints, int retainedKeypoints, int dynamicMaskPercent);
     static void SetStatusBarEnabled(bool enabled);
     static void SetMessage(std::string message);
+    static void SetLocalizationHint(std::string hint);
 
 private:
     static void TouchLocked();

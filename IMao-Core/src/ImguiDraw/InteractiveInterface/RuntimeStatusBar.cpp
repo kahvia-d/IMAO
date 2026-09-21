@@ -62,6 +62,13 @@ void RuntimeStatusBar::Prepare(HWND gameWindow) {
     if (status.localization == "faulted") layout.color = IM_COL32(245, 118, 123, 255);
     else if (status.localization == "recovering" || status.localization == "stale" || status.localization == "mapLocating")
         layout.color = IM_COL32(233, 191, 113, 255);
+    // Something the player can do about the state being shown.  It is the only line the bar
+    // carries that is an instruction rather than a reading, so it is drawn last and in the
+    // attention colour: a frozen marker with no explanation reads as a broken tool.
+    if (!status.hint.empty()) {
+        layout.second += " · " + status.hint;
+        layout.color = IM_COL32(233, 191, 113, 255);
+    }
     const auto returning = RouteGamepadBridge::Shared().ReturnDisplay(gameWindow, DrawItemBase::MarkerProfile());
     if (returning.visible) {
         layout.first = returning.failed ? "IMao  ·  未能返回游戏" : "IMao  ·  正在返回游戏";
