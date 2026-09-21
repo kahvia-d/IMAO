@@ -1086,7 +1086,13 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			lastAbsoluteFixAt = now;
 			// 影子预测的残差：预测值 vs 这次的真值。horizonMs 说明外推了多久，
 			// 这样"外推多准"就是可以在日志里直接分档统计的数字。
-			if (predictedShadowAt != std::chrono::steady_clock::time_point{} &&
+			// 只对**有意义的**真值记录：读数/全局匹配（间隔 0.25~3 秒，正是要替代的那种空档），
+			// 或者追踪命中但已经隔了 ≥300 ms（追踪器卡了一下的情况）。每秒 5 次的普通追踪提交
+			// 只差 0.1~0.2 秒，跟预测几乎是同一时刻，统计进去会让数字好看但毫无意义。
+			const bool measurable = !visual || recognition ||
+				std::chrono::duration_cast<std::chrono::milliseconds>(now - predictedShadowAt) >=
+					std::chrono::milliseconds(300);
+			if (measurable && predictedShadowAt != std::chrono::steady_clock::time_point{} &&
 				now - predictedShadowAt <= std::chrono::seconds(3)) {
 				const double residual = std::hypot(candidate.mapCenter.x - predictedShadow.x,
 					candidate.mapCenter.y - predictedShadow.y) / 1.205;
