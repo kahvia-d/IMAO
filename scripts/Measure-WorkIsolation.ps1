@@ -90,14 +90,14 @@ $sequence = if ($Experiment -eq 'full-client') {
         [pscustomobject]@{ name = 'bar-on-2';  mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 打开「状态条 · 小地图」，然后点回游戏画面（按 Enter 前确认中间能看到状态栏）' }
     )
 } elseif ($Experiment -eq 'roi-readback') {
-    # A/B/A/B on the capture readback: 0 copies the whole client to the CPU every frame, 128 probes only
-    # the regions ordinary exploration samples. The big map has to stay closed in both phases - its canvas
-    # is outside those regions, so opening it makes the capture fall back to full frames by design.
+    # A/B/A/B on the capture readback, after the region probe became the default: mask 0 is the probe and
+    # 128 forces the whole client to the CPU again. The big map has to stay closed in both phases - its
+    # canvas is outside the probed regions, so opening it makes the capture fall back by design.
     @(
-        [pscustomobject]@{ name = 'full-readback-1'; mask = 0;   label = '0' }
-        [pscustomobject]@{ name = 'roi-readback-1';  mask = 128; label = '128' }
-        [pscustomobject]@{ name = 'full-readback-2'; mask = 0;   label = '0' }
-        [pscustomobject]@{ name = 'roi-readback-2';  mask = 128; label = '128' }
+        [pscustomobject]@{ name = 'roi-readback-1';  mask = 0;   label = '0' }
+        [pscustomobject]@{ name = 'full-readback-1'; mask = 128; label = '128' }
+        [pscustomobject]@{ name = 'roi-readback-2';  mask = 0;   label = '0' }
+        [pscustomobject]@{ name = 'full-readback-2'; mask = 128; label = '128' }
     )
 } else {
     @(
@@ -113,7 +113,7 @@ $sequence = if ($Experiment -eq 'full-client') {
 $referencePattern = switch ($Experiment) {
     'status-bar' { 'bar-off*' }
     'full-client' { 'mini-window*' }
-    'roi-readback' { 'full-readback*' }
+    'roi-readback' { 'roi-readback*' }
     default { 'baseline*' }
 }
 
