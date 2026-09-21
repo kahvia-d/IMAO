@@ -175,7 +175,7 @@ public:
     // 预测用的**短窗**外推：取最近 kPredictionWindowSeconds 内的条目，用**首尾两点**估当前速度。
     // 短窗里最小二乘对噪声更敏感、端点差更稳；而且它天然给出"此刻"的速度，而不是 30 秒的平均。
     bool PredictAt(int sceneId, double secondsAt, Coordinate& predicted, double& speedPerSecond,
-        FitReport* report = nullptr) const {
+        FitReport* report = nullptr, double latestEntrySeconds = 1.0e18) const {
         const Entry* newest = nullptr;
         const Entry* oldest = nullptr;
         const Entry* newer = nullptr;
@@ -183,6 +183,8 @@ public:
         const char* reject = "too-few";
         for (auto it = record_.rbegin(); it != record_.rend(); ++it) {
             if (it->sceneId != sceneId) continue;
+            // 回测用：只允许使用"更早的"条目，绝不偷看未来
+            if (it->secondsAt > latestEntrySeconds) continue;
             if (newest == nullptr) {
                 newest = &*it;
                 if (secondsAt - it->secondsAt > kPredictionMaximumAgeSeconds) { reject = "stale"; break; }

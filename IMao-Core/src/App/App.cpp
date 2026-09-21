@@ -423,6 +423,36 @@ winrt::IAsyncAction App::Start() {
 								newest == nullptr ? -1LL : static_cast<long long>((secondsAt - newest->secondsAt) * 1000.0)) +
 							" record=" + std::to_string(coordinateTrust.Record().size()));
 					}
+					// 回测（用户 2026-09-21 的设计）：不等实机出现空档，直接拿记录本身验证外推精度。
+					// 做法：取"现在往前 h 秒"作为截止时刻 cut，只用 cut **之前**的条目预测 cut 之后第一条
+					// 记录的位置，与那条真值比较。这样 0.25/0.5/1/2 秒各有稳定样本，而且都来自真实游玩。
+					const auto& backtestRecord = coordinateTrust.Record();
+					if (backtestRecord.size() >= CoordinateTrust::kFitMinimumEntries + 1) {
+						const double newestSeconds = backtestRecord.back().secondsAt;
+						for (const double wanted : { 0.25, 0.5, 1.0, 2.0 }) {
+							const double cut = newestSeconds - wanted;
+							const CoordinateTrust::Entry* truth = nullptr;
+							for (auto it = backtestRecord.rbegin(); it != backtestRecord.rend(); ++it) {
+								if (it->secondsAt <= cut) break;
+								truth = &*it;   // 一直退到 cut 之前，最后留下的就是 cut 之后**最早**那条
+							}
+							if (truth == nullptr) continue;
+							Coordinate backPredicted{};
+							double backSpeed = 0.0;
+							CoordinateTrust::FitReport backReport;
+							if (!coordinateTrust.PredictAt(coordinateTrust.Scene(), truth->secondsAt,
+								backPredicted, backSpeed, &backReport, cut)) continue;
+							const double backResidual = std::hypot(
+								backPredicted.x - truth->mapCoordinate.x,
+								backPredicted.y - truth->mapCoordinate.y) / 1.205;
+							Diagnostics::Record("position-predicted-backtest", "wantedMs=" + std::to_string(
+								static_cast<long long>(wanted * 1000.0)) + " horizonMs=" + std::to_string(
+								static_cast<long long>((truth->secondsAt - cut) * 1000.0)) +
+								" residual=" + std::to_string(backResidual) + " v=" + std::to_string(backSpeed) +
+								" entries=" + std::to_string(backReport.entries) + " record=" +
+								std::to_string(backtestRecord.size()));
+						}
+					}
 				}
 				if (enabledMinMapShowItem) {
 					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
