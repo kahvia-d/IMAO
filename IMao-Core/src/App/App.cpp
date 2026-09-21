@@ -1429,7 +1429,6 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						}
 						reading.sceneId = coordinateTrust.Scene();
 						reading.mapCoordinate = chosen->mapCoordinate;
-						reading.arbitrated = false;
 					}
 					double jumpUnits = 0.0;
 					if (!OcrCoordinateGate::Acceptable(reading, lock, ocrCoordinateGate.Settings(), &jumpUnits)) {
@@ -1449,7 +1448,6 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 							" world=" + world +
 							" score=" + std::to_string(reading.score) +
 							" correction=" + (candidate->correction.empty() ? "none" : candidate->correction) +
-							" arbitrated=" + std::to_string(reading.arbitrated) +
 							" reason=" + decision.reason +
 							" stalling=" + std::to_string(LocalTrackingStalled(now)) +
 							" jumpUnits=" + std::to_string(decision.jumpUnits) +

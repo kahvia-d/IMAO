@@ -80,13 +80,6 @@ inline void TestOcrCoordinateGate(void (*check)(bool, const std::string&)) {
     auto anchored = noLock.Feed(reading(-49.5, -306.0, 0.94f), empty);
     check(anchored.Publishable() && anchored.reason == "confirmed-no-lock",
         "two agreeing reads publish even without a trusted prior");
-    // 裁决过的读数可以直接发布（场景与符号变体都由地图像素选出来了）
-    Gate arbitratedGate;
-    auto arbitrated = reading(-49.0, -305.0, 0.95f);
-    arbitrated.arbitrated = true;
-    auto decided = arbitratedGate.Feed(arbitrated, empty);
-    check(decided.Publishable() && decided.reason == "arbitrated",
-        "a pixel-arbitrated reading publishes on its own");
     // 无先验时两条读数对不上（例如中途丢了负号）要重新计数
     Gate flipNoLock;
     flipNoLock.Feed(reading(-49.0, -305.0, 0.95f), empty);

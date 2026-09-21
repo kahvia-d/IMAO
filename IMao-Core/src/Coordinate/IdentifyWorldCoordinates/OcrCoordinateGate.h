@@ -45,10 +45,6 @@ struct Reading {
     int sceneId = 0;
     Coordinate mapCoordinate{};   // 已换算到 imgMap 空间
     float score = 0.f;
-    // 没有可信先验时场景是未知的：上层用地图像素在候选场景之间做了裁决，且胜出差距很大。
-    // 这种读数可以直接发布、不必再等"连续两次"——裁决本身已经能排除丢负号那类错误
-    // （正确的符号变体会在像素上明显赢过错误变体）。
-    bool arbitrated = false;
 };
 
 struct Lock {
@@ -87,8 +83,7 @@ inline double DistanceUnits(const Coordinate& a, const Coordinate& b, double sce
 }
 
 // 无状态预检：这一条读数在几何上站不站得住。有先验时要求场景一致且不超位移预算；
-// **没有先验时只剩分数要求**——场景与位置由上层的地图像素裁决给出（Reading::arbitrated），
-// 那种裁决本身就能排掉丢负号那类错误。
+// **没有先验时只剩分数要求**——场景与位置由上层的 CoordinateTrust（记录 + 轨迹判据）负责挑选。
 // 调用方用它从一帧里的多个候选（原始读数 + 解析器给出的符号/分隔符修复候选）里挑出
 // **一条**交给 Feed —— 一帧只能喂一条，否则同一次读数的多个变体会被算成"连续多次一致"。
 // 位移预算：固定下限，并按"距上次可信位置的时间"放大（载具/滑翔/长间隔读数）。
@@ -101,7 +96,7 @@ inline bool Acceptable(const Reading& reading, const Lock& lock, const Config& c
     double* jumpUnits = nullptr) {
     double jump = 0.0;
     bool ok = reading.valid && reading.score >= config.minimumScore;
-    if (ok && lock.valid && !reading.arbitrated) {
+    if (ok && lock.valid) {
         jump = DistanceUnits(reading.mapCoordinate, lock.mapCoordinate, lock.sceneScale);
         ok = lock.sceneId == reading.sceneId && jump <= JumpBudgetUnits(config, lock);
     }
@@ -122,8 +117,9 @@ inline Decision Gate::Feed(const Reading& reading, const Lock& lock) {
         return decision;
     }
     if (!lock.valid) {
-        // 没有可信先验：位移无从比较。此时靠两件事——上层的地图像素裁决（arbitrated），
-        // 以及连续读数之间的一致性；不满足就只把坐标当搜索提示。
+        // 没有可信先验：位移无从比较，只能靠**连续读数之间的一致性**；不满足就只把坐标当搜索提示。
+        // （这里原来还有一条"地图像素裁决过就直接发布"的旁路，2026-09-21 像素裁决退役后，
+        //   挑选候选的职责已交给 CoordinateTrust 的记录+轨迹判据，那条分支再没有任何代码能触发。）
         const bool agrees = agreements_ > 0 &&
             DistanceUnits(reading.mapCoordinate, last_.mapCoordinate, 1.205) <=
                 config_.agreementToleranceUnits && last_.sceneId == reading.sceneId;
@@ -131,11 +127,6 @@ inline Decision Gate::Feed(const Reading& reading, const Lock& lock) {
             agreements_ = 1;
             last_ = reading;
             decision.agreementCount = agreements_;
-            if (reading.arbitrated) {
-                decision.kind = Decision::Kind::Publish;
-                decision.reason = "arbitrated";
-                return decision;
-            }
             decision.kind = Decision::Kind::Pending;
             decision.reason = "pending-no-lock";
             return decision;
@@ -144,17 +135,7 @@ inline Decision Gate::Feed(const Reading& reading, const Lock& lock) {
         last_ = reading;
         decision.agreementCount = agreements_;
         decision.kind = Decision::Kind::Publish;
-        decision.reason = reading.arbitrated ? "arbitrated" : "confirmed-no-lock";
-        return decision;
-    }
-    if (reading.arbitrated) {
-        // 地图像素已经在候选场景/符号变体里选出赢家（乘霄山 0.56~0.65 对别处 ~0.0）。
-        // 传送换图时场景与位移都会"对不上"，这时裁决就是正确路径。
-        ++agreements_;
-        last_ = reading;
-        decision.agreementCount = agreements_;
-        decision.kind = Decision::Kind::Publish;
-        decision.reason = "arbitrated";
+        decision.reason = "confirmed-no-lock";
         return decision;
     }
     if (lock.sceneId != reading.sceneId) {
