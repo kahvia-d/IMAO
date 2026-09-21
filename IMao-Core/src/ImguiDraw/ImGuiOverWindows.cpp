@@ -668,6 +668,7 @@ int ImGuiOverWindows::start()
                     // markerTextureLookupMs is charged by DrawIcon, so it is a part of markerDrawMs.
                     " markerCount=" + std::to_string(markers.draws ? static_cast<double>(markers.candidates) / markers.draws : 0.0) +
                     " markerGroupCount=" + std::to_string(markers.draws ? static_cast<double>(markers.drawnIcons) / markers.draws : 0.0) +
+                    " markerSkippedCompleted=" + std::to_string(markers.draws ? static_cast<double>(markers.skippedCompleted) / markers.draws : 0.0) +
                     " markerDrawMs=" + std::to_string(markers.draws ? markers.drawMs / markers.draws : 0.0) +
                     " markerLayoutMs=" + std::to_string(markers.draws ? markers.layoutMs / markers.draws : 0.0) +
                     " markerTextureLookupMs=" + std::to_string(markers.draws ? markers.textureLookupMs / markers.draws : 0.0) +

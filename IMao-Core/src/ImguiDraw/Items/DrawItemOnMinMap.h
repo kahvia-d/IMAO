@@ -18,6 +18,10 @@ public:
 		std::uint64_t draws = 0;
 		std::uint64_t candidates = 0;
 		std::uint64_t drawnIcons = 0;
+		// Candidates this frame refused to draw because the snapshot said they were completed.
+		// Unlike the candidate/drawn gap, this has one cause, so a completion shows up as its
+		// own count instead of having to be separated from the stay-radius hysteresis ring.
+		std::uint64_t skippedCompleted = 0;
 		double drawMs = 0.0;
 		double layoutMs = 0.0;
 		double textureLookupMs = 0.0;
