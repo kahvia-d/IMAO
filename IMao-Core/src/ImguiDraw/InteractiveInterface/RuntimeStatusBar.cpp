@@ -11,6 +11,11 @@
 
 namespace {
 struct StatusLayout {
+    // The status model can be shown at all (the core runs and the game window is the display context).
+    // Kept apart from `visible` so the bar and the ball are independent choices: the ball does not
+    // disappear because the player turned the bar off, and the bar's rectangle is known even while it
+    // is hidden, which is what lets the small window be sized to hold it when it is wanted.
+    bool available = false;
     bool visible = false;
     float scale = 1, secondLineHeight = 0;
     OverlayPanel::Rect bounds;
@@ -48,9 +53,9 @@ void RuntimeStatusBar::Prepare(HWND gameWindow) {
         static_cast<float>(client.right), static_cast<float>(client.bottom));
     const auto status = RuntimeStatus::Snapshot();
     // Only display authorization includes the controller host; writes still require the game.
-    layout.visible = status.statusBarEnabled && status.coreState == "running" &&
-        DrawItemBase::IsMarkerDisplayContext(gameWindow);
-    if (!layout.visible) return;
+    layout.available = status.coreState == "running" && DrawItemBase::IsMarkerDisplayContext(gameWindow);
+    layout.visible = layout.available && status.statusBarEnabled;
+    if (!layout.available) return;
     const auto s = layout.scale;
     const float width = std::min(450 * s, std::max(1.0f, client.right - 32 * s));
     layout.first = "IMao  ·  " + LocalizationText(status.localization);
@@ -95,8 +100,9 @@ void RuntimeStatusBar::Draw(HWND) {
 
 RECT RuntimeStatusBar::ReservedBounds() {
     RECT rect{};
-    // Zero while the bar is not shown: a window never grows to hold a bar the player has turned off.
-    if (!layout.visible) return rect;
+    // Zero while the status cannot be shown at all: a window never grows to hold a bar that this frame
+    // has no status to fill.
+    if (!layout.available) return rect;
     rect.left = static_cast<LONG>(layout.bounds.left);
     rect.top = static_cast<LONG>(layout.bounds.top);
     rect.right = static_cast<LONG>(layout.bounds.right + 0.5f);
@@ -105,7 +111,9 @@ RECT RuntimeStatusBar::ReservedBounds() {
 }
 
 bool RuntimeStatusBar::DrawCompact(float centerX, float centerY, float radius) {
-    if (!layout.visible || radius <= 0.0f) return false;
+    // The ball is its own setting, so it is drawn whenever there is a status to report - not only when
+    // the bar is enabled.
+    if (!layout.available || radius <= 0.0f) return false;
     auto* draw = ImGui::GetForegroundDrawList();
     const ImVec2 center(centerX, centerY);
     const float thickness = radius * 0.14f > 1.0f ? radius * 0.14f : 1.0f;

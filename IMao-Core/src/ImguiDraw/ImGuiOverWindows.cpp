@@ -552,8 +552,12 @@ int ImGuiOverWindows::start()
         // Keying this on "the minimap was positively detected" instead made the window jump to full size
         // at every state transition, startup included, which is both the visible flicker and exactly the
         // full-screen composition cost this change exists to avoid.
-        const bool fullStatusBar = Isolation::Enabled(Isolation::kFullStatusBar);
+        //
+        // The window holds the minimap, and the status bar too when the player has that bar enabled: the
+        // two status forms are independent switches, so a small window that could not reach the bar would
+        // silently ignore one of them.
         const bool forceFullOverlay = Isolation::Enabled(Isolation::kForceFullOverlay);
+        const bool statusBarEnabled = RuntimeStatus::Snapshot().statusBarEnabled;
         bool minimapWindowRequested = false;
         {
             const auto markerFrame = app.ReadOverlayFrame();
@@ -572,7 +576,7 @@ int ImGuiOverWindows::start()
             const bool gameClientKnown = OverlayWindowBounds::GameClient(h_window, physicalGame);
             RECT target = physicalGame;
             if (gameClientKnown && minimapWindowRequested) {
-                miniClient = MiniOverlayClientRect(GameRect, fullStatusBar);
+                miniClient = MiniOverlayClientRect(GameRect, statusBarEnabled);
                 miniOverlay = miniClient.right > miniClient.left && miniClient.bottom > miniClient.top;
                 if (miniOverlay) target = {physicalGame.left + miniClient.left, physicalGame.top + miniClient.top,
                     physicalGame.left + miniClient.right, physicalGame.top + miniClient.bottom};
@@ -670,7 +674,7 @@ int ImGuiOverWindows::start()
                 GameRect = {0, 0, client.right, client.bottom};
                 // Re-derived from the same fresh client size the drawing will use, so the offset and
                 // the drawing space can never disagree about where the minimap is.
-                miniClient = MiniOverlayClientRect(GameRect, fullStatusBar);
+                miniClient = MiniOverlayClientRect(GameRect, statusBarEnabled);
             }
         }
         if (!miniOverlay) GameRect = {0, 0, static_cast<LONG>(bufferSize.after.clientWidth),
@@ -731,7 +735,8 @@ int ImGuiOverWindows::start()
                     // The window and buffer the frame above was drawn into, so the small-overlay
                     // experiment can be told apart from the full-client one in the same log.
                     " overlayMode=" + std::string(miniOverlay ? "mini" : "full") +
-                    " statusBarStyle=" + std::string(fullStatusBar ? "full" : "minimal") +
+                    " statusBarEnabled=" + std::to_string(statusBarEnabled ? 1 : 0) +
+                    " statusBallEnabled=" + std::to_string(RuntimeStatus::Snapshot().statusBallEnabled ? 1 : 0) +
                     " overlayForcedFull=" + std::to_string(forceFullOverlay ? 1 : 0) +
                     " overlayWidth=" + std::to_string(bufferSize.after.clientWidth) +
                     " overlayHeight=" + std::to_string(bufferSize.after.clientHeight) +
@@ -844,13 +849,11 @@ int ImGuiOverWindows::start()
             presented.mapVisible = drewMap;
             presented.minimapVisible = drewMinimap;
             app.PublishPresentedOverlay(std::move(presented));
-            // The full bar belongs to the style that has room for it. The minimal style never draws it -
-            // not even over the big map, where it would be the only thing on screen - and shows the ball
-            // only while the minimap itself is the state, so neither survives a transition into a state
-            // whose HUD has not been recognized yet.
-            const bool ballWanted = !fullStatusBar && frame->minimapVisible &&
-                RuntimeStatus::Snapshot().statusBallEnabled;
-            if (ballWanted) {
+            // Two independent switches, each drawn on its own say-so: the bar wherever the window can
+            // hold it (it draws nothing when the player has it off), the ball only while the minimap is
+            // the state - so neither outlives the HUD it belongs to.
+            const auto statusNow = RuntimeStatus::Snapshot();
+            if (statusNow.statusBallEnabled && frame->minimapVisible) {
                 // Placed from the HUD's nominal minimap rectangle rather than from the frame's last known
                 // circle: only that one describes where the minimap is before the first localization. Its
                 // radius follows the client width like the marker radius does, so it stays proportionate
@@ -862,7 +865,7 @@ int ImGuiOverWindows::start()
                     static_cast<float>(std::max(minimap.leftPoint.x, minimap.rightPoint.x)) - ball,
                     static_cast<float>(std::max(minimap.topPoint.y, minimap.bottomPoint.y)) - ball, ball);
             }
-            else if (fullStatusBar) RuntimeStatusBar::Draw(h_window);
+            RuntimeStatusBar::Draw(h_window);
             //DrawPiPWindows::DrawImgui();
             Notification::DrawInfo();
             //Debug::DebugWindow(io,app);
