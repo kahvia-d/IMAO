@@ -18,8 +18,11 @@
 #
 # -Experiment status-bar drives the player setting rather than a mask bit, A/B/A/B, because the bar and
 # the minimap status ball are two independent switches in 设置 -> 地图显示. With the bar off the overlay
-# window covers the minimap alone; with it on the window is widened to reach the bar. The overlay has to
-# be showing the minimap for either phase to mean anything - 开始探索 pressed, big map closed.
+# window covers the minimap alone (355x344 at 2560x1440); with it on the window is widened to reach the
+# bar (about 1561x344). The overlay has to be showing the minimap for either phase to mean anything -
+# 开始探索 pressed, big map closed - and the game window has to be the foreground one, because the
+# in-game status is not drawn while the tool's own window has focus. Changing a setting opens that
+# window, so click back into the game before the phase starts.
 #
 # -Experiment full-client is the small-window question from
 # Docs/MiniMapMarkerRenderPerfPlan_zh-Hans.md: the same harness, run as A/B/A/B, where A is the default
@@ -75,10 +78,10 @@ $sequence = if ($Experiment -eq 'full-client') {
     # the mask at 0 and the prompt asks for the settings toggle instead: off leaves the window on the
     # minimap alone, on widens it to hold the bar.
     @(
-        [pscustomobject]@{ name = 'bar-off-1'; mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 把「游戏内状态条」关掉' }
-        [pscustomobject]@{ name = 'bar-on-1';  mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 把「游戏内状态条」打开' }
-        [pscustomobject]@{ name = 'bar-off-2'; mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 把「游戏内状态条」关掉' }
-        [pscustomobject]@{ name = 'bar-on-2';  mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 把「游戏内状态条」打开' }
+        [pscustomobject]@{ name = 'bar-off-1'; mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 关掉「状态条 · 小地图」，然后点回游戏画面（游戏必须是前台，否则游戏内状态不显示）' }
+        [pscustomobject]@{ name = 'bar-on-1';  mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 打开「状态条 · 小地图」，然后点回游戏画面（按 Enter 前确认中间能看到状态栏）' }
+        [pscustomobject]@{ name = 'bar-off-2'; mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 关掉「状态条 · 小地图」，然后点回游戏画面' }
+        [pscustomobject]@{ name = 'bar-on-2';  mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 打开「状态条 · 小地图」，然后点回游戏画面（按 Enter 前确认中间能看到状态栏）' }
     )
 } else {
     @(
@@ -127,9 +130,10 @@ try {
         Write-Host ''
         Write-Host ('=' * 70) -ForegroundColor Yellow
         Write-Host "PHASE $($phase.name)" -ForegroundColor Yellow
-        $step = if ($phase.PSObject.Properties['instruction']) { $phase.instruction }
-            else { "In the tool: 诊断 (Diagnostics) -> 诊断工具 -> 隔离开关, set it to:  $($phase.label)" }
-        Write-Host "  $step" -ForegroundColor Yellow
+        # Always state the mask, even for the experiments that drive a setting instead: a leftover mask
+        # from an earlier run would silently change what this phase measures.
+        Write-Host "  In the tool: 诊断 (Diagnostics) -> 诊断工具 -> 隔离开关, set it to:  $($phase.label)" -ForegroundColor Yellow
+        if ($phase.PSObject.Properties['instruction']) { Write-Host "  $($phase.instruction)" -ForegroundColor Yellow }
         Write-Host '  Then press Enter here and stay off the mouse and keyboard until the phase ends.' -ForegroundColor Yellow
         Write-Host ('=' * 70) -ForegroundColor Yellow
         [void](Read-Host)
