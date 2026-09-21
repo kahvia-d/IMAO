@@ -103,11 +103,21 @@ if ($RealPreparedRoot) {
     $report = Get-Content -LiteralPath (Join-Path $realRoot 'release-report.json') -Raw | ConvertFrom-Json
     if (-not $report.programPrepared -or $report.programPrepared -ne $true) { throw 'A prepared program release must report programPrepared.' }
     $realPlan = Get-ProgramShardAssets $realCatalog $realRoot $repo ([string]$report.tag)
-    if ($realPlan.Retained.Count -ne 0) { throw "A freshly prepared release must own every program archive, retained $($realPlan.Retained.Count)." }
-    if ($realPlan.Upload.Count -ne @($realCatalog.app.package.shards).Count + 1) { throw 'Every shard plus the descriptor must be in the upload plan.' }
+    # Every archive is read out of the prepared output and compared against the signed catalog before it
+    # reaches this point, so a retained shard is bound exactly as tightly as an uploaded one. An
+    # incremental release is expected to keep the archives whose bytes did not change on their published
+    # URL, so retention is not an error here; what must hold is that the plan accounts for every shard and
+    # the descriptor, and that a release which built the program uploads something of its own.
+    $expected = @($realCatalog.app.package.shards).Count + 1
+    if (($realPlan.Upload.Count + $realPlan.Retained.Count) -ne $expected) {
+        throw "Every shard plus the descriptor must be in the plan: expected $expected, got $($realPlan.Upload.Count + $realPlan.Retained.Count)."
+    }
+    if ($realPlan.Upload.Count -eq 0) { throw 'A prepared program release must bind at least one archive to its own tag.' }
     $total = ($realPlan.Upload | ForEach-Object { [IO.FileInfo]::new($_.path).Length } | Measure-Object -Sum).Sum
-    Write-Host ("real prepared release {0}: {1} program archive(s) bound to the signed catalog, {2:N1} MB to upload" -f $report.tag, $realPlan.Upload.Count, ($total / 1MB))
-    foreach ($asset in $realPlan.Upload) { Write-Host ("  {0,-44} {1,10:N2} MB" -f $asset.name, ([IO.FileInfo]::new($asset.path).Length / 1MB)) }
+    $retainedTotal = ($realPlan.Retained | ForEach-Object { [IO.FileInfo]::new($_.path).Length } | Measure-Object -Sum).Sum
+    Write-Host ("real prepared release {0}: {1} program archive(s) bound to the signed catalog, {2:N1} MB to upload, {3} retained on their published URL ({4:N1} MB)" -f $report.tag, $realPlan.Upload.Count, ($total / 1MB), $realPlan.Retained.Count, ($retainedTotal / 1MB))
+    foreach ($asset in $realPlan.Upload) { Write-Host ("  upload    {0,-44} {1,10:N2} MB" -f $asset.name, ([IO.FileInfo]::new($asset.path).Length / 1MB)) }
+    foreach ($asset in $realPlan.Retained) { Write-Host ("  retained  {0,-44} {1,10:N2} MB  {2}" -f $asset.name, ([IO.FileInfo]::new($asset.path).Length / 1MB), $asset.url) }
     $passed.Add('a real prepared release binds every shard and the descriptor to the signed catalog')
 }
 Write-Host ("Program shard asset checks: {0} passed." -f $passed.Count)
