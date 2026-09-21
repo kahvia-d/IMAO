@@ -1,4 +1,4 @@
-﻿# Attributes the overlay's frame-rate cost to individual pieces of per-frame work, instead of to
+# Attributes the overlay's frame-rate cost to individual pieces of per-frame work, instead of to
 # "capture and localization" as one lump.
 #
 # The whole overlay costs about 26 fps with frames over 20 ms rising from 0.37% to 10.18% (see
@@ -13,6 +13,14 @@
 #
 # Usage:  .\Measure-WorkIsolation.ps1
 #         .\Measure-WorkIsolation.ps1 -PhaseSeconds 15      # shorter, noisier
+#         .\Measure-WorkIsolation.ps1 -Experiment mini-overlay
+#
+# -Experiment mini-overlay is the small-window question from
+# Docs/MinimapMarkerRenderPerfPlan_zh-Hans.md: the same harness, run as A/B/A/B, where A leaves the mask
+# at 0 (window the size of the game client) and B sets 128 (window the size of the minimap). The overlay
+# has to be showing the minimap for B to apply - 开始探索 pressed, big map closed - and while B runs only
+# what is drawn inside the minimap rectangle is visible, the in-game status bar included in what is not.
+# That is the experiment itself, not a regression.
 #
 # Before starting: game running, in the foreground, on one scene, and the tool already running the
 # overlay (开始探索 pressed). Leave the mouse and keyboard alone once a phase begins.
@@ -25,7 +33,8 @@ param(
     # budget covers the whole run rather than ending early.
     [int]$PromptAllowanceSeconds = 45,
     [string]$OutputPath,
-    [string]$PresentMonPath
+    [string]$PresentMonPath,
+    [ValidateSet('work-isolation', 'mini-overlay')][string]$Experiment = 'work-isolation'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,14 +57,28 @@ if (-not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($ProcessName
 # Order matters because a run is long and may be abandoned partway. The first pair is the decisive test
 # of how the overlay is presented - colorkey layered window against DirectComposition - because that is
 # the one change with a mechanism behind it. Everything after is per-frame work.
-$sequence = @(
-    [pscustomobject]@{ name = 'baseline-colorkey'; mask = 0;  label = '0  (base)' }
-    [pscustomobject]@{ name = 'composition';       mask = 64; label = '64' }
-    [pscustomobject]@{ name = 'no-overlay-render'; mask = 8;  label = '8' }
-    [pscustomobject]@{ name = 'no-window-sync';    mask = 32; label = '32' }
-    [pscustomobject]@{ name = 'no-overlay-clear';  mask = 16; label = '16' }
-    [pscustomobject]@{ name = 'baseline-again';    mask = 0;  label = '0  (base)' }
-)
+$sequence = if ($Experiment -eq 'mini-overlay') {
+    # A/B/A/B on one scene, so the comparison is a trend inside a single run. The full-client phases are
+    # the reference; if the two of them disagree, the scene or the machine drifted and the pair of
+    # small-window phases cannot be read either.
+    @(
+        [pscustomobject]@{ name = 'full-overlay-1'; mask = 0;   label = '0    (整屏覆盖层)' }
+        [pscustomobject]@{ name = 'mini-overlay-1'; mask = 128; label = '128  (小地图局部覆盖层)' }
+        [pscustomobject]@{ name = 'full-overlay-2'; mask = 0;   label = '0    (整屏覆盖层)' }
+        [pscustomobject]@{ name = 'mini-overlay-2'; mask = 128; label = '128  (小地图局部覆盖层)' }
+    )
+} else {
+    @(
+        [pscustomobject]@{ name = 'baseline-colorkey'; mask = 0;  label = '0  (base)' }
+        [pscustomobject]@{ name = 'composition';       mask = 64; label = '64' }
+        [pscustomobject]@{ name = 'no-overlay-render'; mask = 8;  label = '8' }
+        [pscustomobject]@{ name = 'no-window-sync';    mask = 32; label = '32' }
+        [pscustomobject]@{ name = 'no-overlay-clear';  mask = 16; label = '16' }
+        [pscustomobject]@{ name = 'baseline-again';    mask = 0;  label = '0  (base)' }
+    )
+}
+# Which phases are the reference the others are read against differs per experiment.
+$referencePattern = if ($Experiment -eq 'mini-overlay') { 'full-overlay*' } else { 'baseline*' }
 
 $phaseLog = [Collections.Generic.List[string]]::new()
 $record = {
@@ -137,7 +160,7 @@ Write-PhaseStats -Stats $stats -ReportPath ([IO.Path]::ChangeExtension($OutputPa
 
 # The attribution table is the point of the run: each phase's difference from the baseline is what that
 # piece costs the game.
-$baseline = $stats | Where-Object { $_.Phase -like 'baseline*' } | Select-Object -First 1
+$baseline = $stats | Where-Object { $_.Phase -like $referencePattern } | Select-Object -First 1
 if ($null -ne $baseline -and $baseline.Fps -gt 0) {
     Write-Host "Attribution against $($baseline.Phase):" -ForegroundColor Yellow
     $table = foreach ($stat in $stats) {
@@ -155,7 +178,7 @@ if ($null -ne $baseline -and $baseline.Fps -gt 0) {
     }
     Write-Host ($table | Format-Table -AutoSize | Out-String)
 
-    $check = $stats | Where-Object { $_.Phase -like 'baseline*' -and $_.Phase -ne $baseline.Phase } |
+    $check = $stats | Where-Object { $_.Phase -like $referencePattern -and $_.Phase -ne $baseline.Phase } |
         Select-Object -Last 1
     if ($null -ne $check -and $check.Fps -gt 0) {
         $drift = [math]::Abs($baseline.Fps - $check.Fps)
