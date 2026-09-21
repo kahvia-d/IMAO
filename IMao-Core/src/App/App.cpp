@@ -430,13 +430,14 @@ winrt::IAsyncAction App::Start() {
 					if (backtestRecord.size() >= CoordinateTrust::kFitMinimumEntries + 1) {
 						const double newestSeconds = backtestRecord.back().secondsAt;
 						for (const double wanted : { 0.25, 0.5, 1.0, 2.0 }) {
-							const double cut = newestSeconds - wanted;
+							// 先选"真值"：从最新往回找**年龄恰好 ≥ wanted** 的那一条；再让 cut = 真值时刻 − wanted。
+							// （第一版写成"cut 之后第一条"，而条目间隔只有 50 毫秒，于是四个档位测的都是同一个 50 毫秒。） 
 							const CoordinateTrust::Entry* truth = nullptr;
 							for (auto it = backtestRecord.rbegin(); it != backtestRecord.rend(); ++it) {
-								if (it->secondsAt <= cut) break;
-								truth = &*it;   // 一直退到 cut 之前，最后留下的就是 cut 之后**最早**那条
+								if (newestSeconds - it->secondsAt >= wanted) { truth = &*it; break; }
 							}
 							if (truth == nullptr) continue;
+							const double cut = truth->secondsAt - wanted;
 							Coordinate backPredicted{};
 							double backSpeed = 0.0;
 							CoordinateTrust::FitReport backReport;
