@@ -1011,9 +1011,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			playerLocationLock.generation == coordinateUiGeneration) {
 			const double elapsed = std::max(0.001,
 				std::chrono::duration<double>(now - playerLocationLock.confirmedAt).count());
+			// 与读数闸门同一套单位（世界单位）：map 空间的距离要除以该场景的比例，否则预算会被放宽 ~20%
 			const double jump = std::hypot(candidate.mapCenter.x - playerLocationLock.mapCoordinate.x,
-				candidate.mapCenter.y - playerLocationLock.mapCoordinate.y);
-			const double allowed = std::max(600.0, elapsed * CoordinateTrust::kMaximumSpeedUnitsPerSecond);
+				candidate.mapCenter.y - playerLocationLock.mapCoordinate.y) / 1.205;
+			const double allowed = std::max(250.0, elapsed * CoordinateTrust::kMaximumSpeedUnitsPerSecond);
 			if (jump > allowed) {
 				Diagnostics::Record("position-commit-rejected", "reason=jump scene=" +
 					std::to_string(candidate.sceneId) + " jump=" + std::to_string(jump) +

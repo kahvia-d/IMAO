@@ -21,12 +21,13 @@ inline void TestOcrCoordinateGate(void (*check)(bool, const std::string&)) {
         item.score = score;
         return item;
     };
-    auto lock = [&](double worldX, double worldY, int sceneId = 1) {
+    auto lock = [&](double worldX, double worldY, int sceneId = 1, double secondsSinceLock = 0.0) {
         Lock item;
         item.valid = true;
         item.sceneId = sceneId;
         item.mapCoordinate = toMap(worldX, worldY);
         item.sceneScale = 1.205;
+        item.secondsSinceLock = secondsSinceLock;
         return item;
     };
 
@@ -34,12 +35,14 @@ inline void TestOcrCoordinateGate(void (*check)(bool, const std::string&)) {
     Gate gate;
     auto first = gate.Feed(reading(-49.0, -305.0, 0.897f), lock(-48.0, -304.0));
     check(first.Publishable(), "with a trusted prior a scored read inside the budget publishes");
-    // 走路：读数间隔十几秒、位移几百单位，仍然必须发布（泰缇斯之底的实测症状）
-    auto walked = gate.Feed(reading(-390.0, 1144.0, 0.935f), lock(-338.0, 974.0));
+    // 走路：读数间隔十几秒、位移几百单位，仍然必须发布（泰缇斯之底的实测症状）。
+    // 预算随**间隔**放大，所以这里必须给出真实间隔；上限已按用户实测的飞行速度收到 100 单位/秒
+    // （2026-09-21：6 秒 300 米，峰值 60~70），因此 5 秒间隔的预算是 500 而不是旧的 2000。
+    auto walked = gate.Feed(reading(-390.0, 1144.0, 0.935f), lock(-338.0, 974.0, 1, 5.0));
     check(walked.Publishable() && walked.jumpUnits > 100.0,
         "walking hundreds of units between reads must not be read as disagreement (" +
         std::to_string(walked.jumpUnits) + " units)");
-    auto farther = gate.Feed(reading(-427.0, 1292.0, 0.976f), lock(-338.0, 974.0));
+    auto farther = gate.Feed(reading(-427.0, 1292.0, 0.976f), lock(-338.0, 974.0, 1, 5.0));
     check(farther.Publishable() && farther.jumpUnits < 600.0,
         "a read inside the jump budget keeps publishing while moving");
 
