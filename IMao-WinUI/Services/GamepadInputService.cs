@@ -19,7 +19,8 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
     private JsonElement runtime;
     private long runtimeAt, pollAt, searchAt;
     private int selectedDevice = -1;
-    private bool querying, dispatching, disposed, enabled, configurationPending;
+    private bool querying, dispatching, disposed, enabled, configurationPending, toggling;
+    private readonly ExplorationChordLatch explorationChord = new();
     private int configuredDevice = -1;
     private string message = "手柄适配已关闭";
     private string sessionProfile = "";
@@ -127,6 +128,23 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
         return selectedDevice < 0 ? new(false, -1, GamepadButtons.None) : readController(selectedDevice);
     }
 
+    /// <summary>
+    /// LB+Start 触发的启停。与首页「开始探索 / 停止探索」按钮共用 CoreHostService.ToggleExplorationAsync。
+    /// </summary>
+    private async Task ToggleExplorationFromGamepadAsync()
+    {
+        toggling = true;
+        try
+        {
+            var result = await core.ToggleExplorationAsync(GameWindow.CheckGameWindowSize(), lifetime.Token);
+            if (result == ExplorationToggleResult.WindowSizeRejected)
+                core.ReportUserError("游戏窗口尺寸不合适，无法开始探索（与首页按钮同样的要求）。");
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or ArgumentException or OperationCanceledException)
+        { core.ReportUserError("手柄启停探索失败：" + exception.Message); }
+        finally { toggling = false; }
+    }
+
     private void OnTick(DispatcherQueueTimer sender, object args)
     {
         if (disposed || !enabled) return;
@@ -137,18 +155,18 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             lastTickAt = now;
             var sample = Sample(now);
             guides.PollGamepadReturn();
+            // 启停和弦（LB+Start）**在状态机之外**先处理：核心停止时没有游戏上下文，
+            // 状态机不工作，而那一刻恰恰需要用手柄把工具重新打开（这就是"只能停不能开"的原因）。
+            if (explorationChord.Observe(sample.Buttons))
+            {
+                core.ReportGamepadDiagnostic("input-toggle-chord",
+                    $"buttons={sample.Buttons} connected={sample.Connected} available={Flag(runtime, "available")} " +
+                    $"generation={Number(runtime, "contextGeneration")} foreground={GetForegroundWindow()}");
+                if (!toggling) _ = ToggleExplorationFromGamepadAsync();
+            }
             var entryButtons = toolbar.HasHost ? sample.Buttons : sample.Buttons & (GamepadButtons.LB | GamepadButtons.RB);
             bool entryChanged = entryButtons != lastEntryButtons;
             lastEntryButtons = entryButtons;
-            // 探针：工具开关的和弦（LB+按下RS）必须能被判定。上面那条 input-state 是限速的
-            // （同状态 5 秒一次），一次 100 毫秒的按键很可能根本没进日志——2026-09-21 那次
-            // "LB+RS 没反应"因此无法归因。这里只要样本里出现 R3 就无条件记一条，
-            // 于是下一次测试就能区分"按键没上报"和"和弦没识别"。
-            if ((sample.Buttons & GamepadButtons.R3) != 0)
-                core.ReportGamepadDiagnostic("input-chord-probe",
-                    $"buttons={sample.Buttons} connected={sample.Connected} available={Flag(runtime, "available")} " +
-                    $"mode={runtime.ValueKind} generation={Number(runtime, "contextGeneration")} " +
-                    $"foreground={GetForegroundWindow()}");
             void Diagnose(string state)
             {
                 if (state == lastDiagnosticState && !entryChanged && now < diagnosticAt) return;
@@ -300,14 +318,6 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                     gameHwnd = Number(runtime, "gameHwnd"),
                     action = action == GamepadAction.CompleteCurrent ? "completeCurrent" : "toggleGuide"
                 }, lifetime.Token);
-            }
-            else if (action == GamepadAction.ToggleEnabled)
-            {
-                // 工具开关：LB + 按下 RS。与首页「开始探索 / 停止探索」按钮、键盘快捷键
-                // 共用 CoreHostService.ToggleExplorationAsync —— 三者严格等价。
-                var result = await core.ToggleExplorationAsync(GameWindow.CheckGameWindowSize(), lifetime.Token);
-                if (result == ExplorationToggleResult.WindowSizeRejected)
-                    core.ReportUserError("游戏窗口尺寸不合适，无法开始探索（与首页按钮同样的要求）。");
             }
             else if (action == GamepadAction.OpenAssistant)
             {

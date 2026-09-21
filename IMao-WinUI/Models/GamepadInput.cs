@@ -8,8 +8,6 @@ public enum GamepadAction
     OpenAssistant, Up, Down, Left, Right, Accept, Back, PreviousPage, NextPage,
     OpenRouteMenu, Complete, ScrollUp, ScrollDown, ScrollLeft, ScrollRight,
     OpenToolbar, CompleteCurrent, ToggleGuide,
-    // 工具总开关：手柄 LB+按下RS 与键盘快捷键（默认 F9）都能"开始探索"和"停止探索"。
-    ToggleEnabled,
     // The nearby completion list: hold to collect every listed point; the guide detail
     // page: one press enlarges the picture; the enlarged picture: trigger zoom.
     CompleteAll, ExpandImage, ZoomIn, ZoomOut
@@ -20,6 +18,29 @@ public enum GamepadButtons : ushort
 {
     None = 0, Up = 1, Down = 2, Left = 4, Right = 8, Menu = 16, View = 32,
     L3 = 64, R3 = 128, LB = 256, RB = 512, A = 4096, B = 8192, X = 16384, Y = 32768
+}
+
+/// <summary>
+/// 「开始探索 / 停止探索」的手柄和弦：**LB + Start（Windows.Gaming.Input 里叫 Menu）**。
+///
+/// 它刻意**不走状态机**：状态机只有在核心给出游戏上下文时才工作，而工具被停掉之后上下文就不存在了——
+/// 于是"手柄只能停、不能开"（2026-09-21 实测）。这个闩锁只看原始按键样本，因此在没有核心上下文时
+/// 依然有效；上升沿触发一次，按住不放不会反复开关。
+/// </summary>
+public sealed class ExplorationChordLatch
+{
+    public const GamepadButtons Chord = GamepadButtons.LB | GamepadButtons.Menu;
+
+    private bool latched;
+
+    /// <summary>返回 true 表示"这一帧刚凑齐和弦"，调用方应当在此时执行一次切换。</summary>
+    public bool Observe(GamepadButtons buttons)
+    {
+        var complete = (buttons & Chord) == Chord;
+        var fired = complete && !latched;
+        latched = complete;
+        return fired;
+    }
 }
 
 public readonly record struct GamepadSample(bool Connected, int DeviceId, GamepadButtons Buttons,
@@ -231,9 +252,6 @@ public sealed class GamepadInputInterpreter
     {
         GamepadButtons.LB | GamepadButtons.B => GamepadAction.CompleteCurrent,
         GamepadButtons.LB | GamepadButtons.X => GamepadAction.ToggleGuide,
-        // 工具总开关：LB + 按下 RS。放在同一套和弦里，于是自动继承"必须松开才算一次、
-        // 修饰键期间不重复触发"的既有规矩。
-        GamepadButtons.LB | GamepadButtons.R3 => GamepadAction.ToggleEnabled,
         _ => null
     };
 

@@ -95,7 +95,7 @@
                 </controls:WrapPanel>
                 <ComboBox x:Name="ToggleEnabledKey" Header="开始/停止探索" HorizontalAlignment="Stretch" />
                 <TextBlock Style="{StaticResource IMaoSecondaryTextStyle}"
-                           Text="手柄：按住 LB 再按一下右摇杆（RS）。键盘：这里选的键，默认 F9。两者都等同于首页的「开始探索 / 停止探索」按钮：既能开始探索，也能停止探索。" />
+                           Text="手柄：按住 LB 再按一下 Start 键。键盘：这里选的键，默认 F9。两者都等同于首页的「开始探索 / 停止探索」按钮：既能开始探索，也能停止探索。" />
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                     <Button x:Name="SaveShortcuts" Content="保存快捷键" Click="SaveShortcuts_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
                     <Button x:Name="ResetShortcuts" Content="恢复默认" Click="ResetShortcuts_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />

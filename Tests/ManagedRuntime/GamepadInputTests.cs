@@ -21,33 +21,27 @@ internal static class GamepadInputTests
         VerifyToolToggleChord(check);
     }
 
-    // 工具总开关（用户 2026-09-21 定）：手柄 LB + 按下 RS，与另外两个大世界和弦同一套规矩——
-    // 组合键按住期间不触发，必须松开之后才算一次，避免一直按住时反复开关。
+    // 「开始探索 / 停止探索」的手柄和弦：**LB + Start**，按下即触发，而且**不走状态机**——
+    // 状态机需要核心给出游戏上下文，而工具被停掉之后上下文就没了，那正是"只能停不能开"的原因
+    // （2026-09-21 实测）。闩锁只看原始按键样本，所以在没有核心上下文时同样有效。
     private static void VerifyToolToggleChord(Action<bool, string> check)
     {
-        var chord = GamepadButtons.LB | GamepadButtons.R3;
-        foreach (bool lbFirst in new[] { true, false })
-        {
-            var run = new InputRun(Gameplay);
-            bool silent = !lbFirst || run.Step(GamepadButtons.LB).Action is null;
-            silent &= run.Hold(chord, 1000).All(update => update.Action is null);
-            check(silent && run.Step(GamepadButtons.None).Action == GamepadAction.ToggleEnabled &&
-                run.Step(GamepadButtons.None).Action is null,
-                $"gameplay LB+R3 toggles the tool exactly once after release (LB first={lbFirst})");
-        }
-        // 单独按 RS（没有 LB）不是开关，避免和"按下右摇杆"这个常见操作冲突。
-        var alone = new InputRun(Gameplay);
-        alone.Step(GamepadButtons.R3);
-        check(alone.Step(GamepadButtons.None).Action is null, "RS alone is not the tool switch");
-        // 已经按住的组合键在进入时不算数，必须松开后重新做一次完整手势。
-        var arrivingHeld = new InputRun(Gameplay, initiallyNeutral: false);
-        check(arrivingHeld.Hold(chord, 800).All(update => update.Action is null) &&
-            arrivingHeld.Step(GamepadButtons.None).Action is null &&
-            arrivingHeld.Step(chord).Action is null &&
-            arrivingHeld.Step(GamepadButtons.None).Action == GamepadAction.ToggleEnabled,
-            "a chord already held on entry is discarded and needs a fresh gesture");
+        var latch = new ExplorationChordLatch();
+        check(ExplorationChordLatch.Chord == (GamepadButtons.LB | GamepadButtons.Menu),
+            "the exploration chord is LB + Start");
+        check(!latch.Observe(GamepadButtons.LB), "LB alone does not fire the chord");
+        check(latch.Observe(ExplorationChordLatch.Chord), "completing LB+Start fires immediately, without waiting for release");
+        check(!latch.Observe(ExplorationChordLatch.Chord), "holding the chord does not fire it twice");
+        check(!latch.Observe(GamepadButtons.LB), "releasing Start while LB stays down does not re-fire");
+        check(latch.Observe(ExplorationChordLatch.Chord), "a fresh press after a full release fires again");
+        check(!latch.Observe(GamepadButtons.None), "releasing the chord is silent");
+        var alone = new ExplorationChordLatch();
+        check(!alone.Observe(GamepadButtons.Menu) && !alone.Observe(GamepadButtons.None),
+            "Start alone is not the exploration switch");
+        var legacy = new ExplorationChordLatch();
+        check(!legacy.Observe(GamepadButtons.LB | GamepadButtons.R3),
+            "the old LB+R3 chord no longer toggles the tool");
     }
-
     private static void VerifyEntry(Action<bool, string> check)
     {
         foreach (var savedEntry in new[] { GamepadButtons.LB, GamepadButtons.RB })
