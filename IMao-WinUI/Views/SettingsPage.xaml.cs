@@ -56,6 +56,7 @@ public sealed partial class SettingsPage : Page
         CurrentTargetGuideKey.ItemsSource = choices;
         GuidePreviousImageKey.ItemsSource = choices;
         GuideNextImageKey.ItemsSource = choices;
+        ToggleEnabledKey.ItemsSource = choices;
         Loaded += (_, _) =>
         {
             if (!subscribed) { coreHost.PropertyChanged += CoreHost_PropertyChanged; gamepad.PropertyChanged += Gamepad_PropertyChanged; updates.PropertyChanged += Updates_Changed; kuroAutoSync.PropertyChanged += KuroAutoSync_Changed; subscribed = true; }
@@ -541,6 +542,7 @@ public sealed partial class SettingsPage : Page
         CurrentTargetGuideKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.CurrentTargetGuideKey);
         GuidePreviousImageKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.GuidePreviousImageKey);
         GuideNextImageKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.GuideNextImageKey);
+        ToggleEnabledKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.ToggleEnabledKey);
         RenderBindings();
         RestoreGamepad();
     }
@@ -550,27 +552,28 @@ public sealed partial class SettingsPage : Page
         var configuration = coreHost.Configuration;
         CurrentBindings.Text = $"已保存的绑定：点位完成 {RuntimeConfiguration.HotkeyName(configuration.NearestCompletionKey)}；" +
             $"手绘端点 {RuntimeConfiguration.HotkeyName(configuration.ManualRouteKey)}；攻略浮窗开关 {RuntimeConfiguration.HotkeyName(configuration.CurrentTargetGuideKey)}；" +
-            $"攻略上一张 {RuntimeConfiguration.HotkeyName(configuration.GuidePreviousImageKey)}；下一张 {RuntimeConfiguration.HotkeyName(configuration.GuideNextImageKey)}。";
+            $"攻略上一张 {RuntimeConfiguration.HotkeyName(configuration.GuidePreviousImageKey)}；下一张 {RuntimeConfiguration.HotkeyName(configuration.GuideNextImageKey)}；" +
+            $"启用/暂停工具 {RuntimeConfiguration.HotkeyName(configuration.ToggleEnabledKey)}（手柄：LB+按下RS）。";
 
     }
 
     private async void SaveShortcuts_Click(object sender, RoutedEventArgs e)
     {
         if (NearestCompletionKey.SelectedIndex >= 0 && ManualRouteKey.SelectedIndex >= 0 && CurrentTargetGuideKey.SelectedIndex >= 0 &&
-            GuidePreviousImageKey.SelectedIndex >= 0 && GuideNextImageKey.SelectedIndex >= 0)
+            GuidePreviousImageKey.SelectedIndex >= 0 && GuideNextImageKey.SelectedIndex >= 0 && ToggleEnabledKey.SelectedIndex >= 0)
             await SaveBindingsAsync(SupportedKeys[NearestCompletionKey.SelectedIndex], SupportedKeys[ManualRouteKey.SelectedIndex],
                 SupportedKeys[CurrentTargetGuideKey.SelectedIndex], SupportedKeys[GuidePreviousImageKey.SelectedIndex],
-                SupportedKeys[GuideNextImageKey.SelectedIndex]);
+                SupportedKeys[GuideNextImageKey.SelectedIndex], SupportedKeys[ToggleEnabledKey.SelectedIndex]);
     }
 
     private async void ResetShortcuts_Click(object sender, RoutedEventArgs e)
     {
         var defaults = new RuntimeConfiguration();
         await SaveBindingsAsync(defaults.NearestCompletionKey, defaults.ManualRouteKey, defaults.CurrentTargetGuideKey,
-            defaults.GuidePreviousImageKey, defaults.GuideNextImageKey);
+            defaults.GuidePreviousImageKey, defaults.GuideNextImageKey, defaults.ToggleEnabledKey);
     }
 
-    private async Task SaveBindingsAsync(int nearest, int manual, int guide, int previousImage, int nextImage)
+    private async Task SaveBindingsAsync(int nearest, int manual, int guide, int previousImage, int nextImage, int toggleEnabled)
     {
         if (saving) return;
         saving = true;
@@ -578,7 +581,7 @@ public sealed partial class SettingsPage : Page
         try
         {
             bool accepted = await coreHost.ConfigureAsync(nearestCompletionKey: nearest, manualRouteKey: manual, currentTargetGuideKey: guide,
-                guidePreviousImageKey: previousImage, guideNextImageKey: nextImage);
+                guidePreviousImageKey: previousImage, guideNextImageKey: nextImage, toggleEnabledKey: toggleEnabled);
             ShortcutMessage.Severity = accepted ? InfoBarSeverity.Success : InfoBarSeverity.Error;
             ShortcutMessage.Message = accepted ? "快捷键已保存并应用，重启后会恢复。" :
                 (string.IsNullOrWhiteSpace(coreHost.LastFault) ? "快捷键未能应用，请检查核心连接状态。" : coreHost.LastFault);

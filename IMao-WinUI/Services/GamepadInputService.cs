@@ -292,6 +292,12 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                     action = action == GamepadAction.CompleteCurrent ? "completeCurrent" : "toggleGuide"
                 }, lifetime.Token);
             }
+            else if (action == GamepadAction.ToggleEnabled)
+            {
+                // 工具总开关：LB + 按下 RS。与键盘快捷键改的是同一个核心状态，
+                // 所以两种输入都能"开始探索"和"停止探索"，界面看到的也永远是同一份状态。
+                if (await core.ToggleToolEnabledAsync(lifetime.Token)) SetMessage("已切换工具开关。");
+            }
             else if (action == GamepadAction.OpenAssistant)
             {
                 sessionProfile = Text(runtime, "profileId"); sessionHwnd = Number(runtime, "gameHwnd");

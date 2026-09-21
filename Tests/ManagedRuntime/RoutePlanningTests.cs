@@ -43,13 +43,14 @@ internal static class RoutePlanningTests
             File.WriteAllText(path, "{\"StatusBarEnabled\":false,\"MapUpdateCycle\":95}");
             var store = new RuntimeConfigurationStore(path);
             check(store.Read() is { NearestCompletionKey: 90, ManualRouteKey: 81, CurrentTargetGuideKey: 119,
-                GuidePreviousImageKey: 33, GuideNextImageKey: 34,
+                GuidePreviousImageKey: 33, GuideNextImageKey: 34, ToggleEnabledKey: 120,
                 StatusBarEnabled: false, MapUpdateCycle: 95 } && store.LoadError.Length == 0,
-                "legacy configuration supplies Z/Q/F8/PageUp/PageDown without resetting existing preferences");
+                "legacy configuration supplies Z/Q/F8/PageUp/PageDown and the F9 tool switch without resetting existing preferences");
             var payload = store.Read().ToPayload();
             check(payload["guidePreviousImageKey"] is 33 && payload["guideNextImageKey"] is 34 &&
+                payload["toggleEnabledKey"] is 120 && RuntimeConfiguration.HotkeyName(120) == "F9" &&
                 RuntimeConfiguration.HotkeyName(33) == "PageUp" && RuntimeConfiguration.HotkeyName(34) == "PageDown",
-                "guide paging uses named PageUp/PageDown choices and the canonical configuration protocol fields");
+                "guide paging and the tool switch use named choices and the canonical configuration protocol fields");
             // The trigger ranges are new fields: a file written before them must keep the
             // 15 pixels the keys always used, and the protocol carries both values.
             check(store.Read() is { CompletionRangePixels: 15, GuideRangePixels: 15 } &&

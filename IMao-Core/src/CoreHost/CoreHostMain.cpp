@@ -496,7 +496,10 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
         if (type == "toolEnabled") {
             // 工具总开关：手柄 LB+按下RS 由托管侧发这条命令，键盘一侧由原生轮询线程直接切换。
             // 两条路都改同一个状态，所以状态栏与首页看到的永远一致。
-            const bool enabled = command.value("enabled", true);
+            // 不带 enabled 字段时表示"翻转"——手柄那边因此不需要自己维护一份镜像，
+            // 也就不会出现"界面以为开着、核心里其实关着"这种状态分叉。
+            const bool enabled = command.contains("enabled")
+                ? command.value("enabled", true) : !RuntimeToolState::Enabled();
             RuntimeToolState::SetEnabled(enabled);
             Diagnostics::Record("tool-toggle", std::string("enabled=") + (enabled ? "1" : "0") +
                 " source=controller");

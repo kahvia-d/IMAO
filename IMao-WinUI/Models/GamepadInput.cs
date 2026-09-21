@@ -8,6 +8,8 @@ public enum GamepadAction
     OpenAssistant, Up, Down, Left, Right, Accept, Back, PreviousPage, NextPage,
     OpenRouteMenu, Complete, ScrollUp, ScrollDown, ScrollLeft, ScrollRight,
     OpenToolbar, CompleteCurrent, ToggleGuide,
+    // 工具总开关：手柄 LB+按下RS 与键盘快捷键（默认 F9）都能"开始探索"和"停止探索"。
+    ToggleEnabled,
     // The nearby completion list: hold to collect every listed point; the guide detail
     // page: one press enlarges the picture; the enlarged picture: trigger zoom.
     CompleteAll, ExpandImage, ZoomIn, ZoomOut
@@ -229,6 +231,9 @@ public sealed class GamepadInputInterpreter
     {
         GamepadButtons.LB | GamepadButtons.B => GamepadAction.CompleteCurrent,
         GamepadButtons.LB | GamepadButtons.X => GamepadAction.ToggleGuide,
+        // 工具总开关：LB + 按下 RS。放在同一套和弦里，于是自动继承"必须松开才算一次、
+        // 修饰键期间不重复触发"的既有规矩。
+        GamepadButtons.LB | GamepadButtons.R3 => GamepadAction.ToggleEnabled,
         _ => null
     };
 

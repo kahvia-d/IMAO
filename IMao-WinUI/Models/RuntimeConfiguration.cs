@@ -31,6 +31,8 @@ public sealed record RuntimeConfiguration
     public int CurrentTargetGuideKey { get; init; } = 119;
     public int GuidePreviousImageKey { get; init; } = 33;
     public int GuideNextImageKey { get; init; } = 34;
+    // 工具总开关（手柄 LB+按下RS 是固定和弦，这是键盘那一半，默认 F9）。
+    public int ToggleEnabledKey { get; init; } = 120;
     public bool GamepadEnabled { get; init; }
     public int GamepadControllerIndex { get; init; } = -1;
     public GamepadButtons GamepadEntryButton { get; init; } = GamepadButtons.LB;
@@ -52,7 +54,7 @@ public sealed record RuntimeConfiguration
             throw new ArgumentException("触发范围必须在 5–120 像素之间");
         if (GamepadEntryButton is not (GamepadButtons.LB or GamepadButtons.RB))
             throw new ArgumentException("手柄助手入口仅支持 LB 或 RB");
-        var keys = new[] { NearestCompletionKey, ManualRouteKey, CurrentTargetGuideKey, GuidePreviousImageKey, GuideNextImageKey };
+        var keys = new[] { NearestCompletionKey, ManualRouteKey, CurrentTargetGuideKey, GuidePreviousImageKey, GuideNextImageKey, ToggleEnabledKey };
         if (keys.Any(key => !IsSupportedHotkey(key)))
             throw new ArgumentException("快捷键支持字母、数字、F1–F12、PageUp、PageDown 或禁用；M 用于地图状态辅助，F10 用于诊断截图，不能分配。");
         var enabledKeys = keys.Where(key => key != 0).ToArray();
@@ -83,6 +85,7 @@ public sealed record RuntimeConfiguration
         ["nearestCompletionKey"] = NearestCompletionKey,
         ["manualRouteKey"] = ManualRouteKey, ["currentTargetGuideKey"] = CurrentTargetGuideKey,
         ["guidePreviousImageKey"] = GuidePreviousImageKey, ["guideNextImageKey"] = GuideNextImageKey,
+        ["toggleEnabledKey"] = ToggleEnabledKey,
         ["completionRangePixels"] = CompletionRangePixels, ["guideRangePixels"] = GuideRangePixels
     };
 }

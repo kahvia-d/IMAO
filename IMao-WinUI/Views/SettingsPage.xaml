@@ -93,6 +93,9 @@
                     <ComboBox x:Name="GuidePreviousImageKey" Header="攻略上一张" Width="210" />
                     <ComboBox x:Name="GuideNextImageKey" Header="攻略下一张" Width="210" />
                 </controls:WrapPanel>
+                <ComboBox x:Name="ToggleEnabledKey" Header="启用/暂停工具" HorizontalAlignment="Stretch" />
+                <TextBlock Style="{StaticResource IMaoSecondaryTextStyle}"
+                           Text="手柄：按住 LB 再按一下右摇杆（RS）。键盘：这里选的键，默认 F9。两种操作都能开始探索，也能停止探索。暂停时叠加层不显示任何标记与路线，也不再做定位与识别，所以完全不占性能；再按一次立刻恢复，不需要重启。" />
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                     <Button x:Name="SaveShortcuts" Content="保存快捷键" Click="SaveShortcuts_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
                     <Button x:Name="ResetShortcuts" Content="恢复默认" Click="ResetShortcuts_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />

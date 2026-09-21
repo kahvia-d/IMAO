@@ -186,6 +186,22 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         finally { lifecycleLock.Release(); }
     }
 
+    /// <summary>
+    /// 工具总开关（手柄 LB+按下RS）。发的是"翻转"命令：核心是唯一事实来源，
+    /// 界面不需要自己维护一份镜像，也就不会出现两边状态分叉。
+    /// </summary>
+    public async Task<bool> ToggleToolEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            var session = await EnsureStartedLockedAsync(cancellationToken);
+            if (session is null) { ReportUserError("核心尚未连接，无法切换工具开关。"); return false; }
+            return await SendLockedAsync(session, "toolEnabled", new Dictionary<string, object?>(), cancellationToken);
+        }
+        finally { lifecycleLock.Release(); }
+    }
+
     private async Task<JsonElement> SendMarkerLockedAsync(Session session, string operation, object arguments, CancellationToken cancellationToken)
     {
         string id = Guid.NewGuid().ToString("N");
@@ -226,7 +242,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         bool? mapEnabled = null, bool? minMapEnabled = null, bool? savedPointsEnabled = null,
         bool? statusBarEnabled = null, CancellationToken cancellationToken = default,
         int? nearestCompletionKey = null, int? manualRouteKey = null, int? currentTargetGuideKey = null,
-        int? guidePreviousImageKey = null, int? guideNextImageKey = null,
+        int? guidePreviousImageKey = null, int? guideNextImageKey = null, int? toggleEnabledKey = null,
         bool? gamepadEnabled = null, int? gamepadControllerIndex = null,
         GamepadButtons? gamepadEntryButton = null, bool? autoReplanEnabled = null,
         bool? expectedAutoReplanEnabled = null, string? expectedAutoReplanProfile = null,
@@ -260,6 +276,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     CurrentTargetGuideKey = currentTargetGuideKey ?? old.CurrentTargetGuideKey,
                     GuidePreviousImageKey = guidePreviousImageKey ?? old.GuidePreviousImageKey,
                     GuideNextImageKey = guideNextImageKey ?? old.GuideNextImageKey,
+                    ToggleEnabledKey = toggleEnabledKey ?? old.ToggleEnabledKey,
                     GamepadEnabled = gamepadEnabled ?? old.GamepadEnabled,
                     GamepadControllerIndex = gamepadControllerIndex ?? old.GamepadControllerIndex,
                     GamepadEntryButton = gamepadEntryButton ?? old.GamepadEntryButton,

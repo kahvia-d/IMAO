@@ -80,7 +80,9 @@ public sealed partial class StartPage : Page
         {
             "waiting" => "等待地图画面", "tracking" => "已定位", "lost" => "等待重新定位",
             "recovering" => "正在恢复定位", "mapLocating" => "正在识别大地图", "mapTracking" => "大地图已定位",
-            "stale" => "等待画面更新", "stable" => "定位稳定", _ => "等待有效位置"
+            "stale" => "等待画面更新", "stable" => "定位稳定",
+            // 工具总开关（手柄 LB+按下RS / 键盘快捷键）关掉时的状态。
+            "paused" => "已暂停", _ => "等待有效位置"
         });
         OverviewMarkerSummary.Text = status.IsRunning
             ? $"小地图 {status.MinimapMarkers} 个点位  ·  大地图 {status.MapMarkers} 个点位"

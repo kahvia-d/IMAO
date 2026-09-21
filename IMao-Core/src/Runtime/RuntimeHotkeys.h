@@ -12,7 +12,7 @@ struct RuntimeHotkeyBindings {
     int currentTargetGuideKey = 119;   // F8
     int guidePreviousImageKey = 33;    // PageUp
     int guideNextImageKey = 34;        // PageDown
-    int toggleEnabledKey = 118;        // F9：启用/暂停工具（手柄对应 LB+按下RS）
+    int toggleEnabledKey = 120;        // F9（VK_F9 = 120；118 是 F7）：启用/暂停工具（手柄对应 LB+按下RS）
 };
 
 // A guide-owned press must not become a game completion when the guide hides
@@ -94,5 +94,5 @@ public:
     }
 private:
     inline static std::atomic<std::uint64_t> packed_{90ULL | (81ULL << 8) | (119ULL << 16) | (33ULL << 24) | (34ULL << 32) |
-        (118ULL << 40)};
+        (120ULL << 40)};
 };

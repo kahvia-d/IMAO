@@ -58,6 +58,11 @@ public sealed class CoreRuntimeStatus
     [JsonPropertyName("statusBarEnabled")]
     public bool StatusBarEnabled { get; init; } = true;
 
+    // 工具总开关（手柄 LB+按下RS / 键盘快捷键切换）。核心是唯一事实来源，
+    // 界面只是把它显示出来——手柄那边发的是"翻转"命令，不需要自己维护镜像。
+    [JsonPropertyName("toolEnabled")]
+    public bool ToolEnabled { get; init; } = true;
+
     // 只有 CoreHost 确认叠加已经启动后，首页才切换到“停止”。
     // 资源加载或纯管道连接不能被误显示为“正在运行”。
     public bool IsRunning => CoreState is "running" or "startingOverlay" or "stopping";

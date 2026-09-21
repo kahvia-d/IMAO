@@ -18,6 +18,34 @@ internal static class GamepadInputTests
         VerifyCancellationBoundaries(check);
         VerifyDirectionalRepeat(check);
         VerifyConfiguration(root, check);
+        VerifyToolToggleChord(check);
+    }
+
+    // 工具总开关（用户 2026-09-21 定）：手柄 LB + 按下 RS，与另外两个大世界和弦同一套规矩——
+    // 组合键按住期间不触发，必须松开之后才算一次，避免一直按住时反复开关。
+    private static void VerifyToolToggleChord(Action<bool, string> check)
+    {
+        var chord = GamepadButtons.LB | GamepadButtons.R3;
+        foreach (bool lbFirst in new[] { true, false })
+        {
+            var run = new InputRun(Gameplay);
+            bool silent = !lbFirst || run.Step(GamepadButtons.LB).Action is null;
+            silent &= run.Hold(chord, 1000).All(update => update.Action is null);
+            check(silent && run.Step(GamepadButtons.None).Action == GamepadAction.ToggleEnabled &&
+                run.Step(GamepadButtons.None).Action is null,
+                $"gameplay LB+R3 toggles the tool exactly once after release (LB first={lbFirst})");
+        }
+        // 单独按 RS（没有 LB）不是开关，避免和"按下右摇杆"这个常见操作冲突。
+        var alone = new InputRun(Gameplay);
+        alone.Step(GamepadButtons.R3);
+        check(alone.Step(GamepadButtons.None).Action is null, "RS alone is not the tool switch");
+        // 已经按住的组合键在进入时不算数，必须松开后重新做一次完整手势。
+        var arrivingHeld = new InputRun(Gameplay, initiallyNeutral: false);
+        check(arrivingHeld.Hold(chord, 800).All(update => update.Action is null) &&
+            arrivingHeld.Step(GamepadButtons.None).Action is null &&
+            arrivingHeld.Step(chord).Action is null &&
+            arrivingHeld.Step(GamepadButtons.None).Action == GamepadAction.ToggleEnabled,
+            "a chord already held on entry is discarded and needs a fresh gesture");
     }
 
     private static void VerifyEntry(Action<bool, string> check)
