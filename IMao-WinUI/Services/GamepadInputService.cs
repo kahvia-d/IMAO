@@ -140,6 +140,15 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             var entryButtons = toolbar.HasHost ? sample.Buttons : sample.Buttons & (GamepadButtons.LB | GamepadButtons.RB);
             bool entryChanged = entryButtons != lastEntryButtons;
             lastEntryButtons = entryButtons;
+            // 探针：工具开关的和弦（LB+按下RS）必须能被判定。上面那条 input-state 是限速的
+            // （同状态 5 秒一次），一次 100 毫秒的按键很可能根本没进日志——2026-09-21 那次
+            // "LB+RS 没反应"因此无法归因。这里只要样本里出现 R3 就无条件记一条，
+            // 于是下一次测试就能区分"按键没上报"和"和弦没识别"。
+            if ((sample.Buttons & GamepadButtons.R3) != 0)
+                core.ReportGamepadDiagnostic("input-chord-probe",
+                    $"buttons={sample.Buttons} connected={sample.Connected} available={Flag(runtime, "available")} " +
+                    $"mode={runtime.ValueKind} generation={Number(runtime, "contextGeneration")} " +
+                    $"foreground={GetForegroundWindow()}");
             void Diagnose(string state)
             {
                 if (state == lastDiagnosticState && !entryChanged && now < diagnosticAt) return;
