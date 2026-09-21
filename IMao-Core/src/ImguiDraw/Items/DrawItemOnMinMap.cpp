@@ -64,7 +64,10 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & play
     if(sceneDataKnown) {
         nearItemsDatas = GetAndFilterItemsData(w_Rect, playerROC, minMapRadius, terrainScale);
 		RuntimeStatus::SetMinimapMarkerCount(static_cast<int>(nearItemsDatas.size()));
-        if (Diagnostics::Enabled()) {
+        // 不再包在 Diagnostics::Enabled() 里：那个开关是**截图**选项，普通会话里它是关的，
+        // 于是唯一记录"每个图标自己的坐标与算出的屏幕位置"的那条日志永远不出现——
+        // 而"标记黏在小地图中心"到底是位置错、图标坐标错还是绘制用了旧值，只有这条能分开。
+        {
             static auto lastReport = chrono::steady_clock::time_point{};
             const auto now = chrono::steady_clock::now();
             if (now - lastReport >= chrono::seconds(2)) {
