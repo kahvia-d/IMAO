@@ -7,7 +7,7 @@
 > - 记录纪律：**没有实测的数据一律写「未验证」**。禁止写"预计已解决 / 应该已经优化 / 理论上不会掉帧"。
 > - 每完成一个阶段就地更新 §21 台账、并把该阶段的状态行改成「已实现（待实测）」或「已验证」。
 >
-> 状态：**Phase 0～Phase 3 已落地；Phase 1/2/3 已通过一次实机会话（`F829F061`）验证行为与成本量级，见 §25；Phase 4～Phase 6 未开始。游戏 FPS 类指标仍未验证。**（明细见 §21）
+> 状态：**Phase 0～Phase 4 已落地（Phase 4 仅编译验证）；Phase 1/2/3 已通过一次实机会话（`F829F061`）验证行为与成本量级，见 §25；Phase 5/6 未开始。游戏 FPS 类指标仍未验证 —— 下一个动作是 §26.5 的 A/B/A/B。**（明细见 §21）
 
 ---
 
@@ -881,9 +881,11 @@ WGC ROI Readback
 | Phase 1 | 渲染线程不再实时查询 completion | 已实现 · **实机判定通过**（§25.1） | `44ed966` | ✅ 见 §23 | 行为已验证；收益**未验证**（需同场 A/B） |
 | Phase 2 | 纹理查找 O(1) | 已实现 · 命中成本已实测（§25.2） | `095d129` | ✅ 见 §23 | 命中 1–2 µs/图标；**省下多少未验证** |
 | Phase 3 | marker 分段性能日志 | 已实现 · **已产出真实数据**（§25.3） | `8cf0a91` | ✅ 见 §23 | 字段语义见 §24.4 |
-| Phase 4 | 真正的小尺寸 MiniMap Overlay 实验模式 + A/B/A/B | 未开始 | — | — | 未验证 |
+| Phase 4 | 真正的小尺寸 MiniMap Overlay 实验模式 + A/B/A/B | 已实现（**仅编译验证**） | `b5b6fb3`（脚本 `b2e7fbf`） | ✅ 见 §23 | **未验证**；见 §26 |
 | Phase 5 | Texture Atlas | 未开始（**取决于 Phase 4 结论**） | — | — | 未验证 |
 | Phase 6 | WGC ROI Readback | 未开始（**独立后续实验**） | — | — | 未验证 |
+
+> 附：Phase 3 的一个收尾改动 `b4f70e4`（`markerSkippedCompleted` 计数，见 §25.6）已一并落地，尚未实测。
 
 ## 回归检查（任务书 §16，逐项待实测）
 
@@ -1083,10 +1085,98 @@ markerDraws=            该 2 秒窗口内 DrawItemsOnMinMap 的调用次数
 与 §24.2 基线（改动前构建）对比：`renderFps` 29.72 → 29.71、`sourceFps` 10.87 → 10.87、`segBuildMs` 中位 0.75 → 0.81、`segPresentMs` 最大 20.9 → 23.2。
 **这是跨会话、跨场景的比较，按任务书 §12 不能作为性能结论**；它只能说明"加了诊断后各项量级没变"。游戏 FPS / p50 / p95 / p99 / >20ms frame ratio / PresentMode：**全部未验证**，需要 Phase 4 的同场交替 A/B。
 
-## 25.6 发现的一个可改进点（可选，3 行）
+# 26. Phase 4：小尺寸 MiniMap Overlay 实验模式（已实现，**仅编译验证**）
+
+## 26.1 怎么开、怎么关
+
+| 动作 | 做法 |
+|---|---|
+| 打开 | 工具 → 诊断页 → **隔离开关** 框里填 **`128`** |
+| 关闭 | 同一个框里填 **`0`** |
+| 生效条件 | `frame.minimapVisible && !frame.mapVisible`：小地图存在、大地图未打开、小地图点位显示已开 |
+| 开大地图时 | 自动回到整屏窗口（视口匹配与大地图 marker 保持现状，本轮不动大地图） |
+
+开关本身是 `IMao-Core/src/Runtime/IsolationSwitches.h` 的 **bit 7（`kMiniOverlay`）**，日志里名为 `mini-overlay`。诊断页那个 NumberBox 直接把掩码发给 CoreHost（`CoreHostMain.cpp` 的 `setIsolationSwitches`），所以没有新增 UI。
+
+## 26.2 它到底改了什么
+
+只改三样，都是任务书 §7 指定的：
+
+```text
+HWND 物理尺寸   = 小地图矩形 + padding（并裁剪在游戏客户区内）
+SwapChain/backbuffer = 该 HWND 的客户区尺寸（复用 OverlayBackBufferSize::Ensure）
+视口            = 同一块绘制里的这一小块区域
+```
+
+- **矩形算法**：小地图矩形取自 `GameWindowsScreenData::MinMapScreenData` 按客户区缩放；
+  `padding = clamp(客户区宽 × 0.025, 30, 60)` px，四周相同，且不越出客户区。
+- **2560×1440 下的实际数值**（按公式手算，**未实机核对**）：小地图 x 48→294.4、y 36.8→283.2；
+  padding 60 ⟹ 左/上被裁剪到 0 ⟹ **355 × 344**。面积是 2560×1440 的 **3.3%**。
+- **坐标系不变**：绘制空间仍是游戏客户区，所有 marker/路线/提示的坐标含义与今天完全一致；
+  只有落在小地图矩形之外的部分不再显示。
+- **窗口跟随**：复用 `OverlayWindowBounds::Synchronize` —— 矩形没变就**不调** `SetWindowPos`，
+  并且按**实际几何回读**判定成功，所以没有引入新的高频 `SetWindowPos`。游戏窗口移动时矩形随之改变，照常跟随。
+- **鼠标穿透**：窗口样式一个字节都没改（仍是 `WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | ...`）。
+- **DPI**：mini 矩形与现有窗口同步走同一套物理像素（`ClientToScreen`），没有新增 DPI 分支；
+  但 100%/125%/150% 三档**未实测**。
+
+### 为什么用"平移顶点"而不是 `DisplayPos`
+
+本仓库的 ImGui 把主 viewport 的位置**硬编码为原点**（`IMao-Core/src/Base/imgui_dx11/imgui.cpp` 中
+`main_viewport->Pos = ImVec2(0.0f, 0.0f);`），于是每个 draw list 的裁剪矩形都从 `(0,0)` 起算；
+而 DX11 后端会从裁剪矩形里**减去** `draw_data->DisplayPos`。两者在非零偏移下不自洽：
+小地图在左上角时偏移恰好被裁剪成 `(0,0)`，看起来"能用"，换个分辨率/布局就会**裁错**。
+因此改成把顶点整体平移到小窗口里：viewport 契约（`DisplayPos == viewport->Pos`）保持不变，
+裁剪矩形依旧正确，ImGui 每帧都会重置顶点缓冲，平移不会累积。
+
+## 26.3 已知的、固有的可见后果（不是回归）
+
+实验模式下**小地图矩形之外的一切都不可见**。最直接的一条是**游戏内状态栏**：它画在客户区顶部居中
+（`RuntimeStatusBar`），而小地图在左上角，所以实验模式下看不到"正在恢复定位 / 请打开一次大地图"这类提示。
+marker 本身、数字角标、当前目标提示都在 padding 内，不受影响。超出 padding 的长路线段也会被裁掉。
+
+这是"只维护小地图大小窗口"的必然结果。**正式落地时若要保留状态栏，需要它自己的小块窗口或把它并入小地图附近——那属于实验结论之后的设计问题。**
+
+## 26.4 新增的日志字段（任务书 §13）
+
+`overlay-motion` 行新增：
+
+```text
+overlayMode=full|mini
+overlayWidth= / overlayHeight=      窗口客户区尺寸（= backbuffer 尺寸时即已匹配）
+backBufferWidth= / backBufferHeight=
+```
+
+## 26.5 A/B/A/B 怎么跑
+
+```powershell
+# 管理员 PowerShell（PresentMon 需要独占 ETW 会话）
+.\scripts\Measure-WorkIsolation.ps1 -Experiment mini-overlay
+```
+
+- 相位序列：`full-overlay-1(0) → mini-overlay-1(128) → full-overlay-2(0) → mini-overlay-2(128)`，即任务书要的 A/B/A/B。
+- 每段默认 **45s**，段前有 **4s 沉降 + 5s 预热**（都不计入统计），脚本会提示你去诊断页改掩码。
+- 输出：`out\perf\work-isolation.stats.txt`（FPS / p50 / p95 / p99 / max / >20ms / >33ms / **PresentMode**）与
+  `.phases.txt`（每段起止时间戳，供复算）。
+- 脚本会打印"两段参考相位（full）之间漂移多少"，**漂移 > 3 fps 就判定整张表不安全**——这正是任务书 §12 要的"同一次运行内交替"的护栏。
+- 运行时要求：游戏中、前台、**同一个位置/视角/场景**、不战斗不开菜单，`开始探索` 已按、**大地图关闭**（否则 B 相位不会生效）。
+
+## 26.6 状态
+
+| 项 | 结果 |
+|---|---|
+| 编译 | ✅ 0 error（`ImGuiOverWindows.cpp`、`IsolationSwitches.h` 重编，`IMao-CoreHost` 链接成功） |
+| 原生测试 | ✅ `IMaoOptimizationTests` / `IMaoMarkerTests` 通过 |
+| 部署 | `C:\Dapps\IMao\IMao-CoreHost.exe` = `7EABBC5B`（21:17），旧版备份仍在 |
+| 窗口几何 / DPI / 穿透 / 跟随 / Alt-Tab | **未验证**（需要实机会话） |
+| A/B/A/B 的 FPS / p95 / p99 / >20ms | **未验证**（这就是下一步要跑的东西） |
+
+---
+
+# 27. 遗留：§25.1 的判据原本要靠推理
 
 §25.1 的判据靠"候选集 id 仍在 + 绘制数 −1"来推理，因为候选集与绘制数之间还夹着**迟滞环**（候选用 `minMapRadius+16/+48`，绘制用严格 `minMapRadius`）——单独一个点也可以因落在迟滞环里而"在候选、不被画"。
-要让它变成单因素证据，只需在同一个累加器里加一个计数：**本帧因 `isSaved` 而被跳过的候选数**（`markerSkippedCompleted`）。届时日志会直接写出"完成了 1 个点 → 跳过计数 = 1"，Phase 4 那一次实机测试可以顺带把它验掉。
+要让它变成单因素证据，只需在同一个累加器里加一个计数：**本帧因 `isSaved` 而被跳过的候选数**（`markerSkippedCompleted`）。已由 `b4f70e4` 落地（`overlay-motion` 行新增 `markerSkippedCompleted=`），届时日志会直接写出"完成了 1 个点 → 跳过计数 = 1"；Phase 4 那一次实机测试可以顺带把它验掉。
 
 
 
