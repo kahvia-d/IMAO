@@ -1460,11 +1460,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// asked every second and without an attempt cap (the cap is what used to leave the
 		// marker frozen on the terrain for the rest of the session).
 		if (!stalledTracker && coordinateRecovery.FailedRecognitionBatches() < 2) return;
-		// A stalled tracker needs the position every second; recovery can afford two seconds -
-		// the readout costs 60~150 ms on its own worker, and one mangled read ("-451286,52":
-		// the comma between x and y was lost, which no parser repair can split) must not cost
-		// five seconds of standing still with a perfectly clear coordinate on screen.
-		const auto cadence = stalledTracker ? std::chrono::seconds(1) : std::chrono::seconds(2);
+		// 频率就是精度：用户实测飞行 50~70 单位/秒，而小地图半径只有约 97 单位（123px / 1.268），
+		// 所以 1 秒的读数间隔 = 一次滞后吃掉大半个小地图，边缘标记反复进出就是闪烁。
+		// 读数本身只要 60~150 ms（在独立 worker 上），取 250 ms 让滞后降到约 25 单位；
+		// ocrRequestInFlight 保证不会堆积，推理跟不上时自然降速。
+		const auto cadence = stalledTracker ? std::chrono::milliseconds(250) : std::chrono::milliseconds(500);
 		if (ocrAttemptsForRecovery > 0 && now - lastOcrSubmitAt < cadence) return;
 		CoordinateRecognitionRequest ocrRequest;
 		ocrRequest.sessionId = coordinateSessionId;
