@@ -395,9 +395,12 @@ winrt::IAsyncAction App::Start() {
 			imguiWindowsWidth = rect.right * 0.3;
 
 			if (co_await GetMinMapPlayerROC(currentSnapshot, playerROC, minMapRadius)) {
+				// Drawing only: the readout corrects the position in steps the eye reads as a flicker,
+				// so the drawn one approaches it instead of snapping.
+				Coordinate drawnPlayerROC = SmoothMinimapPlayerROC(playerROC);
 				if (enabledMinMapShowItem) {
-					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
-					DrawRouteOnMinMap::GetRoutePointsScreen(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
+					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, drawnPlayerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
+					DrawRouteOnMinMap::GetRoutePointsScreen(rect, drawnPlayerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
 				}
 				else {
 					DrawItemOnMinMap::ClearNearItemsData();
@@ -1773,6 +1776,28 @@ void App::SuspendPlayerLocationForMapTransition() {
 	Diagnostics::Record("player-location-suspended", "reason=map-ui-transition lock=" +
 		std::to_string(playerLocationLock.valid) + " scene=" +
 		std::to_string(playerLocationLock.sceneId));
+}
+
+Coordinate App::SmoothMinimapPlayerROC(const Coordinate& target) {
+	// A fixed fraction of the remaining difference per 100 ms: a real walk is followed with well under
+	// a unit of lag, while a 36-unit readout correction is spread over ~0.3 s instead of one frame.
+	// A scene change or a long gap snaps - the position jumped for a reason and hiding it would lie.
+	const auto now = std::chrono::steady_clock::now();
+	const bool snap = smoothedMinimapPlayerROCAt == std::chrono::steady_clock::time_point{} ||
+		smoothedMinimapSceneId != playerCurrentSceneId;
+	const double elapsed = snap ? 0.0 : std::min(0.25,
+		std::chrono::duration<double>(now - smoothedMinimapPlayerROCAt).count());
+	smoothedMinimapPlayerROCAt = now;
+	smoothedMinimapSceneId = playerCurrentSceneId;
+	if (elapsed <= 0.0) {
+		smoothedMinimapPlayerROC = target;
+		return smoothedMinimapPlayerROC;
+	}
+	constexpr double kTimeConstantSeconds = 0.12;
+	const double blend = 1.0 - std::exp(-elapsed / kTimeConstantSeconds);
+	smoothedMinimapPlayerROC.x += (target.x - smoothedMinimapPlayerROC.x) * blend;
+	smoothedMinimapPlayerROC.y += (target.y - smoothedMinimapPlayerROC.y) * blend;
+	return smoothedMinimapPlayerROC;
 }
 
 bool App::LocalTrackingStalled(CoordinateRecoveryController::Clock::time_point now) const {
