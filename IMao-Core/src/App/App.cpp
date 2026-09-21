@@ -1150,33 +1150,6 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						return left->previousDistance < right->previousDistance;
 					});
 				ordered.insert(ordered.end(), repaired.begin(), repaired.end());
-				// 没有可信先验时场景是未知的（同一个数字串在不同场景里指向不同的地方），
-				// 让地图像素在已批准的场景之间裁决：实测乘霄山正确处 0.56~0.65、别处 ~0.0，
-				// 差距极大，足以在候选之间选出正确的场景（也顺带排掉符号变体里的错项）。
-				constexpr double kArbitrationFloor = 0.35;
-				constexpr double kArbitrationMargin = 0.20;
-				auto arbitrate = [&](const Coordinate& position, int& sceneId, double& best, double& second) {
-					sceneId = 0;
-					best = -1.0;
-					second = -1.0;
-					for (const int candidateScene : Scene::sceneIds) {
-						if (!Scene::IsRuntimeApproved(candidateScene)) continue;
-						if (Scene::Find(candidateScene) == nullptr) continue;
-						const auto mapped = MapCoordinate::IdentifyCoorToImgMapCoord(position, candidateScene);
-						const auto dense = DenseMapConfirmer::Confirm(normalizedMinimap, candidateScene,
-							{ mapped.x, mapped.y }, Scene::MinimapScale(candidateScene));
-						if (!dense.available) continue;
-						if (dense.score > best) {
-							second = best;
-							best = dense.score;
-							sceneId = candidateScene;
-						}
-						else if (dense.score > second) {
-							second = dense.score;
-						}
-					}
-				};
-				int arbitrations = 0;
 				for (const auto* candidate : ordered) {
 					OcrCoordinateGate::Reading reading;
 					reading.valid = true;
@@ -1189,7 +1162,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						double probeJump = 0.0;
 						if (!OcrCoordinateGate::Acceptable(reading, lock, ocrCoordinateGate.Settings(), &probeJump)) {
 							// 几何上说不通（超预算 / 场景不同：载具高速或跨图传送）→ 这一次按
-							// 没有可信先验处理，走下面的地图像素裁决（裁决赢家可无视场景与位移）。
+							// 没有可信先验处理：下面由"正确坐标记录"决定它能不能用。
 							lock.valid = false;
 						}
 					}
@@ -1222,28 +1195,6 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						reading.sceneId = coordinateTrust.Scene();
 						reading.mapCoordinate = chosen->mapCoordinate;
 						reading.arbitrated = false;
-						if (true) continue;   // the pixel arbitration is retired; the trust design decides
-						++arbitrations;
-						double best = 0.0;
-						double second = 0.0;
-						int sceneId = 0;
-						arbitrate(candidate->Position(), sceneId, best, second);
-						const double margin = best - std::max(second, 0.0);
-						if (sceneId == 0 || best < kArbitrationFloor || margin < kArbitrationMargin) {
-							Diagnostics::Record("coordinate-publish-rejected", "reason=no-scene world=" + world +
-								" score=" + std::to_string(reading.score) +
-								" best=" + std::to_string(best) + " second=" + std::to_string(second) +
-								" margin=" + std::to_string(margin) +
-								" correction=" + (candidate->correction.empty() ? "none" : candidate->correction));
-							continue;
-						}
-						reading.sceneId = sceneId;
-						reading.mapCoordinate = MapCoordinate::IdentifyCoorToImgMapCoord(candidate->Position(), sceneId);
-						reading.arbitrated = true;
-						Diagnostics::Record("coordinate-scene-arbitrated", "scene=" + std::to_string(sceneId) +
-							" world=" + world + " best=" + std::to_string(best) +
-							" second=" + std::to_string(second) + " margin=" + std::to_string(margin) +
-							" correction=" + (candidate->correction.empty() ? "none" : candidate->correction));
 					}
 					double jumpUnits = 0.0;
 					if (!OcrCoordinateGate::Acceptable(reading, lock, ocrCoordinateGate.Settings(), &jumpUnits)) {
@@ -1449,7 +1400,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// asked every second and without an attempt cap (the cap is what used to leave the
 		// marker frozen on the terrain for the rest of the session).
 		if (!stalledTracker && coordinateRecovery.FailedRecognitionBatches() < 2) return;
-		const auto cadence = stalledTracker ? std::chrono::seconds(1) : std::chrono::seconds(5);
+		// A stalled tracker needs the position every second; recovery can afford two seconds -
+		// the readout costs 60~150 ms on its own worker, and one mangled read ("-451286,52":
+		// the comma between x and y was lost, which no parser repair can split) must not cost
+		// five seconds of standing still with a perfectly clear coordinate on screen.
+		const auto cadence = stalledTracker ? std::chrono::seconds(1) : std::chrono::seconds(2);
 		if (ocrAttemptsForRecovery > 0 && now - lastOcrSubmitAt < cadence) return;
 		CoordinateRecognitionRequest ocrRequest;
 		ocrRequest.sessionId = coordinateSessionId;
@@ -1988,14 +1943,26 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
 	// may be the player browsing another region, so only this one may name the region.
 	if (bigMapSolvePending) {
 		bigMapSolvePending = false;
-		const Coordinate regionCenter = ImgMapToWorldCoordinate(
-			{ result.centerMapCoordinate.x, result.centerMapCoordinate.y }, sceneId);
-		coordinateTrust.NoteBigMapSolve(sceneId,
-			{ result.centerMapCoordinate.x, result.centerMapCoordinate.y },
-			std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
-		Diagnostics::Record("coordinate-region-confirmed", "source=big-map scene=" +
-			std::to_string(sceneId) + " world=" + std::to_string(regionCenter.x) + "," +
-			std::to_string(regionCenter.y));
+		const double secondsAt =
+			std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+		// Only the arrow knows where the player is; the viewport centre is where the player
+		// dragged the map.  Recording a panned centre as a certainly-correct coordinate would
+		// poison the very record the readout is validated against (in the 11:03 field log the
+		// two were 700 map units apart), so without an arrow the region is named alone.
+		if (viewportResumeHint.has_value() && viewportResumeHint->position.sceneId == sceneId) {
+			const Coordinate playerWorld = ImgMapToWorldCoordinate(
+				{ viewportResumeHint->position.x, viewportResumeHint->position.y }, sceneId);
+			coordinateTrust.NoteBigMapSolve(sceneId,
+				{ viewportResumeHint->position.x, viewportResumeHint->position.y }, secondsAt);
+			Diagnostics::Record("coordinate-region-confirmed", "source=big-map scene=" +
+				std::to_string(sceneId) + " world=" + std::to_string(playerWorld.x) + "," +
+				std::to_string(playerWorld.y) + " position=player-arrow");
+		}
+		else {
+			coordinateTrust.NoteBigMapRegion(sceneId);
+			Diagnostics::Record("coordinate-region-confirmed", "source=big-map scene=" +
+				std::to_string(sceneId) + " world=unknown position=no-player-arrow");
+		}
 		RuntimeStatus::SetLocalizationHint({});
 	}
 	Diagnostics::Record("map-viewport-result", "accepted=true scope=" +

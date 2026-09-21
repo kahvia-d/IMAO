@@ -225,7 +225,13 @@ void TestMinimapResumePolicy() {
     policy.Begin(39, std::nullopt, viewport, 8, 9, start);
     Expect(policy.Size() == 0, "a previous full-map session cannot supply a viewport hint");
     policy.Begin(39, std::nullopt, viewport, 7, 10, start);
-    Expect(policy.Size() == 0, "panning or zooming invalidates an uncorrected old viewport center");
+    Expect(policy.Size() == 1,
+        "a newer bridge revision still admits the hint: the revision is a frame counter, and demanding "
+        "equality made the recent-viewport hint unusable one frame after it was recorded");
+    policy.Begin(39, std::nullopt, viewport, 7, 8, start);
+    Expect(policy.Size() == 0, "a hint from a revision that was never observed cannot seed recovery");
+    policy.Begin(39, std::nullopt, viewport, 8, 9, start);
+    Expect(policy.Size() == 0, "a previous full-map session cannot supply a viewport hint");
     policy.Begin(39, trusted, std::nullopt, 7, 9, start + std::chrono::seconds(221));
     Expect(policy.Size() == 0, "repeated map openings do not keep an expired player location alive");
 

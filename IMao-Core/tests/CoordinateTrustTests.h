@@ -30,6 +30,17 @@ inline void TestCoordinateTrust(void (*check)(bool, const std::string&)) {
     trust.NoteBigMapSolve(9, toMap(500.0, 500.0), 101.0);
     check(trust.Scene() == 9, "the first big-map solve after opening names the region");
 
+    // 找不到玩家箭头时只命名区域、**不写坐标记录**：视口中心是玩家拖到的地方，不是玩家位置
+    // （2026-09-21 11:03 实测两者相差约 700 imgMap 单位，写进去就污染了记录）
+    Trust regionOnly;
+    regionOnly.NoteBigMapRegion(2);
+    check(regionOnly.HasScene() && regionOnly.Scene() == 2,
+        "a big-map solve without a player arrow still names the region");
+    check(regionOnly.Record().empty(),
+        "a panned viewport centre is never recorded as a correct coordinate");
+    check(!regionOnly.Choose(2, { candidate(0.0, 0.0, 0.99f) }, 10.0).has_value(),
+        "with the region named but no record nothing is published from the readout");
+
     // 小地图失败后：OCR 候选必须落在记录的可达范围内
     Trust moving;
     moving.NoteVisualMatch(8, toMap(0.0, 0.0), 200.0);

@@ -97,8 +97,16 @@ public:
         generation_ = generation;
         if (trusted.has_value() && trusted->source == MinimapResumeSource::TrustedMinimap && Fresh(*trusted, now))
             entries_[count_++] = Entry{ *trusted };
+        // The generation identifies the map session, and that is what must match.  The revision
+        // is the *bridge frame counter*, not a pan/zoom generation: requiring equality dropped
+        // the hint one frame after it was recorded (2026-09-21 11:03 field log: the hint carried
+        // revision 11 while the observed revision had reached 13, so closing the map produced
+        // hints=0 and the minimap had nothing to revalidate against).  A hint cannot be newer
+        // than what has been observed, and its age is capped by Fresh() - it is a bounded
+        // retrieval prior whose candidate must still be confirmed by a second captured frame.
         if (viewport.has_value() && viewport->source == MinimapResumeSource::MapViewport && Fresh(*viewport, now) &&
-            viewport->viewportGeneration == viewportGeneration && viewport->viewportRevision == viewportRevision)
+            viewport->viewportGeneration == viewportGeneration &&
+            viewport->viewportRevision <= viewportRevision)
             entries_[count_++] = Entry{ *viewport };
     }
 

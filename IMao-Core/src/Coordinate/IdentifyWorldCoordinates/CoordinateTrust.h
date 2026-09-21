@@ -50,6 +50,15 @@ public:
         Append(sceneId, map, secondsAt);
     }
 
+    // 只命名区域、不写记录：开图那一次解算证明了"玩家在这个区域"，但**视口中心是玩家自己拖到
+    // 的地方**，不是玩家位置（只有玩家箭头知道）。找不到箭头时只能这样命名区域——
+    // 11:03 那场实测两者相差约 700 imgMap 单位，记进去就污染了"正确坐标记录"。
+    void NoteBigMapRegion(int sceneId) {
+        if (sceneId <= 0) return;
+        sceneId_ = sceneId;
+        hasScene_ = true;
+    }
+
     bool HasScene() const { return hasScene_; }
     int Scene() const { return hasScene_ ? sceneId_ : 0; }
     const std::deque<Entry>& Record() const { return record_; }
