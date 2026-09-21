@@ -958,7 +958,12 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		return true;
 	};
 
-	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition, bool relative = false) {
+	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition, bool relative = false, bool visual = true) {
+		// Only a visual source is a certain state; a coordinate publish passes visual=false and
+		// must not touch T or the record (an OCR misread may never move the region).
+		if (visual && candidate.sceneId > 0)
+			coordinateTrust.NoteVisualMatch(candidate.sceneId, candidate.mapCenter,
+				std::chrono::duration<double>(now.time_since_epoch()).count());
         if (recognition || playerCurrentSceneId != candidate.sceneId)
             minimapTerrainScale = Scene::MinimapScale(candidate.sceneId);
         if(recognition || playerCurrentSceneId != candidate.sceneId) ++routeFixContinuity;
@@ -1216,7 +1221,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 							" jumpUnits=" + std::to_string(decision.jumpUnits) +
 							" agreements=" + std::to_string(decision.agreementCount) +
 							" request=" + std::to_string(ocrResult.requestId));
-						commitVisualPosition(published, false);
+						commitVisualPosition(published, false, false, false);
 					}
 					else {
 						Diagnostics::Record("coordinate-publish-rejected", "reason=" + decision.reason +

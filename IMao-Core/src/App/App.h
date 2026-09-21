@@ -12,6 +12,7 @@
 #include "..\Feature\RuntimeFeatureRepository.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateRecoveryController.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\OcrCoordinateGate.h"
+#include "..\Coordinate\IdentifyWorldCoordinates\CoordinateTrust.h"
 #include "..\Coordinate\VisualLocalization\GlobalVisualLocalizer.h"
 #include "MapUiStateController.h"
 #include "MapUiVisualDetector.h"
@@ -303,6 +304,8 @@ private:
     // so while the visual lock is doubtful it may publish one directly - but only through
     // this gate (score, jump budget, agreement streak).  See OcrCoordinateGate.h for the
     // measured error modes that shaped it.
+    // Region T and the record of coordinates that were certainly correct (CoordinateTrust.h).
+    CoordinateTrust::Trust coordinateTrust;
     OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
