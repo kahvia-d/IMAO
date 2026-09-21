@@ -47,7 +47,8 @@
                     <ToggleSwitch x:Name="Setting_MinMapShowItem" Header="小地图点位" Toggled="ToggleSwitch_MinMapShowItem" />
                     <ToggleSwitch x:Name="Setting_MapShowItem" Header="大地图点位" Toggled="ToggleSwitch_MapShowItem" />
                     <ToggleSwitch x:Name="Setting_SetVisibleSavedPoints" Header="显示已完成点" Toggled="ToggleSwitch_SetVisibleSavedPoints" />
-                    <ToggleSwitch x:Name="ToggleSwitch_StatusBar" Header="游戏内状态条" Toggled="ToggleSwitch_StatusBar_Toggled" />
+                    <ToggleSwitch x:Name="ToggleSwitch_StatusBar" Header="状态条 · 小地图" Toggled="ToggleSwitch_StatusBar_Toggled" />
+                    <ToggleSwitch x:Name="ToggleSwitch_MapStatusBar" Header="状态条 · 大地图" Toggled="ToggleSwitch_MapStatusBar_Toggled" />
                     <ToggleSwitch x:Name="ToggleSwitch_StatusBall" Header="小地图状态球" Toggled="ToggleSwitch_StatusBall_Toggled" />
                 </controls:WrapPanel>
                 <Border Height="1" Background="{StaticResource IMaoBorderBrush}" />

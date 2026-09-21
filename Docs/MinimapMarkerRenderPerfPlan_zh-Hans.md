@@ -1383,6 +1383,34 @@ Copy-Item 'C:\Dapps\IMao\resources.before-mini-switch-20260921.pri' 'C:\Dapps\IM
 
 **验证状态**：编译 0 error、两套原生测试通过、pri 字节验证通过（含"128 已废弃"、仍含"256=强制整屏覆盖层"与"小地图状态球"）；**两个开关的实机行为未验证**。
 
+## 29.9 第四轮：状态条按"大地图内 / 大地图外"再拆开（2026-09-21 23:1x）
+
+**玩家要求**：把"大地图界面内的状态条"和"大地图之外的状态条"分成两个设置，自由组合。
+
+**实现**：状态显示从两个开关变成**三个独立开关**。
+
+| 设置项 | 字段 | 默认 | 生效范围 |
+|---|---|---|---|
+| 状态条 · 小地图 | `statusBarEnabled` | 开 | `gameState != "bigMap"` 的每一帧（含启动、过图过渡） |
+| 状态条 · 大地图 | `mapStatusBarEnabled`（**新增**） | 开 | `gameState == "bigMap"` |
+| 小地图状态球 | `statusBallEnabled` | 关 | 仅小地图是被检测到的当前状态时 |
+
+- `RuntimeStatusBar::Prepare` 用 `RuntimeStatus::Snapshot().gameState` 决定这一帧的栏归哪个开关管；`layout.available` / `layout.visible` 的拆分保留（球只看 available，栏才看 visible）。
+- 窗口并集仍然只看「状态条 · 小地图」（大地图状态本来就是整屏窗口）。
+- 设置页把原来的「游戏内状态条」改名为 **「状态条 · 小地图」**，新增 **「状态条 · 大地图」**（持久化键沿用/新增，不改用户数据格式版本）。
+- ⚠️ **迁移**：`mapStatusBarEnabled` 默认开 ⟹ 原来把状态条整个关掉的玩家，大地图里会重新出现状态栏，需要一并关掉。已写进设计书。
+
+**部署与验证**：
+
+| 文件 | 版本 | 备份 |
+|---|---|---|
+| `IMao-CoreHost.exe` | `A0BC8836`（23:15） | `IMao-CoreHost.before-perf-phase12-20260921.exe` |
+| `IMao-WinUI.dll` | `6D8CE989`（23:16） | `IMao-WinUI.before-split-bars-20260921.dll` |
+| `resources.pri` | `C31B36B1`（23:16） | `resources.before-split-bars-20260921.pri` |
+
+编译 0 error、两套原生测试通过；字节验证：新 dll 含 `mapStatusBarEnabled`（旧的不含）、新 pri 含 `状态条 · 大地图` 与 `小地图状态球`，负对照不命中。
+**未验证**：三个开关的实机组合行为、并集窗口收益、DPI 三档。
+
 
 **副作用（要留意）**：修好之后，**冷启动阶段不再有中间那条文字状态栏，只有一个球**。这是 D1b（保持纯颜色）的直接后果——文字提示只在主窗口或掩码 `128` 的完整状态栏模式下可见。
 

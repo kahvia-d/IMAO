@@ -58,6 +58,9 @@ public sealed class CoreRuntimeStatus
     [JsonPropertyName("statusBarEnabled")]
     public bool StatusBarEnabled { get; init; } = true;
 
+    [JsonPropertyName("mapStatusBarEnabled")]
+    public bool MapStatusBarEnabled { get; init; } = true;
+
     [JsonPropertyName("statusBallEnabled")]
     public bool StatusBallEnabled { get; init; }
 
