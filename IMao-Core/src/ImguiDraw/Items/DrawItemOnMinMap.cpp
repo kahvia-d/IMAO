@@ -60,7 +60,8 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & play
     minMapClipRadius = minMapRadius;
     minMapMarkerRadius = std::max(8.0, w_Rect.right * 0.012 / 2);
     minMapCenterPoint = ScreenCoordinate::MinMapCircleCenterScreenCoordinate(w_Rect);
-    if(GetBasicDataBySenceId(SceneId)) {
+    const bool sceneDataKnown = GetBasicDataBySenceId(SceneId);
+    if(sceneDataKnown) {
         nearItemsDatas = GetAndFilterItemsData(w_Rect, playerROC, minMapRadius, terrainScale);
 		RuntimeStatus::SetMinimapMarkerCount(static_cast<int>(nearItemsDatas.size()));
         if (Diagnostics::Enabled()) {
@@ -74,6 +75,20 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & play
                     " samples=" + DescribeMarkerSample(nearItemsDatas));
                 lastReport = now;
             }
+        }
+    }
+    // Not gated on Diagnostics::Enabled(): that flag is the *screenshot* opt-in, so in every
+    // ordinary session the only record of what the minimap actually drew was silent.  One line a
+    // second is what tells a flicker apart from a marker set that legitimately changed.
+    {
+        static auto lastNearReport = chrono::steady_clock::time_point{};
+        const auto now = chrono::steady_clock::now();
+        if (now - lastNearReport >= chrono::seconds(1)) {
+            lastNearReport = now;
+            Diagnostics::Record("minimap-near-items", "scene=" + to_string(SceneId) +
+                " sceneData=" + to_string(sceneDataKnown) + " markers=" +
+                to_string(nearItemsDatas.size()) + " playerROC=" + to_string(playerROC.x) + "," +
+                to_string(playerROC.y) + " radius=" + to_string(minMapRadius));
         }
     }
 }

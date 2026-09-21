@@ -699,7 +699,20 @@ int ImGuiOverWindows::start()
                         drewMinimap = true;
                         presented.motion = motion;
                         ++attachedFrames;
-                    } else ++trackingMisses;
+                    } else {
+                        ++trackingMisses;
+                        // An unattached frame draws neither markers nor route.  This is the only
+                        // record of that (the marker-count record is gated on the screenshot
+                        // opt-in), and it is what separates "the overlay blinked" from "the
+                        // marker set changed".
+                        static auto lastDropReport = std::chrono::steady_clock::time_point{};
+                        const auto dropNow = std::chrono::steady_clock::now();
+                        if (dropNow - lastDropReport >= std::chrono::seconds(1)) {
+                            lastDropReport = dropNow;
+                            Diagnostics::Record("minimap-overlay-drop", "reason=no-attach frame=" +
+                                std::to_string(frame->frameId) + " misses=" + std::to_string(trackingMisses));
+                        }
+                    }
                 }
             }
             if (!mapEligible) mapMotion.Reset();
