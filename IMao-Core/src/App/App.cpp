@@ -1183,6 +1183,25 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					reading.valid = true;
 					reading.score = candidate->modelScore;
 					const std::string world = std::to_string(candidate->x) + "," + std::to_string(candidate->y);
+					// 读数最常见的错法是**丢掉开头那个负号**：`-423` 读成 `423`，分数 0.983、连续两次还会
+					// 一起错（12:41 实测 `423,1183` 与 `424,1293`），所以"两次读数一致"拦不住它；位移预算
+					// 只在 lock 新鲜时拦得住——那次 lock 已过 2.2 秒，预算涨到 880 > 863，就被放进来了，
+					// 于是位置在相距 1031 单位（一个瓦片栅格）的两点之间来回翻，标记就在中心一闪一闪。
+					// 这个错法的**签名是精确的**：候选的世界坐标正好是当前位置的相反数。直接丢掉。
+					if (playerLocationLock.valid && playerLocationLock.sceneId == coordinateTrust.Scene()) {
+						const Coordinate expected = ImgMapToWorldCoordinate(
+							playerLocationLock.mapCoordinate, playerLocationLock.sceneId);
+						const bool xFlipped = std::abs(candidate->x + expected.x) <= 60.0 &&
+							std::abs(candidate->y - expected.y) <= 200.0;
+						const bool yFlipped = std::abs(candidate->y + expected.y) <= 60.0 &&
+							std::abs(candidate->x - expected.x) <= 200.0;
+						if (xFlipped || yFlipped) {
+							Diagnostics::Record("coordinate-publish-rejected", "reason=sign-flip world=" + world +
+								" expected=" + std::to_string(expected.x) + "," + std::to_string(expected.y) +
+								" score=" + std::to_string(reading.score));
+							continue;
+						}
+					}
 					if (lock.valid) {
 						reading.sceneId = lock.sceneId;
 						reading.mapCoordinate =
