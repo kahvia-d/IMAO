@@ -338,6 +338,10 @@ private:
     std::chrono::steady_clock::time_point lastPredictionLogAt{};
     // 渲染位置那条路（外推 / 隐藏）的限速日志
     std::chrono::steady_clock::time_point lastRenderPredictionLogAt{};
+    // 渲染用的 ROC 位置（外推目标 + 回弹收敛的状态）。权威位置不受它影响。
+    Coordinate drawnMinimapROC{};
+    int drawnMinimapSceneId = 0;
+    std::chrono::steady_clock::time_point drawnMinimapAt{};
     OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being

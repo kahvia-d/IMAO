@@ -463,12 +463,13 @@ winrt::IAsyncAction App::Start() {
 				const double fixAgeSeconds = std::chrono::duration<double>(renderNow - lastTrustedConfirmAt).count();
 				bool renderTrusted = true;
 				std::string renderNote = "authoritative";
+				Coordinate renderTargetROC = playerROC;
 				if (playerCurrentSceneId > 0 && fixAgeSeconds > 0.25) {
 					Coordinate predictedMap{};
 					double predictedSpeed = 0.0;
 					const double secondsAt = std::chrono::duration<double>(renderNow.time_since_epoch()).count();
 					if (coordinateTrust.PredictAt(playerCurrentSceneId, secondsAt, predictedMap, predictedSpeed)) {
-						playerROC = RelativeCoordinates::ImgMapCoordToROC(predictedMap, playerCurrentSceneId);
+						renderTargetROC = RelativeCoordinates::ImgMapCoordToROC(predictedMap, playerCurrentSceneId);
 						renderNote = "extrapolated";
 					}
 				}
@@ -478,15 +479,35 @@ winrt::IAsyncAction App::Start() {
 					renderTrusted = false;
 					renderNote = "hidden-stale";
 				}
+				// A：把"外推 → 真值"的回弹摊开，而不是一步跳回去。位置层已经有外推在跟着你动，
+				// 这里收敛的只是**残差**（实测中位 3~7 单位），所以不会像上一版平滑那样把真实移动拖住；
+				// 大位移（>40 单位）仍然立即吸附——那是真实移动/传送，不是预测误差。
+				const bool drawnSceneChanged = drawnMinimapSceneId != playerCurrentSceneId;
+				const double drawnElapsed = drawnMinimapAt == std::chrono::steady_clock::time_point{} ? 0.0 :
+					std::min(0.25, std::chrono::duration<double>(renderNow - drawnMinimapAt).count());
+				drawnMinimapAt = renderNow;
+				drawnMinimapSceneId = playerCurrentSceneId;
+				const double drawnGap = std::hypot(renderTargetROC.x - drawnMinimapROC.x,
+					renderTargetROC.y - drawnMinimapROC.y);
+				if (drawnSceneChanged || drawnElapsed <= 0.0 || drawnGap > 40.0) {
+					drawnMinimapROC = renderTargetROC;
+				}
+				else {
+					constexpr double kRenderConvergeSeconds = 0.08;
+					const double blend = 1.0 - std::exp(-drawnElapsed / kRenderConvergeSeconds);
+					drawnMinimapROC.x += (renderTargetROC.x - drawnMinimapROC.x) * blend;
+					drawnMinimapROC.y += (renderTargetROC.y - drawnMinimapROC.y) * blend;
+				}
 				if (renderNow - lastRenderPredictionLogAt >= std::chrono::seconds(1)) {
 					lastRenderPredictionLogAt = renderNow;
 					Diagnostics::Record("minimap-render-position", "mode=" + renderNote +
 						" fixAgeMs=" + std::to_string(static_cast<long long>(fixAgeSeconds * 1000.0)) +
-						" drawn=" + std::to_string(renderTrusted));
+						" drawn=" + std::to_string(renderTrusted) +
+						" settleGap=" + std::to_string(drawnGap));
 				}
 				if (enabledMinMapShowItem && renderTrusted) {
-					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
-					DrawRouteOnMinMap::GetRoutePointsScreen(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
+					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, drawnMinimapROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
+					DrawRouteOnMinMap::GetRoutePointsScreen(rect, drawnMinimapROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
 				}
 				else {
 					DrawItemOnMinMap::ClearNearItemsData();
@@ -1063,6 +1084,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	};
 
 	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition, bool relative = false, bool visual = true) {
+		// B：每次提交都记下它相对上一个可信位置的位移与来源，用来钉死"单秒跳 120~377 单位"是哪条路。
+		double commitJumpUnits = -1.0;
 		// 用户的轨迹设计推广到**所有来源**：12:41 那次是读数丢了负号，13:08 这次却是局部匹配自己跑到一个
 		// 瓦片之外（578 次 tracked 提交里混进 4 次 x 翻号）——两者都不符合记录数组的趋势。有轨迹时按趋势
 		// 否决并**不写入数组**（错点因此污染不了趋势）；没有轨迹（条目不足/过期）就照旧放行，
@@ -1103,6 +1126,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			// 与读数闸门同一套单位（世界单位）：map 空间的距离要除以该场景的比例，否则预算会被放宽 ~20%
 			const double jump = std::hypot(candidate.mapCenter.x - playerLocationLock.mapCoordinate.x,
 				candidate.mapCenter.y - playerLocationLock.mapCoordinate.y) / 1.205;
+			commitJumpUnits = jump;
 			const double allowed = std::max(120.0, elapsed * CoordinateTrust::kMaximumSpeedUnitsPerSecond);
 			if (jump > allowed) {
 				Diagnostics::Record("position-commit-rejected", "reason=jump scene=" +
@@ -1193,7 +1217,9 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			" quality=" + std::string(GlobalVisualLocalizer::QualityName(candidate.quality)) +
 			" inliers=" + std::to_string(candidate.inlierCount) +
 			" ratio=" + std::to_string(candidate.inlierRatio) +
-			" error=" + std::to_string(candidate.medianReprojectionError));
+			" error=" + std::to_string(candidate.medianReprojectionError) +
+			" jumpUnits=" + std::to_string(commitJumpUnits) + " source=" +
+			std::string(recognition ? "recognition" : (visual ? (relative ? "relative" : "tracked") : "readout")));
 		RuntimeStatus::SetLocalization("tracking", recognition
 			? std::string(GlobalVisualLocalizer::QualityName(candidate.quality)) : "local-verified",
 			relative ? "小地图地形轮廓短时追踪" : "小地图定位正常");
