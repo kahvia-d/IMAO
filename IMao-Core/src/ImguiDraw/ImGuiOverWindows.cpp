@@ -30,6 +30,8 @@
 
 #include <chrono>
 #include <sstream>
+#include <algorithm>
+#include <cmath>
 
 std::atomic<HWND> ImGuiOverWindows::overWindowsHwnd{nullptr};
 std::atomic_bool ImGuiOverWindows::keepWindowHidden{false};
@@ -92,6 +94,25 @@ std::string DescribeRect(const RECT& rect) {
     return details.str();
 }
 
+// The minimap plus the overhang its own drawing needs: icons and their count badges are wider than
+// the circle, and the target hint sits below it. Padding scales with the client like every other HUD
+// size, clamped to the 30-60 px the experiment asked for, and the rectangle never leaves the client so
+// the window cannot cover desktop the game window does not own.
+RECT MiniOverlayClientRect(const RECT& gameClient) {
+    const auto area = ScreenCoordinate::SpecifyScreenCoordinate(gameClient, GameWindowsScreenData::MinMapScreenData);
+    const double padding = std::clamp(gameClient.right * 0.025, 30.0, 60.0);
+    const double left = std::min(area.leftPoint.x, area.rightPoint.x) - padding;
+    const double top = std::min(area.topPoint.y, area.bottomPoint.y) - padding;
+    const double right = std::max(area.leftPoint.x, area.rightPoint.x) + padding;
+    const double bottom = std::max(area.topPoint.y, area.bottomPoint.y) + padding;
+    RECT rect{};
+    rect.left = static_cast<LONG>(std::max(0.0, std::floor(left)));
+    rect.top = static_cast<LONG>(std::max(0.0, std::floor(top)));
+    rect.right = static_cast<LONG>(std::min<double>(gameClient.right, std::ceil(right)));
+    rect.bottom = static_cast<LONG>(std::min<double>(gameClient.bottom, std::ceil(bottom)));
+    return rect;
+}
+
 void RecordOverlayFrameDiagnostics(HWND overlayWindow, HRESULT presentResult,
     const OverlayBackBufferSize::Snapshot& buffer) {
     if (!Diagnostics::Enabled()) return;
@@ -141,6 +162,8 @@ std::uint64_t HashOverlayDrawData(const ImDrawData* drawData) {
             mixBytes(&texture, sizeof(texture));
         }
     }
+    // Which region of the drawing the viewport shows is part of the frame's identity: the mini
+    // overlay shifts the vertices into its window, so the offset is already in the bytes above.
     return hash;
 }
 
@@ -509,15 +532,34 @@ int ImGuiOverWindows::start()
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         if (!pump(maxWait))
             break;
+        // Which rectangle this frame's window has to cover is decided before it is moved. The published
+        // frame already carries the three conditions the minimap-only experiment allows: the minimap
+        // exists, the big map is closed, and minimap marker drawing is on.
+        bool miniOverlayRequested = false;
+        if (Isolation::Enabled(Isolation::kMiniOverlay)) {
+            const auto markerFrame = app.ReadOverlayFrame();
+            miniOverlayRequested = markerFrame && markerFrame->minimapVisible && !markerFrame->mapVisible;
+        }
         RECT physicalGame{};
+        // The client-space rectangle the mini window covers, and the offset its drawing is presented
+        // at. Both stay empty/zero in the normal full-client mode.
+        RECT miniClient{};
+        bool miniOverlay = false;
         if (GameRect.right > 0 && GameRect.bottom > 0) {
             // Correct position/size BEFORE NewFrame and ResizeBuffers. Verify
             // the HWND each frame, so a failed move is retried, never cached.
             // Diagnostic isolation measures what this per-frame verification costs on its own.
             const auto syncStarted = std::chrono::steady_clock::now();
+            const bool gameClientKnown = OverlayWindowBounds::GameClient(h_window, physicalGame);
+            RECT target = physicalGame;
+            if (gameClientKnown && miniOverlayRequested) {
+                miniClient = MiniOverlayClientRect(GameRect);
+                miniOverlay = miniClient.right > miniClient.left && miniClient.bottom > miniClient.top;
+                if (miniOverlay) target = {physicalGame.left + miniClient.left, physicalGame.top + miniClient.top,
+                    physicalGame.left + miniClient.right, physicalGame.top + miniClient.bottom};
+            }
             const bool synced = Isolation::Enabled(Isolation::kWindowSync) ||
-                (OverlayWindowBounds::GameClient(h_window, physicalGame) &&
-                    OverlayWindowBounds::Synchronize(overWindowsHwnd, physicalGame));
+                (gameClientKnown && OverlayWindowBounds::Synchronize(overWindowsHwnd, target));
             syncTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - syncStarted).count();
             ++syncCalls;
             if (!synced) {
@@ -599,7 +641,20 @@ int ImGuiOverWindows::start()
 
         // Input/layout and frame eligibility use the verified rendering surface,
         // not the game-client snapshot taken before processing window messages.
-        GameRect = {0, 0, static_cast<LONG>(bufferSize.after.clientWidth),
+        // The mini window's surface is only the minimap, so the drawing space has to stay the game
+        // client and the viewport is offset into it instead - every marker, route and hint coordinate
+        // keeps the meaning it has today, and only what falls outside the minimap stops being shown.
+        if (miniOverlay) {
+            RECT client{};
+            if (!GetClientRect(h_window, &client) || client.right <= 0 || client.bottom <= 0) miniOverlay = false;
+            else {
+                GameRect = {0, 0, client.right, client.bottom};
+                // Re-derived from the same fresh client size the drawing will use, so the offset and
+                // the drawing space can never disagree about where the minimap is.
+                miniClient = MiniOverlayClientRect(GameRect);
+            }
+        }
+        if (!miniOverlay) GameRect = {0, 0, static_cast<LONG>(bufferSize.after.clientWidth),
             static_cast<LONG>(bufferSize.after.clientHeight)};
 
         // Start the Dear ImGui frame. Diagnostic isolation skips the whole frame build - the draw-list
@@ -654,6 +709,13 @@ int ImGuiOverWindows::start()
                     " presentHeld=" + std::to_string(heldPresents) +
                     " holdDiagnostic=" + std::to_string(ImGuiOverWindows::HoldPresentEnabled() ? 1 : 0) +
                     " overlayRenderSkipped=" + std::to_string(skippedOverlayFrames) +
+                    // The window and buffer the frame above was drawn into, so the small-overlay
+                    // experiment can be told apart from the full-client one in the same log.
+                    " overlayMode=" + std::string(miniOverlay ? "mini" : "full") +
+                    " overlayWidth=" + std::to_string(bufferSize.after.clientWidth) +
+                    " overlayHeight=" + std::to_string(bufferSize.after.clientHeight) +
+                    " backBufferWidth=" + std::to_string(bufferSize.after.bufferWidth) +
+                    " backBufferHeight=" + std::to_string(bufferSize.after.bufferHeight) +
                     // Per-segment millisecond averages for this thread's own frame, so a split can
                     // name the expensive segment instead of the whole loop.
                     " segSyncMs=" + std::to_string(syncCalls ? syncTotalMs / syncCalls : 0.0) +
@@ -775,6 +837,24 @@ int ImGuiOverWindows::start()
         // Skipped together with the frame build, because ImGui requires the calls to be paired.
         if (buildOverlayFrame) ImGui::Render();
         ImDrawData* drawData = ImGui::GetDrawData();
+        // The mini window shows one region of the same client-space drawing. Naming that region
+        // through DisplayPos is not available here: this ImGui hardcodes the main viewport's position
+        // to the origin, so every draw list's clip rectangle is built from (0,0) while the DX11
+        // backend subtracts DisplayPos from it - a non-zero offset would scissor against the wrong
+        // rectangle. Moving the vertices keeps the viewport contract intact: the clip rectangles
+        // already describe the window, and the drawing is simply shifted into it. ImGui resets these
+        // buffers at the start of every frame, so the shift is never cumulative.
+        if (miniOverlay && drawData != nullptr) {
+            const float offsetX = static_cast<float>(-miniClient.left);
+            const float offsetY = static_cast<float>(-miniClient.top);
+            for (int list = 0; list < drawData->CmdListsCount; ++list) {
+                ImDrawList* commands = drawData->CmdLists[list];
+                for (int vertex = 0; vertex < commands->VtxBuffer.Size; ++vertex) {
+                    commands->VtxBuffer.Data[vertex].pos.x += offsetX;
+                    commands->VtxBuffer.Data[vertex].pos.y += offsetY;
+                }
+            }
+        }
         // The window is the whole game screen, so its cost does not depend on how much is drawn inside
         // it; only whether anything changed does.
         const bool hasContent = drawData != nullptr && drawData->TotalVtxCount > 0;

@@ -31,8 +31,14 @@ inline constexpr int kWindowSync = 1 << 5;
 // costs 13-16 fps (a blt-model surface needs an extra copy from DWM), and it is measured by comparing
 // the baseline against the baseline with this bit set. Applies when the overlay session starts.
 inline constexpr int kOverlayComposition = 1 << 6;
+// Not a "switch off" either: the window, the swap chain and the viewport become the minimap and its
+// overhang instead of the whole game client, which is what the tool maintains - and what the desktop
+// compositor has to keep blending - for a handful of markers in one corner. Applies only while the
+// minimap is the visible map; opening the big map returns the full-screen window, so viewport
+// matching and the map markers keep the surface they have today.
+inline constexpr int kMiniOverlay = 1 << 7;
 inline constexpr int kAll = kCapture | kGameStateDetection | kLocalization | kOverlayRender |
-    kOverlayClear | kWindowSync | kOverlayComposition;
+    kOverlayClear | kWindowSync | kOverlayComposition | kMiniOverlay;
 
 inline std::atomic_int switches{ 0 };
 
@@ -55,6 +61,7 @@ inline const char* Describe(int value) {
     case kOverlayClear: return "关闭覆盖层整屏清屏";
     case kWindowSync: return "关闭窗口几何同步";
     case kOverlayComposition: return "改用 DirectComposition 呈现";
+    case kMiniOverlay: return "小地图局部覆盖层（只在小地图状态生效）";
     default: return "自定义组合";
     }
 }
@@ -70,6 +77,7 @@ inline const char* DescribeAscii(int value) {
     case kOverlayClear: return "no-overlay-clear";
     case kWindowSync: return "no-window-sync";
     case kOverlayComposition: return "overlay-composition";
+    case kMiniOverlay: return "mini-overlay";
     default: return "custom";
     }
 }
