@@ -59,10 +59,14 @@ GPU→CPU 回读**以游戏呈现节奏持续运行且不节流。出处：`Game
 | 4.1 | 已定未做 | **构建不可复现**：候选每次重编译，`IMao-CoreHost.exe` 与托管 dll 字节都变，所以每版地板是 `ui` + `core` ≈ **56 MB**（实测） | 原生加 `/Brepro`、去掉嵌入的绝对路径；托管固定 MVID 与 `deps.json` → 目标压到 ≈30 MB |
 | 4.2 | 待决策 | `runtime` 片是否拆成 `runtime-dotnet` / `runtime-native`（换 .NET/Paddle 时要下 142 MB） | 等下一次 .NET 或 Paddle 升级前定 |
 | 4.3 | 待决策 | **跨渠道引用**：内容与某资源包完全一致的分片，能否直接沿用那个资源包的 URL | 纯发布侧改动；上传带宽吃紧时优先做 |
-| 4.4 | 待决策 | 分片级断点续传（现在单片失败整次重试、从零） | 看用户实际失败率再定 |
-| 4.5 | 新发现 | 下一版发布若不带 `-ManualInstallZip`，新用户首次安装只能拿 `2026.9.20.1` 的包（它的图标是旧的） | 下一次发布带上完整 zip；README/发行说明里说明"任何认识分片的 zip 都能增量升级" |
+| 4.4 | 待决策 | 分片级断点续传（现在单片失败整次重试、从零） | 2026-09-21 实测：472 MB 离线包上传时 TLS 握手超时，重跑发布脚本按**已上传资产的名字与摘要**跳过、只补缺的那几个，所以资产级续传已经有了，缺的是单个大文件内部的字节级续传。看用户实际失败率再定 |
 | 4.6 | 新发现 | 安装根目录与快捷方式的图标**不会**随更新变化（更新器按设计不碰原始副本，见 `ProgramUpdates.md`） | 要么接受，要么给启动器做"下次启动替换自己"的自更新（改的是救援路径，需单独设计与测试） |
 | 4.7 | 小 | `IMao-WinUI/Package.appxmanifest` 引用了 5 个不存在的 PNG（`StoreLogo.png`、`Square150x150Logo.png` 等） | 只在打 MSIX 包时会踩；补资源或清理清单 |
+
+已了结：4.5（下一版发布带完整 zip）——**2026-09-21 发布的 `2026.9.21.1` 已带上**
+`IMao-v2026.9.21.1-windows-x64.zip`（717.3 MB），并因为 `map-data` 有变化同时带上 472.1 MB 离线集合包；
+分片只上传变化的 `core` / `ui` / `assets-map-data` 三片加描述符，另外四片（`runtime`、`assets-misc`、
+`assets-map-icons`、`assets-tiles`，合计 646.7 MB）沿用 `2026.9.20.2` 的 URL。
 
 ## 5. 代码里的 TODO
 
@@ -76,4 +80,6 @@ GPU→CPU 回读**以游戏呈现节奏持续运行且不节流。出处：`Game
 - 生产私钥唯一副本曾只存在于 Codex 包的 `LocalCache` 里；**2026-09-20 已复制回文档主位置**
   `%LOCALAPPDATA%\WWMAP-TOOLS-Publisher\release-signing-key.json`（两份 SHA-256 一致、DPAPI 当前
   用户可解封、与 `Assets/Updates/trusted-keys.json` 匹配）。原始那份仍在，可视为备份。
-- 发布后本地 `main` 会落后远端（脚本用 GitHub API 直接写远端 `main`）：`git fetch origin main:main` 追平。
+- 发布后本地 `main` 会落后远端（脚本用 GitHub API 直接写远端 `main`）：先 `git fetch origin`，再
+  `git merge --ff-only origin/main` 追平。**不要用 `git fetch origin main:main`**——`main` 已检出时 Git
+  直接拒绝（`refusing to fetch into branch ... checked out at ...`），2026-09-21 踩过一次。
