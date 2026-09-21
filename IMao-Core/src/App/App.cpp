@@ -398,6 +398,18 @@ winrt::IAsyncAction App::Start() {
 				// 影子预测：不改任何行为，只把"用正确坐标记录外推能有多准"测出来。
 				// 外推 0.5/1/2 秒的残差决定下一步要不要真的用预测替代冻结的位置。
 				if (coordinateTrust.HasScene()) {
+					// OCR 预热（用户 2026-09-21 的关切：备选方案必须**无缝衔接**，而不是进了无特征区才现装）。
+					// 实测：模型加载 0.84 秒，而它原来只在"已经失败"之后才开始（trigger=minimap-recovery-bootstrap）
+					// ⟹ 从特征跟丢到第一条读数之间有约 1 秒盲区，恰好落在最需要它的时刻。
+					// 这里在**第一次定位成功之后**（启动期的资源竞争已过，不会拖慢加载）就后台把它加载好：
+					// 不请求读数、不改状态栏文字，只是让运行时热着。真正何时询问仍由停摆/恢复条件决定。
+					if (ocrAssistEnabled && !ocrPreloadStarted) {
+						const auto ocrModelDirectory = ResourceSnapshotContext::BaselineRoot() /
+							"models" / "PP-OCRv5_mobile_rec_infer";
+						IdentifyWorldCoordinates::BeginPreload(ocrModelDirectory.string());
+						ocrPreloadStarted = true;
+						Diagnostics::Record("ocr-preload", "enabled=true trigger=warmup-after-first-lock");
+					}
 					const auto predictionNow = std::chrono::steady_clock::now();
 					Coordinate predicted{};
 					double predictedSpeed = 0.0;
