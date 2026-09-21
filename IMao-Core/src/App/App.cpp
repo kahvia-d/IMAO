@@ -974,6 +974,30 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	};
 
 	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition, bool relative = false, bool visual = true) {
+		// Every source can produce a nonsense position, not just the readout: the 12:28 flight log
+		// has the rendered position flipping between roc x -519 and +519 - 1038 units, one raster
+		// tile - while the readout was saying 8074 the whole time.  The readout gate drops an
+		// impossible read; nothing dropped an impossible *commit*.  A jump no player can make in the
+		// elapsed time is refused here too, and the previous position stays.  A teleport changes the
+		// scene or the UI generation (which invalidates the lock), so it never trips this.
+		if (playerLocationLock.valid && candidate.sceneId == playerLocationLock.sceneId &&
+			playerLocationLock.generation == coordinateUiGeneration) {
+			const double elapsed = std::max(0.001,
+				std::chrono::duration<double>(now - playerLocationLock.confirmedAt).count());
+			const double jump = std::hypot(candidate.mapCenter.x - playerLocationLock.mapCoordinate.x,
+				candidate.mapCenter.y - playerLocationLock.mapCoordinate.y);
+			const double allowed = std::max(600.0, elapsed * CoordinateTrust::kMaximumSpeedUnitsPerSecond);
+			if (jump > allowed) {
+				Diagnostics::Record("position-commit-rejected", "reason=jump scene=" +
+					std::to_string(candidate.sceneId) + " jump=" + std::to_string(jump) +
+					" allowed=" + std::to_string(allowed) + " source=" +
+					std::string(recognition ? "recognition" : (visual ? (relative ? "relative" : "tracked") : "readout")) +
+					" map=" + std::to_string(candidate.mapCenter.x) + "," + std::to_string(candidate.mapCenter.y) +
+					" lock=" + std::to_string(playerLocationLock.mapCoordinate.x) + "," +
+					std::to_string(playerLocationLock.mapCoordinate.y));
+				return;
+			}
+		}
 		// Only a visual source is a certain state; a coordinate publish passes visual=false and
 		// must not touch T or the record (an OCR misread may never move the region).
 		if (visual && candidate.sceneId > 0)
