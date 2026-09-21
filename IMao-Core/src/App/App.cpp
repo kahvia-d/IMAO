@@ -787,14 +787,14 @@ void App::Thread_DetectGameState() {
 		const auto update = mapUiState.Update({ (mapControlsVisible || (compassVisible && bigMapStructureConfirmed)) && minimapHudAbsentLongEnough, minimapVisible });
 		isOpenMap = MapUiStateController::IsStableBigMap(update.current);
 		isExistMinMap = MapUiStateController::IsStableGameplay(update.current);
-		// The capture reads back the whole client unless it is told the frame is one of ordinary
-		// exploration. Anything the big map needs - its canvas, the wave-plate glyph, the viewport - lives
-		// outside the regions the ROI copy carries, so a frame stays full while that map is open; and a
-		// compass or zoom-control candidate is what precedes the canvas verification, so the full
-		// readback resumes as soon as one appears and the verification never waits for it.
+		// The capture reads back only the regions ordinary exploration samples. Anything the big map needs
+		// - its canvas, the wave-plate glyph, the viewport - lives outside those regions, so a frame stays
+		// full while that map is open; and a compass or zoom-control candidate is what precedes the canvas
+		// verification, so the full readback resumes as soon as one appears and the verification never
+		// waits for it. The isolation bit forces the old whole-client readback for comparison or rollback.
 		if (graphicsCapture) {
 			if (auto capture = graphicsCapture->Getcapture()) {
-				capture->SetRoiReadback(Isolation::Enabled(Isolation::kRoiReadback) && !isOpenMap &&
+				capture->SetRoiReadback(!Isolation::Enabled(Isolation::kForceFullReadback) && !isOpenMap &&
 					!mapControlsVisible && !compassVisible && isExistMinMap);
 			}
 		}

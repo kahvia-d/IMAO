@@ -370,6 +370,13 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                                 static_cast<std::size_t>(slot.width) * 4);
                         }
                     }
+                    // Blank whatever no box covers, so a reader outside the contract sees nothing rather
+                    // than a previous frame that still looks like a plausible image.
+                    for (const auto& gap : m_roiGaps)
+                    {
+                        std::memset(m_scratchFrame.ptr<std::uint8_t>(static_cast<int>(gap.row)) +
+                            static_cast<std::size_t>(gap.x) * 4, 0, static_cast<std::size_t>(gap.width) * 4);
+                    }
                     m_d3dContext->Unmap(m_roiStaging.get(), 0);
 
                     {
@@ -567,6 +574,22 @@ bool SimpleCapture::EnsureRoiStaging(ID3D11Texture2D* source)
     }
     m_roiStagingWidth = widest; m_roiStagingHeight = totalRows; m_roiStagingFormat = desc.Format;
     m_roiSlots = std::move(slots);
+
+    // Everything the boxes do not cover is cleared on every probed frame. The alternative - leaving the
+    // previous frame there - would let a reader the box list forgot keep working on stale pixels that
+    // still look plausible; cleared, the same mistake reads as a blank region instead.
+    m_roiGaps.clear();
+    for (UINT row = 0; row < desc.Height; ++row)
+    {
+        UINT cursor = 0;
+        for (const auto& slot : m_roiSlots)
+        {
+            if (row < slot.y || row >= slot.y + slot.height) continue;
+            if (slot.x > cursor) m_roiGaps.push_back({ row, cursor, slot.x - cursor });
+            cursor = std::max(cursor, slot.x + slot.width);
+        }
+        if (cursor < desc.Width) m_roiGaps.push_back({ row, cursor, desc.Width - cursor });
+    }
     return true;
 }
 

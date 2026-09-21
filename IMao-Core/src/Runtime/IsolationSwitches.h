@@ -31,18 +31,19 @@ inline constexpr int kWindowSync = 1 << 5;
 // costs 13-16 fps (a blt-model surface needs an extra copy from DWM), and it is measured by comparing
 // the baseline against the baseline with this bit set. Applies when the overlay session starts.
 inline constexpr int kOverlayComposition = 1 << 6;
-// Diagnostic: read back only the regions ordinary exploration samples - the minimap, the task icon, the
-// compass probe, the zoom strip and the coordinate readout, about 4% of the frame - instead of copying
-// the whole client to the CPU every frame. The full-frame copy costs the capture thread about 9 ms on
-// average and up to 37 ms inside a 33 ms cadence. Everything outside those regions belongs to the big
-// map, where the caller asks for full frames again.
-inline constexpr int kRoiReadback = 1 << 7;
+// The region readback below is the ordinary path now; this bit is the way back to the old one. Reading
+// back only the regions ordinary exploration samples - the minimap, the task icon, the compass probe, the
+// zoom strip and the coordinate readout, about 4% of the frame - takes the capture thread's copy from
+// about 14 ms to 4.7 ms per frame, with the worst case halved, and the probe was verified byte for byte
+// against a full copy (mismatches=0) on a live frame. Set this bit to force the whole client to the CPU
+// again, either to compare or to fall back.
+inline constexpr int kForceFullReadback = 1 << 7;
 // Keeps the comparison the small window was decided by available after it became the default: with this
 // bit the overlay goes back to a window the size of the whole game client, so "full client against
 // minimap window" can be re-measured on any scene without rebuilding, and it doubles as the rollback.
 inline constexpr int kForceFullOverlay = 1 << 8;
 inline constexpr int kAll = kCapture | kGameStateDetection | kLocalization | kOverlayRender |
-    kOverlayClear | kWindowSync | kOverlayComposition | kRoiReadback | kForceFullOverlay;
+    kOverlayClear | kWindowSync | kOverlayComposition | kForceFullReadback | kForceFullOverlay;
 
 inline std::atomic_int switches{ 0 };
 
@@ -65,7 +66,7 @@ inline const char* Describe(int value) {
     case kOverlayClear: return "关闭覆盖层整屏清屏";
     case kWindowSync: return "关闭窗口几何同步";
     case kOverlayComposition: return "改用 DirectComposition 呈现";
-    case kRoiReadback: return "小地图 ROI 回读（实验）";
+    case kForceFullReadback: return "强制整帧回读（回退/对照）";
     case kForceFullOverlay: return "强制整屏覆盖层（对照/回滚）";
     default: return "自定义组合";
     }
@@ -82,7 +83,7 @@ inline const char* DescribeAscii(int value) {
     case kOverlayClear: return "no-overlay-clear";
     case kWindowSync: return "no-window-sync";
     case kOverlayComposition: return "overlay-composition";
-    case kRoiReadback: return "roi-readback";
+    case kForceFullReadback: return "force-full-readback";
     case kForceFullOverlay: return "force-full-overlay";
     default: return "custom";
     }

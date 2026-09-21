@@ -152,7 +152,11 @@ private:
 
     /// Where each ROI box lives inside the compact staging texture, including the row it starts at.
     struct RoiSlot { UINT x = 0, y = 0, width = 0, height = 0, rowOffset = 0; };
+    /// A stretch of a frame row the boxes do not cover, precomputed once per size so the per-frame cost
+    /// of clearing it is a handful of memsets rather than a rebuild.
+    struct RowGap { UINT row = 0, x = 0, width = 0; };
     std::vector<RoiSlot> m_roiSlots;
+    std::vector<RowGap> m_roiGaps;
     winrt::com_ptr<ID3D11Texture2D> m_roiStaging{ nullptr };
     UINT m_roiStagingWidth = 0, m_roiStagingHeight = 0;
     DXGI_FORMAT m_roiStagingFormat = DXGI_FORMAT_UNKNOWN;
