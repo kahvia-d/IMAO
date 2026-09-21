@@ -709,8 +709,19 @@ int ImGuiOverWindows::start()
                         const auto dropNow = std::chrono::steady_clock::now();
                         if (dropNow - lastDropReport >= std::chrono::seconds(1)) {
                             lastDropReport = dropNow;
+                            // Which condition failed decides the fix: "reliable" is the recovery state
+                            // (PublishOverlayFrame ties it to CoordinateLockState::Tracking), so a false
+                            // here means the localizer, not the tracker.  The rest is the tracker.
                             Diagnostics::Record("minimap-overlay-drop", "reason=no-attach frame=" +
-                                std::to_string(frame->frameId) + " misses=" + std::to_string(trackingMisses));
+                                std::to_string(frame->frameId) + " misses=" + std::to_string(trackingMisses) +
+                                " reliable=" + std::to_string(frame->minimapMotion.reliable) +
+                                " scene=" + std::to_string(frame->playerScene) +
+                                " ownFrame=" + std::to_string(frame->frameId >= capture->frameId) +
+                                " frameAgeMs=" + std::to_string(static_cast<long long>(
+                                    std::chrono::duration<double, std::milli>(dropNow - frame->capturedAt).count())) +
+                                " captureAgeMs=" + std::to_string(static_cast<long long>(
+                                    std::chrono::duration<double, std::milli>(dropNow - capture->capturedAt).count())) +
+                                " posePixelsPerUnit=" + std::to_string(frame->minimapMotion.pixelsPerUnit));
                         }
                     }
                 }
