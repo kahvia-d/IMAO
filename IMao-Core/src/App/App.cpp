@@ -1793,18 +1793,6 @@ Coordinate App::SmoothMinimapPlayerROC(const Coordinate& target) {
 		smoothedMinimapPlayerROC = target;
 		return smoothedMinimapPlayerROC;
 	}
-	// Only the measured readout *jitter* is glided.  A larger step is a real catch-up - flying over
-	// featureless water leaves the tracker behind, so the next read corrects by hundreds of units -
-	// and gliding that drags the whole marker set across the screen: markers that should have left
-	// the minimap slide back toward the centre and the next area's markers drift in from the path
-	// the player came from (reported 2026-09-21 11:5x).  Measured jitter at a refresh was 7.5 units
-	// median, 36.4 maximum, so 40 separates the two populations.
-	constexpr double kGlideMaximumUnits = 40.0;
-	const double distance = std::hypot(target.x - smoothedMinimapPlayerROC.x, target.y - smoothedMinimapPlayerROC.y);
-	if (distance >= kGlideMaximumUnits) {
-		smoothedMinimapPlayerROC = target;
-		return smoothedMinimapPlayerROC;
-	}
 	constexpr double kTimeConstantSeconds = 0.12;
 	const double blend = 1.0 - std::exp(-elapsed / kTimeConstantSeconds);
 	smoothedMinimapPlayerROC.x += (target.x - smoothedMinimapPlayerROC.x) * blend;
