@@ -1791,11 +1791,21 @@ void App::SuspendPlayerLocationForMapTransition() {
 }
 
 bool App::LocalTrackingStalled(CoordinateRecoveryController::Clock::time_point now) const {
-	// Two seconds is long enough that a blurred or occluded frame or two does not start a
-	// readout cadence, and short enough that a walk through a feature-thin region does not
+	// Two seconds of *failed* frames is long enough that a blurred or occluded frame or two does not
+	// start a readout cadence, and short enough that a walk through a feature-thin region does not
 	// leave the marker pinned to the same terrain while the player moves away from it.
-	return localTrackingStalledSince != CoordinateRecoveryController::Clock::time_point{} &&
+	const bool trackerFailing = localTrackingStalledSince != CoordinateRecoveryController::Clock::time_point{} &&
 		now - localTrackingStalledSince >= std::chrono::seconds(2);
+	// The second, stronger condition: nothing *independent* has placed us for two seconds.  The
+	// contour tracker and the map-pixel confirmation are self-referential - they compare against the
+	// frame we last believed, so over water or flat terrain they keep accepting wherever we already
+	// think we are.  Counting those as tracking is what froze the position for 60 s on the 12:11
+	// flight (and again on 12:19 after the pixel confirmation alone was bounded): the stall clock
+	// stayed clear, the readout was never asked, and the marker of the place we left sat in the
+	// middle of the minimap all the way to the far shore.
+	const bool coasting = lastAbsoluteFixAt != CoordinateRecoveryController::Clock::time_point{} &&
+		now - lastAbsoluteFixAt >= std::chrono::seconds(2);
+	return trackerFailing || coasting;
 }
 
 void App::PrepareMinimapResumeHints(CoordinateRecoveryController::Clock::time_point now) {
