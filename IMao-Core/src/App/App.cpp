@@ -998,6 +998,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		}
 		playerCurrentSceneId = candidate.sceneId;
 		lastTrustedConfirmAt = now;
+		// Independent fixes are the ones that compared the minimap against the map itself: a global
+		// visual match, a track against the tile index, or the readout.  A contour result and the
+		// pixel self-confirmation are only ever relative to what we already believe.
+		if (recognition || !visual || !relative) lastAbsoluteFixAt = now;
 		App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = candidate.mapCenter;
 		gameMapCenterCoordinateByMouseMonitoring = candidate.mapCenter;
 		identifyCoordinate = ImgMapToWorldCoordinate(candidate.mapCenter, candidate.sceneId);
@@ -1664,10 +1668,21 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		const auto dense = DenseMapConfirmer::Confirm(normalizedMinimap, playerCurrentSceneId,
 			{ lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y },
 			Scene::MinimapScale(playerCurrentSceneId));
+		// ...but "the pixels here look plausible" is a statement about where we *think* we are, and
+		// over flat terrain it is true anywhere: on its own it can hold a stale position forever.
+		// Field log 12:11 - flying across water, this kept accepting at the same coordinate, which
+		// counted as tracking, so the stall never started, the readout was never asked, and the
+		// position (and with it the marker) sat still for 60 s while the player flew on.  It may only
+		// stand in while something independent confirmed the position recently.
+		const auto fixAge = now - lastAbsoluteFixAt;
+		const bool independentRecently = lastAbsoluteFixAt != std::chrono::steady_clock::time_point{} &&
+			fixAge <= std::chrono::seconds(4);
 		Diagnostics::Record("dense-confirm", "where=tracking scene=" + std::to_string(playerCurrentSceneId) +
 			" available=" + std::to_string(dense.available) + " accepted=" + std::to_string(dense.accepted) +
+			" independentAgeMs=" + std::to_string(lastAbsoluteFixAt == std::chrono::steady_clock::time_point{}
+				? -1 : static_cast<long long>(std::chrono::duration<double, std::milli>(fixAge).count())) +
 			" " + dense.detail);
-		if (dense.accepted) {
+		if (dense.accepted && independentRecently) {
 			tracked = {};
 			tracked.sceneId = playerCurrentSceneId;
 			tracked.mapCenter = lastPlayerImgMapCoordinate;

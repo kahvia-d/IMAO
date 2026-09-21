@@ -324,6 +324,11 @@ private:
     std::chrono::steady_clock::time_point localTrackingStalledSince{};
     bool LocalTrackingStalled(std::chrono::steady_clock::time_point now) const;
     std::chrono::steady_clock::time_point lastTrustedConfirmAt{};
+    // When an *independent* source last placed the player: a global visual match or a readout
+    // coordinate.  The contour tracker and the map-pixel self-confirmation are not independent -
+    // they can only ever agree with where we already think we are - so they may bridge a moment,
+    // never hold a position on their own.
+    std::chrono::steady_clock::time_point lastAbsoluteFixAt{};
     OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
