@@ -12,6 +12,7 @@ struct RuntimeHotkeyBindings {
     int currentTargetGuideKey = 119;   // F8
     int guidePreviousImageKey = 33;    // PageUp
     int guideNextImageKey = 34;        // PageDown
+    int toggleEnabledKey = 118;        // F9：启用/暂停工具（手柄对应 LB+按下RS）
 };
 
 // A guide-owned press must not become a game completion when the guide hides
@@ -40,7 +41,8 @@ public:
     static RuntimeHotkeyBindings Snapshot() {
         const auto value = packed_.load();
         return {static_cast<int>(value & 255), static_cast<int>((value >> 8) & 255), static_cast<int>((value >> 16) & 255),
-            static_cast<int>((value >> 24) & 255), static_cast<int>((value >> 32) & 255)};
+            static_cast<int>((value >> 24) & 255), static_cast<int>((value >> 32) & 255),
+            static_cast<int>((value >> 40) & 255)};
     }
     static bool IsAllowed(int key) {
         return key == 0 || key == 33 || key == 34 || (key >= 48 && key <= 57) || (key >= 65 && key <= 90 && key != 77) ||
@@ -48,7 +50,7 @@ public:
     }
     static void Validate(const RuntimeHotkeyBindings& value) {
         const std::array keys{value.nearestCompletionKey, value.manualRouteKey, value.currentTargetGuideKey,
-            value.guidePreviousImageKey, value.guideNextImageKey};
+            value.guidePreviousImageKey, value.guideNextImageKey, value.toggleEnabledKey};
         for (std::size_t i = 0; i < keys.size(); ++i) {
             if (!IsAllowed(keys[i])) throw std::invalid_argument("快捷键仅支持字母、数字、F1–F12、PageUp、PageDown 或禁用；M、F10 和 Esc 为保留键");
             for (std::size_t j = 0; j < i; ++j)
@@ -69,6 +71,7 @@ public:
         read("currentTargetGuideKey", value.currentTargetGuideKey);
         read("guidePreviousImageKey", value.guidePreviousImageKey);
         read("guideNextImageKey", value.guideNextImageKey);
+        read("toggleEnabledKey", value.toggleEnabledKey);
         Validate(value);
         return value;
     }
@@ -78,7 +81,8 @@ public:
             (static_cast<std::uint64_t>(value.manualRouteKey) << 8) |
             (static_cast<std::uint64_t>(value.currentTargetGuideKey) << 16) |
             (static_cast<std::uint64_t>(value.guidePreviousImageKey) << 24) |
-            (static_cast<std::uint64_t>(value.guideNextImageKey) << 32));
+            (static_cast<std::uint64_t>(value.guideNextImageKey) << 32) |
+            (static_cast<std::uint64_t>(value.toggleEnabledKey) << 40));
     }
     static std::string Label(int key) {
         if (key == 0) return "未设置";
@@ -89,5 +93,6 @@ public:
         return "未知按键";
     }
 private:
-    inline static std::atomic<std::uint64_t> packed_{90ULL | (81ULL << 8) | (119ULL << 16) | (33ULL << 24) | (34ULL << 32)};
+    inline static std::atomic<std::uint64_t> packed_{90ULL | (81ULL << 8) | (119ULL << 16) | (33ULL << 24) | (34ULL << 32) |
+        (118ULL << 40)};
 };

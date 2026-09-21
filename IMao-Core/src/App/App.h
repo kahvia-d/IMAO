@@ -13,6 +13,7 @@
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateRecoveryController.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\OcrCoordinateGate.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateTrust.h"
+#include "..\Runtime\RuntimeToolState.h"
 #include "..\Coordinate\VisualLocalization\GlobalVisualLocalizer.h"
 #include "MapUiStateController.h"
 #include "MapUiVisualDetector.h"
@@ -68,6 +69,8 @@ public:
 		captureThread = std::thread(&App::Thread_Capture, this);
 		detectGameStateThread = std::thread(&App::Thread_DetectGameState, this);
 		keyMonitoringThread = std::thread(&App::Thread_KeyMonitoring_SavePlayerNearItemPoint, this);
+		// 工具总开关的按键轮询：独立线程，和上面那个 50ms 轮询同一套写法（边沿检测 + 修饰键排除）。
+		toolToggleThread = std::thread(&App::Thread_KeyMonitoring_ToggleTool, this);
 		// Capturing and analysing frames is what the tool does *for* the game, so it must never
 		// compete with the game for CPU on equal terms. The overlay thread and this key watcher keep
 		// normal priority: they sit on the input path, where waiting for CPU is felt as lag.
@@ -109,6 +112,8 @@ public:
         if (captureThread.joinable()) captureThread.join();
 		if (detectGameStateThread.joinable()) detectGameStateThread.join();
 		if (keyMonitoringThread.joinable()) keyMonitoringThread.join();
+		if (toolToggleThread.joinable()) toolToggleThread.join();
+		RuntimeToolState::Reset();
 
 		featureResources.reset();
 		std::vector<cv::KeyPoint>().swap(nearPlayerMapKeypoints);
@@ -385,6 +390,7 @@ private:
 	std::vector<cv::Point2f> captrueCorners{ cv::Point2f(0,0),cv::Point2f(0,0),cv::Point2f(0,0) ,cv::Point2f(0,0) };
 
 	std::thread keyMonitoringThread;
+	std::thread toolToggleThread;
 
 	Coordinate minMapBottomPoint;
 	std::atomic<float> imguiWindowsHeight{0};
@@ -416,5 +422,6 @@ private:
 		std::chrono::steady_clock::time_point anchoredAt, const cv::Mat& mapCrop);
 	void ResetMapViewport();
 	void Thread_KeyMonitoring_SavePlayerNearItemPoint();
+	void Thread_KeyMonitoring_ToggleTool();
 };
 

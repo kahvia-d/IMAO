@@ -19,6 +19,7 @@
 #include "../Runtime/OverlayPacing.h"
 #include "../Runtime/RoutePlanningService.h"
 #include "../Runtime/RuntimeHotkeys.h"
+#include "../Runtime/RuntimeToolState.h"
 #include "../Runtime/IsolationSwitches.h"
 #include "MinimapHudEvidence.h"
 #include "../Coordinate/VisualLocalization/MinimapTerrainEvidence.h"
@@ -302,6 +303,24 @@ winrt::IAsyncAction App::Start() {
 		}
 		if (mapViewportStartRequested.exchange(false)) {
 			BeginMapViewportSession();
+		}
+
+		// 工具总开关（手柄 LB+按下RS / 键盘 F9，可在设置里改）：暂停时**什么都不画**，并且跳过
+		// 定位、识别、大地图解算这些"为游戏而做"的计算——这才是玩家关它的意义。
+		// 注意：这里是**帧循环的开头**，输入监听线程完全不受影响，所以随时能再按一次恢复；
+		// 恢复到启用是瞬时的（资源一直都在，不重新加载）。
+		if (!RuntimeToolState::Enabled()) {
+			DrawItemOnMinMap::ClearNearItemsData();
+			DrawRouteOnMinMap::ClearRountsData();
+			DrawItemOnGameMap::ClearNearItemsData();
+			RuntimeStatus::SetLocalization("paused", {}, "已暂停：手柄 LB+按下RS 或键盘快捷键可恢复");
+			RuntimeStatus::SetMarkerCounts(0, 0);
+			PublishOverlayFrame(captured, renderedViewport);
+			const auto pausedEnd = std::chrono::high_resolution_clock::now();
+			const auto pausedElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(pausedEnd - startTime).count();
+			if (pausedElapsed < cycleTime) std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - pausedElapsed));
+			startTime = std::chrono::high_resolution_clock::now();
+			continue;
 		}
 
 		// The full-screen map has its own asynchronous localizer.  Main capture
@@ -2462,6 +2481,35 @@ void App::Thread_KeyMonitoring_SavePlayerNearItemPoint() {
 }
 
 
+
+void App::Thread_KeyMonitoring_ToggleTool() {
+	// 工具总开关的键盘一侧（用户 2026-09-21 定：手柄 LB+R3 走托管侧，键盘默认 F9 且可改）。
+	// 只在"按下瞬间"切换一次（边沿检测），并且要求没有按修饰键——和旁边那个采集键同一套规矩。
+	int monitoredKey = RuntimeHotkeys::Snapshot().toggleEnabledKey;
+	bool keyWasPressed = monitoredKey > 0 && isKeyPressed(monitoredKey);
+	while (!allThreadStopFlag) {
+		const auto configuredKey = RuntimeHotkeys::Snapshot().toggleEnabledKey;
+		const bool keyIsPressed = configuredKey > 0 && isKeyPressed(configuredKey);
+		if (configuredKey != monitoredKey) {
+			monitoredKey = configuredKey;
+			keyWasPressed = keyIsPressed;
+			Sleep(50);
+			continue;
+		}
+		const bool plainKey = !(GetAsyncKeyState(VK_SHIFT) & 0x8000) && !(GetAsyncKeyState(VK_CONTROL) & 0x8000) &&
+			!(GetAsyncKeyState(VK_MENU) & 0x8000) && !(GetAsyncKeyState(VK_LWIN) & 0x8000) && !(GetAsyncKeyState(VK_RWIN) & 0x8000);
+		if (keyIsPressed && !keyWasPressed && plainKey &&
+			!RuntimeHotkeyPressOwnership::BlocksPolling(configuredKey)) {
+			const bool enabled = RuntimeToolState::Toggle();
+			Diagnostics::Record("tool-toggle", std::string("enabled=") + (enabled ? "1" : "0") +
+				" source=keyboard key=" + RuntimeHotkeys::Label(configuredKey));
+			Notification::AddInfo(NotificationDatas(enabled
+				? "IMao 已启用。" : "IMao 已暂停：再按一次（或手柄 LB+按下RS）即可恢复。", 3));
+		}
+		keyWasPressed = keyIsPressed;
+		Sleep(50);
+	}
+}
 
 void App::PublishPresentedOverlay(PresentedOverlayFrame frame) {
     const auto route=RoutePlanningService::View();
