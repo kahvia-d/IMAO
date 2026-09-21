@@ -15,8 +15,8 @@
                     <ToggleSwitch x:Name="Diagnostics_HoldPresentToggle" Header="暂停叠加层画面更新（窗口仍显示）" AutomationProperties.Name="暂停叠加层画面更新" Toggled="Diagnostics_HoldPresentToggle_Toggled" />
                     <TextBlock Text="窗口继续显示，但只有状态条时约每 3 秒才更新一次。与前一项分别测试，可以看出代价主要来自「窗口在场」还是「每次刷新画面」。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                     <NumberBox x:Name="Diagnostics_IsolationBox" Header="隔离开关（逐项定位代价）" AutomationProperties.Name="隔离开关" Minimum="0" Maximum="511" SpinButtonPlacementMode="Compact" ValueChanged="Diagnostics_IsolationBox_ValueChanged" />
-                    <TextBlock Text="按位关闭或切换每帧工作，用来单独量出每一部分的代价：1=关闭画面采集，2=关闭游戏状态检测，4=关闭定位，8=关闭覆盖层绘制，16=关闭覆盖层整屏清屏，32=关闭窗口几何同步，64=改用 DirectComposition 呈现，256=强制整屏覆盖层（与默认的小地图窗口做对照）。128 已废弃：状态栏与状态球改为设置页里两个互相独立的开关。0 表示全部开启（正常）。脚本 Measure-WorkIsolation.ps1 会提示你逐段设置这个值。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                    <TextBlock Text="注意：64 改变的是叠加层「怎么贴到屏幕上」，需要在下次点击「开始探索」时才生效。256 立即生效；开大地图时总会用整屏覆盖层。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <TextBlock Text="按位关闭或切换每帧工作，用来单独量出每一部分的代价：1=关闭画面采集，2=关闭游戏状态检测，4=关闭定位，8=关闭覆盖层绘制，16=关闭覆盖层整屏清屏，32=关闭窗口几何同步，64=改用 DirectComposition 呈现，128=只回读小地图那几块区域（实验），256=强制整屏覆盖层（与默认的小地图窗口做对照）。0 表示全部开启（正常）。脚本 Measure-WorkIsolation.ps1 会提示你逐段设置这个值。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <TextBlock Text="注意：64 改变的是叠加层「怎么贴到屏幕上」，需要在下次点击「开始探索」时才生效。128 与 256 立即生效；开大地图时总会用整屏覆盖层与整帧回读。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                     <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="打开日志" Click="OpenLogs_Click" /><Button Content="复制诊断摘要" Click="CopySummary_Click" /><Button Content="打开崩溃报告" Click="OpenCrashes_Click" /></controls:WrapPanel>
                 </StackPanel>
             </ScrollViewer>

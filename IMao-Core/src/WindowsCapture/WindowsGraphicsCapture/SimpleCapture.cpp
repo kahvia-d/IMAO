@@ -222,7 +222,10 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             // How long the callback waited for the frame it published: this is the cost the capture
             // method adds to the frame pool's thread, and what a mode switch is traded against.
             " readbackAvgMs=" + std::to_string(m_readbackCount == 0 ? 0.0 : m_readbackTotalMs / m_readbackCount) +
-            " readbackMaxMs=" + std::to_string(m_readbackMaxMs));
+            " readbackMaxMs=" + std::to_string(m_readbackMaxMs) +
+            // Which readback each frame used, so a phase of an A/B can be read off the log instead of
+            // assumed from the switch.
+            " roiFrames=" + std::to_string(m_roiFrames.load()) + " fullFrames=" + std::to_string(m_fullFrames.load()));
     }
     auto swapChainResizedToFrame = false;
 
@@ -302,7 +305,89 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             readbackSource = backBuffer.get();
         }
 
-        if (EnsureStaging(readbackSource))
+        const bool roiRequested = m_roiReadback.load() && !renderRects && readbackSource != nullptr;
+        if (roiRequested && EnsureRoiStaging(readbackSource))
+        {
+            D3D11_TEXTURE2D_DESC readbackDesc = {};
+            readbackSource->GetDesc(&readbackDesc);
+            const int width = static_cast<int>(readbackDesc.Width);
+            const int height = static_cast<int>(readbackDesc.Height);
+
+            const auto readbackStart = std::chrono::steady_clock::now();
+            for (const auto& slot : m_roiSlots)
+            {
+                D3D11_BOX region = {};
+                region.left = slot.x;
+                region.top = slot.y;
+                region.right = slot.x + slot.width;
+                region.bottom = slot.y + slot.height;
+                region.back = 1;
+                m_d3dContext->CopySubresourceRegion(m_roiStaging.get(), 0, 0, slot.rowOffset, 0,
+                    readbackSource, 0, &region);
+            }
+            // Submitted for the same reason as the full copy below: nothing else in this path presents, so
+            // a copy left in this context's command buffer never completes.
+            m_d3dContext->Flush();
+
+            D3D11_MAPPED_SUBRESOURCE mappedResource{};
+            const HRESULT mapped = m_d3dContext->Map(m_roiStaging.get(), 0, D3D11_MAP_READ, 0, &mappedResource);
+            if (FAILED(mapped))
+            {
+                ++m_framesSkipped;
+                RecordFrameDiagnostic("capture-wgc-readback-failed", "hr=" + std::to_string(static_cast<long>(mapped)));
+            }
+            else
+            {
+                try {
+                    // The consumer crops by absolute coordinates, so the frame it reads keeps its full
+                    // shape; only the regions above are written, and the rest is never read (see the box
+                    // list). It is allocated once and then only these rows are touched.
+                    if (m_scratchFrame.rows != height || m_scratchFrame.cols != width || m_scratchFrame.type() != CV_8UC4)
+                    {
+                        m_scratchFrame.create(height, width, CV_8UC4);
+                        m_scratchFrame.setTo(cv::Scalar::all(0));
+                    }
+                    for (const auto& slot : m_roiSlots)
+                    {
+                        const std::uint8_t* source = static_cast<const std::uint8_t*>(mappedResource.pData) +
+                            static_cast<std::size_t>(slot.rowOffset) * mappedResource.RowPitch;
+                        std::uint8_t* target = m_scratchFrame.ptr<std::uint8_t>(static_cast<int>(slot.y)) +
+                            static_cast<std::size_t>(slot.x) * 4;
+                        for (UINT row = 0; row < slot.height; ++row)
+                        {
+                            std::memcpy(target + static_cast<std::size_t>(row) * m_scratchFrame.step,
+                                source + static_cast<std::size_t>(row) * mappedResource.RowPitch,
+                                static_cast<std::size_t>(slot.width) * 4);
+                        }
+                    }
+                    m_d3dContext->Unmap(m_roiStaging.get(), 0);
+
+                    {
+                        std::lock_guard<std::mutex> lock(m_frameMutex);
+                        using std::swap;
+                        swap(m_latestFrame, m_scratchFrame);
+                        m_frameCapturedAt = std::chrono::steady_clock::now();
+                        ++m_frameSequence;
+                    }
+                    m_frameCondition.notify_all();
+                    ++m_framesPublished;
+                    ++m_roiFrames;
+                    if (m_framesPublished == 1)
+                        StructuredLogger::Record("info", "capture", "capture-wgc-first-frame",
+                            "width=" + std::to_string(width) + " height=" + std::to_string(height) + " mode=roi");
+                }
+                catch (...) {
+                    m_d3dContext->Unmap(m_roiStaging.get(), 0);
+                    throw;
+                }
+                const double readbackMs = std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - readbackStart).count();
+                m_readbackTotalMs += readbackMs;
+                ++m_readbackCount;
+                if (readbackMs > m_readbackMaxMs) m_readbackMaxMs = readbackMs;
+            }
+        }
+        else if (EnsureStaging(readbackSource))
         {
             D3D11_TEXTURE2D_DESC readbackDesc = {};
             readbackSource->GetDesc(&readbackDesc);
@@ -360,9 +445,10 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                     }
                     m_frameCondition.notify_all();
                     ++m_framesPublished;
+                    ++m_fullFrames;
                     if (m_framesPublished == 1)
                         StructuredLogger::Record("info", "capture", "capture-wgc-first-frame",
-                            "width=" + std::to_string(width) + " height=" + std::to_string(height));
+                            "width=" + std::to_string(width) + " height=" + std::to_string(height) + " mode=full");
                 }
                 const double readbackMs = std::chrono::duration<double, std::milli>(
                     std::chrono::steady_clock::now() - readbackStart).count();
@@ -389,8 +475,86 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
     }
 }
 
-bool SimpleCapture::EnsureStaging(ID3D11Texture2D* source)
+namespace {
+// The regions ordinary exploration actually samples, in the 1600x900 reference frame the rest of the HUD
+// geometry is expressed in. Each one is read by a named consumer, and this list is the contract the ROI
+// readback rests on:
+//   minimap        CropToMinMapAreaImg (localization), frame.motionImage (motion anchoring), terrain mask
+//   task icon      IsExistMinMap (SURF) and MinimapHudEvidence::Observe
+//   compass        MapUiVisualDetector::DetectBigMapCompass
+//   zoom strip     MapUiVisualDetector::DetectBigMapControlLayout
+//   coordinate     GetCoordinateRegion (the OCR readout)
+// Everything else - the map canvas, the wave-plate glyph, the viewport - is only used while the big map
+// is open, and the caller keeps those frames on the full readback.
+struct ReferenceBox { double left, top, right, bottom; };
+constexpr ReferenceBox kRoiReferenceBoxes[] = {
+    {  30.0,  23.0, 184.0, 177.0 },  // minimap
+    {  12.0, 183.0,  39.0, 207.0 },  // task icon
+    {  10.0,  52.0,  82.0, 116.0 },  // compass
+    {1480.0, 235.0,1540.0, 645.0 },  // zoom strip
+    {  20.0, 865.0, 160.0, 900.0 },  // coordinate readout
+};
+}
+
+bool SimpleCapture::EnsureRoiStaging(ID3D11Texture2D* source)
 {
+    if (source == nullptr) return false;
+    D3D11_TEXTURE2D_DESC desc = {};
+    source->GetDesc(&desc);
+    if (desc.Width == 0 || desc.Height == 0) return false;
+
+    std::vector<RoiSlot> slots;
+    const double scaleX = static_cast<double>(desc.Width) / 1600.0;
+    const double scaleY = static_cast<double>(desc.Height) / 900.0;
+    UINT widest = 0, totalRows = 0;
+    for (const auto& box : kRoiReferenceBoxes)
+    {
+        const LONG left = static_cast<LONG>(box.left * scaleX);
+        const LONG top = static_cast<LONG>(box.top * scaleY);
+        const LONG right = static_cast<LONG>(box.right * scaleX);
+        const LONG bottom = static_cast<LONG>(box.bottom * scaleY);
+        const LONG clampedLeft = std::max<LONG>(0, std::min<LONG>(left, static_cast<LONG>(desc.Width)));
+        const LONG clampedTop = std::max<LONG>(0, std::min<LONG>(top, static_cast<LONG>(desc.Height)));
+        const LONG clampedRight = std::max<LONG>(clampedLeft, std::min<LONG>(right, static_cast<LONG>(desc.Width)));
+        const LONG clampedBottom = std::max<LONG>(clampedTop, std::min<LONG>(bottom, static_cast<LONG>(desc.Height)));
+        RoiSlot slot;
+        slot.x = static_cast<UINT>(clampedLeft);
+        slot.y = static_cast<UINT>(clampedTop);
+        slot.width = static_cast<UINT>(clampedRight - clampedLeft);
+        slot.height = static_cast<UINT>(clampedBottom - clampedTop);
+        slot.rowOffset = totalRows;
+        if (slot.width == 0 || slot.height == 0) continue;
+        widest = std::max(widest, slot.width);
+        totalRows += slot.height;
+        slots.push_back(slot);
+    }
+    if (slots.empty() || widest == 0 || totalRows == 0) return false;
+
+    if (m_roiStaging && m_roiStagingWidth == widest && m_roiStagingHeight == totalRows &&
+        m_roiStagingFormat == desc.Format && m_roiSlots.size() == slots.size()) return true;
+
+    m_roiStaging = nullptr;
+    m_roiStagingWidth = 0; m_roiStagingHeight = 0; m_roiStagingFormat = DXGI_FORMAT_UNKNOWN;
+    D3D11_TEXTURE2D_DESC stagingDesc = desc;
+    stagingDesc.Width = widest;
+    stagingDesc.Height = totalRows;
+    stagingDesc.Usage = D3D11_USAGE_STAGING;
+    stagingDesc.BindFlags = 0;
+    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    stagingDesc.MiscFlags = 0;
+    stagingDesc.MipLevels = 1;
+    stagingDesc.ArraySize = 1;
+    if (FAILED(m_d3dDevice->CreateTexture2D(&stagingDesc, nullptr, m_roiStaging.put())))
+    {
+        m_roiStaging = nullptr;
+        return false;
+    }
+    m_roiStagingWidth = widest; m_roiStagingHeight = totalRows; m_roiStagingFormat = desc.Format;
+    m_roiSlots = std::move(slots);
+    return true;
+}
+
+bool SimpleCapture::EnsureStaging(ID3D11Texture2D* source){
     if (source == nullptr) return false;
     D3D11_TEXTURE2D_DESC desc = {};
     source->GetDesc(&desc);

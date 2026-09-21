@@ -48,6 +48,13 @@ public:
 
     void Close();
 
+    /// Reads back only the regions ordinary exploration samples, instead of copying the whole client to
+    /// the CPU. The caller owns the decision: it knows when the big map (whose canvas, viewport and
+    /// wave-plate glyph all live outside those regions) is open or about to be verified, and asks for
+    /// full frames again for exactly those frames.
+    void SetRoiReadback(bool enabled) { m_roiReadback.store(enabled); }
+    bool RoiReadback() const { return m_roiReadback.load(); }
+
     /// Takes the frame the consumer has not read yet. `outputFrame` is reused when it already has the
     /// right shape, so a caller that keeps its Mat across calls never allocates a full-screen image
     /// again; it only has to have finished with the previous contents. Unlike GetLatestFrame_Mat this
@@ -117,6 +124,9 @@ private:
     void ApplyMinUpdateInterval();
     /// Reuses one CPU-readable copy target instead of allocating a staging texture per frame.
     bool EnsureStaging(ID3D11Texture2D* source);
+    /// One compact CPU-readable target holding the ROI boxes stacked vertically, so the readback is one
+    /// Map and the boxes do not pay for the frame between them.
+    bool EnsureRoiStaging(ID3D11Texture2D* source);
     /// Frame body. It must never throw: an exception escaping the WinRT frame callback terminates the
     /// host process, which the client reports as a core fault with no first frame.
     void ProcessFrame(winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool const& sender);
@@ -134,6 +144,15 @@ private:
     winrt::com_ptr<ID3D11Texture2D> m_stagingTexture{ nullptr };
     UINT m_stagingWidth = 0, m_stagingHeight = 0;
     DXGI_FORMAT m_stagingFormat = DXGI_FORMAT_UNKNOWN;
+
+    /// Where each ROI box lives inside the compact staging texture, including the row it starts at.
+    struct RoiSlot { UINT x = 0, y = 0, width = 0, height = 0, rowOffset = 0; };
+    std::vector<RoiSlot> m_roiSlots;
+    winrt::com_ptr<ID3D11Texture2D> m_roiStaging{ nullptr };
+    UINT m_roiStagingWidth = 0, m_roiStagingHeight = 0;
+    DXGI_FORMAT m_roiStagingFormat = DXGI_FORMAT_UNKNOWN;
+    std::atomic_bool m_roiReadback{ false };
+    std::atomic<std::uint64_t> m_roiFrames{ 0 }, m_fullFrames{ 0 };
     // Frame diagnostics; the callback thread owns them, the counters are read by the test/diagnostic
     // paths only.
     std::atomic<std::uint64_t> m_framesArrived{ 0 }, m_framesPublished{ 0 }, m_framesSkipped{ 0 }, m_stagingFailures{ 0 };
