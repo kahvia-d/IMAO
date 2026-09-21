@@ -223,9 +223,15 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             // method adds to the frame pool's thread, and what a mode switch is traded against.
             " readbackAvgMs=" + std::to_string(m_readbackCount == 0 ? 0.0 : m_readbackTotalMs / m_readbackCount) +
             " readbackMaxMs=" + std::to_string(m_readbackMaxMs) +
+            // The cumulative figures above cannot separate the phases of an A/B: they are session
+            // averages. These are the same measurements since the previous summary, which is the window a
+            // phase boundary falls in.
+            " winReadbackAvgMs=" + std::to_string(m_windowReadbackCount == 0 ? 0.0 : m_windowReadbackTotalMs / m_windowReadbackCount) +
+            " winReadbackMaxMs=" + std::to_string(m_windowReadbackMaxMs) +
             // Which readback each frame used, so a phase of an A/B can be read off the log instead of
             // assumed from the switch.
             " roiFrames=" + std::to_string(m_roiFrames.load()) + " fullFrames=" + std::to_string(m_fullFrames.load()));
+        m_windowReadbackTotalMs = 0.0; m_windowReadbackMaxMs = 0.0; m_windowReadbackCount = 0;
     }
     auto swapChainResizedToFrame = false;
 
@@ -385,6 +391,9 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                 m_readbackTotalMs += readbackMs;
                 ++m_readbackCount;
                 if (readbackMs > m_readbackMaxMs) m_readbackMaxMs = readbackMs;
+                m_windowReadbackTotalMs += readbackMs;
+                ++m_windowReadbackCount;
+                if (readbackMs > m_windowReadbackMaxMs) m_windowReadbackMaxMs = readbackMs;
             }
         }
         else if (EnsureStaging(readbackSource))
@@ -455,6 +464,9 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                 m_readbackTotalMs += readbackMs;
                 ++m_readbackCount;
                 if (readbackMs > m_readbackMaxMs) m_readbackMaxMs = readbackMs;
+                m_windowReadbackTotalMs += readbackMs;
+                ++m_windowReadbackCount;
+                if (readbackMs > m_windowReadbackMaxMs) m_windowReadbackMaxMs = readbackMs;
             }
         }
         else

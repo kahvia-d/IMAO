@@ -24,6 +24,9 @@
 # in-game status is not drawn while the tool's own window has focus. Changing a setting opens that
 # window, so click back into the game before the phase starts.
 #
+# -Experiment roi-readback compares the full-frame capture readback against probing only the regions
+# ordinary exploration samples (mask 128). Keep the big map closed: its canvas is outside those regions.
+#
 # -Experiment full-client is the small-window question from
 # Docs/MiniMapMarkerRenderPerfPlan_zh-Hans.md: the same harness, run as A/B/A/B, where A is the default
 # minimap-sized window and B sets 256, which forces a window the size of the whole game client.
@@ -40,7 +43,7 @@ param(
     [int]$PromptAllowanceSeconds = 45,
     [string]$OutputPath,
     [string]$PresentMonPath,
-    [ValidateSet('work-isolation', 'status-bar', 'full-client')][string]$Experiment = 'work-isolation'
+    [ValidateSet('work-isolation', 'status-bar', 'full-client', 'roi-readback')][string]$Experiment = 'work-isolation'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -83,6 +86,16 @@ $sequence = if ($Experiment -eq 'full-client') {
         [pscustomobject]@{ name = 'bar-off-2'; mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 关掉「状态条 · 小地图」，然后点回游戏画面' }
         [pscustomobject]@{ name = 'bar-on-2';  mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 打开「状态条 · 小地图」，然后点回游戏画面（按 Enter 前确认中间能看到状态栏）' }
     )
+} elseif ($Experiment -eq 'roi-readback') {
+    # A/B/A/B on the capture readback: 0 copies the whole client to the CPU every frame, 128 probes only
+    # the regions ordinary exploration samples. The big map has to stay closed in both phases - its canvas
+    # is outside those regions, so opening it makes the capture fall back to full frames by design.
+    @(
+        [pscustomobject]@{ name = 'full-readback-1'; mask = 0;   label = '0' }
+        [pscustomobject]@{ name = 'roi-readback-1';  mask = 128; label = '128' }
+        [pscustomobject]@{ name = 'full-readback-2'; mask = 0;   label = '0' }
+        [pscustomobject]@{ name = 'roi-readback-2';  mask = 128; label = '128' }
+    )
 } else {
     @(
         [pscustomobject]@{ name = 'baseline-colorkey'; mask = 0;  label = '0  (base)' }
@@ -97,6 +110,7 @@ $sequence = if ($Experiment -eq 'full-client') {
 $referencePattern = switch ($Experiment) {
     'status-bar' { 'bar-off*' }
     'full-client' { 'mini-window*' }
+    'roi-readback' { 'full-readback*' }
     default { 'baseline*' }
 }
 

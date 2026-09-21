@@ -159,8 +159,11 @@ private:
     std::chrono::steady_clock::time_point m_lastFrameDiagnosticAt{};
     std::chrono::steady_clock::time_point m_lastFrameSummaryAt{};
     /// Staging readback cost, accumulated by the callback thread and reported with the frame counts.
+    /// The `window` pair covers only the two seconds since the last summary, because the cumulative
+    /// average cannot separate the phases of an A/B run.
     double m_readbackTotalMs = 0.0, m_readbackMaxMs = 0.0;
-    std::uint64_t m_readbackCount = 0;
+    double m_windowReadbackTotalMs = 0.0, m_windowReadbackMaxMs = 0.0;
+    std::uint64_t m_readbackCount = 0, m_windowReadbackCount = 0;
     winrt::com_ptr<ID3D11Device> m_d3dDevice{ nullptr };
     winrt::com_ptr<ID3D11DeviceContext> m_d3dContext{ nullptr };
     winrt::Windows::Graphics::DirectX::DirectXPixelFormat m_pixelFormat;
