@@ -974,6 +974,30 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	};
 
 	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition, bool relative = false, bool visual = true) {
+		// 用户的轨迹设计推广到**所有来源**：12:41 那次是读数丢了负号，13:08 这次却是局部匹配自己跑到一个
+		// 瓦片之外（578 次 tracked 提交里混进 4 次 x 翻号）——两者都不符合记录数组的趋势。有轨迹时按趋势
+		// 否决并**不写入数组**（错点因此污染不了趋势）；没有轨迹（条目不足/过期）就照旧放行，
+		// 绝不允许"无轨迹"本身变成否决条件——那正是上一版把星海定位锁死的原因。
+		if (visual && candidate.sceneId > 0 && candidate.sceneId == coordinateTrust.Scene()) {
+			Coordinate predicted{};
+			double speed = 0.0;
+			const double secondsAt = std::chrono::duration<double>(now.time_since_epoch()).count();
+			if (coordinateTrust.FitAt(candidate.sceneId, secondsAt, predicted, speed)) {
+				const double residual = std::hypot(candidate.mapCenter.x - predicted.x,
+					candidate.mapCenter.y - predicted.y) / 1.205;
+				const double tolerance = std::max(CoordinateTrust::kTrendToleranceUnits,
+					CoordinateTrust::kTrendSpeedFactor * speed);
+				if (residual > tolerance) {
+					Diagnostics::Record("position-commit-rejected", "reason=trend scene=" +
+						std::to_string(candidate.sceneId) + " residual=" + std::to_string(residual) +
+						" tolerance=" + std::to_string(tolerance) + " speed=" + std::to_string(speed) +
+						" map=" + std::to_string(candidate.mapCenter.x) + "," + std::to_string(candidate.mapCenter.y) +
+						" predicted=" + std::to_string(predicted.x) + "," + std::to_string(predicted.y) +
+						" source=" + std::string(recognition ? "recognition" : (relative ? "relative" : "tracked")));
+					return;
+				}
+			}
+		}
 		// Every source can produce a nonsense position, not just the readout: the 12:28 flight log
 		// has the rendered position flipping between roc x -519 and +519 - 1038 units, one raster
 		// tile - while the readout was saying 8074 the whole time.  The readout gate drops an
