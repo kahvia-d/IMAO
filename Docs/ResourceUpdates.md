@@ -105,6 +105,8 @@ $appRoot = 'out/release-2026.9.9.4/IMao-v2026.9.9.4-windows-x64'
 
 后续资源版本使用更高的 `--sequence` 与四段 `--resource-version`，通过 `--previous` 传入当前正式签名清单；可使用 `--notes-file`、`--min-app-version` 和 `--max-app-version`。内容完全相同的包沿用旧版本及下载地址，只发布变化包。不要给仅资源发布添加 `--program-release true`。保留其他仍受支持的基础资源版本在原清单中，`prepare` 自动保留其他基础资源的快照条目。
 
+`--notes-file` 的内容是**面向玩家的更新公告**，同时进入两处：签名清单的 `app.notes`（客户端更新提示直接显示）与发行页正文。所以按公告写——第三人称陈述程序行为，不要出现"你/您"，也不要写只有开发者才看得懂的内部细节或本次会话的测试过程。两处的可修改性不同：发行页正文随时可用 `gh release edit v<版本> --notes-file <文件>` 改写，而 `app.notes` 一旦签名就不能原地替换——已发布发行页上的同名附件字节不同会被发布脚本拒绝——只能等下一版覆盖，除非另起一个更高的 `--sequence`。
+
 程序发布默认仍用整包 ZIP。改为分片发布时把 `--program-zip` 换成 `--program-shards true`：`prepare` 直接从 `--app-root` 读出权威文件清单并按 `ShardMap` 的路径规则切分，签名清单里的整包字段指向一个小的分片描述符，客户端只下载变化的片。
 
 ```powershell
