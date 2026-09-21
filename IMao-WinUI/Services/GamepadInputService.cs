@@ -303,9 +303,11 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             }
             else if (action == GamepadAction.ToggleEnabled)
             {
-                // 工具总开关：LB + 按下 RS。与键盘快捷键改的是同一个核心状态，
-                // 所以两种输入都能"开始探索"和"停止探索"，界面看到的也永远是同一份状态。
-                if (await core.ToggleToolEnabledAsync(lifetime.Token)) SetMessage("已切换工具开关。");
+                // 工具开关：LB + 按下 RS。与首页「开始探索 / 停止探索」按钮、键盘快捷键
+                // 共用 CoreHostService.ToggleExplorationAsync —— 三者严格等价。
+                var result = await core.ToggleExplorationAsync(GameWindow.CheckGameWindowSize(), lifetime.Token);
+                if (result == ExplorationToggleResult.WindowSizeRejected)
+                    core.ReportUserError("游戏窗口尺寸不合适，无法开始探索（与首页按钮同样的要求）。");
             }
             else if (action == GamepadAction.OpenAssistant)
             {

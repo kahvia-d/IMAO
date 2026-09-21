@@ -81,6 +81,7 @@ public partial class App : Application
             services.AddSingleton<MapToolsController>();
             services.AddSingleton<IMapToolsController>(provider => provider.GetRequiredService<MapToolsController>());
             services.AddSingleton<GamepadInputService>();
+            services.AddSingleton<ExplorationHotkeyService>();
             services.AddTransient<INavigationViewService, NavigationViewService>();
 
             services.AddSingleton<IActivationService, ActivationService>();
@@ -173,7 +174,9 @@ public partial class App : Application
         _ = GetService<MarkerGuideCoordinator>();
         var mapTools = GetService<MapToolsController>();
         var gamepad = GetService<GamepadInputService>();
-        MainWindow.Closed += (_, _) => { mapTools.Dispose(); gamepad.Dispose(); };
+        // 键盘侧的启停快捷键必须在**核心已停止**时也活着，所以它住在外壳里（见该服务注释）。
+        var explorationHotkey = GetService<ExplorationHotkeyService>();
+        MainWindow.Closed += (_, _) => { mapTools.Dispose(); explorationHotkey.Dispose(); gamepad.Dispose(); };
         MainWindow.AppWindow.Closing += async (_, e) =>
         {
             if (closeApproved) return;

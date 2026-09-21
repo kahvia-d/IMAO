@@ -553,7 +553,7 @@ public sealed partial class SettingsPage : Page
         CurrentBindings.Text = $"已保存的绑定：点位完成 {RuntimeConfiguration.HotkeyName(configuration.NearestCompletionKey)}；" +
             $"手绘端点 {RuntimeConfiguration.HotkeyName(configuration.ManualRouteKey)}；攻略浮窗开关 {RuntimeConfiguration.HotkeyName(configuration.CurrentTargetGuideKey)}；" +
             $"攻略上一张 {RuntimeConfiguration.HotkeyName(configuration.GuidePreviousImageKey)}；下一张 {RuntimeConfiguration.HotkeyName(configuration.GuideNextImageKey)}；" +
-            $"启用/暂停工具 {RuntimeConfiguration.HotkeyName(configuration.ToggleEnabledKey)}（手柄：LB+按下RS）。";
+            $"开始/停止探索 {RuntimeConfiguration.HotkeyName(configuration.ToggleEnabledKey)}（手柄：LB+按下RS）。";
 
     }
 

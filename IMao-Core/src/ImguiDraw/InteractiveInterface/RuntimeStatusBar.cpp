@@ -32,8 +32,6 @@ std::string LocalizationText(const std::string& state) {
     if (state == "mapLocating") return "大地图定位中";
     if (state == "stale") return "等待更新定位";
     if (state == "recovering") return "正在恢复定位";
-    // 工具总开关关掉时的状态（手柄 LB+按下RS / 键盘快捷键切换）。
-    if (state == "paused") return "已暂停";
     return "等待定位";
 }
 }

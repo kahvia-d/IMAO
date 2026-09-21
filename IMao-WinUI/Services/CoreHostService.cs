@@ -12,6 +12,10 @@ using IMao_WinUI.Core.Updates;
 
 namespace IMao_WinUI.Services;
 
+/// <summary>「开始探索 / 停止探索」一次切换的结果，供界面决定提示什么。</summary>
+public enum ExplorationToggleResult { Started, Stopped, WindowSizeRejected }
+
+
 public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
 {
     private const int ProtocolVersion = 1;
@@ -170,6 +174,25 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public Task StartRuntimeAsync(CancellationToken cancellationToken = default) => SendCommandAsync("start", null, cancellationToken);
     public Task StopRuntimeAsync(CancellationToken cancellationToken = default) => SendCommandAsync("stop", null, cancellationToken);
 
+    /// <summary>
+    /// 首页「开始探索 / 停止探索」按钮的**同一份实现**，供手柄（LB+按下RS）与键盘快捷键复用。
+    /// 之所以放在服务里而不是各自抄一遍：快捷键必须与按钮严格等价。
+    /// 窗口尺寸检查由调用方在"准备开始"那一步完成并传入 canStart —— 它属于界面层
+    /// （GameWindow 只在外壳工程里编译），写在这里会让托管测试工程编不过；这一点已经被测试抓过一次。
+    /// </summary>
+    public async Task<ExplorationToggleResult> ToggleExplorationAsync(bool canStart = true,
+        CancellationToken cancellationToken = default)
+    {
+        if (Status.IsRunning)
+        {
+            await StopRuntimeAsync(cancellationToken);
+            return ExplorationToggleResult.Stopped;
+        }
+        if (!canStart) return ExplorationToggleResult.WindowSizeRejected;
+        await StartRuntimeAsync(cancellationToken);
+        return ExplorationToggleResult.Started;
+    }
+
     public async Task<JsonElement> ExecuteMarkerAsync(string operation, object arguments, CancellationToken cancellationToken = default)
     {
         if (!operation.StartsWith("marker", StringComparison.Ordinal)) throw new ArgumentException("无效点位命令");
@@ -182,22 +205,6 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             if (operation == "markerSelectProfile")
                 desiredMarkerProfile = JsonSerializer.SerializeToElement(arguments).GetProperty("profileId").GetString() ?? "local";
             return data;
-        }
-        finally { lifecycleLock.Release(); }
-    }
-
-    /// <summary>
-    /// 工具总开关（手柄 LB+按下RS）。发的是"翻转"命令：核心是唯一事实来源，
-    /// 界面不需要自己维护一份镜像，也就不会出现两边状态分叉。
-    /// </summary>
-    public async Task<bool> ToggleToolEnabledAsync(CancellationToken cancellationToken = default)
-    {
-        await lifecycleLock.WaitAsync(cancellationToken);
-        try
-        {
-            var session = await EnsureStartedLockedAsync(cancellationToken);
-            if (session is null) { ReportUserError("核心尚未连接，无法切换工具开关。"); return false; }
-            return await SendLockedAsync(session, "toolEnabled", new Dictionary<string, object?>(), cancellationToken);
         }
         finally { lifecycleLock.Release(); }
     }
