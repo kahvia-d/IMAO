@@ -7,7 +7,7 @@
 > - 记录纪律：**没有实测的数据一律写「未验证」**。禁止写"预计已解决 / 应该已经优化 / 理论上不会掉帧"。
 > - 每完成一个阶段就地更新 §21 台账、并把该阶段的状态行改成「已实现（待实测）」或「已验证」。
 >
-> 状态：**Phase 0 准备完成；Phase 1 / Phase 2 已实现（均未实测）；Phase 3～Phase 6 未开始。**（明细见 §21）
+> 状态：**Phase 0～Phase 2 已落地（编译 + 原生测试已验证；性能与实机回归未验证）；Phase 3～Phase 6 未开始，等实机结果再决定。**（明细见 §21）
 
 ---
 
@@ -852,9 +852,9 @@ WGC ROI Readback
 
 ### 顺带发现（留给 Phase 3 量化，本阶段不动）
 
-* `MarkerCompletionStore::Completed()` 取的是 `std::scoped_lock mutex`，而**写路径 `Commit()` 是在持锁状态下
-  写文件**（`MarkerCompletionStore.cpp` 对应 `.h:436` `Commit`）。所以渲染线程现在这条查询不只是加锁，
-  还可能**阻塞在磁盘写**上——这正是"帧时间长尾"的合理候选机制之一。Phase 1 会把它从渲染路径整体移走。
+* `MarkerCompletionStore::Completed()` 取的是 `std::scoped_lock mutex`，而**写路径 `Execute()` → `Commit()` 是在持锁状态下
+   写文件**（`MarkerCompletionStore.h` 是 header-only，`Commit` 在该文件末尾）。所以渲染线程原来这条查询不只是加锁，
+   还可能**阻塞在磁盘写**上——这正是"帧时间长尾"的合理候选机制之一。Phase 1 已把它从渲染路径整体移走。
 * `App.cpp:2544-2545` 在发布路径上**又对每个 marker 查了一次** `IsPointCompleted`（为游戏手柄上下文刷新
   `isSaved`）。它在采集线程、不在渲染线程，**本轮不动**（属任务书 §17「不修改不相关文件」范围之外），
   但记录在此：Phase 1 之后它是这条链路上最后剩下的每帧逐 marker 查询。
@@ -875,16 +875,61 @@ WGC ROI Readback
 
 # 21. 进度台账
 
-| 阶段 | 内容 | 状态 | commit | 实测数据 |
-|---|---|---|---|---|
-| Phase 0 | 开分支 + 任务书落档 | 已完成 | `docs: …`（见 git log） | 不适用 |
-| Phase 1 | 渲染线程不再实时查询 completion | 已实现（**未实测**） | `perf: use marker snapshot completion state during minimap rendering` | 未验证 |
-| Phase 2 | 纹理查找 O(1) | 已实现（**未实测**） | `perf: add constant-time marker texture lookup` | 未验证 |
-| Phase 3 | marker 分段性能日志 | 未开始 | — | 未验证 |
-| Phase 4 | 真正的小尺寸 MiniMap Overlay 实验模式 + A/B/A/B | 未开始 | — | 未验证 |
-| Phase 5 | Texture Atlas | 未开始（**取决于 Phase 4 结论**） | — | 未验证 |
-| Phase 6 | WGC ROI Readback | 未开始（**独立后续实验**） | — | 未验证 |
+| 阶段 | 内容 | 状态 | commit | 编译/测试证据 | 性能实测 |
+|---|---|---|---|---|---|
+| Phase 0 | 开分支 + 任务书落档 | 已完成 | `690dc22` | 不适用 | 不适用 |
+| Phase 1 | 渲染线程不再实时查询 completion | 已实现 · 已编译验证 | `44ed966` | ✅ 见 §23 | **未验证** |
+| Phase 2 | 纹理查找 O(1) | 已实现 · 已编译验证 | `095d129` | ✅ 见 §23 | **未验证** |
+| Phase 3 | marker 分段性能日志 | 未开始 | — | — | 未验证 |
+| Phase 4 | 真正的小尺寸 MiniMap Overlay 实验模式 + A/B/A/B | 未开始 | — | — | 未验证 |
+| Phase 5 | Texture Atlas | 未开始（**取决于 Phase 4 结论**） | — | — | 未验证 |
+| Phase 6 | WGC ROI Readback | 未开始（**独立后续实验**） | — | — | 未验证 |
 
 ## 回归检查（任务书 §16，逐项待实测）
 
 16 项全部**未验证**。Phase 1 相关的第 3、4、6 项优先，Phase 4 相关的第 9～15 项在实验模式落地后测。
+
+---
+
+# 22. 构建与测试环境（2026-09-21 本会话实测，给下一次会话省时间）
+
+| 项 | 结论 | 证据 |
+|---|---|---|
+| Ninja 构建树**在本会话不可用** | `out/build/windows-x64-release` 的生成边一启动就停住，ninja/cmake 进程 CPU 恒为 0，不推进也不报错 | 决定性实验：`out/perf/ninja-spawn-test` 里一个**只跑 `cmd /c echo`** 的极小 ninja 工程同样挂起（>60s 无输出）⟹ 本沙箱下 ninja **无法启动任何子进程**，与工程本身无关 |
+| **可用路径**：VS 生成器树 + MSBuild | `cmake --build out\build\windows-x64-release-vs144 --config Release --target …` | 先用极小工程 `out/perf/msbuild-spawn-test` 验证：configure 10.2s、build 6.4s，cl.exe 正常 |
+| 两个树**共用输出目录** | 都输出到 `x64\Release` | ninja 的 `build.ninja:1702` 与 VS 树同样设置 `RUNTIME_OUTPUT_DIRECTORY` |
+| `out/build/windows-x64-release/build.ninja` 的 mtime 状态 | 该文件是生成物、不进 git；排查期间我改过它两处并已在事后**逐字还原**（`cmake.verify_globs` 的 force 输入、`build.ninja` 的自重生成输入） | `git status` 看不到它；还原后两行与 `rules.ninja` 生成的原文一致 |
+| `CMakeFiles/cmake.verify_globs` 时间戳被触碰过一次 | 只影响那个不可用的 ninja 树；glob 集合**没有变化**（单独跑 `VerifyGlobs.cmake` exit 0、无 `GLOB mismatch`） | `cmake -P …/VerifyGlobs.cmake` = 0.2s，无输出 |
+
+**下次要注意**：`scripts/Test-Runtime.ps1` 走的是 Ninja 树，若沙箱仍禁止 ninja 起子进程，它会卡在 `[0/2] Re-checking globbed directories...`。可先用 §22 的 MSBuild 路径验证编译，再单独跑测试 exe。
+
+---
+
+# 23. 本会话的编译/测试证据（Phase 1 + Phase 2）
+
+命令（全程同一棵 VS 生成器树，Release）：
+
+```text
+cmake --build out\build\windows-x64-release-vs144 --config Release \
+    --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests --parallel 8
+```
+
+| 检查 | 结果 |
+|---|---|
+| 错误数（`error C`/`error LNK`/`error MSB`） | **0**（Phase 1 与 Phase 2 两次构建都是 0） |
+| 警告 | Phase 1: 209 条（均为既有的 C4244 等，与本次改动无关） |
+| Phase 1 产物 | `IMao-CoreHost.exe` 20:26:36、`IMaoOptimizationTests.exe` 20:28:49 |
+| Phase 2 产物 | `IMao-CoreHost.exe` 20:34:04；三个改动 TU（`DrawMarkerInteraction.cpp`/`ImGuiOverWindows.cpp`/`DrawItemBase.cpp`）在日志中各有一次编译记录 |
+| `IMaoOptimizationTests.exe` | exit 0，末行 `All optimization tests passed.` |
+| `IMaoMarkerTests.exe` | exit 0，末行 `Marker layout, interaction, account isolation and durable synchronization tests passed` |
+| 测试数据隔离 | 测试运行时 `LOCALAPPDATA` 指向 `out\perf\local-app-data`，不触碰玩家真实数据 |
+
+⚠️ **这两个测试目标不含 ImguiDraw 的源文件**（`CMakeLists.txt` 里 `IMaoOptimizationTests` 是显式源列表），所以它们**不能**证明 overlay 绘制路径的行为；它们只能证明"没编译坏"。真正验证 marker 行为需要实机回归（任务书 §16）。
+
+⚠️ **FPS / p95 / p99 / >20ms / PresentMode：全部未验证**——需要玩家在同一次运行里做交替 A/B，见任务书 §12/§13。
+
+## 本轮到此为止的理由
+
+任务书 §18 要求 `Phase 1 → 测试 → Phase 2 → 测试 → Phase 3`。Phase 1、Phase 2 都已按"独立 commit + 独立可回滚"落地并编译验证，但**"测试"这一步（实机帧率与标记行为回归）只有玩家本人能做**。
+因此 Phase 3（补诊断日志）及以后**不在本会话继续推进**：先拿实机结果，再决定是否值得加日志、是否值得做 Phase 4 的小窗口实验。
+
