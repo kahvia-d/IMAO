@@ -336,6 +336,8 @@ private:
     double predictedShadowSpeed = 0.0;
     std::chrono::steady_clock::time_point predictedShadowAt{};
     std::chrono::steady_clock::time_point lastPredictionLogAt{};
+    // 渲染位置那条路（外推 / 隐藏）的限速日志
+    std::chrono::steady_clock::time_point lastRenderPredictionLogAt{};
     OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being

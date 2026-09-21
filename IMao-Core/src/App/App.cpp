@@ -455,7 +455,36 @@ winrt::IAsyncAction App::Start() {
 						}
 					}
 				}
-				if (enabledMinMapShowItem) {
+				// 第 2 步（用户 2026-09-21 拍板，回测支撑）：渲染位置在空档期用短窗速度外推。
+				// 回测实测（15:21 场，2929 样本）：飞行速度下外推 500ms 中位偏 3.0 单位、1s 偏 7.2 单位，
+				// 都远小于小地图半径 97 ⟹ 标记会随飞行正常滑出小地图，而不是黏在中心。
+				// 权威位置、坐标数组、路线规划**一概不动**；这里只改"画出来的那一个值"。
+				const auto renderNow = std::chrono::steady_clock::now();
+				const double fixAgeSeconds = std::chrono::duration<double>(renderNow - lastTrustedConfirmAt).count();
+				bool renderTrusted = true;
+				std::string renderNote = "authoritative";
+				if (playerCurrentSceneId > 0 && fixAgeSeconds > 0.25) {
+					Coordinate predictedMap{};
+					double predictedSpeed = 0.0;
+					const double secondsAt = std::chrono::duration<double>(renderNow.time_since_epoch()).count();
+					if (coordinateTrust.PredictAt(playerCurrentSceneId, secondsAt, predictedMap, predictedSpeed)) {
+						playerROC = RelativeCoordinates::ImgMapCoordToROC(predictedMap, playerCurrentSceneId);
+						renderNote = "extrapolated";
+					}
+				}
+				// 超过 2 秒没有任何真值：外推误差已不可控（回测 p90 随时长增长），
+				// 宁可让标记消失，也不要停在错的位置一闪一闪——这是用户明确的取舍。
+				if (fixAgeSeconds > 2.0) {
+					renderTrusted = false;
+					renderNote = "hidden-stale";
+				}
+				if (renderNow - lastRenderPredictionLogAt >= std::chrono::seconds(1)) {
+					lastRenderPredictionLogAt = renderNow;
+					Diagnostics::Record("minimap-render-position", "mode=" + renderNote +
+						" fixAgeMs=" + std::to_string(static_cast<long long>(fixAgeSeconds * 1000.0)) +
+						" drawn=" + std::to_string(renderTrusted));
+				}
+				if (enabledMinMapShowItem && renderTrusted) {
 					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
 					DrawRouteOnMinMap::GetRoutePointsScreen(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
 				}
