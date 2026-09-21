@@ -113,7 +113,7 @@ vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, cons
     // 迟滞：已经在画的图标要"多走一段"才离场。实测（2026-09-21 13:34）玩家在同一收集点附近往返时，
     // 位置在 ±80 单位内摆动，图标就反复跨过 120 单位阈值 ⟹ 在小地图中心一闪一闪。
     // 进场仍是原来的尺度，只是离场放宽一圈，纯绘制层的事，不碰定位链路。
-    const auto wasDrawn = [&](std::uint64_t itemId) {
+    const auto wasDrawn = [&](const std::string& itemId) {
         for (const auto& previous : nearItemsDatas)
             if (previous.itemId == itemId) return true;
         return false;
