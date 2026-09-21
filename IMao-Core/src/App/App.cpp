@@ -395,6 +395,28 @@ winrt::IAsyncAction App::Start() {
 			imguiWindowsWidth = rect.right * 0.3;
 
 			if (co_await GetMinMapPlayerROC(currentSnapshot, playerROC, minMapRadius)) {
+				// 影子预测：不改任何行为，只把"用正确坐标记录外推能有多准"测出来。
+				// 外推 0.5/1/2 秒的残差决定下一步要不要真的用预测替代冻结的位置。
+				if (coordinateTrust.HasScene()) {
+					const auto predictionNow = std::chrono::steady_clock::now();
+					Coordinate predicted{};
+					double predictedSpeed = 0.0;
+					const double secondsAt = std::chrono::duration<double>(predictionNow.time_since_epoch()).count();
+					if (coordinateTrust.FitAt(coordinateTrust.Scene(), secondsAt, predicted, predictedSpeed)) {
+						predictedShadow = predicted;
+						predictedShadowSpeed = predictedSpeed;
+						predictedShadowAt = predictionNow;
+						if (predictionNow - lastPredictionLogAt >= std::chrono::seconds(1)) {
+							lastPredictionLogAt = predictionNow;
+							const auto* newest = coordinateTrust.Newest();
+							Diagnostics::Record("position-predicted", "scene=" + std::to_string(coordinateTrust.Scene()) +
+								" predicted=" + std::to_string(predicted.x) + "," + std::to_string(predicted.y) +
+								" v=" + std::to_string(predictedSpeed) + " stalenessMs=" + std::to_string(
+									newest == nullptr ? -1LL : static_cast<long long>((secondsAt - newest->secondsAt) * 1000.0)) +
+								" entries=" + std::to_string(coordinateTrust.Record().size()));
+						}
+					}
+				}
 				if (enabledMinMapShowItem) {
 					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
 					DrawRouteOnMinMap::GetRoutePointsScreen(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
@@ -1053,7 +1075,21 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// Independent fixes are the ones that compared the minimap against the map itself: a global
 		// visual match, a track against the tile index, or the readout.  A contour result and the
 		// pixel self-confirmation are only ever relative to what we already believe.
-		if (recognition || !visual || !relative) lastAbsoluteFixAt = now;
+		if (recognition || !visual || !relative) {
+			lastAbsoluteFixAt = now;
+			// 影子预测的残差：预测值 vs 这次的真值。horizonMs 说明外推了多久，
+			// 这样"外推多准"就是可以在日志里直接分档统计的数字。
+			if (predictedShadowAt != std::chrono::steady_clock::time_point{} &&
+				now - predictedShadowAt <= std::chrono::seconds(3)) {
+				const double residual = std::hypot(candidate.mapCenter.x - predictedShadow.x,
+					candidate.mapCenter.y - predictedShadow.y) / 1.205;
+				Diagnostics::Record("position-predicted-result", "residual=" + std::to_string(residual) +
+					" horizonMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+						now - predictedShadowAt).count()) +
+					" v=" + std::to_string(predictedShadowSpeed) + " source=" +
+					std::string(recognition ? "recognition" : (visual ? "tracked" : "readout")));
+			}
+		}
 		App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = candidate.mapCenter;
 		gameMapCenterCoordinateByMouseMonitoring = candidate.mapCenter;
 		identifyCoordinate = ImgMapToWorldCoordinate(candidate.mapCenter, candidate.sceneId);

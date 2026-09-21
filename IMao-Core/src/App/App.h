@@ -329,6 +329,13 @@ private:
     // they can only ever agree with where we already think we are - so they may bridge a moment,
     // never hold a position on their own.
     std::chrono::steady_clock::time_point lastAbsoluteFixAt{};
+    // 影子预测（用户 2026-09-21 的设计，第一步只测量）：每帧用记录拟合出的速度外推一个位置，
+    // 1 秒记一条；下一条独立定位到来时记"预测 vs 真值"的残差。有了外推 0.5/1/2 秒的残差数字，
+    // 才决定要不要在读数被丢弃时用预测**替代**冻结的位置。它绝不写入记录、绝不刷新任何确认时间戳。
+    Coordinate predictedShadow{};
+    double predictedShadowSpeed = 0.0;
+    std::chrono::steady_clock::time_point predictedShadowAt{};
+    std::chrono::steady_clock::time_point lastPredictionLogAt{};
     OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
