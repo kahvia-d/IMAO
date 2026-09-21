@@ -15,6 +15,7 @@
 #include "MinimapHudEvidenceTests.h"
 #include "DenseMapConfirmerTests.h"
 #include "OcrCoordinateGateTests.h"
+#include "CoordinateTrustTests.h"
 #include "Runtime/SnapshotChannel.h"
 #include "Runtime/FrameState.h"
 #include "Feature/Match/ExactDescriptorMatcher.h"
@@ -976,6 +977,7 @@ int main(int argc, char** argv) {
     TestMinimapHudEvidence(Expect);
     TestDenseMapConfirmer(Expect);
     TestOcrCoordinateGate(Expect);
+    TestCoordinateTrust(Expect);
     TestFineViewportMotion(Expect);
 	TestMapUiStateController();
 	TestMapCompassVisualDetector();
