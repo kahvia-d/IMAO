@@ -39,6 +39,22 @@ inline constexpr double kTrendToleranceUnits = 30.0;      // 拟合残差的固�
 inline constexpr double kTrendSpeedFactor = 2.5;          // 残差随时间/速度放宽的系数
 inline constexpr double kMirrorToleranceUnits = 60.0;     // 镜像判据的容差
 inline constexpr double kChainStepMinimumUnits = 60.0;    // 相邻两条记录步长的下限（超出即视为断点）
+// 预测专用短窗（用户 2026-09-21 的设计）：长窗（6~16 条 / 30 秒）是为**抗单点错误**设计的，
+// 但它会把"站立/悬停"和"飞行"平均掉——14:55 实测拟合速度只有 3.3 单位/秒而人正在飞（≈50~70），
+// 于是外推 2.2 秒偏出 94 单位（≈整个小地图半径）。预测要的是**当前**速度，所以另开一个短窗。
+inline constexpr double kPredictionWindowSeconds = 1.2;
+inline constexpr std::size_t kPredictionMinimumEntries = 3;
+inline constexpr std::size_t kPredictionMaximumEntries = 12;
+inline constexpr double kPredictionMinimumSpanSeconds = 0.3;
+inline constexpr double kPredictionMaximumAgeSeconds = 2.0;
+
+// 为什么拟合/预测被拒——没有这个，"测量没数据"永远无法解释。
+struct FitReport {
+    bool ok = false;
+    const char* reason = "ok";       // ok / age / chain / too-few / span / nonfinite
+    std::size_t entries = 0;
+    double spanSeconds = 0.0;
+};
 
 // 候选是否落在"参照位置关于地图原点的镜像"上（x 轴或 y 轴镜像）。
 inline bool IsMirrorOf(int sceneId, const Coordinate& candidate, const Coordinate& reference, double tolerance) {
@@ -100,26 +116,40 @@ public:
     // 轨迹趋势：只取记录里**物理上说得通的那段后缀**（相邻步长 ≤ max(60, 400×dt)）做线性最小二乘，
     // 预测 secondsAt 时刻的位置。任何一条错读都会截断这段后缀，所以它既污染不了趋势，
     // 也不可能把位置锁死——返回 false 表示"没有可用轨迹"，调用方必须退回预算闸门，**不得据此否决**。
-    bool FitAt(int sceneId, double secondsAt, Coordinate& predicted, double& speedPerSecond) const {
+    bool FitAt(int sceneId, double secondsAt, Coordinate& predicted, double& speedPerSecond,
+        FitReport* report = nullptr) const {
         std::vector<const Entry*> segment;
         const Entry* newer = nullptr;
+        const char* reject = "too-few";
         for (auto it = record_.rbegin(); it != record_.rend(); ++it) {
             if (it->sceneId != sceneId) continue;
-            if (secondsAt - it->secondsAt > kFitMaximumAgeSeconds) break;
+            if (secondsAt - it->secondsAt > kFitMaximumAgeSeconds) { reject = "age"; break; }
             if (newer != nullptr) {
                 const double dt = newer->secondsAt - it->secondsAt;
                 const double step = std::hypot(newer->mapCoordinate.x - it->mapCoordinate.x,
                     newer->mapCoordinate.y - it->mapCoordinate.y);
-                if (dt <= 0.0 || step > std::max(kChainStepMinimumUnits, dt * kMaximumSpeedUnitsPerSecond))
+                if (dt <= 0.0 || step > std::max(kChainStepMinimumUnits, dt * kMaximumSpeedUnitsPerSecond)) {
+                    reject = "chain";
                     break;   // 断点：错读就在这一步，后缀到此为止
+                }
             }
             segment.push_back(&*it);
             newer = &*it;
             if (segment.size() >= kFitMaximumEntries) break;
         }
+        if (report != nullptr) {
+            report->entries = segment.size();
+            report->spanSeconds = segment.size() < 2 ? 0.0 :
+                segment.front()->secondsAt - segment.back()->secondsAt;
+            report->reason = reject;
+            report->ok = false;
+        }
         if (segment.size() < kFitMinimumEntries) return false;
         // 站着不动时末尾会堆一串几乎相同的点：对拟合无害（速度≈0），但跨度太小就没有方向可言
-        if (segment.front()->secondsAt - segment.back()->secondsAt < kFitMinimumSpanSeconds) return false;
+        if (segment.front()->secondsAt - segment.back()->secondsAt < kFitMinimumSpanSeconds) {
+            if (report != nullptr) report->reason = "span";
+            return false;
+        }
         // 线性最小二乘：x(t)、y(t)，时间原点取最新一条
         const double t0 = segment.front()->secondsAt;
         double sumT = 0, sumTT = 0, sumX = 0, sumY = 0, sumTX = 0, sumTY = 0;
@@ -138,6 +168,58 @@ public:
         const double t = secondsAt - t0;
         predicted = { interceptX + slopeX * t, interceptY + slopeY * t };
         speedPerSecond = std::hypot(slopeX, slopeY);
+        if (report != nullptr) { report->reason = "ok"; report->ok = true; }
+        return std::isfinite(predicted.x) && std::isfinite(predicted.y);
+    }
+
+    // 预测用的**短窗**外推：取最近 kPredictionWindowSeconds 内的条目，用**首尾两点**估当前速度。
+    // 短窗里最小二乘对噪声更敏感、端点差更稳；而且它天然给出"此刻"的速度，而不是 30 秒的平均。
+    bool PredictAt(int sceneId, double secondsAt, Coordinate& predicted, double& speedPerSecond,
+        FitReport* report = nullptr) const {
+        const Entry* newest = nullptr;
+        const Entry* oldest = nullptr;
+        const Entry* newer = nullptr;
+        std::size_t count = 0;
+        const char* reject = "too-few";
+        for (auto it = record_.rbegin(); it != record_.rend(); ++it) {
+            if (it->sceneId != sceneId) continue;
+            if (newest == nullptr) {
+                newest = &*it;
+                if (secondsAt - it->secondsAt > kPredictionMaximumAgeSeconds) { reject = "stale"; break; }
+            }
+            if (newest->secondsAt - it->secondsAt > kPredictionWindowSeconds) break;
+            if (newer != nullptr) {
+                const double dt = newer->secondsAt - it->secondsAt;
+                const double step = std::hypot(newer->mapCoordinate.x - it->mapCoordinate.x,
+                    newer->mapCoordinate.y - it->mapCoordinate.y);
+                if (dt <= 0.0 || step > std::max(kChainStepMinimumUnits, dt * kMaximumSpeedUnitsPerSecond)) {
+                    reject = "chain";
+                    break;
+                }
+            }
+            oldest = &*it;
+            newer = &*it;
+            ++count;
+            if (count >= kPredictionMaximumEntries) break;
+        }
+        if (report != nullptr) {
+            report->entries = count;
+            report->spanSeconds = (newest != nullptr && oldest != nullptr)
+                ? newest->secondsAt - oldest->secondsAt : 0.0;
+            report->reason = reject;
+            report->ok = false;
+        }
+        if (newest == nullptr || oldest == nullptr || count < kPredictionMinimumEntries) return false;
+        const double span = newest->secondsAt - oldest->secondsAt;
+        if (span < kPredictionMinimumSpanSeconds) { if (report != nullptr) report->reason = "span"; return false; }
+        // 首尾两点差：位置差 / 时间差就是当前速度（map 单位/秒）
+        const double velocityX = (newest->mapCoordinate.x - oldest->mapCoordinate.x) / span;
+        const double velocityY = (newest->mapCoordinate.y - oldest->mapCoordinate.y) / span;
+        speedPerSecond = std::hypot(velocityX, velocityY);
+        const double ahead = secondsAt - newest->secondsAt;
+        predicted = { newest->mapCoordinate.x + velocityX * ahead,
+                      newest->mapCoordinate.y + velocityY * ahead };
+        if (report != nullptr) { report->reason = "ok"; report->ok = true; }
         return std::isfinite(predicted.x) && std::isfinite(predicted.y);
     }
 

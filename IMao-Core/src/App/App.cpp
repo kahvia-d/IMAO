@@ -401,20 +401,27 @@ winrt::IAsyncAction App::Start() {
 					const auto predictionNow = std::chrono::steady_clock::now();
 					Coordinate predicted{};
 					double predictedSpeed = 0.0;
+					CoordinateTrust::FitReport predictionReport;
 					const double secondsAt = std::chrono::duration<double>(predictionNow.time_since_epoch()).count();
-					if (coordinateTrust.FitAt(coordinateTrust.Scene(), secondsAt, predicted, predictedSpeed)) {
+					// 短窗（≈1.2 秒）估**当前**速度：长窗会把站立与飞行平均掉（14:55 实测 v=3.3 而人在飞）。
+					const bool predictedOk = coordinateTrust.PredictAt(coordinateTrust.Scene(), secondsAt,
+						predicted, predictedSpeed, &predictionReport);
+					if (predictedOk) {
 						predictedShadow = predicted;
 						predictedShadowSpeed = predictedSpeed;
 						predictedShadowAt = predictionNow;
-						if (predictionNow - lastPredictionLogAt >= std::chrono::seconds(1)) {
-							lastPredictionLogAt = predictionNow;
-							const auto* newest = coordinateTrust.Newest();
-							Diagnostics::Record("position-predicted", "scene=" + std::to_string(coordinateTrust.Scene()) +
-								" predicted=" + std::to_string(predicted.x) + "," + std::to_string(predicted.y) +
-								" v=" + std::to_string(predictedSpeed) + " stalenessMs=" + std::to_string(
-									newest == nullptr ? -1LL : static_cast<long long>((secondsAt - newest->secondsAt) * 1000.0)) +
-								" entries=" + std::to_string(coordinateTrust.Record().size()));
-						}
+					}
+					if (predictionNow - lastPredictionLogAt >= std::chrono::seconds(1)) {
+						lastPredictionLogAt = predictionNow;
+						const auto* newest = coordinateTrust.Newest();
+						Diagnostics::Record("position-predicted",
+							std::string(predictedOk ? "ok=true" : "ok=false") +
+							" reason=" + predictionReport.reason + " entries=" + std::to_string(predictionReport.entries) +
+							" spanMs=" + std::to_string(static_cast<long long>(predictionReport.spanSeconds * 1000.0)) +
+							" predicted=" + std::to_string(predicted.x) + "," + std::to_string(predicted.y) +
+							" v=" + std::to_string(predictedSpeed) + " stalenessMs=" + std::to_string(
+								newest == nullptr ? -1LL : static_cast<long long>((secondsAt - newest->secondsAt) * 1000.0)) +
+							" record=" + std::to_string(coordinateTrust.Record().size()));
 					}
 				}
 				if (enabledMinMapShowItem) {
