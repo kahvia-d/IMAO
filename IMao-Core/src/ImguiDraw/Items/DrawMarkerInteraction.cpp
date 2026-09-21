@@ -39,6 +39,9 @@ std::deque<nlohmann::json> guideRequests;
 bool mapInteractive = false;
 bool escapeWasDown = false;
 bool ordinaryEscapeRequested = false;
+// Sum of the time DrawIcon spent resolving or loading an icon texture. Monotonic, so a caller
+// that brackets its own icons reads exactly their share of it instead of everyone's.
+std::uint64_t iconTextureLookupMicros = 0;
 struct PlanningEscapeRequest {
     bool cancelOnly = false;
     std::string profile;
@@ -1026,7 +1029,12 @@ void DrawMarkerInteraction::DrawMapToolsLauncher(const RECT& rect, HWND gameWind
     regionsAt = Clock::now();
 }
 
+std::uint64_t DrawMarkerInteraction::IconTextureLookupMicros() { return iconTextureLookupMicros; }
+
 void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted, bool completed, std::size_t count) {
+    // Charged to whoever asked for this icon; a cache hit is a couple of hash lookups, a miss
+    // pays for the decode.
+    const auto lookupStarted = Clock::now();
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture;
     if (const auto cached = DrawItemBase::itemTextureIndex.find(item.nameId); cached != DrawItemBase::itemTextureIndex.end())
         texture = DrawItemBase::itemsTextureData[cached->second].texture;
@@ -1045,6 +1053,8 @@ void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, flo
             DrawItemBase::itemsTextureData.emplace_back(item.nameId, texture);
         }
     }
+    iconTextureLookupMicros += static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - lookupStarted).count());
     auto* draw = ImGui::GetBackgroundDrawList();
     const auto color = highlighted ? IM_COL32(67, 226, 138, 255) : IM_COL32(232, 190, 116, completed ? 120 : 240);
     if (texture) DrawItemBase::RenderPointCircle(reinterpret_cast<ImTextureID>(texture.Get()), position, radius,

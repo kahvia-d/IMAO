@@ -18,6 +18,25 @@ using namespace std;
 namespace {
 constexpr size_t kDiagnosticMarkerSampleLimit = 32;
 
+// Render-thread accumulators behind DrawItemOnMinMap::TakeMarkerRenderStats. A scope guard rather
+// than a start/stop pair, so the early return below is accounted for too.
+DrawItemOnMinMap::MarkerRenderStats markerRenderStats;
+
+double ElapsedMs(const std::chrono::steady_clock::time_point& since) {
+    return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - since).count();
+}
+
+struct MarkerDrawScope {
+    const std::chrono::steady_clock::time_point started = std::chrono::steady_clock::now();
+    const std::uint64_t lookupMicrosBefore = DrawMarkerInteraction::IconTextureLookupMicros();
+    ~MarkerDrawScope() {
+        ++markerRenderStats.draws;
+        markerRenderStats.drawMs += ElapsedMs(started);
+        markerRenderStats.textureLookupMs +=
+            static_cast<double>(DrawMarkerInteraction::IconTextureLookupMicros() - lookupMicrosBefore) / 1000.0;
+    }
+};
+
 string DescribeMarkerSample(const vector<ItemDatas>& markers) {
     ostringstream stream;
     stream << fixed << setprecision(1);
@@ -198,12 +217,14 @@ nlohmann::json DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamep
 }
 
 void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame& frame, const OverlayScreenTransform& motion) {
+    MarkerDrawScope drawScope;
     DrawItemBase::UpdateMarkerContext(frame.sceneName);
     if (frame.profileId != DrawItemBase::MarkerProfile()) return;
     // The frame records the radius its icons were measured with; a frame that never
     // went through the nearby update (a test fixture) still draws with the same formula.
     const float radius = frame.markerRadius > 0 ? static_cast<float>(frame.markerRadius)
         : std::max(8.0f, rect.right * 0.012f / 2);
+    markerRenderStats.candidates += frame.markers.size();
     std::vector<MarkerLayoutPoint> points;
     for (std::size_t index = 0; index < frame.markers.size(); ++index) {
         const auto& item = frame.markers[index];
@@ -216,7 +237,11 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
         if (frame.radius > 0.0 && std::hypot(position.x - frame.center.x, position.y - frame.center.y) > frame.radius) continue;
         points.push_back({std::to_string(item.layer.stateId) + ":" + item.itemId, position.x, position.y, index});
     }
-    for (const auto& group : BuildMarkerLayout(std::move(points), radius * 2 + 2))
+    const auto layoutStarted = std::chrono::steady_clock::now();
+    auto groups = BuildMarkerLayout(std::move(points), radius * 2 + 2);
+    markerRenderStats.layoutMs += ElapsedMs(layoutStarted);
+    markerRenderStats.drawnIcons += groups.size();
+    for (const auto& group : groups)
         DrawMarkerInteraction::DrawIcon(frame.markers[group.anchor.sourceIndex],
             ImVec2(static_cast<float>(group.anchor.x), static_cast<float>(group.anchor.y)), radius, false, false, group.members.size());
     const auto route = RoutePlanningService::View();
@@ -233,3 +258,9 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
 }
 
 ItemMarkerFrame DrawItemOnMinMap::Snapshot() { std::scoped_lock lock(markerMutex); return {senceName, nearItemsDatas, minMapCenterPoint, minMapClipRadius, minMapMarkerRadius, DrawItemBase::MarkerProfile(), minMapFilterRevision}; }
+
+DrawItemOnMinMap::MarkerRenderStats DrawItemOnMinMap::TakeMarkerRenderStats() {
+    const auto stats = markerRenderStats;
+    markerRenderStats = {};
+    return stats;
+}

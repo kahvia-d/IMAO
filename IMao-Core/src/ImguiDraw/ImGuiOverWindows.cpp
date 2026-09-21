@@ -631,6 +631,7 @@ int ImGuiOverWindows::start()
             if (capture->frameId != lastCapturedFrame) { ++capturedFrames; lastCapturedFrame = capture->frameId; }
             if (frameStart - motionReportAt >= std::chrono::seconds(2)) {
                 const double seconds = std::chrono::duration<double>(frameStart - motionReportAt).count();
+                const auto markers = DrawItemOnMinMap::TakeMarkerRenderStats();
                 Diagnostics::Record("overlay-motion", "renderFps=" + std::to_string(renderedFrames / seconds) +
                     " sourceFps=" + std::to_string(observedFrames / seconds) +
                     " captureFps=" + std::to_string(capturedFrames / seconds) + " mode=image-anchored" +
@@ -662,6 +663,15 @@ int ImGuiOverWindows::start()
                     " segHashMs=" + std::to_string(hashCalls ? hashTotalMs / hashCalls : 0.0) +
                     " segPresentMs=" + std::to_string(presentCalls ? presentTotalMs / presentCalls : 0.0) +
                     " segPresents=" + std::to_string(presentCalls) +
+                    // Minimap marker drawing, from DrawItemsOnMinMap's own accumulators. The two
+                    // counts are per-draw averages and markerDraws is how many draws they cover;
+                    // markerTextureLookupMs is charged by DrawIcon, so it is a part of markerDrawMs.
+                    " markerCount=" + std::to_string(markers.draws ? static_cast<double>(markers.candidates) / markers.draws : 0.0) +
+                    " markerGroupCount=" + std::to_string(markers.draws ? static_cast<double>(markers.drawnIcons) / markers.draws : 0.0) +
+                    " markerDrawMs=" + std::to_string(markers.draws ? markers.drawMs / markers.draws : 0.0) +
+                    " markerLayoutMs=" + std::to_string(markers.draws ? markers.layoutMs / markers.draws : 0.0) +
+                    " markerTextureLookupMs=" + std::to_string(markers.draws ? markers.textureLookupMs / markers.draws : 0.0) +
+                    " markerDraws=" + std::to_string(markers.draws) +
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
                 attachedFrames = trackingMisses = 0; heldMinimapFrames = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;

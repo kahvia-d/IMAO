@@ -18,4 +18,7 @@ public:
     static void SyncMouseHook();
     /// "mouse=on/off keyboard=on/off", for the overlay diagnostics.
     static std::string HookState();
+    /// Monotonic microseconds DrawIcon has spent resolving or loading icon textures. Bracket a
+    /// group of icons with it to charge exactly that group; see DrawItemOnMinMap.
+    static std::uint64_t IconTextureLookupMicros();
 };
