@@ -38,7 +38,14 @@
        registers that host for the current user, so the bridge has to ship with
        every build and publish output. -->
   <Target Name="StageKuroSyncBridgeToOutput" AfterTargets="CopyFilesToOutputDirectory">
-    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectDirectory)\..\tools\KuroSyncBridge\KuroSyncBridge.csproj&quot; -c Release -r win-x64 -p:Platform=x64 --self-contained false -p:PublishSingleFile=true -o &quot;$(TargetDir).kuro-bridge&quot; --source &quot;$(NuGetPackageRoot)&quot; -p:NuGetAudit=false" />
+    <!-- 这里原来把本地 NuGet 缓存当成唯一源传进去，有两个问题：
+         ① $(NuGetPackageRoot) 以反斜杠结尾，会把结尾的引号转义掉，后面的 NuGetAudit 开关
+            被当成路径的一部分（NU1301：本地源不存在）；
+         ② 只把本地缓存当源时，PublishSingleFile 需要的 Microsoft.NET.ILLink.Tasks 一旦不在缓存里
+            就 NU1101 直接失败；再补一个 URL 源又会被 NuGet 当成本地路径（同样是 NU1301）。
+         交给常规还原即可：全局包缓存本来就优先于远程源，缺包时才联网。
+         纯构建脚本修复，不改变发布的任何内容。 -->
+    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectDirectory)\..\tools\KuroSyncBridge\KuroSyncBridge.csproj&quot; -c Release -r win-x64 -p:Platform=x64 --self-contained false -p:PublishSingleFile=true -o &quot;$(TargetDir).kuro-bridge&quot; -p:NuGetAudit=false" />
     <Copy SourceFiles="$(TargetDir).kuro-bridge\KuroSyncBridge.exe" DestinationFolder="$(TargetDir)" />
   </Target>
 
