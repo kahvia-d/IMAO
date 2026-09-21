@@ -1359,11 +1359,15 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					reading.valid = true;
 					reading.score = candidate->modelScore;
 					const std::string world = std::to_string(candidate->x) + "," + std::to_string(candidate->y);
-					// 预测卡关：偏离预测超过 40 单位的读数直接丢（15:39 的两条 131/124 单位错读正是这么进来的）
+					// 预测卡关：只拦**明显**离谱的读数。15:48 实测：16 条被这条规则拒绝的读数里，
+					// 中位偏离 73 单位、分数却有 0.94~0.98，而且它们**彼此连续**（相邻两条只差 8~11 单位，
+					// 明显是一条真实的飞行轨迹）——错的是预测（无特征区记录稀疏，短窗速度跟不上），
+					// 不是读数。40 单位太紧，收到 150：宁可放过 130 单位那种"可能是真加速"的边界情况，
+					// 也不能把合法读数丢掉——准确性优先，这是用户明确的取舍。
 					if (hasReadoutPrediction) {
 						const double predictionResidual = std::hypot(candidate->x - predictedWorld.x,
 							candidate->y - predictedWorld.y);
-						if (predictionResidual > 40.0) {
+						if (predictionResidual > 150.0) {
 							Diagnostics::Record("coordinate-publish-rejected", "reason=predicted-outlier world=" + world +
 								" predicted=" + std::to_string(predictedWorld.x) + "," + std::to_string(predictedWorld.y) +
 								" residual=" + std::to_string(predictionResidual) +
