@@ -312,6 +312,13 @@ private:
     // When any source last confirmed the position (visual match or coordinate).  A feature
     // tracker that cannot follow a position we just confirmed is not evidence that the
     // position is wrong, so the recovery state must not escalate on that alone.
+    // When the local tracker last started failing continuously.  Some regions carry a very
+    // thin feature pack (Tethys 7k keypoints against Jinzhou's 207k), so the tracker cannot
+    // follow the minimap there at all.  Waiting for the recovery escalation would freeze the
+    // marker on the terrain for that whole window, so while this is set the readout is asked
+    // for the position continuously instead.  Cleared by any accepted local tracking.
+    std::chrono::steady_clock::time_point localTrackingStalledSince{};
+    bool LocalTrackingStalled(std::chrono::steady_clock::time_point now) const;
     std::chrono::steady_clock::time_point lastTrustedConfirmAt{};
     OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
