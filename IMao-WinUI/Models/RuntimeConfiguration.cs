@@ -25,6 +25,10 @@ public sealed record RuntimeConfiguration
     public bool MinMapEnabled { get; init; } = true;
     public bool SavedPointsEnabled { get; init; } = true;
     public bool StatusBarEnabled { get; init; } = true;
+    // The minimal overlay has no bar, only a ball at the minimap's corner. Off by default: the minimal
+    // style is meant to show the markers and nothing else unless the player asks for the state to be
+    // visible in game.
+    public bool StatusBallEnabled { get; init; }
     public bool AutoReplanEnabled { get; init; }
     public int NearestCompletionKey { get; init; } = 90;
     public int ManualRouteKey { get; init; } = 81;
@@ -81,7 +85,8 @@ public sealed record RuntimeConfiguration
         ["mapUpdateCycle"] = MapUpdateCycle,
         ["minMapUpdateCycle"] = MinMapUpdateCycle, ["mapEnabled"] = MapEnabled,
         ["minMapEnabled"] = MinMapEnabled, ["savedPointsEnabled"] = SavedPointsEnabled,
-        ["statusBarEnabled"] = StatusBarEnabled, ["autoReplanEnabled"] = AutoReplanEnabled,
+        ["statusBarEnabled"] = StatusBarEnabled, ["statusBallEnabled"] = StatusBallEnabled,
+        ["autoReplanEnabled"] = AutoReplanEnabled,
         ["nearestCompletionKey"] = NearestCompletionKey,
         ["manualRouteKey"] = ManualRouteKey, ["currentTargetGuideKey"] = CurrentTargetGuideKey,
         ["guidePreviousImageKey"] = GuidePreviousImageKey, ["guideNextImageKey"] = GuideNextImageKey,

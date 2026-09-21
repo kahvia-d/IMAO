@@ -58,6 +58,9 @@ public sealed class CoreRuntimeStatus
     [JsonPropertyName("statusBarEnabled")]
     public bool StatusBarEnabled { get; init; } = true;
 
+    [JsonPropertyName("statusBallEnabled")]
+    public bool StatusBallEnabled { get; init; }
+
     // 只有 CoreHost 确认叠加已经启动后，首页才切换到“停止”。
     // 资源加载或纯管道连接不能被误显示为“正在运行”。
     public bool IsRunning => CoreState is "running" or "startingOverlay" or "stopping";

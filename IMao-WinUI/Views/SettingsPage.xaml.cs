@@ -616,6 +616,7 @@ public sealed partial class SettingsPage : Page
         Setting_MapShowItem.IsOn = value.MapEnabled;
         Setting_SetVisibleSavedPoints.IsOn = value.SavedPointsEnabled;
         ToggleSwitch_StatusBar.IsOn = value.StatusBarEnabled;
+        ToggleSwitch_StatusBall.IsOn = value.StatusBallEnabled;
         AutomaticReplan.IsOn = value.AutoReplanEnabled;
         CompletionRangePixels.Value = value.CompletionRangePixels;
         GuideRangePixels.Value = value.GuideRangePixels;
@@ -671,6 +672,7 @@ public sealed partial class SettingsPage : Page
     private async void ToggleSwitch_MapShowItem(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(mapEnabled: Setting_MapShowItem.IsOn));
     private async void ToggleSwitch_SetVisibleSavedPoints(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(savedPointsEnabled: Setting_SetVisibleSavedPoints.IsOn));
     private async void ToggleSwitch_StatusBar_Toggled(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(statusBarEnabled: ToggleSwitch_StatusBar.IsOn));
+    private async void ToggleSwitch_StatusBall_Toggled(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(statusBallEnabled: ToggleSwitch_StatusBall.IsOn));
     private async void AutomaticReplan_Toggled(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(autoReplanEnabled: AutomaticReplan.IsOn));
     private void OpenPoints_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.SavedPoints);
     private async void KuroSyncPreview_Click(object sender, RoutedEventArgs e)
