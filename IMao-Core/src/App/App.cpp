@@ -980,6 +980,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			candidate.quality = VisualLocalizationQuality::Marginal;
 		}
 		playerCurrentSceneId = candidate.sceneId;
+		lastTrustedConfirmAt = now;
 		App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = candidate.mapCenter;
 		gameMapCenterCoordinateByMouseMonitoring = candidate.mapCenter;
 		identifyCoordinate = ImgMapToWorldCoordinate(candidate.mapCenter, candidate.sceneId);
@@ -1203,7 +1204,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						reading.sceneId = coordinateTrust.Scene();
 						reading.mapCoordinate = chosen->mapCoordinate;
 						reading.arbitrated = false;
-						if (arbitrations >= 2) break;   // 旧的像素裁决停用（见下一笔的删除）
+						if (true) continue;   // the pixel arbitration is retired; the trust design decides
 						++arbitrations;
 						double best = 0.0;
 						double second = 0.0;
@@ -1611,7 +1612,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// occluded HUD frame. It is the same visual loss as a failed local
 		// match: consume the normal three-frame grace sequence and keep the
 		// trusted marker visible while its age is still safe.
-		coordinateRecovery.OnContinuityFailure(now);
+		// A failing feature tracker is not evidence against a position that was confirmed moments
+	// ago: the predecessor simply kept its position and re-read the readout.  Only when the
+	// confirmation is older than the window does a failure escalate into recovery.
+	if (now - lastTrustedConfirmAt <= std::chrono::seconds(15)) coordinateRecovery.OnContinuitySuccess(now);
+	else coordinateRecovery.OnContinuityFailure(now);
 		if (returnTrustedPosition()) {
 			RuntimeStatus::SetLocalization("stale", "last-trusted", "小地图特征不足，使用上次可信定位");
 			RuntimeStatus::SetLastGoodAgeMilliseconds(coordinateRecovery.TrustedAgeMilliseconds(now));
@@ -1667,7 +1672,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	}
 
 	const auto previousState = coordinateRecovery.State();
-	coordinateRecovery.OnContinuityFailure(now);
+	// A failing feature tracker is not evidence against a position that was confirmed moments
+	// ago: the predecessor simply kept its position and re-read the readout.  Only when the
+	// confirmation is older than the window does a failure escalate into recovery.
+	if (now - lastTrustedConfirmAt <= std::chrono::seconds(15)) coordinateRecovery.OnContinuitySuccess(now);
+	else coordinateRecovery.OnContinuityFailure(now);
 	Diagnostics::Record("minimap-continuity", "failed state=" + std::string(CoordinateRecoveryController::StateName(
 		coordinateRecovery.State())) + " minimapKeypoints=" + std::to_string(minMapFeatureData.imgKeypoints.size()));
 	if (coordinateRecovery.State() != CoordinateLockState::Recovering) {

@@ -309,6 +309,10 @@ private:
     // Armed when the big map opens: at that moment it shows the player's own region, so the
     // first successful viewport solve may name T.  Later solves may be the player browsing.
     bool bigMapSolvePending = false;
+    // When any source last confirmed the position (visual match or coordinate).  A feature
+    // tracker that cannot follow a position we just confirmed is not evidence that the
+    // position is wrong, so the recovery state must not escalate on that alone.
+    std::chrono::steady_clock::time_point lastTrustedConfirmAt{};
     OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
