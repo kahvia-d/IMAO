@@ -1096,7 +1096,37 @@ markerDraws=            该 2 秒窗口内 DrawItemsOnMinMap 的调用次数
 | 生效条件 | `frame.minimapVisible && !frame.mapVisible`：小地图存在、大地图未打开、小地图点位显示已开 |
 | 开大地图时 | 自动回到整屏窗口（视口匹配与大地图 marker 保持现状，本轮不动大地图） |
 
-开关本身是 `IMao-Core/src/Runtime/IsolationSwitches.h` 的 **bit 7（`kMiniOverlay`）**，日志里名为 `mini-overlay`。诊断页那个 NumberBox 直接把掩码发给 CoreHost（`CoreHostMain.cpp` 的 `setIsolationSwitches`），所以没有新增 UI。
+开关本身是 `IMao-Core/src/Runtime/IsolationSwitches.h` 的 **bit 7（`kMiniOverlay`）**，日志里名为 `mini-overlay`。诊断页那个 NumberBox 直接把掩码发给 CoreHost（`CoreHostMain.cpp` 的 `setIsolationSwitches`），所以没有新增 IPC。
+
+⚠️ **那个框原来上限是 127，所以 128 根本填不进去**（2026-09-21 实测发现）。已由 `f4f1d8e` 把 `DiagnosticsPage.xaml` 的上限改成 255，并把 128 写进说明文字。
+⚠️ 改动落在**托管外壳**（`resources.pri` 里编译过的 XAML），所以：**先完全退出 IMAO（含托盘），再启动**，否则你看到的还是旧的 127 上限。
+⚠️ 填完值后要**按 Tab 或点别处**让输入生效（NumberBox 在值变化时才发送）。
+
+### 26.1.1 托管外壳怎么部署的（含本环境的已知限制）
+
+托管 app 的源码与发布版（`8fa437c`）**逐字节一致**（`git diff 8fa437c..HEAD -- IMao-WinUI IMao-WinUI.Core` 为空），我只改了 XAML。重建命令（照 `Build-ReleaseCandidate.ps1`）：
+
+```powershell
+. .\scripts\Enter-DevEnvironment.ps1
+& $env:IMAO_DOTNET build   IMao-WinUI/IMao-WinUI.csproj -c Release -r win-x64 --self-contained true -p:NuGetAudit=false --source $env:NUGET_PACKAGES
+& $env:IMAO_DOTNET publish IMao-WinUI/IMao-WinUI.csproj -c Release -r win-x64 --self-contained true -p:NuGetAudit=false --source $env:NUGET_PACKAGES --no-restore -o <输出目录>
+```
+
+⚠️ **本环境里这条命令 exit=1**：`IMao-WinUI.csproj(161,29)` 报 `MSB4186`（`[System.IO.Path]::GetDirectoryName()` 静态方法调用无效），出现在**后段收集语言 MUI 文件**的步骤，与本次改动无关（是既有问题，报错点在属性/项求值，不在 XAML）。**但 app 与 `resources.pri` 在该步骤之前就已产出**，所以：
+- 已用**字节扫描**验证新 `resources.pri` 确实包含新文案（含正/负对照，见 §26.1.2）；
+- 只部署了 **`resources.pri`** 这一个文件（`68E9F694`），**没有**动 `IMao-WinUI.exe` / `IMao-WinUI.dll` / `IMao-WinUI.Core.dll`——它们与发布版字节不同只是因为提交号盖章（源码相同），没有理由替换已发布的二进制；
+- 旧文件备份：`C:\Dapps\IMao\resources.before-mini-switch-20260921.pri`（`C144F8F7`）。
+
+### 26.1.2 怎么证明新 XAML 真的进去了
+
+`resources.pri` 是二进制，用 UTF-16 字节找字符串即可（本会话就是这么验的）：
+
+| 探针 | 新构建 `resources.pri` | 发布版 `resources.pri` |
+|---|---|---|
+| `128=改用小地图局部覆盖层` | ✅ 命中 | ❌ 不含 |
+| `64=改用 DirectComposition`（改动前就有） | ✅ 命中 | ✅ 命中 |
+| 负对照（臆造的字符串） | ❌ 不命中 | ❌ 不命中 |
+
 
 ## 26.2 它到底改了什么
 
@@ -1167,9 +1197,18 @@ backBufferWidth= / backBufferHeight=
 |---|---|
 | 编译 | ✅ 0 error（`ImGuiOverWindows.cpp`、`IsolationSwitches.h` 重编，`IMao-CoreHost` 链接成功） |
 | 原生测试 | ✅ `IMaoOptimizationTests` / `IMaoMarkerTests` 通过 |
-| 部署 | `C:\Dapps\IMao\IMao-CoreHost.exe` = `7EABBC5B`（21:17），旧版备份仍在 |
+| 部署（原生） | `C:\Dapps\IMao\IMao-CoreHost.exe` = `7EABBC5B`（21:17），旧版备份 `IMao-CoreHost.before-perf-phase12-20260921.exe`（`45C99B91`） |
+| 部署（托管） | `C:\Dapps\IMao\resources.pri` = `68E9F694`（含新开关文案与 255 上限），备份 `resources.before-mini-switch-20260921.pri`（`C144F8F7`） |
+| 托管 shell「干净重建」 | ❌ **本环境做不到**：`IMao-WinUI.csproj(161,29)` 的 `MSB4186` 是既有问题；app/pri 在它之前已产出，故仅部署 `resources.pri`（见 §26.1.1） |
 | 窗口几何 / DPI / 穿透 / 跟随 / Alt-Tab | **未验证**（需要实机会话） |
+| 128 是否真的能填进诊断页 | **未验证**（需要你重启 app 后看一眼；`resources.pri` 的字节证据见 §26.1.2） |
 | A/B/A/B 的 FPS / p95 / p99 / >20ms | **未验证**（这就是下一步要跑的东西） |
+
+### 回滚（托管侧）
+
+```powershell
+Copy-Item 'C:\Dapps\IMao\resources.before-mini-switch-20260921.pri' 'C:\Dapps\IMao\resources.pri' -Force
+```
 
 ---
 
