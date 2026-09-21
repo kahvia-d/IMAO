@@ -7,7 +7,7 @@
 > - 记录纪律：**没有实测的数据一律写「未验证」**。禁止写"预计已解决 / 应该已经优化 / 理论上不会掉帧"。
 > - 每完成一个阶段就地更新 §21 台账、并把该阶段的状态行改成「已实现（待实测）」或「已验证」。
 >
-> 状态：**Phase 0～Phase 2 已落地（编译 + 原生测试已验证；性能与实机回归未验证）；Phase 3～Phase 6 未开始，等实机结果再决定。**（明细见 §21）
+> 状态：**Phase 0～Phase 3 已落地（编译 + 原生测试已验证；性能与实机回归未验证）；Phase 4～Phase 6 未开始。**（明细见 §21）
 
 ---
 
@@ -880,7 +880,7 @@ WGC ROI Readback
 | Phase 0 | 开分支 + 任务书落档 | 已完成 | `690dc22` | 不适用 | 不适用 |
 | Phase 1 | 渲染线程不再实时查询 completion | 已实现 · 已编译验证 | `44ed966` | ✅ 见 §23 | **未验证** |
 | Phase 2 | 纹理查找 O(1) | 已实现 · 已编译验证 | `095d129` | ✅ 见 §23 | **未验证** |
-| Phase 3 | marker 分段性能日志 | 未开始 | — | — | 未验证 |
+| Phase 3 | marker 分段性能日志 | 已实现 · 已编译验证 | `8cf0a91` | ✅ 见 §23 | **未验证**（字段语义见 §24） |
 | Phase 4 | 真正的小尺寸 MiniMap Overlay 实验模式 + A/B/A/B | 未开始 | — | — | 未验证 |
 | Phase 5 | Texture Atlas | 未开始（**取决于 Phase 4 结论**） | — | — | 未验证 |
 | Phase 6 | WGC ROI Readback | 未开始（**独立后续实验**） | — | — | 未验证 |
@@ -920,6 +920,7 @@ cmake --build out\build\windows-x64-release-vs144 --config Release \
 | 警告 | Phase 1: 209 条（均为既有的 C4244 等，与本次改动无关） |
 | Phase 1 产物 | `IMao-CoreHost.exe` 20:26:36、`IMaoOptimizationTests.exe` 20:28:49 |
 | Phase 2 产物 | `IMao-CoreHost.exe` 20:34:04；三个改动 TU（`DrawMarkerInteraction.cpp`/`ImGuiOverWindows.cpp`/`DrawItemBase.cpp`）在日志中各有一次编译记录 |
+| Phase 3 产物 | `IMao-CoreHost.exe` 20:58:19（`sha8=F829F061`）；`DrawItemOnMinMap.cpp`/`ImGuiOverWindows.cpp`/`DrawMarkerInteraction.cpp` 各有一次编译记录 |
 | `IMaoOptimizationTests.exe` | exit 0，末行 `All optimization tests passed.` |
 | `IMaoMarkerTests.exe` | exit 0，末行 `Marker layout, interaction, account isolation and durable synchronization tests passed` |
 | 测试数据隔离 | 测试运行时 `LOCALAPPDATA` 指向 `out\perf\local-app-data`，不触碰玩家真实数据 |
@@ -928,8 +929,77 @@ cmake --build out\build\windows-x64-release-vs144 --config Release \
 
 ⚠️ **FPS / p95 / p99 / >20ms / PresentMode：全部未验证**——需要玩家在同一次运行里做交替 A/B，见任务书 §12/§13。
 
-## 本轮到此为止的理由
+## 为什么最终连 Phase 3 也做了
 
-任务书 §18 要求 `Phase 1 → 测试 → Phase 2 → 测试 → Phase 3`。Phase 1、Phase 2 都已按"独立 commit + 独立可回滚"落地并编译验证，但**"测试"这一步（实机帧率与标记行为回归）只有玩家本人能做**。
-因此 Phase 3（补诊断日志）及以后**不在本会话继续推进**：先拿实机结果，再决定是否值得加日志、是否值得做 Phase 4 的小窗口实验。
+任务书 §18 的顺序是 `Phase 1 → 测试 → Phase 2 → 测试 → Phase 3`。实机测试在 2026-09-21 晚做了一轮，但那一轮**测的是改动前的构建**（见 §24.2），而且它暴露了一个更根本的问题：**当时的日志在原理上就判不出 Phase 1 的效果**——日志记的是候选集，而候选集包含已完成的点（见 §24.1）。
+所以先补 Phase 3 的诊断，让"完成后标记消失"这件事第一次在日志里可判，再用一次实机会话同时验证 Phase 1/2/3。
+
+---
+
+# 24. 诊断字段语义与实机基线（Phase 3 相关）
+
+## 24.1 为什么原来的日志判不出"完成后标记消失"
+
+`DrawItemOnMinMap::GetAndFilterItemsData` 对已完成的点**只打标记不剔除**：命中距离窗口的点一律进 `nearFilterItemsData`，已完成的那一个带 `isSaved=true`。剔除发生在渲染那一刻（`DrawItemsOnMinMap`）。而所有 marker 日志用的都是这个集合：
+
+| 日志 | 记录的东西 |
+|---|---|
+| `minimap-near-items markers=` | 候选集大小（**含已完成**） |
+| `minimap-marker-sample markers=/samples=` | 候选集及其逐点坐标 |
+| `RuntimeStatus::SetMinimapMarkerCount` → 游戏内状态栏"N 个标记" | 候选集大小（**含已完成**，既有行为） |
+
+⟹ 基线数据正好印证：2026-09-21 20:46:43 完成一个点位之后，`markers=` 从 2 **没有下降**。
+⟹ 所以"完成后标记是否立刻消失"这件事，**改动前后都必须靠 `markerCount`（候选）与 `markerGroupCount`（真正画出的 icon）之差**来看，肉眼观察不足为证。
+
+## 24.2 实机基线会话（改动前构建，2026-09-21 20:44:36–20:51:00）
+
+**重要：这一轮跑的不是本次改动。** 日志里 `resource-load` 的路径暴露了实际运行位置是 `C:\Dapps\IMao`，其 `IMao-CoreHost.exe` 当时是 18:33 的构建（`sha8=45C99B91`），而本次 Phase 1+2 的构建是 `8655FBB9`。因此这一段是**纯粹的改动前基线**，可用作对照。
+
+| 观察 | 数值 |
+|---|---|
+| 会话边界 | CoreHost 20:44:36 启动 → 20:51:00 停止；`app-init client=2560x1440` |
+| Overlay 窗口 | `origin=0,0 size=2560x1440`、`mode=layered-colorkey`（全屏分层窗口，Phase 4 尚未做） |
+| 完成动作 | **3 次**：20:46:43 / 20:49:40 / 20:49:43（`已完成当前附近点位。`） |
+| 大地图开合 | 7 次（`map-ui-transition`） |
+| `minimap-overlay-drop` | **0**（没有因配准失败整层不画） |
+| 崩溃 | 本次会话内 0 次（但当天另有两次 dump，见 §24.3） |
+| 工具自身节奏（**不是游戏 FPS**） | `renderFps` 中位 29.7；`sourceFps` 中位 10.9；`captureFps` 中位 17.7；`segBuildMs` 中位 0.75 / 最大 7.1；`segPresentMs` 中位 0.67 / **最大 20.9 ms**；`presentSkipped` 合计 3286 |
+| `minimap-markers-cleared` | 10 次，全部 `state=Uninitialized stalling=1`，且几乎都紧跟关闭大地图之后 ⟹ 与已知的"整帧丢位置"行为一致，不是新回归 |
+| 候选集规模 | `markers=` 在 1～5 之间（20:46:08 起 1 → 2 → 4 → 5 → 4…） |
+
+`segPresentMs` 最大 20.9 ms 这条长尾与既有分析（全屏置顶分层窗口把游戏压回 DWM 合成）一致，可作为 Phase 4 的对照。
+
+## 24.3 当天两次 CoreHost 崩溃（与本次改动无关）
+
+`%LOCALAPPDATA%\IMao-WinUI\CrashReports\` 里有 `IMao-Core-2026-9-21-19-40-27.dmp`（587 KB）与 `IMao-Core-2026-9-21-1-31-32.dmp`（573 KB）。两次都发生在**改动前**的构建上（本次构建 20:26 之后才存在），日志在 19:40:27 前后也没有对应事件。**未分析**，需要时另开一轮看 minidump。
+
+## 24.4 新字段的确切语义（`overlay-motion` 行尾）
+
+沿用该行既有的 `seg*Ms = 总时长/次数` 约定：
+
+```text
+markerCount=            候选 marker 数的**每次绘制平均**（含已完成的点）
+markerGroupCount=       BuildMarkerLayout 之后真正绘制的 icon 数**每次绘制平均**
+markerDrawMs=           DrawItemsOnMinMap 整函数耗时 / markerDraws（含下面的 layout 与 texture）
+markerLayoutMs=         BuildMarkerLayout 耗时 / markerDraws
+markerTextureLookupMs=  DrawIcon 里"查索引 + 必要时解码加载"耗时 / markerDraws
+markerDraws=            该 2 秒窗口内 DrawItemsOnMinMap 的调用次数
+```
+
+- **判定 Phase 1 的方法**：在同一次 2 秒窗口内，`markerCount` 不降而 `markerGroupCount` 降 ⟹ 被完成掉的点当帧就不再绘制。若两者同步下降，说明它其实是离开了候选集（位置走远），不是完成生效。
+- `markerTextureLookupMs` 只含**小地图自己**那几次 `DrawIcon`：实现用的是"单调累加 + 调用方取差值"，所以大地图共用 `DrawIcon` 不会污染这个数。
+- 计时开销：每个 icon 两次 `steady_clock::now()`（≈QueryPerformanceCounter）。大地图几百个 icon 的最坏情况约数百次调用/帧，相对既有 `seg*` 计时可忽略；**尚未在实机上对比过开关前后的 `renderFps`**。
+- ⚠️ 这些数字**全部未验证**——直到有实机会话跑出带这些字段的 `overlay-motion` 行为止。
+
+## 24.5 部署状态（2026-09-21 21:0x）
+
+| 位置 | 内容 |
+|---|---|
+| `C:\Dapps\IMao\IMao-CoreHost.exe` | `F829F061`（20:58，Phase 1+2+3）——**这是玩家实际启动的那一份** |
+| `C:\Dapps\IMao\IMao-CoreHost.before-perf-phase12-20260921.exe` | `45C99B91`（18:33，改动前，保留作回滚/A 组） |
+| `C:\Dcode\WWMAP-TOOLS\x64\Release\IMao-CoreHost.exe`、`out\map-test\IMao-CoreHost.exe` | 同上 `F829F061` |
+
+⚠️ **回滚**：`Copy-Item 'C:\Dapps\IMao\IMao-CoreHost.before-perf-phase12-20260921.exe' 'C:\Dapps\IMao\IMao-CoreHost.exe' -Force`。
+⚠️ 以后换构建时，**记得换的是 `C:\Dapps\IMao` 这一份**，仓库里的两份不会影响实机（这一点已经浪费过一轮测试）。
+
 
