@@ -345,6 +345,10 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             else
             {
                 try {
+                    // The first probed frame also reads the whole client and compares, so the box list
+                    // and the offsets it rests on are checked rather than assumed.
+                    if (m_roiVerifyPending.exchange(false))
+                        VerifyRoiAgainstFullFrame(readbackSource, mappedResource);
                     // The consumer crops by absolute coordinates, so the frame it reads keeps its full
                     // shape; only the regions above are written, and the rest is never read (see the box
                     // list). It is allocated once and then only these rows are touched.
@@ -564,6 +568,47 @@ bool SimpleCapture::EnsureRoiStaging(ID3D11Texture2D* source)
     m_roiStagingWidth = widest; m_roiStagingHeight = totalRows; m_roiStagingFormat = desc.Format;
     m_roiSlots = std::move(slots);
     return true;
+}
+
+void SimpleCapture::VerifyRoiAgainstFullFrame(ID3D11Texture2D* source, const D3D11_MAPPED_SUBRESOURCE& probed)
+{
+    if (source == nullptr || !EnsureStaging(source)) return;
+    m_d3dContext->CopyResource(m_stagingTexture.get(), source);
+    m_d3dContext->Flush();
+    D3D11_MAPPED_SUBRESOURCE whole{};
+    if (FAILED(m_d3dContext->Map(m_stagingTexture.get(), 0, D3D11_MAP_READ, 0, &whole))) return;
+
+    std::uint64_t compared = 0, mismatched = 0;
+    int worst = 0;
+    std::string firstMismatch;
+    for (const auto& slot : m_roiSlots)
+    {
+        for (UINT row = 0; row < slot.height; ++row)
+        {
+            const std::uint8_t* expected = static_cast<const std::uint8_t*>(whole.pData) +
+                static_cast<std::size_t>(slot.y + row) * whole.RowPitch + static_cast<std::size_t>(slot.x) * 4;
+            const std::uint8_t* actual = static_cast<const std::uint8_t*>(probed.pData) +
+                static_cast<std::size_t>(slot.rowOffset + row) * probed.RowPitch;
+            for (UINT column = 0; column < slot.width * 4; ++column)
+            {
+                ++compared;
+                const int difference = std::abs(static_cast<int>(expected[column]) - static_cast<int>(actual[column]));
+                if (difference != 0)
+                {
+                    ++mismatched;
+                    if (difference > worst) worst = difference;
+                    if (firstMismatch.empty())
+                        firstMismatch = " box=" + std::to_string(slot.x) + "," + std::to_string(slot.y) +
+                            " row=" + std::to_string(row) + " col=" + std::to_string(column / 4) +
+                            " channel=" + std::to_string(column % 4);
+                }
+            }
+        }
+    }
+    m_d3dContext->Unmap(m_stagingTexture.get(), 0);
+    StructuredLogger::Record("info", "capture", "capture-roi-verify",
+        "boxes=" + std::to_string(m_roiSlots.size()) + " bytes=" + std::to_string(compared) +
+        " mismatches=" + std::to_string(mismatched) + " maxDiff=" + std::to_string(worst) + firstMismatch);
 }
 
 bool SimpleCapture::EnsureStaging(ID3D11Texture2D* source){

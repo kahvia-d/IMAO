@@ -127,6 +127,11 @@ private:
     /// One compact CPU-readable target holding the ROI boxes stacked vertically, so the readback is one
     /// Map and the boxes do not pay for the frame between them.
     bool EnsureRoiStaging(ID3D11Texture2D* source);
+    /// Reads the same frame twice - the probed regions and the whole client - and compares them byte for
+    /// byte, once per session. Reasoning about the box list and its offsets is what the ROI readback
+    /// rests on; this replaces that reasoning with a measurement, and it covers every box including the
+    /// ones no detector happens to exercise in a given session.
+    void VerifyRoiAgainstFullFrame(ID3D11Texture2D* source, const D3D11_MAPPED_SUBRESOURCE& probed);
     /// Frame body. It must never throw: an exception escaping the WinRT frame callback terminates the
     /// host process, which the client reports as a core fault with no first frame.
     void ProcessFrame(winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool const& sender);
@@ -153,6 +158,8 @@ private:
     DXGI_FORMAT m_roiStagingFormat = DXGI_FORMAT_UNKNOWN;
     std::atomic_bool m_roiReadback{ false };
     std::atomic<std::uint64_t> m_roiFrames{ 0 }, m_fullFrames{ 0 };
+    /// Cleared by the first ROI frame, which is the one that also verifies itself against a full copy.
+    std::atomic_bool m_roiVerifyPending{ true };
     // Frame diagnostics; the callback thread owns them, the counters are read by the test/diagnostic
     // paths only.
     std::atomic<std::uint64_t> m_framesArrived{ 0 }, m_framesPublished{ 0 }, m_framesSkipped{ 0 }, m_stagingFailures{ 0 };
