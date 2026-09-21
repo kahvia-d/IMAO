@@ -1491,8 +1491,7 @@ Copy-Item 'C:\Dapps\IMao\resources.before-mini-switch-20260921.pri' 'C:\Dapps\IM
 - **可能的动作**：若并集明显吃掉收益，就把状态栏改成画在小地图窗口内（或默认关掉小地图那一档的状态栏）。
 - **未验证**：并集窗口的 FPS/p95/p99 全都没测。
 
-## 30.2 下一个独立实验（任务书 §11 早已点名）：WGC ROI 回读
-- **依据**：普通探索仍在做**整张 2560×1440** 的 GPU→CPU 回读（`capture-wgc-first-frame width=2560 height=1440`；`capture-wgc-frames ... readbackAvgMs`）。真正要识别的只有**小地图**（2560×1440 下 245×246）和 **HUD 坐标探针**（≈213×53）：
+## 30.2 下一个独立实验（任务书 §11 早已点名）：WGC ROI 回读- **依据**：普通探索仍在做**整张 2560×1440** 的 GPU→CPU 回读（`capture-wgc-first-frame width=2560 height=1440`；`capture-wgc-frames ... readbackAvgMs`）。真正要识别的只有**小地图**（2560×1440 下 245×246）和 **HUD 坐标探针**（≈213×53）：
   - 整屏：3.686 MPix ≈ **14.7 MB/帧**；按 30 Hz ≈ **442 MB/s**
   - ROI：≈0.071 MPix ≈ **0.28 MB/帧**；≈ **8.5 MB/s**（约为原来的 **2%**）
 - **做法**：`CopySubresourceRegion` 把源 capture texture 的这两个矩形拷到小 staging，再 `Map` 读回。
@@ -1527,6 +1526,50 @@ Copy-Item 'C:\Dapps\IMao\resources.before-mini-switch-20260921.pri' 'C:\Dapps\IM
 **副作用（要留意）**：修好之后，**冷启动阶段不再有中间那条文字状态栏，只有一个球**。这是 D1b（保持纯颜色）的直接后果——文字提示只在主窗口或掩码 `128` 的完整状态栏模式下可见。
 
 
+
+---
+
+# 31. 并集窗口（14%）的代价：实测（2026-09-22 00:13:11–00:18:06）
+
+`.\scripts\Measure-WorkIsolation.ps1 -Experiment status-bar`，A/B/A/B：`bar-off-1 → bar-on-1 → bar-off-2 → bar-on-2`，每段 45 s。
+
+**配置核对（来自日志，不是推断）**：bar-off 段 `statusBarEnabled=0` + 窗口 **355×344**；bar-on 段 `statusBarEnabled=1` + 窗口 **1561×344**；球全程 `statusBallEnabled=0`、掩码 0、`windowHidden=0`（四段都没有隐藏）。marker 负载四段完全相同（`markerCount=4 / markerGroupCount=3 / skipped=0 / markerDrawMs≈0.024 ms`）⟹ **唯一变量就是覆盖层窗口面积**。
+
+## 31.1 结果（用不受伪影影响的 `MsBetweenDisplayChange` 口径）
+
+| 相位 | mean ms | p50 | p95 | p99 | >20ms | **FPS** | PresentMode |
+|---|---|---|---|---|---|---|---|
+| bar-off-1 | 7.82 | 7.79 | 10.14 | 15.97 | 0.09% | **127.8** | Hardware: Independent Flip 100% |
+| bar-on-1 | 8.07 | 8.03 | 10.07 | 14.80 | 0.04% | **124.0** | Hardware: Independent Flip 100% |
+| bar-off-2 | 7.83 | 7.80 | 10.55 | 16.49 | 0.09% | **127.7** | Hardware: Independent Flip 100% |
+| bar-on-2 | 7.88 | 7.84 | 10.00 | 14.60 | 0.00% | **126.9** | Hardware: Independent Flip 100% |
+
+- 参考相位漂移 **0.1 fps**（127.8 / 127.7）⟹ 机器在这轮里非常稳。
+- **代价：平均 −2.3 fps（−1.8%）**，但两个 bar-on 相位彼此差 2.9 fps（124.0 / 126.9）⟹ 真实代价区间是 **−0.8 ~ −3.8 fps**。
+- **尾部没有变差**：p95 10.07/10.00 vs 10.14/10.55、p99 14.6/14.8 vs 16.0/16.5、`>20ms` 0.00–0.04% vs 0.09% —— bar-on 甚至略好，属噪声内。
+- **`PresentMode` 四段全是 `Hardware: Independent Flip 100%`**：并集窗口**不会**把游戏踢出独立翻转。
+
+与 §28（整屏 vs 小地图窗口：3.3% 面积换 +9.6 fps）合起来看：**合成代价大致与覆盖层面积成正比**（约每 1 个百分点的面积 ≈ 0.1–0.2 fps），3.3%→14% 的这点代价与"100%→3.3% 换 9.6 fps"同量级、方向一致。
+
+## 31.2 顺带发现：测量体系里有个成对伪影（**重要**）
+
+这轮 PresentMon 的 `MsBetweenPresents` 是**严格成对**的（~15 ms 紧跟 ~0.3 ms；单个 `SwapChainAddress`、单 `ProcessID`、`SyncInterval=0 / AllowsTearing=1 / PresentMode=Independent Flip`）。后果：**恰好 50% 的样本 <6 ms**，于是：
+
+- 脚本打印的 **p50 / p95 / p99 全被污染**（p50 在 5.4 与 8.9 之间跳，只看中位数落在哪个峰）；
+- **FPS 仍然可用**：伪影四段一致，且均值恰好等于真实帧周期（每帧两个事件）；
+- §28 那次（`Composed: Flip`）**没有**这个伪影（p50 ≈ 9 ms 与真实帧率吻合）⟹ **伪影与呈现模式相关**，不是每次都出现。
+
+规避：用 `MsBetweenDisplayChange`（每个事件各带一个，不受成对影响），或先过滤掉 `<2 ms` 的成对事件再算分位数。**建议**（尚未做）在 `scripts/OverlayTrace.Common.ps1` 的 `Get-PhaseFrameStats` 里自动检测并处理，否则任务书 §13 点名要的 `p95/p99` 在独立翻转场景下不可信。
+
+## 31.3 结论与可选决策
+
+- **并集窗口的代价真实但很小**（≈ −2 fps / −1.8%），且**不影响帧时间长尾**——玩家最初抱怨的"不丝滑"来自长尾，而长尾在两种配置下一样。
+- 因此「状态条 · 小地图」默认开着是**可接受**的（拿 1.8% 换游戏内可见状态）。
+- 若想把最后 ~2 fps 也拿回来，三个选项（**都未实现**）：
+  1. 默认关掉「状态条 · 小地图」（用状态球或只看主窗口）；
+  2. 把状态栏**画进小地图窗口内**（例如小地图下方一行），窗口保持 355×344 ⟹ 理论上能拿回大部分；
+  3. 接受 14%（现状）。
+- **未验证**：DPI 100%/150%、设备重建、云同步、长时间运行；以及上面三个选项的实际数值。
 
 ---
 
