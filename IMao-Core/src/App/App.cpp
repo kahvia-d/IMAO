@@ -426,8 +426,11 @@ winrt::IAsyncAction App::Start() {
 					// 回测（用户 2026-09-21 的设计）：不等实机出现空档，直接拿记录本身验证外推精度。
 					// 做法：取"现在往前 h 秒"作为截止时刻 cut，只用 cut **之前**的条目预测 cut 之后第一条
 					// 记录的位置，与那条真值比较。这样 0.25/0.5/1/2 秒各有稳定样本，而且都来自真实游玩。
+					// ⚠️ 已经用它定完了"预测能不能替代"的结论（500ms 偏 3.0、1s 偏 7.2 单位），
+					// 现在只在**诊断/截图开关打开时**才跑：它每秒产出 4 条记录，是当天日志里最大的单一来源
+					// （2026-09-21 实测 18151 条 / 33.6MB），平时没必要付这个代价。
 					const auto& backtestRecord = coordinateTrust.Record();
-					if (backtestRecord.size() >= CoordinateTrust::kFitMinimumEntries + 1) {
+					if (Diagnostics::Enabled() && backtestRecord.size() >= CoordinateTrust::kFitMinimumEntries + 1) {
 						const double newestSeconds = backtestRecord.back().secondsAt;
 						for (const double wanted : { 0.25, 0.5, 1.0, 2.0 }) {
 							// 先选"真值"：从最新往回找**年龄恰好 ≥ wanted** 的那一条；再让 cut = 真值时刻 − wanted。
