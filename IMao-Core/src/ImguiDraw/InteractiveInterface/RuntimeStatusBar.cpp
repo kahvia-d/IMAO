@@ -54,7 +54,11 @@ void RuntimeStatusBar::Prepare(HWND gameWindow) {
     const auto status = RuntimeStatus::Snapshot();
     // Only display authorization includes the controller host; writes still require the game.
     layout.available = status.coreState == "running" && DrawItemBase::IsMarkerDisplayContext(gameWindow);
-    layout.visible = layout.available && status.statusBarEnabled;
+    // Which switch owns this frame's bar depends on what the bar would be reporting: the big map's own
+    // switch while that map is the state, and the general one everywhere else - startup and the
+    // transitions included, which is where the bar's "open the big map once" line does its work.
+    const bool bigMap = status.gameState == "bigMap";
+    layout.visible = layout.available && (bigMap ? status.mapStatusBarEnabled : status.statusBarEnabled);
     if (!layout.available) return;
     const auto s = layout.scale;
     const float width = std::min(450 * s, std::max(1.0f, client.right - 32 * s));

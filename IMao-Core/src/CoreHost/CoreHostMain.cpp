@@ -167,6 +167,7 @@ json StatusEvent() {
         { "minimapRetainedKeypoints", status.minimapRetainedKeypoints },
         { "minimapDynamicMaskPercent", status.minimapDynamicMaskPercent },
         { "statusBarEnabled", status.statusBarEnabled },
+        { "mapStatusBarEnabled", status.mapStatusBarEnabled },
         { "statusBallEnabled", status.statusBallEnabled }
     };
 }
@@ -458,6 +459,7 @@ bool ApplyConfigure(const json& command) {
     const auto mini = boolean("minMapEnabled");
     const auto saved = boolean("savedPointsEnabled");
     const auto bar = boolean("statusBarEnabled");
+    const auto mapBar = boolean("mapStatusBarEnabled");
     const auto ball = boolean("statusBallEnabled");
     const auto autoReplan = boolean("autoReplanEnabled");
     const auto completionRange = integer("completionRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
@@ -471,6 +473,7 @@ bool ApplyConfigure(const json& command) {
     if (mini) EnabledMinMapShowItem(*mini);
     if (saved) SetVisibleSavedPoints(*saved);
     if (bar) RuntimeStatus::SetStatusBarEnabled(*bar);
+    if (mapBar) RuntimeStatus::SetMapStatusBarEnabled(*mapBar);
     if (ball) RuntimeStatus::SetStatusBallEnabled(*ball);
     if (autoReplan) RoutePlanningService::SetAutoReplanEnabled(*autoReplan);
     if (completionRange || guideRange)

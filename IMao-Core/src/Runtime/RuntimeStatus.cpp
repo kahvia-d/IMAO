@@ -83,6 +83,12 @@ void RuntimeStatus::SetStatusBarEnabled(bool enabled) {
     TouchLocked();
 }
 
+void RuntimeStatus::SetMapStatusBarEnabled(bool enabled) {
+    std::scoped_lock lock(mutex);
+    status.mapStatusBarEnabled = enabled;
+    TouchLocked();
+}
+
 void RuntimeStatus::SetStatusBallEnabled(bool enabled) {
     std::scoped_lock lock(mutex);
     status.statusBallEnabled = enabled;

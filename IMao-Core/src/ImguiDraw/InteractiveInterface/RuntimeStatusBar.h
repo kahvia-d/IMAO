@@ -12,7 +12,7 @@ public:
     /// that has room for it. Zero until a layout has been prepared at least once.
     static RECT ReservedBounds();
     /// The minimal form of the same status - one ball coloured by state - for a window that only covers
-    /// the minimap. False when the bar would not be shown at all, so the ball disappears with it.
+    /// the minimap. Its own switch, so it is independent of whether either bar is enabled.
     static bool DrawCompact(float centerX, float centerY, float radius);
     static float ToolbarTop();
     static float Scale();
