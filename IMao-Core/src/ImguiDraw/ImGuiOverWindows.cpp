@@ -559,8 +559,12 @@ int ImGuiOverWindows::start()
         const bool forceFullOverlay = Isolation::Enabled(Isolation::kForceFullOverlay);
         const bool statusBarEnabled = RuntimeStatus::Snapshot().statusBarEnabled;
         bool minimapWindowRequested = false;
+        // The same flag picks the window's rectangle and the bar's switch, so a bar the player enabled is
+        // never drawn where the window cannot reach it.
+        bool bigMapFrame = false;
         {
             const auto markerFrame = app.ReadOverlayFrame();
+            bigMapFrame = markerFrame && markerFrame->mapVisible;
             minimapWindowRequested = !forceFullOverlay && markerFrame && !markerFrame->mapVisible;
         }
         RECT physicalGame{};
@@ -691,7 +695,7 @@ int ImGuiOverWindows::start()
             ImGui_ImplDX11_NewFrame();
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
-            RuntimeStatusBar::Prepare(h_window);
+            RuntimeStatusBar::Prepare(h_window, bigMapFrame);
             newFrameTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - newFrameStarted).count();
         }
         // Image tracking is the longest stretch of work in this frame; pump before it so a hook

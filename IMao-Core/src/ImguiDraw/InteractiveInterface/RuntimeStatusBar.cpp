@@ -46,7 +46,7 @@ ImFont* RuntimeStatusBar::UiFont() { return uiFont ? uiFont : ImGui::GetFont(); 
 float RuntimeStatusBar::Scale() { return layout.scale; }
 float RuntimeStatusBar::ToolbarTop() { return layout.visible ? layout.bounds.bottom + 12 * layout.scale : 18 * layout.scale; }
 
-void RuntimeStatusBar::Prepare(HWND gameWindow) {
+void RuntimeStatusBar::Prepare(HWND gameWindow, bool bigMap) {
     layout = {};
     RECT client{}; if (!GetClientRect(gameWindow, &client)) return;
     layout.scale = OverlayPanel::Scale(static_cast<float>(GetDpiForWindow(gameWindow)),
@@ -54,10 +54,10 @@ void RuntimeStatusBar::Prepare(HWND gameWindow) {
     const auto status = RuntimeStatus::Snapshot();
     // Only display authorization includes the controller host; writes still require the game.
     layout.available = status.coreState == "running" && DrawItemBase::IsMarkerDisplayContext(gameWindow);
-    // Which switch owns this frame's bar depends on what the bar would be reporting: the big map's own
-    // switch while that map is the state, and the general one everywhere else - startup and the
-    // transitions included, which is where the bar's "open the big map once" line does its work.
-    const bool bigMap = status.gameState == "bigMap";
+    // Which switch owns this frame's bar comes from the caller - the same flag that sized the window -
+    // rather than from the state the bar is describing. The two detectors disagree around transitions,
+    // and a bar that a switch asked for but the window cannot reach is invisible: the player would see
+    // a switch that does nothing.
     layout.visible = layout.available && (bigMap ? status.mapStatusBarEnabled : status.statusBarEnabled);
     if (!layout.available) return;
     const auto s = layout.scale;

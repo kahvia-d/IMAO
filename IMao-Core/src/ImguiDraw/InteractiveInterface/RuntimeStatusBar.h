@@ -6,7 +6,9 @@ struct ImFont;
 
 class RuntimeStatusBar {
 public:
-    static void Prepare(HWND gameWindow);
+    /// `bigMap` decides which of the two bar switches owns this frame. The caller passes the same flag
+    /// that chose the window's rectangle, so the switch that is drawn is always one the window can hold.
+    static void Prepare(HWND gameWindow, bool bigMap);
     static void Draw(HWND gameWindow);
     /// The bar's own rectangle whether or not it is currently drawn, so the overlay can size a window
     /// that has room for it. Zero until a layout has been prepared at least once.
