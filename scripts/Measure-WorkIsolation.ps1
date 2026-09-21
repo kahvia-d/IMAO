@@ -13,14 +13,17 @@
 #
 # Usage:  .\Measure-WorkIsolation.ps1
 #         .\Measure-WorkIsolation.ps1 -PhaseSeconds 15      # shorter, noisier
-#         .\Measure-WorkIsolation.ps1 -Experiment mini-overlay
+#         .\Measure-WorkIsolation.ps1 -Experiment status-bar    # what the in-game status bar costs
+#         .\Measure-WorkIsolation.ps1 -Experiment full-client   # minimap window against full-client
 #
-# -Experiment mini-overlay is the small-window question from
-# Docs/MinimapMarkerRenderPerfPlan_zh-Hans.md: the same harness, run as A/B/A/B, where A leaves the mask
-# at 0 (window the size of the game client) and B sets 128 (window the size of the minimap). The overlay
-# has to be showing the minimap for B to apply - 开始探索 pressed, big map closed - and while B runs only
-# what is drawn inside the minimap rectangle is visible, the in-game status bar included in what is not.
-# That is the experiment itself, not a regression.
+# -Experiment status-bar drives the player setting rather than a mask bit, A/B/A/B, because the bar and
+# the minimap status ball are two independent switches in 设置 -> 地图显示. With the bar off the overlay
+# window covers the minimap alone; with it on the window is widened to reach the bar. The overlay has to
+# be showing the minimap for either phase to mean anything - 开始探索 pressed, big map closed.
+#
+# -Experiment full-client is the small-window question from
+# Docs/MiniMapMarkerRenderPerfPlan_zh-Hans.md: the same harness, run as A/B/A/B, where A is the default
+# minimap-sized window and B sets 256, which forces a window the size of the whole game client.
 #
 # Before starting: game running, in the foreground, on one scene, and the tool already running the
 # overlay (开始探索 pressed). Leave the mouse and keyboard alone once a phase begins.
@@ -34,7 +37,7 @@ param(
     [int]$PromptAllowanceSeconds = 45,
     [string]$OutputPath,
     [string]$PresentMonPath,
-    [ValidateSet('work-isolation', 'mini-overlay', 'full-client')][string]$Experiment = 'work-isolation'
+    [ValidateSet('work-isolation', 'status-bar', 'full-client')][string]$Experiment = 'work-isolation'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -67,14 +70,15 @@ $sequence = if ($Experiment -eq 'full-client') {
         [pscustomobject]@{ name = 'mini-window-2'; mask = 0;   label = '0    (小地图窗口)' }
         [pscustomobject]@{ name = 'full-client-2'; mask = 256; label = '256  (强制整屏)' }
     )
-} elseif ($Experiment -eq 'mini-overlay') {
-    # What the full status bar costs: both phases keep the minimap-sized minimap window, and 128 widens it
-    # to hold the bar. This is the "union window against minimap-only" A/B.
+} elseif ($Experiment -eq 'status-bar') {
+    # What the in-game status bar costs. It is a player setting now, not a mask bit, so every phase keeps
+    # the mask at 0 and the prompt asks for the settings toggle instead: off leaves the window on the
+    # minimap alone, on widens it to hold the bar.
     @(
-        [pscustomobject]@{ name = 'minimal-bar-1'; mask = 0;   label = '0    (极简：状态球)' }
-        [pscustomobject]@{ name = 'full-bar-1';    mask = 128; label = '128  (完整状态栏)' }
-        [pscustomobject]@{ name = 'minimal-bar-2'; mask = 0;   label = '0    (极简：状态球)' }
-        [pscustomobject]@{ name = 'full-bar-2';    mask = 128; label = '128  (完整状态栏)' }
+        [pscustomobject]@{ name = 'bar-off-1'; mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 把「游戏内状态条」关掉' }
+        [pscustomobject]@{ name = 'bar-on-1';  mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 把「游戏内状态条」打开' }
+        [pscustomobject]@{ name = 'bar-off-2'; mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 把「游戏内状态条」关掉' }
+        [pscustomobject]@{ name = 'bar-on-2';  mask = 0; label = '0'; instruction = '设置 (Settings) -> 地图显示 -> 把「游戏内状态条」打开' }
     )
 } else {
     @(
@@ -88,7 +92,7 @@ $sequence = if ($Experiment -eq 'full-client') {
 }
 # Which phases are the reference the others are read against differs per experiment.
 $referencePattern = switch ($Experiment) {
-    'mini-overlay' { 'minimal-bar*' }
+    'status-bar' { 'bar-off*' }
     'full-client' { 'mini-window*' }
     default { 'baseline*' }
 }
@@ -123,7 +127,9 @@ try {
         Write-Host ''
         Write-Host ('=' * 70) -ForegroundColor Yellow
         Write-Host "PHASE $($phase.name)" -ForegroundColor Yellow
-        Write-Host "  In the tool: 诊断 (Diagnostics) -> 诊断工具 -> 隔离开关, set it to:  $($phase.label)" -ForegroundColor Yellow
+        $step = if ($phase.PSObject.Properties['instruction']) { $phase.instruction }
+            else { "In the tool: 诊断 (Diagnostics) -> 诊断工具 -> 隔离开关, set it to:  $($phase.label)" }
+        Write-Host "  $step" -ForegroundColor Yellow
         Write-Host '  Then press Enter here and stay off the mouse and keyboard until the phase ends.' -ForegroundColor Yellow
         Write-Host ('=' * 70) -ForegroundColor Yellow
         [void](Read-Host)
