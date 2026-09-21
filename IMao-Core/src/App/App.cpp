@@ -1341,11 +1341,36 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						return left->previousDistance < right->previousDistance;
 					});
 				ordered.insert(ordered.end(), repaired.begin(), repaired.end());
+				// 用短窗预测卡读数（用户 2026-09-21 的设计）。回测实测：飞行速度下外推 1 秒只偏
+				// 中位 7.2 / p90 18 单位；而 15:39 那两条错读偏 131 / 124 单位（source=readout），
+				// 靠着"间隔×100"的预算混了进来。容差 40 单位 ≈ 预测误差 p90 的两倍。
+				// **没有可用预测时绝不否决**——那是上次把星海定位锁死的教训。
+				Coordinate predictedForReadout{};
+				double predictedForReadoutSpeed = 0.0;
+				const double secondsForReadout = std::chrono::duration<double>(now.time_since_epoch()).count();
+				const bool hasReadoutPrediction = coordinateTrust.HasScene() &&
+					playerCurrentSceneId == coordinateTrust.Scene() &&
+					coordinateTrust.PredictAt(coordinateTrust.Scene(), secondsForReadout,
+						predictedForReadout, predictedForReadoutSpeed);
+				const Coordinate predictedWorld = hasReadoutPrediction
+					? ImgMapToWorldCoordinate(predictedForReadout, coordinateTrust.Scene()) : Coordinate{};
 				for (const auto* candidate : ordered) {
 					OcrCoordinateGate::Reading reading;
 					reading.valid = true;
 					reading.score = candidate->modelScore;
 					const std::string world = std::to_string(candidate->x) + "," + std::to_string(candidate->y);
+					// 预测卡关：偏离预测超过 40 单位的读数直接丢（15:39 的两条 131/124 单位错读正是这么进来的）
+					if (hasReadoutPrediction) {
+						const double predictionResidual = std::hypot(candidate->x - predictedWorld.x,
+							candidate->y - predictedWorld.y);
+						if (predictionResidual > 40.0) {
+							Diagnostics::Record("coordinate-publish-rejected", "reason=predicted-outlier world=" + world +
+								" predicted=" + std::to_string(predictedWorld.x) + "," + std::to_string(predictedWorld.y) +
+								" residual=" + std::to_string(predictionResidual) +
+								" score=" + std::to_string(reading.score));
+							continue;
+						}
+					}
 					if (lock.valid) {
 						reading.sceneId = lock.sceneId;
 						reading.mapCoordinate =
