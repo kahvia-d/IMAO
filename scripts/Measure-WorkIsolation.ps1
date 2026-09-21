@@ -1,4 +1,4 @@
-# Attributes the overlay's frame-rate cost to individual pieces of per-frame work, instead of to
+﻿# Attributes the overlay's frame-rate cost to individual pieces of per-frame work, instead of to
 # "capture and localization" as one lump.
 #
 # The whole overlay costs about 26 fps with frames over 20 ms rising from 0.37% to 10.18% (see

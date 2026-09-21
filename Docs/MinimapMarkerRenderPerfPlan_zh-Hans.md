@@ -905,6 +905,14 @@ WGC ROI Readback
 
 **下次要注意**：`scripts/Test-Runtime.ps1` 走的是 Ninja 树，若沙箱仍禁止 ninja 起子进程，它会卡在 `[0/2] Re-checking globbed directories...`。可先用 §22 的 MSBuild 路径验证编译，再单独跑测试 exe。
 
+### 22.1 脚本编码约定（2026-09-21 踩过，务必遵守）
+
+**含非 ASCII 的 `.ps1` 必须存成 UTF-8 带 BOM。** 玩家实际使用的引擎是 **Windows PowerShell 5.1**，它把无 BOM 的 UTF-8 当 ANSI(GBK) 解释：中文字节会吞掉后面的引号，报错形如 `字符串缺少终止符` / `哈希文本不完整` / `Unexpected token '??'`。
+
+- **验证必须用 `powershell.exe`（5.1），不要只用 pwsh 7**：pwsh 7 读无 BOM 的 UTF-8 是正确的，会把这个问题完全藏起来（我这次就是这样漏掉的）。
+- 本会话我在改 `Measure-WorkIsolation.ps1` 时丢掉了 BOM（`c6d94d1` 起），导致玩家在 5.1 里**无法启动**该脚本；已修复（见 §30.1 记录），并在 5.1 下验证：解析 0 错误、`设置` 的码点为 `U+8BBE U+7F6E`。
+- 顺带扫描 `scripts/` 与 `tools/`：**另有 5 个脚本同样缺 BOM 且在 5.1 下解析失败**（`Install-KuroSyncBridge.ps1`、`Invoke-MapRegionRebuild.ps1`、`New-MapRegionRegistry.ps1`、`Restore-BundledResources.ps1`、`Start-KuroCaptureAssistant.ps1`）——**这是 main 上的既有问题，不是本分支引入**；它们在 pwsh 7 下正常。修复只需加上 BOM（不改变任何行为）。
+
 ---
 
 # 23. 本会话的编译/测试证据（Phase 1 + Phase 2）
