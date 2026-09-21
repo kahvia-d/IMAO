@@ -710,6 +710,9 @@ int ImGuiOverWindows::start()
             if (frameStart - motionReportAt >= std::chrono::seconds(2)) {
                 const double seconds = std::chrono::duration<double>(frameStart - motionReportAt).count();
                 const auto markers = DrawItemOnMinMap::TakeMarkerRenderStats();
+                // The three status switches as one instant, so a reading of the log never combines values
+                // that were true at different moments.
+                const auto statusSwitches = RuntimeStatus::Snapshot();
                 Diagnostics::Record("overlay-motion", "renderFps=" + std::to_string(renderedFrames / seconds) +
                     " sourceFps=" + std::to_string(observedFrames / seconds) +
                     " captureFps=" + std::to_string(capturedFrames / seconds) + " mode=image-anchored" +
@@ -735,8 +738,9 @@ int ImGuiOverWindows::start()
                     // The window and buffer the frame above was drawn into, so the small-overlay
                     // experiment can be told apart from the full-client one in the same log.
                     " overlayMode=" + std::string(miniOverlay ? "mini" : "full") +
-                    " statusBarEnabled=" + std::to_string(statusBarEnabled ? 1 : 0) +
-                    " statusBallEnabled=" + std::to_string(RuntimeStatus::Snapshot().statusBallEnabled ? 1 : 0) +
+                    " statusBarEnabled=" + std::to_string(statusSwitches.statusBarEnabled ? 1 : 0) +
+                    " mapStatusBarEnabled=" + std::to_string(statusSwitches.mapStatusBarEnabled ? 1 : 0) +
+                    " statusBallEnabled=" + std::to_string(statusSwitches.statusBallEnabled ? 1 : 0) +
                     " overlayForcedFull=" + std::to_string(forceFullOverlay ? 1 : 0) +
                     " overlayWidth=" + std::to_string(bufferSize.after.clientWidth) +
                     " overlayHeight=" + std::to_string(bufferSize.after.clientHeight) +
