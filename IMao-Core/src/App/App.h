@@ -323,15 +323,6 @@ private:
     // for the position continuously instead.  Cleared by any accepted local tracking.
     std::chrono::steady_clock::time_point localTrackingStalledSince{};
     bool LocalTrackingStalled(std::chrono::steady_clock::time_point now) const;
-    // The *rendered* player position glides toward the authoritative one instead of snapping.  The
-    // local tracker only follows about a quarter of frames here, so between two readouts the position
-    // falls behind and each readout would otherwise step the markers by 7.5 imgMap units on average
-    // and up to 36 (field log 11:39) - which is what the player sees as a flicker.  Only drawing uses
-    // this value: the published position, the nearby selection and route planning keep the exact one.
-    Coordinate smoothedMinimapPlayerROC{};
-    int smoothedMinimapSceneId = 0;
-    std::chrono::steady_clock::time_point smoothedMinimapPlayerROCAt{};
-    Coordinate SmoothMinimapPlayerROC(const Coordinate& target);
     std::chrono::steady_clock::time_point lastTrustedConfirmAt{};
     OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
