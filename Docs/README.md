@@ -91,6 +91,7 @@
 | [`GameFrameCostAnalysis_20260918.md`](GameFrameCostAnalysis_20260918.md) | 工具对游戏帧率的影响：玩家现场现象与成因分析 |
 | [`GameFrameDropAnalysis_20260917.md`](GameFrameDropAnalysis_20260917.md) | 2026-09-17 游戏掉帧：工具侧开销分析与改动 |
 | [`MinimapMarkerRenderPerfPlan_zh-Hans.md`](MinimapMarkerRenderPerfPlan_zh-Hans.md) | 小地图标记渲染掉帧优化 · 任务书与进度台账（现行） |
+| [`MiniMapOverlayDesign_zh-Hans.md`](MiniMapOverlayDesign_zh-Hans.md) | 小地图局部覆盖层 · 正式设计（待评审） |
 
 ## 发行说明与发行资源
 
