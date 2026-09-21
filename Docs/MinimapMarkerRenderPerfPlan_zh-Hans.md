@@ -1573,6 +1573,68 @@ Copy-Item 'C:\Dapps\IMao\resources.before-mini-switch-20260921.pri' 'C:\Dapps\IM
 
 ---
 
+# 32. 下一步实验：WGC ROI 回读（设计定稿，待实现）
+
+任务书 §11 点名的独立实验。**不改 overlay、不与前面任何改动混在一个 commit。**
+
+## 32.1 先量收益上限（已测，来自 `capture-wgc-first-frame` / `capture-wgc-frames`）
+
+会话 `events-20260922.jsonl`（22346 帧、无 skipped、无 staging 失败）：
+
+| 指标 | 实测 |
+|---|---|
+| `readbackAvgMs` | 会话均值 **9.2 ms/帧**（中位 6.6） |
+| `readbackMaxMs` | **37.3 ms**（2 秒窗口的最大值，p90 也是 37.3 ⟹ 37 ms 级停顿常见） |
+| 捕获周期 | 33.3 ms（30 Hz）⟹ 回读占捕获线程约 **28%** |
+| 回读流量 | 2560×1440×4 ≈ **14.1 MB/帧** ≈ **422 MB/s** |
+
+现路径（`SimpleCapture::ProcessFrame`）：`CopyResource(整张)` → `Flush` → `Map`（阻塞等 GPU）→ `copyTo` 整帧 14.7 MB。
+
+## 32.2 ROI 集合（逐个消费者核实过）
+
+普通探索状态真正会被采样的区域只有 5 个 box（给出 1600×900 参考坐标；运行时按客户区缩放，并用 `ScaleCrop` 同样的算法裁剪到图像内）：
+
+| # | 区域（参考坐标） | 消费者 |
+|---|---|---|
+| A | (30,23)-(184,177) | `CropToMinMapAreaImg`（小地图定位）、`frame.motionImage`（运动锚定）、地形/视野锥掩码 |
+| B | (12,183)-(39,207) | `IsExistMinMap`（IconTask SURF）+ `MinimapHudEvidence::Observe(iconRoi)` |
+| C | (10,52)-(82,116) | `MapUiVisualDetector::DetectBigMapCompass` |
+| D | (1480,235)-(1540,645) | `MapUiVisualDetector::DetectBigMapControlLayout`（缩放条） |
+| E | (20,865)-(160,900) | `GetCoordinateRegion`（OCR 坐标读数） |
+
+面积：参考坐标下 5 个 box 合计 ≈ 148k px（2560×1440 下）≈ **整帧的 4.0%** ⟹ **0.57 MB/帧**，流量 422 → **约 18 MB/s**。
+
+**不在 ROI 内、因此必须走整帧的消费者**（都在大地图状态）：
+`CropToRegion_IconWavePlateCrystal` 与 `CropToMapCenterArea`（`IsOpenMap` 结构校验、视口预测/搜索/桥接、`CommitMapViewportResult` 里的箭头提示）。
+中心区在参考坐标下是 1280×630（2560×1440 下 2048×1008 ≈ 整帧的 **56%**）⟹ 大地图状态本来就没有 ROI 收益可言，保持整帧即可。
+
+## 32.3 回退规则（关键设计）
+
+**整帧**（现状）当且仅当：
+1. 大地图已确认（`isOpenMap`）；
+2. 出现大地图候选（`compassVisible || mapControlsVisible`）——即"可能马上要校验地图画布"；
+3. 状态机不处于稳定 gameplay（`Unknown`/过渡）——保守起见。
+其余情况走 **ROI 回读**。
+
+代价与理由：地图画布校验（`IsOpenMap`）需要中心区，而"是否要校验"正是从 ROI 内的罗盘/控件证据推出来的 ⟹ 校验会**晚一帧**拿到整帧。它自身有 3 帧候选 + 1 秒节流的门限，晚一帧（33 ms）在门限之内，仍应在允许的时刻拿到整帧。**这一点要实测确认**（看 `map-ui-candidate-rejected` / `map-open-detection` 是否出现异常）。
+
+## 32.4 实现要点
+
+- 复用**已废弃的隔离掩码 bit 7（`128`）**作为本实验的开关（诊断页文案随之改回），便于同场 A/B 与一键回滚；不改默认行为。
+- `SimpleCapture`：新增一个小 staging 纹理（把 5 个 box 纵向拼在一张紧凑纹理里，行 4 字节对齐），用 `CopySubresourceRegion` 逐 box 拷入；`Map` 一次后按 box 把行 `memcpy` 进**整帧尺寸**的 `m_scratchFrame` 对应位置（Mat 尺寸必须保持整帧，因为所有消费者都按绝对坐标裁剪）。ROI 之外的像素保持上一帧内容——**不读就不会用到**（上面已逐个消费者核实）。
+- 诊断：`capture-wgc-frames` 的 `readbackAvgMs/Max` 保持；新增 `mode=full|roi` 与本次是否走了整帧的计数，便于核对配置。
+- 不改 `MinUpdateInterval`、缓冲复用、线程模型。
+
+## 32.5 验证与判读
+
+1. **A/B/A/B**（掩码 0 vs 128，各 45 s，同场同视角）：看 `readbackAvgMs`（预期从 ~9 ms 降到 ~1-2 ms 量级）与 PresentMon 的 FPS/p95/p99。
+2. **功能回归（最重要）**：小地图定位、marker 显示、大地图开合与视口定位、OCR 读数、状态栏 —— 逐项确认无退化；`map-ui-candidate-rejected` 与 `map-open-detection` 行为应与掩码 0 时一致。
+3. 若有任何定位退化 ⟹ 先把开关置 0（一键回退），再把对应区域补进 ROI 集合。
+
+**未验证**：本设计尚未实现，全部数字（ROI 的实际耗时、FPS 收益）都还没测。
+
+---
+
 # 27. 遗留：§25.1 的判据原本要靠推理
 
 §25.1 的判据靠"候选集 id 仍在 + 绘制数 −1"来推理，因为候选集与绘制数之间还夹着**迟滞环**（候选用 `minMapRadius+16/+48`，绘制用严格 `minMapRadius`）——单独一个点也可以因落在迟滞环里而"在候选、不被画"。
