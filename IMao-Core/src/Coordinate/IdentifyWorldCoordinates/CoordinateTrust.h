@@ -20,15 +20,30 @@ namespace CoordinateTrust {
 
 inline constexpr double kMaximumSpeedUnitsPerSecond = 400.0;
 inline constexpr std::size_t kRecordLimit = 64;
-// 轨迹拟合（用户 2026-09-21 定的设计）：进无特征区之前，小地图匹配成功会留下一串高可信坐标；
-// 依赖读数时，把候选与这段轨迹的趋势对比——错读的形态是"断点"（方向/速度不连续），直接丢；
-// 符合趋势的读数写回数组，成为新的拟合基础。
-inline constexpr double kFitWindowSeconds = 3.0;
-inline constexpr std::size_t kFitMinimumEntries = 5;
-inline constexpr std::size_t kFitMaximumEntries = 24;
+// 轨迹拟合（用户 2026-09-21 定的设计）。v2：窗口**按条数**取（6~16 条，年龄上限 30 秒），
+// 因为进了无特征区只剩读数（1 秒一条）时，"3 秒内 5 条"会立刻失效——保护恰好丢在最需要它的地方。
+// 否决只用于一种**有精确签名**的错误：候选落在"趋势预测位置关于地图原点的镜像"上
+// （丢负号与瓦片错位都落在那里）。参照物必须是**预测**（累积证据），不能是当前位置——
+// 用当前位置当参照会在位置出错后自我锁死（2026-09-21 12:47 的教训）。
+inline constexpr double kFitMaximumAgeSeconds = 30.0;
+inline constexpr std::size_t kFitMinimumEntries = 6;
+inline constexpr std::size_t kFitMaximumEntries = 16;
+inline constexpr double kFitMinimumSpanSeconds = 2.0;
 inline constexpr double kTrendToleranceUnits = 30.0;      // 拟合残差的固定下限
 inline constexpr double kTrendSpeedFactor = 2.5;          // 残差随时间/速度放宽的系数
+inline constexpr double kMirrorToleranceUnits = 60.0;     // 镜像判据的容差
 inline constexpr double kChainStepMinimumUnits = 60.0;    // 相邻两条记录步长的下限（超出即视为断点）
+
+// 候选是否落在"参照位置关于地图原点的镜像"上（x 轴或 y 轴镜像）。
+inline bool IsMirrorOf(int sceneId, const Coordinate& candidate, const Coordinate& reference, double tolerance) {
+    const auto* scene = Scene::Find(sceneId);
+    if (scene == nullptr) return false;
+    const double mirrorX = 2.0 * scene->originX - reference.x;
+    const double mirrorY = 2.0 * scene->originY - reference.y;
+    const double xFlip = std::hypot(candidate.x - mirrorX, candidate.y - reference.y);
+    const double yFlip = std::hypot(candidate.x - reference.x, candidate.y - mirrorY);
+    return xFlip <= tolerance || yFlip <= tolerance;
+}
 
 struct Entry {
     int sceneId = 0;
@@ -84,7 +99,7 @@ public:
         const Entry* newer = nullptr;
         for (auto it = record_.rbegin(); it != record_.rend(); ++it) {
             if (it->sceneId != sceneId) continue;
-            if (secondsAt - it->secondsAt > kFitWindowSeconds) break;
+            if (secondsAt - it->secondsAt > kFitMaximumAgeSeconds) break;
             if (newer != nullptr) {
                 const double dt = newer->secondsAt - it->secondsAt;
                 const double step = std::hypot(newer->mapCoordinate.x - it->mapCoordinate.x,
@@ -97,6 +112,8 @@ public:
             if (segment.size() >= kFitMaximumEntries) break;
         }
         if (segment.size() < kFitMinimumEntries) return false;
+        // 站着不动时末尾会堆一串几乎相同的点：对拟合无害（速度≈0），但跨度太小就没有方向可言
+        if (segment.front()->secondsAt - segment.back()->secondsAt < kFitMinimumSpanSeconds) return false;
         // 线性最小二乘：x(t)、y(t)，时间原点取最新一条
         const double t0 = segment.front()->secondsAt;
         double sumT = 0, sumTT = 0, sumX = 0, sumY = 0, sumTX = 0, sumTY = 0;
@@ -148,12 +165,15 @@ public:
         for (const auto& candidate : candidates) {
             const double distance = std::hypot(candidate.mapCoordinate.x - anchor->mapCoordinate.x,
                 candidate.mapCoordinate.y - anchor->mapCoordinate.y) / 1.205;
+            // 唯一的趋势否决：候选落在"预测位置的镜像"上 —— 丢负号与瓦片错位的精确签名。
+            // 偏离趋势但**不是镜像**的候选不在这里否决（起飞、传送、上车都会那样），交回预算判据。
             if (hasTrend) {
                 const double residual = std::hypot(candidate.mapCoordinate.x - predicted.x,
                     candidate.mapCoordinate.y - predicted.y) / 1.205;
-                if (residual > trendTolerance) continue;   // 断点：不符合变化趋势
+                if (residual > trendTolerance &&
+                    IsMirrorOf(sceneId, candidate.mapCoordinate, predicted, kMirrorToleranceUnits)) continue;
             }
-            else if (distance > allowed) continue;
+            if (distance > allowed) continue;
             // 同等可达时优先"未经修复"的原始读数，其次取分高者
             if (!best.has_value() ||
                 (best->repaired && !candidate.repaired) ||

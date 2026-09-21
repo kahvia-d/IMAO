@@ -987,8 +987,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					candidate.mapCenter.y - predicted.y) / 1.205;
 				const double tolerance = std::max(CoordinateTrust::kTrendToleranceUnits,
 					CoordinateTrust::kTrendSpeedFactor * speed);
-				if (residual > tolerance) {
-					Diagnostics::Record("position-commit-rejected", "reason=trend scene=" +
+				// 只否决"落在预测位置镜像上"的候选（丢负号 / 瓦片错位的签名）。偏离趋势但不是镜像的
+				// ——起飞、传送、上车——一律放行，交回预算闸门；否则会把真实移动锁死（12:47 的教训）。
+				if (residual > tolerance && CoordinateTrust::IsMirrorOf(candidate.sceneId, candidate.mapCenter,
+					predicted, CoordinateTrust::kMirrorToleranceUnits)) {
+					Diagnostics::Record("position-commit-rejected", "reason=mirror scene=" +
 						std::to_string(candidate.sceneId) + " residual=" + std::to_string(residual) +
 						" tolerance=" + std::to_string(tolerance) + " speed=" + std::to_string(speed) +
 						" map=" + std::to_string(candidate.mapCenter.x) + "," + std::to_string(candidate.mapCenter.y) +
