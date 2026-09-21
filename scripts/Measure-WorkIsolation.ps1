@@ -39,8 +39,11 @@ param(
     [int]$PhaseSeconds = 45,
     [int]$WarmupSeconds = 5,
     # Time allowed per phase for reading the prompt and changing the mask in the tool, so the capture
-    # budget covers the whole run rather than ending early.
-    [int]$PromptAllowanceSeconds = 45,
+    # budget covers the whole run rather than ending early. It is a safety net, not a schedule: the
+    # capture is killed as soon as the phases are done. A measured run sat 134 s on one prompt, and the
+    # old 45 s allowance expired the recording before the last phase began, which read as a phase with no
+    # frames at all rather than as a truncated run.
+    [int]$PromptAllowanceSeconds = 150,
     [string]$OutputPath,
     [string]$PresentMonPath,
     [ValidateSet('work-isolation', 'status-bar', 'full-client', 'roi-readback')][string]$Experiment = 'work-isolation'
