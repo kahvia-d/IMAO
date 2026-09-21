@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <unordered_map>
 #include <nlohmann/json.hpp>
 #include "Windows.h"
 #include "../ImGuiOverWindows.h"
@@ -61,6 +62,9 @@ public:
     static std::string MarkerProfile();
 
 	static std::vector<ItemTextureData> itemsTextureData;
+	// nameId -> subscript in itemsTextureData. The vector is only ever appended to, so a subscript
+	// stays valid until the D3D device is recreated and both are cleared together.
+	static std::unordered_map<std::string, std::size_t> itemTextureIndex;
 	static json itemsJsonData_World;
 	static json itemsJsonData_Tethys;
 	static json itemsJsonData_Fabricatorium;

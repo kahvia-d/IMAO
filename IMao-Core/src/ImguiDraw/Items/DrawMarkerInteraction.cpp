@@ -1028,7 +1028,8 @@ void DrawMarkerInteraction::DrawMapToolsLauncher(const RECT& rect, HWND gameWind
 
 void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted, bool completed, std::size_t count) {
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture;
-    for (const auto& cached : DrawItemBase::itemsTextureData) if (cached.nameId == item.nameId) { texture = cached.texture; break; }
+    if (const auto cached = DrawItemBase::itemTextureIndex.find(item.nameId); cached != DrawItemBase::itemTextureIndex.end())
+        texture = DrawItemBase::itemsTextureData[cached->second].texture;
     if (!texture && DrawItemBase::IsValidItemNameId(item.nameId)) {
         int width = 0, height = 0;
         bool loaded = false;
@@ -1038,7 +1039,11 @@ void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, flo
             const auto name = L"IDB_PNG_" + std::wstring(item.nameId.begin(), item.nameId.end());
             loaded = ImGuiOverWindows::LoadTextureFromResource(name.c_str(), &texture, &width, &height);
         }
-        if (loaded) DrawItemBase::itemsTextureData.emplace_back(item.nameId, texture);
+        if (loaded) {
+            // The index goes in first, so its subscript is the slot the vector is about to take.
+            DrawItemBase::itemTextureIndex.emplace(item.nameId, DrawItemBase::itemsTextureData.size());
+            DrawItemBase::itemsTextureData.emplace_back(item.nameId, texture);
+        }
     }
     auto* draw = ImGui::GetBackgroundDrawList();
     const auto color = highlighted ? IM_COL32(67, 226, 138, 255) : IM_COL32(232, 190, 116, completed ? 120 : 240);

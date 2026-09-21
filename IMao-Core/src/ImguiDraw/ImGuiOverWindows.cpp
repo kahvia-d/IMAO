@@ -1054,6 +1054,7 @@ void CleanupDeviceD3D()
 {
     // Cached views belong to this D3D device and cannot survive a recreation.
     DrawItemBase::itemsTextureData.clear();
+    DrawItemBase::itemTextureIndex.clear();
     CleanupRenderTarget();
     if (g_compositionVisual) { g_compositionVisual->Release(); g_compositionVisual = nullptr; }
     if (g_compositionTarget) { g_compositionTarget->Release(); g_compositionTarget = nullptr; }

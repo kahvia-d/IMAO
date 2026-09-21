@@ -35,6 +35,7 @@ json DrawItemBase::itemsJsonData_Darkplain;
 json DrawItemBase::itemsJsonData_TimeRiftRuins;
 
 vector<ItemTextureData> DrawItemBase::itemsTextureData;
+unordered_map<string, size_t> DrawItemBase::itemTextureIndex;
 static SceneItemStore<ItemsDatas> selectedItems;
 thread DrawItemBase::thread_ReadSavedPointsJson;
 std::atomic_bool DrawItemBase::savedPointsThreadStop = false;
