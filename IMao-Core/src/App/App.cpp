@@ -1175,7 +1175,35 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						}
 					}
 					if (!lock.valid) {
-						if (arbitrations >= 2) break;   // 一次读数最多裁决两个变体，别把恢复态拖住
+						// The region comes only from certain states and OCR cannot change it, so a
+						// coordinate may only pick among readings that are reachable from the record
+						// of coordinates that were certainly correct.  Nothing here may move T, and a
+						// frame that does not qualify is dropped rather than filled in from the record.
+						if (!coordinateTrust.HasScene()) {
+							Diagnostics::Record("coordinate-publish-rejected",
+								"reason=no-region world=" + world + " (open the big map once)");
+							continue;
+						}
+						std::vector<CoordinateTrust::Candidate> trustCandidates;
+						for (const auto& item : ocrResult.candidates) {
+							CoordinateTrust::Candidate entry;
+							entry.mapCoordinate = MapCoordinate::IdentifyCoorToImgMapCoord(
+								item.Position(), coordinateTrust.Scene());
+							entry.score = item.modelScore;
+							entry.repaired = !item.correction.empty();
+							trustCandidates.push_back(entry);
+						}
+						const auto chosen = coordinateTrust.Choose(coordinateTrust.Scene(), trustCandidates,
+							std::chrono::duration<double>(now.time_since_epoch()).count());
+						if (!chosen.has_value()) {
+							Diagnostics::Record("coordinate-publish-rejected", "reason=not-reachable scene=" +
+								std::to_string(coordinateTrust.Scene()) + " world=" + world);
+							continue;
+						}
+						reading.sceneId = coordinateTrust.Scene();
+						reading.mapCoordinate = chosen->mapCoordinate;
+						reading.arbitrated = false;
+						if (arbitrations >= 2) break;   // 旧的像素裁决停用（见下一笔的删除）
 						++arbitrations;
 						double best = 0.0;
 						double second = 0.0;
@@ -1759,6 +1787,7 @@ void App::BeginMinimapReacquisition() {
 }
 
 void App::BeginMapViewportSession() {
+	bigMapSolvePending = true;   // the player just opened the big map
 	ResetMapViewport();
 	++mapViewportGeneration;
 	observedMapViewportRevision = 0;
@@ -1875,6 +1904,19 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
         Diagnostics::Record("map-viewport-resume-hint", "source=player-arrow scene=" + std::to_string(sceneId) +
             " map=" + std::to_string(player.x) + "," + std::to_string(player.y));
     } else Diagnostics::Record("map-viewport-resume-hint", "available=false reason=no-unique-player-arrow");
+	// A certain state: the first successful solve after the big map was opened.  Later solves
+	// may be the player browsing another region, so only this one may name the region.
+	if (bigMapSolvePending) {
+		bigMapSolvePending = false;
+		const Coordinate regionCenter = ImgMapToWorldCoordinate(
+			{ result.centerMapCoordinate.x, result.centerMapCoordinate.y }, sceneId);
+		coordinateTrust.NoteBigMapSolve(sceneId,
+			{ result.centerMapCoordinate.x, result.centerMapCoordinate.y },
+			std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
+		Diagnostics::Record("coordinate-region-confirmed", "source=big-map scene=" +
+			std::to_string(sceneId) + " world=" + std::to_string(regionCenter.x) + "," +
+			std::to_string(regionCenter.y));
+	}
 	Diagnostics::Record("map-viewport-result", "accepted=true scope=" +
 		std::string(MapViewportLocalizer::ScopeName(result.scope)) + " scene=" + std::to_string(sceneId) +
 		" center=" + std::to_string(result.centerMapCoordinate.x) + "," +

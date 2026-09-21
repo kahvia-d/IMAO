@@ -306,6 +306,9 @@ private:
     // measured error modes that shaped it.
     // Region T and the record of coordinates that were certainly correct (CoordinateTrust.h).
     CoordinateTrust::Trust coordinateTrust;
+    // Armed when the big map opens: at that moment it shows the player's own region, so the
+    // first successful viewport solve may name T.  Later solves may be the player browsing.
+    bool bigMapSolvePending = false;
     OcrCoordinateGate::Gate ocrCoordinateGate;
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
