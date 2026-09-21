@@ -545,17 +545,18 @@ int ImGuiOverWindows::start()
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         if (!pump(maxWait))
             break;
-        // Which rectangle this frame's window has to cover is decided before it is moved. The published
-        // frame already carries the conditions this needs: the minimap exists, the big map is closed,
-        // and minimap marker drawing is on. A window the size of the minimap is the ordinary state now;
-        // the isolation bit selects the other status-bar style, whose bar needs more room.
+        // Which rectangle this frame's window has to cover is decided before it is moved. Only the big
+        // map needs the whole client, because its viewport markers can land anywhere on it; every other
+        // frame - including the ones before the minimap has been detected at all - is a small window.
+        // Keying this on "the minimap was positively detected" instead made the window jump to full size
+        // at every state transition, startup included, which is both the visible flicker and exactly the
+        // full-screen composition cost this change exists to avoid.
         const bool fullStatusBar = Isolation::Enabled(Isolation::kFullStatusBar);
         const bool forceFullOverlay = Isolation::Enabled(Isolation::kForceFullOverlay);
         bool minimapWindowRequested = false;
         {
             const auto markerFrame = app.ReadOverlayFrame();
-            minimapWindowRequested = !forceFullOverlay && markerFrame && markerFrame->minimapVisible &&
-                !markerFrame->mapVisible;
+            minimapWindowRequested = !forceFullOverlay && markerFrame && !markerFrame->mapVisible;
         }
         RECT physicalGame{};
         // The client-space rectangle the mini window covers, and the offset its drawing is presented
@@ -843,15 +844,17 @@ int ImGuiOverWindows::start()
             presented.minimapVisible = drewMinimap;
             app.PublishPresentedOverlay(std::move(presented));
             if (miniOverlay && !fullStatusBar) {
-                // The window covers only the minimap, so the status becomes one ball in its corner. Its
-                // radius follows the client width like the marker radius does, so it stays proportionate
-                // at every resolution and DPI, and it lands inside the padding the window already has.
-                const auto& markers = frame->minimapMarkers;
+                // The window covers only the minimap, so the status becomes one ball in its corner. It is
+                // placed from the HUD's nominal minimap rectangle rather than from the frame's last known
+                // circle: before the first successful localization there is no circle yet, and the state
+                // is exactly what the ball has to be able to report. Its radius follows the client width
+                // like the marker radius does, so it stays proportionate at every resolution and DPI, and
+                // the corner it sits in is inside the padding the window already has.
+                const auto minimap = ScreenCoordinate::SpecifyScreenCoordinate(GameRect, GameWindowsScreenData::MinMapScreenData);
                 const float ball = std::max(8.0f, static_cast<float>(GameRect.right) * 0.011f / 2.0f);
-                if (markers.radius > 0.0)
-                    RuntimeStatusBar::DrawCompact(
-                        static_cast<float>(markers.center.x + markers.radius) - ball,
-                        static_cast<float>(markers.center.y + markers.radius) - ball, ball);
+                RuntimeStatusBar::DrawCompact(
+                    static_cast<float>(std::max(minimap.leftPoint.x, minimap.rightPoint.x)) - ball,
+                    static_cast<float>(std::max(minimap.topPoint.y, minimap.bottomPoint.y)) - ball, ball);
             }
             else RuntimeStatusBar::Draw(h_window);
             //DrawPiPWindows::DrawImgui();
