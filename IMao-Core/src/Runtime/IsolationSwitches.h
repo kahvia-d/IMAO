@@ -31,14 +31,18 @@ inline constexpr int kWindowSync = 1 << 5;
 // costs 13-16 fps (a blt-model surface needs an extra copy from DWM), and it is measured by comparing
 // the baseline against the baseline with this bit set. Applies when the overlay session starts.
 inline constexpr int kOverlayComposition = 1 << 6;
-// Not a "switch off" either: the window, the swap chain and the viewport become the minimap and its
-// overhang instead of the whole game client, which is what the tool maintains - and what the desktop
-// compositor has to keep blending - for a handful of markers in one corner. Applies only while the
-// minimap is the visible map; opening the big map returns the full-screen window, so viewport
-// matching and the map markers keep the surface they have today.
-inline constexpr int kMiniOverlay = 1 << 7;
+// Not a "switch off", and no longer how the small window is enabled: a window the size of the minimap
+// is now the ordinary minimap state, measured at about +9.6 fps with p95 down 2.4 ms and the over-20 ms
+// share at zero (Docs/MiniMapOverlayDesign_zh-Hans.md). What this bit selects is the other status-bar
+// style - the full bar reaches across the client, so the window grows to hold the union of the two.
+// Unset is the minimal style: the same small window, with the state shown as one coloured ball.
+inline constexpr int kFullStatusBar = 1 << 7;
+// Keeps the comparison the small window was decided by available after it became the default: with this
+// bit the overlay goes back to a window the size of the whole game client, so "full client against
+// minimap window" can be re-measured on any scene without rebuilding, and it doubles as the rollback.
+inline constexpr int kForceFullOverlay = 1 << 8;
 inline constexpr int kAll = kCapture | kGameStateDetection | kLocalization | kOverlayRender |
-    kOverlayClear | kWindowSync | kOverlayComposition | kMiniOverlay;
+    kOverlayClear | kWindowSync | kOverlayComposition | kFullStatusBar | kForceFullOverlay;
 
 inline std::atomic_int switches{ 0 };
 
@@ -61,7 +65,8 @@ inline const char* Describe(int value) {
     case kOverlayClear: return "关闭覆盖层整屏清屏";
     case kWindowSync: return "关闭窗口几何同步";
     case kOverlayComposition: return "改用 DirectComposition 呈现";
-    case kMiniOverlay: return "小地图局部覆盖层（只在小地图状态生效）";
+    case kFullStatusBar: return "完整状态栏模式（并集窗口）";
+    case kForceFullOverlay: return "强制整屏覆盖层（对照/回滚）";
     default: return "自定义组合";
     }
 }
@@ -77,7 +82,8 @@ inline const char* DescribeAscii(int value) {
     case kOverlayClear: return "no-overlay-clear";
     case kWindowSync: return "no-window-sync";
     case kOverlayComposition: return "overlay-composition";
-    case kMiniOverlay: return "mini-overlay";
+    case kFullStatusBar: return "full-status-bar";
+    case kForceFullOverlay: return "force-full-overlay";
     default: return "custom";
     }
 }

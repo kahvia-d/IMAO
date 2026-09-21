@@ -98,13 +98,26 @@ std::string DescribeRect(const RECT& rect) {
 // the circle, and the target hint sits below it. Padding scales with the client like every other HUD
 // size, clamped to the 30-60 px the experiment asked for, and the rectangle never leaves the client so
 // the window cannot cover desktop the game window does not own.
-RECT MiniOverlayClientRect(const RECT& gameClient) {
+//
+// The full status bar reaches across the client, so the non-minimal style adds its rectangle to this
+// one: the window then holds everything that is drawn, and the minimal style keeps the window at the
+// minimap alone with the state shown as a ball instead.
+RECT MiniOverlayClientRect(const RECT& gameClient, bool withStatusBar) {
     const auto area = ScreenCoordinate::SpecifyScreenCoordinate(gameClient, GameWindowsScreenData::MinMapScreenData);
     const double padding = std::clamp(gameClient.right * 0.025, 30.0, 60.0);
-    const double left = std::min(area.leftPoint.x, area.rightPoint.x) - padding;
-    const double top = std::min(area.topPoint.y, area.bottomPoint.y) - padding;
-    const double right = std::max(area.leftPoint.x, area.rightPoint.x) + padding;
-    const double bottom = std::max(area.topPoint.y, area.bottomPoint.y) + padding;
+    double left = std::min(area.leftPoint.x, area.rightPoint.x) - padding;
+    double top = std::min(area.topPoint.y, area.bottomPoint.y) - padding;
+    double right = std::max(area.leftPoint.x, area.rightPoint.x) + padding;
+    double bottom = std::max(area.topPoint.y, area.bottomPoint.y) + padding;
+    if (withStatusBar) {
+        const RECT bar = RuntimeStatusBar::ReservedBounds();
+        if (bar.right > bar.left && bar.bottom > bar.top) {
+            left = std::min(left, static_cast<double>(bar.left));
+            top = std::min(top, static_cast<double>(bar.top));
+            right = std::max(right, static_cast<double>(bar.right));
+            bottom = std::max(bottom, static_cast<double>(bar.bottom));
+        }
+    }
     RECT rect{};
     rect.left = static_cast<LONG>(std::max(0.0, std::floor(left)));
     rect.top = static_cast<LONG>(std::max(0.0, std::floor(top)));
@@ -533,12 +546,16 @@ int ImGuiOverWindows::start()
         if (!pump(maxWait))
             break;
         // Which rectangle this frame's window has to cover is decided before it is moved. The published
-        // frame already carries the three conditions the minimap-only experiment allows: the minimap
-        // exists, the big map is closed, and minimap marker drawing is on.
-        bool miniOverlayRequested = false;
-        if (Isolation::Enabled(Isolation::kMiniOverlay)) {
+        // frame already carries the conditions this needs: the minimap exists, the big map is closed,
+        // and minimap marker drawing is on. A window the size of the minimap is the ordinary state now;
+        // the isolation bit selects the other status-bar style, whose bar needs more room.
+        const bool fullStatusBar = Isolation::Enabled(Isolation::kFullStatusBar);
+        const bool forceFullOverlay = Isolation::Enabled(Isolation::kForceFullOverlay);
+        bool minimapWindowRequested = false;
+        {
             const auto markerFrame = app.ReadOverlayFrame();
-            miniOverlayRequested = markerFrame && markerFrame->minimapVisible && !markerFrame->mapVisible;
+            minimapWindowRequested = !forceFullOverlay && markerFrame && markerFrame->minimapVisible &&
+                !markerFrame->mapVisible;
         }
         RECT physicalGame{};
         // The client-space rectangle the mini window covers, and the offset its drawing is presented
@@ -552,8 +569,8 @@ int ImGuiOverWindows::start()
             const auto syncStarted = std::chrono::steady_clock::now();
             const bool gameClientKnown = OverlayWindowBounds::GameClient(h_window, physicalGame);
             RECT target = physicalGame;
-            if (gameClientKnown && miniOverlayRequested) {
-                miniClient = MiniOverlayClientRect(GameRect);
+            if (gameClientKnown && minimapWindowRequested) {
+                miniClient = MiniOverlayClientRect(GameRect, fullStatusBar);
                 miniOverlay = miniClient.right > miniClient.left && miniClient.bottom > miniClient.top;
                 if (miniOverlay) target = {physicalGame.left + miniClient.left, physicalGame.top + miniClient.top,
                     physicalGame.left + miniClient.right, physicalGame.top + miniClient.bottom};
@@ -651,7 +668,7 @@ int ImGuiOverWindows::start()
                 GameRect = {0, 0, client.right, client.bottom};
                 // Re-derived from the same fresh client size the drawing will use, so the offset and
                 // the drawing space can never disagree about where the minimap is.
-                miniClient = MiniOverlayClientRect(GameRect);
+                miniClient = MiniOverlayClientRect(GameRect, fullStatusBar);
             }
         }
         if (!miniOverlay) GameRect = {0, 0, static_cast<LONG>(bufferSize.after.clientWidth),
@@ -712,6 +729,8 @@ int ImGuiOverWindows::start()
                     // The window and buffer the frame above was drawn into, so the small-overlay
                     // experiment can be told apart from the full-client one in the same log.
                     " overlayMode=" + std::string(miniOverlay ? "mini" : "full") +
+                    " statusBarStyle=" + std::string(fullStatusBar ? "full" : "minimal") +
+                    " overlayForcedFull=" + std::to_string(forceFullOverlay ? 1 : 0) +
                     " overlayWidth=" + std::to_string(bufferSize.after.clientWidth) +
                     " overlayHeight=" + std::to_string(bufferSize.after.clientHeight) +
                     " backBufferWidth=" + std::to_string(bufferSize.after.bufferWidth) +
@@ -823,7 +842,18 @@ int ImGuiOverWindows::start()
             presented.mapVisible = drewMap;
             presented.minimapVisible = drewMinimap;
             app.PublishPresentedOverlay(std::move(presented));
-            RuntimeStatusBar::Draw(h_window);
+            if (miniOverlay && !fullStatusBar) {
+                // The window covers only the minimap, so the status becomes one ball in its corner. Its
+                // radius follows the client width like the marker radius does, so it stays proportionate
+                // at every resolution and DPI, and it lands inside the padding the window already has.
+                const auto& markers = frame->minimapMarkers;
+                const float ball = std::max(8.0f, static_cast<float>(GameRect.right) * 0.011f / 2.0f);
+                if (markers.radius > 0.0)
+                    RuntimeStatusBar::DrawCompact(
+                        static_cast<float>(markers.center.x + markers.radius) - ball,
+                        static_cast<float>(markers.center.y + markers.radius) - ball, ball);
+            }
+            else RuntimeStatusBar::Draw(h_window);
             //DrawPiPWindows::DrawImgui();
             Notification::DrawInfo();
             //Debug::DebugWindow(io,app);

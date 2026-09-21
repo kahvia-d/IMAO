@@ -92,3 +92,28 @@ void RuntimeStatusBar::Draw(HWND) {
     draw->AddText(UiFont(), 14 * s, ImVec2(box.left + 16 * s, box.top + 35 * s), IM_COL32(160, 178, 195, 255),
         layout.second.c_str(), nullptr, box.Width() - 32 * s);
 }
+
+RECT RuntimeStatusBar::ReservedBounds() {
+    RECT rect{};
+    // Zero while the bar is not shown: a window never grows to hold a bar the player has turned off.
+    if (!layout.visible) return rect;
+    rect.left = static_cast<LONG>(layout.bounds.left);
+    rect.top = static_cast<LONG>(layout.bounds.top);
+    rect.right = static_cast<LONG>(layout.bounds.right + 0.5f);
+    rect.bottom = static_cast<LONG>(layout.bounds.bottom + 0.5f);
+    return rect;
+}
+
+bool RuntimeStatusBar::DrawCompact(float centerX, float centerY, float radius) {
+    if (!layout.visible || radius <= 0.0f) return false;
+    auto* draw = ImGui::GetForegroundDrawList();
+    const ImVec2 center(centerX, centerY);
+    const float thickness = radius * 0.14f > 1.0f ? radius * 0.14f : 1.0f;
+    // A dark disc under the colour keeps the state readable over bright terrain. The colour is the one
+    // the full bar would have used, so the two forms of the same status can never disagree.
+    draw->AddCircleFilled(ImVec2(center.x, center.y + radius * 0.14f), radius, IM_COL32(0, 0, 0, 90));
+    draw->AddCircleFilled(center, radius, IM_COL32(16, 21, 29, 235));
+    draw->AddCircleFilled(center, radius * 0.6f, layout.color);
+    draw->AddCircle(center, radius, IM_COL32(61, 80, 98, 210), 0, thickness);
+    return true;
+}
