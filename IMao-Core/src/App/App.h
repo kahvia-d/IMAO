@@ -293,6 +293,10 @@ private:
     std::uint64_t trustedMinimapGeneration = 0;
     std::chrono::steady_clock::time_point trustedMinimapCapturedAt{};
 	std::chrono::steady_clock::time_point lastMinimapFeatureReportAt{};
+	// A frame that cannot place the player clears every minimap marker, so a flicker is either
+	// this or the marker set itself.  Recording which one it is (at most once a second) is what
+	// tells the two apart in a field log.
+	std::chrono::steady_clock::time_point lastMinimapClearReportAt{};
 	std::optional<std::uint64_t> ocrRequestInFlight;
 	std::uint64_t nextOcrRequestId = 1;
 	int ocrAttemptsForRecovery = 0;

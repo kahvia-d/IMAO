@@ -406,6 +406,21 @@ winrt::IAsyncAction App::Start() {
             } else {
                 DrawItemOnMinMap::ClearNearItemsData();
                 DrawRouteOnMinMap::ClearRountsData();
+                // This frame could not place the player, so the marker set was just thrown away.
+                // A marker that appears to flicker is either this or the set itself changing;
+                // one record a second is enough to tell those apart without drowning the log.
+                const auto clearNow = CoordinateRecoveryController::Clock::now();
+                if (clearNow - lastMinimapClearReportAt >= std::chrono::seconds(1)) {
+                    lastMinimapClearReportAt = clearNow;
+                    const auto status = RuntimeStatus::Snapshot();
+                    Diagnostics::Record("minimap-markers-cleared", "state=" + std::string(
+                        CoordinateRecoveryController::StateName(coordinateRecovery.State())) +
+                        " lock=" + std::to_string(playerLocationLock.valid) + " scene=" +
+                        std::to_string(playerCurrentSceneId) + " keypoints=" +
+                        std::to_string(status.minimapRetainedKeypoints) + " stalling=" +
+                        std::to_string(LocalTrackingStalled(clearNow)) + " trustedAgeMs=" +
+                        std::to_string(coordinateRecovery.TrustedAgeMilliseconds(clearNow)));
+                }
             }
 
 			cycleTime = App::updateMinMapDataCycleTime;
