@@ -34,7 +34,7 @@ param(
     [int]$PromptAllowanceSeconds = 45,
     [string]$OutputPath,
     [string]$PresentMonPath,
-    [ValidateSet('work-isolation', 'mini-overlay')][string]$Experiment = 'work-isolation'
+    [ValidateSet('work-isolation', 'mini-overlay', 'full-client')][string]$Experiment = 'work-isolation'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -57,15 +57,24 @@ if (-not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($ProcessName
 # Order matters because a run is long and may be abandoned partway. The first pair is the decisive test
 # of how the overlay is presented - colorkey layered window against DirectComposition - because that is
 # the one change with a mechanism behind it. Everything after is per-frame work.
-$sequence = if ($Experiment -eq 'mini-overlay') {
-    # A/B/A/B on one scene, so the comparison is a trend inside a single run. The full-client phases are
-    # the reference; if the two of them disagree, the scene or the machine drifted and the pair of
-    # small-window phases cannot be read either.
+$sequence = if ($Experiment -eq 'full-client') {
+    # The comparison the small window was decided by, kept available now that it is the default: 0 is the
+    # minimap-sized window, 256 forces a window the size of the whole game client. Use it to re-confirm
+    # the gain on a heavy scene, where the absolute numbers differ from the light one it was measured on.
     @(
-        [pscustomobject]@{ name = 'full-overlay-1'; mask = 0;   label = '0    (整屏覆盖层)' }
-        [pscustomobject]@{ name = 'mini-overlay-1'; mask = 128; label = '128  (小地图局部覆盖层)' }
-        [pscustomobject]@{ name = 'full-overlay-2'; mask = 0;   label = '0    (整屏覆盖层)' }
-        [pscustomobject]@{ name = 'mini-overlay-2'; mask = 128; label = '128  (小地图局部覆盖层)' }
+        [pscustomobject]@{ name = 'mini-window-1'; mask = 0;   label = '0    (小地图窗口)' }
+        [pscustomobject]@{ name = 'full-client-1'; mask = 256; label = '256  (强制整屏)' }
+        [pscustomobject]@{ name = 'mini-window-2'; mask = 0;   label = '0    (小地图窗口)' }
+        [pscustomobject]@{ name = 'full-client-2'; mask = 256; label = '256  (强制整屏)' }
+    )
+} elseif ($Experiment -eq 'mini-overlay') {
+    # What the full status bar costs: both phases keep the minimap-sized minimap window, and 128 widens it
+    # to hold the bar. This is the "union window against minimap-only" A/B.
+    @(
+        [pscustomobject]@{ name = 'minimal-bar-1'; mask = 0;   label = '0    (极简：状态球)' }
+        [pscustomobject]@{ name = 'full-bar-1';    mask = 128; label = '128  (完整状态栏)' }
+        [pscustomobject]@{ name = 'minimal-bar-2'; mask = 0;   label = '0    (极简：状态球)' }
+        [pscustomobject]@{ name = 'full-bar-2';    mask = 128; label = '128  (完整状态栏)' }
     )
 } else {
     @(
@@ -78,7 +87,11 @@ $sequence = if ($Experiment -eq 'mini-overlay') {
     )
 }
 # Which phases are the reference the others are read against differs per experiment.
-$referencePattern = if ($Experiment -eq 'mini-overlay') { 'full-overlay*' } else { 'baseline*' }
+$referencePattern = switch ($Experiment) {
+    'mini-overlay' { 'minimal-bar*' }
+    'full-client' { 'mini-window*' }
+    default { 'baseline*' }
+}
 
 $phaseLog = [Collections.Generic.List[string]]::new()
 $record = {
