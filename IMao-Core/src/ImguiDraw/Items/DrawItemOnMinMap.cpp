@@ -207,7 +207,11 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
     std::vector<MarkerLayoutPoint> points;
     for (std::size_t index = 0; index < frame.markers.size(); ++index) {
         const auto& item = frame.markers[index];
-        if (DrawItemBase::IsPointCompleted(frame.sceneName, item)) continue;
+        // The nearby update reads this from the completion store - local record and cloud set alike -
+        // in the same capture iteration that publishes this frame, so the frozen value is the current
+        // one. Querying the store here instead took its mutex once per marker per rendered frame, and
+        // that mutex is also held while a profile write goes to disk.
+        if (item.isSaved) continue;
         const auto position = motion.Apply(item.screenCoordiante);
         if (frame.radius > 0.0 && std::hypot(position.x - frame.center.x, position.y - frame.center.y) > frame.radius) continue;
         points.push_back({std::to_string(item.layer.stateId) + ":" + item.itemId, position.x, position.y, index});
