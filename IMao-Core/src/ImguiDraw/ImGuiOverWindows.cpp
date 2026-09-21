@@ -429,12 +429,7 @@ int ImGuiOverWindows::start()
     auto motionReportAt = std::chrono::steady_clock::now();
     std::uint64_t renderedFrames = 0, observedFrames = 0, lastObservedFrame = 0;
     std::uint64_t capturedFrames = 0, lastCapturedFrame = 0;
-    std::uint64_t attachedFrames = 0, trackingMisses = 0, heldOverlayFrames = 0;
-    // The last *measured* minimap transform.  A registration that fails on one frame must not erase
-    // the whole layer: the game window cannot move meaningfully in 40 ms, so reusing the previous
-    // measurement keeps the markers on screen without inventing motion.
-    OverlayScreenTransform lastMinimapMotion;
-    std::chrono::steady_clock::time_point lastMinimapMotionAt{};
+    std::uint64_t attachedFrames = 0, trackingMisses = 0;
     // This thread owns the low-level mouse and keyboard hooks, so Windows hands it every input event
     // and waits for the callback. The longest stretch without a pump is therefore the worst-case delay
     // this tool adds to the player's mouse, so each frame segment is tracked separately below.
@@ -636,7 +631,6 @@ int ImGuiOverWindows::start()
                     " sourceFps=" + std::to_string(observedFrames / seconds) +
                     " captureFps=" + std::to_string(capturedFrames / seconds) + " mode=image-anchored" +
                     " attachedFps=" + std::to_string(attachedFrames / seconds) +
-                    " heldFrames=" + std::to_string(heldOverlayFrames) +
                     " trackingMisses=" + std::to_string(trackingMisses) +
                     " captureAgeMs=" + std::to_string(capture->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
                         frameStart - capture->capturedAt).count() : -1) +
@@ -665,7 +659,7 @@ int ImGuiOverWindows::start()
                     " segPresents=" + std::to_string(presentCalls) +
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
-                attachedFrames = trackingMisses = 0; heldOverlayFrames = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;
+                attachedFrames = trackingMisses = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;
                 syncTotalMs = newFrameTotalMs = buildTotalMs = renderTotalMs = hashTotalMs = presentTotalMs = 0;
                 syncCalls = renderCalls = hashCalls = presentCalls = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();
@@ -698,22 +692,13 @@ int ImGuiOverWindows::start()
                     const auto motionStarted = std::chrono::steady_clock::now();
                     const bool attached = minimapMotion.Update(frame, *capture, motion);
                     maxMotion = std::max(maxMotion, std::chrono::steady_clock::now() - motionStarted);
-                    const auto motionNow = std::chrono::steady_clock::now();
-                    const bool mayHold = lastMinimapMotionAt != std::chrono::steady_clock::time_point{} &&
-                        motionNow - lastMinimapMotionAt <= std::chrono::milliseconds(150);
-                    const bool held = !attached && mayHold;
-                    if (attached || held) {
-                        const auto& useMotion = attached ? motion : lastMinimapMotion;
-                        DrawRouteOnMinMap::DrawRoute(frame->minimapRoutes, frame->playerScene, useMotion,
+                    if (attached) {
+                        DrawRouteOnMinMap::DrawRoute(frame->minimapRoutes, frame->playerScene, motion,
                             frame->minimapMarkers.center, frame->minimapMarkers.radius);
-                        DrawItemOnMinMap::DrawItemsOnMinMap(GameRect, frame->minimapMarkers, useMotion);
+                        DrawItemOnMinMap::DrawItemsOnMinMap(GameRect, frame->minimapMarkers, motion);
                         drewMinimap = true;
-                        presented.motion = useMotion;
-                        if (attached) {
-                            ++attachedFrames;
-                            lastMinimapMotion = motion;
-                            lastMinimapMotionAt = motionNow;
-                        } else ++heldOverlayFrames;
+                        presented.motion = motion;
+                        ++attachedFrames;
                     } else {
                         ++trackingMisses;
                         // An unattached frame draws neither markers nor route.  This is the only
