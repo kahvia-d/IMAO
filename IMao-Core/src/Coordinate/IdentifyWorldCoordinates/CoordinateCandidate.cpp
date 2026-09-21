@@ -128,6 +128,14 @@ std::vector<CoordinateCandidate> CoordinateCandidateParser::Parse(const std::str
     // (the first character after the third number must not be a digit, comma or sign).
     static const std::regex tripleThenClockText(R"(^([+-]?[0-9]+),([+-]?[0-9]+),([+-]?[0-9]+)([^0-9,+-].*)?$)");
     static const std::regex lastSeparatorMissing(R"(^([+-]?[0-9]+),([+-]?[0-9]+)(-[0-9]+)$)");
+    // 飞行时抓到的帧经常把 x 与 y 之间的逗号糊掉（2026-09-21 14:21 实测 40 次读数里 23 次
+    // candidates=0，其中一半是 "-4371283,52"、"437128355" 这种）。HUD 的 y 是 4 位、x 带符号
+    // 1~4 位，所以"最后 4 位是 y"是确定的切法。标成修复候选，排在原始读数之后 ✔。
+    static const std::regex missingCommaBetweenXAndY(R"(^([+-]?[0-9]{1,4})([0-9]{4}),([+-]?[0-9]+)$)");
+
+    if (std::regex_match(text, match, missingCommaBetweenXAndY)) {
+        AddCandidate(output, seen, utf8Text, score, match, "x-y-comma-missing", previousTrusted);
+    }
 
     if (std::regex_match(text, match, direct)) {
         AddCandidate(output, seen, utf8Text, score, match, "", previousTrusted);
