@@ -80,4 +80,36 @@ inline void TestCoordinateTrust(void (*check)(bool, const std::string&)) {
     check(ring.Record().size() == kRecordLimit, "the record keeps a bounded history");
     ring.Reset();
     check(!ring.HasScene() && ring.Record().empty(), "reset clears the region and the record");
+
+    // 轨迹拟合：2026-09-21 12:41 的真实数据。玩家在泰缇斯沿 x 缓慢西移（map x 从 8090 走到 8073），
+    // 读数把负号丢了，读成 +423（map x≈9103），偏离 1030 单位；正确读数是 -425（map x≈8080）。
+    {
+        Trust track;
+        // 6 条"小地图匹配成功"的坐标，2 秒间隔，x 每步 -3，y 不动
+        double x = 8090.0, t = 1000.0;
+        for (int index = 0; index < 6; ++index) {
+            track.NoteVisualMatch(2, { x, 2960.0 }, t);
+            x -= 3.0; t += 2.0;
+        }
+        const double nowSeconds = t;   // 下一条读数就落在这一刻
+        Candidate good; good.mapCoordinate = { 8075.0, 2960.0 }; good.score = 0.95f;
+        Candidate flipped; flipped.mapCoordinate = { 8075.0 + 1030.0, 2960.0 }; flipped.score = 0.98f;
+        const auto accepted = track.Choose(2, { flipped, good }, nowSeconds);
+        check(accepted.has_value() && std::abs(accepted->mapCoordinate.x - 8075.0) < 1.0,
+            "the read that fits the recorded trajectory is taken and the sign-flipped one is dropped");
+        const auto onlyFlipped = track.Choose(2, { flipped }, nowSeconds);
+        check(!onlyFlipped.has_value(),
+            "a read that breaks the trajectory is dropped even at score 0.98, which the jump budget let through");
+        // 符合趋势的读数写回数组后，数组继续延伸（无特征区也能维持趋势）
+        track.NoteReadoutAccepted(2, accepted->mapCoordinate, nowSeconds);
+        check(track.Record().size() == 7 && track.Record().back().mapCoordinate.x == 8075.0,
+            "an accepted read joins the record so the trajectory keeps growing in a featureless area");
+        // 没有足够轨迹时**不得**否决：只有两条记录，读数照旧走预算判据
+        Trust sparse;
+        sparse.NoteVisualMatch(2, { 8000.0, 2960.0 }, 5.0);
+        sparse.NoteVisualMatch(2, { 8001.0, 2960.0 }, 6.0);
+        const auto noTrend = sparse.Choose(2, { good }, 6.5);
+        check(noTrend.has_value(),
+            "without a usable trajectory the read is judged by the budget, never refused for lack of a fit");
+    }
 }

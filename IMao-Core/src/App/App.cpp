@@ -1248,6 +1248,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 							" jumpUnits=" + std::to_string(decision.jumpUnits) +
 							" agreements=" + std::to_string(decision.agreementCount) +
 							" request=" + std::to_string(ocrResult.requestId));
+						// 符合轨迹趋势的读数写回坐标数组，成为下一次拟合的基础（用户 2026-09-21 的设计：
+						// 数组在无特征区也能延续，而不是永远停在入水前那一刻）。
+						coordinateTrust.NoteReadoutAccepted(reading.sceneId, reading.mapCoordinate,
+							std::chrono::duration<double>(now.time_since_epoch()).count());
 						commitVisualPosition(published, false, false, false);
 					}
 					else {
