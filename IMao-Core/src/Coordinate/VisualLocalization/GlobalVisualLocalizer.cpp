@@ -846,12 +846,25 @@ private:
             // recovery diagnostics. During gameplay, changing terrain support
             // must not turn camera-cone changes into fictitious map zoom or
             // rotation, which also displaces the extrapolated player center.
-            transform = FitMinimapTrackingTranslation(minimapPoints, mapPoints,
+            const auto tracking = FitMinimapTrackingTranslation(minimapPoints, mapPoints,
                 minimapSize, inlierMask, fixedTerrainScale);
-            if (transform.empty()) return translationCandidate.inlierCount >= kMinimumTranslationVotes
-                ? translationCandidate : VisualLocalizationCandidate{};
-            candidate.scale = fixedTerrainScale;
-            candidate.rotationDegrees = 0.0;
+            if (!tracking.empty()) {
+                transform = tracking;
+                candidate.scale = fixedTerrainScale;
+                candidate.rotationDegrees = 0.0;
+            }
+            else {
+                // The fixed scale is a tracking-stability rule, not a correctness rule. When it
+                // cannot explain these matches at all, the similarity fit above already has to
+                // hold support to have reached this point - measured inside a layered map: the
+                // fixed fit found no consensus while the similarity fit kept 20 inliers at a
+                // scale 1.9% off the expected one. Throwing that away and dropping to a
+                // three-vote translation is what made a cold start inside a cave unpublishable:
+                // reacquisition requires affine support, and every candidate came back
+                // translation-only. North-up is still enforced, because the minimap is north-up
+                // by construction.
+                candidate.rotationDegrees = 0.0;
+            }
         }
 
         const cv::Point2d center(minimapSize.width / 2.0, minimapSize.height / 2.0);

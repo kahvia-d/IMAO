@@ -75,6 +75,9 @@ int main(int argc, char** argv) {
     bool hasAnchor = false;
     double anchorX = 0.0;
     double anchorY = 0.0;
+    // Optional similarity-fit check over the same descriptor matches the localizer uses.
+    bool affineMode = false;
+    std::string affineFloorId;
     // Same defaults the runtime classifier ships with; see LayeredFloorIndex.h for the
     // calibration these came from.
     int minimumMatches = 10;
@@ -113,6 +116,8 @@ int main(int argc, char** argv) {
                 stream >> anchorX >> anchorY;
                 hasAnchor = true;
             }
+            else if (argument == "--affine") { affineMode = true; }
+            else if (argument == "--affine-floor") { affineMode = true; affineFloorId = next("--affine-floor"); }
             else { PrintUsage(); return 2; }
         }
         catch (const std::exception& exception) {
@@ -168,6 +173,44 @@ int main(int argc, char** argv) {
             << " runnerUp=" << classification.runnerUpMatches
             << " (min=" << minimumMatches << " margin=" << margin << " ratio=" << ratio
             << " maxDistance=" << maxDistance << ")\n";
+        // Geometry check: does a similarity fit succeed on the same descriptor matches the
+        // localizer uses? Measured per floor set, because several floors can share one tile
+        // coordinate and their appearances are then indistinguishable to a plain matcher.
+        if (affineMode) {
+            const char* label = affineFloorId.empty() ? "all floors" : affineFloorId.c_str();
+            std::vector<cv::Point2f> minimapPoints, mapPoints;
+            cv::BFMatcher matcher(cv::NORM_L2);
+            int considered = 0;
+            for (const auto& floor : floors) {
+                if (!affineFloorId.empty() && floor.floorId != affineFloorId) continue;
+                ++considered;
+                std::vector<std::vector<cv::DMatch>> knn;
+                matcher.knnMatch(query.imgDescriptors, floor.features.imgDescriptors, knn, 2);
+                for (const auto& pair : knn) {
+                    if (pair.size() < 2) continue;
+                    if (pair[0].distance >= ratio * pair[1].distance || pair[0].distance >= maxDistance) continue;
+                    minimapPoints.push_back(query.imgKeypoints[pair[0].queryIdx].pt);
+                    mapPoints.push_back(floor.features.imgKeypoints[pair[0].trainIdx].pt);
+                }
+            }
+            std::cout << "geometry over " << label << " (" << considered << " floor(s)): matches="
+                << minimapPoints.size();
+            if (minimapPoints.size() >= 4) {
+                cv::Mat inlierMask;
+                const auto transform = cv::estimateAffinePartial2D(minimapPoints, mapPoints, inlierMask,
+                    cv::RANSAC, 3.0, 2000, 0.99, 10);
+                if (transform.empty()) {
+                    std::cout << "  affine=FAILED (empty transform)";
+                }
+                else {
+                    const double a = transform.at<double>(0, 0), b = transform.at<double>(1, 0);
+                    std::cout << "  affine=ok scale=" << std::hypot(a, b)
+                        << " inliers=" << cv::countNonZero(inlierMask)
+                        << " (expected scale 1.0543)";
+                }
+            }
+            std::cout << '\n';
+        }
         if (hasAnchor) {
             // Footprint report: what the state machine uses to keep a floor the imagery alone
             // can no longer re-confirm every frame.
