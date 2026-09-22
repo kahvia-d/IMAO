@@ -428,7 +428,24 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
 }
 
 std::string PointKey(const ItemDatas& point) { return std::to_string(point.layer.stateId) + ":" + point.itemId; }
-void ClearSelection() {
+
+// The official map marks a collectible that lives in a layered map ("分层地图") with a small
+// stacked-layers glyph in the icon's lower-right corner: a dark disc with two plates, the
+// upper one lit. Drawn from primitives so the badge needs no texture and scales with the
+// marker radius.
+void DrawStackedLayersBadge(ImDrawList* draw, ImVec2 centre, float radius) {
+    draw->AddCircleFilled(centre, radius, IM_COL32(24, 29, 37, 235));
+    draw->AddCircle(centre, radius, IM_COL32(232, 216, 158, 220), 0, std::max(1.0f, radius * 0.13f));
+    const auto plate = [&](float offsetY, ImU32 colour) {
+        const float plateY = centre.y + offsetY;
+        const float halfWidth = radius * 0.66f;
+        const float halfHeight = radius * 0.30f;
+        draw->AddQuadFilled(ImVec2(centre.x - halfWidth, plateY), ImVec2(centre.x, plateY - halfHeight),
+            ImVec2(centre.x + halfWidth, plateY), ImVec2(centre.x, plateY + halfHeight), colour);
+    };
+    plate(radius * 0.36f, IM_COL32(168, 144, 90, 255));   // the layer below
+    plate(-radius * 0.26f, IM_COL32(244, 226, 164, 255)); // the layer you are looking at
+}void ClearSelection() {
     const bool hadSelection = !selected.empty() || !expanded.empty();
     selected.clear(); expanded.clear(); hoverGroup.clear(); expandedMembers.clear(); listPage = 0;
     if (hadSelection) DrawItemBase::PublishMarkerEvent({{"type", "markerSelectionCleared"}});
@@ -1031,7 +1048,7 @@ void DrawMarkerInteraction::DrawMapToolsLauncher(const RECT& rect, HWND gameWind
 
 std::uint64_t DrawMarkerInteraction::IconTextureLookupMicros() { return iconTextureLookupMicros; }
 
-void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted, bool completed, std::size_t count) {
+void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted, bool completed, std::size_t count, bool layeredBadge) {
     // Charged to whoever asked for this icon; a cache hit is a couple of hash lookups, a miss
     // pays for the decode.
     const auto lookupStarted = Clock::now();
@@ -1066,6 +1083,15 @@ void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, flo
         const ImVec2 badge(position.x + radius * 0.72f, position.y - radius * 0.65f);
         draw->AddCircleFilled(badge, std::max(9.0f, size.x * 0.55f + 3), IM_COL32(33, 55, 78, 255));
         draw->AddText(ImVec2(badge.x - size.x / 2, badge.y - size.y / 2), IM_COL32_WHITE, label.c_str());
+    }
+    // A collectible that lives in a layered map ("分层地图") carries a floor id. The official
+    // map marks those with a small stacked-layers glyph so the layer is visible before you
+    // enter it; the same badge serves the large map and the minimap because both draw here.
+    // Inside the layer the marker stops being a hint (see LayeredMarkerDecoration), which is
+    // why the decision is a parameter rather than being read straight off the floor id.
+    if (!item.layer.floorId.empty() && layeredBadge) {
+        DrawStackedLayersBadge(draw, ImVec2(position.x + radius * 0.74f, position.y + radius * 0.74f),
+            std::max(6.5f, radius * 0.5f));
     }
 }
 
