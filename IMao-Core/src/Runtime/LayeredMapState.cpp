@@ -114,13 +114,30 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     const auto now = std::chrono::steady_clock::now();
 
     std::vector<Entry> candidates;
+    bool restricted = false;
+    std::string containing;
     {
         std::lock_guard lock(stateMutex);
         if (entries.empty()) return;
         if (lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < kMinimumInterval) return;
         lastClassifyAt = now;
+        // Physically impossible floors are not evidence. Standing inside 眠龙庭's cave rules
+        // out 叩天关's, even though they share a tile coordinate; without this, a rival floor
+        // with six matches was enough to hold the true floor under the margin.
+        std::vector<const Entry*> inside;
         for (const auto& entry : entries) {
-            if (entry.sceneId == sceneId) candidates.push_back(entry);
+            if (entry.sceneId != sceneId) continue;
+            if (LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) inside.push_back(&entry);
+        }
+        restricted = !inside.empty();
+        for (const auto& entry : entries) {
+            if (entry.sceneId != sceneId) continue;
+            if (restricted && !LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) continue;
+            candidates.push_back(entry);
+            if (restricted) {
+                if (!containing.empty()) containing += " ";
+                containing += entry.floor.floorId;
+            }
         }
     }
     if (candidates.empty()) return;
@@ -128,7 +145,15 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     std::vector<LayeredFloors::FloorEntry> floors;
     floors.reserve(candidates.size());
     for (const auto& entry : candidates) floors.push_back(entry.floor);
-    const auto classification = LayeredFloors::Classify(minimapFeatures, floors);
+    // Inside a cave the only real question is which of the floors sharing it, and those votes
+    // are small (4-9 on a real 眠龙庭·上层 position); out in the open the bar stays where the
+    // surface references were calibrated, because there the imagery is the only evidence.
+    //
+    // The lower bar is safe because every floor's composite shares the same dimmed surface
+    // base: on the surface above a cave the shared base matches all of them equally, so no
+    // floor can lead by the 2x margin, while inside the cave the cave texture separates them.
+    const int minimumMatches = restricted ? 4 : 10;
+    const auto classification = LayeredFloors::Classify(minimapFeatures, floors, minimumMatches, 2.0);
 
     std::lock_guard lock(stateMutex);
     if (classification.identified) {
@@ -194,6 +219,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         lastReportAt = now;
         Diagnostics::Record("layered-floor", "scene=" + std::to_string(sceneId) +
             " active=" + std::to_string(current.active) + " floor=" + (current.floorId.empty() ? "-" : current.floorId) +
+            " restricted=" + std::to_string(restricted) + " containing=[" + containing + "]" +
             " identified=" + std::to_string(classification.identified) +
             " winner=" + std::to_string(classification.winnerMatches) +
             " runnerUp=" + std::to_string(classification.runnerUpMatches) +
