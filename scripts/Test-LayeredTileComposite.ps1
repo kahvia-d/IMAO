@@ -28,7 +28,13 @@
 param(
     [string]$SourceRoot,
     [string]$RegionId = 'jinzhou',
-    [string]$Version = 'B50F4135DCCC4D8DA87ED33CE95EA31D'
+    [string]$Version = 'B50F4135DCCC4D8DA87ED33CE95EA31D',
+    # A full-screen gameplay screenshot taken inside a layered map, plus the game
+    # coordinates the HUD shows in that frame. This is the only query that is a real
+    # minimap render; the cave crops below are geometric proxies.
+    [string]$InGameMinimap = '',
+    [double]$InGameAnchorX = 0,
+    [double]$InGameAnchorY = 0
 )
 
 Set-StrictMode -Version Latest
@@ -62,10 +68,11 @@ foreach ($tag in 'k100', 'k035') {
 }
 
 $packs = [ordered]@{
-    surface = @{ dir = $surfaceDir; extra = $null }
-    k100    = @{ dir = (Join-Path $compositeRoot 'k100'); extra = $null }
-    k035    = @{ dir = (Join-Path $compositeRoot 'k035'); extra = $null }
-    both    = @{ dir = $surfaceDir; extra = (Join-Path $compositeRoot 'k100') }
+    surface  = @{ dir = $surfaceDir; extra = $null }
+    k100     = @{ dir = (Join-Path $compositeRoot 'k100'); extra = $null }
+    k035     = @{ dir = (Join-Path $compositeRoot 'k035'); extra = $null }
+    both100  = @{ dir = $surfaceDir; extra = (Join-Path $compositeRoot 'k100') }
+    both035  = @{ dir = $surfaceDir; extra = (Join-Path $compositeRoot 'k035') }
 }
 
 function Write-PackManifest([string]$tag, [string]$dir, [string]$extraDir) {
@@ -172,6 +179,11 @@ $queries = @(
     [pscustomobject]@{ name = 'cave-surface'; path = (Join-Path $work 'cave-surface.png')
         anchorX = $gameX; anchorY = $gameY; full = $false }
 )
+if (-not [string]::IsNullOrWhiteSpace($InGameMinimap)) {
+    if (-not (Test-Path -LiteralPath $InGameMinimap)) { throw "In-game screenshot is missing: $InGameMinimap" }
+    $queries += [pscustomobject]@{ name = 'ingame-layer'; path = $InGameMinimap
+        anchorX = $InGameAnchorX; anchorY = $InGameAnchorY; full = $true }
+}
 
 $invariant = [Globalization.CultureInfo]::InvariantCulture
 $rows = New-Object System.Collections.ArrayList

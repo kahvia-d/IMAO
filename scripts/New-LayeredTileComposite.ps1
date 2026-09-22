@@ -23,11 +23,12 @@ param(
     [string]$LayerArchiveRoot,
     [string]$OutputRoot,
     [string]$ResourceVersion,
-    # Surface brightness under the overlays. 1.0 is the only one that survives the A/B in
-    # scripts/Test-LayeredTileComposite.ps1: dimming loses 5-6% of the pack's keypoints and
-    # stops the plain surface view from locking at those coordinates. The parameter stays
-    # because the in-game layered large map does dim its base, so it may need revisiting.
-    [double[]]$BaseFactor = @(1.0)
+    # Surface brightness under the overlays. Both are kept because the in-game test in
+    # scripts/Test-LayeredTileComposite.ps1 prefers 0.35 (30 near-anchor matches on a real
+    # minimap captured inside 眠龙庭, against 13 for 1.0), while 1.0 is the plain
+    # surface+overlay composite. Never below ~0.2: that is the measured layered large-map
+    # brightness and it costs keypoints without helping.
+    [double[]]$BaseFactor = @(1.0, 0.35)
 )
 
 Set-StrictMode -Version Latest
