@@ -14,6 +14,7 @@
 #include "ImguiDraw/Items/DrawItemOnMinMap.h"
 #include "Diagnostics/Diagnostics.h"
 #include "Feature/RuntimeFeatureRepository.h"
+#include "Runtime/LayeredMapState.h"
 #include "Runtime/RuntimeStatus.h"
 #include "Runtime/StructuredLogger.h"
 #include "Runtime/IsolationSwitches.h"
@@ -278,6 +279,10 @@ void Initi()
 	Diagnostics::Initialize();
 	const auto assetRoot = ResourceSnapshotContext::BaselineRoot();
 	RuntimeFeatureRepository::Instance().BeginPreload(assetRoot);
+	// Layered-floor indexes travel inside the region packs; load whatever is there so the
+	// marker display can tell which floor the player is standing on. Regions without layered
+	// maps have no index and behave exactly as before.
+	LayeredMap::Install(assetRoot / "FeaturesDatas");
 	Diagnostics::Record("ocr-preload", "deferred=until-app-ready background preload");
 	shutdownRequested = false;
 	runRequested = false;

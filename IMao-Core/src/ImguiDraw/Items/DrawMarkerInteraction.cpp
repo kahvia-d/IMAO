@@ -10,6 +10,7 @@
 #include "../../Runtime/PlanningEscapeKey.h"
 #include "../../Runtime/RuntimeHotkeys.h"
 #include "../../Runtime/MarkerGuideProtocol.h"
+#include "../../Runtime/LayeredMapState.h"
 #include "../../Runtime/OverlayPacing.h"
 #include "../../Runtime/RouteGamepadBridge.h"
 #include "../../Runtime/RouteGamepadControls.h"
@@ -445,6 +446,27 @@ void DrawStackedLayersBadge(ImDrawList* draw, ImVec2 centre, float radius) {
     };
     plate(radius * 0.36f, IM_COL32(168, 144, 90, 255));   // the layer below
     plate(-radius * 0.26f, IM_COL32(244, 226, 164, 255)); // the layer you are looking at
+}
+
+// Standing on one floor of a layered map, a collectible on another floor of the same map is
+// dimmed and carries a direction marker in the same lower-right corner the layered badge
+// uses: warm up-arrow for a layer above, cool down-arrow for one below.
+void DrawFloorDirectionBadge(ImDrawList* draw, ImVec2 centre, float radius, bool above) {
+    draw->AddCircleFilled(centre, radius, IM_COL32(24, 29, 37, 225));
+    draw->AddCircle(centre, radius, IM_COL32(232, 216, 158, 200), 0, std::max(1.0f, radius * 0.13f));
+    const ImU32 colour = above ? IM_COL32(246, 200, 92, 255) : IM_COL32(116, 214, 236, 255);
+    const float half = radius * 0.54f;
+    const float height = radius * 0.64f;
+    if (above) {
+        draw->AddTriangleFilled(ImVec2(centre.x - half, centre.y + height * 0.42f),
+            ImVec2(centre.x + half, centre.y + height * 0.42f),
+            ImVec2(centre.x, centre.y - height * 0.58f), colour);
+    }
+    else {
+        draw->AddTriangleFilled(ImVec2(centre.x - half, centre.y - height * 0.42f),
+            ImVec2(centre.x + half, centre.y - height * 0.42f),
+            ImVec2(centre.x, centre.y + height * 0.58f), colour);
+    }
 }void ClearSelection() {
     const bool hadSelection = !selected.empty() || !expanded.empty();
     selected.clear(); expanded.clear(); hoverGroup.clear(); expandedMembers.clear(); listPage = 0;
@@ -1049,6 +1071,14 @@ void DrawMarkerInteraction::DrawMapToolsLauncher(const RECT& rect, HWND gameWind
 std::uint64_t DrawMarkerInteraction::IconTextureLookupMicros() { return iconTextureLookupMicros; }
 
 void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted, bool completed, std::size_t count, bool layeredBadge) {
+    // Inside a layer the surface collectibles are not drawn at all, and a collectible on
+    // another floor of the same layered map is dimmed and marked with a direction. Deciding
+    // here covers the large map and the minimap at once; callers additionally skip Hidden
+    // items before building their layout so nothing invisible stays clickable.
+    const auto layeredRole = LayeredMap::RoleFor(item);
+    if (layeredRole == LayeredMap::MarkerRole::Hidden) return;
+    const bool otherFloor = layeredRole == LayeredMap::MarkerRole::Above ||
+        layeredRole == LayeredMap::MarkerRole::Below;
     // Charged to whoever asked for this icon; a cache hit is a couple of hash lookups, a miss
     // pays for the decode.
     const auto lookupStarted = Clock::now();
@@ -1074,9 +1104,13 @@ void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, flo
         std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - lookupStarted).count());
     auto* draw = ImGui::GetBackgroundDrawList();
     const auto color = highlighted ? IM_COL32(67, 226, 138, 255) : IM_COL32(232, 190, 116, completed ? 120 : 240);
-    if (texture) DrawItemBase::RenderPointCircle(reinterpret_cast<ImTextureID>(texture.Get()), position, radius,
-        completed ? 0.45f : 0.95f, color);
-    else { draw->AddCircleFilled(position, radius, IM_COL32(33, 39, 48, 220)); draw->AddCircle(position, radius, color, 0, 2); }
+    // 45% is the same dimming completed markers already use: "present, but not where you are".
+    const float opacity = otherFloor ? 0.45f : (completed ? 0.45f : 0.95f);
+    if (texture) DrawItemBase::RenderPointCircle(reinterpret_cast<ImTextureID>(texture.Get()), position, radius, opacity, color);
+    else {
+        draw->AddCircleFilled(position, radius, IM_COL32(33, 39, 48, otherFloor ? 120 : 220));
+        draw->AddCircle(position, radius, color, 0, 2);
+    }
     if (count > 1) {
         const auto label = std::to_string(count);
         const auto size = ImGui::CalcTextSize(label.c_str());
@@ -1087,11 +1121,13 @@ void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, flo
     // A collectible that lives in a layered map ("分层地图") carries a floor id. The official
     // map marks those with a small stacked-layers glyph so the layer is visible before you
     // enter it; the same badge serves the large map and the minimap because both draw here.
-    // Inside the layer the marker stops being a hint (see LayeredMarkerDecoration), which is
-    // why the decision is a parameter rather than being read straight off the floor id.
-    if (!item.layer.floorId.empty() && layeredBadge) {
-        DrawStackedLayersBadge(draw, ImVec2(position.x + radius * 0.74f, position.y + radius * 0.74f),
-            std::max(6.5f, radius * 0.5f));
+    // On the floor you are standing on the marker stops being a hint, and on another floor
+    // of the same map the direction marker replaces it.
+    if (!item.layer.floorId.empty() && layeredBadge && layeredRole != LayeredMap::MarkerRole::Current) {
+        const ImVec2 corner(position.x + radius * 0.74f, position.y + radius * 0.74f);
+        const float badgeRadius = std::max(6.5f, radius * 0.5f);
+        if (otherFloor) DrawFloorDirectionBadge(draw, corner, badgeRadius, layeredRole == LayeredMap::MarkerRole::Above);
+        else DrawStackedLayersBadge(draw, corner, badgeRadius);
     }
 }
 
@@ -1167,6 +1203,9 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     for (std::size_t index = 0; index < frame.markers.size(); ++index) {
         const auto& item = frame.markers[index];
         if ((planning.enabled || !showCompleted) && DrawItemBase::IsPointCompleted(frame.sceneName, item)) continue;
+        // Hidden markers must not reach the layout either: a marker that is not drawn must
+        // not stay hoverable, selectable or counted in a group.
+        if (LayeredMap::RoleFor(item) == LayeredMap::MarkerRole::Hidden) continue;
         const auto position = motion.Apply(item.screenCoordiante);
         if (position.x < -radius || position.y < -radius || position.x > rect.right + radius || position.y > rect.bottom + radius) continue;
         if (planningPanel.Contains(position.x, position.y)) continue;

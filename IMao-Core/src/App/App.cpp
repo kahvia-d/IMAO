@@ -1,6 +1,7 @@
 #include "../Feature/Match/SceneMapFeatures.h"
 #include "App.h"
 #include "../Runtime/GamepadWorldActions.h"
+#include "../Runtime/LayeredMapState.h"
 #include "..\Coordinate\locationCalculator\RelativeCoordinates.h"
 #include "../Coordinate/VisualLocalization/RecoveryPolicy.h"
 #include "..\Coordinate\locationCalculator\ScreenCoordinate.h"
@@ -1088,6 +1089,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		trustedMinimapReference.empty() ? nullptr : &trustedMinimapReference, &minimapDiagnostics);
 	RuntimeStatus::SetMinimapFeatureStats(minimapDiagnostics.rawKeypointCount,
 		minimapDiagnostics.retainedKeypointCount, minimapDiagnostics.dynamicMaskPercent);
+	// Which floor of a layered map this capture belongs to. The classifier is cheap and
+	// rate-limits itself; an unknown answer must never disturb the marker display, so all
+	// debouncing lives in LayeredMapState.
+	LayeredMap::ObserveMinimap(minMapFeatureData, playerCurrentSceneId);
 	if (std::chrono::steady_clock::now() - lastMinimapFeatureReportAt >= std::chrono::seconds(2)) {
 		lastMinimapFeatureReportAt = std::chrono::steady_clock::now();
 		Diagnostics::Record("minimap-feature-mask", "raw=" + std::to_string(minimapDiagnostics.rawKeypointCount) +

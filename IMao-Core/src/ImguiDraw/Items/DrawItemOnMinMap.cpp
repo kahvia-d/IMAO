@@ -1,4 +1,5 @@
 #include "DrawItemOnMinMap.h"
+#include "../../Runtime/LayeredMapState.h"
 #include "../../Runtime/RuntimeHotkeys.h"
 #include "../../Runtime/RoutePlanningService.h"
 #include "DrawMarkerInteraction.h"
@@ -233,6 +234,9 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
         // one. Querying the store here instead took its mutex once per marker per rendered frame, and
         // that mutex is also held while a profile write goes to disk.
         if (item.isSaved) { ++markerRenderStats.skippedCompleted; continue; }
+        // Standing on a floor of a layered map hides everything that is not part of it, and
+        // skipping here keeps hidden markers out of the layout (so they stay unclickable).
+        if (LayeredMap::RoleFor(item) == LayeredMap::MarkerRole::Hidden) continue;
         const auto position = motion.Apply(item.screenCoordiante);
         if (frame.radius > 0.0 && std::hypot(position.x - frame.center.x, position.y - frame.center.y) > frame.radius) continue;
         points.push_back({std::to_string(item.layer.stateId) + ":" + item.itemId, position.x, position.y, index});
