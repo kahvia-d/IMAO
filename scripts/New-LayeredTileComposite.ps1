@@ -1,15 +1,21 @@
-# Builds "layered view" tiles for a region by compositing its layered-map overlays onto
-# the surface tiles, so the feature pack matches what the game draws inside a layer.
+# Builds "layered view" tiles for a region by compositing each layered-map overlay onto
+# the surface tile it sits on, ONE IMAGE PER FLOOR.
 #
-# Evidence for the model (Docs/LayeredMapFeatureMeasurement_20260922.md, sections 7-8):
+# Evidence for the model (Docs/LayeredMapFeatureMeasurement_20260922.md sections 7-8,
+# Docs/LayeredMapFeaturePackPlan.md section 0):
 #   * upstream layered tiles are RGBA overlays (93.7-100% fully transparent);
 #   * the in-game layered view is the surface tile dimmed to 0.197x with the current
-#     layer on top;
-#   * the corner minimap inside a layer draws the current layer over the surface tile.
-# So the composited tile is:  surface * k  then alpha-over each overlay of that tile.
+#     layer on top, and the corner minimap draws the current layer over the surface;
+#   * several floors share a tile coordinate (叩天关 上/中/下 all sit on (3,-3)), and
+#     stacking them into one image lets whichever is drawn last hide the others: measured
+#     against a real 叩天关 minimap, the stacked image scored 5 near-anchor matches while
+#     the correct floor's own composite scored 21.
+# So each floor gets its own composite, and the pack lists them all at the same
+# coordinate - the runtime then matches whichever floor the player is actually in.
 #
-# Tiles of the region that carry no overlay are hard-linked from the surface archive, so
-# the output directory is a drop-in tile-archive layout and costs almost no disk.
+# Output: <OutputRoot>/<region>/k<factor>/L<layer>_F<floor>_<state>_<x>_<y>.png
+# plus composite.manifest.json listing the lot. Tiles without an overlay are simply not
+# written: the pack keeps using the surface archive for those coordinates.
 #
 #   pwsh -File scripts\New-LayeredTileComposite.ps1 -RegionId jinzhou
 
@@ -23,11 +29,9 @@ param(
     [string]$LayerArchiveRoot,
     [string]$OutputRoot,
     [string]$ResourceVersion,
-    # Surface brightness under the overlays. Both are kept because the in-game test in
-    # scripts/Test-LayeredTileComposite.ps1 prefers 0.35 (30 near-anchor matches on a real
-    # minimap captured inside 眠龙庭, against 13 for 1.0), while 1.0 is the plain
-    # surface+overlay composite. Never below ~0.2: that is the measured layered large-map
-    # brightness and it costs keypoints without helping.
+    # Surface brightness under the overlays. 0.35 measured best against a real in-game
+    # minimap inside 眠龙庭 (30 near-anchor matches vs 13 at 1.0) and again inside 叩天关;
+    # 1.0 is kept as the plain surface+overlay composite.
     [double[]]$BaseFactor = @(1.0, 0.35)
 )
 
@@ -68,11 +72,9 @@ if ($null -eq $stateNode -or -not $stateNode.Value.hasLayers) {
     throw "Frame $state has no layered maps; nothing to composite for $RegionId."
 }
 $layers = @($stateNode.Value.layers)
-$surfaceRecords = @($tileManifest.regions.$RegionId.tiles | Where-Object { -not $_.absent })
-if ($surfaceRecords.Count -eq 0) { throw "No present surface tiles recorded for $RegionId." }
 
-# A layer belongs to this region when its entrance marker (item FCRK) is nearest to one
-# of the region's own anchors - the same attribution the region registry uses.
+# A layer belongs to this region when its entrance marker (item FCRK) is nearest to one of
+# the region's own anchors - the same attribution the region registry uses.
 $pointFile = Join-Path $SourceRoot "Assets/KuroMap/states/state-$state.json"
 $points = Get-Content -LiteralPath $pointFile -Raw -Encoding UTF8 | ConvertFrom-Json
 $country = Get-Content -LiteralPath (Join-Path $SourceRoot 'Assets/KuroMap/country.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -104,31 +106,19 @@ if ($regionLayers.Count -eq 0) { throw "No layer in frame $state attributes to r
 Write-Host ("Region {0} (frame {1}) owns {2} layered maps: {3}" -f $RegionId, $state, $regionLayers.Count,
     (($regionLayers | ForEach-Object { "$($_.name)[$($_.id)]" }) -join ', '))
 
-# coordinate -> ordered overlay images belonging to this region
-$overlaysByTile = @{}
-foreach ($layer in $regionLayers) {
-    foreach ($floor in $layer.floors) {
-        foreach ($image in @($floor.tiles)) {
-            $parts = (($image -split '/')[-1] -replace '\.png$', '').Split('_')
-            $key = "$([int]$parts[0]),$([int]$parts[1])"
-            if (-not $overlaysByTile.ContainsKey($key)) { $overlaysByTile[$key] = New-Object System.Collections.ArrayList }
-            [void]$overlaysByTile[$key].Add([pscustomobject]@{ layerId = [string]$layer.id; layerName = $layer.name
-                floorId = [string]$floor.id; image = [string]$image })
-        }
+$tileRoot = Join-Path $TileArchiveRoot $tileVersion
+
+function Get-OpaqueSampleCount([string]$path) {
+    $bitmap = [System.Drawing.Bitmap]::FromFile($path)
+    $count = 0
+    for ($y = 0; $y -lt $bitmap.Height; $y += 4) {
+        for ($x = 0; $x -lt $bitmap.Width; $x += 4) { if ($bitmap.GetPixel($x, $y).A -gt 8) { $count++ } }
     }
+    $bitmap.Dispose()
+    return $count
 }
 
-function Get-OpaqueStats([string]$path) {
-    $bmp = [System.Drawing.Bitmap]::FromFile($path)
-    $total = 0; $opaque = 0
-    for ($y = 0; $y -lt $bmp.Height; $y += 4) {
-        for ($x = 0; $x -lt $bmp.Width; $x += 4) { $total++; if ($bmp.GetPixel($x, $y).A -gt 8) { $opaque++ } }
-    }
-    $bmp.Dispose()
-    return [Math]::Round(100.0 * $opaque / $total, 2)
-}
-
-function New-CompositeTile([string]$surfacePath, [object[]]$overlays, [string]$outPath, [double]$factor) {
+function New-LayeredTile([string]$surfacePath, [string]$overlayPath, [string]$outPath, [double]$factor) {
     $canvas = New-Object System.Drawing.Bitmap 1024, 1024, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $graphics = [System.Drawing.Graphics]::FromImage($canvas)
     $graphics.CompositingMode = [System.Drawing.Drawing2D.CompositingMode]::SourceOver
@@ -142,15 +132,13 @@ function New-CompositeTile([string]$surfacePath, [object[]]$overlays, [string]$o
     $rect = New-Object System.Drawing.Rectangle 0, 0, 1024, 1024
     $graphics.DrawImage($surface, $rect, 0, 0, 1024, 1024, [System.Drawing.GraphicsUnit]::Pixel, $attributes)
     $surface.Dispose(); $attributes.Dispose()
-    foreach ($overlay in $overlays) {
-        $image = [System.Drawing.Image]::FromFile($overlay.path)
-        $graphics.DrawImage($image, $rect)
-        $image.Dispose()
-    }
+    $overlay = [System.Drawing.Image]::FromFile($overlayPath)
+    $graphics.DrawImage($overlay, $rect)
+    $overlay.Dispose()
     $graphics.Dispose()
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $outPath) | Out-Null
-    # Never open the destination in place: an earlier run may have left a hard link
-    # there, and GDI+ would then write through it into the archived source tile.
+    # Never open the destination in place: a previous run may have left a hard link
+    # there, and GDI+ would then write through it into a file outside this directory.
     $tempPath = "$outPath.tmp"
     $canvas.Save($tempPath, [System.Drawing.Imaging.ImageFormat]::Png)
     $canvas.Dispose()
@@ -158,48 +146,64 @@ function New-CompositeTile([string]$surfacePath, [object[]]$overlays, [string]$o
     Move-Item -LiteralPath $tempPath -Destination $outPath -Force
 }
 
-$factorList = @($BaseFactor | Sort-Object -Descending)
-$summary = New-Object System.Collections.ArrayList
+$records = New-Object System.Collections.ArrayList
+foreach ($layer in $regionLayers) {
+    foreach ($floor in $layer.floors) {
+        foreach ($image in @($floor.tiles)) {
+            $leaf = ($image -split '/')[-1]                                # 3_-3.png
+            $surfacePath = Join-Path $tileRoot "$state/${state}_$leaf"
+            $overlayPath = Join-Path $LayerArchiveRoot "$tileVersion/$state$image"
+            if (-not (Test-Path -LiteralPath $surfacePath)) {
+                Write-Warning "No archived surface tile for $state/$leaf; skipping $($layer.name) $($floor.name)."
+                continue
+            }
+            if (-not (Test-Path -LiteralPath $overlayPath)) { throw "Layer tile is missing: $overlayPath" }
+            $opaque = Get-OpaqueSampleCount $overlayPath
+            if ($opaque -eq 0) { continue }                                 # fully transparent floor
+            $parts = ($leaf -replace '\.png$', '').Split('_')
+            $floorTag = $floor.id -replace '/', '-'
+            [void]$records.Add([pscustomobject]@{
+                layerId = [string]$layer.id; layerName = [string]$layer.name
+                floorId = [string]$floor.id; floorName = [string]$floor.name
+                x = [int]$parts[0]; y = [int]$parts[1]
+                surfacePath = $surfacePath; overlayPath = $overlayPath
+                opaqueSamples = $opaque
+                file = "L$($layer.id)_F$floorTag`_${state}_$leaf"
+            })
+        }
+    }
+}
+if ($records.Count -eq 0) { throw "No opaque layered tile found for $RegionId." }
 
-foreach ($factor in $factorList) {
+$manifest = [ordered]@{
+    formatVersion = 1
+    regionId = $RegionId
+    frame = $state
+    tileResourceVersion = $tileVersion
+    generatedAtUtc = [DateTime]::UtcNow.ToString('o')
+    factors = [ordered]@{}
+}
+
+foreach ($factor in @($BaseFactor | Sort-Object -Descending)) {
     $tag = 'k{0:D3}' -f [int][Math]::Round($factor * 100)
     $outDir = Join-Path $OutputRoot "$RegionId/$tag"
     New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-    $composited = 0; $linked = 0
-    foreach ($record in $surfaceRecords) {
-        $leaf = Split-Path -Leaf $record.file                     # 8_-3_1.png
-        $surfacePath = Join-Path $TileArchiveRoot "$tileVersion/$state/$leaf"
-        if (-not (Test-Path -LiteralPath $surfacePath)) { throw "Surface tile is missing: $surfacePath" }
-        $outPath = Join-Path $outDir $leaf
-        # `-replace` binds tighter than `+`, so the prefix pattern must be built first.
-        $prefix = '^' + $state + '_'
-        $key = ($leaf -replace $prefix, '') -replace '\.png$', ''
-        $key = $key -replace '_', ','
-        if ($overlaysByTile.ContainsKey($key)) {
-            $resolved = foreach ($overlay in $overlaysByTile[$key]) {
-                $relative = "$state$($overlay.image)"
-                $path = Join-Path $LayerArchiveRoot "$tileVersion/$relative"
-                if (-not (Test-Path -LiteralPath $path)) { throw "Layer tile is missing: $path" }
-                [pscustomobject]@{ path = $path; layerId = $overlay.layerId; layerName = $overlay.layerName
-                    floorId = $overlay.floorId; opaquePct = (Get-OpaqueStats $path) }
-            }
-            New-CompositeTile $surfacePath @($resolved) $outPath $factor
-            $composited++
-            $overlapNote = ''
-            if (@($resolved).Count -gt 1) { $overlapNote = " overlays=$(@($resolved).Count)" }
-            [void]$summary.Add([pscustomobject]@{ factor = $factor; tile = $key; overlays = @($resolved).Count
-                opaquePct = (($resolved | ForEach-Object { $_.opaquePct }) -join '/')
-                layers = (($resolved | ForEach-Object { "$($_.layerName)/$($_.floorId)" }) -join ' + ') })
-        }
-        else {
-            if (Test-Path -LiteralPath $outPath) { Remove-Item -LiteralPath $outPath -Force }
-            try { New-Item -ItemType HardLink -Path $outPath -Target $surfacePath -ErrorAction Stop | Out-Null }
-            catch { Copy-Item -LiteralPath $surfacePath -Destination $outPath -Force }
-            $linked++
-        }
+    $entries = New-Object System.Collections.ArrayList
+    foreach ($record in $records) {
+        $outPath = Join-Path $outDir $record.file
+        New-LayeredTile $record.surfacePath $record.overlayPath $outPath $factor
+        [void]$entries.Add([ordered]@{
+            x = $record.x; y = $record.y; file = $record.file
+            layerId = $record.layerId; layerName = $record.layerName
+            floorId = $record.floorId; floorName = $record.floorName
+            opaqueSamples = $record.opaqueSamples
+            sha256 = (Get-FileHash -LiteralPath $outPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        })
     }
-    Write-Host ("  {0}: composited {1} tiles, linked {2} surface tiles -> {3}" -f $tag, $composited, $linked, $outDir)
+    $manifest.factors[$tag] = [ordered]@{ baseFactor = $factor; tiles = @($entries) }
+    Write-Host ("  {0}: {1} per-floor composites -> {2}" -f $tag, $entries.Count, $outDir)
 }
 
-Write-Host ''
-$summary | Sort-Object tile, factor | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+$manifestPath = Join-Path $OutputRoot "$RegionId/composite.manifest.json"
+[IO.File]::WriteAllText($manifestPath, (($manifest | ConvertTo-Json -Depth 10) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
+Write-Host "Manifest: $manifestPath" -ForegroundColor Green
