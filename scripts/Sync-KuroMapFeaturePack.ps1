@@ -41,6 +41,14 @@ param(
     # <archive>/<state>/<state>_<x>_<y>.png. When set, no network access happens and the
     # build is reproducible from archived bytes alone.
     [string]$TileArchive,
+    # A directory of per-floor layered composites written by
+    # scripts/New-LayeredTileComposite.ps1 (L<layer>_F<floor>_<state>_<x>_<y>.png). Each
+    # file is added as an EXTRA tile at its own coordinate, so one coordinate carries the
+    # surface appearance and every floor's layered appearance. Stacking the floors into a
+    # single image instead measured 5 near-anchor matches against a real minimap where the
+    # per-floor files scored 21, so they must stay separate; see
+    # Docs/LayeredMapFeaturePackPlan.md section 0.
+    [string]$LayeredCompositeDir = '',
     # Generation recorded in the manifest. With -TileArchive it defaults to the archive
     # directory name; without it, the value is compared against the live upstream value
     # and a mismatch aborts instead of silently building from another generation.
@@ -249,6 +257,35 @@ try {
     }
     if ($tiles.Count -eq 0) { throw 'No source tiles were available in the requested bounds.' }
 
+    # Layered appearances: same coordinate, one entry per floor. The builder maps every
+    # listed tile into the pack, so duplicates are how one coordinate ends up holding all
+    # of them (the runtime only reads features and the reference gate, not this list).
+    $layeredTileCount = 0
+    if ($LayeredCompositeDir) {
+        if (-not (Test-Path -LiteralPath $LayeredCompositeDir -PathType Container)) {
+            throw "Layered composite directory does not exist: $LayeredCompositeDir"
+        }
+        foreach ($file in Get-ChildItem -LiteralPath $LayeredCompositeDir -File -Filter '*.png') {
+            $parts = $file.BaseName.Split('_')
+            if ($parts.Count -ne 5 -or -not $parts[0].StartsWith('L')) {
+                throw "Layered composite file name is not L<layer>_F<floor>_<state>_<x>_<y>.png: $($file.Name)"
+            }
+            if ([int]$parts[2] -ne $State) { continue }
+            $destination = Join-Path $tileDir "layered_$($file.Name)"
+            Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
+            Assert-MapTilePng $destination
+            $tiles.Add([ordered]@{
+                x = [int]$parts[3]; y = [int]$parts[4]; file = "tiles/layered_$($file.Name)"
+                sha256 = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+            })
+            ++$layeredTileCount
+        }
+        if ($layeredTileCount -eq 0) {
+            throw "No layered composite tile for state $State was found in $LayeredCompositeDir."
+        }
+        Write-Host "Layered appearances added: $layeredTileCount extra tiles at existing coordinates"
+    }
+
     $tileManifest = [ordered]@{
         formatVersion = 1; packId = $PackId; scene = $Scene; sceneId = $sceneIds[$Scene]; resourceVersion = $resourceVersion
         source = [ordered]@{ static = "https://$kuroStaticHost"; state = $State; tileSize = $tileSize; virtualMapSize = $kuroVirtualMapSize }
@@ -256,7 +293,7 @@ try {
         anchorWorldCoordinate = [ordered]@{ x = $AnchorWorldX; y = $AnchorWorldY }
         tileRadius = if ($usesExplicitBounds) { $null } else { $TileRadius }
         tileBounds = [ordered]@{ minX = $minimumTileX; maxX = $maximumTileX; minY = $minimumTileY; maxY = $maximumTileY }
-        tiles = @($tiles); missingTileCount = $missingTileCount
+        tiles = @($tiles); missingTileCount = $missingTileCount; layeredTileCount = $layeredTileCount
     }
     if ($Scene -ne 'World' -and $null -ne $calibration -and $calibration.Value.passed) {
         $tileManifest['referenceCoordinateTransform'] = $calibration.Value.coordinateTransform
@@ -310,7 +347,7 @@ try {
         generatedAtUtc = [DateTime]::UtcNow.ToString('o')
         source = $tileManifest.source; coordinateTransform = $tileManifest.coordinateTransform; anchorWorldCoordinate = $tileManifest.anchorWorldCoordinate
         tileRadius = $tileManifest.tileRadius; tileBounds = $tileManifest.tileBounds
-        tiles = @($tiles); missingTileCount = $missingTileCount; coordinateBounds = $builderReport.coordinateBounds
+        tiles = @($tiles); missingTileCount = $missingTileCount; layeredTileCount = $layeredTileCount; coordinateBounds = $builderReport.coordinateBounds
         referenceVerification = $referenceVerification
         features = [ordered]@{ file = 'features.yml'; sha256 = [string]$builderReport.featuresSha256; keypointCount = [int]$builderReport.selectedKeypoints; extractedKeypointCount = [int]$builderReport.extractedKeypoints }
     }

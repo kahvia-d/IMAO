@@ -50,7 +50,56 @@
 `surface` 包的关键点数 **207205 与已发布的 `jinzhou` 包完全一致**，控制组可信。
 "把地表瓦片替换成合成图"的做法已排除：那会让地表视图在同一坐标失效。
 
-## 一、目标
+## 七、流水线已跑通（2026-09-23 深夜）
+
+从归档到可运行包全部走通，产物**只在 `out/`**，源码树与 `x64\Release` 未被改动：
+
+```powershell
+. .\scripts\Enter-DevEnvironment.ps1                     # IMAO_PADDLE_LIB / IMAO_OPENCV_DIR
+pwsh -File scripts\Get-MapLayerArchive.ps1               # 162 张分层瓦片 -> map-regions/layers/
+pwsh -File scripts\New-LayeredTileComposite.ps1 -RegionId jinzhou   # 16 张逐层合成（k100/k035）
+
+& .\scripts\Sync-KuroMapFeaturePack.ps1 -Apply -PackId jinzhou -Scene World `
+    -TileArchive map-regions\tiles\B50F4135DCCC4D8DA87ED33CE95EA31D `
+    -MaxTiles 512 -TileMinX -3 -TileMaxX 14 -TileMinY -10 -TileMaxY 11 `
+    -AnchorWorldX -96 -AnchorWorldY 1310 `
+    -ReferencePath map-regions\references\jinzhou.png -ReferenceFullSnapshot `
+    -LayeredCompositeDir out\map-regions\composite\jinzhou\k035 `
+    -OutputRoot out\map-regions\packs -AllowMissingTiles
+
+# features.yml -> features.imf，以及 --pack-only 复用基线词表生成 visual-index.imx
+x64\Release\IMaoFeatureConverter.exe  out\map-regions\packs\jinzhou\features.yml `
+    out\map-regions\packs\jinzhou\features.imf out\map-regions\packs\jinzhou\features.imf.manifest.json
+x64\Release\IMaoVisualIndexBuilder.exe --pack-only out\map-regions\base-index out\map-regions\packs\jinzhou --verified
+
+pwsh -File scripts\Test-KuroMapFeaturePack.ps1 -PackRoot out\map-regions\packs\jinzhou
+pwsh -File scripts\New-MapTestTree.ps1 -PackRegionId jinzhou
+```
+
+结果：**212 个瓦片条目（196 坐标 + 16 分层）/ 220090 关键点**，
+`referenceVerification` 84 good / 79 near / **2.8834px**（与旧包逐位相同），
+`visual-index.imx` 19.65 MB、词表 `8bd80ebd…`（与其它 12 个包一致）。
+`Test-KuroMapFeaturePack.ps1` 通过，且 13 个已发布包重跑全部通过。
+
+改动到的仓库脚本：
+
+| 脚本 | 改动 |
+| --- | --- |
+| `Sync-KuroMapFeaturePack.ps1` | 新增 `-LayeredCompositeDir`：把逐层合成作为**额外条目**加进同一坐标；manifest 记 `layeredTileCount` |
+| `Test-KuroMapFeaturePack.ps1` | 允许**同一坐标多条**（要求 sha256 互不相同），并校验条数 = 坐标数 + `layeredTileCount` |
+
+### 走位验收的基线（旧包，2026-09-23 00:07–00:18 眠龙庭）
+
+`%LOCALAPPDATA%\IMao-WinUI\Logs\events-20260923.jsonl` 里 **35 帧全部落在瓦片 (4,−3)**：
+
+| 指标 | 旧包实测 |
+| --- | --- |
+| quality | 35/35 全是 **Marginal** |
+| inliers | min 0 / max 5 / **avg 1.9** |
+| inlierRatio | avg **0.029** |
+| source | relative 18 / tracked 16 / readout 1 |
+
+也就是说旧包在眠龙庭是"勉强连着"：一帧掉 2 个 inlier 就没了。新包走位后用同一份日志比对这三个数字即可判定。
 
 让工具在**层内**（今州：叩天关 3 层、环木阙 3 层、眠龙庭 2 层、寒雾深坑 1 层）也能定位小地图，
 且**不改运行时接口、不改坐标换算、不动点位数据**。

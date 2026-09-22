@@ -35,10 +35,25 @@ if (-not $isReferencePassed) {
     }
     Write-Warning "Feature pack is intentionally unverified: $($manifest.packId)"
 }
-$ids = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+# One coordinate may legitimately carry several source tiles: the surface tile and, for a
+# layered-map ("分层") region, one composite per floor (scripts/New-LayeredTileComposite.ps1
+# plus -LayeredCompositeDir on Sync-KuroMapFeaturePack.ps1). What must never happen is the
+# same coordinate listed twice with the SAME bytes - that is a duplicated entry, not an
+# extra appearance. Distinct-coordinate tiles keep the original guarantee.
+$entries = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$appearances = @{}
 foreach ($tile in @($manifest.tiles)) {
     $id = "$($tile.x),$($tile.y)"
-    if (-not $ids.Add($id) -or [string]::IsNullOrWhiteSpace([string]$tile.sha256)) { throw "Invalid tile entry: $id" }
+    $sha = ([string]$tile.sha256).ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($sha) -or $sha.Length -ne 64) { throw "Invalid tile entry: $id" }
+    if (-not $entries.Add("$id|$sha")) { throw "Duplicate tile entry (same coordinate and bytes): $id" }
+    if (-not $appearances.ContainsKey($id)) { $appearances[$id] = 0 }
+    $appearances[$id]++
+}
+$layeredCount = if ($null -ne $manifest.PSObject.Properties['layeredTileCount']) { [int]$manifest.layeredTileCount } else { 0 }
+$extraAppearances = (@($appearances.Values) | Measure-Object -Sum).Sum - $appearances.Count
+if ($extraAppearances -ne $layeredCount) {
+    throw "Manifest lists $extraAppearances extra tile appearances but layeredTileCount is $layeredCount."
 }
 $featurePath = Join-Path $PackRoot ([string]$manifest.features.file)
 $binaryPath = Join-Path $PackRoot 'features.imf'
@@ -75,4 +90,4 @@ if (Test-Path -LiteralPath $featurePath) {
     if ([int]$binaryManifest.keypointCount -ne $xmlCount) { throw 'Binary feature manifest does not match the verified XML source.' }
     $featureSourceVerified = 'source-xml'
 }
-Write-Host "Kuro tile feature pack valid: pack=$($manifest.packId) tiles=$($ids.Count) keypoints=$xmlCount resource=$($manifest.resourceVersion) featureSource=$featureSourceVerified" -ForegroundColor Green
+Write-Host "Kuro tile feature pack valid: pack=$($manifest.packId) coordinates=$($appearances.Count) tileEntries=$(@($manifest.tiles).Count) layered=$layeredCount keypoints=$xmlCount resource=$($manifest.resourceVersion) featureSource=$featureSourceVerified" -ForegroundColor Green
