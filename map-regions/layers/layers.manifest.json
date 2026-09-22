@@ -1,0 +1,1999 @@
+{
+  "formatVersion": 1,
+  "registryResourceVersion": "E62CEAC5F80745288BF76C7AD5F731C3",
+  "layerResourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "generatedAtUtc": "2026-09-22T15:43:13.8454027Z",
+  "archiveRoot": "map-regions/layers/B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "states": {
+    "8": {
+      "hasLayers": true,
+      "layers": [
+        {
+          "id": "1",
+          "name": "叩天关",
+          "floors": [
+            {
+              "id": "-1/1",
+              "name": "叩天关·上层",
+              "sort": 1,
+              "tiles": [
+                "/1/-1/3_-3.png",
+                "/1/-1/3_-4.png"
+              ]
+            },
+            {
+              "id": "-2/1",
+              "name": "叩天关·中层",
+              "sort": 2,
+              "tiles": [
+                "/1/-2/3_-3.png",
+                "/1/-2/3_-4.png"
+              ]
+            },
+            {
+              "id": "-3/1",
+              "name": "叩天关·下层",
+              "sort": 3,
+              "tiles": [
+                "/1/-3/3_-4.png",
+                "/1/-3/3_-3.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2",
+          "name": "环木阙",
+          "floors": [
+            {
+              "id": "-1/2",
+              "name": "环木阙·上层",
+              "sort": 1,
+              "tiles": [
+                "/2/-1/4_-4.png",
+                "/2/-1/4_-3.png"
+              ]
+            },
+            {
+              "id": "-2/2",
+              "name": "环木阙·中层",
+              "sort": 2,
+              "tiles": [
+                "/2/-2/4_-3.png",
+                "/2/-2/4_-4.png"
+              ]
+            },
+            {
+              "id": "-3/2",
+              "name": "环木阙·下层",
+              "sort": 3,
+              "tiles": [
+                "/2/-3/3_-3.png",
+                "/2/-3/4_-3.png",
+                "/2/-3/4_-4.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "name": "眠龙庭",
+          "floors": [
+            {
+              "id": "-1/3",
+              "name": "眠龙庭·上层",
+              "sort": 1,
+              "tiles": [
+                "/3/-1/3_-3.png",
+                "/3/-1/4_-3.png"
+              ]
+            },
+            {
+              "id": "-2/3",
+              "name": "眠龙庭·下层",
+              "sort": 2,
+              "tiles": [
+                "/3/-2/4_-3.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "name": "虎口山脉",
+          "floors": [
+            {
+              "id": "-1/7",
+              "name": "寒雾深坑",
+              "sort": 1,
+              "tiles": [
+                "/7/-1/0_-2.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "8",
+          "name": "浮光海窟",
+          "floors": [
+            {
+              "id": "-1/8",
+              "name": "浮光海窟",
+              "sort": 1,
+              "tiles": [
+                "/8/-1/10_-5.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "9",
+          "name": "愚人乐土",
+          "floors": [
+            {
+              "id": "-1/9",
+              "name": "愚人乐土",
+              "sort": 1,
+              "tiles": [
+                "/9/-1/10_-5.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "10",
+          "name": "赞悼圣迹 · 地下",
+          "floors": [
+            {
+              "id": "-1/10",
+              "name": "赞悼圣迹 · 地下",
+              "sort": 1,
+              "tiles": [
+                "/10/-1/10_-6.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "11",
+          "name": "岩栖残垣",
+          "floors": [
+            {
+              "id": "-1/11",
+              "name": "岩栖残垣",
+              "sort": 1,
+              "tiles": [
+                "/11/-1/10_-6.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "12",
+          "name": "沉没幻想·遗址",
+          "floors": [
+            {
+              "id": "-1/12",
+              "name": "沉没幻想·遗址",
+              "sort": 1,
+              "tiles": [
+                "/12/-1/10_-7.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "13",
+          "name": "青栎庭院·下层",
+          "floors": [
+            {
+              "id": "-1/13",
+              "name": "青栎庭院·下层",
+              "sort": 1,
+              "tiles": [
+                "/13/-1/11_-6.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "18",
+          "name": "秘藏之地",
+          "floors": [
+            {
+              "id": "-1/18",
+              "name": "秘藏之地·地下一层",
+              "sort": 1,
+              "tiles": [
+                "/18/-1/12_-6.png",
+                "/18/-1/12_-7.png"
+              ]
+            },
+            {
+              "id": "-2/18",
+              "name": "秘藏之地·地下二层",
+              "sort": 2,
+              "tiles": [
+                "/18/-2/12_-6.png",
+                "/18/-2/12_-7.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "19",
+          "name": "阿维纽林·地下旧址",
+          "floors": [
+            {
+              "id": "-1/19",
+              "name": "阿维纽林·地下旧址",
+              "sort": 1,
+              "tiles": [
+                "/19/-1/12_-9.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "20",
+          "name": "石龙寝",
+          "floors": [
+            {
+              "id": "-1/20",
+              "name": "石龙寝上层",
+              "sort": 1,
+              "tiles": [
+                "/20/-1/14_-13.png"
+              ]
+            },
+            {
+              "id": "-2/20",
+              "name": "石龙寝下层",
+              "sort": 2,
+              "tiles": [
+                "/20/-2/14_-13.png",
+                "/20/-2/14_-14.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "21",
+          "name": "弥诺斯地下水道",
+          "floors": [
+            {
+              "id": "-1/21",
+              "name": "弥诺斯地下水道",
+              "sort": 1,
+              "tiles": [
+                "/21/-1/14_-13.png",
+                "/21/-1/14_-14.png",
+                "/21/-1/15_-13.png",
+                "/21/-1/15_-14.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "23",
+          "name": "静思所",
+          "floors": [
+            {
+              "id": "-1/23",
+              "name": "静思所",
+              "sort": 1,
+              "tiles": [
+                "/23/-1/14_-15.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "24",
+          "name": "鸣猎之穴",
+          "floors": [
+            {
+              "id": "-1/24",
+              "name": "鸣猎之穴",
+              "sort": 1,
+              "tiles": [
+                "/24/-1/14_-15.png",
+                "/24/-1/15_-15.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "25",
+          "name": "赤林岩窟",
+          "floors": [
+            {
+              "id": "-1/25",
+              "name": "赤林岩窟",
+              "sort": 1,
+              "tiles": [
+                "/25/-1/14_-16.png",
+                "/25/-1/15_-16.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "26",
+          "name": "赤林西喉",
+          "floors": [
+            {
+              "id": "-1/26",
+              "name": "赤林西喉",
+              "sort": 1,
+              "tiles": [
+                "/26/-1/14_-16.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "27",
+          "name": "溶蚀地窟",
+          "floors": [
+            {
+              "id": "-1/27",
+              "name": "溶蚀地窟",
+              "sort": 1,
+              "tiles": [
+                "/27/-1/14_-16.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "44",
+          "name": "天槎空间站",
+          "floors": [
+            {
+              "id": "-1/44",
+              "name": "天槎空间站",
+              "sort": 1,
+              "tiles": [
+                "/44/-1/0_8.png",
+                "/44/-1/0_9.png",
+                "/44/-1/-1_8.png",
+                "/44/-1/-1_9.png",
+                "/44/-1/-2_8.png",
+                "/44/-1/-2_9.png"
+              ]
+            },
+            {
+              "id": "-2/44",
+              "name": "封锁舱段·天槎空间站",
+              "sort": 2,
+              "tiles": [
+                "/44/-2/-1_9.png"
+              ]
+            },
+            {
+              "id": "-3/44",
+              "name": "实验舱段一区·天槎空间站",
+              "sort": 3,
+              "tiles": [
+                "/44/-3/-1_9.png",
+                "/44/-3/-1_8.png"
+              ]
+            },
+            {
+              "id": "-4/44",
+              "name": "实验舱段二区·天槎空间站",
+              "sort": 4,
+              "tiles": [
+                "/44/-4/-1_9.png",
+                "/44/-4/-1_8.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "45",
+          "name": "永冻遗航",
+          "floors": [
+            {
+              "id": "-1/45",
+              "name": "观测廊道",
+              "sort": 1,
+              "tiles": [
+                "/45/-1/-1_8.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "46",
+          "name": "观测廊道",
+          "floors": [
+            {
+              "id": "-1/46",
+              "name": "永冻遗航",
+              "sort": 1,
+              "tiles": [
+                "/46/-1/-1_9.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "47",
+          "name": "渐湖",
+          "floors": [
+            {
+              "id": "-1/47",
+              "name": "渐湖",
+              "sort": 1,
+              "tiles": [
+                "/47/-1/0_9.png",
+                "/47/-1/0_10.png",
+                "/47/-1/1_9.png",
+                "/47/-1/1_10.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "48",
+          "name": "元林再生舱",
+          "floors": [
+            {
+              "id": "-1/48",
+              "name": "元林再生舱",
+              "sort": 1,
+              "tiles": [
+                "/48/-1/1_8.png",
+                "/48/-1/1_9.png",
+                "/48/-1/1_10.png",
+                "/48/-1/2_9.png",
+                "/48/-1/2_10.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "54",
+          "name": "中枢构间",
+          "floors": [
+            {
+              "id": "-1/54",
+              "name": "中枢构间",
+              "sort": 1,
+              "tiles": [
+                "/54/-1/-10_1.png",
+                "/54/-1/-9_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "55",
+          "name": "万机台",
+          "floors": [
+            {
+              "id": "-1/55",
+              "name": "万机台",
+              "sort": 1,
+              "tiles": [
+                "/55/-1/-9_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "56",
+          "name": "幽锁层",
+          "floors": [
+            {
+              "id": "-1/56",
+              "name": "幽锁层·三层",
+              "sort": 1,
+              "tiles": [
+                "/56/-1/-7_1.png"
+              ]
+            },
+            {
+              "id": "-2/56",
+              "name": "幽锁层·二层",
+              "sort": 2,
+              "tiles": [
+                "/56/-2/-7_1.png"
+              ]
+            },
+            {
+              "id": "-3/56",
+              "name": "幽锁层",
+              "sort": 3,
+              "tiles": [
+                "/56/-3/-7_1.png"
+              ]
+            },
+            {
+              "id": "-4/56",
+              "name": "雾隐枢",
+              "sort": 4,
+              "tiles": [
+                "/56/-4/-7_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "57",
+          "name": "雾隐帘洞",
+          "floors": [
+            {
+              "id": "-1/57",
+              "name": "雾隐帘洞",
+              "sort": 1,
+              "tiles": [
+                "/57/-1/-7_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "58",
+          "name": "雾隐阁",
+          "floors": [
+            {
+              "id": "-1/58",
+              "name": "雾隐阁·上层",
+              "sort": 1,
+              "tiles": [
+                "/58/-1/-7_0.png",
+                "/58/-1/-7_1.png"
+              ]
+            },
+            {
+              "id": "-2/58",
+              "name": "雾隐阁·下层",
+              "sort": 2,
+              "tiles": [
+                "/58/-2/-7_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "59",
+          "name": "隐秘入口",
+          "floors": [
+            {
+              "id": "-1/59",
+              "name": "隐秘入口",
+              "sort": 1,
+              "tiles": [
+                "/59/-1/-8_1.png",
+                "/59/-1/-8_2.png"
+              ]
+            }
+          ]
+        }
+      ],
+      "tiles": [
+        {
+          "file": "tiles/8/1/-1/3_-3.png",
+          "sha256": "6bc58ec5786a575b95c662faa27fdce65dec1ddd34adfbb317bdc0ca4cc7f3e9",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/1/-1/3_-4.png",
+          "sha256": "efc7929d236316b385553fa056b6ad77d4407f2a847bfa0bda9e143921c19301",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/1/-2/3_-3.png",
+          "sha256": "f7db7e3a77e5b2e292ee0b302ae3eeb8cb64bc9bd1e45e3058c14bb4172421ed",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/1/-2/3_-4.png",
+          "sha256": "38aed06938397f64a73cf8c8d22365f594f8199eb349623b7597c9f21e893bc7",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/1/-3/3_-4.png",
+          "sha256": "af4ad02f0a9dcc827abbb7cc03d8dd8eac2870c9a377af9ac702a67881e9ebf0",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/1/-3/3_-3.png",
+          "sha256": "8ada0c30dabdac62c9c6957ebd6b6a2068170ba2f96594183a8a9f5ad6542633",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/2/-1/4_-4.png",
+          "sha256": "156cca757640288dc409e56cb56001bc9ad831cab5cccb04d9ab60a79bb82a72",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/2/-1/4_-3.png",
+          "sha256": "b447a4bbf861da465616d75bd466a980fdf41f130f15b58761f406ba6914c8fe",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/2/-2/4_-3.png",
+          "sha256": "480136e286a73718dd3879518d1362d15fb74efe39de0a9f81070d15bf77bd18",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/2/-2/4_-4.png",
+          "sha256": "6074ad734bd4bda10b0730a0930f0d0fb8d7d05aaa5e2ad18adacf27b9e69235",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/2/-3/3_-3.png",
+          "sha256": "76939154a09f259b59a5dabc1d2a14818104e3a7687d17df0674d7a3b7e290eb",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/2/-3/4_-3.png",
+          "sha256": "0069c64559810035641d5162da328edd6af4e89b62b78070bde0bb8f10b69bf6",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/2/-3/4_-4.png",
+          "sha256": "96c5191d44629b71feb0d5376b36ec58e081c4a87963b5773144e40643b428aa",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/3/-1/3_-3.png",
+          "sha256": "7abd4cea6c9907eb4fdd25693c8f90cd1a192a89886bb29b5045251010cee2a9",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/3/-1/4_-3.png",
+          "sha256": "75103818ed24ce7e79e7e0bbb16ca5c2711883ceb0ecfdc6034946ea9c61c96c",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/3/-2/4_-3.png",
+          "sha256": "7fe6a68b898923936f86aa770541088a3729f18def7b89a21a63d0e04c06f24b",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/7/-1/0_-2.png",
+          "sha256": "4254cd22ff68ab34797480b20b6285aafb90aa67c90398f8bf23db3f5bcd8e4d",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/8/-1/10_-5.png",
+          "sha256": "0f4159c36c0149a15fa8567ab944150d992d5ebee6587a3b6ee1168b6f229cf1",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/9/-1/10_-5.png",
+          "sha256": "2a9923409262f1c19d6c97bf5e13e1ee66c4434d495d86c76c4fe8525d402838",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/10/-1/10_-6.png",
+          "sha256": "12b4adef815f0ed143d3ec1053e8105124d732923628e5833cc1d7f4bf2f2f14",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/11/-1/10_-6.png",
+          "sha256": "a15604037da76813b566c88059cc15830d0abfe702bdc1331d6e7b29d06b4f2a",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/12/-1/10_-7.png",
+          "sha256": "aa70ae06164c0fd4f704caeb745ca4ac3e452cecc2293f7fe0ea85cc9831ad86",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/13/-1/11_-6.png",
+          "sha256": "46db846e33dc301a5dda16c60d38396d10ace0ff19f1042a172c81e9ea406b7a",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/18/-1/12_-6.png",
+          "sha256": "1882d87c89181952eeea61466ff9718c0c560650d49ea8bbeff8e2a447c6af74",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/18/-1/12_-7.png",
+          "sha256": "b8e4409a719a76a15bda82d2853545209e9991b2a292a01a59859398aa542134",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/18/-2/12_-6.png",
+          "sha256": "29820711335c3bdfc63d07a123c4b9e423453602f4a890d2fa9d5c9d70109d70",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/18/-2/12_-7.png",
+          "sha256": "0035f06b32a46a36baaf2b0c232ab59afb4ab1c0f30cdecfd0bb8b983b4015aa",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/19/-1/12_-9.png",
+          "sha256": "f551595ae265c3168771e233ca881ebada8bc029fd0452809ebc87d2d20f0657",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/20/-1/14_-13.png",
+          "sha256": "a3b41affb325196033b13464925a22de2cf79c668ce6b657e02ade2443049bcc",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/20/-2/14_-13.png",
+          "sha256": "4dc52e0eefa908ab29459bc3f952da68fa9885feec86c2c3516a9c7788a5205b",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/20/-2/14_-14.png",
+          "sha256": "787eaf755b80b967c32ab5261c2b3f8af83477185b99aa4d8a624ec79728fb28",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/21/-1/14_-13.png",
+          "sha256": "71cdd2772f1cb7195671fd6e59cf9dbff4ea8177f6d6b097e94a0affd481736c",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/21/-1/14_-14.png",
+          "sha256": "815f7fc7c988611bf39024ac27c9e35096f877f15a8fb513feb3f0d4c00fc7e1",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/21/-1/15_-13.png",
+          "sha256": "dce47b1a4da53220ec07792ad1218b6bb544563c92f42756285b2939cccfad0b",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/21/-1/15_-14.png",
+          "sha256": "f178b7f1e4c3498f85e0e174b8888ba3a2e8dc23d77f6b2e946bc6e5f1f7575a",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/23/-1/14_-15.png",
+          "sha256": "adde5cfb59c3b684b14d0a4bf2adee94bef30f61494ffc4b8bdae1b5daa797d1",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/24/-1/14_-15.png",
+          "sha256": "91a236ee4079c7c73579497bfaffd310c61d956c325ec8951286dea1e4a26715",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/24/-1/15_-15.png",
+          "sha256": "2ce90e2e08e8fb4c2470e9494b679e35584fa93f84aeb410a49643e64686ac76",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/25/-1/14_-16.png",
+          "sha256": "a8c1f973e885e65741195847c26815fd1f7d4a5afa3e9ed028dbe0c6f067aaf3",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/25/-1/15_-16.png",
+          "sha256": "9ee4210d3b0ab31cb6b1c67da41c0408230432d58a2ade70d1e003c3b6a6e306",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/26/-1/14_-16.png",
+          "sha256": "476578636e41da45552c1ea8239b9e3d3aedb196840baa85a9c92f55c9b67e28",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/27/-1/14_-16.png",
+          "sha256": "023101d86ecaf0a8d7d62f88e9cc69e36b09ce82d18ba050d720ae6cf4a991d2",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-1/0_8.png",
+          "sha256": "bde57b97df3674bb704055de2a29d828b5a4adeab4d4b801888607be9a2fec72",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-1/0_9.png",
+          "sha256": "98336a113a9a3c06588183bf4a6be6349900b9cbf61f0ad0af9c2383793a5497",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-1/-1_8.png",
+          "sha256": "a4ffc4a9e3a205940967e4ade0f027267941cab6ab7e41d62300750179611922",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-1/-1_9.png",
+          "sha256": "3d12039b5070685ad989edea9e8475f2fc920a7d259764fc8b80dcd69feda033",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-1/-2_8.png",
+          "sha256": "f102e7cb8a0002f35a12faf68e3e06c2d7a534889d963c90e9c6c1dec750dd6a",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-1/-2_9.png",
+          "sha256": "696d2ec610a51c91b1e5bc662f6d3db2ad50d3bac92288988846e15133e0ab53",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-2/-1_9.png",
+          "sha256": "e4c3a9f41a61ea4f968f273e4caccc706cd5b318431db7ecb709699473cdc7cf",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-3/-1_9.png",
+          "sha256": "01949697ea77942881040a9aa4a491bcc4e8efd1e86df307795f3777e38fedbe",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-3/-1_8.png",
+          "sha256": "08f134655ed3a69e498e66e577ac4406c0dbc44ce7e356e442f134a743e54304",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-4/-1_9.png",
+          "sha256": "67fb7bb64a0fe406e1d770b53c7ce29ab686b7e46dc963ad58d60efe67e06cf0",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/44/-4/-1_8.png",
+          "sha256": "4f5504072c240dab4e737cd967d2673537d9bc95d8f44c1c44a5bab77a0cfb05",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/45/-1/-1_8.png",
+          "sha256": "6fe1cb3ea137d290fdd018c9cf6dab64c240d80e8507dfedd15a376edb96a7e9",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/46/-1/-1_9.png",
+          "sha256": "9553f103c3c93477e8b8b01ae95b613b48128195ecd139469006af7f5d393307",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/47/-1/0_9.png",
+          "sha256": "99f03873e89e5bd3c9e087fa4e268154a16cb64407363f37d79f194995e42aab",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/47/-1/0_10.png",
+          "sha256": "8888631cc8e16ca8e54f2db29b0d8c7c7bf665b2235f1021ee7f7afca24531ae",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/47/-1/1_9.png",
+          "sha256": "c0ab875c270694345ca10f270f1963fbe7b54975ce6dc5cad2096be0e3dfb0d0",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/47/-1/1_10.png",
+          "sha256": "f96df102e9a169e64fc89036547acce9b2442db3b2685d9fcbbc11a6e16e2c83",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/48/-1/1_8.png",
+          "sha256": "7bb6f3ef963b3a0ebf685dc64fb4e6b2fbf20d13f0064c05c13cba8e2e307432",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/48/-1/1_9.png",
+          "sha256": "a6c1c4d49d43797baf9997825b4eeb63b9ffbd928d8dbee693b84908c185af86",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/48/-1/1_10.png",
+          "sha256": "fc7a51bbe95b99bc23fb5755f481ef8476fb00e659c9c13766f19a9cf3f5f252",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/48/-1/2_9.png",
+          "sha256": "3553819d67420bf21ea50fa1aba1baadf2ca46a86f28e6afc14337ae289d16d7",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/48/-1/2_10.png",
+          "sha256": "03c9e5c16c3170570a4102279a5d0de427673ca0717a20ef151951d43b42770c",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/54/-1/-10_1.png",
+          "sha256": "3c4666e2a410f5c5e1689e692f1df8d1fc9dea1f18bf8402e8d2506098864bc2",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/54/-1/-9_1.png",
+          "sha256": "c4a68b973614c6fcd582afd02f66acbf3783ae2b07ea5f80ace4f9afdff88c64",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/55/-1/-9_1.png",
+          "sha256": "68c4e4315c736d7267330de8f7a9bad5feefafb138d8046ec4dc9da83d28501e",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/56/-1/-7_1.png",
+          "sha256": "e08a26437869461fd809a5cfff607e15fadec364695ffdc3deb30be47aa20c15",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/56/-2/-7_1.png",
+          "sha256": "7a6e311062446f276cd695dade2417a107030f4ccf6511781a42d9ac92839f01",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/56/-3/-7_1.png",
+          "sha256": "f878fb29181d9ec5abc57a8299f55ab9be0a688775dfaee63dce022c756e39e4",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/56/-4/-7_1.png",
+          "sha256": "b7bb017c89bb7b65cccea6ddc234358d8978fd07f03b2cd4f0bd94417973f011",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/57/-1/-7_1.png",
+          "sha256": "6eac4615f47357d3adb8ac4f19b1be3834a4e39afceffa91258bd067f44aa842",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/58/-1/-7_0.png",
+          "sha256": "5e55d23a3261401dad2a018bc04b974a1929b345584dcf9a3ebb3b0cab77fcad",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/58/-1/-7_1.png",
+          "sha256": "0bd9f5a5b6cdf1542b4f983feba0b19925907e3128ea475e4a78ffa4da0ce7ac",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/58/-2/-7_1.png",
+          "sha256": "e12f797af1c26d2d0abc6929f3ad1dac400a2038d8da52b8b7e41fd6690957cd",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/59/-1/-8_1.png",
+          "sha256": "fcdd1ab4c1873b23977dad4338bd2298098954eac9be7dc6ecd4d9929d3bd5b0",
+          "absent": false
+        },
+        {
+          "file": "tiles/8/59/-1/-8_2.png",
+          "sha256": "05923eec82eaac8edcb99b9d49b2ac0cd35102b0d6287fe7215e0c94f52c298c",
+          "absent": false
+        }
+      ]
+    },
+    "900": {
+      "hasLayers": true,
+      "layers": [
+        {
+          "id": "4",
+          "name": "金枝地",
+          "floors": [
+            {
+              "id": "-1/4",
+              "name": "金枝地·二层",
+              "sort": 1,
+              "tiles": [
+                "/4/-1/0_-1.png",
+                "/4/-1/1_-1.png"
+              ]
+            },
+            {
+              "id": "-2/4",
+              "name": "金枝地·一层",
+              "sort": 2,
+              "tiles": [
+                "/4/-2/0_-1.png",
+                "/4/-2/1_-1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "name": "谬误收容所",
+          "floors": [
+            {
+              "id": "-1/5",
+              "name": "一层·谬误收容所",
+              "sort": 1,
+              "tiles": [
+                "/5/-1/0_0.png"
+              ]
+            },
+            {
+              "id": "-2/5",
+              "name": "地下一层·谬误收容所",
+              "sort": 2,
+              "tiles": [
+                "/5/-2/0_0.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "name": "艾多斯之镜",
+          "floors": [
+            {
+              "id": "-1/6",
+              "name": "艾多斯之镜·神秘房间",
+              "sort": 1,
+              "tiles": [
+                "/6/-1/0_0.png"
+              ]
+            }
+          ]
+        }
+      ],
+      "tiles": [
+        {
+          "file": "tiles/900/4/-1/0_-1.png",
+          "sha256": "eae71a83fe84aa3a60c242dc81abd62db0f6a04a85a2768925b73e2075a8fecb",
+          "absent": false
+        },
+        {
+          "file": "tiles/900/4/-1/1_-1.png",
+          "sha256": "3437505cf281b22116038676401beff6ae8b985fa616016f74e26ca94b34ee47",
+          "absent": false
+        },
+        {
+          "file": "tiles/900/4/-2/0_-1.png",
+          "sha256": "4b625f4786313dd2ae7936925b47c5d44ab4197dd730735e09761e6558debe8f",
+          "absent": false
+        },
+        {
+          "file": "tiles/900/4/-2/1_-1.png",
+          "sha256": "993f96d2bfe8df9e521f8b8d1970907edc46274c2f71381804dca9dafc6dfe27",
+          "absent": false
+        },
+        {
+          "file": "tiles/900/5/-1/0_0.png",
+          "sha256": "14b967fb2ecd80f38306a1a2866dfb9e0cb7108aba6e4e70c04d895d4ba4f11e",
+          "absent": false
+        },
+        {
+          "file": "tiles/900/5/-2/0_0.png",
+          "sha256": "0dc5f8639bc7bbecaa6a3ca5ce2f5580ca7c23654315e8f8681bf0a5817d3ef5",
+          "absent": false
+        },
+        {
+          "file": "tiles/900/6/-1/0_0.png",
+          "sha256": "8fdcd65387e4d00e8be87bf961369084c6de7520c384413f7798f74456a2d864",
+          "absent": false
+        }
+      ]
+    },
+    "902": {
+      "hasLayers": true,
+      "layers": [
+        {
+          "id": "16",
+          "name": "声骸藏区",
+          "floors": [
+            {
+              "id": "-1/16",
+              "name": "声骸藏区1楼",
+              "sort": 1,
+              "tiles": [
+                "/16/-1/3_0.png"
+              ]
+            },
+            {
+              "id": "-2/16",
+              "name": "声骸藏区2楼",
+              "sort": 2,
+              "tiles": [
+                "/16/-2/3_0.png"
+              ]
+            },
+            {
+              "id": "-3/16",
+              "name": "声骸藏区3楼",
+              "sort": 3,
+              "tiles": [
+                "/16/-3/3_0.png"
+              ]
+            },
+            {
+              "id": "-4/16",
+              "name": "声骸藏区4楼",
+              "sort": 4,
+              "tiles": [
+                "/16/-4/3_0.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "17",
+          "name": "金库未知区域内部",
+          "floors": [
+            {
+              "id": "-1/17",
+              "name": "金库未知区域内部",
+              "sort": 1,
+              "tiles": [
+                "/17/-1/3_1.png",
+                "/17/-1/4_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "14",
+          "name": "声骸站台内部",
+          "floors": [
+            {
+              "id": "-1/14",
+              "name": "声骸站台内部",
+              "sort": 1,
+              "tiles": [
+                "/14/-1/3_0.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "15",
+          "name": "贵金属与艺术品藏区",
+          "floors": [
+            {
+              "id": "-1/15",
+              "name": "贵金属与艺术品藏区1楼",
+              "sort": 1,
+              "tiles": [
+                "/15/-1/3_0.png",
+                "/15/-1/3_-1.png"
+              ]
+            },
+            {
+              "id": "-2/15",
+              "name": "贵金属与艺术品藏区2楼",
+              "sort": 2,
+              "tiles": [
+                "/15/-2/3_0.png",
+                "/15/-2/3_-1.png"
+              ]
+            },
+            {
+              "id": "-3/15",
+              "name": "贵金属与艺术品藏区3楼",
+              "sort": 3,
+              "tiles": [
+                "/15/-3/3_0.png",
+                "/15/-3/3_-1.png"
+              ]
+            },
+            {
+              "id": "-4/15",
+              "name": "贵金属与艺术品藏区4楼",
+              "sort": 4,
+              "tiles": [
+                "/15/-4/3_0.png",
+                "/15/-4/3_-1.png"
+              ]
+            }
+          ]
+        }
+      ],
+      "tiles": [
+        {
+          "file": "tiles/902/16/-1/3_0.png",
+          "sha256": "4bf1911dc7acc486affb6c62f22e14e4d809467c726ddf1f0e82fb75dbe36e69",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/16/-2/3_0.png",
+          "sha256": "699503943a1c79fb9a429c95ebf3a2b94444a043c904da0a336cf27448cef0fb",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/16/-3/3_0.png",
+          "sha256": "4fde6babe4967c04e9bf889e3c51b4826e6289dc7f6e2e6ac136aa2de6f760e3",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/16/-4/3_0.png",
+          "sha256": "7e179d4cbb72a99cc87c5cb81af833b48748283a8f028b9ef7ec3f9a01fe35e2",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/17/-1/3_1.png",
+          "sha256": "05cc97ef6b01785011de7e0858eb8f17e1b1f82dadb12248e572675f230d4cd3",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/17/-1/4_1.png",
+          "sha256": "4233700b684a7d938c7ecb54cdc8e8c919c6598c4cd96b34b872d55237e10516",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/14/-1/3_0.png",
+          "sha256": "38a254d99a720f61b208fd81a3a10dd6bc21fee3fffb73b951dab798cae81684",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/15/-1/3_0.png",
+          "sha256": "a41a426a52f8aa7eac0c13bebca178633fcd6bf1504450cd39a0c4621c4091ba",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/15/-1/3_-1.png",
+          "sha256": "5b3ffe70ccec84060f2b34327fb02918c43f8ac315ab4c0931bc5fda1445ee5e",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/15/-2/3_0.png",
+          "sha256": "d5dc6d3ce5d54069c9121f30ea7b9be9c87a7fa2ad6cea843792ccd4bad94430",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/15/-2/3_-1.png",
+          "sha256": "490984befd798b8dd5536146d970f1dc3a8fff33df8a8e52bfbaafee95595552",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/15/-3/3_0.png",
+          "sha256": "887ee61cb2a56861c6a50df7cc36974b16cefcc33a4b58693fbfc8e22c268a48",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/15/-3/3_-1.png",
+          "sha256": "2a736618971c1fbec7fefd13869a38fb4bcc9b9d537324e291d91e71f963c0da",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/15/-4/3_0.png",
+          "sha256": "78e3620d2e162a83cf4b9060427353635f9b7d64d4c7bbf131324759ae49d3ab",
+          "absent": false
+        },
+        {
+          "file": "tiles/902/15/-4/3_-1.png",
+          "sha256": "f86b993ba1f942af765a3b05da9361dc6099b286e24e9bbd203c057c6ee71d62",
+          "absent": false
+        }
+      ]
+    },
+    "903": {
+      "hasLayers": true,
+      "layers": [],
+      "tiles": []
+    },
+    "905": {
+      "hasLayers": true,
+      "layers": [
+        {
+          "id": "22",
+          "name": "蓄能中枢下层",
+          "floors": [
+            {
+              "id": "-1/22",
+              "name": "蓄能中枢下层",
+              "sort": 1,
+              "tiles": [
+                "/22/-1/0_1.png",
+                "/22/-1/0_2.png",
+                "/22/-1/1_1.png",
+                "/22/-1/1_2.png"
+              ]
+            }
+          ]
+        }
+      ],
+      "tiles": [
+        {
+          "file": "tiles/905/22/-1/0_1.png",
+          "sha256": "7e52aaf671ca124f48908fc545e9d93c923da118277f0b1d77acaf0b164ac368",
+          "absent": false
+        },
+        {
+          "file": "tiles/905/22/-1/0_2.png",
+          "sha256": "d5c92dcbe47411edb7bcddacce0f2678783dfe64ba08bb00b3575695dc7f3a93",
+          "absent": false
+        },
+        {
+          "file": "tiles/905/22/-1/1_1.png",
+          "sha256": "02b3e79e439bbfbb1f33c0c2207441c79885e944161d8d79cbfb1e0e4e0a6365",
+          "absent": false
+        },
+        {
+          "file": "tiles/905/22/-1/1_2.png",
+          "sha256": "c53d26d3b59b27966a18dccd2f97a6d05404c13d1f7b16c4d9a3ac67d891117d",
+          "absent": false
+        }
+      ]
+    },
+    "906": {
+      "hasLayers": true,
+      "layers": [
+        {
+          "id": "32",
+          "name": "眶折谷·北段",
+          "floors": [
+            {
+              "id": "-1/32",
+              "name": "眶折谷·北段",
+              "sort": 1,
+              "tiles": [
+                "/32/-1/2_7.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "33",
+          "name": "眶折谷·本段",
+          "floors": [
+            {
+              "id": "-1/33",
+              "name": "眶折谷·本段",
+              "sort": 1,
+              "tiles": [
+                "/33/-1/2_6.png",
+                "/33/-1/2_7.png",
+                "/33/-1/3_6.png",
+                "/33/-1/3_7.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "34",
+          "name": "眶折谷·南段",
+          "floors": [
+            {
+              "id": "-1/34",
+              "name": "眶折谷·南段",
+              "sort": 1,
+              "tiles": [
+                "/34/-1/2_6.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "35",
+          "name": "落辉长隧",
+          "floors": [
+            {
+              "id": "-1/35",
+              "name": "落辉长隧",
+              "sort": 1,
+              "tiles": [
+                "/35/-1/0_8.png",
+                "/35/-1/-1_7.png",
+                "/35/-1/-1_8.png",
+                "/35/-1/-2_7.png",
+                "/35/-1/-2_8.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "36",
+          "name": "联坠长廊·地下段",
+          "floors": [
+            {
+              "id": "-1/36",
+              "name": "联坠长廊·地下段",
+              "sort": 1,
+              "tiles": [
+                "/36/-1/0_11.png",
+                "/36/-1/-1_11.png",
+                "/36/-1/-2_11.png",
+                "/36/-1/-3_11.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "37",
+          "name": "联坠长廊·基座段",
+          "floors": [
+            {
+              "id": "-1/37",
+              "name": "联坠长廊·基座段",
+              "sort": 1,
+              "tiles": [
+                "/37/-1/0_10.png",
+                "/37/-1/0_11.png",
+                "/37/-1/1_10.png",
+                "/37/-1/1_11.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "38",
+          "name": "深浮长廊",
+          "floors": [
+            {
+              "id": "-1/38",
+              "name": "深浮长廊",
+              "sort": 1,
+              "tiles": [
+                "/38/-1/0_9.png",
+                "/38/-1/0_10.png",
+                "/38/-1/-1_9.png",
+                "/38/-1/-1_10.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "39",
+          "name": "日树核心",
+          "floors": [
+            {
+              "id": "-1/39",
+              "name": "日树核心",
+              "sort": 1,
+              "tiles": [
+                "/39/-1/-4_8.png",
+                "/39/-1/-5_8.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "40",
+          "name": "第一日树",
+          "floors": [
+            {
+              "id": "-1/40",
+              "name": "一层·第一日树",
+              "sort": 1,
+              "tiles": [
+                "/40/-1/-4_8.png"
+              ]
+            },
+            {
+              "id": "-2/40",
+              "name": "二层·第一日树",
+              "sort": 1,
+              "tiles": [
+                "/40/-2/-4_8.png"
+              ]
+            },
+            {
+              "id": "-3/40",
+              "name": "三层·第一日树",
+              "sort": 1,
+              "tiles": [
+                "/40/-3/-4_8.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "41",
+          "name": "第二日树",
+          "floors": [
+            {
+              "id": "-1/41",
+              "name": "一层·第二日树",
+              "sort": 1,
+              "tiles": [
+                "/41/-1/-4_8.png"
+              ]
+            },
+            {
+              "id": "-2/41",
+              "name": "二层·第二日树",
+              "sort": 1,
+              "tiles": [
+                "/41/-2/-4_8.png"
+              ]
+            },
+            {
+              "id": "-3/41",
+              "name": "三层·第二日树",
+              "sort": 1,
+              "tiles": [
+                "/41/-3/-4_8.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "42",
+          "name": "第三日树",
+          "floors": [
+            {
+              "id": "-1/42",
+              "name": "一层·第三日树",
+              "sort": 1,
+              "tiles": [
+                "/42/-1/-4_8.png",
+                "/42/-1/-5_8.png"
+              ]
+            },
+            {
+              "id": "-2/42",
+              "name": "二层·第三日树",
+              "sort": 2,
+              "tiles": [
+                "/42/-2/-4_8.png",
+                "/42/-2/-5_8.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "43",
+          "name": "第四日树",
+          "floors": [
+            {
+              "id": "-1/43",
+              "name": "一层·第四日树",
+              "sort": 1,
+              "tiles": [
+                "/43/-1/-5_8.png",
+                "/43/-1/-6_8.png"
+              ]
+            },
+            {
+              "id": "-2/43",
+              "name": "二层·第四日树",
+              "sort": 2,
+              "tiles": [
+                "/43/-2/-5_8.png",
+                "/43/-2/-6_8.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "30",
+          "name": "星炬学院",
+          "floors": [
+            {
+              "id": "-1/30",
+              "name": "星炬学院·广场区",
+              "sort": 1,
+              "tiles": [
+                "/30/-1/0_7.png"
+              ]
+            },
+            {
+              "id": "-2/30",
+              "name": "星炬学院·教学区",
+              "sort": 2,
+              "tiles": [
+                "/30/-2/0_7.png"
+              ]
+            },
+            {
+              "id": "-3/30",
+              "name": "星炬学院·运载区",
+              "sort": 3,
+              "tiles": [
+                "/30/-3/0_7.png"
+              ]
+            },
+            {
+              "id": "-4/30",
+              "name": "文献中心·休憩区",
+              "sort": 4,
+              "tiles": [
+                "/30/-4/0_7.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "31",
+          "name": "溺森涡道",
+          "floors": [
+            {
+              "id": "-1/31",
+              "name": "溺森涡道",
+              "sort": 1,
+              "tiles": [
+                "/31/-1/-2_9.png",
+                "/31/-1/-2_10.png",
+                "/31/-1/-3_8.png",
+                "/31/-1/-3_9.png",
+                "/31/-1/-3_10.png",
+                "/31/-1/-4_9.png"
+              ]
+            }
+          ]
+        }
+      ],
+      "tiles": [
+        {
+          "file": "tiles/906/32/-1/2_7.png",
+          "sha256": "4ed2e2e949ae1448555f3fa378a14371877cd45185a7182d1e5cb087c041ee82",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/33/-1/2_6.png",
+          "sha256": "6bf593cdc10c2e56cf03ab51967ad6d1e7d12563729552233b69174170b14c83",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/33/-1/2_7.png",
+          "sha256": "3293a9c66e2e953b160d87b768ae5dbe7a3f54c642484e3519f6b40320eba05c",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/33/-1/3_6.png",
+          "sha256": "6695c0c114d51b3f512d1aa9714bbd3f0da90a2dd4472766a017c6153672c948",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/33/-1/3_7.png",
+          "sha256": "800ea7b72c9973855f917a8a785c4029235f4578dae0612b141ded6db76a3762",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/34/-1/2_6.png",
+          "sha256": "07689d1367e1d9457af56735908d20271bcabff8969731e127ab08f3b9e80333",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/35/-1/0_8.png",
+          "sha256": "a3087bbea06d58cc4e398d6d0f78dd7dce147d80715afff0bda7d6e0688e5108",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/35/-1/-1_7.png",
+          "sha256": "b400d7be4c39b07389ededf80256a27784f3f8a62bccd9716bf1967700375201",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/35/-1/-1_8.png",
+          "sha256": "a25a0c767cad0fd425511f52656d4a808d9877dc60e143a5b23d3adaba633e8a",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/35/-1/-2_7.png",
+          "sha256": "82e64a5fa631955426375c81cd6409ca95f10fa95a471c760a62e47f4e1036a0",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/35/-1/-2_8.png",
+          "sha256": "46805c6d529bb99f75a7783e111f0dba45c85ebacb52fc76dee91e7ea589ef94",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/36/-1/0_11.png",
+          "sha256": "b2c05850b0d70f19fe7ad22f9f7fdb72c2c4f773ff04a5471c9cc59907fd9bce",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/36/-1/-1_11.png",
+          "sha256": "648fe4d31bbe940e6798245ed4ed24c370e9a93f7840b5ac1119ae7e233f29b0",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/36/-1/-2_11.png",
+          "sha256": "17fd6a8fb4153a800acf327eef904a5e864c457eeef9e50e3c47088642bcdd76",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/36/-1/-3_11.png",
+          "sha256": "163470405da99bb2e2d37f7ba74e3df4aa410c131987bbb5321ec53abc381d95",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/37/-1/0_10.png",
+          "sha256": "0c9f0dc978a1d326eda6d44df5d05cdd203bd6b81cf9265c033e3f1c1103da03",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/37/-1/0_11.png",
+          "sha256": "5daae44902e3eec2816f96535dc1a235e24724c213c5cb9f36cc27dece89a808",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/37/-1/1_10.png",
+          "sha256": "db76b74a3eb3b8661b11c041f5a2027dd3faaca880d3ba705b73b2f3ea423575",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/37/-1/1_11.png",
+          "sha256": "bd8c0598f812377e07fc3a76c6fbb9386d2a5d203d97e7e1427f502363ab3b42",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/38/-1/0_9.png",
+          "sha256": "288cd561d56b63e89430cf21e0177c80d19d639c2d03f2531037d2f04dde6608",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/38/-1/0_10.png",
+          "sha256": "77f3a582cae4d43e62b68e27acde6ce0e84773f75feb792dd0e2e9dd1ae73561",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/38/-1/-1_9.png",
+          "sha256": "d4001651360259d24c7dca26f7e6bf4e03fc8325b4f3f5a9746ef7c6052fccfc",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/38/-1/-1_10.png",
+          "sha256": "fc3abac68b998627e90ecafb828e7cbd7b7b4ce1d18257057925849a149d4aa6",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/39/-1/-4_8.png",
+          "sha256": "f9735039c0d366b30e2ef3027752ae473d380c755cd2cda5b59126f998c96052",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/39/-1/-5_8.png",
+          "sha256": "7d57c4b778c49c718770a635a12d66ecee874630a710e3f6816e157c62e686ec",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/40/-1/-4_8.png",
+          "sha256": "e64bd544a26f68e683373e0d6ad1fd4e855ec4420379f71e82012f3e0448a003",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/40/-2/-4_8.png",
+          "sha256": "3c1117a580de5d9b254be2d0e6242c2e69a384851a6ff08e9acfd0efd221cfc6",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/40/-3/-4_8.png",
+          "sha256": "05f1251e9d789dfde91f264c1d38f7975179ad9998a046ee5d776352f06a6998",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/41/-1/-4_8.png",
+          "sha256": "bc67e41db5de5479a5ab2ebeb8bb295b2d73a3271c4eea939cb19782e115242e",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/41/-2/-4_8.png",
+          "sha256": "3e5919f1501c48b129b06fc61290933e8fb785f72bdf1ff83af458acb428d464",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/41/-3/-4_8.png",
+          "sha256": "3b28d630a97d8a3ac5311671f2d7188c261b262e79bb433f4b8f2d9b4f2fe1a6",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/42/-1/-4_8.png",
+          "sha256": "1aaaf62005826c5156adf52d1dba051da3f114796a195112278a109364ffbb97",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/42/-1/-5_8.png",
+          "sha256": "a8be66ceb8c6af2fb502f125583704fb44ae5b4295f859223c09edf09f830a01",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/42/-2/-4_8.png",
+          "sha256": "f4885ae7021542152f7a66ddc17a6f7788a76c9f5e7f6d3dd401d03ddcfcd9f5",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/42/-2/-5_8.png",
+          "sha256": "a8be66ceb8c6af2fb502f125583704fb44ae5b4295f859223c09edf09f830a01",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/43/-1/-5_8.png",
+          "sha256": "a8ed300ba047a79b530b9776324cc5f3880d81952b3ea26a0294d2ef8ba80559",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/43/-1/-6_8.png",
+          "sha256": "4ed85f6fa53de7efa6064b70de819d71d97e46fb227f15e853ecf37033293883",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/43/-2/-5_8.png",
+          "sha256": "bc86551abf9507954db27a95db08176937455f398914570979b9976ec2dbd685",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/43/-2/-6_8.png",
+          "sha256": "b56dadd0a1f7b033c4ad64ff643626a6bf74d1d42eba9c48ae72209f1579dbe4",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/30/-1/0_7.png",
+          "sha256": "21fea48902367c24d561888e4c75a0d58b952009a95a4f434ddff6704ab592a8",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/30/-2/0_7.png",
+          "sha256": "63d8a7949702a7cb744a4810d3d44555e53a683719dc34ccde5ffdc64c0afbf3",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/30/-3/0_7.png",
+          "sha256": "373f67e7c5f103f240fa169350e60b43252c07074de6e1e895ac00737362316b",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/30/-4/0_7.png",
+          "sha256": "be1a1635db13d4c40424466d75a3ba4ef3a29109806239615e975456aa16efce",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/31/-1/-2_9.png",
+          "sha256": "a6fd4ea50dcc23884ac2105986490548e916ddfc5edf1d9a67f0937e3117196b",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/31/-1/-2_10.png",
+          "sha256": "654e3783d921fde343b72471fd1e912e51ce8b6433c186acd9c11f9f3f20d98f",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/31/-1/-3_8.png",
+          "sha256": "c4e33178283684d917321cbd212461966bd202e0d248ba98982f2b66d6db5b1b",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/31/-1/-3_9.png",
+          "sha256": "67796897bda6c0688ebd339519aa01ad1cd675931f841c5a65b5a482ddc21cdf",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/31/-1/-3_10.png",
+          "sha256": "6709fe222f0fcd2b7dee9d8902b1a677cdaad451c7b9e810b844d9eb113108f0",
+          "absent": false
+        },
+        {
+          "file": "tiles/906/31/-1/-4_9.png",
+          "sha256": "dce16d3a7a0f56d8e45f967f186b33dc4752c5dbb14ccacfe5adf8db3f07fa1e",
+          "absent": false
+        }
+      ]
+    },
+    "909": {
+      "hasLayers": true,
+      "layers": [
+        {
+          "id": "49",
+          "name": "明日阈限",
+          "floors": [
+            {
+              "id": "-1/49",
+              "name": "明日阈限",
+              "sort": 1,
+              "tiles": [
+                "/49/-1/1_1.png",
+                "/49/-1/2_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "50",
+          "name": "栖光岩窟",
+          "floors": [
+            {
+              "id": "-1/50",
+              "name": "栖光岩窟",
+              "sort": 1,
+              "tiles": [
+                "/50/-1/1_-1.png",
+                "/50/-1/1_0.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "51",
+          "name": "未竟残舍",
+          "floors": [
+            {
+              "id": "-1/51",
+              "name": "未竟残舍",
+              "sort": 1,
+              "tiles": [
+                "/51/-1/0_0.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "52",
+          "name": "虚妄摇篮",
+          "floors": [
+            {
+              "id": "-1/52",
+              "name": "入口·虚妄摇篮",
+              "sort": 1,
+              "tiles": [
+                "/52/-1/0_1.png"
+              ]
+            },
+            {
+              "id": "-2/52",
+              "name": "一层·虚妄摇篮",
+              "sort": 2,
+              "tiles": [
+                "/52/-2/0_1.png"
+              ]
+            },
+            {
+              "id": "-3/52",
+              "name": "二层·虚妄摇篮",
+              "sort": 3,
+              "tiles": [
+                "/52/-3/0_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "53",
+          "name": "锈丘",
+          "floors": [
+            {
+              "id": "-1/53",
+              "name": "锈丘",
+              "sort": 1,
+              "tiles": [
+                "/53/-1/2_0.png"
+              ]
+            }
+          ]
+        }
+      ],
+      "tiles": [
+        {
+          "file": "tiles/909/49/-1/1_1.png",
+          "sha256": "fdd869f2e15bff40a046070192e7a8c2555016477099e6163aac13688a4879ba",
+          "absent": false
+        },
+        {
+          "file": "tiles/909/49/-1/2_1.png",
+          "sha256": "1d142e0bef72b4de19c0710f27047b210e1068418b58236f9979284e9d395323",
+          "absent": false
+        },
+        {
+          "file": "tiles/909/50/-1/1_-1.png",
+          "sha256": "cf66ed1e423e0d5de812c1fe63389475763534a6c6c0d4b1154e59f976e49df6",
+          "absent": false
+        },
+        {
+          "file": "tiles/909/50/-1/1_0.png",
+          "sha256": "a200f546b5b30251b977be6e10d73b95b4831c837cdfd4af1452a3546b9c0bad",
+          "absent": false
+        },
+        {
+          "file": "tiles/909/51/-1/0_0.png",
+          "sha256": "c75a7173c15f776fd97be7403d91c59cee8c5c790e03f88971afde5edf16cd24",
+          "absent": false
+        },
+        {
+          "file": "tiles/909/52/-1/0_1.png",
+          "sha256": "77bf544332514b87031ef9f6685e235a52ba342f1cdeef3dc0ce747293fd6d1e",
+          "absent": false
+        },
+        {
+          "file": "tiles/909/52/-2/0_1.png",
+          "sha256": "8ffead15fefdf8ea312f703dfcf8fc1e3ff19c9905522a5880c668f0c07be784",
+          "absent": false
+        },
+        {
+          "file": "tiles/909/52/-3/0_1.png",
+          "sha256": "eec2d1c07ca1909e570fe683bcb24a87bc53b21024da263347de905908834fa1",
+          "absent": false
+        },
+        {
+          "file": "tiles/909/53/-1/2_0.png",
+          "sha256": "1916f05c11d621fd4b7720beec6006f202e840188312a33e960d721d1ed6b489",
+          "absent": false
+        }
+      ]
+    },
+    "910": {
+      "hasLayers": true,
+      "layers": [],
+      "tiles": []
+    }
+  }
+}

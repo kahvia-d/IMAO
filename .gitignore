@@ -26,6 +26,10 @@ tools/dotnet-sdk-8.0.424/
 # from scripts/Get-MapTileArchive.ps1. The hash manifest beside them is committed.
 map-regions/tiles/*/
 !map-regions/tiles/tiles.manifest.json
+# Layered-map ("分层") overlays are the same class of third-party asset, archived by
+# scripts/Get-MapLayerArchive.ps1 with layers.manifest.json carrying the hash list.
+map-regions/layers/*/
+!map-regions/layers/layers.manifest.json
 # Reference captures staged for a rebuild are copies of the user's game screenshots;
 # their source paths are recorded in map-regions/origins/ and the pack manifests.
 map-regions/references/
