@@ -1713,6 +1713,21 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		visualRequest.hintVersion = visualHintVersion;
 		visualRequest.normalizedMinimap = normalizedMinimap;
 		visualRequest.minimapFeatures = minMapFeatureData;
+		// Cold start: no scene and no position yet, so the image matcher would sweep the whole
+		// map - and inside a cave that sweep finds too little to pass geometric verification.
+		// The layered index knows where each cave is and this same frame said which one it is,
+		// so point the search there. It is a scope, not a position: a wrong guess fails and the
+		// existing fallback clears it and sweeps globally, exactly as before.
+		if (latestOcrHints.empty() && playerCurrentSceneId == 0) {
+			const auto scope = LayeredMap::ScopeHint();
+			if (scope.valid) {
+				latestOcrHints.push_back(VisualMapHint{ scope.sceneId, { scope.mapX, scope.mapY } });
+				++visualHintVersion;
+				Diagnostics::Record("layered-floor-scope-used", "scene=" + std::to_string(scope.sceneId) +
+					" floor=" + scope.floorId + " center=" + std::to_string(scope.mapX) + "," +
+					std::to_string(scope.mapY) + " hintVersion=" + std::to_string(visualHintVersion));
+			}
+		}
 		visualRequest.ocrHints = latestOcrHints;
 		visualRequest.requireOcrHint = !latestOcrHints.empty();
 		if (!GlobalVisualLocalizer::Submit(std::move(visualRequest))) return;

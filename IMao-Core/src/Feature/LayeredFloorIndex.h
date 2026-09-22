@@ -49,6 +49,11 @@ struct FloorEntry {
     int level = 0;         // "-1": lower (more negative) is deeper
     ImageFeatureData features;
     std::vector<FloorTile> tiles;
+    // Centre of the floor's footprint in map coordinates. A cold start has no position at
+    // all, and this is the only coordinate the layered index can offer to scope a search.
+    double centerMapX = 0.0;
+    double centerMapY = 0.0;
+    bool hasCenter = false;
 };
 
 struct Index {

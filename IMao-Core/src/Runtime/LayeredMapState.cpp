@@ -25,6 +25,7 @@ struct Entry {
 std::mutex stateMutex;
 std::vector<Entry> entries;
 Snapshot current;
+Scope scope;
 // A floor has to win `kSwitchFrames` classifications in a row before it is adopted, and
 // `kClearFrames` unknowns in a row before the state clears. Walking in and out of a cave
 // otherwise flickers the entire marker set on and off.
@@ -110,14 +111,55 @@ void Install(const std::filesystem::path& featureDataRoot) {
 }
 
 void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double mapX, double mapY) {
-    if (minimapFeatures.imgDescriptors.empty() || sceneId == 0) return;
+    if (minimapFeatures.imgDescriptors.empty()) return;
     const auto now = std::chrono::steady_clock::now();
+
+    // Cold start: no scene is known, so no position can be interpreted either. The minimap can
+    // still say which floor's cave it is looking at, and that floor's footprint is somewhere to
+    // point the localizer's sweep. Nothing is published from this - it is a search scope only.
+    if (sceneId == 0) {
+        std::vector<Entry> all;
+        {
+            std::lock_guard lock(stateMutex);
+            if (entries.empty()) return;
+            if (lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < kMinimumInterval) return;
+            lastClassifyAt = now;
+            all = entries;
+        }
+        std::vector<LayeredFloors::FloorEntry> floors;
+        floors.reserve(all.size());
+        for (const auto& entry : all) floors.push_back(entry.floor);
+        // The scope only has to pick the right cave, not confirm a position: a wrong guess
+        // costs one bounded search that falls back to the global sweep anyway.
+        const auto classification = LayeredFloors::Classify(minimapFeatures, floors, 4, 1.5);
+        std::lock_guard lock(stateMutex);
+        if (!classification.identified) return;
+        const auto found = std::find_if(all.begin(), all.end(), [&](const Entry& entry) {
+            return entry.floor.floorId == classification.floorId;
+        });
+        if (found == all.end() || !found->floor.hasCenter) return;
+        if (scope.valid && scope.floorId == classification.floorId && scope.sceneId == found->sceneId) return;
+        scope.valid = true;
+        scope.sceneId = found->sceneId;
+        scope.layerId = found->floor.layerId;
+        scope.floorId = found->floor.floorId;
+        scope.mapX = found->floor.centerMapX;
+        scope.mapY = found->floor.centerMapY;
+        Diagnostics::Record("layered-floor-scope", "scene=" + std::to_string(scope.sceneId) +
+            " region=" + found->regionId + " floor=" + scope.floorId + " name=" + found->floor.floorName +
+            " center=" + std::to_string(scope.mapX) + "," + std::to_string(scope.mapY) +
+            " matches=" + std::to_string(classification.winnerMatches) +
+            " runnerUp=" + std::to_string(classification.runnerUpMatches));
+        return;
+    }
 
     std::vector<Entry> candidates;
     bool restricted = false;
     std::string containing;
     {
         std::lock_guard lock(stateMutex);
+        // A scene is known again, so the cold-start scope has done its job.
+        if (scope.valid) scope = Scope{};
         if (entries.empty()) return;
         if (lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < kMinimumInterval) return;
         lastClassifyAt = now;
@@ -227,6 +269,11 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     }
 }
 
+Scope ScopeHint() {
+    std::lock_guard lock(stateMutex);
+    return scope;
+}
+
 Snapshot Read() {
     std::lock_guard lock(stateMutex);
     return current;
@@ -261,6 +308,7 @@ void Reset() {
     std::lock_guard lock(stateMutex);
     entries.clear();
     current = Snapshot{};
+    scope = Scope{};
     pendingFloorId.clear();
     pendingCount = 0;
     unknownCount = 0;

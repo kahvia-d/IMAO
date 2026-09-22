@@ -46,15 +46,37 @@ struct Snapshot {
     std::uint64_t revision = 0;
 };
 
+/// Where to point a search when the tool has no position at all yet.
+///
+/// A cold start has no prior, so the localizer sweeps the whole map; inside a cave that sweep
+/// finds about eight mutual matches and fails geometric verification. The layered index does
+/// know where each floor's cave is, and the same minimap frame says which floor it is, so a
+/// cold start can be scoped to that floor instead of the entire map. It is a search scope, not
+/// a position: nothing is published from it, and a wrong guess only costs one bounded search.
+struct Scope {
+    bool valid = false;
+    int sceneId = 0;
+    int layerId = 0;
+    std::string floorId;
+    double mapX = 0.0;
+    double mapY = 0.0;
+};
+
 /// Loads every <featureDataRoot>/KuroTilePacks/<region>/layered-floors index. A pack
 /// without one is normal - most regions have no layered maps - and is simply skipped.
 void Install(const std::filesystem::path& featureDataRoot);
 
-/// Classifies one minimap capture and debounces the answer into the state. `mapX`/`mapY` are
-/// the player's current map coordinate: they decide whether the player is still standing in
-/// the known floor's cave, which is what keeps the answer stable where the imagery alone is
-/// too weak to re-confirm it every frame.
+/// Classifies one minimap capture and debounces the answer into the state.
+///
+/// `sceneId` is 0 before the first localisation: that is the cold start, and there the call
+/// only refreshes the search scope (see ScopeHint) because there is no position to interpret
+/// a floor against. Once a scene is known, `mapX`/`mapY` are the player's map coordinate and
+/// decide whether the player is still standing in the known floor's cave, which is what keeps
+/// the answer stable where the imagery alone is too weak to re-confirm it every frame.
 void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double mapX, double mapY);
+
+/// The current cold-start search scope; invalid once a scene is known.
+Scope ScopeHint();
 
 Snapshot Read();
 

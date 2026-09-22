@@ -42,6 +42,20 @@ int FloorLayerId(const std::string& floorId) {
     }
 }
 
+/// Centre of one occupancy cell in map coordinates - the inverse of the mapping Contains uses.
+void MapPointOfCell(const Transform& transform, int tileX, int tileY, int cellX, int cellY,
+    double& mapX, double& mapY) {
+    const double cell = transform.tileSize / transform.gridSize;
+    const double pixelX = (cellX + 0.5) * cell;
+    const double pixelY = (cellY + 0.5) * cell;
+    const double kuroX = static_cast<double>(tileX) * transform.tileSize + pixelX;
+    const double kuroY = static_cast<double>(tileY) * transform.tileSize - pixelY;
+    const double gameX = (kuroX - transform.tileSize) * transform.virtualMapSize / transform.tileSize;
+    const double gameY = -kuroY * transform.virtualMapSize / transform.tileSize;
+    mapX = gameX * transform.scale + transform.originX;
+    mapY = gameY * transform.scale + transform.originY;
+}
+
 bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error) {
     index.floors.clear();
     const auto indexPath = packDirectory / "layered-floors" / "floor-index.json";
@@ -117,6 +131,30 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
             error = "layered floor " + entry.floorId + " has an invalid feature set";
             return false;
         }
+        // The footprint centre, so a cold start has somewhere to point its search.
+        double sumX = 0.0, sumY = 0.0;
+        std::size_t cells = 0;
+        const auto bitsPerTile = static_cast<std::size_t>(index.transform.gridSize) * index.transform.gridSize;
+        for (const auto& tile : entry.tiles) {
+            if (tile.occupancy.size() * 4 != bitsPerTile) continue;
+            for (std::size_t bit = 0; bit < bitsPerTile; ++bit) {
+                const char nibble = tile.occupancy[bit / 4];
+                const int value = nibble >= '0' && nibble <= '9' ? nibble - '0'
+                    : (nibble >= 'a' && nibble <= 'f' ? nibble - 'a' + 10
+                        : (nibble >= 'A' && nibble <= 'F' ? nibble - 'A' + 10 : 0));
+                if (((value >> (bit % 4)) & 1) == 0) continue;
+                double cellX = 0.0, cellY = 0.0;
+                MapPointOfCell(index.transform, tile.x, tile.y,
+                    static_cast<int>(bit % index.transform.gridSize),
+                    static_cast<int>(bit / index.transform.gridSize), cellX, cellY);
+                sumX += cellX; sumY += cellY; ++cells;
+            }
+        }
+        if (cells > 0) {
+            entry.centerMapX = sumX / static_cast<double>(cells);
+            entry.centerMapY = sumY / static_cast<double>(cells);
+            entry.hasCenter = true;
+        }
         index.floors.push_back(std::move(entry));
     }
     if (index.floors.empty()) {
@@ -126,8 +164,7 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
     return true;
 }
 
-bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY) {
-    // Inverse of the builder's KuroTilePointToAppMap: map -> game -> tile pixel -> grid cell.
+bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY) {    // Inverse of the builder's KuroTilePointToAppMap: map -> game -> tile pixel -> grid cell.
     const double gameX = (mapX - transform.originX) / transform.scale;
     const double gameY = (mapY - transform.originY) / transform.scale;
     const int tileX = static_cast<int>(std::floor(gameX / transform.virtualMapSize + 1.0));
