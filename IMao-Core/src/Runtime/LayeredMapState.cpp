@@ -14,6 +14,9 @@ namespace {
 
 struct Entry {
     int sceneId = 0;
+    // ItemDatas::layer::stateId carries the Kuro state (World = 8), NOT the runtime scene id
+    // (World = 1). RoleFor compares that field, so the state has to be kept alongside.
+    int kuroStateId = 0;
     std::string regionId;
     LayeredFloors::FloorEntry floor;
 };
@@ -64,16 +67,19 @@ void Install(const std::filesystem::path& featureDataRoot) {
         const auto packRoot = directory.path();
         if (!std::filesystem::exists(packRoot / "layered-floors" / "floor-index.json")) continue;
         int sceneId = 0;
+        int kuroStateId = 0;
         try {
             std::ifstream manifest(packRoot / "manifest.json");
             if (manifest) {
                 nlohmann::json json;
                 manifest >> json;
                 sceneId = json.value("sceneId", 0);
+                kuroStateId = json["source"].value("state", 0);
             }
         }
         catch (...) {
             sceneId = 0;
+            kuroStateId = 0;
         }
         std::vector<LayeredFloors::FloorEntry> floors;
         std::string loadError;
@@ -83,9 +89,9 @@ void Install(const std::filesystem::path& featureDataRoot) {
             continue;
         }
         const auto region = packRoot.filename().string();
-        for (auto& floor : floors) loaded.push_back(Entry{sceneId, region, std::move(floor)});
+        for (auto& floor : floors) loaded.push_back(Entry{sceneId, kuroStateId, region, std::move(floor)});
         Diagnostics::Record("layered-floor-index", "region=" + region + " scene=" + std::to_string(sceneId) +
-            " floors=" + std::to_string(floors.size()));
+            " kuroState=" + std::to_string(kuroStateId) + " floors=" + std::to_string(floors.size()));
     }
 
     std::lock_guard lock(stateMutex);
@@ -138,6 +144,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId) {
             });
             current.active = true;
             current.sceneId = sceneId;
+            current.kuroStateId = found == candidates.end() ? 0 : found->kuroStateId;
             current.floorId = classification.floorId;
             current.level = found == candidates.end() ? LayeredFloors::FloorLevel(classification.floorId) : found->floor.level;
             current.layerId = found == candidates.end() ? LayeredFloors::FloorLayerId(classification.floorId) : found->floor.layerId;
@@ -186,13 +193,24 @@ Snapshot Read() {
 MarkerRole RoleFor(const ItemDatas& item) {
     const auto state = Read();
     if (!state.active) return MarkerRole::Normal;
-    // A marker from another scene is not this state's business.
-    if (item.layer.stateId != 0 && item.layer.stateId != state.sceneId) return MarkerRole::Normal;
-    const auto& floorId = item.layer.floorId;
-    if (floorId.empty()) return MarkerRole::Hidden;             // surface collectible
+    // The marker carries the Kuro state (World = 8); the state holds that same field. Keeping
+    // the two id spaces apart is what makes this check meaningful - comparing it against the
+    // runtime scene id matched nothing and silently skipped every layered rule.
+    if (item.layer.stateId != 0 && state.kuroStateId != 0 && item.layer.stateId != state.kuroStateId) {
+        return MarkerRole::Normal;
+    }
+
+    // The two fields mean different things, which is easy to get backwards: the point's
+    // `floorId` names the LAYERED MAP ("1" = 叩天关, "48" = 元林再生舱) and its `level` names
+    // the floor inside that map ("-2/1"). The classifier reports the floor id.
+    const auto& mapId = item.layer.floorId;
+    const auto& floorId = item.layer.level;
+    if (mapId.empty() || floorId.empty()) return MarkerRole::Hidden; // plain surface collectible
+    const int level = LayeredFloors::FloorLevel(floorId);
+    // An entrance marker ("-1000000/1") and a floor-less point ("0") sit on the surface.
+    if (level == 0 || level <= -1000000) return MarkerRole::Hidden;
     if (floorId == state.floorId) return MarkerRole::Current;
     if (LayeredFloors::FloorLayerId(floorId) != state.layerId) return MarkerRole::Hidden; // another layered map
-    const auto level = LayeredFloors::FloorLevel(floorId);
     // More negative is deeper: "-1" is the top floor, "-3" the bottom.
     return level < state.level ? MarkerRole::Below : MarkerRole::Above;
 }
@@ -206,6 +224,11 @@ void Reset() {
     unknownCount = 0;
     lastClassifyAt = std::chrono::steady_clock::time_point{};
     lastReportAt = std::chrono::steady_clock::time_point{};
+}
+
+void SetForTest(const Snapshot& snapshot) {
+    std::lock_guard lock(stateMutex);
+    current = snapshot;
 }
 
 } // namespace LayeredMap

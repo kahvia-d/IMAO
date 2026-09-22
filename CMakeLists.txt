@@ -349,6 +349,24 @@ target_include_directories(IMaoMarkerTests PRIVATE
 set_target_properties(IMaoMarkerTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoMarkerTests COMMAND IMaoMarkerTests)
 
+# The layered marker rules depend on two id spaces that are easy to confuse, so the mapping
+# is pinned here rather than only by playing the game.
+add_executable(IMaoLayeredMapTests
+    IMao-Core/tests/LayeredMapTests.cpp
+    IMao-Core/src/Runtime/LayeredMapState.cpp
+    IMao-Core/src/Runtime/StructuredLogger.cpp
+    IMao-Core/src/Diagnostics/Diagnostics.cpp
+    IMao-Core/src/Feature/LayeredFloorIndex.cpp
+    IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
+    IMao-Core/src/Feature/Processing/FeatureProcessing.cpp
+)
+target_include_directories(IMaoLayeredMapTests PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
+set_target_properties(IMaoLayeredMapTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+target_link_libraries(IMaoLayeredMapTests PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib psapi.lib)
+add_test(NAME IMaoLayeredMapTests COMMAND IMaoLayeredMapTests)
+
 add_executable(IMaoRoutePlanningTests IMao-Core/tests/RoutePlanningTests.cpp)
 target_include_directories(IMaoRoutePlanningTests PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src

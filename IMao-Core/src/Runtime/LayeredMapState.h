@@ -32,7 +32,12 @@ enum class MarkerRole {
 
 struct Snapshot {
     bool active = false;
+    /// The runtime scene (World = 1). Index entries are filtered by this.
     int sceneId = 0;
+    /// The Kuro state the floor's tiles come from (World = 8). Markers carry THIS in
+    /// ItemDatas::layer::stateId, not the scene id, so the two must not be confused: doing
+    /// so silently matched nothing and every layered rule was skipped.
+    int kuroStateId = 0;
     /// The layered map the floor belongs to (叩天关 = 1). Two layered maps can share a tile
     /// coordinate, so "above/below" only means anything within one of them.
     int layerId = 0;
@@ -57,5 +62,9 @@ MarkerRole RoleFor(const ItemDatas& item);
 
 /// For tests and for tearing the app down.
 void Reset();
+
+/// Test hook: installs a state directly, so the marker-role mapping (which id field means
+/// what) can be pinned by a unit test instead of only by playing the game.
+void SetForTest(const Snapshot& snapshot);
 
 }
