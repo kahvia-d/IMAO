@@ -19,6 +19,7 @@ struct Entry {
     int kuroStateId = 0;
     std::string regionId;
     LayeredFloors::FloorEntry floor;
+    LayeredFloors::Transform transform;
 };
 
 std::mutex stateMutex;
@@ -28,7 +29,9 @@ Snapshot current;
 // `kClearFrames` unknowns in a row before the state clears. Walking in and out of a cave
 // otherwise flickers the entire marker set on and off.
 constexpr int kSwitchFrames = 3;
-constexpr int kClearFrames = 5;
+// Long enough that a stretch of weak classifications cannot end a floor the player never left
+// (see the footprint check in ObserveMinimap, which normally decides this on its own).
+constexpr int kClearFrames = 10;
 std::string pendingFloorId;
 int pendingCount = 0;
 int unknownCount = 0;
@@ -82,16 +85,19 @@ void Install(const std::filesystem::path& featureDataRoot) {
             kuroStateId = 0;
         }
         std::vector<LayeredFloors::FloorEntry> floors;
+        LayeredFloors::Index index;
         std::string loadError;
-        if (!LayeredFloors::Load(packRoot, floors, loadError)) {
+        if (!LayeredFloors::Load(packRoot, index, loadError)) {
             Diagnostics::Record("layered-floor-index", "region=" + directory.path().filename().string() +
                 " loaded=0 error=" + loadError);
             continue;
         }
         const auto region = packRoot.filename().string();
-        for (auto& floor : floors) loaded.push_back(Entry{sceneId, kuroStateId, region, std::move(floor)});
+        for (auto& floor : index.floors) {
+            loaded.push_back(Entry{sceneId, kuroStateId, region, std::move(floor), index.transform});
+        }
         Diagnostics::Record("layered-floor-index", "region=" + region + " scene=" + std::to_string(sceneId) +
-            " kuroState=" + std::to_string(kuroStateId) + " floors=" + std::to_string(floors.size()));
+            " kuroState=" + std::to_string(kuroStateId) + " floors=" + std::to_string(index.floors.size()));
     }
 
     std::lock_guard lock(stateMutex);
@@ -103,7 +109,7 @@ void Install(const std::filesystem::path& featureDataRoot) {
     Diagnostics::Record("layered-floor-index", "stage=ready floors=" + std::to_string(entries.size()));
 }
 
-void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId) {
+void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double mapX, double mapY) {
     if (minimapFeatures.imgDescriptors.empty() || sceneId == 0) return;
     const auto now = std::chrono::steady_clock::now();
 
@@ -163,7 +169,17 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId) {
         pendingFloorId.clear();
         pendingCount = 0;
         ++unknownCount;
-        if (current.active && unknownCount >= kClearFrames) {
+        // The imagery alone is not decisive: at some spots inside 眠龙庭·上层 the correct floor
+        // scores 4-11 against a threshold of 10 while surface frames reach 6, so requiring a
+        // fresh identification every few seconds made the state flicker on and off. Once a
+        // floor is known, it is kept for as long as the player is standing in that floor's
+        // cave; leaving the cave (or a position jump) is what ends it.
+        const auto active = std::find_if(entries.begin(), entries.end(), [&](const Entry& entry) {
+            return entry.floor.floorId == current.floorId && entry.sceneId == current.sceneId;
+        });
+        const bool stillInside = current.active && active != entries.end() &&
+            LayeredFloors::Contains(active->floor, active->transform, mapX, mapY);
+        if (current.active && unknownCount >= kClearFrames && !stillInside) {
             const auto previous = current.floorId;
             current = Snapshot{};
             ++current.revision;

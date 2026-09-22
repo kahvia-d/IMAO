@@ -19,6 +19,7 @@ param(
     [string]$RegionId,
     [string]$SourceRoot,
     [string]$CompositeRoot,
+    [string]$LayerArchiveRoot,
     [string]$OutputRoot,
     [string]$Version = 'B50F4135DCCC4D8DA87ED33CE95EA31D',
     [ValidateSet('k100', 'k035')]
@@ -31,6 +32,7 @@ $ErrorActionPreference = 'Stop'
 if (-not $SourceRoot) { $SourceRoot = Split-Path -Parent $PSScriptRoot }
 $SourceRoot = [IO.Path]::GetFullPath($SourceRoot)
 if (-not $CompositeRoot) { $CompositeRoot = Join-Path $SourceRoot "out/map-regions/composite/$RegionId/$Factor" }
+if (-not $LayerArchiveRoot) { $LayerArchiveRoot = Join-Path $SourceRoot 'map-regions/layers' }
 if (-not $OutputRoot) { $OutputRoot = Join-Path $SourceRoot "out/map-regions/packs/$RegionId/layered-floors" }
 
 $builder = Join-Path $SourceRoot 'x64/RelWithDebInfo/KuroMapFeatureBuilder.exe'
@@ -54,6 +56,39 @@ if ($tiles.Count -eq 0) { throw "The composite manifest has no tiles for $Factor
 
 $state = [int]$compositeManifest.frame
 $originX = 2474.0; $originY = 1957.0; $scale = 1.205
+
+# Coarse "is the player standing inside this floor's cave" mask: the overlay's alpha
+# downsampled to a 64x64 grid per tile (16 px cells), written as hex. The classifier's vote
+# count alone is not enough - on a real 眠龙庭·上层 position it scored 4-11 against a
+# threshold of 10 while surface frames reach 6 - but the floors' footprints barely overlap
+# (IoU 13.7% between 上层 and 下层 on the same tile), so containment separates them.
+$gridSize = 64
+$cell = 1024 / $gridSize
+
+Add-Type -AssemblyName System.Drawing
+
+function Get-OccupancyHex([string]$overlayPath) {
+    $bitmap = [System.Drawing.Bitmap]::FromFile($overlayPath)
+    $bytes = New-Object byte[] ($gridSize * $gridSize)
+    for ($gy = 0; $gy -lt $gridSize; ++$gy) {
+        for ($gx = 0; $gx -lt $gridSize; ++$gx) {
+            $opaque = 0
+            for ($y = [int]($gy * $cell); $y -lt [int](($gy + 1) * $cell) -and $opaque -eq 0; $y += 4) {
+                for ($x = [int]($gx * $cell); $x -lt [int](($gx + 1) * $cell); $x += 4) {
+                    if ($bitmap.GetPixel($x, $y).A -gt 8) { $opaque = 1; break }
+                }
+            }
+            $bytes[$gy * $gridSize + $gx] = $opaque
+        }
+    }
+    $bitmap.Dispose()
+    $hex = New-Object System.Text.StringBuilder ($gridSize * $gridSize / 4)
+    for ($i = 0; $i -lt $bytes.Length; $i += 4) {
+        $nibble = $bytes[$i] -bor ($bytes[$i + 1] -shl 1) -bor ($bytes[$i + 2] -shl 2) -bor ($bytes[$i + 3] -shl 3)
+        [void]$hex.Append('0123456789abcdef'[$nibble])
+    }
+    return $hex.ToString()
+}
 
 $groups = $tiles | Group-Object { "L$($_.layerId)|$($_.floorId)" }
 Write-Host ("Region {0}: {1} floor groups over {2} composite tiles ({3})" -f $RegionId, $groups.Count, $tiles.Count, $Factor)
@@ -103,7 +138,11 @@ foreach ($group in $groups | Sort-Object Name) {
         layerId = $layerId; floorId = $floorId
         layerName = [string]$first.layerName; floorName = [string]$first.floorName
         file = "$tag.imf"; keypointCount = $keypoints
-        tiles = @($group.Group | ForEach-Object { [ordered]@{ x = [int]$_.x; y = [int]$_.y } })
+        tiles = @($group.Group | ForEach-Object {
+            $overlayPath = Join-Path $LayerArchiveRoot "$Version/$state/$($_.overlay)"
+            $occupancy = if (Test-Path -LiteralPath $overlayPath) { Get-OccupancyHex $overlayPath } else { '' }
+            [ordered]@{ x = [int]$_.x; y = [int]$_.y; occupancy = $occupancy }
+        })
     })
     Write-Host ("  {0,-16} {1,-22} keypoints={2,6}  tiles={3}" -f $tag, $first.floorName, $keypoints, $group.Count)
 }
@@ -114,6 +153,9 @@ $index = [ordered]@{
     frame = $state
     baseFactor = [double]$factorNode.Value.baseFactor
     tileResourceVersion = $Version
+    # Needed to turn a runtime map coordinate into a tile pixel when testing the footprints.
+    coordinateTransform = [ordered]@{ originX = $originX; originY = $originY; scale = $scale; virtualMapSize = 850.0; tileSize = 1024 }
+    gridSize = $gridSize
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
     floors = @($entries)
 }

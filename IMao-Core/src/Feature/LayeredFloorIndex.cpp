@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 
 using json = nlohmann::json;
@@ -41,8 +42,8 @@ int FloorLayerId(const std::string& floorId) {
     }
 }
 
-bool Load(const std::filesystem::path& packDirectory, std::vector<FloorEntry>& floors, std::string& error) {
-    floors.clear();
+bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error) {
+    index.floors.clear();
     const auto indexPath = packDirectory / "layered-floors" / "floor-index.json";
     if (!std::filesystem::exists(indexPath)) {
         error = "no layered floor index at " + indexPath.string();
@@ -53,21 +54,34 @@ bool Load(const std::filesystem::path& packDirectory, std::vector<FloorEntry>& f
         error = "cannot open " + indexPath.string();
         return false;
     }
-    json index;
+    json parsed;
     try {
-        input >> index;
+        input >> parsed;
     }
     catch (const std::exception& exception) {
         error = "cannot parse " + indexPath.string() + ": " + exception.what();
         return false;
     }
-    if (index.value("formatVersion", 0) != 1) {
+    if (parsed.value("formatVersion", 0) != 1) {
         error = "unsupported layered floor index format";
         return false;
     }
-    const auto entries = index.find("floors");
-    if (entries == index.end() || !entries->is_array()) {
+    const auto entries = parsed.find("floors");
+    if (entries == parsed.end() || !entries->is_array()) {
         error = "layered floor index has no floors array";
+        return false;
+    }
+    const auto transformNode = parsed.find("coordinateTransform");
+    if (transformNode != parsed.end() && transformNode->is_object()) {
+        index.transform.originX = transformNode->value("originX", index.transform.originX);
+        index.transform.originY = transformNode->value("originY", index.transform.originY);
+        index.transform.scale = transformNode->value("scale", index.transform.scale);
+        index.transform.virtualMapSize = transformNode->value("virtualMapSize", index.transform.virtualMapSize);
+        index.transform.tileSize = transformNode->value("tileSize", index.transform.tileSize);
+    }
+    index.transform.gridSize = parsed.value("gridSize", index.transform.gridSize);
+    if (index.transform.gridSize <= 0 || index.transform.scale <= 0.0) {
+        error = "layered floor index has an invalid transform";
         return false;
     }
     const auto root = indexPath.parent_path();
@@ -83,6 +97,16 @@ bool Load(const std::filesystem::path& packDirectory, std::vector<FloorEntry>& f
             error = "layered floor index entry is missing floorId or file";
             return false;
         }
+        const auto tiles = node.find("tiles");
+        if (tiles != node.end() && tiles->is_array()) {
+            for (const auto& tile : *tiles) {
+                FloorTile parsedTile;
+                parsedTile.x = tile.value("x", 0);
+                parsedTile.y = tile.value("y", 0);
+                parsedTile.occupancy = ReadString(tile, "occupancy");
+                entry.tiles.push_back(std::move(parsedTile));
+            }
+        }
         std::string loadError;
         if (!FeatureBinaryCodec::Load(root / file, entry.features, loadError)) {
             error = "cannot load " + (root / file).string() + ": " + loadError;
@@ -93,13 +117,52 @@ bool Load(const std::filesystem::path& packDirectory, std::vector<FloorEntry>& f
             error = "layered floor " + entry.floorId + " has an invalid feature set";
             return false;
         }
-        floors.push_back(std::move(entry));
+        index.floors.push_back(std::move(entry));
     }
-    if (floors.empty()) {
+    if (index.floors.empty()) {
         error = "layered floor index lists no floors";
         return false;
     }
     return true;
+}
+
+bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY) {
+    // Inverse of the builder's KuroTilePointToAppMap: map -> game -> tile pixel -> grid cell.
+    const double gameX = (mapX - transform.originX) / transform.scale;
+    const double gameY = (mapY - transform.originY) / transform.scale;
+    const int tileX = static_cast<int>(std::floor(gameX / transform.virtualMapSize + 1.0));
+    const int tileY = static_cast<int>(std::ceil(-gameY / transform.virtualMapSize));
+    const double pixelX = gameX * transform.tileSize / transform.virtualMapSize + transform.tileSize -
+        static_cast<double>(tileX) * transform.tileSize;
+    const double pixelY = static_cast<double>(tileY) * transform.tileSize +
+        gameY * transform.tileSize / transform.virtualMapSize;
+    const double cell = transform.tileSize / transform.gridSize;
+    if (pixelX < 0.0 || pixelY < 0.0 || pixelX >= transform.tileSize || pixelY >= transform.tileSize) return false;
+    const int cellX = static_cast<int>(pixelX / cell);
+    const int cellY = static_cast<int>(pixelY / cell);
+    for (const auto& tile : floor.tiles) {
+        if (tile.x != tileX || tile.y != tileY) continue;
+        const auto bits = static_cast<std::size_t>(transform.gridSize) * transform.gridSize;
+        if (tile.occupancy.size() * 4 != bits) return false;
+        // One cell of slack: the player's position is accurate to a couple of map pixels and
+        // the cave edge is exactly where a strict test would flicker.
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                const int gx = cellX + dx;
+                const int gy = cellY + dy;
+                if (gx < 0 || gy < 0 || gx >= transform.gridSize || gy >= transform.gridSize) continue;
+                const auto bit = static_cast<std::size_t>(gy) * transform.gridSize + gx;
+                const char nibble = tile.occupancy[bit / 4];
+                const int value = nibble >= '0' && nibble <= '9' ? nibble - '0'
+                    : (nibble >= 'a' && nibble <= 'f' ? nibble - 'a' + 10
+                        : (nibble >= 'A' && nibble <= 'F' ? nibble - 'A' + 10 : 0));
+                // The writer packs four cells per nibble, first cell in the lowest bit.
+                if ((value >> (bit % 4)) & 1) return true;
+            }
+        }
+        return false;
+    }
+    return false;
 }
 
 Classification Classify(const ImageFeatureData& query, const std::vector<FloorEntry>& floors,

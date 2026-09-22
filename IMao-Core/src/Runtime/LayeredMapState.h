@@ -50,9 +50,11 @@ struct Snapshot {
 /// without one is normal - most regions have no layered maps - and is simply skipped.
 void Install(const std::filesystem::path& featureDataRoot);
 
-/// Classifies one minimap capture and debounces the answer into the state. Cheap enough to
-/// call per capture, but it rate-limits itself, so callers do not need to.
-void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId);
+/// Classifies one minimap capture and debounces the answer into the state. `mapX`/`mapY` are
+/// the player's current map coordinate: they decide whether the player is still standing in
+/// the known floor's cave, which is what keeps the answer stable where the imagery alone is
+/// too weak to re-confirm it every frame.
+void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double mapX, double mapY);
 
 Snapshot Read();
 

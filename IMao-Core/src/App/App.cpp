@@ -1091,8 +1091,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		minimapDiagnostics.retainedKeypointCount, minimapDiagnostics.dynamicMaskPercent);
 	// Which floor of a layered map this capture belongs to. The classifier is cheap and
 	// rate-limits itself; an unknown answer must never disturb the marker display, so all
-	// debouncing lives in LayeredMapState.
-	LayeredMap::ObserveMinimap(minMapFeatureData, playerCurrentSceneId);
+	// debouncing lives in LayeredMapState. The last accepted position tells it whether the
+	// player is still standing in the known floor's cave.
+	LayeredMap::ObserveMinimap(minMapFeatureData, playerCurrentSceneId,
+		lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
 	if (std::chrono::steady_clock::now() - lastMinimapFeatureReportAt >= std::chrono::seconds(2)) {
 		lastMinimapFeatureReportAt = std::chrono::steady_clock::now();
 		Diagnostics::Record("minimap-feature-mask", "raw=" + std::to_string(minimapDiagnostics.rawKeypointCount) +

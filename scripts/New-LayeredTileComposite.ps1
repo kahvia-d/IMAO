@@ -197,6 +197,9 @@ foreach ($factor in @($BaseFactor | Sort-Object -Descending)) {
             layerId = $record.layerId; layerName = $record.layerName
             floorId = $record.floorId; floorName = $record.floorName
             opaqueSamples = $record.opaqueSamples
+            # Kept so the floor index can read this floor's own alpha mask without having to
+            # guess the upstream path layout again.
+            overlay = "$($record.layerId)/$(([string]$record.floorId -split '/')[0])/$($record.x)_$($record.y).png"
             sha256 = (Get-FileHash -LiteralPath $outPath -Algorithm SHA256).Hash.ToLowerInvariant()
         })
     }

@@ -19,6 +19,25 @@
 // every layered marker the same way they do today.
 namespace LayeredFloors {
 
+/// One tile of a floor, with a coarse "the player is standing inside this floor's cave" mask:
+/// the overlay's alpha downsampled to a gridSize x gridSize bit grid, packed as hex.
+struct FloorTile {
+    int x = 0;
+    int y = 0;
+    std::string occupancy; // gridSize*gridSize bits, big-endian nibbles, row-major
+};
+
+/// The index's coordinate transform, needed to turn a runtime map coordinate into a tile
+/// pixel so the occupancy grids can be queried.
+struct Transform {
+    double originX = 0.0;
+    double originY = 0.0;
+    double scale = 1.0;
+    double virtualMapSize = 850.0;
+    double tileSize = 1024.0;
+    int gridSize = 64;
+};
+
 struct FloorEntry {
     // The layered map this floor belongs to (the denominator of floorId): 叩天关 is 1,
     // 环木阙 2, 眠龙庭 3. Two different layered maps can occupy the same tile coordinate,
@@ -29,6 +48,12 @@ struct FloorEntry {
     std::string floorName; // "叩天关·上层"
     int level = 0;         // "-1": lower (more negative) is deeper
     ImageFeatureData features;
+    std::vector<FloorTile> tiles;
+};
+
+struct Index {
+    std::vector<FloorEntry> floors;
+    Transform transform;
 };
 
 struct FloorVote {
@@ -50,7 +75,13 @@ struct Classification {
 /// Reads <packDirectory>/layered-floors/floor-index.json plus the .imf files it names.
 /// Returns false only on a malformed index; a missing index is (false, ...) with `error`
 /// describing it, and the caller decides whether that matters.
-bool Load(const std::filesystem::path& packDirectory, std::vector<FloorEntry>& floors, std::string& error);
+bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error);
+
+/// True when the map coordinate falls inside this floor's cave. One coordinate can be inside
+/// several floors' footprints only where two caves overlap, and it is inside none of them out
+/// on the surface - but note that standing on the surface ABOVE a cave shares the coordinate,
+/// so containment can never decide "am I in a layer", only "which one".
+bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY);
 
 /// Votes every floor against the query descriptors and returns the winner. `identified` is
 /// false when the winner has too few matches or does not lead the runner-up by `margin`,

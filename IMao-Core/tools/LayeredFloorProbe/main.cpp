@@ -25,7 +25,7 @@ namespace {
 void PrintUsage() {
     std::cerr <<
         "Usage: IMaoLayeredFloorProbe --pack <pack dir> --reference <png>\n"
-        "       [--full-snapshot] [--crop x,y,w,h] [--hessian N] [--min-matches N]\n"
+        "       [--full-snapshot] [--crop x,y,w,h] [--map x,y] [--hessian N] [--min-matches N]\n"
         "       [--margin X] [--ratio X] [--max-distance X] [--no-mask]\n";
 }
 
@@ -71,6 +71,10 @@ int main(int argc, char** argv) {
     bool useMask = true;
     cv::Rect crop;
     double hessian = 60.0;
+    // Optional player map coordinate, so the footprint check can be exercised alongside the vote.
+    bool hasAnchor = false;
+    double anchorX = 0.0;
+    double anchorY = 0.0;
     // Same defaults the runtime classifier ships with; see LayeredFloorIndex.h for the
     // calibration these came from.
     int minimumMatches = 10;
@@ -102,6 +106,13 @@ int main(int argc, char** argv) {
                 stream >> x >> y >> w >> h;
                 crop = cv::Rect(x, y, w, h);
             }
+            else if (argument == "--map") {
+                std::string value = next("--map");
+                std::replace(value.begin(), value.end(), ',', ' ');
+                std::istringstream stream(value);
+                stream >> anchorX >> anchorY;
+                hasAnchor = true;
+            }
             else { PrintUsage(); return 2; }
         }
         catch (const std::exception& exception) {
@@ -112,12 +123,13 @@ int main(int argc, char** argv) {
     if (packDirectory.empty() || referencePath.empty()) { PrintUsage(); return 2; }
 
     try {
-        std::vector<LayeredFloors::FloorEntry> floors;
+        LayeredFloors::Index index;
         std::string error;
-        if (!LayeredFloors::Load(packDirectory, floors, error)) {
+        if (!LayeredFloors::Load(packDirectory, index, error)) {
             std::cerr << "floor index unavailable: " << error << '\n';
             return 1;
         }
+        const auto& floors = index.floors;
         std::cout << "floor index: " << floors.size() << " floors from " << packDirectory << '\n';
 
         const cv::Mat frame = cv::imread(referencePath.string(), cv::IMREAD_COLOR);
@@ -156,6 +168,19 @@ int main(int argc, char** argv) {
             << " runnerUp=" << classification.runnerUpMatches
             << " (min=" << minimumMatches << " margin=" << margin << " ratio=" << ratio
             << " maxDistance=" << maxDistance << ")\n";
+        if (hasAnchor) {
+            // Footprint report: what the state machine uses to keep a floor the imagery alone
+            // can no longer re-confirm every frame.
+            std::cout << "footprint at map (" << anchorX << "," << anchorY << "):\n";
+            for (const auto& floor : floors) {
+                const bool inside = LayeredFloors::Contains(floor, index.transform, anchorX, anchorY);
+                const bool voted = floor.floorId == classification.floorId;
+                if (inside || voted) {
+                    std::cout << "  " << (inside ? "INSIDE " : "outside") << " " << floor.floorId
+                        << "  " << floor.floorName << (voted ? "   (top vote)" : "") << '\n';
+                }
+            }
+        }
         return classification.identified ? 0 : 1;
     }
     catch (const std::exception& exception) {

@@ -74,8 +74,7 @@ int main() {
             "clearing the floor must restore the badge behaviour");
 
         std::cout << "Layered marker role tests passed\n";
-        return 0;
-    }
+        return 0;    }
     catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
