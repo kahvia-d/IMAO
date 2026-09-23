@@ -56,7 +56,8 @@ void MapPointOfCell(const Transform& transform, int tileX, int tileY, int cellX,
     mapY = gameY * transform.scale + transform.originY;
 }
 
-bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error) {
+bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error,
+    int maxKeypointsPerFloor) {
     index.floors.clear();
     const auto indexPath = packDirectory / "layered-floors" / "floor-index.json";
     if (!std::filesystem::exists(indexPath)) {
@@ -125,6 +126,26 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
         if (!FeatureBinaryCodec::Load(root / file, entry.features, loadError)) {
             error = "cannot load " + (root / file).string() + ": " + loadError;
             return false;
+        }
+        // The index answers "which floor", never "where exactly" - the pack does that. Keeping a
+        // few hundred descriptors therefore preserves the decision while the whole game's ninety
+        // floors stay affordable to compare on every minimap frame.
+        if (maxKeypointsPerFloor > 0 &&
+            entry.features.imgKeypoints.size() > static_cast<std::size_t>(maxKeypointsPerFloor)) {
+            const std::size_t stride = (entry.features.imgKeypoints.size() +
+                static_cast<std::size_t>(maxKeypointsPerFloor) - 1) / static_cast<std::size_t>(maxKeypointsPerFloor);
+            std::vector<cv::KeyPoint> keypoints;
+            std::vector<float> descriptors;
+            keypoints.reserve(entry.features.imgKeypoints.size() / stride + 1);
+            descriptors.reserve(keypoints.capacity() * 128);
+            for (std::size_t i = 0; i < entry.features.imgKeypoints.size(); i += stride) {
+                keypoints.push_back(entry.features.imgKeypoints[i]);
+                const float* row = entry.features.imgDescriptors.ptr<float>(static_cast<int>(i));
+                descriptors.insert(descriptors.end(), row, row + entry.features.imgDescriptors.cols);
+            }
+            entry.features.imgKeypoints = std::move(keypoints);
+            entry.features.imgDescriptors = cv::Mat(static_cast<int>(entry.features.imgKeypoints.size()),
+                entry.features.imgDescriptors.cols, CV_32F, descriptors.data()).clone();
         }
         if (entry.features.imgKeypoints.empty() ||
             entry.features.imgDescriptors.rows != static_cast<int>(entry.features.imgKeypoints.size())) {
@@ -202,19 +223,21 @@ bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, 
     return false;
 }
 
-Classification Classify(const ImageFeatureData& query, const std::vector<FloorEntry>& floors,
+Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,
     int minimumMatches, double margin, float ratio, float maxDistance) {
     Classification result;
     if (query.imgDescriptors.empty() || query.imgDescriptors.rows < 2 || floors.empty()) return result;
 
     cv::BFMatcher matcher(cv::NORM_L2);
-    for (const auto& floor : floors) {
-        if (floor.features.imgDescriptors.empty()) continue;
+    for (std::size_t index = 0; index < floors.size(); ++index) {
+        const auto* floor = floors[index];
+        if (floor == nullptr || floor->features.imgDescriptors.empty()) continue;
         std::vector<std::vector<cv::DMatch>> knn;
-        matcher.knnMatch(query.imgDescriptors, floor.features.imgDescriptors, knn, 2);
+        matcher.knnMatch(query.imgDescriptors, floor->features.imgDescriptors, knn, 2);
         FloorVote vote;
-        vote.layerId = floor.layerId;
-        vote.floorId = floor.floorId;
+        vote.layerId = floor->layerId;
+        vote.floorId = floor->floorId;
+        vote.sourceIndex = index;
         for (const auto& pair : knn) {
             if (pair.size() < 2) continue;
             // Same test the localizer uses: nearest neighbour must beat the second by a ratio

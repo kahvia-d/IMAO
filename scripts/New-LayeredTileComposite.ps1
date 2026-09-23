@@ -73,34 +73,12 @@ if ($null -eq $stateNode -or -not $stateNode.Value.hasLayers) {
 }
 $layers = @($stateNode.Value.layers)
 
-# A layer belongs to this region when its entrance marker (item FCRK) is nearest to one of
-# the region's own anchors - the same attribution the region registry uses.
-$pointFile = Join-Path $SourceRoot "Assets/KuroMap/states/state-$state.json"
-$points = Get-Content -LiteralPath $pointFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$country = Get-Content -LiteralPath (Join-Path $SourceRoot 'Assets/KuroMap/country.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-$anchors = New-Object System.Collections.ArrayList
-function Add-Anchors($node) {
-    if ($node.level -ge 2) {
-        [void]$anchors.Add([pscustomobject]@{ countryId = $node.countryId; mapState = [string]$node.mapState
-            x = [double]$node.xPosition; y = [double]$node.yPosition })
-    }
-    $children = if ($null -ne $node.PSObject.Properties['children']) { @($node.children) } else { @() }
-    foreach ($child in $children) { Add-Anchors $child }
-}
-foreach ($entry in $country) { foreach ($node in $entry.countrys) { Add-Anchors $node } }
-
+# Which layered maps belong to this region is shared with the per-floor index step, because the
+# two disagreeing silently produces a pack whose appearances sit under the wrong region.
+. (Join-Path $PSScriptRoot 'LayeredRegionAttribution.ps1')
+$attribution = Get-OwnedLayeredIds -RegionId $RegionId -SourceRoot $SourceRoot
 $ownedLayerIds = New-Object System.Collections.Generic.HashSet[string]
-foreach ($item in $points) {
-    foreach ($location in $item.location) {
-        if ($item.id -ne 'FCRK') { continue }
-        $best = $null; $bestDistance = [double]::MaxValue
-        foreach ($anchor in $anchors | Where-Object { $_.countryId -eq $location.countryId }) {
-            $distance = [Math]::Sqrt([Math]::Pow($anchor.x - $location.x, 2) + [Math]::Pow($anchor.y - $location.y, 2))
-            if ($distance -lt $bestDistance) { $bestDistance = $distance; $best = $anchor }
-        }
-        if ($null -ne $best -and $best.mapState -eq [string]$region.mapState) { [void]$ownedLayerIds.Add([string]$location.floorId) }
-    }
-}
+foreach ($id in $attribution.Owned) { [void]$ownedLayerIds.Add([string]$id) }
 $regionLayers = @($layers | Where-Object { $ownedLayerIds.Contains([string]$_.id) })
 if ($regionLayers.Count -eq 0) { throw "No layer in frame $state attributes to region $RegionId." }
 Write-Host ("Region {0} (frame {1}) owns {2} layered maps: {3}" -f $RegionId, $state, $regionLayers.Count,

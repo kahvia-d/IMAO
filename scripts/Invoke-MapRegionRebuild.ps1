@@ -168,8 +168,14 @@ function Complete-PackRegion([string]$packDirectory, $tools) {
     if (-not (Test-Path -LiteralPath $featureXml)) { throw "Pack has no features.yml: $packDirectory" }
     & $tools.Converter $featureXml (Join-Path $packDirectory 'features.imf') (Join-Path $packDirectory 'features.imf.manifest.json')
     if ($LASTEXITCODE -ne 0) { throw 'Feature binary conversion failed.' }
-    # --pack-only uses the baseline vocabulary but never rewrites the baseline itself.
+    # --pack-only uses the baseline vocabulary but never rewrites the baseline itself. The
+    # baseline was retired from Assets/FeaturesDatas (the runtime now ships region packs only),
+    # so the staged base-index tree is the one that still has Map_features.imf to borrow from.
     $assetsRoot = Join-Path $SourceRoot 'Assets'
+    $baseIndexRoot = Join-Path $SourceRoot 'out/map-regions/base-index'
+    if (Test-Path -LiteralPath (Join-Path $baseIndexRoot 'FeaturesDatas/Map_features.imf') -PathType Leaf) {
+        $assetsRoot = $baseIndexRoot
+    }
     & $tools.IndexBuilder '--pack-only' $assetsRoot $packDirectory '--allow-unverified'
     if ($LASTEXITCODE -ne 0) { throw 'Per-pack visual index generation failed.' }
 }
@@ -223,6 +229,18 @@ foreach ($record in $buildable) {
         TileArchive      = $TileArchive
         ResourceVersion  = $tileVersion
         OutputRoot       = $OutputRoot
+    }
+    # Layered-map ("分层地图") appearances travel with their region pack: when the composite
+    # step has run for this region, every floor's own image is listed at its own coordinate as
+    # well, so a minimap captured inside a cave has something to match. Without this a cave
+    # minimap finds nothing at all in that coordinate's tile.
+    $layeredDir = Join-Path $SourceRoot "out/map-regions/composite/$currentRegion/k035"
+    if (Test-Path -LiteralPath $layeredDir -PathType Container) {
+        $layeredTiles = @(Get-ChildItem -LiteralPath $layeredDir -File -Filter '*.png').Count
+        if ($layeredTiles -gt 0) {
+            $arguments.LayeredCompositeDir = $layeredDir
+            Write-Host "  layered appearances: $layeredTiles tiles from $layeredDir"
+        }
     }
     # A region with a captured reference minimap is built as a verified pack; without one
     # the build must explicitly mark the pack unverified rather than imply accuracy.

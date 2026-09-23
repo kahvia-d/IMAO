@@ -65,6 +65,9 @@ struct FloorVote {
     int layerId = 0;
     std::string floorId;
     int matches = 0;
+    // Index of this floor in the vector handed to Classify. Two regions can name a floor the
+    // same way, so a caller that wants to report *which* region won cannot look the id up again.
+    std::size_t sourceIndex = 0;
 };
 
 struct Classification {
@@ -80,7 +83,14 @@ struct Classification {
 /// Reads <packDirectory>/layered-floors/floor-index.json plus the .imf files it names.
 /// Returns false only on a malformed index; a missing index is (false, ...) with `error`
 /// describing it, and the caller decides whether that matters.
-bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error);
+///
+/// `maxKeypointsPerFloor` caps the descriptors kept per floor (0 = keep all). The index only
+/// ever answers "which floor is this", never "where exactly", so a few hundred descriptors
+/// carry the same decision at a fraction of the cost: with 90 floors across the game, keeping
+/// everything made one classification roughly ten times slower and the indexes ten times
+/// larger.
+bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error,
+    int maxKeypointsPerFloor = 0);
 
 /// True when the map coordinate falls inside this floor's cave. One coordinate can be inside
 /// several floors' footprints only where two caves overlap, and it is inside none of them out
@@ -97,8 +107,19 @@ bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, 
 /// IMaoLayeredFloorProbe): two in-layer captures vote 22 for the correct floor with a
 /// runner-up of 3, while nine surface captures peak at 6 and never lead by 2x. 10 sits
 /// between the two populations - below 8 the classifier started accepting surface frames.
-Classification Classify(const ImageFeatureData& query, const std::vector<FloorEntry>& floors,
+Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,
     int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f);
+
+/// Convenience overload for callers that hold the floors by value. The pointer form above is the
+/// real one: a FloorEntry owns its descriptors, so passing a vector of them by value copies tens
+/// of megabytes per call once every floor in the game is a candidate.
+inline Classification Classify(const ImageFeatureData& query, const std::vector<FloorEntry>& floors,
+    int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f) {
+    std::vector<const FloorEntry*> pointers;
+    pointers.reserve(floors.size());
+    for (const auto& floor : floors) pointers.push_back(&floor);
+    return Classify(query, pointers, minimumMatches, margin, ratio, maxDistance);
+}
 
 /// "-2/3" -> -2. The numerator orders the floors inside one layered map.
 int FloorLevel(const std::string& floorId);

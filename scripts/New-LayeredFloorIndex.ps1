@@ -57,6 +57,23 @@ if ($tiles.Count -eq 0) { throw "The composite manifest has no tiles for $Factor
 $state = [int]$compositeManifest.frame
 $originX = 2474.0; $originY = 1957.0; $scale = 1.205
 
+# Scene name and runtime scene id come from the region registry and its shipped pack: the
+# builder refuses a frame that does not belong to the scene it is told to build.
+$registry = Get-Content -LiteralPath (Join-Path $SourceRoot 'map-regions/regions.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+$regionRecord = @($registry.regions | Where-Object { $_.id -eq $RegionId })
+if ($regionRecord.Count -ne 1) { throw "Region '$RegionId' is not in the registry exactly once." }
+$scene = [string]$regionRecord[0].scene
+$sceneId = 1
+foreach ($candidate in (Join-Path $SourceRoot 'Assets/FeaturesDatas/KuroTilePacks'), (Join-Path $SourceRoot "out/map-regions/packs/$RegionId")) {
+    $manifestPath = Join-Path $candidate "$RegionId/manifest.json"
+    if ($RegionId -eq (Split-Path -Leaf $candidate)) { $manifestPath = Join-Path $candidate 'manifest.json' }
+    if (Test-Path -LiteralPath $manifestPath) {
+        $sceneId = [int](Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json).sceneId
+        break
+    }
+}
+Write-Host "Region $RegionId builds in scene '$scene' (sceneId=$sceneId), frame $state"
+
 # Coarse "is the player standing inside this floor's cave" mask: the overlay's alpha
 # downsampled to a 64x64 grid per tile (16 px cells), written as hex. The classifier's vote
 # count alone is not enough - on a real 眠龙庭·上层 position it scored 4-11 against a
@@ -116,9 +133,13 @@ foreach ($group in $groups | Sort-Object Name) {
         [ordered]@{ x = [int]$tile.x; y = [int]$tile.y; file = "tiles/$($tile.file)"
             sha256 = (Get-FileHash -LiteralPath $link -Algorithm SHA256).Hash.ToLowerInvariant() }
     }
+    # The builder validates the frame against the scene, so a layered map in 泰缇斯之底 (frame
+    # 900) cannot be built as 'World' any more than 今州's can be built as 'Tethys'. The region
+    # registry names the scene; the shipped pack for the region is the authority on its runtime
+    # scene id.
     $manifest = [ordered]@{
         formatVersion = 1; packId = "$RegionId-floor-$tag"; resourceVersion = $Version
-        scene = 'World'; sceneId = 1
+        scene = $scene; sceneId = $sceneId
         source = [ordered]@{ static = 'https://web-static.kurobbs.com'; state = $state; tileSize = 1024; virtualMapSize = 850.0 }
         coordinateTransform = [ordered]@{ originX = $originX; originY = $originY; scale = $scale }
         tiles = @($specs)

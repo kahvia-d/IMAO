@@ -65,7 +65,7 @@ cv::Mat BuildMinimapMask(const cv::Mat& reference) {
 } // namespace
 
 int main(int argc, char** argv) {
-    std::filesystem::path packDirectory;
+    std::vector<std::filesystem::path> packDirectories;
     std::filesystem::path referencePath;
     bool fullSnapshot = false;
     bool useMask = true;
@@ -81,6 +81,9 @@ int main(int argc, char** argv) {
     // Same defaults the runtime classifier ships with; see LayeredFloorIndex.h for the
     // calibration these came from.
     int minimumMatches = 10;
+    // Descriptors kept per floor at load time; 0 keeps all. Used to check how far the per-floor
+    // fingerprint can be cut before floor identification degrades.
+    int maxKeypoints = 0;
     double margin = 2.0;
     float ratio = 0.75f;
     float maxDistance = 0.6f;
@@ -92,12 +95,13 @@ int main(int argc, char** argv) {
             return std::string(argv[++index]);
         };
         try {
-            if (argument == "--pack") packDirectory = next("--pack");
+            if (argument == "--pack") packDirectories.push_back(next("--pack"));
             else if (argument == "--reference") referencePath = next("--reference");
             else if (argument == "--full-snapshot") fullSnapshot = true;
             else if (argument == "--no-mask") useMask = false;
             else if (argument == "--hessian") hessian = std::stod(next("--hessian"));
             else if (argument == "--min-matches") minimumMatches = std::stoi(next("--min-matches"));
+            else if (argument == "--max-keypoints") maxKeypoints = std::stoi(next("--max-keypoints"));
             else if (argument == "--margin") margin = std::stod(next("--margin"));
             else if (argument == "--ratio") ratio = std::stof(next("--ratio"));
             else if (argument == "--max-distance") maxDistance = std::stof(next("--max-distance"));
@@ -125,17 +129,32 @@ int main(int argc, char** argv) {
             return 2;
         }
     }
-    if (packDirectory.empty() || referencePath.empty()) { PrintUsage(); return 2; }
+    if (packDirectories.empty() || referencePath.empty()) { PrintUsage(); return 2; }
 
     try {
-        LayeredFloors::Index index;
-        std::string error;
-        if (!LayeredFloors::Load(packDirectory, index, error)) {
-            std::cerr << "floor index unavailable: " << error << '\n';
-            return 1;
+        // Every pack named on the command line contributes its floors, which is how the runtime
+        // sees the game: one multiple-choice question over every layered floor at once. Several
+        // regions have no layered maps at all, so a missing index there is normal.
+        std::vector<LayeredFloors::FloorEntry> floors;
+        std::vector<LayeredFloors::Transform> transforms;
+        std::vector<std::string> regions;
+        std::size_t loadedPacks = 0;
+        for (const auto& pack : packDirectories) {
+            LayeredFloors::Index index;
+            std::string error;
+            if (!LayeredFloors::Load(pack, index, error, maxKeypoints)) {
+                std::cerr << "  skipped " << pack << ": " << error << '\n';
+                continue;
+            }
+            ++loadedPacks;
+            for (auto& floor : index.floors) {
+                floors.push_back(std::move(floor));
+                transforms.push_back(index.transform);
+                regions.push_back(pack.filename().string());
+            }
         }
-        const auto& floors = index.floors;
-        std::cout << "floor index: " << floors.size() << " floors from " << packDirectory << '\n';
+        if (loadedPacks == 0) { std::cerr << "no pack had a floor index\n"; return 1; }
+        std::cout << "floor index: " << floors.size() << " floors from " << loadedPacks << " pack(s)\n";
 
         const cv::Mat frame = cv::imread(referencePath.string(), cv::IMREAD_COLOR);
         if (frame.empty()) throw std::runtime_error("cannot read " + referencePath.string());
@@ -164,8 +183,13 @@ int main(int argc, char** argv) {
                 return floor.floorId == vote.floorId;
             });
             const std::string label = found == floors.end() ? vote.floorId : found->floorName;
+            // The region matters once every pack is on the table: two regions can name a floor
+            // the same way, and a wrong region is a wrong answer even with a right floor name.
+            const std::string region = found == floors.end() ? std::string{}
+                : regions[static_cast<std::size_t>(std::distance(floors.begin(), found))];
             std::cout << "  " << (vote.floorId == classification.floorId ? "* " : "  ")
-                << vote.floorId << "  " << label << "  " << vote.matches << '\n';
+                << (region.empty() ? "" : region + " ") << vote.floorId << "  " << label
+                << "  " << vote.matches << '\n';
         }
         std::cout << "decision: " << (classification.identified ? "identified" : "unknown")
             << " floor=" << classification.floorId
@@ -215,8 +239,9 @@ int main(int argc, char** argv) {
             // Footprint report: what the state machine uses to keep a floor the imagery alone
             // can no longer re-confirm every frame.
             std::cout << "footprint at map (" << anchorX << "," << anchorY << "):\n";
-            for (const auto& floor : floors) {
-                const bool inside = LayeredFloors::Contains(floor, index.transform, anchorX, anchorY);
+            for (std::size_t i = 0; i < floors.size(); ++i) {
+                const auto& floor = floors[i];
+                const bool inside = LayeredFloors::Contains(floor, transforms[i], anchorX, anchorY);
                 const bool voted = floor.floorId == classification.floorId;
                 if (inside || voted) {
                     std::cout << "  " << (inside ? "INSIDE " : "outside") << " " << floor.floorId
@@ -231,3 +256,4 @@ int main(int argc, char** argv) {
         return 1;
     }
 }
+

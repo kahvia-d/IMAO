@@ -42,15 +42,22 @@ std::chrono::steady_clock::time_point lastReportAt{};
 // several times a second; three per second is plenty to follow a player around.
 constexpr auto kMinimumInterval = std::chrono::milliseconds(300);
 
-std::string VoteSummary(const LayeredFloors::Classification& classification, const std::vector<Entry>& source) {
+// Descriptors kept per floor when the index is loaded. The whole game has 90 floors and a cold
+// start compares every one of them, because the question is "which floor", not "where". Measured
+// against both real in-cave frames with all 90 floors on the table: keeping every descriptor gave
+// 22 vs 7 and 22 vs 5, 600 gave 26 vs 12 and 20 vs 7, and 300 broke identification outright
+// (22 vs 14, and a 9 vs 8 wrong answer), so 600 is the smallest cap that still separates them.
+constexpr int kFloorDescriptorCap = 600;
+
+std::string VoteSummary(const LayeredFloors::Classification& classification, const std::vector<const Entry*>& source) {
     std::string summary;
     for (std::size_t index = 0; index < classification.votes.size() && index < 4; ++index) {
         const auto& vote = classification.votes[index];
-        const auto found = std::find_if(source.begin(), source.end(), [&](const Entry& entry) {
-            return entry.floor.floorId == vote.floorId;
-        });
+        // The vote carries where it came from: with every region on the table the same floor id
+        // can appear more than once, so looking the id up again would report the wrong region.
+        const Entry* entry = vote.sourceIndex < source.size() ? source[vote.sourceIndex] : nullptr;
         if (!summary.empty()) summary += " ";
-        summary += found == source.end() ? vote.floorId : found->regionId + ":" + found->floor.floorId;
+        summary += entry == nullptr ? vote.floorId : entry->regionId + ":" + entry->floor.floorId;
         summary += "=" + std::to_string(vote.matches);
     }
     return summary;
@@ -88,7 +95,7 @@ void Install(const std::filesystem::path& featureDataRoot) {
         std::vector<LayeredFloors::FloorEntry> floors;
         LayeredFloors::Index index;
         std::string loadError;
-        if (!LayeredFloors::Load(packRoot, index, loadError)) {
+        if (!LayeredFloors::Load(packRoot, index, loadError, kFloorDescriptorCap)) {
             Diagnostics::Record("layered-floor-index", "region=" + directory.path().filename().string() +
                 " loaded=0 error=" + loadError);
             continue;
@@ -98,7 +105,8 @@ void Install(const std::filesystem::path& featureDataRoot) {
             loaded.push_back(Entry{sceneId, kuroStateId, region, std::move(floor), index.transform});
         }
         Diagnostics::Record("layered-floor-index", "region=" + region + " scene=" + std::to_string(sceneId) +
-            " kuroState=" + std::to_string(kuroStateId) + " floors=" + std::to_string(index.floors.size()));
+            " kuroState=" + std::to_string(kuroStateId) + " floors=" + std::to_string(index.floors.size()) +
+            " descriptorCap=" + std::to_string(kFloorDescriptorCap));
     }
 
     std::lock_guard lock(stateMutex);
@@ -118,42 +126,47 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     // still say which floor's cave it is looking at, and that floor's footprint is somewhere to
     // point the localizer's sweep. Nothing is published from this - it is a search scope only.
     if (sceneId == 0) {
-        std::vector<Entry> all;
+        // Pointers, not copies: a FloorEntry owns its descriptors, and once every floor in the
+        // game is a candidate that copy was tens of megabytes per frame. `entries` is written
+        // once by Install and never mutated afterwards, so referring into it is safe.
+        std::vector<const Entry*> all;
         {
             std::lock_guard lock(stateMutex);
             if (entries.empty()) return;
             if (lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < kMinimumInterval) return;
             lastClassifyAt = now;
-            all = entries;
+            all.reserve(entries.size());
+            for (const auto& entry : entries) all.push_back(&entry);
         }
-        std::vector<LayeredFloors::FloorEntry> floors;
+        std::vector<const LayeredFloors::FloorEntry*> floors;
         floors.reserve(all.size());
-        for (const auto& entry : all) floors.push_back(entry.floor);
+        for (const auto* entry : all) floors.push_back(&entry->floor);
         // The scope only has to pick the right cave, not confirm a position: a wrong guess
         // costs one bounded search that falls back to the global sweep anyway.
         const auto classification = LayeredFloors::Classify(minimapFeatures, floors, 4, 1.5);
         std::lock_guard lock(stateMutex);
         if (!classification.identified) return;
-        const auto found = std::find_if(all.begin(), all.end(), [&](const Entry& entry) {
-            return entry.floor.floorId == classification.floorId;
+        const auto found = std::find_if(all.begin(), all.end(), [&](const Entry* entry) {
+            return entry->floor.floorId == classification.floorId;
         });
-        if (found == all.end() || !found->floor.hasCenter) return;
-        if (scope.valid && scope.floorId == classification.floorId && scope.sceneId == found->sceneId) return;
+        if (found == all.end() || !(*found)->floor.hasCenter) return;
+        const auto& scopeEntry = **found;
+        if (scope.valid && scope.floorId == classification.floorId && scope.sceneId == scopeEntry.sceneId) return;
         scope.valid = true;
-        scope.sceneId = found->sceneId;
-        scope.layerId = found->floor.layerId;
-        scope.floorId = found->floor.floorId;
-        scope.mapX = found->floor.centerMapX;
-        scope.mapY = found->floor.centerMapY;
+        scope.sceneId = scopeEntry.sceneId;
+        scope.layerId = scopeEntry.floor.layerId;
+        scope.floorId = scopeEntry.floor.floorId;
+        scope.mapX = scopeEntry.floor.centerMapX;
+        scope.mapY = scopeEntry.floor.centerMapY;
         Diagnostics::Record("layered-floor-scope", "scene=" + std::to_string(scope.sceneId) +
-            " region=" + found->regionId + " floor=" + scope.floorId + " name=" + found->floor.floorName +
+            " region=" + scopeEntry.regionId + " floor=" + scope.floorId + " name=" + scopeEntry.floor.floorName +
             " center=" + std::to_string(scope.mapX) + "," + std::to_string(scope.mapY) +
             " matches=" + std::to_string(classification.winnerMatches) +
             " runnerUp=" + std::to_string(classification.runnerUpMatches));
         return;
     }
 
-    std::vector<Entry> candidates;
+    std::vector<const Entry*> candidates;
     bool restricted = false;
     std::string containing;
     {
@@ -175,7 +188,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         for (const auto& entry : entries) {
             if (entry.sceneId != sceneId) continue;
             if (restricted && !LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) continue;
-            candidates.push_back(entry);
+            candidates.push_back(&entry);
             if (restricted) {
                 if (!containing.empty()) containing += " ";
                 containing += entry.floor.floorId;
@@ -184,9 +197,9 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     }
     if (candidates.empty()) return;
 
-    std::vector<LayeredFloors::FloorEntry> floors;
+    std::vector<const LayeredFloors::FloorEntry*> floors;
     floors.reserve(candidates.size());
-    for (const auto& entry : candidates) floors.push_back(entry.floor);
+    for (const auto* entry : candidates) floors.push_back(&entry->floor);
     // Inside a cave the only real question is which of the floors sharing it, and those votes
     // are small (4-9 on a real 眠龙庭·上层 position); out in the open the bar stays where the
     // surface references were calibrated, because there the imagery is the only evidence.
@@ -212,22 +225,23 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             pendingCount = 1;
         }
         if (pendingCount >= kSwitchFrames && classification.floorId != current.floorId) {
-            const auto found = std::find_if(candidates.begin(), candidates.end(), [&](const Entry& entry) {
-                return entry.floor.floorId == classification.floorId;
+            const auto found = std::find_if(candidates.begin(), candidates.end(), [&](const Entry* entry) {
+                return entry->floor.floorId == classification.floorId;
             });
+            const Entry* entry = found == candidates.end() ? nullptr : *found;
             current.active = true;
             current.sceneId = sceneId;
-            current.kuroStateId = found == candidates.end() ? 0 : found->kuroStateId;
+            current.kuroStateId = entry == nullptr ? 0 : entry->kuroStateId;
             current.floorId = classification.floorId;
-            current.level = found == candidates.end() ? LayeredFloors::FloorLevel(classification.floorId) : found->floor.level;
-            current.layerId = found == candidates.end() ? LayeredFloors::FloorLayerId(classification.floorId) : found->floor.layerId;
+            current.level = entry == nullptr ? LayeredFloors::FloorLevel(classification.floorId) : entry->floor.level;
+            current.layerId = entry == nullptr ? LayeredFloors::FloorLayerId(classification.floorId) : entry->floor.layerId;
             ++current.revision;
             pendingFloorId.clear();
             pendingCount = 0;
             Diagnostics::Record("layered-floor-change", "scene=" + std::to_string(sceneId) +
-                " region=" + (found == candidates.end() ? std::string("?") : found->regionId) +
+                " region=" + (entry == nullptr ? std::string("?") : entry->regionId) +
                 " floor=" + current.floorId +
-                " name=" + (found == candidates.end() ? std::string("?") : found->floor.floorName) +
+                " name=" + (entry == nullptr ? std::string("?") : entry->floor.floorName) +
                 " matches=" + std::to_string(classification.winnerMatches) +
                 " runnerUp=" + std::to_string(classification.runnerUpMatches));
         }
