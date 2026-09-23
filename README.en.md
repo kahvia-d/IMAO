@@ -10,12 +10,12 @@
 
 <div>
     <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20x64-blueviolet">
-    <img alt="license" src="https://img.shields.io/github/license/kahvia-d/WWMAP-TOOLS">
+    <img alt="license" src="https://img.shields.io/github/license/kahvia-d/IMAO">
 </div>
 <div>
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/kahvia-d/WWMAP-TOOLS?color=%2343e28a">
-    <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/kahvia-d/WWMAP-TOOLS/total?style=social">
-    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/kahvia-d/WWMAP-TOOLS?style=social">
+    <img alt="GitHub release" src="https://img.shields.io/github/v/release/kahvia-d/IMAO?color=%2343e28a">
+    <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/kahvia-d/IMAO/total?style=social">
+    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/kahvia-d/IMAO?style=social">
 </div>
 <br>
 
@@ -34,7 +34,7 @@ Still actively updated ✿✿ヽ(°▽°)ノ✿
 
 ## Download & Install
 
-Go to **[Releases](https://github.com/kahvia-d/WWMAP-TOOLS/releases/latest)**, download
+Go to **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)**, download
 `IMao-v<version>-windows-x64.zip`, unzip it and run **`IMao-Launcher.exe`**.
 
 | Item | Requirement |
@@ -252,7 +252,7 @@ Thanks to everyone who developed, tested and reported issues — you are what ma
 **User QQ group: `1109700733`**
 
 Bugs, feature requests, or just somewhere to talk about Wuthering Waves — you are welcome to join.
-You can also file an [issue](https://github.com/kahvia-d/WWMAP-TOOLS/issues).
+You can also file an [issue](https://github.com/kahvia-d/IMAO/issues).
 
 If this tool helped you, **please give it a Star** — it is the biggest support you can give us!
 

@@ -10,12 +10,12 @@
 
 <div>
     <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20x64-blueviolet">
-    <img alt="license" src="https://img.shields.io/github/license/kahvia-d/WWMAP-TOOLS">
+    <img alt="license" src="https://img.shields.io/github/license/kahvia-d/IMAO">
 </div>
 <div>
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/kahvia-d/WWMAP-TOOLS?color=%2343e28a">
-    <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/kahvia-d/WWMAP-TOOLS/total?style=social">
-    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/kahvia-d/WWMAP-TOOLS?style=social">
+    <img alt="GitHub release" src="https://img.shields.io/github/v/release/kahvia-d/IMAO?color=%2343e28a">
+    <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/kahvia-d/IMAO/total?style=social">
+    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/kahvia-d/IMAO?style=social">
 </div>
 <br>
 
@@ -33,7 +33,7 @@
 
 ## 下载与安装
 
-前往 **[Releases](https://github.com/kahvia-d/WWMAP-TOOLS/releases/latest)** 下载 `IMao-v<版本号>-windows-x64.zip`，
+前往 **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** 下载 `IMao-v<版本号>-windows-x64.zip`，
 解压后运行 **`IMao-Launcher.exe`** 即可。
 
 | 项目 | 要求 |
@@ -225,7 +225,7 @@
 **用户交流 QQ 群：`1109700733`**
 
 遇到 Bug、想要新功能，或者只是想找个地方聊鸣潮，都欢迎进群；也欢迎到
-[Issues](https://github.com/kahvia-d/WWMAP-TOOLS/issues) 反馈。
+[Issues](https://github.com/kahvia-d/IMAO/issues) 反馈。
 
 如果这个工具帮到了你，**帮忙点个 Star 吧**！~（网页右上角的小星星）这就是对我们最大的支持了！
 
