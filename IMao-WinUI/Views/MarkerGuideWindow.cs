@@ -45,7 +45,12 @@ public sealed class MarkerGuideWindow : Window
     private string? currentImagePath;
     private bool completing;
     /// <summary>The enlarged picture lives in its own half-screen window; it is created once.</summary>
+    // One window per guide window, reused for every picture: it is only hidden while the guide
+    // stays open, and destroyed with the guide. Creating a new one per open leaked a hidden
+    // window every time, and hidden windows keep the process alive after the last visible one
+    // closes.
     private GuideImageWindow? imageWindow;
+    private bool imageVisible;
     private RectInt32? lastGameBounds;
     private readonly TextBlock gamepadHint = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
     private readonly ProgressBar gamepadHold = new() { Minimum = 0, Maximum = 1, Height = 5, Visibility = Visibility.Collapsed };
@@ -56,13 +61,13 @@ public sealed class MarkerGuideWindow : Window
     public bool IsClosed { get; private set; }
     internal bool IsGuideVisible { get; private set; }
     internal MarkerSelection? Selection => selected;
-    internal bool IsGamepadImageOpen => imageWindow is not null;
+    internal bool IsGamepadImageOpen => imageVisible;
     /// <summary>The enlarged picture's HWND while it is open, so gamepad focus can follow it.</summary>
-    internal nint ImageWindowHandle => imageWindow?.Handle ?? 0;
+    internal nint ImageWindowHandle => imageVisible ? imageWindow?.Handle ?? 0 : 0;
     /// <summary>Raised when the enlarged picture opens or closes, so the core can follow the front window.</summary>
     internal Action<Window, bool>? ImageWindowChanged { get; set; }
-    internal bool CanCompleteGamepad => gamepadMode && IsGuideVisible && imageWindow is null && selected?.Completed == false && !completing;
-    internal string GamepadViewToken => $"{generation}:{pictureIndex}:{(imageWindow is null ? "detail" : "image")}";
+    internal bool CanCompleteGamepad => gamepadMode && IsGuideVisible && !imageVisible && selected?.Completed == false && !completing;
+    internal string GamepadViewToken => $"{generation}:{pictureIndex}:{(imageVisible ? "image" : "detail")}";
     internal Func<long, Task>? ContentDismiss { get; set; }
 
     internal void SetReturnState(string message)
@@ -256,9 +261,17 @@ public sealed class MarkerGuideWindow : Window
     {
         var window = imageWindow;
         if (window is null) return;
-        imageWindow = null;
-        if (destroy) window.Close();
-        else window.HideImage();
+        imageVisible = false;
+        if (destroy)
+        {
+            // Only here is the reference dropped, so the window really goes away.
+            imageWindow = null;
+            window.Close();
+        }
+        else
+        {
+            window.HideImage();
+        }
         if (ImageWindowChanged is { } changed) changed(window, false);
     }
 
@@ -344,7 +357,7 @@ public sealed class MarkerGuideWindow : Window
         picturePage.Text = $"{index + 1} / {detail.PictureUrls.Length}";
         // An already open picture follows the page the guide is on: title now, bitmap when
         // it arrives, blank in between instead of showing the previous page's image.
-        if (imageWindow is { } openImage)
+        if (imageVisible && imageWindow is { } openImage)
         {
             openImage.SetTitle($"攻略图片 · {index + 1}/{detail.PictureUrls.Length}");
             openImage.SetSource(null);
@@ -378,6 +391,7 @@ public sealed class MarkerGuideWindow : Window
     {
         if (currentImagePath is null) return;
         imageWindow ??= CreateImageWindow();
+        imageVisible = true;
         imageWindow.ShowImage(currentImagePath,
             $"攻略图片 · {pictureIndex + 1}/{currentDetail?.PictureUrls.Length ?? 1}",
             pictureStatus.Text, lastGameBounds, gamepadMode);
@@ -391,7 +405,7 @@ public sealed class MarkerGuideWindow : Window
         return window;
     }
 
-    /// <summary>Hides the enlarged picture and hands the front-window registration back to the guide.</summary>
+    /// <summary>Hides the enlarged picture and hands the front-window registration back to the`n    /// guide. The window is kept for reuse - see the field comment - so this must not drop the`n    /// reference, and destroying it is a separate call.</summary>
     private void CloseImageWindow()
     {
         CloseImageWindow(destroy: false);
@@ -402,7 +416,7 @@ public sealed class MarkerGuideWindow : Window
         gamepadMode = enabled;
         gamepadHint.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
         gamepadHint.Text = "X 放大图片 · B 返回列表 · LB/RB 翻图 · 右摇杆滚动 · 长按 A 完成";
-        if (!enabled && imageWindow is not null) CloseImageWindow();
+        if (!enabled && imageVisible) CloseImageWindow();
         SetGamepadHoldProgress(0);
         UpdateCompletionButton();
     }
@@ -423,7 +437,7 @@ public sealed class MarkerGuideWindow : Window
         // X opens the enlarged picture; the triggers zoom it; the sticks and D-pad pan.
         if (action == GamepadAction.ExpandImage)
         {
-            if (imageWindow is null && enlarge.IsEnabled) _ = ShowEnlargedAsync();
+            if (!imageVisible && enlarge.IsEnabled) _ = ShowEnlargedAsync();
             return;
         }
         if (action == GamepadAction.ZoomIn) { imageWindow?.ChangeZoom(1.4); return; }
@@ -538,3 +552,4 @@ public sealed class MarkerGuideWindow : Window
         refresh.IsEnabled = true;
     }
 }
+
