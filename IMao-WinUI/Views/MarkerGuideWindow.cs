@@ -173,7 +173,11 @@ public sealed class MarkerGuideWindow : Window
         Closed += (_, _) =>
         {
             RemoveWindowSubclass(handle, nonClientProcedure, 1);
-            IsClosed = true; IsGuideVisible = false; CancelLoads(); HideImageDialog(); dismiss(generation);
+            IsClosed = true; IsGuideVisible = false; CancelLoads();
+            // Destroy, not hide: a hidden picture window outlives this one and WinUI only exits
+            // once the last window is gone, which left the process running with nothing on screen.
+            CloseImageWindow(destroy: true);
+            dismiss(generation);
         };
     }
 
@@ -240,6 +244,22 @@ public sealed class MarkerGuideWindow : Window
     private void HideImageDialog()
     {
         CloseImageWindow();
+    }
+
+    /// <summary>
+    /// Hides the enlarged picture while the guide stays open - hiding is deliberate there, so the
+    /// window can be reused without rebuilding its scroll state. It must not be hidden once this
+    /// guide window is being destroyed: WinUI keeps the process alive until the LAST window is
+    /// closed, so a hidden picture window left the app running with no window on screen.
+    /// </summary>
+    private void CloseImageWindow(bool destroy = false)
+    {
+        var window = imageWindow;
+        if (window is null) return;
+        imageWindow = null;
+        if (destroy) window.Close();
+        else window.HideImage();
+        if (ImageWindowChanged is { } changed) changed(window, false);
     }
 
     private void SetPictureStatus(string message)
@@ -374,11 +394,7 @@ public sealed class MarkerGuideWindow : Window
     /// <summary>Hides the enlarged picture and hands the front-window registration back to the guide.</summary>
     private void CloseImageWindow()
     {
-        var window = imageWindow;
-        if (window is null) return;
-        imageWindow = null;
-        window.HideImage();
-        if (ImageWindowChanged is { } changed) changed(window, false);
+        CloseImageWindow(destroy: false);
     }
 
     internal void SetGamepadMode(bool enabled)
