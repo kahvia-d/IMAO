@@ -135,6 +135,15 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
 /// so containment can never decide "am I in a layer", only "which one".
 bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY);
 
+/// True when the coordinate is inside the floor's art with `marginCells` of art around it, i.e.
+/// standing on drawn art rather than beside it.
+///
+/// NOT an "am I inside the cave" test: the layer art is a drawing, so the rooms inside a floor -
+/// 虚妄摇篮's 一层, every room of 下层金库 - are transparent holes in it and read as "not inside".
+/// Contains, which keeps a cell of slack, is what the runtime uses for containment.
+bool InsideWithMargin(const FloorEntry& floor, const Transform& transform, double mapX, double mapY,
+    int marginCells = 1);
+
 /// How much of the layered art around this coordinate is the surface's own pixels rather than the
 /// layer's own drawing: the fraction of opaque cells in a (2*radiusCells+1) square that the tile
 /// marks as shared. A layered map can adopt a piece of the surface as its own ground (下层金库's

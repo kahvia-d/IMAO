@@ -214,6 +214,27 @@ int main() {
             Require(!LayeredFloors::AdjacentToSurface(floorAt),
                 "so must a floor deeper in the building");
 
+            // Inside the art and on its rim are different answers to "is the player in this cave".
+            // Contains keeps a cell of slack so it is true a step outside the mouth; the rim test
+            // is what stops the position alone from holding a floor the player has walked out of.
+            // The fixture's occupancy covers its whole tile, so the tile's edge is the art's edge.
+            const auto cellCentre = [&](double pixelX, double pixelY) {
+                const double gameX = (3.0 * transform.tileSize + pixelX - transform.tileSize) *
+                    transform.virtualMapSize / transform.tileSize;
+                const double gameY = pixelY * transform.virtualMapSize / transform.tileSize;
+                return std::pair<double, double>{ gameX * transform.scale + transform.originX,
+                    gameY * transform.scale + transform.originY };
+            };
+            auto rimFloor = SharedGroundFloor();
+            const auto deep = cellCentre(512.0, 512.0);      // middle of the tile
+            const auto rim = cellCentre(8.0, 512.0);         // first cell column: art on one side only
+            Require(LayeredFloors::InsideWithMargin(rimFloor, transform, deep.first, deep.second, 1),
+                "a coordinate in the middle of the art is solidly inside it");
+            Require(!LayeredFloors::InsideWithMargin(rimFloor, transform, rim.first, rim.second, 1),
+                "a coordinate on the rim of the art is not solidly inside it");
+            Require(LayeredFloors::Contains(rimFloor, transform, rim.first, rim.second),
+                "the rim is still inside the floor as far as containment goes");
+
             // A layered map whose floors carry no number at all still gets an above/below order:
             // 星炬学院's zones are the plaza at the bottom, the teaching area, then the transport
             // area on top, against levels -1/-2/-3.

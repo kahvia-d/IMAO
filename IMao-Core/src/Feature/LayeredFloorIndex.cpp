@@ -343,44 +343,6 @@ void AssignHeightRanks(std::vector<FloorEntry>& floors) {
     }
 }
 
-bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY) {    // Inverse of the builder's KuroTilePointToAppMap: map -> game -> tile pixel -> grid cell.
-    const double gameX = (mapX - transform.originX) / transform.scale;
-    const double gameY = (mapY - transform.originY) / transform.scale;
-    const int tileX = static_cast<int>(std::floor(gameX / transform.virtualMapSize + 1.0));
-    const int tileY = static_cast<int>(std::ceil(-gameY / transform.virtualMapSize));
-    const double pixelX = gameX * transform.tileSize / transform.virtualMapSize + transform.tileSize -
-        static_cast<double>(tileX) * transform.tileSize;
-    const double pixelY = static_cast<double>(tileY) * transform.tileSize +
-        gameY * transform.tileSize / transform.virtualMapSize;
-    const double cell = transform.tileSize / transform.gridSize;
-    if (pixelX < 0.0 || pixelY < 0.0 || pixelX >= transform.tileSize || pixelY >= transform.tileSize) return false;
-    const int cellX = static_cast<int>(pixelX / cell);
-    const int cellY = static_cast<int>(pixelY / cell);
-    for (const auto& tile : floor.tiles) {
-        if (tile.x != tileX || tile.y != tileY) continue;
-        const auto bits = static_cast<std::size_t>(transform.gridSize) * transform.gridSize;
-        if (tile.occupancy.size() * 4 != bits) return false;
-        // One cell of slack: the player's position is accurate to a couple of map pixels and
-        // the cave edge is exactly where a strict test would flicker.
-        for (int dy = -1; dy <= 1; ++dy) {
-            for (int dx = -1; dx <= 1; ++dx) {
-                const int gx = cellX + dx;
-                const int gy = cellY + dy;
-                if (gx < 0 || gy < 0 || gx >= transform.gridSize || gy >= transform.gridSize) continue;
-                const auto bit = static_cast<std::size_t>(gy) * transform.gridSize + gx;
-                const char nibble = tile.occupancy[bit / 4];
-                const int value = nibble >= '0' && nibble <= '9' ? nibble - '0'
-                    : (nibble >= 'a' && nibble <= 'f' ? nibble - 'a' + 10
-                        : (nibble >= 'A' && nibble <= 'F' ? nibble - 'A' + 10 : 0));
-                // The writer packs four cells per nibble, first cell in the lowest bit.
-                if ((value >> (bit % 4)) & 1) return true;
-            }
-        }
-        return false;
-    }
-    return false;
-}
-
 namespace {
 
 /// One grid bit, packed four cells per nibble with the first cell in the lowest bit.
@@ -392,7 +354,77 @@ int GridBit(const std::string& grid, std::size_t bit) {
     return (value >> (bit % 4)) & 1;
 }
 
+struct CellLocation {
+    const FloorTile* tile = nullptr;
+    int cellX = 0;
+    int cellY = 0;
+};
+
+/// The floor's tile holding this coordinate and the grid cell it falls in. Inverse of the builder's
+/// KuroTilePointToAppMap: map -> game -> tile pixel -> grid cell. A tile the floor does not cover -
+/// or one with an unusable grid - is no tile at all.
+CellLocation LocateCell(const FloorEntry& floor, const Transform& transform, double mapX, double mapY) {
+    CellLocation location;
+    const double gameX = (mapX - transform.originX) / transform.scale;
+    const double gameY = (mapY - transform.originY) / transform.scale;
+    const int tileX = static_cast<int>(std::floor(gameX / transform.virtualMapSize + 1.0));
+    const int tileY = static_cast<int>(std::ceil(-gameY / transform.virtualMapSize));
+    const double pixelX = gameX * transform.tileSize / transform.virtualMapSize + transform.tileSize -
+        static_cast<double>(tileX) * transform.tileSize;
+    const double pixelY = static_cast<double>(tileY) * transform.tileSize +
+        gameY * transform.tileSize / transform.virtualMapSize;
+    const double cell = transform.tileSize / transform.gridSize;
+    if (pixelX < 0.0 || pixelY < 0.0 || pixelX >= transform.tileSize || pixelY >= transform.tileSize) {
+        return location;
+    }
+    location.cellX = static_cast<int>(pixelX / cell);
+    location.cellY = static_cast<int>(pixelY / cell);
+    const auto bits = static_cast<std::size_t>(transform.gridSize) * transform.gridSize;
+    for (const auto& tile : floor.tiles) {
+        if (tile.x != tileX || tile.y != tileY) continue;
+        if (tile.occupancy.size() * 4 != bits) return CellLocation{};
+        location.tile = &tile;
+        return location;
+    }
+    return location;
+}
+
 } // namespace
+
+bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY) {
+    const auto location = LocateCell(floor, transform, mapX, mapY);
+    if (location.tile == nullptr) return false;
+    // One cell of slack: the player's position is accurate to a couple of map pixels and the cave
+    // edge is exactly where a strict test would flicker.
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            const int gx = location.cellX + dx;
+            const int gy = location.cellY + dy;
+            if (gx < 0 || gy < 0 || gx >= transform.gridSize || gy >= transform.gridSize) continue;
+            if (GridBit(location.tile->occupancy, static_cast<std::size_t>(gy) * transform.gridSize + gx)) return true;
+        }
+    }
+    return false;
+}
+
+bool InsideWithMargin(const FloorEntry& floor, const Transform& transform, double mapX, double mapY,
+    int marginCells) {
+    const auto location = LocateCell(floor, transform, mapX, mapY);
+    if (location.tile == nullptr) return false;
+    // Every cell within the margin has to be the floor's art. NOTE: the layer art is a drawing -
+    // the rooms inside 虚妄摇篮's 一层 are transparent holes in it - so this says "standing on drawn
+    // art", NOT "inside the cave". It is not a usable "am I inside" test; kept only because the
+    // grid it shares with Contains is useful for diagnosing a footprint.
+    for (int dy = -marginCells; dy <= marginCells; ++dy) {
+        for (int dx = -marginCells; dx <= marginCells; ++dx) {
+            const int gx = location.cellX + dx;
+            const int gy = location.cellY + dy;
+            if (gx < 0 || gy < 0 || gx >= transform.gridSize || gy >= transform.gridSize) return false;
+            if (!GridBit(location.tile->occupancy, static_cast<std::size_t>(gy) * transform.gridSize + gx)) return false;
+        }
+    }
+    return true;
+}
 
 double SharedFraction(const FloorEntry& floor, const Transform& transform, double mapX, double mapY,
     int radiusCells) {    const double gameX = (mapX - transform.originX) / transform.scale;

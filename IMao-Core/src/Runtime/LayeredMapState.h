@@ -59,11 +59,14 @@ struct Snapshot {
     /// so the honest answer is "one of these", not "this one": everything on a floor in this set
     /// draws as the current floor instead of being asserted above or below.
     std::vector<std::string> equivalentFloorIds;
-    /// The player is standing on ground the active floor copied from the surface (see
-    /// LayeredFloors::SharedFraction). The floor stays known - its markers still draw normally -
-    /// but the surface's own markers come back too, because that piece of ground belongs to both
-    /// and hiding either one is a guess the imagery cannot support: 下层金库's plaza carries the
-    /// surface's markers while the vault's own markers sit a few units inside the door.
+    /// The surface's own markers belong on screen here as well as the floor's.
+    ///
+    /// Two places say so, and both are ground the layer does not own outright: ground the active
+    /// floor copied from the surface (see LayeredFloors::SharedFraction - 下层金库's plaza), and the
+    /// rim of the floor's art, where the layer and the surface meet (see
+    /// LayeredFloors::InsideWithMargin - the mouth of a cave). Hiding either map's markers there is
+    /// a guess the imagery cannot support, and the field log shows what the guess cost: at
+    /// 虚妄摇篮's mouth the surface's markers stayed hidden while the player stood in the open.
     bool sharedGround = false;
 };
 

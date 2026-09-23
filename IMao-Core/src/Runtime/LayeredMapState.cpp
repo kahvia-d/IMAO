@@ -39,6 +39,10 @@ constexpr int kClearFrames = 10;
 // every 300 ms, which is why ten of them meant tens of seconds of a stale floor.
 constexpr auto kLeftFootprintFor = std::chrono::milliseconds(2500);
 std::chrono::steady_clock::time_point outsideFootprintSince{};
+// A near-tie among the floors the player can be in - 下层金库's 贵金属与艺术品藏区 votes 12/10/5/4
+// for four floors of the same marble hall - is still a decision, but it takes this many matches to
+// make: the winner is the only candidate too often for a small count to mean anything.
+constexpr int kNearTieMatches = 10;
 std::string pendingFloorId;
 // Consecutive decisive classifications; see kGroupResetFrames.
 int decisiveStreak = 0;
@@ -180,6 +184,7 @@ void Install(const std::filesystem::path& featureDataRoot) {
     sharedGroundFrames = 0;
     sharedGround = false;
     sharedGroundLogged = false;
+    outsideFootprintSince = std::chrono::steady_clock::time_point{};
     Diagnostics::Record("layered-floor-index", "stage=ready floors=" + std::to_string(entries.size()));
 }
 
@@ -234,6 +239,9 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     }
 
     std::vector<const Entry*> candidates;
+    // The floors the player's position can physically be in; the deciding vote below needs them
+    // outside the lock as well.
+    std::vector<const Entry*> inside;
     bool restricted = false;
     std::string containing;
     {
@@ -244,12 +252,17 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         const auto interval = current.active ? kMinimumInterval : kIdleInterval;
         if (lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < interval) return;
         lastClassifyAt = now;
-        // Physically impossible floors are not evidence. Standing inside 眠龙庭's cave rules
-        // out 叩天关's, even though they share a tile coordinate; without this, a rival floor
-        // with six matches was enough to hold the true floor under the margin.
-        std::vector<const Entry*> inside;
+        // Every floor of the scene is a candidate, deliberately: the SPREAD between the floors is
+        // itself the evidence that the player is in a cave at all. A surface frame taken over a
+        // cave matches every one of its floors almost equally - the field log has 黯原's 虚妄摇篮 at
+        // 21/21/18 from the field above it - while inside the cave the cave texture separates them.
+        // Comparing only the floors that contain the player threw that away: one candidate always
+        // wins its own vote, so a 4-match field frame read as a decision and held the cave for 22 s
+        // while the player walked away from it. Containment is still what says which floor the
+        // player can physically be standing in - see the adoption test below.
         for (const auto& entry : entries) {
             if (entry.sceneId != sceneId) continue;
+            candidates.push_back(&entry);
             if (LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) inside.push_back(&entry);
         }
         restricted = !inside.empty();
@@ -287,18 +300,14 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
                 " fraction=" + std::to_string(sharedFraction) +
                 " floor=" + (sharedEntry == nullptr ? current.floorId : sharedEntry->floor.floorId) +
                 " region=" + (sharedEntry == nullptr ? std::string("?") : sharedEntry->regionId) +
-                " copiedFraction=" + std::to_string(sharedEntry == nullptr ? 0.0 : sharedEntry->floor.copiedFraction));        }
+                " copiedFraction=" + std::to_string(sharedEntry == nullptr ? 0.0 : sharedEntry->floor.copiedFraction));
+        }
         // Carried on the snapshot so the marker roles can see it; a stale flag is impossible
         // because the assignment happens before the floor is adopted below, in the same call.
         current.sharedGround = sharedGround;
-        for (const auto& entry : entries) {
-            if (entry.sceneId != sceneId) continue;
-            if (restricted && !LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) continue;
-            candidates.push_back(&entry);
-            if (restricted) {
-                if (!containing.empty()) containing += " ";
-                containing += entry.floor.floorId;
-            }
+        for (const auto* entry : inside) {
+            if (!containing.empty()) containing += " ";
+            containing += entry->floor.floorId;
         }
     }
     if (candidates.empty()) return;
@@ -306,40 +315,49 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     std::vector<const LayeredFloors::FloorEntry*> floors;
     floors.reserve(candidates.size());
     for (const auto* entry : candidates) floors.push_back(&entry->floor);
-    // Inside a cave the only real question is which of the floors sharing it, and those votes
-    // are small (4-9 on a real 眠龙庭·上层 position); out in the open the bar stays where the
-    // surface references were calibrated, because there the imagery is the only evidence.
-    //
-    // The lower bar is safe because every floor's composite shares the same dimmed surface
-    // base: on the surface above a cave the shared base matches all of them equally, so no
-    // floor can lead by the 2x margin, while inside the cave the cave texture separates them.
-    const int minimumMatches = restricted ? 4 : 10;
-    // Full descriptors: the candidate set is already narrowed (by containment inside a cave), and
-    // this vote is the one that decides the floor.
-    const auto classification = LayeredFloors::Classify(minimapFeatures, floors, minimumMatches, 2.0);
+    // Full descriptors, and every floor of the scene on the table: this vote decides both whether
+    // the frame is a cave frame at all (a 2x lead) and which floor it is. A low absolute bar is
+    // safe here because the margin carries the meaning: in-cave winners can be small (4-9 on a
+    // real 眠龙庭·上层 position) while a surface frame ties every floor of the cave it is above.
+    const auto classification = LayeredFloors::Classify(minimapFeatures, floors, 4, 2.0);
 
-    // Containment already made the candidates physically plausible, so inside a cave a close
-    // runner-up is not a reason to refuse: 下层金库's 贵金属与艺术品藏区 votes 12/10/5/4 for four
-    // floors of the same marble hall, which never reaches the 2x lead and left the whole layer
-    // display off. Adopt the winner, and remember every floor whose vote is within
-    // kIndistinguishableFactor of it - those draw as the current floor rather than being
-    // asserted above or below. Out in the open the 2x rule still stands, because there the
-    // candidates are not constrained by anything.
+    const auto contained = [&](const std::string& floorId) {
+        return std::any_of(inside.begin(), inside.end(), [&](const Entry* entry) {
+            return entry->floor.floorId == floorId;
+        });
+    };
+    // The floor the imagery names has to be one the player can physically be standing in: a cave
+    // whose art the position is outside of is the cave BELOW the player, not the one they are in.
+    const bool winnerContained = contained(classification.floorId);
+    // A near-tie is no longer a decision here - the 2x lead is what says the frame is a cave frame -
+    // but 下层金库's 贵金属与艺术品藏区 is four floors of one marble hall voting 12/10/5/4, where the
+    // lead never comes. Such a frame still counts when the tie is between floors that share the
+    // player's position and there is a real match count behind it: "the only candidate won" is not
+    // evidence, and on the surface above a cave the tie is between the cave's floors and the one
+    // the position points at (the field log's 21/21/18 in 入口 while standing in 一层).
     std::vector<std::string> equivalent;
-    bool adopted = classification.identified;
-    if (!adopted && restricted && classification.winnerMatches >= minimumMatches) adopted = true;
+    bool adopted = classification.identified && winnerContained;
+    if (!adopted && restricted && winnerContained && classification.winnerMatches >= kNearTieMatches) {
+        const bool tieIsLocal = std::all_of(classification.votes.begin(), classification.votes.end(),
+            [&](const LayeredFloors::FloorVote& vote) {
+                return vote.matches == 0 ||
+                    vote.matches * kIndistinguishableFactor < classification.winnerMatches ||
+                    contained(vote.floorId);
+            });
+        if (tieIsLocal) adopted = true;
+    }
     if (adopted && restricted) {
         for (const auto& vote : classification.votes) {
-            if (vote.matches > 0 &&
-                vote.matches * kIndistinguishableFactor >= classification.winnerMatches) {
-                equivalent.push_back(vote.floorId);
-            }
+            if (vote.matches == 0 ||
+                vote.matches * kIndistinguishableFactor < classification.winnerMatches) continue;
+            if (contained(vote.floorId)) equivalent.push_back(vote.floorId);
         }
     }
 
     std::lock_guard lock(stateMutex);
     if (adopted) {
         unknownCount = 0;
+        // The imagery confirmed a floor, so the rim clock starts over.
         const bool sameFloor = current.active && classification.floorId == current.floorId;
         // A winner that is already in the equivalence set is another candidate for where the
         // player stands, not a floor change. 下层金库's four marble floors trade the lead from
@@ -367,7 +385,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             // and then. Growing therefore needs kGroupGrowFrames close frames in a row, and
             // shrinking needs kGroupResetFrames decisive ones.
             const bool decisive = classification.winnerMatches >=
-                2 * std::max(classification.runnerUpMatches, 1) && classification.winnerMatches >= minimumMatches;
+                2 * std::max(classification.runnerUpMatches, 1) && classification.winnerMatches >= 4;
             bool applyGroup = false;
             if (decisive) {
                 // Decrement rather than reset the other counter: the two regimes alternate (the log
@@ -474,6 +492,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             " restricted=" + std::to_string(restricted) + " containing=[" + containing + "]" +
             " identified=" + std::to_string(classification.identified) +
             " adopted=" + std::to_string(adopted) +
+            " winnerContained=" + std::to_string(winnerContained) +
             " decisiveStreak=" + std::to_string(decisiveStreak) +
             " closeStreak=" + std::to_string(closeStreak) +
             " equivalent=[" + JoinFloors(current.equivalentFloorIds) + "]" +
