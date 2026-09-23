@@ -47,10 +47,16 @@ constexpr auto kMinimumInterval = std::chrono::milliseconds(300);
 // tracking a layered floor, or have no position yet and are using the vote as a search scope.
 constexpr auto kIdleInterval = std::chrono::milliseconds(1000);
 
-// Two floors count as the same place when their votes are this close. Inside 下层金库's
-// 贵金属与艺术品藏区 four floors are one marble hall and vote 12/10/5/4; the display must then
-// say "you are on one of these" instead of picking one and calling the others above or below.
-constexpr int kIndistinguishableFactor = 3;   // vote * 3 >= winner  <=>  vote >= winner / 3
+// Two floors count as the same place when their votes are within this factor. Inside 下层金库's
+// 贵金属与艺术品藏区 the votes can be near-tied (12/10), and then the display must say "you are
+// on one of these" instead of picking one and calling the others above or below - that is what
+// stops the state flickering between them.
+//
+// It used to be 3, which was calibrated while the deciding vote ran on a 600-descriptor sample
+// that could not separate the floors at all. With the full set the same captures lead 17 vs 8 and
+// 15 vs 6, and a factor of 3 swallowed those real leads too: every floor showed as the current
+// one, which is what the user saw. 1.5 keeps the near-tie case and lets a 2x lead mean something.
+constexpr int kIndistinguishableFactor = 1.5;   // vote * 1.5 >= winner  <=>  vote >= winner / 1.5
 
 // Descriptors kept per floor when the index is loaded. The whole game has 90 floors and a cold
 // start compares every one of them, because the question is "which floor", not "where". Measured
