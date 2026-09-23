@@ -103,7 +103,7 @@ if (args.FirstOrDefault() == "live-program")
     var scratch = Path.GetFullPath(args[1]);
     var liveKeys = JsonSerializer.Deserialize<TrustedUpdateKeys>(File.ReadAllText(args[2]), UpdateJson.Options)!;
     using var liveHttp = new HttpClient();
-    var liveEnvelope = await liveHttp.GetByteArrayAsync("https://raw.githubusercontent.com/kahvia-d/WWMAP-TOOLS/main/updates/stable.json").ConfigureAwait(false);
+    var liveEnvelope = await liveHttp.GetByteArrayAsync("https://raw.githubusercontent.com/kahvia-d/IMAO/main/updates/stable.json").ConfigureAwait(false);
     var liveCatalog = UpdateSignature.Verify(liveEnvelope, liveKeys.Keys); // production keys, no test fallback
     var livePackage = liveCatalog.App.Package ?? throw new Exception("the live catalog has no program package");
     var liveStore = new ProgramUpdateStore(scratch, liveKeys.Keys, "", false, (_, _) => Task.CompletedTask);

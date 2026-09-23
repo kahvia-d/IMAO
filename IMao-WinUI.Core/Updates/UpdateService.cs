@@ -21,7 +21,9 @@ public sealed record UpdateCheckResult
 
 public sealed class UpdateService : IDisposable
 {
-    public static readonly Uri StableUri = new("https://raw.githubusercontent.com/kahvia-d/WWMAP-TOOLS/main/updates/stable.json");
+    // Canonical location of the update channel. The repository used to be called
+    // kahvia-d/WWMAP-TOOLS; GitHub still redirects that path, but read the new one.
+    public static readonly Uri StableUri = new("https://raw.githubusercontent.com/kahvia-d/IMAO/main/updates/stable.json");
     private readonly BuildInfo _build;
     private readonly TrustedUpdateKey[] _keys;
     private readonly ResourceSnapshotService _snapshots;

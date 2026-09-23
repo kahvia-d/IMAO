@@ -11,7 +11,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer is req
 $OutputRoot = [IO.Path]::GetFullPath($OutputRoot)
 if (Test-Path -LiteralPath $OutputRoot) { throw 'Use a fresh shard asset regression output directory.' }
 [IO.Directory]::CreateDirectory($OutputRoot) | Out-Null
-$repo = 'kahvia-d/WWMAP-TOOLS'
+$repo = 'kahvia-d/IMAO'
 $tag = 'v2026.9.20.1'
 $passed = [Collections.Generic.List[string]]::new()
 function Expect-Rejection([string]$Name, [scriptblock]$Action) {

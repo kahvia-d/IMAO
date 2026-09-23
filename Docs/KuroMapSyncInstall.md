@@ -11,7 +11,7 @@ Edge 加载项商店的审核还在进行中。在这之前可以手动加载**�
 
 1. **注册桥接**：打开 IMao → **设置 → 库街区点位进度同步** → 点「注册/修复浏览器桥接」。
    状态行显示「浏览器桥接已注册（扩展 ID ohmik…）」即成功。若提示找不到 `KuroSyncBridge.exe`，说明用的不是完整程序包，请重新下载完整包。
-2. **下载扩展**：从 https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/ext-v0.1.1 下载 `IMao-KuroMapSync-0.1.1.zip`。
+2. **下载扩展**：从 https://github.com/kahvia-d/IMAO/releases/tag/ext-v0.1.1 下载 `IMao-KuroMapSync-0.1.1.zip`。
 3. **解压到固定目录**：例如 `%LOCALAPPDATA%\IMao-WinUI\KuroMapSync\`。
    不要解压到「下载」文件夹——清理后就失效了。解压完成后，该目录下应当**直接**能看到 `manifest.json`。
 4. **加载扩展**：地址栏打开 `edge://extensions`（Chrome 是 `chrome://extensions`）→ 打开「开发人员模式」→ 点「加载解压缩的扩展」→ 选中第 3 步的目录。

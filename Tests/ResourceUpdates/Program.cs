@@ -93,6 +93,20 @@ await Test("catalog versions, URLs, package kinds and cardinality are enforced",
         catalog with { Resources = [release with { Sequence = 3 }] }
     }) Throws<InvalidDataException>(() => UpdateSignature.ValidateCatalog(bad));
 });
+await Test("release URLs are accepted under both the current and the pre-rename repository slug", async () =>
+{
+    using var f = New(); await f.Initialize(); var catalog = f.Catalog(); var release = catalog.Resources[0]; var p = release.Packages[0];
+    // The repository was renamed kahvia-d/WWMAP-TOOLS -> kahvia-d/IMAO. Manifests signed before the
+    // rename still carry the old slug, and GitHub keeps redirecting those downloads, so both have
+    // to validate; otherwise an installed client would reject its own update channel.
+    foreach (var origin in new[] { "https://github.com/kahvia-d/IMAO", "https://github.com/kahvia-d/WWMAP-TOOLS" })
+    {
+        UpdateSignature.ValidateCatalog(catalog with { App = catalog.App with { Url = origin + "/releases/tag/v1" } });
+        UpdateSignature.ValidateCatalog(catalog with { Resources = [release with { Packages = [p with { Url = origin + "/releases/download/v1/data.zip" }] }] });
+    }
+    foreach (var stranger in new[] { "https://github.com/someone-else/IMAO", "https://github.com/kahvia-d/IMAO-extra", "https://github.com/kahvia-d/other" })
+        Throws<InvalidDataException>(() => UpdateSignature.ValidateCatalog(catalog with { App = catalog.App with { Url = stranger + "/releases/tag/v1" } }));
+});
 await Test("unsafe resource paths and executables are rejected before transfer", async () =>
 {
     using var f = New(); await f.Initialize(); var catalog = f.Catalog(); var release = catalog.Resources[0]; var p = release.Packages[0];
@@ -1145,7 +1159,7 @@ sealed class Fixture : IDisposable
         return Catalog(sequence) with { Resources = [release with { Packages = [MakePackage("map-data", "map-data", "2026.9.9.2", "{\"map\":\"data\"}"), MakeRegionPackage("taro-kurotiles"), MakeRegionPackage("lahai-kurotiles"), MakeRegionPackage("tethys-kurotiles")] }] };
     }
     public ResourcePackage MakeRegionPackage(string id) => MakePackage(id, "tile", "2026.9.9.2", "{\"region\":\"" + id + "\"}");
-    public string PackageUrl(string id) => $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/2026.9.9.2/{id}.zip";
+    public string PackageUrl(string id) => $"https://github.com/kahvia-d/IMAO/releases/download/2026.9.9.2/{id}.zip";
     /// <summary>
     /// Declares the mandatory package as shipping inside the program, mirroring a real bundled descriptor:
     /// it lists the package but deliberately carries no hash and no file inventory, because those describe
@@ -1180,7 +1194,7 @@ sealed class Fixture : IDisposable
         var package = MakePackage("map-data", "map-data", "2026.9.9." + sequence, "{\"marker\":" + sequence + "}");
         return new UpdateCatalog
         {
-            Sequence = sequence, App = new ProgramRelease { Version = Build.AppVersion, Url = "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/2026.9.9.1" },
+            Sequence = sequence, App = new ProgramRelease { Version = Build.AppVersion, Url = "https://github.com/kahvia-d/IMAO/releases/tag/2026.9.9.1" },
             Resources = [new ResourceRelease { SnapshotId = "snapshot-" + sequence, Sequence = sequence, BaselineId = Build.BaselineId, MinAppVersion = Build.AppVersion, Packages = [package] }]
         };
     }
@@ -1192,7 +1206,7 @@ sealed class Fixture : IDisposable
         if (malformed == "duplicate") entries.Add((name.ToUpperInvariant(), bytes, 0));
         if (malformed == "missing") entries.Clear();
         if (malformed == "extra") entries.Add(("extra.json", [1], 0));
-        var zip = Zip(entries); var url = $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/{version}/{id}.zip"; Network.Routes[url] = zip;
+        var zip = Zip(entries); var url = $"https://github.com/kahvia-d/IMAO/releases/download/{version}/{id}.zip"; Network.Routes[url] = zip;
         return new ResourcePackage { Id = id, Kind = kind, Version = version, Url = url, Size = zip.Length, Sha256 = Hash(zip), Files = [new ResourceFile { Path = name, Size = bytes.Length, Sha256 = Hash(bytes) }] };
     }
     public byte[] Sign(UpdateCatalog catalog, TrustedUpdateKey? key = null)

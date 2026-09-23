@@ -104,7 +104,7 @@ if (-not $Publish) {
     return
 }
 if (-not $sourceClean) { throw 'Commit the extension sources before publishing; a published archive must match a commit.' }
-$repo = 'kahvia-d/WWMAP-TOOLS'
+$repo = 'kahvia-d/IMAO'
 $tag = "ext-v$version"
 if (-not $NotesFile) { throw 'Publishing requires -NotesFile with the release announcement.' }
 $NotesFile = [IO.Path]::GetFullPath($NotesFile, $SourceRoot)

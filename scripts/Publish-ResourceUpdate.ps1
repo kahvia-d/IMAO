@@ -21,7 +21,7 @@ if (-not $Dotnet) { $Dotnet = Join-Path $sourceRoot 'tools/dotnet-sdk-8.0.424/do
 if (-not $PublicKey) { $PublicKey = Join-Path $sourceRoot 'Assets/Updates/trusted-keys.json' }
 if (-not $PublisherDll) { $PublisherDll = Join-Path $sourceRoot 'tools/UpdatePublisher/bin/Release/net8.0/UpdatePublisher.dll' }
 $PreparedRoot = [IO.Path]::GetFullPath($PreparedRoot)
-$repo = 'kahvia-d/WWMAP-TOOLS'
+$repo = 'kahvia-d/IMAO'
 $report = Get-Content -LiteralPath (Join-Path $PreparedRoot 'release-report.json') -Raw | ConvertFrom-Json
 if (-not $report.production -or -not $report.nativePassed) { throw 'Only production-signed, native-verified artifacts may be published.' }
 if ($report.sourceDirty -ne $false -or $report.sourceTreeSha256 -notmatch '^[a-f0-9]{64}$') { throw 'A working-tree QA build cannot be published. Commit the reviewed source and rebuild from that exact clean commit.' }

@@ -15,7 +15,7 @@
 
 当前仓库：
 
-`https://github.com/kahvia-d/WWMAP-TOOLS`
+`https://github.com/kahvia-d/IMAO`（改名前的地址 `kahvia-d/WWMAP-TOOLS` 仍会重定向）
 
 现象：
 

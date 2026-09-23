@@ -15,6 +15,11 @@ static class Publisher
     static readonly DateTimeOffset ZipEpoch = new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
     static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".json", ".png", ".jpg", ".jpeg", ".webp", ".imf", ".imx", ".yml", ".yaml", ".md", ".txt" };
+    // The repository moved kahvia-d/WWMAP-TOOLS -> kahvia-d/IMAO. Newly published URLs use the
+    // current slug; the legacy one is still accepted so an already-published catalog can be
+    // verified or reused after the rename (GitHub redirects those downloads).
+    const string RepoSlug = "kahvia-d/IMAO";
+    static readonly string[] AcceptedRepoSlugs = { "kahvia-d/IMAO", "kahvia-d/WWMAP-TOOLS" };
     public static async Task<int> Run(string[] args)
     {
         try
@@ -164,7 +169,7 @@ static class Publisher
     static void RequireGithub(string value, bool asset)
     {
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.Host != "github.com" ||
-            !uri.AbsolutePath.StartsWith(asset ? "/kahvia-d/WWMAP-TOOLS/releases/download/" : "/kahvia-d/WWMAP-TOOLS/releases/", StringComparison.Ordinal) || uri.UserInfo.Length != 0 || uri.Query.Length != 0)
+            !AcceptedRepoSlugs.Any(slug => uri.AbsolutePath.StartsWith(asset ? $"/{slug}/releases/download/" : $"/{slug}/releases/", StringComparison.Ordinal)) || uri.UserInfo.Length != 0 || uri.Query.Length != 0)
             throw new InvalidDataException("Only this repository's GitHub Releases URLs are permitted.");
     }
     static ResourcePackage Package(string source, string output, SnapshotPackage package, string baseUrl)
@@ -233,7 +238,7 @@ static class Publisher
         var sequence = long.Parse(Required(o, "sequence"));
         var version = Id(Required(o, "resource-version"));
         var tag = Id(Required(o, "tag"));
-        var baseUrl = "https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/" + tag;
+        var baseUrl = $"https://github.com/{RepoSlug}/releases/download/" + tag;
         UpdateCatalog? previous = null;
         if (o.TryGetValue("previous", out var previousFile))
         {
@@ -291,7 +296,7 @@ static class Publisher
             Notes = o.TryGetValue("notes-file", out var notesFile) ? File.ReadAllText(notesFile) : "地图资源更新", Packages = packages };
         var resources = previous?.Resources.Where(r => r.BaselineId != release.BaselineId).ToList() ?? [];
         resources.Add(release);
-        var app = previous?.App ?? new ProgramRelease { Version = build.AppVersion, Url = "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/" + tag, Notes = "首次支持程序与地图资源更新。" };
+        var app = previous?.App ?? new ProgramRelease { Version = build.AppVersion, Url = $"https://github.com/{RepoSlug}/releases/tag/" + tag, Notes = "首次支持程序与地图资源更新。" };
         // Positive signal for the release script: only a preparation that built the program itself may
         // upload program archives; a resource-only release carries the published program forward.
         var programPrepared = false;
@@ -315,7 +320,7 @@ static class Publisher
             // A published program version is immutable: the same version may not describe different bytes.
             if (program is not null && previous?.App.Version == build.AppVersion && previous.App.Package is not null && !SameProgramContent(previous.App.Package, program))
                 throw new InvalidDataException("The published program version is immutable. Increment the version before rebuilding.");
-            app = new() { Version = build.AppVersion, Url = "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/" + tag, Notes = release.Notes, Package = program };
+            app = new() { Version = build.AppVersion, Url = $"https://github.com/{RepoSlug}/releases/tag/" + tag, Notes = release.Notes, Package = program };
             programPrepared = program is not null;
         }
         var catalog = new UpdateCatalog { Sequence = sequence, App = app, Resources = resources };
@@ -578,6 +583,13 @@ static class Publisher
         Reject("path traversal rejected", () => SafeFile(root, "../escape.json"));
         Reject("executable extension rejected", () => { File.WriteAllText(Path.Combine(source, "bad.exe"), "bad"); Package(source, Path.Combine(root, "bad"), new() { Id = "map-data", Version = "2", Kind = "map-data" }, "https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/test"); });
         Reject("unknown release host rejected", () => RequireGithub("https://example.com/kahvia-d/WWMAP-TOOLS/releases/download/test/a.zip", true));
+        Reject("another repository's release rejected", () => RequireGithub("https://github.com/someone-else/IMAO/releases/download/test/a.zip", true));
+        // The rename must not orphan anything already published under the old slug.
+        RequireGithub("https://github.com/kahvia-d/IMAO/releases/download/test/a.zip", true);
+        RequireGithub("https://github.com/kahvia-d/IMAO/releases/tag/v1", false);
+        RequireGithub("https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/test/a.zip", true);
+        RequireGithub("https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/v1", false);
+        passed.Add("both the current and the pre-rename repository slug are accepted for release URLs");
         Reject("missing map-data rejected", () => ValidateCatalog(catalog with { Resources = [catalog.Resources[0] with { Packages = [] }] }));
         Reject("reserved Windows filename rejected", () => SafeFile(root, "CON.json"));
         var originalZip = Path.Combine(root, "packages", "map-data-2026.9.9.1.zip");
@@ -627,7 +639,7 @@ static class Publisher
         File.Delete(Path.Combine(app, "Assets", "KuroMap", "scene-validation.json"));
         passed.Add("approved scene without a shipped pack is refused at release time");
         if (second.Resources.Single().Packages.Single(p => p.Id == "map-data").Version != "2026.9.9.1" || second.Resources.Single().Packages.Single(p => p.Id == "fixture-feature").Version != "2026.9.9.2") throw new Exception("Differential package identity preservation failed.");
-        if (second.App.Url != "https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/fixture-1") throw new Exception("Resource-only release changed program identity.");
+        if (second.App.Url != $"https://github.com/{RepoSlug}/releases/tag/fixture-1") throw new Exception("Resource-only release changed program identity.");
         using (var offline = ZipFile.OpenRead(Path.Combine(root, "second", "resources-2026.9.9.2-offline.zip")))
             if (offline.Entries.Count != 3 || offline.GetEntry("update.json") is null || offline.GetEntry("packages/map-data-2026.9.9.1.zip") is null) throw new Exception("Offline archive is incomplete.");
         passed.Add("feature-only publish retains unchanged map-data version/hash and old program release");
@@ -729,7 +741,7 @@ static class Publisher
         if (shardPackage.Shards.Count != ShardMap.Ids.Length || covered.Count != inventory.Count || !covered.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(inventory))
             throw new Exception("Signed shards must partition the signed program file list exactly.");
         var pointerName = $"IMao-v{shardCatalog.App.Version}-shards.json";
-        if (shardPackage.Url != $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/fixture-3/{pointerName}" ||
+        if (shardPackage.Url != $"https://github.com/{RepoSlug}/releases/download/fixture-3/{pointerName}" ||
             shardPackage.Size != new FileInfo(Path.Combine(root, "shard-release", "program", pointerName)).Length)
             throw new Exception("The whole-package pointer must name the real shard descriptor under this tag.");
         foreach (var shard in shardPackage.Shards) VerifyShard(Path.Combine(root, "shard-release", "program", Path.GetFileName(new Uri(shard.Url).AbsolutePath)), shardPackage, shard);

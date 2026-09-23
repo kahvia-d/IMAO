@@ -3,7 +3,7 @@
 这是库街区点位进度同步扩展的**手动安装包**，用于 Edge 加载项商店审核通过之前。内容与提交商店的版本相同。
 
 - 打包文件：`IMao-KuroMapSync-0.1.1.zip`（同目录附带 `.sha256` 校验文件）
-- 安装步骤：[Docs/KuroMapSyncInstall.md](https://github.com/kahvia-d/WWMAP-TOOLS/blob/main/Docs/KuroMapSyncInstall.md)
+- 安装步骤：[Docs/KuroMapSyncInstall.md](https://github.com/kahvia-d/IMAO/blob/main/Docs/KuroMapSyncInstall.md)
   简述：桌面端 设置 → 库街区点位进度同步 → 「注册/修复浏览器桥接」→ 解压 zip 到固定目录 → `edge://extensions` 打开开发人员模式 → 「加载解压缩的扩展」→ 打开并登录库街区大地图 → 点扩展图标「连接桌面端」。
 - 需要 IMao 桌面程序 **2026.9.17.6 或更高**（程序包自带 `KuroSyncBridge.exe`）。
 - 手动安装得到的扩展 ID 与商店版完全一致（`ohmikfaeobbffhlhoocklplniobcfdbg`），桌面端不需要额外设置。
