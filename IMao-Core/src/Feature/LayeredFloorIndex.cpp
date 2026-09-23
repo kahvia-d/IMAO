@@ -186,7 +186,47 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
         error = "layered floor index lists no floors";
         return false;
     }
+    // Which way is up. Upstream names floors two different ways and the level runs opposite ways
+    // in each: 叩天关/眠龙庭/雾隐阁 use 上层(-1) ... 下层(-3), where a bigger level is higher, while
+    // 下层金库's 贵金属与艺术品藏区 uses 1楼(-1) ... 4楼(-4), where 4楼 is the top. Reading the
+    // second kind with the first convention marked the floors above the player as below.
+    for (auto& floor : index.floors) floor.heightDirection = LayerHeightDirection(index.floors, floor.layerId);
     return true;
+}
+
+namespace {
+
+/// The building floor number in a name like "贵金属与艺术品藏区4楼", or 0 when the name carries
+/// none. Only Arabic digits are read: they are what 楼 numbering uses, and guessing at the other
+/// naming styles (第一日树, 星炬学院·广场区) would be inventing an order the data does not state.
+int BuildingFloorNumber(const std::string& name) {
+    const auto marker = name.find("楼");
+    if (marker == std::string::npos) return 0;
+    std::size_t begin = marker;
+    while (begin > 0 && name[begin - 1] >= '0' && name[begin - 1] <= '9') --begin;
+    if (begin == marker) return 0;
+    return std::stoi(name.substr(begin, marker - begin));
+}
+
+} // namespace
+
+int LayerHeightDirection(const std::vector<FloorEntry>& floors, int layerId) {
+    std::vector<std::pair<int, int>> numbered;   // (floor number, level)
+    for (const auto& floor : floors) {
+        if (floor.layerId != layerId) continue;
+        const int number = BuildingFloorNumber(floor.floorName);
+        if (number > 0) numbered.emplace_back(number, floor.level);
+    }
+    if (numbered.size() < 2) return 1;
+    int agreeing = 0, disagreeing = 0;
+    for (std::size_t i = 0; i < numbered.size(); ++i) {
+        for (std::size_t j = i + 1; j < numbered.size(); ++j) {
+            const bool numberRises = numbered[i].first > numbered[j].first;
+            const bool levelRises = numbered[i].second > numbered[j].second;
+            if (numberRises == levelRises) ++agreeing; else ++disagreeing;
+        }
+    }
+    return disagreeing > agreeing ? -1 : 1;
 }
 
 bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY) {    // Inverse of the builder's KuroTilePointToAppMap: map -> game -> tile pixel -> grid cell.

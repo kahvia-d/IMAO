@@ -158,6 +158,17 @@ int main(int argc, char** argv) {
         }
         if (loadedPacks == 0) { std::cerr << "no pack had a floor index\n"; return 1; }
         std::cout << "floor index: " << floors.size() << " floors from " << loadedPacks << " pack(s)\n";
+        // Which way each layered map's levels run, so a wrong above/below marker is visible here
+        // rather than only in the game.
+        {
+            std::vector<int> reported;
+            for (const auto& floor : floors) {
+                if (std::find(reported.begin(), reported.end(), floor.layerId) != reported.end()) continue;
+                reported.push_back(floor.layerId);
+                std::cout << "  layer " << floor.layerId << " " << floor.layerName
+                    << " heightDirection=" << floor.heightDirection << '\n';
+            }
+        }
 
         const cv::Mat frame = cv::imread(referencePath.string(), cv::IMREAD_COLOR);
         if (frame.empty()) throw std::runtime_error("cannot read " + referencePath.string());
@@ -259,5 +270,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 }
+
 
 

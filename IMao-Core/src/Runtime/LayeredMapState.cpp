@@ -332,6 +332,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             current.floorId = classification.floorId;
             current.level = entry == nullptr ? LayeredFloors::FloorLevel(classification.floorId) : entry->floor.level;
             current.layerId = entry == nullptr ? LayeredFloors::FloorLayerId(classification.floorId) : entry->floor.layerId;
+            current.heightDirection = entry == nullptr ? 1 : entry->floor.heightDirection;
             current.equivalentFloorIds = equivalent;
             ++current.revision;
             pendingFloorId.clear();
@@ -342,6 +343,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
                 " name=" + (entry == nullptr ? std::string("?") : entry->floor.floorName) +
                 " matches=" + std::to_string(classification.winnerMatches) +
                 " runnerUp=" + std::to_string(classification.runnerUpMatches) +
+                " heightDirection=" + std::to_string(current.heightDirection) +
                 " equivalent=[" + JoinFloors(equivalent) + "]");
         }
     }
@@ -421,8 +423,11 @@ MarkerRole RoleFor(const ItemDatas& item) {
     if (std::find(state.equivalentFloorIds.begin(), state.equivalentFloorIds.end(), floorId) !=
         state.equivalentFloorIds.end()) return MarkerRole::Current;
     if (LayeredFloors::FloorLayerId(floorId) != state.layerId) return MarkerRole::Hidden; // another layered map
-    // More negative is deeper: "-1" is the top floor, "-3" the bottom.
-    return level < state.level ? MarkerRole::Below : MarkerRole::Above;
+    // Which way the level runs is a property of the layered map, not of the code: 叩天关's
+    // 上层(-1) sits above 下层(-3), while 下层金库's 1楼(-1) sits below 4楼(-4). Assuming the
+    // first convention marked the floors above a player standing on 1楼 as below them.
+    const int direction = state.heightDirection == 0 ? 1 : state.heightDirection;
+    return level * direction < state.level * direction ? MarkerRole::Below : MarkerRole::Above;
 }
 
 void Reset() {
@@ -443,6 +448,7 @@ void SetForTest(const Snapshot& snapshot) {
 }
 
 } // namespace LayeredMap
+
 
 
 

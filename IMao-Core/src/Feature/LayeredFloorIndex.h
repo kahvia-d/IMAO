@@ -47,6 +47,10 @@ struct FloorEntry {
     std::string layerName; // "叩天关"
     std::string floorName; // "叩天关·上层"
     int level = 0;         // "-1": lower (more negative) is deeper
+    /// +1 when a bigger level is higher, -1 when the level runs the other way. Upstream uses two
+    /// naming conventions and their levels run opposite ways (see LayerHeightDirection), so the
+    /// above/below markers must not assume one of them.
+    int heightDirection = 1;
     ImageFeatureData features;
     /// A capped copy of `features`, used only when every floor in the game is a candidate.
     ///
@@ -140,6 +144,10 @@ inline Classification Classify(const ImageFeatureData& query, const std::vector<
 /// "-2/3" -> -2. The numerator orders the floors inside one layered map.
 int FloorLevel(const std::string& floorId);
 
+/// Whether a bigger level means a higher floor for this layered map: +1 normally (叩天关's
+/// 上层(-1) above 下层(-3)), -1 where the names number the floors the other way round
+/// (下层金库's 1楼(-1) below 4楼(-4)). Derived from the names, not assumed.
+int LayerHeightDirection(const std::vector<FloorEntry>& floors, int layerId);
 /// "-2/3" -> 3, the layered map the floor belongs to. 0 when the id is malformed.
 int FloorLayerId(const std::string& floorId);
 
