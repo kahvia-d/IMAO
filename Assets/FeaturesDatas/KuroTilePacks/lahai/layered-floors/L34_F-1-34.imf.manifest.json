@@ -1,0 +1,9 @@
+{
+  "descriptorColumns": 128,
+  "descriptorRows": 2318,
+  "format": "IMAOFT01",
+  "keypointCount": 2318,
+  "payloadSha256": "2468c800ec53a2df108052fda8f6362e5dc3d5208d47f41304aeeae5232bd216",
+  "sourceXmlSha256": "a21c2946d11072eea4a4f85670869be78b88ff782db1b2242197ef4b01854ab5",
+  "version": 1
+}

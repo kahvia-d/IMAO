@@ -4,7 +4,7 @@
   "scene": "LowerVault",
   "sceneId": 6,
   "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
-  "generatedAtUtc": "2026-09-18T18:26:39.2100019Z",
+  "generatedAtUtc": "2026-09-23T04:16:41.0263637Z",
   "source": {
     "static": "https://web-static.kurobbs.com",
     "state": 902,
@@ -81,9 +81,100 @@
       "y": 1,
       "file": "tiles/902_4_1.png",
       "sha256": "b41d8fb63836f99d81ad334f002f33a68b379782fa751305680b7c868aedc597"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/layered_L14_F-1-14_902_3_0.png",
+      "sha256": "ba1ec4fcab763429e7e24b1a6c17f3db91909852037184f7f86b1b6cee3780b3"
+    },
+    {
+      "x": 3,
+      "y": -1,
+      "file": "tiles/layered_L15_F-1-15_902_3_-1.png",
+      "sha256": "1440f8c9f8f89ed0ff44e7dd82d399dc9a7649e76c7a5e8482a1bc95ab547b57"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/layered_L15_F-1-15_902_3_0.png",
+      "sha256": "2f5a133a8a72746680d145a1299e8d8749c5a385180992267ce34d954357f4a3"
+    },
+    {
+      "x": 3,
+      "y": -1,
+      "file": "tiles/layered_L15_F-2-15_902_3_-1.png",
+      "sha256": "6709dec4003fca96d5eef4de17d9d83c1eb6b85168f20fa9b9c2ba81b186d1ed"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/layered_L15_F-2-15_902_3_0.png",
+      "sha256": "7fc3895a2e4adfcc5faf078fd0fa17b0c45a814fcd7708027c798c8358c3f087"
+    },
+    {
+      "x": 3,
+      "y": -1,
+      "file": "tiles/layered_L15_F-3-15_902_3_-1.png",
+      "sha256": "0427a3d8f8e7cfc8b352d55a5ec1fcc24219ad956527b37c2bacae92b51c31fe"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/layered_L15_F-3-15_902_3_0.png",
+      "sha256": "906864493b437157a91b2ec03ed92548f02f26bfc332621833c837b1036c9118"
+    },
+    {
+      "x": 3,
+      "y": -1,
+      "file": "tiles/layered_L15_F-4-15_902_3_-1.png",
+      "sha256": "0282042eeb9ca8a7e03ebe66dd2f384dec2c25d673b146609b0d0abc79f98ac4"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/layered_L15_F-4-15_902_3_0.png",
+      "sha256": "3d5e86dda9ae6fbbd689e69726f2369d78ff32d9817ffdc090ab144658d68458"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/layered_L16_F-1-16_902_3_0.png",
+      "sha256": "437be318bb1c59fd83a2654843b5ee3c31bbb11af2f55a388ec96b9fdaf0e344"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/layered_L16_F-2-16_902_3_0.png",
+      "sha256": "5ee55fa283d1a17d93c039bd6730ffdba8d65ddf8ee0730c9ef187d1f6b7d939"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/layered_L16_F-3-16_902_3_0.png",
+      "sha256": "4e1c9bf810dff963409c7dad881666e19f859bf0d0c02871e0ab2b16e7bac272"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "file": "tiles/layered_L16_F-4-16_902_3_0.png",
+      "sha256": "c16064a81cd7f718e80377d332f7dcf62b78c52734593d8290e81d8c8892357a"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "file": "tiles/layered_L17_F-1-17_902_3_1.png",
+      "sha256": "5910e3a72320fc3e05d6a0a1249293724069781ca456f05fd6a2d783302f3ca5"
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "file": "tiles/layered_L17_F-1-17_902_4_1.png",
+      "sha256": "1c28546b7829f4305333dd5a15da330c327895345399fe281dab5cc1b2a72d7b"
     }
   ],
   "missingTileCount": 90,
+  "layeredTileCount": 15,
   "coordinateBounds": {
     "maxX": 3555.154052734375,
     "maxY": 1241.2926025390625,
@@ -91,33 +182,33 @@
     "minY": -827.3427124023438
   },
   "referenceVerification": {
-    "errorPixels": 0.43102529439552045,
+    "errorPixels": 0.5600090887027864,
     "expectedMapCoordinate": {
       "x": 2868.7195893597436,
       "y": 606.2202644412455
     },
     "geometryDiagnostic": {
-      "inliers": 25,
-      "mapX": 2869.0697041789963,
-      "mapY": 607.055012304058,
-      "rotationDegrees": -0.021671782276992294,
-      "scale": 1.0755719420286884
+      "inliers": 220,
+      "mapX": 2868.8420137871294,
+      "mapY": 607.0025585844481,
+      "rotationDegrees": 0.07957691793254569,
+      "scale": 1.07061509090904
     },
-    "goodMatches": 39,
-    "mapKeypoints": 571,
+    "goodMatches": 286,
+    "mapKeypoints": 3741,
     "minimapKeypoints": 140,
-    "nearAnchorMatches": 28,
+    "nearAnchorMatches": 231,
     "passed": true,
     "reference": "lowervault.png",
     "resultMapCoordinate": {
-      "x": 2868.458744339321,
-      "y": 606.5634009734445
+      "x": 2868.38157405024,
+      "y": 606.6667572519053
     }
   },
   "features": {
     "file": "features.yml",
-    "sha256": "1d02262354a444df1ae4e16438eb5f0e2e12ed7a15ca7c5e421e6d03e108e9f7",
-    "keypointCount": 9008,
-    "extractedKeypointCount": 9008
+    "sha256": "68a45d574d6d971287d4649abf27d558be48a1b1bfc5105755a9dd0767ab7d85",
+    "keypointCount": 30567,
+    "extractedKeypointCount": 30567
   }
 }

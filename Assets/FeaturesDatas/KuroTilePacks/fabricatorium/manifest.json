@@ -4,7 +4,7 @@
   "scene": "Fabricatorium",
   "sceneId": 3,
   "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
-  "generatedAtUtc": "2026-09-18T17:15:00.2338570Z",
+  "generatedAtUtc": "2026-09-23T04:17:00.2820723Z",
   "source": {
     "static": "https://web-static.kurobbs.com",
     "state": 905,
@@ -78,6 +78,12 @@
     },
     {
       "x": -4,
+      "y": -3,
+      "file": "tiles/905_-4_-3.png",
+      "sha256": "50c5d7da5f0e8e149ecde36bcb21334257fbe4ec553ce118d85f81eefa43ee01"
+    },
+    {
+      "x": -4,
       "y": -2,
       "file": "tiles/905_-4_-2.png",
       "sha256": "60f0921a34f01da5c7334113cd1fe8e74e9eb957489db65c00cb4f558d6af2c0"
@@ -99,6 +105,18 @@
       "y": 1,
       "file": "tiles/905_-4_1.png",
       "sha256": "9a164c173c663e9b2a53678a83d5fdd2c97fd8412cbf00867c444269adea1446"
+    },
+    {
+      "x": -4,
+      "y": 2,
+      "file": "tiles/905_-4_2.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": -3,
+      "y": -4,
+      "file": "tiles/905_-3_-4.png",
+      "sha256": "cada1cdec661c9628f22d0c472f7a7daf4d61c0f2d4284d46d239ac94f1e6283"
     },
     {
       "x": -3,
@@ -150,6 +168,12 @@
     },
     {
       "x": -2,
+      "y": -2,
+      "file": "tiles/905_-2_-2.png",
+      "sha256": "2d59a7a6e016608ca1daf1ac68f26536fac0f73f78229c8e719e3c86c47c5c80"
+    },
+    {
+      "x": -2,
       "y": -1,
       "file": "tiles/905_-2_-1.png",
       "sha256": "b968c04b902371b2b7f7942421dd5c3cbb2e5d19c7a2b62bcc37edc65160e046"
@@ -171,6 +195,18 @@
       "y": 2,
       "file": "tiles/905_-2_2.png",
       "sha256": "fcdb35e0077f4734ccdf06010f7e63a18887d434520224546ed64435674a4a58"
+    },
+    {
+      "x": -1,
+      "y": -4,
+      "file": "tiles/905_-1_-4.png",
+      "sha256": "6e3af88eb9af8e5e115adda7f0cf70503f71110bdadbbb04d6dccd7bfbe833eb"
+    },
+    {
+      "x": -1,
+      "y": -3,
+      "file": "tiles/905_-1_-3.png",
+      "sha256": "014c2152322a57ee324205982f9eb65b72a57faf486264fa27f9b2436f7029bc"
     },
     {
       "x": -1,
@@ -219,6 +255,18 @@
       "y": -2,
       "file": "tiles/905_0_-2.png",
       "sha256": "3fe5ef5913d7229ae45ae1366d1f348138c3a503ba10ce89e4851fdd15d37eb1"
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "file": "tiles/905_0_-1.png",
+      "sha256": "a308eb5bca1a54a2c76333e5597ecdcdbd4369c23242a304970be90b9c92724f"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/905_0_0.png",
+      "sha256": "f7d062d40e27aaa4fe06394cb4d7f4b919bbf56f24fad1c7741f61088c97f83e"
     },
     {
       "x": 0,
@@ -276,6 +324,12 @@
     },
     {
       "x": 2,
+      "y": -4,
+      "file": "tiles/905_2_-4.png",
+      "sha256": "1891b5efc78f82d3b3b3fcc2024992a1d000fcd3b0c11a01de68195ec39335b9"
+    },
+    {
+      "x": 2,
       "y": -3,
       "file": "tiles/905_2_-3.png",
       "sha256": "8024b96269c1c9c6fbbf22d0c7348923676442ebaf796fda948f6fa8c86c9604"
@@ -291,6 +345,12 @@
       "y": -1,
       "file": "tiles/905_2_-1.png",
       "sha256": "bb74232e8d7abb605bcc4a35e5c1b5a5ef94c13a0f23671666a93138ad4a13ed"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "file": "tiles/905_2_0.png",
+      "sha256": "5f68d8fa76068d0953359e91b32c959df1e026f3c8edd70e9e70270e4260dee0"
     },
     {
       "x": 2,
@@ -471,43 +531,68 @@
       "y": 2,
       "file": "tiles/905_6_2.png",
       "sha256": "101a9d8ca92de68bdc14e6df41adaad91a0bc9de9140e2f98ee449a8695d28a9"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/layered_L22_F-1-22_905_0_1.png",
+      "sha256": "4437c73cb2a476811742cbccc8fdeed8165b4fe8d1d043d70393d10db12708fa"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "file": "tiles/layered_L22_F-1-22_905_0_2.png",
+      "sha256": "751526eb474c782c96c5396885b65007786829d90c5e8c02b67d7836cc454f6b"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "file": "tiles/layered_L22_F-1-22_905_1_1.png",
+      "sha256": "09aa70396f1384010ff269ba05c99ec0ec86ec0031a43c29ff4bfbd10791550d"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "file": "tiles/layered_L22_F-1-22_905_1_2.png",
+      "sha256": "0fea850d189be3afb03f4b11f1939880d419ef6dfa32dad19e56c216ca9008d0"
     }
   ],
-  "missingTileCount": 43,
+  "missingTileCount": 33,
+  "layeredTileCount": 4,
   "coordinateBounds": {
     "maxX": 12535.8583984375,
-    "maxY": 18364.212890625,
+    "maxY": 18852.9453125,
     "minX": 1324.27734375,
     "minY": 12190.7998046875
   },
   "referenceVerification": {
-    "errorPixels": 2.2053549853958754,
+    "errorPixels": 2.314969670584862,
     "expectedMapCoordinate": {
       "x": 6939.335,
       "y": 13746.85
     },
     "geometryDiagnostic": {
-      "inliers": 6,
-      "mapX": 6945.155808777819,
-      "mapY": 13746.40586501484,
-      "rotationDegrees": -3.3790657121757373,
-      "scale": 1.1033552994072182
+      "inliers": 9,
+      "mapX": 6944.868312395133,
+      "mapY": 13746.439078378551,
+      "rotationDegrees": -3.3785696776137595,
+      "scale": 1.1060957301932364
     },
-    "goodMatches": 20,
-    "mapKeypoints": 497,
+    "goodMatches": 45,
+    "mapKeypoints": 871,
     "minimapKeypoints": 139,
-    "nearAnchorMatches": 7,
+    "nearAnchorMatches": 15,
     "passed": true,
     "reference": "fabricatorium.png",
     "resultMapCoordinate": {
-      "x": 6941.4978186565895,
-      "y": 13746.418947717419
+      "x": 6941.636781029079,
+      "y": 13746.603243703428
     }
   },
   "features": {
     "file": "features.yml",
-    "sha256": "33c6e35eaab3c61bdc77a41a0568deeb6ad566577adaedf1236c8a1c0df6055c",
-    "keypointCount": 25520,
-    "extractedKeypointCount": 25520
+    "sha256": "5a9b8064515ad6526f3acd6403b2f92f30bee03f71279617400b970fcd866d5c",
+    "keypointCount": 32194,
+    "extractedKeypointCount": 32194
   }
 }

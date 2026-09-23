@@ -4,7 +4,7 @@
   "scene": "World",
   "sceneId": 1,
   "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
-  "generatedAtUtc": "2026-09-18T16:56:43.6149912Z",
+  "generatedAtUtc": "2026-09-23T04:13:43.1704571Z",
   "source": {
     "static": "https://web-static.kurobbs.com",
     "state": 8,
@@ -261,43 +261,122 @@
       "y": -11,
       "file": "tiles/8_17_-11.png",
       "sha256": "6f33afb8305ae719120648e5fb3437fff8d6b7031ec37d694558d30c82502651"
+    },
+    {
+      "x": 14,
+      "y": -13,
+      "file": "tiles/layered_L20_F-1-20_8_14_-13.png",
+      "sha256": "eb3d018f8a09203c4dc04f6a17441387243ae03f5bf36da967eb9272c12baefe"
+    },
+    {
+      "x": 14,
+      "y": -13,
+      "file": "tiles/layered_L20_F-2-20_8_14_-13.png",
+      "sha256": "f0aadbbbd47cc3711f09b81942947eae1a335a3174f055181c4c6040a25dc3b4"
+    },
+    {
+      "x": 14,
+      "y": -14,
+      "file": "tiles/layered_L20_F-2-20_8_14_-14.png",
+      "sha256": "59f765a81c8abe235ba5034cc988baa86fa3010daca17523d6deba8461ade30b"
+    },
+    {
+      "x": 14,
+      "y": -13,
+      "file": "tiles/layered_L21_F-1-21_8_14_-13.png",
+      "sha256": "d26dc49a65b388c411094c87ea598c0efc268be5c003405105164991b4a451e2"
+    },
+    {
+      "x": 15,
+      "y": -13,
+      "file": "tiles/layered_L21_F-1-21_8_15_-13.png",
+      "sha256": "70ba1db14efd7c0179521401ef5cd876e58253d4e90012399fb48ea3b8142427"
+    },
+    {
+      "x": 15,
+      "y": -14,
+      "file": "tiles/layered_L21_F-1-21_8_15_-14.png",
+      "sha256": "a8f93b078ef26ae0284d1258dc974acf46da448e36b959235cbbeb46f92c4480"
+    },
+    {
+      "x": 14,
+      "y": -15,
+      "file": "tiles/layered_L23_F-1-23_8_14_-15.png",
+      "sha256": "561f73a8cc711c7b9258e2b481ec71183c62fff838cfda52c172d0ad9fccb61f"
+    },
+    {
+      "x": 14,
+      "y": -15,
+      "file": "tiles/layered_L24_F-1-24_8_14_-15.png",
+      "sha256": "fc7f297567d62823dbcf998fa915f528995865b3cc8ff2d28f1fa8471890d99a"
+    },
+    {
+      "x": 15,
+      "y": -15,
+      "file": "tiles/layered_L24_F-1-24_8_15_-15.png",
+      "sha256": "abae591f6d436ceeffa7fb8c57ff31c4463dc044d7a726e4feb4ab6c71067fed"
+    },
+    {
+      "x": 14,
+      "y": -16,
+      "file": "tiles/layered_L25_F-1-25_8_14_-16.png",
+      "sha256": "2c4bf4c6d5e097fbbb776d33c6f58a8ad011e136e3a420a50ab1065fb8510a86"
+    },
+    {
+      "x": 15,
+      "y": -16,
+      "file": "tiles/layered_L25_F-1-25_8_15_-16.png",
+      "sha256": "6117392bcb383e7142dc364ecd4162505cbe9f58e5f66872e7c44d4eddb8275d"
+    },
+    {
+      "x": 14,
+      "y": -16,
+      "file": "tiles/layered_L26_F-1-26_8_14_-16.png",
+      "sha256": "e02e3cf63e90409f2965685f10bfc4817dd4b6f1056a3ac4391509d1ad98eb6d"
+    },
+    {
+      "x": 14,
+      "y": -16,
+      "file": "tiles/layered_L27_F-1-27_8_14_-16.png",
+      "sha256": "1c6bb94741907642def65ce5973a85a61610aed8864ca1686a9fd088e6923872"
     }
   ],
   "missingTileCount": 33,
+  "layeredTileCount": 13,
   "coordinateBounds": {
     "maxX": 19395.98046875,
-    "maxY": 19082.388671875,
+    "maxY": 19082.560546875,
     "minX": 13674.123046875,
     "minY": 12210.14453125
   },
   "referenceVerification": {
-    "errorPixels": 3.1407206515693264,
+    "errorPixels": 3.023814496487994,
     "expectedMapCoordinate": {
       "x": 17205.125,
       "y": 16041.04
     },
     "geometryDiagnostic": {
-      "inliers": 53,
-      "mapX": 17202.793209732303,
-      "mapY": 16039.191524256696,
-      "rotationDegrees": 0.05299889462172716,
-      "scale": 1.0741266182498297
+      "inliers": 58,
+      "mapX": 17202.835243593625,
+      "mapY": 16039.241734500913,
+      "rotationDegrees": 0.06055210101651618,
+      "scale": 1.0747388475109818
     },
-    "goodMatches": 69,
-    "mapKeypoints": 1788,
+    "goodMatches": 78,
+    "mapKeypoints": 2747,
     "minimapKeypoints": 210,
-    "nearAnchorMatches": 63,
+    "nearAnchorMatches": 70,
     "passed": true,
     "reference": "qiqiu.png",
     "resultMapCoordinate": {
-      "x": 17202.813193113907,
-      "y": 16038.914047241211
+      "x": 17202.822468011276,
+      "y": 16039.079948839935
     }
   },
   "features": {
     "file": "features.yml",
-    "sha256": "727cd7de84f41124cdcb4f3f6d7496645f5c90171381223ae46c396bc146a2ac",
-    "keypointCount": 78101,
-    "extractedKeypointCount": 78101
+    "sha256": "f61bee925e57584477a53363864737b490ce14fc1bc8262f7e40dc4c00292ed5",
+    "keypointCount": 101652,
+    "extractedKeypointCount": 101652
   }
 }

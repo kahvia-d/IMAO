@@ -4,7 +4,7 @@
   "scene": "Darkplain",
   "sceneId": 7,
   "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
-  "generatedAtUtc": "2026-09-18T15:22:39.6166450Z",
+  "generatedAtUtc": "2026-09-23T04:16:24.9705104Z",
   "source": {
     "static": "https://web-static.kurobbs.com",
     "state": 909,
@@ -177,9 +177,64 @@
       "y": 2,
       "file": "tiles/909_3_2.png",
       "sha256": "03eb1a110c3465c06fb79655443b284a45ad74035d7de4f2279170ddac15b31c"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "file": "tiles/layered_L49_F-1-49_909_1_1.png",
+      "sha256": "55833facf40b5b081d8f35e09e581c9a7e1338bff116e650531703468e9ed079"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "file": "tiles/layered_L49_F-1-49_909_2_1.png",
+      "sha256": "4d02175c068f89291ce8064ad8402f1d01b6cb7aca19d6bbc4508dd237a095e3"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "file": "tiles/layered_L50_F-1-50_909_1_-1.png",
+      "sha256": "1e28f05eca55b087dc030c58da605af94fbc51c8317fba3c2d87c2f029ce1a32"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "file": "tiles/layered_L50_F-1-50_909_1_0.png",
+      "sha256": "5c5deef1e9fa85e2e5b6bb5586a3673401ec2f059c22da28567fed94f903e799"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/layered_L51_F-1-51_909_0_0.png",
+      "sha256": "4c2904dbdf3f7817792e99b555ba0aae4183a102244da6ae0db38a253f2626f3"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/layered_L52_F-1-52_909_0_1.png",
+      "sha256": "74f03aed458513e96aa18d0843327a2603a759af925927b1552cda9e4b47c5a0"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/layered_L52_F-2-52_909_0_1.png",
+      "sha256": "d331e4a5b1456a80072a02dacee763fc1f3afb26c63e9b25be32cd6c98412d40"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/layered_L52_F-3-52_909_0_1.png",
+      "sha256": "f375179986ae7780552b387b0995bfbcfdc41a7bf675b010bff2bf5ea9623044"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "file": "tiles/layered_L53_F-1-53_909_2_0.png",
+      "sha256": "730fdfc3eeceeaf7966a545868fc3932e8ed0d1b0948e3e86d9e1a771ad96911"
     }
   ],
   "missingTileCount": 31,
+  "layeredTileCount": 9,
   "coordinateBounds": {
     "maxX": 2522.383056640625,
     "maxY": 2020.583984375,
@@ -193,16 +248,16 @@
       "y": 963.1448161620972
     },
     "geometryDiagnostic": {
-      "inliers": 17,
-      "mapX": -260.730650701121,
-      "mapY": 961.1161125972906,
-      "rotationDegrees": -0.1718675830137601,
-      "scale": 0.800773714036899
+      "inliers": 20,
+      "mapX": -260.50850037181806,
+      "mapY": 961.0165555099566,
+      "rotationDegrees": 0.015352351557523786,
+      "scale": 0.8010378404231369
     },
-    "goodMatches": 33,
-    "mapKeypoints": 1073,
+    "goodMatches": 43,
+    "mapKeypoints": 1652,
     "minimapKeypoints": 327,
-    "nearAnchorMatches": 23,
+    "nearAnchorMatches": 25,
     "passed": true,
     "reference": "reference-minimap.png",
     "resultMapCoordinate": {
@@ -212,8 +267,8 @@
   },
   "features": {
     "file": "features.yml",
-    "sha256": "f6f2cfb2e01c6c3e39c350866e568d4a86292d48d206b00e6896a731dc45ec10",
-    "keypointCount": 37524,
-    "extractedKeypointCount": 37524
+    "sha256": "6890ea39ef89672a9603b59c8019fd177d8fd23e797a385868f07a608ef12405",
+    "keypointCount": 49788,
+    "extractedKeypointCount": 49788
   }
 }

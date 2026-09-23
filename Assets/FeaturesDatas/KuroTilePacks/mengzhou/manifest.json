@@ -4,7 +4,7 @@
   "scene": "World",
   "sceneId": 1,
   "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
-  "generatedAtUtc": "2026-09-18T16:05:23.8309718Z",
+  "generatedAtUtc": "2026-09-23T04:12:42.5293967Z",
   "source": {
     "static": "https://web-static.kurobbs.com",
     "state": 8,
@@ -405,9 +405,88 @@
       "y": 4,
       "file": "tiles/8_-4_4.png",
       "sha256": "b46d96734080923e0927da522528ba4a0fff8ac2380f42bf719e8e62b302b216"
+    },
+    {
+      "x": -10,
+      "y": 1,
+      "file": "tiles/layered_L54_F-1-54_8_-10_1.png",
+      "sha256": "8269c55d06b751f575a6a2ef3b83e23b502f9f0449aa29c7a4c26d6eaa653cb6"
+    },
+    {
+      "x": -9,
+      "y": 1,
+      "file": "tiles/layered_L54_F-1-54_8_-9_1.png",
+      "sha256": "0e08c5076673dcc5e3022ecb0d98cdd7cbcfe4dfc866fb6058a3d181d4b1a616"
+    },
+    {
+      "x": -9,
+      "y": 1,
+      "file": "tiles/layered_L55_F-1-55_8_-9_1.png",
+      "sha256": "6b7614ce9d05b01a631757c6224f835633ac1a2f7264aa0fb444e305da4476be"
+    },
+    {
+      "x": -7,
+      "y": 1,
+      "file": "tiles/layered_L56_F-1-56_8_-7_1.png",
+      "sha256": "d507ce3f94cd4e53a8e8e128144c81cfdc27f675c8aad73a280fbc1ade82861c"
+    },
+    {
+      "x": -7,
+      "y": 1,
+      "file": "tiles/layered_L56_F-2-56_8_-7_1.png",
+      "sha256": "e51fcc7eb9da7e46dae08263e51717eac55fe524e74fd5a61ce6e984f14711eb"
+    },
+    {
+      "x": -7,
+      "y": 1,
+      "file": "tiles/layered_L56_F-3-56_8_-7_1.png",
+      "sha256": "4f489ba43bf164b697b93a93a2bf302898abf4cf8f1860246ad6b25d192a7981"
+    },
+    {
+      "x": -7,
+      "y": 1,
+      "file": "tiles/layered_L56_F-4-56_8_-7_1.png",
+      "sha256": "7c34f52478ee0a364fb1017faaa217bc9f3b036bc830906b347cf89481754905"
+    },
+    {
+      "x": -7,
+      "y": 1,
+      "file": "tiles/layered_L57_F-1-57_8_-7_1.png",
+      "sha256": "373f0e11a1ea6429e60eb2800f2cc9d45e1e974e1b8e6ecb623cdd1e634c6652"
+    },
+    {
+      "x": -7,
+      "y": 0,
+      "file": "tiles/layered_L58_F-1-58_8_-7_0.png",
+      "sha256": "0c2403817ddf476eee61373c32b4830608eb4a3e0ad4b3c031ed22d427008c6a"
+    },
+    {
+      "x": -7,
+      "y": 1,
+      "file": "tiles/layered_L58_F-1-58_8_-7_1.png",
+      "sha256": "5c4781dbe2615f37a52554a5a54a5b74a57ce4da2757a7bb5fd299e31c00d592"
+    },
+    {
+      "x": -7,
+      "y": 1,
+      "file": "tiles/layered_L58_F-2-58_8_-7_1.png",
+      "sha256": "f9b7fc07fe1e0fde522bca5be1ebb49a2f811d89ac88b400d1836f3cc1792025"
+    },
+    {
+      "x": -8,
+      "y": 1,
+      "file": "tiles/layered_L59_F-1-59_8_-8_1.png",
+      "sha256": "883a7a0f5277e7cb2a8d31292c8c8732c695e8549528f68e14d59053446b74d6"
+    },
+    {
+      "x": -8,
+      "y": 2,
+      "file": "tiles/layered_L59_F-1-59_8_-8_2.png",
+      "sha256": "60032e6608cfa9d63e3a40cb30c3b9744fa25332c5d003daded2fd420c9b4abf"
     }
   ],
   "missingTileCount": 0,
+  "layeredTileCount": 13,
   "coordinateBounds": {
     "maxX": -3078.652099609375,
     "maxY": 3531.905517578125,
@@ -422,13 +501,13 @@
     },
     "geometryDiagnostic": {
       "inliers": 23,
-      "mapX": -5631.536467950978,
-      "mapY": 846.3265560568675,
-      "rotationDegrees": 0.0925040377582265,
-      "scale": 1.0734695623305643
+      "mapX": -5631.477405873132,
+      "mapY": 846.4281270704676,
+      "rotationDegrees": -0.07750035743422316,
+      "scale": 1.0731543836316644
     },
-    "goodMatches": 35,
-    "mapKeypoints": 751,
+    "goodMatches": 36,
+    "mapKeypoints": 1007,
     "minimapKeypoints": 122,
     "nearAnchorMatches": 25,
     "passed": true,
@@ -440,8 +519,8 @@
   },
   "features": {
     "file": "features.yml",
-    "sha256": "bbaab63c3ba1c5d7cfec5aad9c773bb57a802a57a74b84d12d4d96161c5e44c7",
-    "keypointCount": 64750,
-    "extractedKeypointCount": 64750
+    "sha256": "37df521b07cbcf6ced57b50b3ce4379ab0b39cb965e972dacf9735d4687ee0d1",
+    "keypointCount": 94641,
+    "extractedKeypointCount": 94641
   }
 }

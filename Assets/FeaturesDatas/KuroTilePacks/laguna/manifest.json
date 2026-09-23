@@ -4,7 +4,7 @@
   "scene": "World",
   "sceneId": 1,
   "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
-  "generatedAtUtc": "2026-09-18T16:56:18.6706245Z",
+  "generatedAtUtc": "2026-09-23T04:13:14.2643145Z",
   "source": {
     "static": "https://web-static.kurobbs.com",
     "state": 8,
@@ -537,9 +537,76 @@
       "y": -8,
       "file": "tiles/8_15_-8.png",
       "sha256": "baf1fb4ec0f7622b4486275976ff7cccea98ea61953a11fc1ba20f019f668162"
+    },
+    {
+      "x": 10,
+      "y": -6,
+      "file": "tiles/layered_L10_F-1-10_8_10_-6.png",
+      "sha256": "fd7a13e865a7891085eeecbe7b91b06e0c3f421d6112f83db2d6ded5cf78b855"
+    },
+    {
+      "x": 10,
+      "y": -6,
+      "file": "tiles/layered_L11_F-1-11_8_10_-6.png",
+      "sha256": "86870609cba95dd5d0442e084a477fc409a87aca5c6a5475e123a3b15bf73f0d"
+    },
+    {
+      "x": 10,
+      "y": -7,
+      "file": "tiles/layered_L12_F-1-12_8_10_-7.png",
+      "sha256": "b2f6d97232cc635c7535052e541e832528519d71611c5d68b652b4cefc5c4372"
+    },
+    {
+      "x": 11,
+      "y": -6,
+      "file": "tiles/layered_L13_F-1-13_8_11_-6.png",
+      "sha256": "be89d4a4b053333a183917a4dd38362cc8eb9652d41c469e6561c60fdc2b1416"
+    },
+    {
+      "x": 12,
+      "y": -6,
+      "file": "tiles/layered_L18_F-1-18_8_12_-6.png",
+      "sha256": "f1d800252b5272910cfcc1197f6f0678b06d48220248250872688be7599ba790"
+    },
+    {
+      "x": 12,
+      "y": -7,
+      "file": "tiles/layered_L18_F-1-18_8_12_-7.png",
+      "sha256": "d2c782a89bf6de101a5ef6e818e3ac229e9c6b83b5ca761469f26b029fea34b7"
+    },
+    {
+      "x": 12,
+      "y": -6,
+      "file": "tiles/layered_L18_F-2-18_8_12_-6.png",
+      "sha256": "7424cb75140a30a316d88d0bcecad4c45d0678ceede7cbb89d8e16c160705145"
+    },
+    {
+      "x": 12,
+      "y": -7,
+      "file": "tiles/layered_L18_F-2-18_8_12_-7.png",
+      "sha256": "3580fe19ab46a3dd9a767cd12ebc32639133161587f41545c38548dff9200d57"
+    },
+    {
+      "x": 12,
+      "y": -9,
+      "file": "tiles/layered_L19_F-1-19_8_12_-9.png",
+      "sha256": "ce233d222d432fb3c6ac6a496dc9a28b9fad0b80e24e0e4d9e48b960f4759110"
+    },
+    {
+      "x": 10,
+      "y": -5,
+      "file": "tiles/layered_L8_F-1-8_8_10_-5.png",
+      "sha256": "8d27839e81aad23d63386bbe3379c1c24e4952de06b42e09ae83d15471cfce0c"
+    },
+    {
+      "x": 10,
+      "y": -5,
+      "file": "tiles/layered_L9_F-1-9_8_10_-5.png",
+      "sha256": "9c28c8ef88aca2df08fe06e28458bd64a372a176e47569426694f4d77e92e4f2"
     }
   ],
   "missingTileCount": 35,
+  "layeredTileCount": 11,
   "coordinateBounds": {
     "maxX": 17781.943359375,
     "maxY": 15261.0390625,
@@ -572,8 +639,8 @@
   },
   "features": {
     "file": "features.yml",
-    "sha256": "2e30e2e1195cc159a423d2842fc49678cffed8ec1638d1b54efb5eec7859dea2",
-    "keypointCount": 72054,
-    "extractedKeypointCount": 72054
+    "sha256": "04e5b585cec0da88d5f40fc53574d73961af359efae9f20aa909fc127e1ffe02",
+    "keypointCount": 84407,
+    "extractedKeypointCount": 84407
   }
 }

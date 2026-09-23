@@ -1,12 +1,12 @@
 {
-  "featureCount": 72054,
+  "featureCount": 84407,
   "path": "visual-index.imx",
-  "postingCount": 187216,
+  "postingCount": 199804,
   "referenceVerified": true,
   "sceneId": 1,
   "source": "features.yml",
-  "sourceSha256": "2e30e2e1195cc159a423d2842fc49678cffed8ec1638d1b54efb5eec7859dea2",
-  "tileCount": 641,
-  "visualIndexSha256": "f73bbba992628fa6a63e38c07e10ff00332fcc12d74bc1fb6cda85dc3b5d67b8",
+  "sourceSha256": "04e5b585cec0da88d5f40fc53574d73961af359efae9f20aa909fc127e1ffe02",
+  "tileCount": 642,
+  "visualIndexSha256": "ada96554b1ba4e44c7188b1804f63774cfc693d111bd9e01809135c0f9ac3058",
   "vocabularySha256": "8bd80ebd3cfe727538d65a0ccc8c17c043b80c70b5c721f4ac0e1436669a7c33"
 }
