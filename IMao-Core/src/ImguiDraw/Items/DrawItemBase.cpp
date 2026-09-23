@@ -25,43 +25,6 @@
 using namespace std;
 namespace fs = filesystem;
 
-namespace {
-// Upstream map data occasionally puts a collectible on the wrong floor of a layered map. The
-// in-game evidence (the map's own layer name, the built-in detector) is the authority, so a few
-// points carry a locally recorded correction instead of a hand edit of the synced snapshot -
-// which the next sync would revert and which would break the snapshot's recorded hash.
-// Assets/KuroMap/point-layer-corrections.json holds them, keyed by stateId + location[].id.
-struct PointLayerCorrection {
-    string floorId;
-    string level;
-};
-
-const unordered_map<string, PointLayerCorrection>& PointLayerCorrections() {
-    static const unordered_map<string, PointLayerCorrection> corrections = [] {
-        unordered_map<string, PointLayerCorrection> loaded;
-        try {
-            const auto path = ResourceSnapshotContext::MapDataRoot() / "point-layer-corrections.json";
-            ifstream input(path);
-            if (!input) return loaded;
-            json document;
-            input >> document;
-            for (const auto& entry : document.value("corrections", json::array())) {
-                const string key = to_string(entry.value("stateId", 0)) + "|" + entry.value("locationId", string{});
-                loaded[key] = PointLayerCorrection{ entry.value("floorId", string{}), entry.value("level", string{}) };
-            }
-            if (!loaded.empty()) {
-                StructuredLogger::Record("info", "layered-map", "point-layer-corrections", "loaded=" + to_string(loaded.size()));
-            }
-        }
-        catch (const exception& exception) {
-            StructuredLogger::Record("warning", "layered-map", "point-layer-corrections", string("load failed: ") + exception.what());
-        }
-        return loaded;
-    }();
-    return corrections;
-}
-}
-
 json DrawItemBase::itemsJsonData_World;
 json DrawItemBase::itemsJsonData_Tethys;
 json DrawItemBase::itemsJsonData_Fabricatorium;
@@ -309,13 +272,6 @@ void DrawItemBase::AddItemDataFromJson(string itemId) {
                         };
                         tempItemDatas.layer.floorId = metadata("floorId");
                         tempItemDatas.layer.level = metadata("level");
-                        // A recorded correction wins over the upstream snapshot; see above.
-                        const auto correction = PointLayerCorrections().find(
-                            to_string(tempItemDatas.layer.stateId) + "|" + s);
-                        if (correction != PointLayerCorrections().end()) {
-                            tempItemDatas.layer.floorId = correction->second.floorId;
-                            tempItemDatas.layer.level = correction->second.level;
-                        }
                         itemsDatas.push_back(tempItemDatas);
                     }
                    std::scoped_lock filterLock(nearbyOperationMutex);
@@ -707,4 +663,3 @@ bool DrawItemBase::IsMarkerDisplayContext(HWND game) {
     if (RouteGamepadBridge::Shared().ReturnDisplay(game, MarkerProfile()).visible) return true;
     return !FocusedGuideWindow().empty();
 }
-
