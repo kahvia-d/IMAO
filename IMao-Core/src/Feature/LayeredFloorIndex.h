@@ -48,6 +48,14 @@ struct FloorEntry {
     std::string floorName; // "叩天关·上层"
     int level = 0;         // "-1": lower (more negative) is deeper
     ImageFeatureData features;
+    /// A capped copy of `features`, used only when every floor in the game is a candidate.
+    ///
+    /// The cold start compares all 90 floors and only needs an answer good enough to scope a
+    /// search, so it can afford a sample. The vote that DECIDES a floor runs against a handful
+    /// of floors that containment already narrowed down, and there the full set matters: on two
+    /// real 下层金库 captures a 600-descriptor sample picks the wrong floor (13 vs 13, 11 vs 10)
+    /// where the full set picks 贵金属与艺术品藏区1楼 at 17 vs 8 and 15 vs 6.
+    ImageFeatureData sampleFeatures;
     std::vector<FloorTile> tiles;
     // Centre of the floor's footprint in map coordinates. A cold start has no position at
     // all, and this is the only coordinate the layered index can offer to scope a search.
@@ -89,6 +97,9 @@ struct Classification {
 /// carry the same decision at a fraction of the cost: with 90 floors across the game, keeping
 /// everything made one classification roughly ten times slower and the indexes ten times
 /// larger.
+/// The cold start, where every floor in the game is a candidate, votes against `sampleFeatures`
+/// (see FloorEntry); `maxKeypointsPerFloor` is the cap for that copy, 0 disabling it. The full
+/// `features` set is always loaded: it is what the deciding vote uses.
 bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error,
     int maxKeypointsPerFloor = 0);
 
@@ -107,18 +118,23 @@ bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, 
 /// IMaoLayeredFloorProbe): two in-layer captures vote 22 for the correct floor with a
 /// runner-up of 3, while nine surface captures peak at 6 and never lead by 2x. 10 sits
 /// between the two populations - below 8 the classifier started accepting surface frames.
+/// `useSamples` votes against each floor's capped `sampleFeatures` instead of the full set, which
+/// is what the cold start does: it compares every floor in the game and only needs enough to
+/// scope a search.
 Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,
-    int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f);
+    int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f,
+    bool useSamples = false);
 
 /// Convenience overload for callers that hold the floors by value. The pointer form above is the
 /// real one: a FloorEntry owns its descriptors, so passing a vector of them by value copies tens
 /// of megabytes per call once every floor in the game is a candidate.
 inline Classification Classify(const ImageFeatureData& query, const std::vector<FloorEntry>& floors,
-    int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f) {
+    int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f,
+    bool useSamples = false) {
     std::vector<const FloorEntry*> pointers;
     pointers.reserve(floors.size());
     for (const auto& floor : floors) pointers.push_back(&floor);
-    return Classify(query, pointers, minimumMatches, margin, ratio, maxDistance);
+    return Classify(query, pointers, minimumMatches, margin, ratio, maxDistance, useSamples);
 }
 
 /// "-2/3" -> -2. The numerator orders the floors inside one layered map.

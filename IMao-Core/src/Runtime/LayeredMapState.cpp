@@ -162,7 +162,9 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         for (const auto* entry : all) floors.push_back(&entry->floor);
         // The scope only has to pick the right cave, not confirm a position: a wrong guess
         // costs one bounded search that falls back to the global sweep anyway.
-        const auto classification = LayeredFloors::Classify(minimapFeatures, floors, 4, 1.5);
+        // Every floor in the game is a candidate here and the answer only scopes a search, so the
+        // capped sample is enough - see FloorEntry::sampleFeatures.
+        const auto classification = LayeredFloors::Classify(minimapFeatures, floors, 4, 1.5, 0.75f, 0.6f, true);
         std::lock_guard lock(stateMutex);
         if (!classification.identified) return;
         const auto found = std::find_if(all.begin(), all.end(), [&](const Entry* entry) {
@@ -228,6 +230,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     // base: on the surface above a cave the shared base matches all of them equally, so no
     // floor can lead by the 2x margin, while inside the cave the cave texture separates them.
     const int minimumMatches = restricted ? 4 : 10;
+    // Full descriptors: the candidate set is already narrowed (by containment inside a cave), and
+    // this vote is the one that decides the floor.
     const auto classification = LayeredFloors::Classify(minimapFeatures, floors, minimumMatches, 2.0);
 
     // Containment already made the candidates physically plausible, so inside a cave a close
@@ -409,4 +413,5 @@ void SetForTest(const Snapshot& snapshot) {
 }
 
 } // namespace LayeredMap
+
 

@@ -84,6 +84,8 @@ int main(int argc, char** argv) {
     // Descriptors kept per floor at load time; 0 keeps all. Used to check how far the per-floor
     // fingerprint can be cut before floor identification degrades.
     int maxKeypoints = 0;
+    // Vote against the capped sample set (what the cold start does) instead of the full one.
+    bool useSamples = false;
     double margin = 2.0;
     float ratio = 0.75f;
     float maxDistance = 0.6f;
@@ -102,6 +104,7 @@ int main(int argc, char** argv) {
             else if (argument == "--hessian") hessian = std::stod(next("--hessian"));
             else if (argument == "--min-matches") minimumMatches = std::stoi(next("--min-matches"));
             else if (argument == "--max-keypoints") maxKeypoints = std::stoi(next("--max-keypoints"));
+            else if (argument == "--samples") useSamples = true;
             else if (argument == "--margin") margin = std::stod(next("--margin"));
             else if (argument == "--ratio") ratio = std::stof(next("--ratio"));
             else if (argument == "--max-distance") maxDistance = std::stof(next("--max-distance"));
@@ -176,7 +179,7 @@ int main(int argc, char** argv) {
             << " keypoints=" << query.imgKeypoints.size()
             << " mask=" << (useMask ? "on" : "off") << '\n';
 
-        const auto classification = LayeredFloors::Classify(query, floors, minimumMatches, margin, ratio, maxDistance);
+        const auto classification = LayeredFloors::Classify(query, floors, minimumMatches, margin, ratio, maxDistance, useSamples);
         std::cout << "votes (matches):\n";
         for (const auto& vote : classification.votes) {
             const auto found = std::find_if(floors.begin(), floors.end(), [&](const LayeredFloors::FloorEntry& floor) {
@@ -256,4 +259,5 @@ int main(int argc, char** argv) {
         return 1;
     }
 }
+
 

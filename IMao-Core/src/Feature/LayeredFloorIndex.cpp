@@ -128,8 +128,11 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
             return false;
         }
         // The index answers "which floor", never "where exactly" - the pack does that. Keeping a
-        // few hundred descriptors therefore preserves the decision while the whole game's ninety
-        // floors stay affordable to compare on every minimap frame.
+        // The full set stays: it is what the deciding vote uses. The cap only fills the sample the
+        // cold start compares against every floor in the game - see sampleFeatures' comment for the
+        // measurement that made this split necessary (a 600-descriptor sample picked the wrong
+        // floor in 下层金库 where the full set picked the right one).
+        entry.sampleFeatures = entry.features;
         if (maxKeypointsPerFloor > 0 &&
             entry.features.imgKeypoints.size() > static_cast<std::size_t>(maxKeypointsPerFloor)) {
             const std::size_t stride = (entry.features.imgKeypoints.size() +
@@ -143,8 +146,9 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
                 const float* row = entry.features.imgDescriptors.ptr<float>(static_cast<int>(i));
                 descriptors.insert(descriptors.end(), row, row + entry.features.imgDescriptors.cols);
             }
-            entry.features.imgKeypoints = std::move(keypoints);
-            entry.features.imgDescriptors = cv::Mat(static_cast<int>(entry.features.imgKeypoints.size()),
+            entry.sampleFeatures.imgKeypoints = std::move(keypoints);
+            entry.sampleFeatures.imgDescriptors = cv::Mat(
+                static_cast<int>(entry.sampleFeatures.imgKeypoints.size()),
                 entry.features.imgDescriptors.cols, CV_32F, descriptors.data()).clone();
         }
         if (entry.features.imgKeypoints.empty() ||
@@ -224,16 +228,21 @@ bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, 
 }
 
 Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,
-    int minimumMatches, double margin, float ratio, float maxDistance) {
+    int minimumMatches, double margin, float ratio, float maxDistance, bool useSamples) {
     Classification result;
     if (query.imgDescriptors.empty() || query.imgDescriptors.rows < 2 || floors.empty()) return result;
 
     cv::BFMatcher matcher(cv::NORM_L2);
     for (std::size_t index = 0; index < floors.size(); ++index) {
         const auto* floor = floors[index];
-        if (floor == nullptr || floor->features.imgDescriptors.empty()) continue;
+        if (floor == nullptr) continue;
+        // The cold start compares every floor in the game and can afford the capped sample; the
+        // vote that decides a floor compares a handful and uses the full set.
+        const auto& source = useSamples && !floor->sampleFeatures.imgDescriptors.empty()
+            ? floor->sampleFeatures : floor->features;
+        if (source.imgDescriptors.empty()) continue;
         std::vector<std::vector<cv::DMatch>> knn;
-        matcher.knnMatch(query.imgDescriptors, floor->features.imgDescriptors, knn, 2);
+        matcher.knnMatch(query.imgDescriptors, source.imgDescriptors, knn, 2);
         FloorVote vote;
         vote.layerId = floor->layerId;
         vote.floorId = floor->floorId;
@@ -265,3 +274,4 @@ Classification Classify(const ImageFeatureData& query, const std::vector<const F
 }
 
 } // namespace LayeredFloors
+
