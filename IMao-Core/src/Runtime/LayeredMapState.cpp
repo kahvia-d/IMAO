@@ -252,10 +252,35 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     std::lock_guard lock(stateMutex);
     if (adopted) {
         unknownCount = 0;
-        if (classification.floorId == current.floorId && current.active) {
+        const bool sameFloor = current.active && classification.floorId == current.floorId;
+        // A winner that is already in the equivalence set is another candidate for where the
+        // player stands, not a floor change. 下层金库's four marble floors trade the lead from
+        // frame to frame (9/4, 6/5, 12/5), and treating that as a change flipped every marker's
+        // role several times a second.
+        const bool equivalentToCurrent = current.active &&
+            (std::find(current.equivalentFloorIds.begin(), current.equivalentFloorIds.end(),
+                classification.floorId) != current.equivalentFloorIds.end() ||
+             // Symmetric test: this frame cannot separate the winner from the floor already held,
+             // so holding is right even when the winner changes. Without it the state flipped
+             // A -> B -> A every three frames, which is the flicker the user saw.
+             std::any_of(equivalent.begin(), equivalent.end(), [&](const std::string& floor) {
+                 return floor == current.floorId ||
+                     std::find(current.equivalentFloorIds.begin(), current.equivalentFloorIds.end(), floor) !=
+                         current.equivalentFloorIds.end();
+             }));
+        if (sameFloor || equivalentToCurrent) {
             pendingFloorId.clear();
             pendingCount = 0;
-            current.equivalentFloorIds = equivalent;
+            // Merge instead of replace: the set comes from noisy votes, so a frame that separates
+            // them once must not shrink the group back and make the display flip again.
+            for (const auto& floor : equivalent) {
+                if (std::find(current.equivalentFloorIds.begin(), current.equivalentFloorIds.end(), floor) ==
+                    current.equivalentFloorIds.end()) current.equivalentFloorIds.push_back(floor);
+            }
+            if (std::find(current.equivalentFloorIds.begin(), current.equivalentFloorIds.end(),
+                current.floorId) == current.equivalentFloorIds.end()) {
+                current.equivalentFloorIds.push_back(current.floorId);
+            }
         }
         else if (classification.floorId == pendingFloorId) {
             ++pendingCount;
@@ -264,7 +289,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             pendingFloorId = classification.floorId;
             pendingCount = 1;
         }
-        if (pendingCount >= kSwitchFrames && classification.floorId != current.floorId) {
+        if (pendingCount >= kSwitchFrames && !sameFloor && !equivalentToCurrent) {
             const auto found = std::find_if(candidates.begin(), candidates.end(), [&](const Entry* entry) {
                 return entry->floor.floorId == classification.floorId;
             });
