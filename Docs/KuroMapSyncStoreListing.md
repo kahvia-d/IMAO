@@ -19,7 +19,8 @@
 - **简短描述（≤ 132 字符）**：把库街区鸣潮大地图的点位完成状态与你本机的 IMao 桌面程序对应起来，双向补齐，不需要上传到任何服务器。
 - **分类**：生产力 / 效率（Productivity）
 - **语言**：中文（简体）；可另加 English
-- **隐私政策 URL**：需指向 `Docs/KuroMapSyncPrivacy.md` 的公开链接（可先用仓库 raw 链接，后续换成 GitHub Pages 页面）
+- **隐私政策 URL**：`https://github.com/kahvia-d/IMAO/blob/main/Docs/KuroMapSyncPrivacy.md`
+  （2026-09-24 复核可达，HTTP 200；备用的纯文本地址：`https://raw.githubusercontent.com/kahvia-d/IMAO/main/Docs/KuroMapSyncPrivacy.md`）
 - **支持链接**：仓库 issue 页
 
 ## 详细描述（草稿）
@@ -64,6 +65,18 @@
 3. 扩展不发起任何网络请求，因此不需要测试账号即可验证「无外发流量」；如需验证读取行为，任意登录状态的库街区地图页均可。
 4. 扩展不含远程代码，权限仅 `nativeMessaging` + `storage` 与两个 kurobbs 域名。
 
+## 上架后的商店页留存
+
+![Edge 加载项商店上架页](images/kuromap-sync/edge-store-listing.png)
+
+上图为商店页快照（存于 `Docs/images/kuromap-sync/edge-store-listing.png`），记录上架时的名称、描述与隐私声明。
+
+⚠️ **上架版本与仓库版本不一致（2026-09-24 发现，未处理）**：商店页显示 **版本 0.1.0**，
+而 `BrowserExtensions/KuroMapSync/manifest.json` 是 **0.1.1**（`805b5bc`，2026-09-17 12:44 提交，
+同日 12 时前商店提交的是 0.1.0）。GitHub 侧的 `ext-v0.1.1` 发行版是 0.1.1。
+**从仓库无法判断 0.1.1 是"已提交待审"还是"从未提交"** —— 下次进 Partner Center 时确认，
+必要时把 0.1.1 重新提交，使商店页版本与仓库一致。
+
 ## 提交前检查清单
 
 - [x] 图标：16/32/48/128 PNG（已放在 `BrowserExtensions/KuroMapSync/icons/`）
@@ -71,6 +84,9 @@
 - [x] 首次提交（2026-09-17 已提交）
 - [x] **已上架**：https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg
       商店版与手动版共用同一个 CRX ID，桌面端桥接白名单与同步档案都不受影响。
-- [x] 隐私政策链接与商店截图（随上架材料一并提交，**仓库内没有留存副本**；改版时需与商店页核对）
+- [x] 隐私政策链接：已填入上面的公开地址（可达性已复核）
+- [x] 商店截图：提交材料由 Partner Center 保存；**仓库内只留了一张商店页快照**（见上），
+      不是上传到商店的画廊截图 —— 画廊原图仓库里没有副本
 - [x] 桌面端新版本发布（含同步功能，且能自动注册桥接）
 - [x] 桥接白名单 ID（CRX ID 已获取，已写进桌面端注册逻辑）
+- [ ] 把商店页版本从 0.1.0 更新到仓库当前的 0.1.1（见上面的版本差异说明）

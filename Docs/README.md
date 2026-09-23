@@ -80,7 +80,7 @@
 |---|---|
 | [`KuroMapSyncInstall.md`](KuroMapSyncInstall.md) | 库街区进度同步扩展：商店版（Edge，已上架）与手动安装（Chrome） |
 | [`KuroMapSyncPrivacy.md`](KuroMapSyncPrivacy.md) | IMao 库街区进度同步扩展 · 隐私说明 |
-| [`KuroMapSyncStoreListing.md`](KuroMapSyncStoreListing.md) | Edge 插件上架材料（Partner Center 填报用） |
+| [`KuroMapSyncStoreListing.md`](KuroMapSyncStoreListing.md) | Edge 插件上架材料与上架后留存（Partner Center 填报用） |
 
 ## 审计、性能与重构
 
