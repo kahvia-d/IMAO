@@ -444,6 +444,16 @@ public sealed class MarkerGuideCoordinator : IDisposable
         string name = LayerFloorNames.NameFor(level);
         return name.Length > 0 ? $"图层 {name} ({level}) · " : $"图层 {level} · ";
     }
+
+    // The chooser row's floor: "3楼" rather than "-3/15". Every candidate in this list is on the
+    // same layered map - other maps are hidden - so the map's name is left out and only the floor
+    // is named; the raw level is the fallback for a floor no pack has named.
+    private static string FloorLabel(string? level)
+    {
+        if (string.IsNullOrWhiteSpace(level)) return "";
+        string name = LayerFloorNames.ShortFor(level);
+        return name.Length > 0 ? name : level;
+    }
     private void RenderGamepadList(IReadOnlyDictionary<string, string>? names = null)
     {
         if (!IsGamepadSessionOpen || gamepadMenuRoute is not null || gamepadAssistant is not { } assistant) return;
@@ -1290,7 +1300,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 loaded++;
                 var detail = await details.GetLocalAsync(selection);
                 if (!IsCurrent()) return;
-                button.Content = new TextBlock { Text = $"{detail.Name}  {detail.Level}  · {selection.PointId[^Math.Min(6, selection.PointId.Length)..]}", TextWrapping = TextWrapping.Wrap };
+                button.Content = new TextBlock { Text = $"{detail.Name}  {FloorLabel(detail.Level)}  · {selection.PointId[^Math.Min(6, selection.PointId.Length)..]}", TextWrapping = TextWrapping.Wrap };
             }
             if (!IsCurrent()) return;
             more.Visibility = result.TryGetProperty("hasMore", out var hasMore) && hasMore.GetBoolean() ? Visibility.Visible : Visibility.Collapsed;
