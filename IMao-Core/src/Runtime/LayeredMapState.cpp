@@ -36,6 +36,8 @@ constexpr int kClearFrames = 10;
 std::string pendingFloorId;
 // Consecutive decisive classifications; see kGroupResetFrames.
 int decisiveStreak = 0;
+// Consecutive close classifications; see kGroupGrowFrames.
+int closeStreak = 0;
 int pendingCount = 0;
 int unknownCount = 0;
 std::chrono::steady_clock::time_point lastClassifyAt{};
@@ -64,6 +66,11 @@ constexpr int kIndistinguishableFactor = 1.5;   // vote * 1.5 >= winner  <=>  vo
 // back to the winner. Long enough that a burst of close frames cannot shrink it mid-tie (which
 // would flicker the other floors' markers), short enough to stay under two seconds.
 constexpr int kGroupResetFrames = 5;
+
+// And how many consecutive close classifications it takes before a floor joins the group. The
+// votes have two regimes - a clear frame reads 14 vs 4 while one against a blank wall reads
+// 1 vs 1 - so a single weak frame must not decide that two floors are the same place.
+constexpr int kGroupGrowFrames = 3;
 
 // Descriptors kept per floor when the index is loaded. The whole game has 90 floors and a cold
 // start compares every one of them, because the question is "which floor", not "where". Measured
@@ -289,25 +296,41 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             pendingFloorId.clear();
             pendingCount = 0;
             // The group exists to stop the display flickering while the votes are close (12/10),
-            // not to keep floors lumped together once a clear lead says otherwise. It therefore
-            // only grows while the evidence is close, and collapses back to this frame's group
-            // after the lead has been decisive for a while - 下层金库 now votes 15 vs 4 for
-            // 贵金属与艺术品藏区1楼, but the group picked up all four floors in its noisy opening
-            // seconds and, being grow-only, never let them go.
+            // not to keep floors lumped together once a clear lead says otherwise. Both changes
+            // are debounced, because the votes have two regimes: a clear frame reads 14 vs 4,
+            // while one taken against a blank wall reads 1 vs 1 and would otherwise pull its two
+            // floors into the group on its own - the "everything is one layer" the user saw now
+            // and then. Growing therefore needs kGroupGrowFrames close frames in a row, and
+            // shrinking needs kGroupResetFrames decisive ones.
             const bool decisive = classification.winnerMatches >=
                 2 * std::max(classification.runnerUpMatches, 1) && classification.winnerMatches >= minimumMatches;
+            bool applyGroup = false;
             if (decisive) {
+                // Decrement rather than reset the other counter: the two regimes alternate (the log
+                // shows 7 vs 1, then 4 vs 3, then 14 vs 4), so a strict run of five decisive frames
+                // never happened and the group stayed open for minutes. A close frame now only
+                // delays the collapse instead of cancelling it.
+                closeStreak = std::max(0, closeStreak - 1);
                 if (++decisiveStreak >= kGroupResetFrames) {
                     current.equivalentFloorIds = equivalent;
                     decisiveStreak = 0;
+                    applyGroup = false;   // the collapsed set is already the group
                 }
             }
-            else decisiveStreak = 0;
-            // Merge instead of replace otherwise: the set comes from noisy votes, so a frame that
-            // separates them once must not shrink the group back and make the display flip again.
-            for (const auto& floor : equivalent) {
-                if (std::find(current.equivalentFloorIds.begin(), current.equivalentFloorIds.end(), floor) ==
-                    current.equivalentFloorIds.end()) current.equivalentFloorIds.push_back(floor);
+            else {
+                decisiveStreak = std::max(0, decisiveStreak - 1);
+                if (++closeStreak >= kGroupGrowFrames) {
+                    closeStreak = 0;
+                    applyGroup = true;
+                }
+            }
+            // Merge instead of replace: the set comes from noisy votes, so a frame that separates
+            // them once must not shrink the group back and make the display flip again.
+            if (applyGroup) {
+                for (const auto& floor : equivalent) {
+                    if (std::find(current.equivalentFloorIds.begin(), current.equivalentFloorIds.end(), floor) ==
+                        current.equivalentFloorIds.end()) current.equivalentFloorIds.push_back(floor);
+                }
             }
             if (std::find(current.equivalentFloorIds.begin(), current.equivalentFloorIds.end(),
                 current.floorId) == current.equivalentFloorIds.end()) {
@@ -365,6 +388,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             const auto previous = current.floorId;
             current = Snapshot{};
             decisiveStreak = 0;
+            closeStreak = 0;
             ++current.revision;
             Diagnostics::Record("layered-floor-change", "scene=" + std::to_string(sceneId) +
                 " floor=cleared previous=" + previous + " unknownFrames=" + std::to_string(unknownCount));
@@ -381,6 +405,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             " identified=" + std::to_string(classification.identified) +
             " adopted=" + std::to_string(adopted) +
             " decisiveStreak=" + std::to_string(decisiveStreak) +
+            " closeStreak=" + std::to_string(closeStreak) +
             " equivalent=[" + JoinFloors(current.equivalentFloorIds) + "]" +
             " winner=" + std::to_string(classification.winnerMatches) +
             " runnerUp=" + std::to_string(classification.runnerUpMatches) +
@@ -448,6 +473,7 @@ void SetForTest(const Snapshot& snapshot) {
 }
 
 } // namespace LayeredMap
+
 
 
 
