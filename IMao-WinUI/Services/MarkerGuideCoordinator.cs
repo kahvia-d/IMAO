@@ -433,15 +433,23 @@ public sealed class MarkerGuideCoordinator : IDisposable
         var route = core.RoutePlanning.CurrentTarget;
         string name = route is not null && route.PointId == selection.PointId && route.StateId == selection.StateId
             ? route.DisplayName : selection.NameId;
-        return $"{prefix}{name}\n{(string.IsNullOrWhiteSpace(selection.Level) ? "" : "图层 " + selection.Level + " · ")}点位 {selection.PointId[^Math.Min(6, selection.PointId.Length)..]}";
+        return $"{prefix}{name}\n{LayerLabel(selection.Level)}点位 {selection.PointId[^Math.Min(6, selection.PointId.Length)..]}";
     }
 
+    // "雾隐阁·下层 (-2/58)" when the region pack names the floor, else the raw level. Shared by
+    // the keyboard and gamepad labels so both read the same way as the game's layer selector.
+    private static string LayerLabel(string? level)
+    {
+        if (string.IsNullOrWhiteSpace(level)) return "";
+        string name = LayerFloorNames.NameFor(level);
+        return name.Length > 0 ? $"图层 {name} ({level}) · " : $"图层 {level} · ";
+    }
     private void RenderGamepadList(IReadOnlyDictionary<string, string>? names = null)
     {
         if (!IsGamepadSessionOpen || gamepadMenuRoute is not null || gamepadAssistant is not { } assistant) return;
         var entries = new List<GamepadAssistantEntry>();
         string Label(MarkerSelection point, string prefix) => names is not null && names.TryGetValue(point.PointId, out var name)
-            ? $"{prefix}{name}\n{(string.IsNullOrWhiteSpace(point.Level) ? "" : "图层 " + point.Level + " · ")}点位 {point.PointId[^Math.Min(6, point.PointId.Length)..]}"
+            ? $"{prefix}{name}\n{LayerLabel(point.Level)}点位 {point.PointId[^Math.Min(6, point.PointId.Length)..]}"
             : GamepadPointLabel(point, prefix);
         foreach (var point in gamepadCursor)
             if (!point.Completed) entries.Add(new(Label(point, "光标圈内 · "), point));
@@ -1474,3 +1482,4 @@ public sealed class MarkerGuideCoordinator : IDisposable
         chooser?.Close(); guide?.Close();
     }
 }
+

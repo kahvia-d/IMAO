@@ -457,6 +457,11 @@ public sealed class MarkerGuideWindow : Window
 
     private static string LayerText(MarkerDetail detail)
     {
+        // Prefer the name the game itself uses ("雾隐阁·下层"): the panel used to say "第 N 层",
+        // which reads like an independent fact but is derived from the same level field as the
+        // map badge, and that made a wrong upstream floor look like a contradiction.
+        string name = Services.LayerFloorNames.NameFor(detail.Level);
+        if (name.Length > 0) return $"分层区域 · {name}";
         // Official compound values such as -2/16 contain an internal group ID, not a display label.
         string value = detail.Level.Split('/')[0];
         if (int.TryParse(value, out int level) && level is >= -20 and <= 20 && level != 0)
