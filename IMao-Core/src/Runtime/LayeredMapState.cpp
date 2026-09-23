@@ -274,14 +274,16 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         // surface's come back (MarkerRole::Normal), instead of guessing one and hiding the other.
         //
         // Where the layer drew its ground FROM the surface drawing, or where it sits above or
-        // below the surface, the comparison says nothing: only the floor next to the surface can
-        // share the surface's ground (see LayeredFloors::AdjacentToSurface).
+        // below the surface, the comparison says nothing: a floor only shares the surface's ground
+        // if it is the one next to the surface AND its art is not a redrawing of the surface's own
+        // (see LayeredFloors::SharesSurfaceGround - 星炬学院's 广场区 is the case that proved both
+        // halves are needed, since its 73%-copied art made a plaza of the academy's own interior).
         bool onSharedGround = false;
         double sharedFraction = 0.0;
         const Entry* sharedEntry = nullptr;
         for (const auto& entry : entries) {
             if (entry.sceneId != sceneId) continue;
-            if (!LayeredFloors::AdjacentToSurface(entry.floor)) continue;
+            if (!LayeredFloors::SharesSurfaceGround(entry.floor)) continue;
             const double fraction = LayeredFloors::SharedFraction(entry.floor, entry.transform, mapX, mapY);
             if (fraction < kSharedGroundFraction) continue;
             onSharedGround = true;

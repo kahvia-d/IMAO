@@ -300,6 +300,14 @@ bool AdjacentToSurface(const FloorEntry& floor) {
     return floor.level == -1;
 }
 
+bool ArtIsSurfaceCopy(const FloorEntry& floor, double gate) {
+    return floor.copiedFraction >= gate;
+}
+
+bool SharesSurfaceGround(const FloorEntry& floor) {
+    return AdjacentToSurface(floor) && !ArtIsSurfaceCopy(floor);
+}
+
 int HeightRank(const std::vector<FloorEntry>& floors, const std::string& floorId) {
     for (const auto& floor : floors) {
         if (floor.floorId == floorId) return floor.heightRank;

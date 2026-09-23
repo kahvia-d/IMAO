@@ -214,6 +214,27 @@ int main() {
             Require(!LayeredFloors::AdjacentToSurface(floorAt),
                 "so must a floor deeper in the building");
 
+            // Both halves of the shared-ground test, and they are both needed. 下层金库's plaza is
+            // the floor next to the surface and only 27-32% the surface's pixels, so it shares;
+            // 星炬学院's 广场区 is ALSO the floor next to the surface (level -1) but its art is 73%
+            // the surface's drawing, and a player standing there is inside the academy - the field
+            // log has the surface markers coming back there, which is what the player reported.
+            auto plaza = floor;
+            plaza.level = -1;
+            plaza.copiedFraction = 0.32;   // measured on 声骸藏区1楼 / 贵金属与艺术品藏区1楼
+            Require(LayeredFloors::SharesSurfaceGround(plaza),
+                "the vault's plaza shares the surface's ground");
+            auto academy = floor;
+            academy.level = -1;
+            academy.copiedFraction = 0.73;   // measured on 星炬学院·广场区
+            Require(LayeredFloors::ArtIsSurfaceCopy(academy),
+                "a floor drawn from the surface drawing is recognised as such");
+            Require(!LayeredFloors::SharesSurfaceGround(academy),
+                "the academy's plaza is the layer's own ground, not the surface's");
+            academy.copiedFraction = 0.16;   // measured on 联坠长廊·基座段
+            Require(LayeredFloors::SharesSurfaceGround(academy),
+                "a floor that only adopts a piece of the surface keeps the comparison");
+
             // Inside the art and on its rim are different answers to "is the player in this cave".
             // Contains keeps a cell of slack so it is true a step outside the mouth; the rim test
             // is what stops the position alone from holding a floor the player has walked out of.

@@ -164,6 +164,24 @@ double SharedFraction(const FloorEntry& floor, const Transform& transform, doubl
 /// and their level -2/-3 floors do it while their level -1 floor is the one at ground level.
 bool AdjacentToSurface(const FloorEntry& floor);
 
+/// True when a floor's art is mostly the surface's own drawing, which makes SharedFraction
+/// meaningless for it: the layer drew its whole ground by copying the surface, so "this spot looks
+/// like the surface" is true of the layer's OWN ground too.
+///
+/// 星炬学院 is the case that proved it: all four of its floors are 58-84% the surface's pixels
+/// (against at most 32% for every other floor in the game), and a player standing in its 广场区 is
+/// inside the academy - the field log has `shared=1 fraction=1.0` there and the surface markers
+/// coming back, which is exactly what the player did not want.
+bool ArtIsSurfaceCopy(const FloorEntry& floor, double gate = 0.5);
+
+/// True when the shared-ground comparison may be used for this floor at all: it has to be the floor
+/// next to the surface, and its art must not be a redrawing of the surface's own.
+///
+/// 下层金库's plaza answers yes on both (1楼, 27-32% copied) and is why the comparison exists at
+/// all; 星炬学院's 广场区 is the floor next to the surface (level -1) but answers no on the second,
+/// because its ground is the layer's own and the surface's markers do not belong on it.
+bool SharesSurfaceGround(const FloorEntry& floor);
+
 /// Votes every floor against the query descriptors and returns the winner. `identified` is
 /// false when the winner has too few matches or does not lead the runner-up by `margin`,
 /// which is the common case out in the open; callers must treat that as "unknown", never as

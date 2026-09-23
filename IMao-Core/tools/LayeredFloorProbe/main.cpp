@@ -276,6 +276,7 @@ int main(int argc, char** argv) {
                         << " shared=" << LayeredFloors::SharedFraction(floor, transforms[i], anchorX, anchorY)
                         << (LayeredFloors::InsideWithMargin(floor, transforms[i], anchorX, anchorY, 1)
                             ? "  solid=yes" : "  solid=no")
+                        << (LayeredFloors::SharesSurfaceGround(floor) ? "  shares=yes" : "  shares=no")
                         << (adjacent ? "  adjacent=yes" : "  adjacent=no") << '\n';
                 }
             }
