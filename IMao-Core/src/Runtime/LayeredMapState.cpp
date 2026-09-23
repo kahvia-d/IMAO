@@ -41,6 +41,11 @@ std::chrono::steady_clock::time_point lastReportAt{};
 // Classification is a BFMatcher sweep over every floor's descriptors. Captures arrive
 // several times a second; three per second is plenty to follow a player around.
 constexpr auto kMinimumInterval = std::chrono::milliseconds(300);
+// Out in the open the classifier is only waiting to notice that the player walked into a cave,
+// and that answer does not change within a second. Every floor in the game is a candidate, so
+// the cheaper cadence matters: three times a second is kept for the cases that are actually
+// tracking a layered floor, or have no position yet and are using the vote as a search scope.
+constexpr auto kIdleInterval = std::chrono::milliseconds(1000);
 
 // Descriptors kept per floor when the index is loaded. The whole game has 90 floors and a cold
 // start compares every one of them, because the question is "which floor", not "where". Measured
@@ -174,7 +179,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         // A scene is known again, so the cold-start scope has done its job.
         if (scope.valid) scope = Scope{};
         if (entries.empty()) return;
-        if (lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < kMinimumInterval) return;
+        const auto interval = current.active ? kMinimumInterval : kIdleInterval;
+        if (lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < interval) return;
         lastClassifyAt = now;
         // Physically impossible floors are not evidence. Standing inside 眠龙庭's cave rules
         // out 叩天关's, even though they share a tile coordinate; without this, a rival floor
