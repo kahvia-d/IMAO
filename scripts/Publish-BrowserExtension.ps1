@@ -137,7 +137,10 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Release $tag already publishes these exact bytes."
     return
 }
-Invoke-Gh @('release', 'create', $tag, '--repo', $repo, '--target', $sourceCommit, '--title', "IMao 库街区同步扩展 $version", '--notes-file', $NotesFile) | Out-Null
+# The extension is a side artifact. Without --latest=false GitHub would put the repository's
+# "Latest" badge on this release, and the README's Releases link would send players to a page
+# that has no IMao-v*-windows-x64.zip in it.
+Invoke-Gh @('release', 'create', $tag, '--repo', $repo, '--target', $sourceCommit, '--title', "IMao 库街区同步扩展 $version", '--notes-file', $NotesFile, '--latest=false') | Out-Null
 foreach ($asset in @([pscustomobject]@{ path = $archivePath; name = "$archiveName.zip"; sha256 = $sha256 },
         [pscustomobject]@{ path = $shaPath; name = "$archiveName.zip.sha256"; sha256 = (Get-FileHash -LiteralPath $shaPath -Algorithm SHA256).Hash.ToLowerInvariant() })) {
     Invoke-Gh @('release', 'upload', $tag, $asset.path, '--repo', $repo) | Out-Null

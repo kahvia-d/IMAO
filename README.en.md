@@ -34,12 +34,11 @@ Still actively updated ✿✿ヽ(°▽°)ノ✿
 
 ## Download & Install
 
-Go to **[Releases](https://github.com/kahvia-d/IMAO/releases)** and download
+Go to **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** and download
 **`IMao-v<version>-windows-x64.zip`**, then unzip it and run **`IMao-Launcher.exe`**.
 
 > In that list, anything starting with `ext-` is the **KuroBBS sync browser extension**, not the
-> program. The program package is `IMao-v…-windows-x64.zip`. (The repository's "Latest" badge
-> currently sits on the extension release, so go by the file name rather than the badge.)
+> program. The program package is `IMao-v…-windows-x64.zip`.
 
 | Item | Requirement |
 | :--- | :--- |
@@ -76,8 +75,8 @@ Go to **[Releases](https://github.com/kahvia-d/IMAO/releases)** and download
   (`resources-<version>-offline.zip`) is supported too.
 - **Xbox gamepad support.** Open the tool palette, the marker assistant, complete nearby markers,
   collect a whole group and zoom guide images — all without touching the keyboard.
-- **KuroBBS progress sync.** With the companion browser extension, local completion records and your
-  KuroBBS account are merged both ways (union only — nothing is ever un-checked).
+- **KuroBBS progress sync.** With the [companion browser extension](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg),
+  local completion records and your KuroBBS account are merged both ways (union only — nothing is ever un-checked).
 - **A signed update chain.** Manifests are ECDSA P-256 signed, every package is SHA-256 verified and
   executables are rejected inside map packages. Updates only touch the program and map data —
   your completion records, routes, filters and personal settings are **never overwritten**.
@@ -160,6 +159,30 @@ input, so the game's own action for the same button may fire at the same time.
 | Marker details | Hold <kbd>A</kbd> for 0.6 s | Complete the current marker |
 | Candidate list | Hold <kbd>X</kbd> for 0.6 s | Collect the whole group |
 | Guide image | <kbd>X</kbd> / <kbd>LT</kbd> / <kbd>RT</kbd> / right stick | Zoom in / out / in / pan |
+
+### KuroBBS progress sync extension
+
+The tool can merge its progress with your [KuroBBS map](https://www.kurobbs.com/mc/map/) account:
+markers completed only on KuroBBS are pulled into the local profile, markers completed only locally are
+pushed back. It is a **union** — nothing is ever un-checked on either side.
+
+**Edge Add-ons (recommended): [IMao KuroBBS Progress Sync](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg)**
+
+On Chrome, load the same code by hand with the [manual install guide](Docs/KuroMapSyncInstall.md) —
+`manifest.json` pins the release public key, so the unpacked build gets exactly the same extension id
+as the store build (`ohmikf…`) and the desktop credentials and sync profiles carry over unchanged.
+
+Once installed:
+
+1. In the tool, open **Settings → KuroBBS marker progress sync** and click "Register/repair browser bridge".
+2. Open and sign in to the KuroBBS map, click the extension icon, then "Connect desktop app".
+3. Back in the tool, "Preview sync" to see the difference, then "Apply sync". With automatic sync on,
+   completing a marker in game is pushed immediately and everything is reconciled every 10 minutes.
+
+Credentials travel only over the browser's official Native Messaging channel to the local program, which
+stores them encrypted with **DPAPI** under the current Windows user. The extension **does not read
+cookies, does not touch other sites and makes no network requests of its own** — it only reads the
+session the KuroBBS map page already holds.
 
 ### Supported regions
 

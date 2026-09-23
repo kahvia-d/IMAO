@@ -33,11 +33,10 @@
 
 ## 下载与安装
 
-前往 **[Releases](https://github.com/kahvia-d/IMAO/releases)** 下载 **`IMao-v<版本号>-windows-x64.zip`**，
+前往 **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** 下载 **`IMao-v<版本号>-windows-x64.zip`**，
 解压后运行 **`IMao-Launcher.exe`** 即可。
 
 > 下载页里 `ext-` 开头的是**库街区同步浏览器扩展**，不是程序包；程序包是 `IMao-v…-windows-x64.zip`。
-> （本仓库的「Latest」标记目前挂在扩展发行版上，所以请按文件名认，不要只看 Latest 徽章。）
 
 | 项目 | 要求 |
 | :--- | :--- |
@@ -65,7 +64,8 @@
 - **地区按需下载**：每个地区是一份独立的特征包，用不到的地区可以停用或直接从磁盘删除腾空间，
   之后随时再点「下载」取回。支持**导入离线包**（`resources-<版本>-offline.zip`）。
 - **Xbox 手柄支持**：打开工具台、点位助手、完成附近点位、一键收集、缩放攻略图，都可以不碰键盘。
-- **库街区进度同步**：配合浏览器扩展，把本机收集记录与库街区账号双向补齐（只做并集，不会取消任何点位）。
+- **库街区进度同步**：配合[浏览器扩展](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg)，
+  把本机收集记录与库街区账号双向补齐（只做并集，不会取消任何点位）。
 - **安全的更新链路**：清单经 ECDSA P-256 签名，逐包校验 SHA-256，禁止包内出现可执行文件；
   更新只动程序与地图资源，**绝不覆盖**你的完成记录、路线、筛选与个人设置。
 
@@ -142,6 +142,26 @@
 | 点位详情 | 长按 <kbd>A</kbd> 0.6 秒 | 完成当前点位 |
 | 候选列表 | 长按 <kbd>X</kbd> 0.6 秒 | 一键完成整组 |
 | 攻略图 | <kbd>X</kbd> / <kbd>LT</kbd> / <kbd>RT</kbd> / 右摇杆 | 放大 / 缩小 / 放大 / 平移 |
+
+### 库街区进度同步扩展
+
+工具可以和[库街区鸣潮大地图](https://www.kurobbs.com/mc/map/)的账号进度**双向补齐**：库街区上独有的完成点拉进本地，
+本地独有的写回库街区。**只做并集，两边都不会取消任何点位。**
+
+**Edge 加载项商店（推荐）：[IMao 库街区进度同步](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg)**
+
+用 Chrome 的话请按[手动安装说明](Docs/KuroMapSyncInstall.md)加载同一份代码 —— `manifest.json` 里固定了发布公钥，
+所以手动加载与商店版的扩展 ID 完全相同（`ohmikf…`），桌面端的凭据与同步档案不受影响。
+
+装好之后：
+
+1. 在工具的**设置 → 库街区点位进度同步**里点「注册/修复浏览器桥接」。
+2. 打开并登录库街区大地图，点扩展图标 → 「连接桌面端」。
+3. 回到工具，先「预览同步」看差异，再「应用同步」。打开「自动同步」后，游戏内标记完成会立即推送，
+   并每 10 分钟整体补齐一次。
+
+凭据只通过浏览器官方的 Native Messaging 通道交给本机程序，由桌面程序以当前 Windows 用户的 **DPAPI 加密**保存在本机。
+扩展**不读 Cookie、不访问其他站点、不做任何网络请求**，只读取库街区地图页面自身存放的登录会话。
 
 ### 支持的地区
 

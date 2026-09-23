@@ -4,17 +4,23 @@
 
 扩展只在 `kurobbs.com/mc/map` 页面读取该页面自身存放的 `AKI_MAP_USER_TOKEN` 和账号 `userId`。点击「连接桌面端」后，token 经浏览器官方的 Native Messaging 通道发送到本机 `KuroSyncBridge`，由当前 Windows 用户的 DPAPI 加密保存。扩展不读取 Cookie，不访问其他站点，不做任何网络请求，也不在自身存储、页面、控制台或日志中保存 token。
 
-## 玩家安装（商店审核通过前）
+## 玩家安装
 
-完整步骤见仓库的 [Docs/KuroMapSyncInstall.md](../../Docs/KuroMapSyncInstall.md)，摘要：
+**Edge 加载项商店（推荐）**：https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg
+
+1. IMao → 设置 → 库街区点位进度同步 → 「注册/修复浏览器桥接」。
+2. 打开并登录库街区大地图 → 点扩展图标 → 「连接桌面端」。
+3. 回到 IMao → 「预览同步」→「应用同步」。
+
+Chrome（Windows）没有对应的商店条目，需要手动加载，完整步骤见仓库的 [Docs/KuroMapSyncInstall.md](../../Docs/KuroMapSyncInstall.md)，摘要：
 
 1. IMao → 设置 → 库街区点位进度同步 → 「注册/修复浏览器桥接」。
 2. 下载本扩展的 zip（发行版 `ext-v*`）并解压到固定目录，例如 `%LOCALAPPDATA%\IMao-WinUI\KuroMapSync\`。
-3. `edge://extensions`（Chrome 为 `chrome://extensions`）→ 开发人员模式 → 「加载解压缩的扩展」→ 选中该目录。
+3. `chrome://extensions` → 开发人员模式 → 「加载解压缩的扩展」→ 选中该目录。
 4. 打开并登录库街区大地图 → 点扩展图标 → 「连接桌面端」。
 5. 回到 IMao → 「预览同步」→「应用同步」。
 
-`manifest.json` 里的 `key` 固定了发布公钥，所以手动加载得到的扩展 ID 与商店版一致（`ohmikfaeobbffhlhoocklplniobcfdbg`），桌面端注册的桥接白名单无需改动。
+`manifest.json` 里的 `key` 固定了发布公钥，所以手动加载得到的扩展 ID 与商店版一致（`ohmikfaeobbffhlhoocklplniobcfdbg`），桌面端注册的桥接白名单无需改动，两种装法可以互换。
 
 ## 开发与手工安装
 
