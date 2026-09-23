@@ -160,12 +160,18 @@ public sealed class MarkerDetailService : IDisposable
                 if (!group.TryGetProperty("location", out var positions) || positions.ValueKind != JsonValueKind.Array) continue;
                 foreach (var point in positions.EnumerateArray())
                 {
+                    string pointId = Text(point, "id");
+                    if (pointId.Length == 0) continue;
+                    // Upstream sometimes puts a collectible on the wrong floor of a layered map;
+                    // the recorded correction is the same file the renderer uses, so the badge and
+                    // this panel can never disagree about which floor a point is on.
+                    var (floorId, level) = LayerCorrections.Apply(state, pointId,
+                        Text(point, "floorId"), Text(point, "level"));
                     var selection = new MarkerSelection
                     {
-                        PointId = Text(point, "id"), StateId = state, CountryId = Integer(point, "countryId"),
-                        NameId = Text(group, "id"), FloorId = Text(point, "floorId"), Level = Text(point, "level")
+                        PointId = pointId, StateId = state, CountryId = Integer(point, "countryId"),
+                        NameId = Text(group, "id"), FloorId = floorId, Level = level
                     };
-                    if (selection.PointId.Length == 0) continue;
                     result[selection.PointId] = new MarkerDetail
                     {
                         PointId = selection.PointId, StateId = state, CountryId = selection.CountryId, TypeId = selection.NameId,
