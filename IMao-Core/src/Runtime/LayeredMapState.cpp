@@ -38,8 +38,14 @@ std::string pendingFloorId;
 int decisiveStreak = 0;
 // Consecutive close classifications; see kGroupGrowFrames.
 int closeStreak = 0;
-// Consecutive frames of shared-ground evidence; see kSharedGroundFraction.
+// Consecutive frames of shared-ground evidence; see kSharedGroundFraction. Signed: it counts up
+// towards "shared" and down towards "not shared", so the verdict has the same hysteresis leaving
+// the plaza as entering it.
 int sharedGroundFrames = 0;
+// The debounced verdict, and the last one that was logged, so the diagnostic is one line per
+// change instead of one per second.
+bool sharedGround = false;
+bool sharedGroundLogged = false;
 int pendingCount = 0;
 int unknownCount = 0;
 std::chrono::steady_clock::time_point lastClassifyAt{};
@@ -75,11 +81,11 @@ constexpr int kGroupResetFrames = 5;
 constexpr int kGroupGrowFrames = 3;
 
 // A layered map may reuse part of the surface as its own ground. Where this much of the art
-// around the player is the surface's own pixels, the player is on the surface, not in the layer.
+// around the player is the surface's own pixels, the player is on ground both maps describe.
 // Measured on 下层金库 with radius 3: the shared plaza reads 0.67-0.69, the hall inside the
 // building 0.16-0.34, so 0.5 sits between them with roughly a 2x margin.
 constexpr double kSharedGroundFraction = 0.5;
-// Frames of that evidence before the layer is dropped: the fraction moves as the player walks the
+// Frames of that evidence before the verdict flips: the fraction moves as the player walks the
 // boundary between the plaza and the building.
 constexpr int kSharedGroundFrames = 3;
 
@@ -165,6 +171,9 @@ void Install(const std::filesystem::path& featureDataRoot) {
     pendingFloorId.clear();
     pendingCount = 0;
     unknownCount = 0;
+    sharedGroundFrames = 0;
+    sharedGround = false;
+    sharedGroundLogged = false;
     Diagnostics::Record("layered-floor-index", "stage=ready floors=" + std::to_string(entries.size()));
 }
 
@@ -238,17 +247,21 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             if (LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) inside.push_back(&entry);
         }
         restricted = !inside.empty();
-        // A shared piece of ground is the surface, not the layer: 下层金库's 贵金属与艺术品藏区
-        // draws the plaza in front of the building by copying the surface pixels, so a player
-        // standing there matches the floor's imagery and sits inside its footprint, yet every
-        // surface marker around them (measured: one three units away) belongs on screen. Where
-        // enough of the local art is the surface's own, the layer does not apply. Debounced like
-        // everything else here, because the fraction moves as the player walks the boundary.
+        // A shared piece of ground belongs to both maps: 下层金库's 贵金属与艺术品藏区 draws the
+        // plaza in front of the building by copying the surface pixels, so a player standing there
+        // matches the floor's imagery and sits inside its footprint, yet the surface markers
+        // around them (measured: one three units away) belong on screen. Nothing here can tell
+        // which map the player means, so both are shown: the floor keeps its markers and the
+        // surface's come back (MarkerRole::Normal), instead of guessing one and hiding the other.
+        //
+        // Where the layer drew its ground FROM the surface drawing the comparison says nothing
+        // (see LayeredFloors::ArtIsSurfaceCopy) - there the layer keeps the ground to itself.
         bool onSharedGround = false;
         double sharedFraction = 0.0;
         const Entry* sharedEntry = nullptr;
         for (const auto& entry : entries) {
             if (entry.sceneId != sceneId) continue;
+            if (LayeredFloors::ArtIsSurfaceCopy(entry.floor)) continue;
             const double fraction = LayeredFloors::SharedFraction(entry.floor, entry.transform, mapX, mapY);
             if (fraction < kSharedGroundFraction) continue;
             onSharedGround = true;
@@ -256,22 +269,22 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             sharedEntry = &entry;
             break;
         }
-        if (onSharedGround) {
-            if (++sharedGroundFrames >= kSharedGroundFrames) {
-                const auto previous = current.floorId;
-                current = Snapshot{};
-                decisiveStreak = 0;
-                closeStreak = 0;
-                sharedGroundFrames = 0;
-                Diagnostics::Record("layered-floor-shared", "scene=" + std::to_string(sceneId) +
-                    " region=" + (sharedEntry == nullptr ? std::string("?") : sharedEntry->regionId) +
-                    " floor=" + (sharedEntry == nullptr ? std::string("?") : sharedEntry->floor.floorId) +
-                    " sharedFraction=" + std::to_string(sharedFraction) +
-                    (previous.empty() ? "" : " previous=" + previous));
-                return;
-            }
+        sharedGroundFrames += onSharedGround ? 1 : -1;
+        if (sharedGroundFrames > kSharedGroundFrames) sharedGroundFrames = kSharedGroundFrames;
+        if (sharedGroundFrames < -kSharedGroundFrames) sharedGroundFrames = -kSharedGroundFrames;
+        sharedGround = sharedGroundFrames >= kSharedGroundFrames;
+        if (sharedGround != sharedGroundLogged) {
+            sharedGroundLogged = sharedGround;
+            Diagnostics::Record("layered-floor-shared", "scene=" + std::to_string(sceneId) +
+                " shared=" + std::to_string(sharedGround) +
+                " fraction=" + std::to_string(sharedFraction) +
+                " floor=" + (sharedEntry == nullptr ? current.floorId : sharedEntry->floor.floorId) +
+                " region=" + (sharedEntry == nullptr ? std::string("?") : sharedEntry->regionId) +
+                " copiedFraction=" + std::to_string(sharedEntry == nullptr ? 0.0 : sharedEntry->floor.copiedFraction));
         }
-        else sharedGroundFrames = 0;
+        // Carried on the snapshot so the marker roles can see it; a stale flag is impossible
+        // because the assignment happens before the floor is adopted below, in the same call.
+        current.sharedGround = sharedGround;
         for (const auto& entry : entries) {
             if (entry.sceneId != sceneId) continue;
             if (restricted && !LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) continue;
@@ -469,9 +482,19 @@ Snapshot Read() {
     return current;
 }
 
+namespace {
+
+// A surface marker - one with no floor, or the entrance marker that stands on the surface above a
+// layered map - while a floor is known. It normally hides, but on ground the layer copied from the
+// surface it belongs there as much as the layer's own markers do, and the two are drawn together.
+MarkerRole SurfaceRole(const Snapshot& state) {
+    return state.sharedGround ? MarkerRole::Normal : MarkerRole::Hidden;
+}
+
+} // namespace
+
 MarkerRole RoleFor(const ItemDatas& item) {
-    const auto state = Read();
-    if (!state.active) return MarkerRole::Normal;
+    const auto state = Read();    if (!state.active) return MarkerRole::Normal;
     // The marker carries the Kuro state (World = 8); the state holds that same field. Keeping
     // the two id spaces apart is what makes this check meaningful - comparing it against the
     // runtime scene id matched nothing and silently skipped every layered rule.
@@ -484,10 +507,10 @@ MarkerRole RoleFor(const ItemDatas& item) {
     // the floor inside that map ("-2/1"). The classifier reports the floor id.
     const auto& mapId = item.layer.floorId;
     const auto& floorId = item.layer.level;
-    if (mapId.empty() || floorId.empty()) return MarkerRole::Hidden; // plain surface collectible
+    if (mapId.empty() || floorId.empty()) return SurfaceRole(state); // plain surface collectible
     const int level = LayeredFloors::FloorLevel(floorId);
     // An entrance marker ("-1000000/1") and a floor-less point ("0") sit on the surface.
-    if (level == 0 || level <= -1000000) return MarkerRole::Hidden;
+    if (level == 0 || level <= -1000000) return SurfaceRole(state);
     if (floorId == state.floorId) return MarkerRole::Current;
     // A floor the imagery cannot separate from the current one is not "above" or "below": it is
     // another candidate for where the player is standing, so it draws as the current floor.
@@ -511,6 +534,9 @@ void Reset() {
     unknownCount = 0;
     lastClassifyAt = std::chrono::steady_clock::time_point{};
     lastReportAt = std::chrono::steady_clock::time_point{};
+    sharedGroundFrames = 0;
+    sharedGround = false;
+    sharedGroundLogged = false;
 }
 
 void SetForTest(const Snapshot& snapshot) {

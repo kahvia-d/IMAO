@@ -68,6 +68,16 @@ struct FloorEntry {
     /// where the full set picks 贵金属与艺术品藏区1楼 at 17 vs 8 and 15 vs 6.
     ImageFeatureData sampleFeatures;
     std::vector<FloorTile> tiles;
+    /// How much of this floor's own art is the surface's art instead: shared cells / opaque cells
+    /// over the whole floor (0 on an index built before the shared grid existed).
+    ///
+    /// This is the honesty check for `FloorTile::shared`. Upstream draws some layered maps by
+    /// copying the surface drawing, and there the comparison reports "shared" over ground the
+    /// layer really does own: 拉海's 星炬学院 floors measure 0.51-0.84 copied, against at most 0.16
+    /// for every other floor in the game, and their own markers stand on that copied art (6 of the
+    /// 10 points on 星炬学院·广场区). Where most of the art is a copy, art similarity says nothing
+    /// about who owns the ground - see ArtIsSurfaceCopy.
+    double copiedFraction = 0.0;
     // Centre of the floor's footprint in map coordinates. A cold start has no position at
     // all, and this is the only coordinate the layered index can offer to scope a search.
     double centerMapX = 0.0;
@@ -131,6 +141,17 @@ bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, 
 /// building 0.16-0.34, so a threshold of 0.5 sits between them with roughly a 2x margin.
 double SharedFraction(const FloorEntry& floor, const Transform& transform, double mapX, double mapY,
     int radiusCells = 3);
+
+/// True when a floor's art is mostly the surface's own drawing, which makes SharedFraction
+/// meaningless for it: the layer drew its ground by copying the surface, so "this spot looks like
+/// the surface" is true of the layer's own ground too, and acting on it would hide the markers the
+/// player is standing on. Measured over every shipped floor: 拉海's 星炬学院 floors read 0.51-0.84
+/// copied, every other floor at most 0.16, so the gate sits in that gap instead of on a tuned
+/// per-map value - a layered map released later is classified by the same rule.
+///
+/// The caller keeps the floor's markers as they are where this is true; only where it is false does
+/// shared ground mean anything.
+bool ArtIsSurfaceCopy(const FloorEntry& floor, double gate = 0.5);
 
 /// Votes every floor against the query descriptors and returns the winner. `identified` is
 /// false when the winner has too few matches or does not lead the runner-up by `margin`,

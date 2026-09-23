@@ -157,18 +157,23 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
             error = "layered floor " + entry.floorId + " has an invalid feature set";
             return false;
         }
-        // The footprint centre, so a cold start has somewhere to point its search.
+        // The footprint centre, so a cold start has somewhere to point its search. The same pass
+        // counts how much of the floor's art is the surface's (see FloorEntry::copiedFraction).
         double sumX = 0.0, sumY = 0.0;
-        std::size_t cells = 0;
+        std::size_t cells = 0, copiedCells = 0;
         const auto bitsPerTile = static_cast<std::size_t>(index.transform.gridSize) * index.transform.gridSize;
+        const auto nibbleValue = [](char nibble) {
+            return nibble >= '0' && nibble <= '9' ? nibble - '0'
+                : (nibble >= 'a' && nibble <= 'f' ? nibble - 'a' + 10
+                    : (nibble >= 'A' && nibble <= 'F' ? nibble - 'A' + 10 : 0));
+        };
         for (const auto& tile : entry.tiles) {
             if (tile.occupancy.size() * 4 != bitsPerTile) continue;
+            const bool hasShared = tile.shared.size() * 4 == bitsPerTile;
             for (std::size_t bit = 0; bit < bitsPerTile; ++bit) {
-                const char nibble = tile.occupancy[bit / 4];
-                const int value = nibble >= '0' && nibble <= '9' ? nibble - '0'
-                    : (nibble >= 'a' && nibble <= 'f' ? nibble - 'a' + 10
-                        : (nibble >= 'A' && nibble <= 'F' ? nibble - 'A' + 10 : 0));
+                const int value = nibbleValue(tile.occupancy[bit / 4]);
                 if (((value >> (bit % 4)) & 1) == 0) continue;
+                if (hasShared && (((nibbleValue(tile.shared[bit / 4]) >> (bit % 4)) & 1) != 0)) ++copiedCells;
                 double cellX = 0.0, cellY = 0.0;
                 MapPointOfCell(index.transform, tile.x, tile.y,
                     static_cast<int>(bit % index.transform.gridSize),
@@ -180,6 +185,7 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
             entry.centerMapX = sumX / static_cast<double>(cells);
             entry.centerMapY = sumY / static_cast<double>(cells);
             entry.hasCenter = true;
+            entry.copiedFraction = static_cast<double>(copiedCells) / static_cast<double>(cells);
         }
         index.floors.push_back(std::move(entry));
     }
@@ -282,8 +288,7 @@ int GridBit(const std::string& grid, std::size_t bit) {
 } // namespace
 
 double SharedFraction(const FloorEntry& floor, const Transform& transform, double mapX, double mapY,
-    int radiusCells) {
-    const double gameX = (mapX - transform.originX) / transform.scale;
+    int radiusCells) {    const double gameX = (mapX - transform.originX) / transform.scale;
     const double gameY = (mapY - transform.originY) / transform.scale;
     const int tileX = static_cast<int>(std::floor(gameX / transform.virtualMapSize + 1.0));
     const int tileY = static_cast<int>(std::ceil(-gameY / transform.virtualMapSize));
@@ -315,6 +320,10 @@ double SharedFraction(const FloorEntry& floor, const Transform& transform, doubl
         return opaque > 0 ? static_cast<double>(shared) / opaque : 0.0;
     }
     return 0.0;
+}
+
+bool ArtIsSurfaceCopy(const FloorEntry& floor, double gate) {
+    return floor.copiedFraction >= gate;
 }
 
 Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,

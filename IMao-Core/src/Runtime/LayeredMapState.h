@@ -20,7 +20,8 @@ namespace LayeredMap {
 enum class MarkerRole {
     /// No floor known: everything draws as before, layered markers keep the layered badge.
     Normal,
-    /// A floor is known and this marker is not part of it: do not draw it at all.
+    /// A floor is known and this marker is not part of it: do not draw it at all. Surface
+    /// markers also come back as Normal while the player stands on shared ground.
     Hidden,
     /// The floor the player is standing on: normal icon, no layered badge.
     Current,
@@ -55,6 +56,12 @@ struct Snapshot {
     /// so the honest answer is "one of these", not "this one": everything on a floor in this set
     /// draws as the current floor instead of being asserted above or below.
     std::vector<std::string> equivalentFloorIds;
+    /// The player is standing on ground the active floor copied from the surface (see
+    /// LayeredFloors::SharedFraction). The floor stays known - its markers still draw normally -
+    /// but the surface's own markers come back too, because that piece of ground belongs to both
+    /// and hiding either one is a guess the imagery cannot support: 下层金库's plaza carries the
+    /// surface's markers while the vault's own markers sit a few units inside the door.
+    bool sharedGround = false;
 };
 
 /// Where to point a search when the tool has no position at all yet.

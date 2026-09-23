@@ -323,11 +323,21 @@ add_executable(IMaoOptimizationTests
     IMao-Core/src/Coordinate/VisualLocalization/DenseMapConfirmer.cpp
     IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
     IMao-Core/src/Feature/VisualIndex/MapVisualIndex.cpp
+    # NearbySelection asks LayeredMap for each marker's role, so this target needs the layered
+    # state and everything it pulls in. Without them the target stopped linking when the two
+    # were connected, which is why the suite was missing its optimization tests.
+    IMao-Core/src/Runtime/LayeredMapState.cpp
+    IMao-Core/src/Runtime/StructuredLogger.cpp
+    IMao-Core/src/Diagnostics/Diagnostics.cpp
+    IMao-Core/src/Feature/LayeredFloorIndex.cpp
+    IMao-Core/src/Feature/Processing/FeatureProcessing.cpp
 )
 set_target_properties(IMaoOptimizationTests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
 )
-target_include_directories(IMaoOptimizationTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+target_include_directories(IMaoOptimizationTests PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
 target_compile_definitions(IMaoOptimizationTests PRIVATE IMAO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib user32.lib)
 

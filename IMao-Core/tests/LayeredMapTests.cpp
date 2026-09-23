@@ -71,6 +71,13 @@ LayeredMap::Snapshot State(int layerId, const std::string& floorId, int level) {
     return snapshot;
 }
 
+LayeredMap::Snapshot SharedState(int layerId, const std::string& floorId, int level) {
+    auto snapshot = State(layerId, floorId, level);
+    snapshot.sharedGround = true;
+    snapshot.heightDirection = -1; // 下层金库's 1楼 sits at the bottom, its 4楼 on top
+    return snapshot;
+}
+
 } // namespace
 
 int main() {
@@ -152,12 +159,21 @@ int main() {
             LayeredMap::SetForTest({});
             Require(NearbySelection::Includes(surface, NearbySelection::Intent::Complete),
                 "leaving the layer must restore surface completion");
+
+            // On shared ground the surface marker is a candidate again, because the marker role
+            // itself is what decides this - see the role test below.
+            LayeredMap::SetForTest(SharedState(15, "-1/15", -1));
+            Require(NearbySelection::Includes(surface, NearbySelection::Intent::Complete),
+                "a surface marker on shared ground must be completable by the key");
+            Require(NearbySelection::Includes(here, NearbySelection::Intent::Complete),
+                "the floor's own marker stays completable on shared ground");
         }
 
         // Ground a layered map copied from the surface reads as shared, and ground it drew itself
-        // does not. The runtime uses this to leave the layer alone on a shared plaza, where the
-        // floor's imagery matches and its footprint contains the player, yet every surface marker
-        // around them belongs on screen.
+        // does not. The runtime uses this to show the surface's own markers again where the layer
+        // only drew the surface's art as its ground, instead of hiding one set of markers or the
+        // other: 下层金库's plaza carries the surface's markers while the vault's own markers sit
+        // a few units inside the door.
         {
             using LayeredFloors::SharedFraction;
             LayeredFloors::Transform transform;   // the World defaults are enough for the geometry
@@ -180,6 +196,43 @@ int main() {
             const auto elsewhere = mapPointOf(256.0, 512.0 + 2048.0);
             Require(SharedFraction(floor, transform, elsewhere.first, elsewhere.second, 0) == 0.0,
                 "a coordinate outside the covered tile must not report shared ground");
+
+            // A floor drawn FROM the surface drawing cannot use that comparison: every cell of it
+            // reads as copied, including the ground its own markers stand on. 拉海's 星炬学院 floors
+            // measure 0.51-0.84 copied against at most 0.16 for every other floor in the game.
+            auto recreated = floor;                 // half of the art copied, half of it its own
+            Require(!LayeredFloors::ArtIsSurfaceCopy(recreated),
+                "half the art copied must not count as a surface drawing");
+            recreated.copiedFraction = 0.84;        // measured on 星炬学院·广场区
+            Require(LayeredFloors::ArtIsSurfaceCopy(recreated),
+                "a floor whose art is mostly the surface's must not use the comparison");
+            recreated.copiedFraction = 0.16;        // measured on 拉海's 联坠长廊·基座段
+            Require(!LayeredFloors::ArtIsSurfaceCopy(recreated),
+                "a floor that only adopts a piece of the surface keeps the comparison");
+        }
+
+        // Standing on ground the active floor copied from the surface: the floor's own markers
+        // keep their roles and the surface's own markers come back, instead of one set being
+        // hidden on a guess. This is 下层金库's plaza, where the surface marker three units away
+        // belongs on screen and so does the marker just inside the vault door.
+        {
+            LayeredMap::SetForTest(SharedState(15, "-1/15", -1));
+            Require(LayeredMap::RoleFor(Marker(8, "", "")) == MarkerRole::Normal,
+                "a surface collectible must return on shared ground");
+            Require(LayeredMap::RoleFor(Marker(8, "15", "0")) == MarkerRole::Normal,
+                "a floor-less point must return on shared ground");
+            Require(LayeredMap::RoleFor(Marker(8, "15", "-1000000/15")) == MarkerRole::Normal,
+                "the entrance marker above the layer must return on shared ground");
+            Require(LayeredMap::RoleFor(Marker(8, "15", "-1/15")) == MarkerRole::Current,
+                "the floor's own marker stays current on shared ground");
+            Require(LayeredMap::RoleFor(Marker(8, "15", "-2/15")) == MarkerRole::Above,
+                "another floor of the same map keeps its above/below role on shared ground");
+            Require(LayeredMap::RoleFor(Marker(8, "16", "-1/16")) == MarkerRole::Hidden,
+                "a different layered map stays hidden on shared ground");
+            // Off the copied piece the surface hides again.
+            LayeredMap::SetForTest(State(15, "-1/15", -1));
+            Require(LayeredMap::RoleFor(Marker(8, "", "")) == MarkerRole::Hidden,
+                "surface markers must hide again off the shared ground");
         }
 
         std::cout << "Layered marker role tests passed\n";

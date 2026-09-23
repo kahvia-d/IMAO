@@ -251,15 +251,22 @@ int main(int argc, char** argv) {
         }
         if (hasAnchor) {
             // Footprint report: what the state machine uses to keep a floor the imagery alone
-            // can no longer re-confirm every frame.
+            // can no longer re-confirm every frame. The shared columns are the other half of
+            // that decision: `shared` is how much of the art around the anchor is the surface's
+            // own pixels, and `copied` is that share over the whole floor - a floor drawn FROM
+            // the surface drawing (copied > 0.5) cannot use it at all, so it is gated out.
             std::cout << "footprint at map (" << anchorX << "," << anchorY << "):\n";
             for (std::size_t i = 0; i < floors.size(); ++i) {
                 const auto& floor = floors[i];
                 const bool inside = LayeredFloors::Contains(floor, transforms[i], anchorX, anchorY);
                 const bool voted = floor.floorId == classification.floorId;
                 if (inside || voted) {
+                    const bool gated = LayeredFloors::ArtIsSurfaceCopy(floor);
                     std::cout << "  " << (inside ? "INSIDE " : "outside") << " " << floor.floorId
-                        << "  " << floor.floorName << (voted ? "   (top vote)" : "") << '\n';
+                        << "  " << floor.floorName << (voted ? "   (top vote)" : "")
+                        << "  copied=" << floor.copiedFraction
+                        << " shared=" << LayeredFloors::SharedFraction(floor, transforms[i], anchorX, anchorY)
+                        << (gated ? "  gated=yes" : "  gated=no") << '\n';
                 }
             }
         }
