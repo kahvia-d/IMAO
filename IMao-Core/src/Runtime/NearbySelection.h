@@ -1,5 +1,6 @@
 #pragma once
 #include "../Domain/MapData.h"
+#include "LayeredMapState.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -57,6 +58,16 @@ struct Observation {
 };
 inline std::string Key(const ItemDatas& item) { return std::to_string(item.layer.stateId) + ":" + item.itemId; }
 inline bool Includes(const Candidate& item, Intent intent) {
+    // A marker the display is hiding must not be reachable by a key press either. Standing in a
+    // layered map hides every surface point, and without this the completion key would still tick
+    // one of them off - the key acts on what the player can see.
+    const auto role = LayeredMap::RoleFor(item.item);
+    if (role == LayeredMap::MarkerRole::Hidden) return false;
+    // Completing is floor-exact: standing on 1楼 must not tick off the chest one floor up or down,
+    // because the player cannot have reached it. Reading a guide is not floor-exact, so those
+    // floors stay eligible for the guide intent.
+    if (intent == Intent::Complete &&
+        (role == LayeredMap::MarkerRole::Above || role == LayeredMap::MarkerRole::Below)) return false;
     return !item.item.isSaved && std::isfinite(item.screenDistance) && item.screenDistance < Ranges::Pixels(intent);
 }
 

@@ -1205,12 +1205,15 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         if ((planning.enabled || !showCompleted) && DrawItemBase::IsPointCompleted(frame.sceneName, item)) continue;
         // Hidden markers must not reach the layout either: a marker that is not drawn must
         // not stay hoverable, selectable or counted in a group.
-        if (LayeredMap::RoleFor(item) == LayeredMap::MarkerRole::Hidden) continue;
+        const auto role = LayeredMap::RoleFor(item);
+        if (role == LayeredMap::MarkerRole::Hidden) continue;
         const auto position = motion.Apply(item.screenCoordiante);
         if (position.x < -radius || position.y < -radius || position.x > rect.right + radius || position.y > rect.bottom + radius) continue;
         if (planningPanel.Contains(position.x, position.y)) continue;
         const auto key = PointKey(item);
-        points.push_back({key, position.x, position.y, index});
+        // Same rule as the minimap: a pile from several floors draws the current floor's icon.
+        points.push_back({key, position.x, position.y, index,
+            role == LayeredMap::MarkerRole::Current ? 1 : 0});
         visible[key] = index;
     }
     if (!selected.empty() && !visible.contains(selected)) ClearSelection();

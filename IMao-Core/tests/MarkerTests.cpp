@@ -145,6 +145,19 @@ int main() {
         auto cluster = BuildMarkerLayout(std::move(dense), 30);
         Require(cluster.size() == 1 && cluster[0].members.size() == 25000, "dense cluster lost markers");
         Require(std::chrono::steady_clock::now() - started < std::chrono::seconds(3), "dense layout exceeded bounded processing budget");
+        // A pile of markers from several floors must draw the point on the player's own floor, not
+        // whichever key sorts first: the anchor decides the icon and the up/down badge, and the
+        // player has to be able to see that something of theirs is in the pile. The current floor's
+        // marker here carries the LARGER key, so only the priority can make it the anchor.
+        {
+            std::vector<MarkerLayoutPoint> floors = {{"8:aaa", 100, 100, 0, 0}, {"9:zzz", 102, 101, 1, 1}};
+            auto pile = BuildMarkerLayout(floors, 30);
+            Require(pile.size() == 1 && pile[0].members.size() == 2, "layered pile must be one group");
+            Require(pile[0].anchor.key == "9:zzz", "the current floor's marker must own the pile's icon");
+            std::vector<MarkerLayoutPoint> noPriority = {{"8:aaa", 100, 100, 0, 0}, {"9:zzz", 102, 101, 1, 0}};
+            auto byKey = BuildMarkerLayout(noPriority, 30);
+            Require(byKey[0].anchor.key == "8:aaa", "without a priority the key order still decides");
+        }
         MarkerClickTracker click;
         click.Down("a", 0, 0); Require(click.Up("a", 1, 1) == "a", "single target click failed");
         click.Down("a", 0, 0); click.Move(30, 0); Require(click.Up("a", 0, 0).empty(), "drag selected a marker");

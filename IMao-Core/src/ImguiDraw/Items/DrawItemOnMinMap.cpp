@@ -236,10 +236,14 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
         if (item.isSaved) { ++markerRenderStats.skippedCompleted; continue; }
         // Standing on a floor of a layered map hides everything that is not part of it, and
         // skipping here keeps hidden markers out of the layout (so they stay unclickable).
-        if (LayeredMap::RoleFor(item) == LayeredMap::MarkerRole::Hidden) continue;
+        const auto role = LayeredMap::RoleFor(item);
+        if (role == LayeredMap::MarkerRole::Hidden) continue;
         const auto position = motion.Apply(item.screenCoordiante);
         if (frame.radius > 0.0 && std::hypot(position.x - frame.center.x, position.y - frame.center.y) > frame.radius) continue;
-        points.push_back({std::to_string(item.layer.stateId) + ":" + item.itemId, position.x, position.y, index});
+        // A pile of markers from different floors draws the current floor's icon, so the pile only
+        // shows an up/down badge once nothing of the player's own floor is left in it.
+        const int priority = role == LayeredMap::MarkerRole::Current ? 1 : 0;
+        points.push_back({std::to_string(item.layer.stateId) + ":" + item.itemId, position.x, position.y, index, priority});
     }
     const auto layoutStarted = std::chrono::steady_clock::now();
     auto groups = BuildMarkerLayout(std::move(points), radius * 2 + 2);

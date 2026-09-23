@@ -4,6 +4,7 @@
 // revisions mixed those up and silently drew every marker as if no floor were known.
 
 #include "Runtime/LayeredMapState.h"
+#include "Runtime/NearbySelection.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -72,6 +73,54 @@ int main() {
         LayeredMap::SetForTest({});
         Require(LayeredMap::RoleFor(Marker(8, "1", "-1/1")) == MarkerRole::Normal,
             "clearing the floor must restore the badge behaviour");
+
+        // The nearby hotkeys act on what the player can see. While standing in a layered map the
+        // surface markers are hidden, so a key press must not complete one of them - and it must
+        // not complete a chest from another floor either, which the player cannot have reached:
+        // standing on 1楼 may not tick off the chest on 4楼.
+        {
+            LayeredMap::Snapshot state;
+            state.active = true;
+            state.kuroStateId = 902;     // 下层金库
+            state.layerId = 15;          // 贵金属与艺术品藏区
+            state.floorId = "-1/15";     // 1楼
+            state.level = -1;
+            state.heightDirection = -1;  // 1楼 at the bottom, 4楼 on top
+            LayeredMap::SetForTest(state);
+
+            const auto candidate = [](const std::string& mapId, const std::string& floorId, double pixels) {
+                NearbySelection::Candidate item;
+                item.item.layer.stateId = 902;
+                item.item.layer.floorId = mapId;
+                item.item.layer.level = floorId;
+                item.item.itemId = mapId + floorId;
+                item.distance = pixels;
+                item.screenDistance = pixels;
+                return item;
+            };
+            const auto here = candidate("15", "-1/15", 5);
+            const auto topFloor = candidate("15", "-4/15", 5);
+            const auto surface = candidate("", "", 1);
+            const auto elsewhere = candidate("16", "-1/16", 5);
+
+            Require(NearbySelection::Includes(here, NearbySelection::Intent::Complete),
+                "the floor the player stands on must stay completable");
+            Require(!NearbySelection::Includes(topFloor, NearbySelection::Intent::Complete),
+                "another floor's chest must not be completable by the key");
+            Require(NearbySelection::Includes(topFloor, NearbySelection::Intent::Guide),
+                "reading another floor's guide is still allowed");
+            Require(!NearbySelection::Includes(surface, NearbySelection::Intent::Complete),
+                "a hidden surface marker must not be completable by the key");
+            Require(!NearbySelection::Includes(surface, NearbySelection::Intent::Guide),
+                "a hidden surface marker must not be reachable by the key at all");
+            Require(!NearbySelection::Includes(elsewhere, NearbySelection::Intent::Guide),
+                "another layered map's marker is hidden too");
+
+            // Out in the open nothing is hidden, so the same marker is completable again.
+            LayeredMap::SetForTest({});
+            Require(NearbySelection::Includes(surface, NearbySelection::Intent::Complete),
+                "leaving the layer must restore surface completion");
+        }
 
         std::cout << "Layered marker role tests passed\n";
         return 0;    }

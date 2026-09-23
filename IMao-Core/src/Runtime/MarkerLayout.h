@@ -10,6 +10,11 @@ struct MarkerLayoutPoint {
     std::string key;
     double x = 0, y = 0;
     std::size_t sourceIndex = 0;
+    /// Higher wins the anchor. The anchor decides which icon and badge a stacked group draws, so
+    /// the point on the player's own floor must be the one drawn: otherwise a group holding both
+    /// the current floor's chest and one from the floor above draws the up marker, and the player
+    /// cannot tell whether anything of theirs is actually in this pile.
+    int priority = 0;
 };
 struct MarkerLayoutGroup {
     MarkerLayoutPoint anchor;
@@ -24,7 +29,12 @@ inline std::vector<MarkerLayoutGroup> BuildMarkerLayout(std::vector<MarkerLayout
     std::vector<MarkerLayoutGroup> groups;
     if (!(diameter > 0) || !std::isfinite(diameter)) return groups;
     points.erase(std::remove_if(points.begin(), points.end(), [](const auto& p) { return !std::isfinite(p.x) || !std::isfinite(p.y); }), points.end());
-    std::sort(points.begin(), points.end(), [](const auto& a, const auto& b) { return a.key < b.key; });
+    // Priority first so a group's anchor is the point that should be drawn, then the stable key
+    // order the grid algorithm relies on.
+    std::sort(points.begin(), points.end(), [](const auto& a, const auto& b) {
+        if (a.priority != b.priority) return a.priority > b.priority;
+        return a.key < b.key;
+    });
     std::unordered_map<std::int64_t, std::vector<std::size_t>> cells;
     const auto cellKey = [](int x, int y) { return static_cast<std::int64_t>(static_cast<std::uint64_t>(static_cast<std::uint32_t>(x)) << 32 |
         static_cast<std::uint32_t>(y)); };
@@ -73,3 +83,4 @@ private:
     double startX = 0, startY = 0;
     bool dragged = false;
 };
+
