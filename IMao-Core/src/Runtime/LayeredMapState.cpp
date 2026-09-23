@@ -254,14 +254,15 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         // which map the player means, so both are shown: the floor keeps its markers and the
         // surface's come back (MarkerRole::Normal), instead of guessing one and hiding the other.
         //
-        // Where the layer drew its ground FROM the surface drawing the comparison says nothing
-        // (see LayeredFloors::ArtIsSurfaceCopy) - there the layer keeps the ground to itself.
+        // Where the layer drew its ground FROM the surface drawing, or where it sits above or
+        // below the surface, the comparison says nothing: only the floor next to the surface can
+        // share the surface's ground (see LayeredFloors::AdjacentToSurface).
         bool onSharedGround = false;
         double sharedFraction = 0.0;
         const Entry* sharedEntry = nullptr;
         for (const auto& entry : entries) {
             if (entry.sceneId != sceneId) continue;
-            if (LayeredFloors::ArtIsSurfaceCopy(entry.floor)) continue;
+            if (!LayeredFloors::AdjacentToSurface(entry.floor)) continue;
             const double fraction = LayeredFloors::SharedFraction(entry.floor, entry.transform, mapX, mapY);
             if (fraction < kSharedGroundFraction) continue;
             onSharedGround = true;
@@ -280,8 +281,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
                 " fraction=" + std::to_string(sharedFraction) +
                 " floor=" + (sharedEntry == nullptr ? current.floorId : sharedEntry->floor.floorId) +
                 " region=" + (sharedEntry == nullptr ? std::string("?") : sharedEntry->regionId) +
-                " copiedFraction=" + std::to_string(sharedEntry == nullptr ? 0.0 : sharedEntry->floor.copiedFraction));
-        }
+                " copiedFraction=" + std::to_string(sharedEntry == nullptr ? 0.0 : sharedEntry->floor.copiedFraction));        }
         // Carried on the snapshot so the marker roles can see it; a stale flag is impossible
         // because the assignment happens before the floor is adopted below, in the same call.
         current.sharedGround = sharedGround;

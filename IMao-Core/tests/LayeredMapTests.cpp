@@ -197,18 +197,65 @@ int main() {
             Require(SharedFraction(floor, transform, elsewhere.first, elsewhere.second, 0) == 0.0,
                 "a coordinate outside the covered tile must not report shared ground");
 
-            // A floor drawn FROM the surface drawing cannot use that comparison: every cell of it
-            // reads as copied, including the ground its own markers stand on. 拉海's 星炬学院 floors
-            // measure 0.51-0.84 copied against at most 0.16 for every other floor in the game.
-            auto recreated = floor;                 // half of the art copied, half of it its own
-            Require(!LayeredFloors::ArtIsSurfaceCopy(recreated),
-                "half the art copied must not count as a surface drawing");
-            recreated.copiedFraction = 0.84;        // measured on 星炬学院·广场区
-            Require(LayeredFloors::ArtIsSurfaceCopy(recreated),
-                "a floor whose art is mostly the surface's must not use the comparison");
-            recreated.copiedFraction = 0.16;        // measured on 拉海's 联坠长廊·基座段
-            Require(!LayeredFloors::ArtIsSurfaceCopy(recreated),
-                "a floor that only adopts a piece of the surface keeps the comparison");
+            // Only the floor next to the surface can share the surface's ground. 拉海's 星炬学院
+            // floors are drawn from the surface drawing (51-84% of their pixels are the surface's
+            // own), and their own markers stand on that art - but only the ground floor is at
+            // ground level: 广场区 is the lowest floor and 运载区 the highest.
+            auto floorAt = floor;
+            floorAt.level = -1;
+            Require(LayeredFloors::AdjacentToSurface(floorAt),
+                "the floor next to the surface may share its ground");
+            floorAt.level = -2;
+            Require(!LayeredFloors::AdjacentToSurface(floorAt),
+                "a floor above or below the surface must not use the comparison");
+            floorAt.level = -4;
+            Require(!LayeredFloors::AdjacentToSurface(floorAt),
+                "so must a floor deeper in the building");
+
+            // A layered map whose floors carry no number at all still gets an above/below order:
+            // 星炬学院's zones are the plaza at the bottom, the teaching area, then the transport
+            // area on top, against levels -1/-2/-3.
+            {
+                const auto zone = [](int layerId, const std::string& floorId, const std::string& name, int level) {
+                    LayeredFloors::FloorEntry entry;
+                    entry.layerId = layerId;
+                    entry.floorId = floorId;
+                    entry.floorName = name;
+                    entry.level = level;
+                    return entry;
+                };
+                std::vector<LayeredFloors::FloorEntry> academy{
+                    zone(30, "-1/30", "星炬学院·广场区", -1),
+                    zone(30, "-2/30", "星炬学院·教学区", -2),
+                    zone(30, "-3/30", "星炬学院·运载区", -3),
+                    zone(30, "-4/30", "文献中心·休憩区", -4),
+                };
+                Require(LayeredFloors::LayerHeightDirection(academy, 30) == -1,
+                    "the academy's plaza is the lowest floor, so a bigger level is lower");
+                // 下层金库 numbers its floors in the names, and they run the same way.
+                std::vector<LayeredFloors::FloorEntry> vault{
+                    zone(15, "-1/15", "贵金属与艺术品藏区1楼", -1),
+                    zone(15, "-2/15", "贵金属与艺术品藏区2楼", -2),
+                    zone(15, "-3/15", "贵金属与艺术品藏区3楼", -3),
+                };
+                Require(LayeredFloors::LayerHeightDirection(vault, 15) == -1,
+                    "the vault's 1楼 is the ground floor");
+                // 叩天关's names run the other way and are read from the same rule.
+                std::vector<LayeredFloors::FloorEntry> pass{
+                    zone(1, "-1/1", "叩天关·上层", -1),
+                    zone(1, "-2/1", "叩天关·中层", -2),
+                    zone(1, "-3/1", "叩天关·下层", -3),
+                };
+                Require(LayeredFloors::LayerHeightDirection(pass, 1) == 1,
+                    "without a name that states an order, a bigger level is higher");
+                // A name that states nothing is no evidence either way.
+                std::vector<LayeredFloors::FloorEntry> unnamed{
+                    zone(9, "-1/9", "愚人乐土", -1),
+                    zone(9, "-2/9", "愚人乐土·深处", -2),
+                };
+                Require(LayeredFloors::LayerHeightDirection(unnamed, 9) == 1,
+                    "two floors whose names state no order keep the common convention");
+            }
         }
 
         // Standing on ground the active floor copied from the surface: the floor's own markers

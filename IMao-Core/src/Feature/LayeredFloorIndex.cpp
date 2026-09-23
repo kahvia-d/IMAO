@@ -203,27 +203,50 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
 
 namespace {
 
-/// The building floor number in a name like "贵金属与艺术品藏区4楼", or 0 when the name carries
-/// none. Only Arabic digits are read: they are what 楼 numbering uses, and guessing at the other
-/// naming styles (第一日树, 星炬学院·广场区) would be inventing an order the data does not state.
-int BuildingFloorNumber(const std::string& name) {
+/// Zone names that state no number at all, so their order is a fact about the game rather than
+/// something the data says. Recorded from play (2026-09-23): 星炬学院 is an above-ground building
+/// whose ground floor is the plaza, then the teaching area, then the transport area on top.
+/// A layered map shipped later with another such naming needs one line here and nothing else -
+/// every other branch of the rule reads the order out of the name.
+struct ZoneOrder { const char* name; int order; };
+constexpr ZoneOrder kZoneOrders[] = {
+    { "广场区", 1 }, { "教学区", 2 }, { "运载区", 3 },
+};
+
+/// The vertical position a floor name states, ascending with height, or 0 when it states none.
+///
+/// Upstream's `sort` field is no help: it simply repeats the level order (叩天关's 上层 and
+/// 下层金库's 1楼 both come first, and those are physically opposite), and no coordinate in the
+/// data carries a height.
+///
+/// Only the reading that cannot be a coin flip is taken. "…4楼" states the building floor, and in
+/// this game those are numbered from the ground up. Chinese ordinals are deliberately NOT read:
+/// 一层 is the first floor UP in 拉海's 日树 and the first floor DOWN in 黯原's 虚妄摇篮, and the
+/// names give no way to tell which - guessing one would swap the above/below markers on the other.
+int NamedFloorOrder(const std::string& name) {
     const auto marker = name.find("楼");
-    if (marker == std::string::npos) return 0;
-    std::size_t begin = marker;
-    while (begin > 0 && name[begin - 1] >= '0' && name[begin - 1] <= '9') --begin;
-    if (begin == marker) return 0;
-    return std::stoi(name.substr(begin, marker - begin));
+    if (marker != std::string::npos) {
+        std::size_t begin = marker;
+        while (begin > 0 && name[begin - 1] >= '0' && name[begin - 1] <= '9') --begin;
+        if (begin != marker) return std::stoi(name.substr(begin, marker - begin));
+    }
+    for (const auto& zone : kZoneOrders) {
+        if (name.find(zone.name) != std::string::npos) return zone.order;
+    }
+    return 0;
 }
 
 } // namespace
 
 int LayerHeightDirection(const std::vector<FloorEntry>& floors, int layerId) {
-    std::vector<std::pair<int, int>> numbered;   // (floor number, level)
+    std::vector<std::pair<int, int>> numbered;   // (floor position, level)
     for (const auto& floor : floors) {
         if (floor.layerId != layerId) continue;
-        const int number = BuildingFloorNumber(floor.floorName);
-        if (number > 0) numbered.emplace_back(number, floor.level);
+        const int order = NamedFloorOrder(floor.floorName);
+        if (order > 0) numbered.emplace_back(order, floor.level);
     }
+    // Fewer than two floors have a name that states an order, so there is nothing to compare and
+    // the common convention is kept: a bigger level is higher.
     if (numbered.size() < 2) return 1;
     int agreeing = 0, disagreeing = 0;
     for (std::size_t i = 0; i < numbered.size(); ++i) {
@@ -234,6 +257,14 @@ int LayerHeightDirection(const std::vector<FloorEntry>& floors, int layerId) {
         }
     }
     return disagreeing > agreeing ? -1 : 1;
+}
+
+bool AdjacentToSurface(const FloorEntry& floor) {
+    // Upstream numbers the floor next to the surface -1 on every layered map: the entrance floor
+    // of a cave (叩天关·上层, 幽锁层·三层), the ground floor of a building (下层金库's 1楼, and
+    // 星炬学院·广场区, which is 星炬学院's lowest floor). Every other floor is above or below the
+    // surface, so art it copied from the surface drawing is not surface ground.
+    return floor.level == -1;
 }
 
 bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY) {    // Inverse of the builder's KuroTilePointToAppMap: map -> game -> tile pixel -> grid cell.
@@ -320,10 +351,6 @@ double SharedFraction(const FloorEntry& floor, const Transform& transform, doubl
         return opaque > 0 ? static_cast<double>(shared) / opaque : 0.0;
     }
     return 0.0;
-}
-
-bool ArtIsSurfaceCopy(const FloorEntry& floor, double gate) {
-    return floor.copiedFraction >= gate;
 }
 
 Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,

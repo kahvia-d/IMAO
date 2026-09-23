@@ -71,12 +71,10 @@ struct FloorEntry {
     /// How much of this floor's own art is the surface's art instead: shared cells / opaque cells
     /// over the whole floor (0 on an index built before the shared grid existed).
     ///
-    /// This is the honesty check for `FloorTile::shared`. Upstream draws some layered maps by
-    /// copying the surface drawing, and there the comparison reports "shared" over ground the
-    /// layer really does own: 拉海's 星炬学院 floors measure 0.51-0.84 copied, against at most 0.16
-    /// for every other floor in the game, and their own markers stand on that copied art (6 of the
-    /// 10 points on 星炬学院·广场区). Where most of the art is a copy, art similarity says nothing
-    /// about who owns the ground - see ArtIsSurfaceCopy.
+    /// Reported, not decided on: it is what says whether upstream drew this map FROM the surface
+    /// drawing (拉海's 星炬学院 floors are 0.51-0.84, every other floor at most 0.32), which is
+    /// worth seeing when a floor's above/below markers look wrong. What decides whether the
+    /// comparison may be used at all is AdjacentToSurface.
     double copiedFraction = 0.0;
     // Centre of the floor's footprint in map coordinates. A cold start has no position at
     // all, and this is the only coordinate the layered index can offer to scope a search.
@@ -142,16 +140,13 @@ bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, 
 double SharedFraction(const FloorEntry& floor, const Transform& transform, double mapX, double mapY,
     int radiusCells = 3);
 
-/// True when a floor's art is mostly the surface's own drawing, which makes SharedFraction
-/// meaningless for it: the layer drew its ground by copying the surface, so "this spot looks like
-/// the surface" is true of the layer's own ground too, and acting on it would hide the markers the
-/// player is standing on. Measured over every shipped floor: 拉海's 星炬学院 floors read 0.51-0.84
-/// copied, every other floor at most 0.16, so the gate sits in that gap instead of on a tuned
-/// per-map value - a layered map released later is classified by the same rule.
-///
-/// The caller keeps the floor's markers as they are where this is true; only where it is false does
-/// shared ground mean anything.
-bool ArtIsSurfaceCopy(const FloorEntry& floor, double gate = 0.5);
+/// True when a floor can share ground with the surface at all, which only the floor next to the
+/// surface can. Everything above or below it is a different place, so art it copied from the
+/// surface drawing (拉海's 星炬学院 floors are 51-84% the surface's own pixels) is NOT surface
+/// ground, and acting on the comparison there would hide the markers the player is standing on.
+/// Measured over all 90 floors: only 拉海's 星炬学院 and 日树 floors copy more than 32% of their art,
+/// and their level -2/-3 floors do it while their level -1 floor is the one at ground level.
+bool AdjacentToSurface(const FloorEntry& floor);
 
 /// Votes every floor against the query descriptors and returns the winner. `identified` is
 /// false when the winner has too few matches or does not lead the runner-up by `margin`,
