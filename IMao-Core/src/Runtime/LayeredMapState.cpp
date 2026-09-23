@@ -33,6 +33,12 @@ constexpr int kSwitchFrames = 3;
 // Long enough that a stretch of weak classifications cannot end a floor the player never left
 // (see the footprint check in ObserveMinimap, which normally decides this on its own).
 constexpr int kClearFrames = 10;
+// How long the player may stand outside the known floor's footprint before it is dropped. This is
+// the position-only test, so it also runs while no minimap is being captured at all, and it is
+// counted in TIME rather than classifications: those arrive every few seconds in practice, not
+// every 300 ms, which is why ten of them meant tens of seconds of a stale floor.
+constexpr auto kLeftFootprintFor = std::chrono::milliseconds(2500);
+std::chrono::steady_clock::time_point outsideFootprintSince{};
 std::string pendingFloorId;
 // Consecutive decisive classifications; see kGroupResetFrames.
 int decisiveStreak = 0;
@@ -450,6 +456,9 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             decisiveStreak = 0;
             closeStreak = 0;
             sharedGroundFrames = 0;
+            sharedGround = false;
+            sharedGroundLogged = false;
+            outsideFootprintSince = std::chrono::steady_clock::time_point{};
             ++current.revision;
             Diagnostics::Record("layered-floor-change", "scene=" + std::to_string(sceneId) +
                 " floor=cleared previous=" + previous + " unknownFrames=" + std::to_string(unknownCount));
@@ -477,6 +486,46 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
 Scope ScopeHint() {
     std::lock_guard lock(stateMutex);
     return scope;
+}
+
+void ObservePosition(int sceneId, double mapX, double mapY) {
+    const auto now = std::chrono::steady_clock::now();
+    std::lock_guard lock(stateMutex);
+    if (entries.empty()) return;
+    // Only the scene the state belongs to can judge it: another scene's coordinates say nothing,
+    // and ObserveMinimap ends a state whose scene changed.
+    if (!current.active || sceneId == 0 || sceneId != current.sceneId) {
+        outsideFootprintSince = std::chrono::steady_clock::time_point{};
+        return;
+    }
+    const auto active = std::find_if(entries.begin(), entries.end(), [&](const Entry& entry) {
+        return entry.floor.floorId == current.floorId && entry.sceneId == current.sceneId;
+    });
+    if (active == entries.end()) {
+        outsideFootprintSince = std::chrono::steady_clock::time_point{};
+        return;
+    }
+    if (LayeredFloors::Contains(active->floor, active->transform, mapX, mapY)) {
+        outsideFootprintSince = std::chrono::steady_clock::time_point{};
+        return;
+    }
+    if (outsideFootprintSince.time_since_epoch().count() == 0) { outsideFootprintSince = now; return; }
+    if (now - outsideFootprintSince < kLeftFootprintFor) return;
+    const auto previous = current.floorId;
+    current = Snapshot{};
+    pendingFloorId.clear();
+    pendingCount = 0;
+    unknownCount = 0;
+    decisiveStreak = 0;
+    closeStreak = 0;
+    sharedGroundFrames = 0;
+    sharedGround = false;
+    sharedGroundLogged = false;
+    outsideFootprintSince = std::chrono::steady_clock::time_point{};
+    ++current.revision;
+    Diagnostics::Record("layered-floor-change", "scene=" + std::to_string(sceneId) +
+        " floor=cleared previous=" + previous + " reason=left-footprint map=" +
+        std::to_string(mapX) + "," + std::to_string(mapY));
 }
 
 Snapshot Read() {
@@ -551,11 +600,31 @@ void Reset() {
     sharedGroundFrames = 0;
     sharedGround = false;
     sharedGroundLogged = false;
+    outsideFootprintSince = std::chrono::steady_clock::time_point{};
 }
 
 void SetForTest(const Snapshot& snapshot) {
     std::lock_guard lock(stateMutex);
     current = snapshot;
+    outsideFootprintSince = std::chrono::steady_clock::time_point{};
+}
+
+void SetEntriesForTest(int sceneId, std::vector<LayeredFloors::FloorEntry> floors,
+    LayeredFloors::Transform transform) {
+    std::vector<Entry> loaded;
+    loaded.reserve(floors.size());
+    for (auto& floor : floors) {
+        Entry entry;
+        entry.sceneId = sceneId;
+        entry.kuroStateId = sceneId;   // one scene in these tests, so the two spaces coincide
+        entry.regionId = "test";
+        entry.floor = std::move(floor);
+        entry.transform = transform;
+        loaded.push_back(std::move(entry));
+    }
+    std::lock_guard lock(stateMutex);
+    entries = std::move(loaded);
+    outsideFootprintSince = std::chrono::steady_clock::time_point{};
 }
 
 } // namespace LayeredMap

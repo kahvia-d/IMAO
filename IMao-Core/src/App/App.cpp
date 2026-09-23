@@ -1072,6 +1072,7 @@ int App::ValidateCoordinateCandidate(const Coordinate& identifyCoordinate, const
 			if (outSupportingMatchCount != nullptr) *outSupportingMatchCount = supportingMatchCount;
 			if (commitPosition) {
 				App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = PlayerImgMapCoordinate;
+				LayeredMap::ObservePosition(sceneId, PlayerImgMapCoordinate.x, PlayerImgMapCoordinate.y);
 			}
 			return sceneId;
 		}
@@ -1221,6 +1222,9 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			}
 		}
 		App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = candidate.mapCenter;
+		// The floor the tool believes in is judged here too: the imagery is not always captured,
+		// and a floor the player has walked out of must not keep hiding the surface's markers.
+		LayeredMap::ObservePosition(candidate.sceneId, candidate.mapCenter.x, candidate.mapCenter.y);
 		gameMapCenterCoordinateByMouseMonitoring = candidate.mapCenter;
 		identifyCoordinate = ImgMapToWorldCoordinate(candidate.mapCenter, candidate.sceneId);
 		globalVisualConfirmation.Reset();
@@ -2225,6 +2229,9 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
             (result.captureCorners[3] - result.captureCorners[0]) * ((arrow.y - 35.0f) / 630.0f);
         viewportResumeHint = MinimapResumeHint{ MinimapResumeSource::MapViewport,
             { sceneId, player.x, player.y }, anchoredAt, result.viewportGeneration, result.viewportRevision };
+        // The big map hides the minimap, so no classification runs while it is open: the player's
+        // position is the only thing that can say the known floor was left behind.
+        LayeredMap::ObservePosition(sceneId, player.x, player.y);
         viewportMinimapReference = MinimapTerrainEvidence::ViewportReference(nominalSnapshot,
             arrow + cv::Point2f(160,100), CaptureWidth(result.captureCorners) / 1280.0, Scene::MinimapScale(sceneId));
         Diagnostics::Record("map-viewport-resume-hint", "source=player-arrow scene=" + std::to_string(sceneId) +

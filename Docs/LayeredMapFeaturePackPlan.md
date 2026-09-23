@@ -86,6 +86,19 @@
 新出的分层地图如果用另一种"没有序号的命名"，只需要在 `kRecordedOrders` 里加一行，其余分支都自动。
 
 诊断：`layered-floor-shared`（每次判定翻转一行，含 `fraction` / `copiedFraction`）。
+`layered-floor-change ... reason=left-footprint` = 位置判定把楼层收掉了。
+
+### 离开分层地图（`LayeredMap::ObservePosition`）
+
+楼层状态以前只靠**影像**结束：连续 10 次分类都认不出来才清。问题是分类**并不按 300ms 来**
+（实测大约几秒一次），10 次就是几十秒；而且玩家打开游戏大地图时小地图根本不采集，
+分类一次都不跑，状态就一直冻在那儿。实机日志（2026-09-23 17:58）里玩家已经站在虚妄摇篮外的
+空地上，状态仍写着 `-2/52`，于是身边地表标记全被隐藏。
+
+现在**位置本身**也是判据：只要已知楼层的足迹（`Contains`）连续 2.5 秒不包含玩家，就收掉该楼层
+（位置判定不需要影像，所以大地图打开时照样生效）。调用点就是"玩家坐标确定"的三处：小地图定位提交、
+小地图续接提交、大地图玩家箭头。走路出洞 = 2.5 秒内恢复地表标记；走回去时分类重新认层。
+
 离线复核：`out/map-regions/Audit-SharedGround.ps1`（逐区域峰值占比）、
 `out/map-regions/Audit-SharedOwnership.ps1`（分层自己的点位落在共用像素上的数量）、
 `IMaoLayeredFloorProbe --map x,y`（直接打印 `copied=` / `shared=` / `adjacent=`）。

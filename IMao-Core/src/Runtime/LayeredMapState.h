@@ -96,6 +96,19 @@ void Install(const std::filesystem::path& featureDataRoot);
 /// the answer stable where the imagery alone is too weak to re-confirm it every frame.
 void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double mapX, double mapY);
 
+/// Judges the known floor against a position alone, with no imagery involved.
+///
+/// A floor the player is standing outside of cannot be the floor they are on, and that is the one
+/// test that does not need a minimap. It matters because the imagery is not always captured - the
+/// game's big map hides the minimap, and while it is open the classification never runs - and
+/// because classifications are far rarer than frames, so counting unknown ones to end a floor took
+/// tens of seconds: the field log has the state still naming 虚妄摇篮's cave while the player was
+/// standing in the open field outside it, with every surface marker around them hidden.
+///
+/// Called wherever a player coordinate becomes known. Cheap: one footprint test against the
+/// already-parsed index.
+void ObservePosition(int sceneId, double mapX, double mapY);
+
 /// The current cold-start search scope; invalid once a scene is known.
 Scope ScopeHint();
 
@@ -111,6 +124,12 @@ void Reset();
 /// Test hook: installs a state directly, so the marker-role mapping (which id field means
 /// what) can be pinned by a unit test instead of only by playing the game.
 void SetForTest(const Snapshot& snapshot);
+
+/// Test hook: installs one scene's floors directly, without a pack on disk, so the position-only
+/// rules can be pinned too. `transform` is used for every floor, which is what the real loader does
+/// within one region.
+void SetEntriesForTest(int sceneId, std::vector<LayeredFloors::FloorEntry> floors,
+    LayeredFloors::Transform transform);
 
 }
 

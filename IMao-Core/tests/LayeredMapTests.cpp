@@ -6,9 +6,11 @@
 #include "Runtime/LayeredMapState.h"
 #include "Runtime/NearbySelection.h"
 
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 namespace {
 
@@ -302,6 +304,46 @@ int main() {
                     "without ranks a bigger level is still higher");
                 Require(LayeredFloors::HeightComparison(0, -1, 0, -2, -1) > 0,
                     "and the direction still flips it where the names say so");
+            }
+
+            // Leaving a layered map ends it on the position alone. The imagery cannot do this job:
+            // the game's big map hides the minimap, so no classification runs at all while it is
+            // open, and classifications are rare enough that counting unknown ones took tens of
+            // seconds. The field log has the state still naming 虚妄摇篮's cave while the player
+            // stood in the open field outside it, with every surface marker hidden.
+            {
+                LayeredFloors::Transform transform;   // World defaults; the geometry is all this needs
+                auto floor = SharedGroundFloor();     // one tile, (3,0), covering that whole tile
+                floor.copiedFraction = 0.0;
+                LayeredMap::SetEntriesForTest(1, { floor }, transform);
+                LayeredMap::SetForTest(State(15, "-1/15", -1));
+
+                const auto pixelToMap = [&](double pixelX, double pixelY) {
+                    const double gameX = (3.0 * transform.tileSize + pixelX - transform.tileSize) *
+                        transform.virtualMapSize / transform.tileSize;
+                    const double gameY = pixelY * transform.virtualMapSize / transform.tileSize;
+                    return std::pair<double, double>{ gameX * transform.scale + transform.originX,
+                        gameY * transform.scale + transform.originY };
+                };
+                const auto inside = pixelToMap(512.0, 512.0);
+                LayeredMap::ObservePosition(1, inside.first, inside.second);
+                LayeredMap::ObservePosition(1, inside.first, inside.second);
+                Require(LayeredMap::Read().active, "a position inside the floor must keep it");
+
+                // One frame outside is not enough - the footprint test has a cell of slack and the
+                // player is walking across its edge.
+                const auto outside = pixelToMap(512.0, 512.0 + 2048.0);
+                LayeredMap::ObservePosition(1, outside.first, outside.second);
+                Require(LayeredMap::Read().active, "one frame outside must not end the floor");
+                std::this_thread::sleep_for(std::chrono::milliseconds(2700));
+                LayeredMap::ObservePosition(1, outside.first, outside.second);
+                Require(!LayeredMap::Read().active, "a position outside the floor must end it");
+
+                // Walking back in re-arms it: the next classification can adopt the floor again.
+                LayeredMap::SetForTest(State(15, "-1/15", -1));
+                LayeredMap::ObservePosition(1, inside.first, inside.second);
+                Require(LayeredMap::Read().active, "being inside again must not clear it");
+                LayeredMap::SetEntriesForTest(1, {}, transform);
             }
         }
 
