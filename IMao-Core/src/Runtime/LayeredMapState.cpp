@@ -47,12 +47,26 @@ constexpr auto kMinimumInterval = std::chrono::milliseconds(300);
 // tracking a layered floor, or have no position yet and are using the vote as a search scope.
 constexpr auto kIdleInterval = std::chrono::milliseconds(1000);
 
+// Two floors count as the same place when their votes are this close. Inside 下层金库's
+// 贵金属与艺术品藏区 four floors are one marble hall and vote 12/10/5/4; the display must then
+// say "you are on one of these" instead of picking one and calling the others above or below.
+constexpr int kIndistinguishableFactor = 3;   // vote * 3 >= winner  <=>  vote >= winner / 3
+
 // Descriptors kept per floor when the index is loaded. The whole game has 90 floors and a cold
 // start compares every one of them, because the question is "which floor", not "where". Measured
 // against both real in-cave frames with all 90 floors on the table: keeping every descriptor gave
 // 22 vs 7 and 22 vs 5, 600 gave 26 vs 12 and 20 vs 7, and 300 broke identification outright
 // (22 vs 14, and a 9 vs 8 wrong answer), so 600 is the smallest cap that still separates them.
 constexpr int kFloorDescriptorCap = 600;
+
+std::string JoinFloors(const std::vector<std::string>& floors) {
+    std::string joined;
+    for (const auto& floor : floors) {
+        if (!joined.empty()) joined += " ";
+        joined += floor;
+    }
+    return joined;
+}
 
 std::string VoteSummary(const LayeredFloors::Classification& classification, const std::vector<const Entry*>& source) {
     std::string summary;
@@ -216,12 +230,32 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     const int minimumMatches = restricted ? 4 : 10;
     const auto classification = LayeredFloors::Classify(minimapFeatures, floors, minimumMatches, 2.0);
 
+    // Containment already made the candidates physically plausible, so inside a cave a close
+    // runner-up is not a reason to refuse: 下层金库's 贵金属与艺术品藏区 votes 12/10/5/4 for four
+    // floors of the same marble hall, which never reaches the 2x lead and left the whole layer
+    // display off. Adopt the winner, and remember every floor whose vote is within
+    // kIndistinguishableFactor of it - those draw as the current floor rather than being
+    // asserted above or below. Out in the open the 2x rule still stands, because there the
+    // candidates are not constrained by anything.
+    std::vector<std::string> equivalent;
+    bool adopted = classification.identified;
+    if (!adopted && restricted && classification.winnerMatches >= minimumMatches) adopted = true;
+    if (adopted && restricted) {
+        for (const auto& vote : classification.votes) {
+            if (vote.matches > 0 &&
+                vote.matches * kIndistinguishableFactor >= classification.winnerMatches) {
+                equivalent.push_back(vote.floorId);
+            }
+        }
+    }
+
     std::lock_guard lock(stateMutex);
-    if (classification.identified) {
+    if (adopted) {
         unknownCount = 0;
         if (classification.floorId == current.floorId && current.active) {
             pendingFloorId.clear();
             pendingCount = 0;
+            current.equivalentFloorIds = equivalent;
         }
         else if (classification.floorId == pendingFloorId) {
             ++pendingCount;
@@ -241,6 +275,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             current.floorId = classification.floorId;
             current.level = entry == nullptr ? LayeredFloors::FloorLevel(classification.floorId) : entry->floor.level;
             current.layerId = entry == nullptr ? LayeredFloors::FloorLayerId(classification.floorId) : entry->floor.layerId;
+            current.equivalentFloorIds = equivalent;
             ++current.revision;
             pendingFloorId.clear();
             pendingCount = 0;
@@ -249,7 +284,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
                 " floor=" + current.floorId +
                 " name=" + (entry == nullptr ? std::string("?") : entry->floor.floorName) +
                 " matches=" + std::to_string(classification.winnerMatches) +
-                " runnerUp=" + std::to_string(classification.runnerUpMatches));
+                " runnerUp=" + std::to_string(classification.runnerUpMatches) +
+                " equivalent=[" + JoinFloors(equivalent) + "]");
         }
     }
     else {
@@ -283,6 +319,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             " active=" + std::to_string(current.active) + " floor=" + (current.floorId.empty() ? "-" : current.floorId) +
             " restricted=" + std::to_string(restricted) + " containing=[" + containing + "]" +
             " identified=" + std::to_string(classification.identified) +
+            " adopted=" + std::to_string(adopted) +
+            " equivalent=[" + JoinFloors(current.equivalentFloorIds) + "]" +
             " winner=" + std::to_string(classification.winnerMatches) +
             " runnerUp=" + std::to_string(classification.runnerUpMatches) +
             " votes=[" + VoteSummary(classification, candidates) + "]");
@@ -319,6 +357,10 @@ MarkerRole RoleFor(const ItemDatas& item) {
     // An entrance marker ("-1000000/1") and a floor-less point ("0") sit on the surface.
     if (level == 0 || level <= -1000000) return MarkerRole::Hidden;
     if (floorId == state.floorId) return MarkerRole::Current;
+    // A floor the imagery cannot separate from the current one is not "above" or "below": it is
+    // another candidate for where the player is standing, so it draws as the current floor.
+    if (std::find(state.equivalentFloorIds.begin(), state.equivalentFloorIds.end(), floorId) !=
+        state.equivalentFloorIds.end()) return MarkerRole::Current;
     if (LayeredFloors::FloorLayerId(floorId) != state.layerId) return MarkerRole::Hidden; // another layered map
     // More negative is deeper: "-1" is the top floor, "-3" the bottom.
     return level < state.level ? MarkerRole::Below : MarkerRole::Above;
@@ -342,3 +384,4 @@ void SetForTest(const Snapshot& snapshot) {
 }
 
 } // namespace LayeredMap
+

@@ -44,6 +44,15 @@ struct Snapshot {
     std::string floorId; // "-2/1"
     int level = 0;       // -2
     std::uint64_t revision = 0;
+    /// Floors the imagery cannot tell apart from `floorId`.
+    ///
+    /// Inside 下层金库's 贵金属与艺术品藏区 the four floors are the same marble hall: their
+    /// composites share one dimmed surface base and the interiors carry few distinctive
+    /// features, so the votes come out 12/10/5/4 and the required 2x lead never appears - the
+    /// layer state stayed off entirely. Containment already says all four caves hold the player,
+    /// so the honest answer is "one of these", not "this one": everything on a floor in this set
+    /// draws as the current floor instead of being asserted above or below.
+    std::vector<std::string> equivalentFloorIds;
 };
 
 /// Where to point a search when the tool has no position at all yet.
