@@ -20,6 +20,7 @@ param(
     [string]$SourceRoot,
     [string]$CompositeRoot,
     [string]$LayerArchiveRoot,
+    [string]$TileArchiveRoot,
     [string]$OutputRoot,
     [string]$Version = 'B50F4135DCCC4D8DA87ED33CE95EA31D',
     [ValidateSet('k100', 'k035')]
@@ -33,7 +34,20 @@ if (-not $SourceRoot) { $SourceRoot = Split-Path -Parent $PSScriptRoot }
 $SourceRoot = [IO.Path]::GetFullPath($SourceRoot)
 if (-not $CompositeRoot) { $CompositeRoot = Join-Path $SourceRoot "out/map-regions/composite/$RegionId/$Factor" }
 if (-not $LayerArchiveRoot) { $LayerArchiveRoot = Join-Path $SourceRoot 'map-regions/layers' }
+if (-not $TileArchiveRoot) { $TileArchiveRoot = Join-Path $SourceRoot 'map-regions/tiles' }
 if (-not $OutputRoot) { $OutputRoot = Join-Path $SourceRoot "out/map-regions/packs/$RegionId/layered-floors" }
+
+# The surface tiles are read next to the overlays: a layered map can reuse a piece of the surface
+# as its own ground (下层金库's 贵金属与艺术品藏区 draws the plaza in front of the building by
+# copying the surface pixels there), and standing on that shared piece puts the player on the
+# surface, not inside the layer. Nothing downstream can tell those apart by shape, so the
+# comparison is made here, once per tile, and shipped as a second grid.
+$tileManifestPath = Join-Path $TileArchiveRoot 'tiles.manifest.json'
+if (-not (Test-Path -LiteralPath $tileManifestPath)) { throw "Tile archive manifest is missing: $tileManifestPath" }
+$tileManifest = Get-Content -LiteralPath $tileManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$tileVersion = if ($Version) { $Version.ToUpperInvariant() } else { [string]$tileManifest.tileResourceVersion }
+if ($tileVersion -notmatch '^[A-Fa-f0-9]{32}$') { throw "Tile generation is invalid: $tileVersion" }
+$tileRoot = Join-Path $TileArchiveRoot $tileVersion
 
 $builder = Join-Path $SourceRoot 'x64/RelWithDebInfo/KuroMapFeatureBuilder.exe'
 $converter = Join-Path $SourceRoot 'x64/Release/IMaoFeatureConverter.exe'
@@ -100,8 +114,46 @@ $cell = 1024 / $gridSize
 
 Add-Type -AssemblyName System.Drawing
 
-function Get-OccupancyHex([string]$overlayPath) {
-    $bitmap = [System.Drawing.Bitmap]::FromFile($overlayPath)
+# A cell counts as shared when most of its opaque pixels are the surface tile's own pixels: the
+# layered map copied that piece instead of drawing its own. Measured across all 161 layered tiles
+# of the game the population is bimodal - 86.9% of opaque cells are clearly the layer's own art
+# (<=30% match) and 8.5% clearly shared (>=70%), with only 4.7% in between - so one threshold
+# works for every region, including maps released later, and no per-region tuning is involved.
+function Get-SharedHex([string]$overlayPath, [string]$surfacePath) {
+    $bytes = New-Object byte[] ($gridSize * $gridSize)
+    if (Test-Path -LiteralPath $surfacePath) {
+        $overlay = [System.Drawing.Bitmap]::FromFile($overlayPath)
+        $surface = [System.Drawing.Bitmap]::FromFile($surfacePath)
+        try {
+            for ($gy = 0; $gy -lt $gridSize; ++$gy) {
+                for ($gx = 0; $gx -lt $gridSize; ++$gx) {
+                    $opaque = 0; $same = 0
+                    foreach ($dy in 4, 12) {
+                        foreach ($dx in 4, 12) {
+                            $x = [int]($gx * $cell + $dx); $y = [int]($gy * $cell + $dy)
+                            if ($x -ge $overlay.Width -or $y -ge $overlay.Height) { continue }
+                            $o = $overlay.GetPixel($x, $y)
+                            if ($o.A -le 8) { continue }
+                            $opaque++
+                            $s = $surface.GetPixel($x, $y)
+                            if ([Math]::Abs($o.R - $s.R) + [Math]::Abs($o.G - $s.G) + [Math]::Abs($o.B - $s.B) -le 30) { $same++ }
+                        }
+                    }
+                    $bytes[$gy * $gridSize + $gx] = if ($opaque -gt 0 -and $same * 10 -ge $opaque * 7) { 1 } else { 0 }
+                }
+            }
+        }
+        finally { $overlay.Dispose(); $surface.Dispose() }
+    }
+    $hex = New-Object System.Text.StringBuilder ($gridSize * $gridSize / 4)
+    for ($i = 0; $i -lt $bytes.Length; $i += 4) {
+        $nibble = $bytes[$i] -bor ($bytes[$i + 1] -shl 1) -bor ($bytes[$i + 2] -shl 2) -bor ($bytes[$i + 3] -shl 3)
+        [void]$hex.Append('0123456789abcdef'[$nibble])
+    }
+    return $hex.ToString()
+}
+
+function Get-OccupancyHex([string]$overlayPath) {    $bitmap = [System.Drawing.Bitmap]::FromFile($overlayPath)
     $bytes = New-Object byte[] ($gridSize * $gridSize)
     for ($gy = 0; $gy -lt $gridSize; ++$gy) {
         for ($gx = 0; $gx -lt $gridSize; ++$gx) {
@@ -176,9 +228,11 @@ foreach ($group in $groups | Sort-Object Name) {
         layerName = [string]$first.layerName; floorName = [string]$first.floorName
         file = "$tag.imf"; keypointCount = $keypoints
         tiles = @($group.Group | ForEach-Object {
-            $overlayPath = Join-Path $LayerArchiveRoot "$Version/$state/$($_.overlay)"
+            $overlayPath = Join-Path $LayerArchiveRoot "$tileVersion/$state/$($_.overlay)"
+            $surfacePath = Join-Path $tileRoot "$state/${state}_$([int]$_.x)_$([int]$_.y).png"
             $occupancy = if (Test-Path -LiteralPath $overlayPath) { Get-OccupancyHex $overlayPath } else { '' }
-            [ordered]@{ x = [int]$_.x; y = [int]$_.y; occupancy = $occupancy }
+            $shared = if (Test-Path -LiteralPath $overlayPath) { Get-SharedHex $overlayPath $surfacePath } else { '' }
+            [ordered]@{ x = [int]$_.x; y = [int]$_.y; occupancy = $occupancy; shared = $shared }
         })
     })
     Write-Host ("  {0,-16} {1,-22} keypoints={2,6}  tiles={3}" -f $tag, $first.floorName, $keypoints, $group.Count)

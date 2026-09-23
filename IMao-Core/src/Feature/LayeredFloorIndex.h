@@ -25,6 +25,13 @@ struct FloorTile {
     int x = 0;
     int y = 0;
     std::string occupancy; // gridSize*gridSize bits, big-endian nibbles, row-major
+    /// Same layout, but set where the layer reused the surface tile's own pixels instead of
+    /// drawing its own art. A layered map can take a piece of the surface as its own ground -
+    /// 下层金库's 贵金属与艺术品藏区 draws the plaza in front of the building by copying it - and
+    /// a player standing there is on the surface, not inside the layer, even though the layer's
+    /// art covers the spot and its imagery matches. Empty on an index built before this grid
+    /// existed, which simply means "nothing is shared".
+    std::string shared;
 };
 
 /// The index's coordinate transform, needed to turn a runtime map coordinate into a tile
@@ -112,6 +119,18 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
 /// on the surface - but note that standing on the surface ABOVE a cave shares the coordinate,
 /// so containment can never decide "am I in a layer", only "which one".
 bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY);
+
+/// How much of the layered art around this coordinate is the surface's own pixels rather than the
+/// layer's own drawing: the fraction of opaque cells in a (2*radiusCells+1) square that the tile
+/// marks as shared. A layered map can adopt a piece of the surface as its own ground (下层金库's
+/// 贵金属与艺术品藏区 draws the plaza in front of the building by copying it), and a player
+/// standing on that piece is on the surface - the layer covers the spot and its imagery matches,
+/// so nothing but this comparison can say so.
+///
+/// Measured with radius 3 on 下层金库: the shared plaza reads 0.67-0.69, the hall inside the
+/// building 0.16-0.34, so a threshold of 0.5 sits between them with roughly a 2x margin.
+double SharedFraction(const FloorEntry& floor, const Transform& transform, double mapX, double mapY,
+    int radiusCells = 3);
 
 /// Votes every floor against the query descriptors and returns the winner. `identified` is
 /// false when the winner has too few matches or does not lead the runner-up by `margin`,

@@ -38,6 +38,8 @@ std::string pendingFloorId;
 int decisiveStreak = 0;
 // Consecutive close classifications; see kGroupGrowFrames.
 int closeStreak = 0;
+// Consecutive frames of shared-ground evidence; see kSharedGroundFraction.
+int sharedGroundFrames = 0;
 int pendingCount = 0;
 int unknownCount = 0;
 std::chrono::steady_clock::time_point lastClassifyAt{};
@@ -71,6 +73,15 @@ constexpr int kGroupResetFrames = 5;
 // votes have two regimes - a clear frame reads 14 vs 4 while one against a blank wall reads
 // 1 vs 1 - so a single weak frame must not decide that two floors are the same place.
 constexpr int kGroupGrowFrames = 3;
+
+// A layered map may reuse part of the surface as its own ground. Where this much of the art
+// around the player is the surface's own pixels, the player is on the surface, not in the layer.
+// Measured on 下层金库 with radius 3: the shared plaza reads 0.67-0.69, the hall inside the
+// building 0.16-0.34, so 0.5 sits between them with roughly a 2x margin.
+constexpr double kSharedGroundFraction = 0.5;
+// Frames of that evidence before the layer is dropped: the fraction moves as the player walks the
+// boundary between the plaza and the building.
+constexpr int kSharedGroundFrames = 3;
 
 // Descriptors kept per floor when the index is loaded. The whole game has 90 floors and a cold
 // start compares every one of them, because the question is "which floor", not "where". Measured
@@ -227,6 +238,40 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             if (LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) inside.push_back(&entry);
         }
         restricted = !inside.empty();
+        // A shared piece of ground is the surface, not the layer: 下层金库's 贵金属与艺术品藏区
+        // draws the plaza in front of the building by copying the surface pixels, so a player
+        // standing there matches the floor's imagery and sits inside its footprint, yet every
+        // surface marker around them (measured: one three units away) belongs on screen. Where
+        // enough of the local art is the surface's own, the layer does not apply. Debounced like
+        // everything else here, because the fraction moves as the player walks the boundary.
+        bool onSharedGround = false;
+        double sharedFraction = 0.0;
+        const Entry* sharedEntry = nullptr;
+        for (const auto& entry : entries) {
+            if (entry.sceneId != sceneId) continue;
+            const double fraction = LayeredFloors::SharedFraction(entry.floor, entry.transform, mapX, mapY);
+            if (fraction < kSharedGroundFraction) continue;
+            onSharedGround = true;
+            sharedFraction = fraction;
+            sharedEntry = &entry;
+            break;
+        }
+        if (onSharedGround) {
+            if (++sharedGroundFrames >= kSharedGroundFrames) {
+                const auto previous = current.floorId;
+                current = Snapshot{};
+                decisiveStreak = 0;
+                closeStreak = 0;
+                sharedGroundFrames = 0;
+                Diagnostics::Record("layered-floor-shared", "scene=" + std::to_string(sceneId) +
+                    " region=" + (sharedEntry == nullptr ? std::string("?") : sharedEntry->regionId) +
+                    " floor=" + (sharedEntry == nullptr ? std::string("?") : sharedEntry->floor.floorId) +
+                    " sharedFraction=" + std::to_string(sharedFraction) +
+                    (previous.empty() ? "" : " previous=" + previous));
+                return;
+            }
+        }
+        else sharedGroundFrames = 0;
         for (const auto& entry : entries) {
             if (entry.sceneId != sceneId) continue;
             if (restricted && !LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) continue;
@@ -389,6 +434,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             current = Snapshot{};
             decisiveStreak = 0;
             closeStreak = 0;
+            sharedGroundFrames = 0;
             ++current.revision;
             Diagnostics::Record("layered-floor-change", "scene=" + std::to_string(sceneId) +
                 " floor=cleared previous=" + previous + " unknownFrames=" + std::to_string(unknownCount));
@@ -473,6 +519,7 @@ void SetForTest(const Snapshot& snapshot) {
 }
 
 } // namespace LayeredMap
+
 
 
 

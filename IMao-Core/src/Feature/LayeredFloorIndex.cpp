@@ -119,6 +119,7 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
                 parsedTile.x = tile.value("x", 0);
                 parsedTile.y = tile.value("y", 0);
                 parsedTile.occupancy = ReadString(tile, "occupancy");
+                parsedTile.shared = ReadString(tile, "shared");
                 entry.tiles.push_back(std::move(parsedTile));
             }
         }
@@ -265,6 +266,55 @@ bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, 
         return false;
     }
     return false;
+}
+
+namespace {
+
+/// One grid bit, packed four cells per nibble with the first cell in the lowest bit.
+int GridBit(const std::string& grid, std::size_t bit) {
+    const char nibble = grid[bit / 4];
+    const int value = nibble >= '0' && nibble <= '9' ? nibble - '0'
+        : (nibble >= 'a' && nibble <= 'f' ? nibble - 'a' + 10
+            : (nibble >= 'A' && nibble <= 'F' ? nibble - 'A' + 10 : 0));
+    return (value >> (bit % 4)) & 1;
+}
+
+} // namespace
+
+double SharedFraction(const FloorEntry& floor, const Transform& transform, double mapX, double mapY,
+    int radiusCells) {
+    const double gameX = (mapX - transform.originX) / transform.scale;
+    const double gameY = (mapY - transform.originY) / transform.scale;
+    const int tileX = static_cast<int>(std::floor(gameX / transform.virtualMapSize + 1.0));
+    const int tileY = static_cast<int>(std::ceil(-gameY / transform.virtualMapSize));
+    const double pixelX = gameX * transform.tileSize / transform.virtualMapSize + transform.tileSize -
+        static_cast<double>(tileX) * transform.tileSize;
+    const double pixelY = static_cast<double>(tileY) * transform.tileSize +
+        gameY * transform.tileSize / transform.virtualMapSize;
+    const double cell = transform.tileSize / transform.gridSize;
+    if (pixelX < 0.0 || pixelY < 0.0 || pixelX >= transform.tileSize || pixelY >= transform.tileSize) return 0.0;
+    const int cellX = static_cast<int>(pixelX / cell);
+    const int cellY = static_cast<int>(pixelY / cell);
+    const auto bits = static_cast<std::size_t>(transform.gridSize) * transform.gridSize;
+    for (const auto& tile : floor.tiles) {
+        if (tile.x != tileX || tile.y != tileY) continue;
+        // An index built before the shared grid existed simply has none: nothing is shared.
+        if (tile.shared.size() * 4 != bits || tile.occupancy.size() * 4 != bits) return 0.0;
+        int opaque = 0, shared = 0;
+        for (int dy = -radiusCells; dy <= radiusCells; ++dy) {
+            for (int dx = -radiusCells; dx <= radiusCells; ++dx) {
+                const int gx = cellX + dx;
+                const int gy = cellY + dy;
+                if (gx < 0 || gy < 0 || gx >= transform.gridSize || gy >= transform.gridSize) continue;
+                const auto bit = static_cast<std::size_t>(gy) * transform.gridSize + gx;
+                if (GridBit(tile.occupancy, bit) == 0) continue;   // outside the art is not evidence
+                ++opaque;
+                shared += GridBit(tile.shared, bit);
+            }
+        }
+        return opaque > 0 ? static_cast<double>(shared) / opaque : 0.0;
+    }
+    return 0.0;
 }
 
 Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,

@@ -28,6 +28,38 @@ ItemDatas Marker(int kuroStateId, const std::string& mapId, const std::string& l
     return item;
 }
 
+// A single-tile floor whose occupancy covers the whole tile and whose left half is marked as
+// ground the layered map copied from the surface. Used to pin SharedFraction: the left half must
+// read as shared and the right half as the layer's own art.
+LayeredFloors::FloorEntry SharedGroundFloor() {
+    LayeredFloors::FloorEntry floor;
+    floor.layerId = 15;
+    floor.floorId = "-1/15";
+    floor.floorName = "贵金属与艺术品藏区1楼";
+    floor.level = -1;
+    const int grid = 64;
+    const int bits = grid * grid;
+    std::vector<int> occupancy(bits, 1), shared(bits, 0);
+    for (int y = 0; y < grid; ++y) {
+        for (int x = 0; x < grid / 2; ++x) shared[y * grid + x] = 1;
+    }
+    const auto pack = [&](const std::vector<int>& source) {
+        std::string hex;
+        for (int i = 0; i < bits; i += 4) {
+            hex += "0123456789abcdef"[source[i] | (source[i + 1] << 1) | (source[i + 2] << 2) |
+                (source[i + 3] << 3)];
+        }
+        return hex;
+    };
+    LayeredFloors::FloorTile tile;
+    tile.x = 3;
+    tile.y = 0;
+    tile.occupancy = pack(occupancy);
+    tile.shared = pack(shared);
+    floor.tiles.push_back(std::move(tile));
+    return floor;
+}
+
 LayeredMap::Snapshot State(int layerId, const std::string& floorId, int level) {
     LayeredMap::Snapshot snapshot;
     snapshot.active = true;
@@ -120,6 +152,34 @@ int main() {
             LayeredMap::SetForTest({});
             Require(NearbySelection::Includes(surface, NearbySelection::Intent::Complete),
                 "leaving the layer must restore surface completion");
+        }
+
+        // Ground a layered map copied from the surface reads as shared, and ground it drew itself
+        // does not. The runtime uses this to leave the layer alone on a shared plaza, where the
+        // floor's imagery matches and its footprint contains the player, yet every surface marker
+        // around them belongs on screen.
+        {
+            using LayeredFloors::SharedFraction;
+            LayeredFloors::Transform transform;   // the World defaults are enough for the geometry
+            const auto floor = SharedGroundFloor();
+            // Tile (3,0) pixel -> map coordinate: the inverse of the mapping the index stores.
+            const auto mapPointOf = [&](double pixelX, double pixelY) {
+                const double gameX = (3.0 * transform.tileSize + pixelX - transform.tileSize) *
+                    transform.virtualMapSize / transform.tileSize;
+                const double gameY = pixelY * transform.virtualMapSize / transform.tileSize;
+                return std::pair<double, double>{ gameX * transform.scale + transform.originX,
+                    gameY * transform.scale + transform.originY };
+            };
+            const auto left = mapPointOf(256.0, 512.0);    // shared half
+            const auto right = mapPointOf(768.0, 512.0);   // the layer's own art
+            Require(SharedFraction(floor, transform, left.first, left.second, 0) == 1.0,
+                "copied ground must read as fully shared");
+            Require(SharedFraction(floor, transform, right.first, right.second, 0) == 0.0,
+                "the layer's own art must not read as shared");
+            // A tile outside the one the floor covers says nothing, rather than claiming shared.
+            const auto elsewhere = mapPointOf(256.0, 512.0 + 2048.0);
+            Require(SharedFraction(floor, transform, elsewhere.first, elsewhere.second, 0) == 0.0,
+                "a coordinate outside the covered tile must not report shared ground");
         }
 
         std::cout << "Layered marker role tests passed\n";
