@@ -414,6 +414,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             current.level = entry == nullptr ? LayeredFloors::FloorLevel(classification.floorId) : entry->floor.level;
             current.layerId = entry == nullptr ? LayeredFloors::FloorLayerId(classification.floorId) : entry->floor.layerId;
             current.heightDirection = entry == nullptr ? 1 : entry->floor.heightDirection;
+            current.heightRank = entry == nullptr ? 0 : entry->floor.heightRank;
             current.equivalentFloorIds = equivalent;
             ++current.revision;
             pendingFloorId.clear();
@@ -425,6 +426,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
                 " matches=" + std::to_string(classification.winnerMatches) +
                 " runnerUp=" + std::to_string(classification.runnerUpMatches) +
                 " heightDirection=" + std::to_string(current.heightDirection) +
+                " heightRank=" + std::to_string(current.heightRank) +
                 " equivalent=[" + JoinFloors(equivalent) + "]");
         }
     }
@@ -520,8 +522,20 @@ MarkerRole RoleFor(const ItemDatas& item) {
     // Which way the level runs is a property of the layered map, not of the code: 叩天关's
     // 上层(-1) sits above 下层(-3), while 下层金库's 1楼(-1) sits below 4楼(-4). Assuming the
     // first convention marked the floors above a player standing on 1楼 as below them.
-    const int direction = state.heightDirection == 0 ? 1 : state.heightDirection;
-    return level * direction < state.level * direction ? MarkerRole::Below : MarkerRole::Above;
+    //
+    // The rank, where the floor's name states one, is preferred to the level: a level does not
+    // always follow the height (黯原's 虚妄摇篮 is 二层 at the bottom, 入口 in the middle, 一层 on
+    // top), and a single direction can never express that.
+    const int markerRank = [&] {
+        std::lock_guard lock(stateMutex);
+        for (const auto& entry : entries) {
+            if (entry.floor.floorId == floorId) return entry.floor.heightRank;
+        }
+        return 0;
+    }();
+    const int comparison = LayeredFloors::HeightComparison(state.heightRank, state.level, markerRank, level,
+        state.heightDirection);
+    return comparison < 0 ? MarkerRole::Below : MarkerRole::Above;
 }
 
 void Reset() {

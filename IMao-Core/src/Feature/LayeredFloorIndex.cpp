@@ -193,45 +193,77 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
         error = "layered floor index lists no floors";
         return false;
     }
-    // Which way is up. Upstream names floors two different ways and the level runs opposite ways
-    // in each: 叩天关/眠龙庭/雾隐阁 use 上层(-1) ... 下层(-3), where a bigger level is higher, while
-    // 下层金库's 贵金属与艺术品藏区 uses 1楼(-1) ... 4楼(-4), where 4楼 is the top. Reading the
-    // second kind with the first convention marked the floors above the player as below.
-    for (auto& floor : index.floors) floor.heightDirection = LayerHeightDirection(index.floors, floor.layerId);
+    // Which way is up, and where each floor sits. Upstream names floors several ways and the level
+    // runs opposite ways in them: 叩天关/眠龙庭/雾隐阁 use 上层(-1) ... 下层(-3), where a bigger
+    // level is higher, while 下层金库's 贵金属与艺术品藏区 uses 1楼(-1) ... 4楼(-4), where 4楼 is
+    // the top. Reading the second kind with the first convention marked the floors above the
+    // player as below.
+    AssignHeightRanks(index.floors);
     return true;
 }
 
 namespace {
 
-/// Zone names that state no number at all, so their order is a fact about the game rather than
-/// something the data says. Recorded from play (2026-09-23): 星炬学院 is an above-ground building
-/// whose ground floor is the plaza, then the teaching area, then the transport area on top.
-/// A layered map shipped later with another such naming needs one line here and nothing else -
-/// every other branch of the rule reads the order out of the name.
-struct ZoneOrder { const char* name; int order; };
-constexpr ZoneOrder kZoneOrders[] = {
+/// Floor names whose order is a fact about the game rather than something the name says, recorded
+/// from play (2026-09-23) and checked against the game by the user:
+///
+///   星炬学院 is an above-ground building and its zones run 广场区 (ground) < 教学区 < 运载区 (top).
+///   虚妄摇篮's heights are NOT monotonic in its levels: 二层 (-3) is the bottom, 入口 (-1) is in
+///   the middle and 一层 (-2) is the top. A single "which way do the levels run" cannot express
+///   that, which is why every floor of a layer that appears here is listed.
+///
+/// A layered map shipped later with another naming of this kind needs one line here and nothing
+/// else; every other branch of the rule reads the position out of the name.
+struct RecordedOrder { const char* name; int order; };   // ascending with height
+constexpr RecordedOrder kRecordedOrders[] = {
     { "广场区", 1 }, { "教学区", 2 }, { "运载区", 3 },
+    { "二层·虚妄摇篮", 1 }, { "入口·虚妄摇篮", 2 }, { "一层·虚妄摇篮", 3 },
 };
+
+/// One Chinese digit, or 0 for anything else. The names are UTF-8, so the digit is the three bytes
+/// before the 层 that follows it - indexing a single byte there would read half a character.
+int ChineseDigitBefore(const std::string& name, std::size_t end) {
+    static const char* const digits[] = { "一", "二", "三", "四", "五", "六", "七", "八", "九", "十" };
+    if (end < 3) return 0;
+    const std::string character = name.substr(end - 3, 3);
+    for (int index = 0; index < 10; ++index) {
+        if (character == digits[index]) return index + 1;
+    }
+    return 0;
+}
 
 /// The vertical position a floor name states, ascending with height, or 0 when it states none.
 ///
 /// Upstream's `sort` field is no help: it simply repeats the level order (叩天关's 上层 and
 /// 下层金库's 1楼 both come first, and those are physically opposite), and no coordinate in the
-/// data carries a height.
+/// data carries a height. So the name is the source, read in this order:
 ///
-/// Only the reading that cannot be a coin flip is taken. "…4楼" states the building floor, and in
-/// this game those are numbered from the ground up. Chinese ordinals are deliberately NOT read:
-/// 一层 is the first floor UP in 拉海's 日树 and the first floor DOWN in 黯原's 虚妄摇篮, and the
-/// names give no way to tell which - guessing one would swap the above/below markers on the other.
+///   "…4楼"        the building floor, numbered from the ground up in this game;
+///   "…二层"        the same, written in Chinese; "地下一层" is below ground, so it counts down;
+///   recorded      names that state no position at all - see kRecordedOrders.
+///
+/// The last case is why 一层 cannot simply be read as "the first floor up": it is the ground floor
+/// in 拉海's 日树 but the TOP floor of 黯原's 虚妄摇篮, and the recorded table is what separates
+/// them. Reading it as "up" without that table would swap the markers on the other map.
 int NamedFloorOrder(const std::string& name) {
+    for (const auto& recorded : kRecordedOrders) {
+        if (name.find(recorded.name) != std::string::npos) return recorded.order;
+    }
     const auto marker = name.find("楼");
     if (marker != std::string::npos) {
         std::size_t begin = marker;
         while (begin > 0 && name[begin - 1] >= '0' && name[begin - 1] <= '9') --begin;
         if (begin != marker) return std::stoi(name.substr(begin, marker - begin));
     }
-    for (const auto& zone : kZoneOrders) {
-        if (name.find(zone.name) != std::string::npos) return zone.order;
+    const auto storey = name.find("层");
+    if (storey != std::string::npos) {
+        const int digit = ChineseDigitBefore(name, storey);
+        if (digit > 0) {
+            // "地下一层" counts down from the surface, so 地下一层 sits above 地下二层.
+            const bool belowGround = storey >= 9 && name.compare(storey - 6, 3, "下") == 0 &&
+                name.compare(storey - 9, 3, "地") == 0;
+            return belowGround ? -digit : digit;
+        }
     }
     return 0;
 }
@@ -243,9 +275,10 @@ int LayerHeightDirection(const std::vector<FloorEntry>& floors, int layerId) {
     for (const auto& floor : floors) {
         if (floor.layerId != layerId) continue;
         const int order = NamedFloorOrder(floor.floorName);
-        if (order > 0) numbered.emplace_back(order, floor.level);
+        // 0 means the name states no position; 地下一层's negative order is a position like any other.
+        if (order != 0) numbered.emplace_back(order, floor.level);
     }
-    // Fewer than two floors have a name that states an order, so there is nothing to compare and
+    // Fewer than two floors have a name that states a position, so there is nothing to compare and
     // the common convention is kept: a bigger level is higher.
     if (numbered.size() < 2) return 1;
     int agreeing = 0, disagreeing = 0;
@@ -265,6 +298,49 @@ bool AdjacentToSurface(const FloorEntry& floor) {
     // 星炬学院·广场区, which is 星炬学院's lowest floor). Every other floor is above or below the
     // surface, so art it copied from the surface drawing is not surface ground.
     return floor.level == -1;
+}
+
+int HeightRank(const std::vector<FloorEntry>& floors, const std::string& floorId) {
+    for (const auto& floor : floors) {
+        if (floor.floorId == floorId) return floor.heightRank;
+    }
+    return 0;
+}
+
+int HeightComparison(int currentRank, int currentLevel, int markerRank, int markerLevel, int direction) {
+    if (currentRank != 0 && markerRank != 0 && markerRank != currentRank) {
+        return markerRank < currentRank ? -1 : 1;
+    }
+    const int sign = direction == 0 ? 1 : direction;
+    // Equal ranks mean the two floors are the same place as far as the names say; the level then
+    // decides, exactly as it did before any name was read.
+    return markerLevel * sign < currentLevel * sign ? -1 : 1;
+}
+
+void AssignHeightRanks(std::vector<FloorEntry>& floors) {
+    std::vector<int> layers;
+    for (const auto& floor : floors) {
+        if (std::find(layers.begin(), layers.end(), floor.layerId) == layers.end()) layers.push_back(floor.layerId);
+    }
+    for (const int layerId : layers) {
+        const int direction = LayerHeightDirection(floors, layerId);
+        // Where every floor of the layer states its own position, those positions are used as they
+        // are: 虚妄摇篮's heights are not monotonic in its levels, so no single direction can
+        // reproduce them (入口 sits between 二层 and 一层).
+        std::size_t total = 0, named = 0;
+        for (const auto& floor : floors) {
+            if (floor.layerId != layerId) continue;
+            ++total;
+            if (NamedFloorOrder(floor.floorName) != 0) ++named;
+        }
+        const bool everyFloorNamed = total > 1 && named == total;
+        for (auto& floor : floors) {
+            if (floor.layerId != layerId) continue;
+            floor.heightDirection = direction;
+            const int order = NamedFloorOrder(floor.floorName);
+            floor.heightRank = everyFloorNamed && order != 0 ? order : floor.level * direction;
+        }
+    }
 }
 
 bool Contains(const FloorEntry& floor, const Transform& transform, double mapX, double mapY) {    // Inverse of the builder's KuroTilePointToAppMap: map -> game -> tile pixel -> grid cell.

@@ -58,6 +58,13 @@ struct FloorEntry {
     /// naming conventions and their levels run opposite ways (see LayerHeightDirection), so the
     /// above/below markers must not assume one of them.
     int heightDirection = 1;
+    /// Where the floor sits inside its layered map, ascending with height; bigger is higher.
+    ///
+    /// Read off the floor's NAME (AssignHeightRanks) and preferred over `level * heightDirection`,
+    /// because a level does not always follow the height: 黯原's 虚妄摇篮 is 二层 (-3) at the
+    /// bottom, 入口 (-1) in the middle and 一层 (-2) on top. Floors whose names state nothing keep
+    /// the level comparison, which is what the whole game used before the names were read.
+    int heightRank = 0;
     ImageFeatureData features;
     /// A capped copy of `features`, used only when every floor in the game is a candidate.
     ///
@@ -183,6 +190,22 @@ int FloorLevel(const std::string& floorId);
 /// 上层(-1) above 下层(-3)), -1 where the names number the floors the other way round
 /// (下层金库's 1楼(-1) below 4楼(-4)). Derived from the names, not assumed.
 int LayerHeightDirection(const std::vector<FloorEntry>& floors, int layerId);
+
+/// Fills in both `heightDirection` and `heightRank` for every floor; Load calls this once. Ranks
+/// are used in preference to the direction because not every layered map's heights follow its
+/// levels: 虚妄摇篮's 入口 sits between 二层 and 一层, which no single direction can reproduce.
+void AssignHeightRanks(std::vector<FloorEntry>& floors);
+
+/// The rank `AssignHeightRanks` gave this floor, or 0 when the index has no such floor.
+int HeightRank(const std::vector<FloorEntry>& floors, const std::string& floorId);
+
+/// Where a marker on the second floor sits relative to a player on the first: -1 below, +1 above.
+///
+/// The ranks decide it while both are known, because a level does not always follow the height
+/// (黯原's 虚妄摇篮 is 二层 at the bottom, 入口 in the middle, 一层 on top - the player on 入口 has
+/// 一层 above and 二层 below, which no direction can express). `direction` is the fallback that the
+/// whole game used before the names were read: +1 meaning a bigger level is higher.
+int HeightComparison(int currentRank, int currentLevel, int markerRank, int markerLevel, int direction);
 /// "-2/3" -> 3, the layered map the floor belongs to. 0 when the id is malformed.
 int FloorLayerId(const std::string& floorId);
 

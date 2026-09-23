@@ -255,6 +255,53 @@ int main() {
                 };
                 Require(LayeredFloors::LayerHeightDirection(unnamed, 9) == 1,
                     "two floors whose names state no order keep the common convention");
+
+                // The ranks are what the markers actually use, and they survive a layer whose
+                // heights do not follow its levels: 黯原's 虚妄摇篮 is 二层 (-3) at the bottom,
+                // 入口 (-1) in the middle and 一层 (-2) on top.
+                std::vector<LayeredFloors::FloorEntry> cradle{
+                    zone(52, "-1/52", "入口·虚妄摇篮", -1),
+                    zone(52, "-2/52", "一层·虚妄摇篮", -2),
+                    zone(52, "-3/52", "二层·虚妄摇篮", -3),
+                };
+                LayeredFloors::AssignHeightRanks(cradle);
+                Require(LayeredFloors::HeightRank(cradle, "-3/52") == 1 &&
+                    LayeredFloors::HeightRank(cradle, "-1/52") == 2 &&
+                    LayeredFloors::HeightRank(cradle, "-2/52") == 3,
+                    "the cradle's ranks must be 二层 < 入口 < 一层");
+                // 日树's floors are numbered upward, the opposite of the old default.
+                std::vector<LayeredFloors::FloorEntry> tree{
+                    zone(40, "-1/40", "一层·第一日树", -1),
+                    zone(40, "-2/40", "二层·第一日树", -2),
+                    zone(40, "-3/40", "三层·第一日树", -3),
+                };
+                LayeredFloors::AssignHeightRanks(tree);
+                Require(LayeredFloors::HeightRank(tree, "-3/40") > LayeredFloors::HeightRank(tree, "-1/40"),
+                    "the day tree's 三层 is above its 一层");
+                // 秘藏之地's 地下一层 is the shallower of the two, so it ranks higher.
+                std::vector<LayeredFloors::FloorEntry> hoard{
+                    zone(18, "-1/18", "秘藏之地·地下一层", -1),
+                    zone(18, "-2/18", "秘藏之地·地下二层", -2),
+                };
+                LayeredFloors::AssignHeightRanks(hoard);
+                Require(LayeredFloors::HeightRank(hoard, "-1/18") > LayeredFloors::HeightRank(hoard, "-2/18"),
+                    "地下一层 sits above 地下二层");
+
+                // And that is what the markers do with it: standing on 入口, 一层 is above and
+                // 二层 below - the ranks decide, and the level would have got both backwards.
+                const auto rank = [&](const std::vector<LayeredFloors::FloorEntry>& floors, const char* id) {
+                    return LayeredFloors::HeightRank(floors, id);
+                };
+                const int entrance = rank(cradle, "-1/52");
+                Require(LayeredFloors::HeightComparison(entrance, -1, rank(cradle, "-2/52"), -2, 1) > 0,
+                    "一层 must read as above 入口");
+                Require(LayeredFloors::HeightComparison(entrance, -1, rank(cradle, "-3/52"), -3, 1) < 0,
+                    "二层 must read as below 入口");
+                // Without ranks the level comparison is what runs, unchanged.
+                Require(LayeredFloors::HeightComparison(0, -1, 0, -2, 1) < 0,
+                    "without ranks a bigger level is still higher");
+                Require(LayeredFloors::HeightComparison(0, -1, 0, -2, -1) > 0,
+                    "and the direction still flips it where the names say so");
             }
         }
 

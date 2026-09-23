@@ -44,8 +44,11 @@ struct Snapshot {
     int layerId = 0;
     std::string floorId; // "-2/1"
     int level = 0;       // -2
-    /// Which way this layered map's levels run; see FloorEntry::heightDirection.
+    /// Which way this layered map's levels run; see FloorEntry::heightDirection. Only the fallback:
+    /// a level does not always follow the height (虚妄摇篮), so heightRank is preferred.
     int heightDirection = 1;
+    /// Where this floor sits inside its layered map, ascending with height; 0 when unknown.
+    int heightRank = 0;
     std::uint64_t revision = 0;
     /// Floors the imagery cannot tell apart from `floorId`.
     ///

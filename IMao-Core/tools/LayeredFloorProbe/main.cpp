@@ -158,15 +158,22 @@ int main(int argc, char** argv) {
         }
         if (loadedPacks == 0) { std::cerr << "no pack had a floor index\n"; return 1; }
         std::cout << "floor index: " << floors.size() << " floors from " << loadedPacks << " pack(s)\n";
-        // Which way each layered map's levels run, so a wrong above/below marker is visible here
-        // rather than only in the game.
+        // Where each floor sits, so a wrong above/below marker is visible here rather than only in
+        // the game. The rank is what the markers use; the direction is only its fallback.
         {
             std::vector<int> reported;
             for (const auto& floor : floors) {
-                if (std::find(reported.begin(), reported.end(), floor.layerId) != reported.end()) continue;
-                reported.push_back(floor.layerId);
-                std::cout << "  layer " << floor.layerId << " " << floor.layerName
-                    << " heightDirection=" << floor.heightDirection << '\n';
+                if (std::find(reported.begin(), reported.end(), floor.layerId) == reported.end()) {
+                    reported.push_back(floor.layerId);
+                    std::cout << "  layer " << floor.layerId << " " << floor.layerName
+                        << " heightDirection=" << floor.heightDirection << '\n';
+                    for (const auto& member : floors) {
+                        if (member.layerId != floor.layerId) continue;
+                        std::cout << "    " << member.floorId << "  " << member.floorName
+                            << "  heightRank=" << member.heightRank
+                            << (LayeredFloors::AdjacentToSurface(member) ? "  adjacent=yes" : "") << '\n';
+                    }
+                }
             }
         }
 
