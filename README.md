@@ -33,8 +33,11 @@
 
 ## 下载与安装
 
-前往 **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** 下载 `IMao-v<版本号>-windows-x64.zip`，
+前往 **[Releases](https://github.com/kahvia-d/IMAO/releases)** 下载 **`IMao-v<版本号>-windows-x64.zip`**，
 解压后运行 **`IMao-Launcher.exe`** 即可。
+
+> 下载页里 `ext-` 开头的是**库街区同步浏览器扩展**，不是程序包；程序包是 `IMao-v…-windows-x64.zip`。
+> （本仓库的「Latest」标记目前挂在扩展发行版上，所以请按文件名认，不要只看 Latest 徽章。）
 
 | 项目 | 要求 |
 | :--- | :--- |

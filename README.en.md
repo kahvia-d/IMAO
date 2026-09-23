@@ -34,8 +34,12 @@ Still actively updated ✿✿ヽ(°▽°)ノ✿
 
 ## Download & Install
 
-Go to **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)**, download
-`IMao-v<version>-windows-x64.zip`, unzip it and run **`IMao-Launcher.exe`**.
+Go to **[Releases](https://github.com/kahvia-d/IMAO/releases)** and download
+**`IMao-v<version>-windows-x64.zip`**, then unzip it and run **`IMao-Launcher.exe`**.
+
+> In that list, anything starting with `ext-` is the **KuroBBS sync browser extension**, not the
+> program. The program package is `IMao-v…-windows-x64.zip`. (The repository's "Latest" badge
+> currently sits on the extension release, so go by the file name rather than the badge.)
 
 | Item | Requirement |
 | :--- | :--- |
