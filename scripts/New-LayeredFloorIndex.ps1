@@ -55,7 +55,6 @@ $tiles = @($factorNode.Value.tiles)
 if ($tiles.Count -eq 0) { throw "The composite manifest has no tiles for $Factor." }
 
 $state = [int]$compositeManifest.frame
-$originX = 2474.0; $originY = 1957.0; $scale = 1.205
 
 # Scene name and runtime scene id come from the region registry and its shipped pack: the
 # builder refuses a frame that does not belong to the scene it is told to build.
@@ -63,6 +62,23 @@ $registry = Get-Content -LiteralPath (Join-Path $SourceRoot 'map-regions/regions
 $regionRecord = @($registry.regions | Where-Object { $_.id -eq $RegionId })
 if ($regionRecord.Count -ne 1) { throw "Region '$RegionId' is not in the registry exactly once." }
 $scene = [string]$regionRecord[0].scene
+# The footprint grid and the scope centre are both expressed as map coordinates, and 每个 scene 有
+# 自己的坐标系: World is (2474,1957) @1.205 while, for example, 下层金库 is (-3.5,-2.5) @1.2053.
+# Hardcoding World's numbers made every non-World index test containment against the wrong point,
+# so no floor ever contained the player there (runtime log: containing=[] in 下层金库).
+$originX = 2474.0; $originY = 1957.0; $scale = 1.205
+$calibrationPath = Join-Path $SourceRoot 'Assets/KuroMap/scene-calibrations.json'
+if (Test-Path -LiteralPath $calibrationPath) {
+    $calibrations = Get-Content -LiteralPath $calibrationPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $calibration = $calibrations.scenes.PSObject.Properties[$scene]
+    if ($null -ne $calibration) {
+        $originX = [double]$calibration.Value.coordinateTransform.originX
+        $originY = [double]$calibration.Value.coordinateTransform.originY
+        $scale = [double]$calibration.Value.coordinateTransform.scale
+        Write-Host ("  scene transform: origin=({0},{1}) scale={2}" -f [math]::Round($originX, 3), [math]::Round($originY, 3), [math]::Round($scale, 5))
+    }
+    else { Write-Host "  no calibration for scene '$scene'; using the World transform" }
+}
 $sceneId = 1
 foreach ($candidate in (Join-Path $SourceRoot 'Assets/FeaturesDatas/KuroTilePacks'), (Join-Path $SourceRoot "out/map-regions/packs/$RegionId")) {
     $manifestPath = Join-Path $candidate "$RegionId/manifest.json"
