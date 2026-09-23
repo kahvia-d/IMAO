@@ -34,6 +34,8 @@ constexpr int kSwitchFrames = 3;
 // (see the footprint check in ObserveMinimap, which normally decides this on its own).
 constexpr int kClearFrames = 10;
 std::string pendingFloorId;
+// Consecutive decisive classifications; see kGroupResetFrames.
+int decisiveStreak = 0;
 int pendingCount = 0;
 int unknownCount = 0;
 std::chrono::steady_clock::time_point lastClassifyAt{};
@@ -57,6 +59,11 @@ constexpr auto kIdleInterval = std::chrono::milliseconds(1000);
 // 15 vs 6, and a factor of 3 swallowed those real leads too: every floor showed as the current
 // one, which is what the user saw. 1.5 keeps the near-tie case and lets a 2x lead mean something.
 constexpr int kIndistinguishableFactor = 1.5;   // vote * 1.5 >= winner  <=>  vote >= winner / 1.5
+
+// How many consecutive decisive classifications it takes before the equivalence group collapses
+// back to the winner. Long enough that a burst of close frames cannot shrink it mid-tie (which
+// would flicker the other floors' markers), short enough to stay under two seconds.
+constexpr int kGroupResetFrames = 5;
 
 // Descriptors kept per floor when the index is loaded. The whole game has 90 floors and a cold
 // start compares every one of them, because the question is "which floor", not "where". Measured
@@ -281,8 +288,23 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         if (sameFloor || equivalentToCurrent) {
             pendingFloorId.clear();
             pendingCount = 0;
-            // Merge instead of replace: the set comes from noisy votes, so a frame that separates
-            // them once must not shrink the group back and make the display flip again.
+            // The group exists to stop the display flickering while the votes are close (12/10),
+            // not to keep floors lumped together once a clear lead says otherwise. It therefore
+            // only grows while the evidence is close, and collapses back to this frame's group
+            // after the lead has been decisive for a while - 下层金库 now votes 15 vs 4 for
+            // 贵金属与艺术品藏区1楼, but the group picked up all four floors in its noisy opening
+            // seconds and, being grow-only, never let them go.
+            const bool decisive = classification.winnerMatches >=
+                2 * std::max(classification.runnerUpMatches, 1) && classification.winnerMatches >= minimumMatches;
+            if (decisive) {
+                if (++decisiveStreak >= kGroupResetFrames) {
+                    current.equivalentFloorIds = equivalent;
+                    decisiveStreak = 0;
+                }
+            }
+            else decisiveStreak = 0;
+            // Merge instead of replace otherwise: the set comes from noisy votes, so a frame that
+            // separates them once must not shrink the group back and make the display flip again.
             for (const auto& floor : equivalent) {
                 if (std::find(current.equivalentFloorIds.begin(), current.equivalentFloorIds.end(), floor) ==
                     current.equivalentFloorIds.end()) current.equivalentFloorIds.push_back(floor);
@@ -340,6 +362,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         if (current.active && unknownCount >= kClearFrames && !stillInside) {
             const auto previous = current.floorId;
             current = Snapshot{};
+            decisiveStreak = 0;
             ++current.revision;
             Diagnostics::Record("layered-floor-change", "scene=" + std::to_string(sceneId) +
                 " floor=cleared previous=" + previous + " unknownFrames=" + std::to_string(unknownCount));
@@ -355,6 +378,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             " restricted=" + std::to_string(restricted) + " containing=[" + containing + "]" +
             " identified=" + std::to_string(classification.identified) +
             " adopted=" + std::to_string(adopted) +
+            " decisiveStreak=" + std::to_string(decisiveStreak) +
             " equivalent=[" + JoinFloors(current.equivalentFloorIds) + "]" +
             " winner=" + std::to_string(classification.winnerMatches) +
             " runnerUp=" + std::to_string(classification.runnerUpMatches) +
@@ -419,5 +443,6 @@ void SetForTest(const Snapshot& snapshot) {
 }
 
 } // namespace LayeredMap
+
 
 
