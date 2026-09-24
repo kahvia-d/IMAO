@@ -76,6 +76,37 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
     check(OverlayPacing::ShouldHideIdleOverlay(OverlayPacing::kFramesBeforeHidingIdleOverlay),
         "an overlay with nothing to draw for a second is hidden from the compositor");
 
+    {
+        OverlayPacing::FocusHandoffHold handoff;
+        using Foreground = OverlayPacing::FocusHandoffForeground;
+        check(!handoff.ShouldHold(true, Foreground::Tools, true, true, now),
+            "a focused tools window with a ready map renders normally");
+        check(handoff.ShouldHold(true, Foreground::None, false, true, now + 50ms),
+            "the last map surface survives the empty foreground during tools return");
+        check(handoff.ShouldHold(false, Foreground::Game, false, true, now + 150ms),
+            "the map stays visible while the game regains focus but its frame is still stale");
+        check(!handoff.ShouldHold(false, Foreground::Game, true, true, now + 200ms),
+            "a fresh game map frame ends the handoff hold");
+        check(!handoff.ShouldHold(false, Foreground::Game, false, true, now + 210ms),
+            "a completed handoff cannot start another hold without a new tools focus");
+    }
+    {
+        OverlayPacing::FocusHandoffHold handoff;
+        using Foreground = OverlayPacing::FocusHandoffForeground;
+        handoff.ShouldHold(true, Foreground::Tools, true, true, now);
+        check(!handoff.ShouldHold(true, Foreground::Other, false, true, now + 20ms),
+            "switching to another application never preserves map markers");
+        check(!handoff.ShouldHold(true, Foreground::None, false, true, now + 30ms),
+            "a later empty foreground cannot revive a cancelled handoff");
+        handoff.ShouldHold(true, Foreground::Tools, true, true, now + 40ms);
+        check(!handoff.ShouldHold(false, Foreground::None, false, true,
+            now + 40ms + OverlayPacing::kFocusHandoffHoldLimit),
+            "a focus handoff is held only for the bounded interval");
+        handoff.ShouldHold(true, Foreground::Tools, true, true, now + 400ms);
+        check(!handoff.ShouldHold(true, Foreground::None, false, false, now + 410ms),
+            "a blank previous surface is never held");
+    }
+
     // The hold diagnostic keeps the window in the composition while it stops presenting into it.
     {
         OverlayPacing::HoldPresentPolicy policy;

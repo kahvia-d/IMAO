@@ -529,17 +529,20 @@ Json RoutePlanningService::Command(const Json& command){
         if(action=="new"){
             InvalidateLocked();r.enabled=true;r.tool="pan";r.scene=command.value("sceneId",r.observedScene);
             if(Scene::IsKnown(r.scene)){r.drafts[r.scene]={};if(r.mapStart.valid&&r.mapStart.sceneId==r.scene)r.drafts[r.scene].start=r.mapStart;r.pendingNew=false;}
-            else {r.scene=0;r.pendingNew=true;}r.message="打开大地图后框选或套索选择目标";
+            else {r.scene=0;r.pendingNew=true;}r.message="点击点位切换选中，或用框选、套索批量添加目标";
         }else if(action=="end"){InvalidateLocked();r.enabled=false;r.tool="pan";r.message="已退出选点，草稿保留";}
         else if(action=="tool"){
-            const auto tool=command.value("tool","pan");if(tool!="pan"&&tool!="box"&&tool!="rectangle"&&tool!="lasso"&&tool!="start")throw std::invalid_argument("选点工具无效");
+            const auto tool=command.value("tool","pan");if(tool!="pan"&&tool!="box"&&tool!="rectangle"&&tool!="lasso"&&tool!="point"&&tool!="start")throw std::invalid_argument("选点工具无效");
             r.tool=tool=="rectangle"?"box":tool;r.enabled=true;
         }else if(action=="setStart"){
             if(command.value("sceneId",0)!=r.scene)throw std::runtime_error("起点不属于当前地图");
             const Coordinate roc(command.at("x").get<double>(),command.at("y").get<double>());if(!Finite(roc))throw std::runtime_error("起点坐标无效");
             auto& draft=DraftLocked();InvalidateLocked();draft.start={r.scene,roc,"manual",0,r.epoch.load(),true};draft.preview.reset();r.tool="pan";r.message="已设置手动起点";
         }else if(action=="add"||action=="addVisible"){
-            std::vector<std::string> keys;if(action=="add")keys=command.at("keys").get<std::vector<std::string>>();else for(const auto& p:r.visible)keys.push_back(AutoRoute::Key(p));AddLocked(keys);
+            std::vector<std::string> keys;
+            if(action=="add") keys=command.at("keys").get<std::vector<std::string>>();
+            else for(const auto& p:r.visible)if(AutoRoute::IsSurfaceTarget(p))keys.push_back(AutoRoute::Key(p));
+            AddLocked(keys);
         }else if(action=="toggle"||action=="remove"){
             auto& draft=DraftLocked();const auto key=command.at("key").get<std::string>();
             const auto found=std::find_if(draft.selected.begin(),draft.selected.end(),[&](const ItemDatas& p){return AutoRoute::Key(p)==key;});

@@ -17,7 +17,7 @@ struct ViewportCandidates {
             position.x < 0 || position.y < 0 || position.x > width || position.y > height ||
             !keys.insert(Key(item)).second) return;
         inViewport.push_back(item);
-        if (!coveredByTools) {
+        if (IsSurfaceTarget(item) && !coveredByTools) {
             onCanvas.push_back(item);
             canvasPositions.push_back(position);
         }

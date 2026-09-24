@@ -164,7 +164,7 @@ public sealed partial class FunctionPage : Page
         AutoRouteMessage.Severity = InfoBarSeverity.Informational;
         AutoRouteMessage.Message = state.Message;
         AutoRouteMessage.IsOpen = !string.IsNullOrWhiteSpace(state.Message);
-        string tool = state.Tool switch { "box" => "矩形框选", "lasso" => "自由套索", "start" => "指定起点", _ => "移动地图" };
+        string tool = state.Tool switch { "point" => "单点选择", "box" => "矩形框选", "lasso" => "自由套索", "start" => "指定起点", _ => "移动地图" };
         AutoRouteSelectionSummary.Text = $"已选 {state.SelectedCount} / 500 · 当前不可见 {state.HiddenCount} 个 · " +
             (state.Enabled ? $"{tool} · {state.SceneName}" : "未进入选点");
         AutoRouteStartSummary.Text = state.Start.Valid

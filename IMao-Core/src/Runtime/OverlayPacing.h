@@ -12,6 +12,11 @@ using Clock = std::chrono::steady_clock;
 // every input event the overlay thread also services. Marker positions change at the capture rate
 // (about 30 Hz), so 30 Hz presentation keeps the same visible result with far less blocking.
 inline constexpr std::chrono::microseconds kFramePeriod{33333};
+inline constexpr std::chrono::microseconds kRouteCanvasFramePeriod{16667};
+
+inline std::chrono::microseconds FramePeriod(bool routeCanvasActive) {
+    return routeCanvasActive ? kRouteCanvasFramePeriod : kFramePeriod;
+}
 
 // The mouse hook decides synchronously whether a click belongs to the overlay, so it must be installed
 // while the map publishes clickable regions. Installed for the whole session it would instead route
@@ -119,6 +124,33 @@ inline constexpr int kFramesBeforeHidingIdleOverlay = 30;
 inline bool ShouldHideIdleOverlay(int consecutiveEmptyFrames) {
     return consecutiveEmptyFrames >= kFramesBeforeHidingIdleOverlay;
 }
+
+// Returning focus from the route tools can briefly leave Windows with no foreground HWND. The
+// capture thread then publishes a non-displayable map frame before the game has a fresh one.
+// Keep the already presented map surface for only that handoff, without moving or repainting it.
+inline constexpr std::chrono::milliseconds kFocusHandoffHoldLimit{350};
+enum class FocusHandoffForeground { Tools, Game, None, Other };
+
+struct FocusHandoffHold {
+    Clock::time_point lastReadyToolsFrame{};
+
+    bool ShouldHold(bool toolsRegistered, FocusHandoffForeground foreground, bool mapReady,
+        bool presentedMap, Clock::time_point now) {
+        if (foreground == FocusHandoffForeground::Other) { lastReadyToolsFrame = {}; return false; }
+        if (foreground == FocusHandoffForeground::Tools) {
+            if (toolsRegistered && mapReady && presentedMap) lastReadyToolsFrame = now;
+            return false;
+        }
+        if (foreground == FocusHandoffForeground::Game && mapReady) {
+            lastReadyToolsFrame = {}; return false;
+        }
+        if (!presentedMap || lastReadyToolsFrame == Clock::time_point{} ||
+            now < lastReadyToolsFrame || now - lastReadyToolsFrame >= kFocusHandoffHoldLimit) {
+            lastReadyToolsFrame = {}; return false;
+        }
+        return true;
+    }
+};
 
 // Diagnostic only. A visible topmost layered window costs the game two different things: the desktop
 // compositor has to keep it in the composition, and every present makes the compositor blend the

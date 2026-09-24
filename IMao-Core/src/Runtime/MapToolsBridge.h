@@ -27,6 +27,9 @@ public:
         RECT bounds{};
     };
     static MapToolsBridge& Shared() { static MapToolsBridge bridge; return bridge; }
+    static bool SupportsCanvasTool(const std::string& tool) {
+        return tool == "pan" || tool == "point" || tool == "box" || tool == "lasso" || tool == "start";
+    }
     static Identity Inspect(std::uint64_t value, bool& visible) {
         HWND window = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(value));
         DWORD process = 0;
@@ -98,8 +101,7 @@ public:
     }
     State Update(std::uint64_t session, const std::string& page, const std::string& tool,
         std::uint64_t layoutRevision, RECT bounds, bool interactive, std::uint64_t expectedResultRevision = UINT64_MAX) {
-        if ((page != "home" && page != "route" && page != "filter") ||
-            (tool != "pan" && tool != "box" && tool != "lasso" && tool != "start") ||
+        if ((page != "home" && page != "route" && page != "filter") || !SupportsCanvasTool(tool) ||
             bounds.right <= bounds.left || bounds.bottom <= bounds.top)
             throw std::invalid_argument("工具台页面或窗口边界无效");
         std::scoped_lock lock(mutex_);

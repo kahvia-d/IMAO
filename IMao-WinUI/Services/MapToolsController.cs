@@ -60,6 +60,10 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
                 case "markerMapToolsRequested": await OpenAsync(value); break;
                 case "markerMapToolsCanvasChanged":
                     ApplyNativeState(value.TryGetProperty("data", out var data) ? data : value); break;
+                case "markerMapToolsDismissRequested":
+                    if (Text(value, "profileId") == profile && Number(value, "sessionId") == sessionId)
+                        await CloseAsync("已返回路线规划", true);
+                    break;
             }
         }
         catch (Exception e) { core.ReportGamepadDiagnostic("map-tools-event-failed", e.Message); }
@@ -245,7 +249,7 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
         { _ = CancelCanvasAsync("手柄输入中断，未提交选区已取消"); return; }
         if (sample.Buttons != GamepadButtons.None || !sample.AxesNeutral) canvasControllerOwned = true;
         bool edge = sample.Buttons != previous.Buttons || Other(sample) != Other(previous);
-        if (!edge && now - lastSampleAt < 32) return;
+        if (!edge && now - lastSampleAt < 16) return;
         if (samples.Count >= 24 || samples.First is { } oldest && now - oldest.Value.At >= 180)
         { _ = CancelCanvasAsync("手柄输入延迟，未提交选区已取消"); return; }
         if (!edge && samples.Last is { } last && last.Value.Sample.Buttons == sample.Buttons && Other(last.Value.Sample) == Other(sample))
@@ -360,7 +364,7 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
             await core.ExecuteRoutePlanningAsync(routeAction, payload, sessionCancellation?.Token ?? default);
             if (operation != generation || window is null) return;
             window.RenderRoute(core.RoutePlanning);
-            if (action is "tool:box" or "tool:lasso" or "tool:start")
+            if (action is "tool:box" or "tool:lasso" or "tool:point" or "tool:start")
             {
                 navigation.Reset(); samples.Clear(); previous = default; lastSampleAt = 0; canvasControllerOwned = false;
                 window.SetCanvas(action[5..]);

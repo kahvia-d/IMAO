@@ -24,7 +24,7 @@
    <TextBlock Text="完成成功保存后关闭攻略，失败时保留窗口与错误提示。完成快捷键不会撤销已经完成的记录。" Style="{StaticResource IMaoSecondaryTextStyle}" />
   </StackPanel></Expander>
   <Expander Header="路线：选点、预览与导航" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12">
-   <TextBlock Text="选点：新建自动路线后，在游戏大地图框选、套索或加入当前视野，最多 500 个目标。选多了可撤销或逐点移除；缺少可靠位置时可指定起点。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="选点：新建自动路线后，可直接点击点位切换选中，也可在游戏大地图框选、套索或加入当前视野，最多 500 个目标。再次点击可移除已选点位；选多了可撤销或逐点移除，缺少可靠位置时可指定起点。" Style="{StaticResource IMaoBodyTextStyle}" />
    <TextBlock Text="预览：生成后查看访问顺序，再开始导航。新预览不会替换现有活动路线，直到你启用它。" Style="{StaticResource IMaoBodyTextStyle}" />
    <TextBlock Text="导航：确认完成后推进当前目标；跳过只改变这条路线，可以撤销。偏离后可手动重算，也可在路线页开启自动重排。" Style="{StaticResource IMaoBodyTextStyle}" />
    <TextBlock Text="暂停保留静态路线，继续后恢复指引；退出导航结束活动选择，保存的路线文件仍在。加载路线后需手动继续。删除路线不删除点位完成记录。" Style="{StaticResource IMaoBodyTextStyle}" />

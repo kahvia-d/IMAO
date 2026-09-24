@@ -14,6 +14,7 @@
 #include "../../Runtime/OverlayPacing.h"
 #include "../../Runtime/RouteGamepadBridge.h"
 #include "../../Runtime/RouteGamepadControls.h"
+#include "../../Runtime/RoutePointSelectionInput.h"
 #include "../../Runtime/GamepadContext.h"
 #include "../../Runtime/GamepadCursorTargets.h"
 #include "../../Runtime/GamepadCursorGeometry.h"
@@ -56,6 +57,7 @@ std::vector<MarkerHitRegion> regions;
 RECT hitClientRect{};
 struct Capture {
     bool owned = false, cancelled = false, planning = false;
+    bool keepCanvas = false;
     std::string target, profile, routeId, routeTarget;
     int scene = 0;
     std::uint64_t generation = 0;
@@ -69,7 +71,8 @@ struct Click {
     std::string profile, routeId, routeTarget;
     int scene = 0;
     std::uint64_t generation = 0;
-    bool planning = false, gamepad = false;
+    bool planning = false, gamepad = false, keepCanvas = false, retainOnFocusLoss = false,
+        fromToolsGamepad = false;
 };
 std::deque<Click> clicks;
 std::string context, expanded, selected, hoverGroup;
@@ -254,6 +257,21 @@ std::string Hit(double x, double y) {
     }
     return {};
 }
+
+void SnapRouteCursorToNearest(double& x, double& y, POINT origin, double width, double height) {
+    std::vector<RouteSnapPoint> candidates;
+    candidates.reserve(regions.size());
+    for (const auto& region : regions) {
+        auto target = RouteSnapSelectionTarget(region.key);
+        if (!target.empty()) candidates.push_back({std::move(target),
+            (region.left + region.right) / 2, (region.top + region.bottom) / 2});
+    }
+    if (const auto nearest = NearestRouteSnapPoint(candidates, origin.x + x, origin.y + y)) {
+        x = std::clamp(nearest->x - origin.x, 0.0, width);
+        y = std::clamp(nearest->y - origin.y, 0.0, height);
+    }
+}
+
 LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
     if (code != HC_ACTION) return CallNextHookEx(keyboardHook, code, message, value);
     const auto& info = *reinterpret_cast<KBDLLHOOKSTRUCT*>(value);
@@ -331,9 +349,16 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
     const auto& info = *reinterpret_cast<MSLLHOOKSTRUCT*>(value);
     const bool gameFocused = DrawItemBase::IsMarkerGameFocused(game);
     const bool focused = gameFocused || ToolsCanvasFocused();
-    if (!focused && !RouteGamepadFocused()) { leftCapture.cancelled = true; rightCapture.cancelled = true; CancelGesture(); }
+    if (!focused && !RouteGamepadFocused()) {
+        const bool routePointCapture = leftCapture.owned && leftCapture.planning &&
+            (leftCapture.target.starts_with("p:") || leftCapture.target.starts_with("g:")) &&
+            planningBinding.enabled && planningBinding.valid && planningBinding.presented.Fresh();
+        if (!routePointCapture) leftCapture.cancelled = true;
+        rightCapture.cancelled = true; CancelGesture();
+    }
     if (message == WM_MOUSEMOVE) {
-        for (auto* capture : {&leftCapture, &rightCapture}) if (capture->owned) capture->tracker.Move(info.pt.x, info.pt.y);
+        for (auto* capture : {&leftCapture, &rightCapture})
+            if (capture->owned) capture->tracker.Move(info.pt.x, info.pt.y);
         // Own down/up, but let Windows move the cursor. Suppressing low-level
         // mouse-move messages can freeze the visible pointer during a lasso.
         if (gesture.active && leftCapture.owned) UpdateGesture(info.pt);
@@ -349,13 +374,26 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
     if (message == WM_RBUTTONDOWN || message == WM_RBUTTONUP) { capture = &rightCapture; down = message == WM_RBUTTONDOWN; right = true; }
     if (!capture) return CallNextHookEx(mouseHook, code, message, value); // Wheels always belong to the game.
     if (down) {
-        if (!focused || !mapInteractive || Clock::now() - regionsAt > std::chrono::milliseconds(100))
-            return CallNextHookEx(mouseHook, code, message, value);
+        const bool regionsFresh = mapInteractive && Clock::now() - regionsAt <= std::chrono::milliseconds(100);
         const auto target = Hit(info.pt.x, info.pt.y);
         if (planningBinding.panel.Contains(info.pt.x - planningBinding.origin.x, info.pt.y - planningBinding.origin.y))
             return CallNextHookEx(mouseHook, code, message, value);
         const bool shiftBox = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
         const auto tool = shiftBox ? std::string("box") : planningBinding.tool;
+        const bool freshPlanningMap = planningBinding.enabled && planningBinding.valid && planningBinding.presented.Fresh();
+        const auto markerAction = RouteMarkerMouseActionFor(planningBinding.enabled, right, tool,
+            target, focused, freshPlanningMap);
+        if (RouteMarkerCanCapturePublishedHit(regionsFresh, freshPlanningMap, markerAction)) {
+            *capture = {};
+            capture->owned = true; capture->target = target; capture->profile = displayedProfile;
+            capture->scene = planningBinding.scene; capture->generation = planningBinding.generation;
+            capture->planning = true;
+            capture->keepCanvas = RoutePointSelectionKeepsCanvas(planningBinding.enabled, tool);
+            capture->tracker.Down(target, info.pt.x, info.pt.y);
+            return 1;
+        }
+        if (!regionsFresh) return CallNextHookEx(mouseHook, code, message, value);
+        if (!focused) return CallNextHookEx(mouseHook, code, message, value);
         const bool backgroundGesture = !right && planningBinding.enabled && planningBinding.valid &&
             (!planningBinding.toolsSession || ToolsCanvasFocused()) &&
             planningBinding.presented.Fresh() && !target.starts_with("route:") && target != "panel" &&
@@ -379,13 +417,6 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
         // Only the planning canvas accepts mouse input while the real tools
         // window owns focus. Ordinary marker writes retain the strict game gate.
         if (!gameFocused) return CallNextHookEx(mouseHook, code, message, value);
-        // Moving the map must work even when the drag starts on an overlay
-        // marker. Point selection belongs to the box/lasso tools in this mode.
-        if (!right && planningBinding.enabled && tool == "pan" &&
-            (target.empty() || target.starts_with("p:") || target.starts_with("g:"))) {
-            dismissRequested = true; mapInteractive = false; regions.clear();
-            return CallNextHookEx(mouseHook, code, message, value);
-        }
         if (target.empty()) {
             if (message == WM_LBUTTONDOWN) { dismissRequested = true; mapInteractive = false; regions.clear(); }
             return CallNextHookEx(mouseHook, code, message, value);
@@ -403,6 +434,9 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
         return 1;
     }
     if (capture->owned) {
+        const bool routePointCapture = capture->planning &&
+            (capture->target.starts_with("p:") || capture->target.starts_with("g:")) &&
+            planningBinding.enabled && planningBinding.valid && planningBinding.presented.Fresh();
         if (capture == &leftCapture && gesture.active) {
             UpdateGesture(info.pt);
             const auto tracked = capture->tracker.Up(gesture.tool == "start" ? capture->target : Hit(info.pt.x, info.pt.y), info.pt.x, info.pt.y);
@@ -417,10 +451,14 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
             *capture = {};
             return 1;
         }
-        const auto target = capture->tracker.Up(Hit(info.pt.x, info.pt.y), info.pt.x, info.pt.y);
-        if (focused && mapInteractive && !capture->cancelled && !target.empty() &&
-            Clock::now() - regionsAt <= std::chrono::milliseconds(100)) {
-            if (clicks.size() < 16) clicks.push_back({capture->target, right, info.pt, capture->profile, capture->routeId, capture->routeTarget, capture->scene, capture->generation, capture->planning});
+        auto hit = Hit(info.pt.x, info.pt.y);
+        if (routePointCapture && hit.empty()) hit = capture->target;
+        const auto target = capture->tracker.Up(hit, info.pt.x, info.pt.y);
+        if ((focused || routePointCapture) && (mapInteractive || routePointCapture) && !capture->cancelled && !target.empty() &&
+            (routePointCapture || Clock::now() - regionsAt <= std::chrono::milliseconds(100))) {
+            if (clicks.size() < 16) clicks.push_back({capture->target, right, info.pt, capture->profile,
+                capture->routeId, capture->routeTarget, capture->scene, capture->generation,
+                capture->planning, false, capture->keepCanvas, routePointCapture});
         }
         *capture = {};
         return 1; // Every intercepted down owns its matching up, even after focus loss.
@@ -531,6 +569,7 @@ ToolbarUi BuildPlanningToolbar(const RoutePlanningView& view, const RECT& rect) 
         if (view.hiddenCount) ui.caption += "  ·  " + std::to_string(view.hiddenCount) + " 个在视野外";
         if (view.computing) ui.caption += "  ·  正在计算";
         add("移动地图", "route:tool:pan", view.tool == "pan");
+        add("单点选择", "route:tool:point", view.tool == "point");
         add("矩形框选", "route:tool:box", view.tool == "box");
         add("自由套索", "route:tool:lasso", view.tool == "lasso");
         add("指定起点", "route:tool:start", view.tool == "start");
@@ -551,9 +590,11 @@ ToolbarUi BuildPlanningToolbar(const RoutePlanningView& view, const RECT& rect) 
             realtime(2);
             add("退出导航", "route:stop", false, true, 2);
         }
-        ui.hint = RouteGamepadFocused() ? (view.tool == "pan" ? "左摇杆选择 · A 确认 · B 返回游戏" : "左摇杆移动光标 · 按住 A 绘制，松开提交 · B 取消") :
+        ui.hint = RouteGamepadFocused() ? (view.tool == "pan" ? "左摇杆选择 · A 确认 · B 返回游戏" : view.tool == "point" ?
+            "左摇杆移动光标 · A 切换点位 · B 返回工具栏" : "左摇杆移动光标 · 按住 A 绘制，松开提交 · B 取消") :
             view.tool == "start" ? "点击地图指定起点 · Esc 取消" : view.tool == "pan" ?
-            "拖动空白处移动地图 · Shift + 左键框选 · 点击点位切换选中" : "按住左键绘制选区 · 松开追加点位 · Esc 取消";
+            "拖动空白处移动地图 · 点击点位切换选中 · Shift + 左键框选" : view.tool == "point" ?
+            "手柄单点选择模式 · 键鼠可直接点击点位切换选中" : "按住左键绘制选区 · 松开追加点位 · Esc 取消";
         ui.notice = !planningNotice.empty() ? planningNotice : view.message;
         if (ui.notice.empty()) ui.notice = view.start.valid ? (view.start.source == "manual" ? "起点：手动指定" : "起点：打开地图前最后确认的位置") :
             "起点未知，请指定起点或返回游戏完成定位";
@@ -729,12 +770,28 @@ void ProcessMapTools(const RECT& rect, POINT origin) {
             std::abs(sample.leftX) >= .35 || std::abs(sample.leftY) >= .35;
         const auto stamp = std::chrono::duration_cast<std::chrono::milliseconds>(sample.receivedAt.time_since_epoch()).count();
         const auto update = toolsControls.Update(sample.buttons, sample.leftX, sample.leftY, sample.otherInput,
-            true, planningBinding.tool == "start", stamp);
+            true, planningBinding.tool == "start", stamp, planningBinding.tool == "point");
         if (update.cancelDraw) { CancelGesture(); gesture = {}; }
         if (update.exit) { CancelGesture(); gesture = {}; FinishToolsCanvas(state.sessionId, "已返回路线工具"); return; }
         const double speed = std::max(220.0, rect.right * .30);
         toolsCursor.x = std::clamp(toolsCursor.x + update.dx * speed, 0.0, static_cast<double>(rect.right));
         toolsCursor.y = std::clamp(toolsCursor.y + update.dy * speed, 0.0, static_cast<double>(rect.bottom));
+        if (update.togglePoint) {
+            const POINT position{static_cast<LONG>(origin.x + toolsCursor.x),
+                static_cast<LONG>(origin.y + toolsCursor.y)};
+            const auto target = Hit(position.x, position.y);
+            const auto pointTarget = RouteSnapSelectionTarget(target);
+            if (RoutePointActionFor(target) == RoutePointAction::Toggle) {
+                if (clicks.size() < 16) {
+                    Click click{pointTarget, false, position, displayedProfile, {}, {},
+                        planningBinding.scene, planningBinding.generation, true};
+                    click.gamepad = true;
+                    click.keepCanvas = true;
+                    click.fromToolsGamepad = true;
+                    clicks.push_back(std::move(click));
+                }
+            } else SnapRouteCursorToNearest(toolsCursor.x, toolsCursor.y, origin, rect.right, rect.bottom);
+        }
         if (update.beginDraw && !planningBinding.panel.Contains(toolsCursor.x, toolsCursor.y)) {
             gesture = {}; gesture.active = true; gesture.tool = planningBinding.tool; gesture.binding = planningBinding;
             gesture.current = toolsCursor; gesture.path.push_back(toolsCursor);
@@ -838,10 +895,22 @@ void ProcessRouteGamepad(const RECT& rect, POINT origin, bool suppressFrameInput
             CancelRouteGamepad("焦点或输入时效已变化，已取消本次操作"); return;
         }
         const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(sample.receivedAt.time_since_epoch()).count();
+        const auto pointMode = planningBinding.tool == "point";
         const auto update = routeGamepadControls.Update(sample.buttons, sample.leftX, sample.leftY, sample.otherInput,
-            routeGamepadCursorMode, planningBinding.tool == "start", now);
+            routeGamepadCursorMode, planningBinding.tool == "start", now, pointMode);
         if (update.cancelDraw) { CancelGesture(); gesture = {}; }
-        if (update.exit) { CancelRouteGamepad("已退出路线工具栏"); return; }
+        if (update.exit) {
+            if (routeGamepadCursorMode && pointMode) {
+                const auto current = RoutePlanningService::View();
+                const auto result = RoutePlanningService::Command({{"profileId",current.profileId},
+                    {"expectedSceneId",current.sceneId},{"expectedGeneration",current.generation},
+                    {"expectedRevision",current.revision},{"action","tool"},{"tool","pan"}});
+                PlanningResult(result);
+                if (!result.value("accepted",false)) { CancelRouteGamepad(planningNotice); return; }
+                routeGamepadCursorMode = false; routeGamepadControls.Reset(); routeGamepadSelected = "route:tool:pan";
+            } else { CancelRouteGamepad("已退出路线工具栏"); return; }
+            break;
+        }
         if (update.direction) NavigateRouteToolbar(buttons, update.direction);
         if (update.activate && !routeGamepadCursorMode) {
             const auto selected = std::find_if(buttons.begin(), buttons.end(), [](const auto& value) { return value.key == routeGamepadSelected; });
@@ -864,7 +933,8 @@ void ProcessRouteGamepad(const RECT& rect, POINT origin, bool suppressFrameInput
                 }
                 clicks.push_back({selected->key, false, center, displayedProfile, displayedRouteId, displayedRouteTarget,
                     planningBinding.scene, planningBinding.generation, planningBinding.enabled, true});
-                if (selected->key == "route:tool:box" || selected->key == "route:tool:lasso" || selected->key == "route:tool:start")
+                if (selected->key == "route:tool:box" || selected->key == "route:tool:lasso" ||
+                    selected->key == "route:tool:point" || selected->key == "route:tool:start")
                     routeGamepadRequestedTool = selected->key.substr(11);
                 else if (selected->key == "route:tool:pan" && planningBinding.enabled)
                     routeGamepadRequestedTool = "pan";
@@ -875,7 +945,19 @@ void ProcessRouteGamepad(const RECT& rect, POINT origin, bool suppressFrameInput
         const double speed = std::max(220.0, rect.right * .30);
         routeGamepadCursor.x = std::clamp(routeGamepadCursor.x + update.dx * speed, 0.0, static_cast<double>(rect.right));
         routeGamepadCursor.y = std::clamp(routeGamepadCursor.y + update.dy * speed, 0.0, static_cast<double>(rect.bottom));
-        if (update.beginDraw) {
+        if (update.togglePoint) {
+            const POINT position{static_cast<LONG>(origin.x + routeGamepadCursor.x),
+                static_cast<LONG>(origin.y + routeGamepadCursor.y)};
+            const auto target = Hit(position.x, position.y);
+            const auto pointTarget = RouteSnapSelectionTarget(target);
+            if (RoutePointActionFor(target) == RoutePointAction::Toggle) {
+                if (clicks.size() < 16)
+                    clicks.push_back({pointTarget, false, position, displayedProfile, {}, {},
+                        planningBinding.scene, planningBinding.generation, true, true});
+            } else SnapRouteCursorToNearest(routeGamepadCursor.x, routeGamepadCursor.y, origin,
+                rect.right, rect.bottom);
+        }
+        if (update.beginDraw && !pointMode) {
             gesture = {}; gesture.active = true; gesture.tool = planningBinding.tool; gesture.binding = planningBinding;
             gesture.current = routeGamepadCursor; gesture.path.push_back(routeGamepadCursor);
         }
@@ -911,7 +993,9 @@ void ProcessRouteGamepad(const RECT& rect, POINT origin, bool suppressFrameInput
     } else for (const auto& button : buttons) if (button.key == routeGamepadSelected)
         draw->AddRect(ImVec2(static_cast<float>(button.left - origin.x - 2), static_cast<float>(button.top - origin.y - 2)),
             ImVec2(static_cast<float>(button.right - origin.x + 2), static_cast<float>(button.bottom - origin.y + 2)), IM_COL32(99, 216, 232, 255), 6, 0, 3);
-    const char* hint = routeGamepadCursorMode ? "左摇杆移动光标 · 按住 A 圈选，松开提交 · B 退出" : "左摇杆 / 方向键选择 · A 确认 · B 退出";
+    const char* hint = routeGamepadCursorMode ? (planningBinding.tool == "point" ?
+        "左摇杆移动光标 · A 切换点位 · B 返回工具栏" : "左摇杆移动光标 · 按住 A 圈选，松开提交 · B 退出") :
+        "左摇杆 / 方向键选择 · A 确认 · B 退出";
     draw->AddText(RuntimeStatusBar::UiFont(), 18 * RuntimeStatusBar::Scale(),
         ImVec2(20, static_cast<float>(rect.bottom - 34 * RuntimeStatusBar::Scale())), IM_COL32(150, 239, 248, 255), hint);
 }
@@ -1426,11 +1510,17 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     GamepadCursorGeometry::Shared().Publish(std::move(cursorGeometry));
     mapInteractive = DrawItemBase::IsMarkerGameFocused(gameWindow) || ToolsFocused();
     regionsAt = now;
-    if (!mapInteractive) { clicks.clear(); regions.clear(); }
+    if (!mapInteractive) {
+        std::erase_if(clicks, [](const Click& click) { return !click.retainOnFocusLoss; });
+        regions.clear();
+    }
     ProcessMapTools(rect, origin);
     while (!clicks.empty()) {
         const auto click = clicks.front(); clicks.pop_front();
-        if (click.gamepad && (!RouteGamepadFocused() || !planningBinding.valid || !planningBinding.presented.Fresh())) {
+        if (click.gamepad && (!RouteGamepadSelectionHasFocus(click.fromToolsGamepad,
+                RouteGamepadFocused(), ToolsCanvasFocused()) ||
+            !planningBinding.valid || !planningBinding.presented.Fresh())) {
+            if (click.fromToolsGamepad) continue;
             CancelRouteGamepad("焦点或地图画面已变化，操作未执行"); break;
         }
         if (click.profile != DrawItemBase::MarkerProfile()) continue;
@@ -1481,9 +1571,14 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
                 // Both mouse buttons stay out of guide/completion commands in
                 // planning mode. Selection remains a separate reversible set.
                 if (click.planning && !click.right) {
-                    if (planningBinding.toolsSession && !ToolsCanvasFocused()) continue;
                     PlanningResult(RoutePlanningService::TogglePoint(item, PlanningContext(click)));
-                    FinishToolsCanvas(planningBinding.toolsSession, planningNotice);
+                    if (!click.gamepad && !click.keepCanvas && planningBinding.tool != "pan" &&
+                        !RoutePointSelectionKeepsCanvas(click.planning, planningBinding.tool))
+                        FinishToolsCanvas(planningBinding.toolsSession, planningNotice);
+                    if (RouteMarkerClickDismissesTools(click.planning, click.gamepad,
+                        planningBinding.toolsSession != 0))
+                        DrawItemBase::PublishMarkerEvent({{"type", "markerMapToolsDismissRequested"},
+                            {"profileId", click.profile}, {"sessionId", planningBinding.toolsSession}});
                 }
             } else if (click.right) {
                 const auto result = DrawItemBase::HandleMarkerCommand({{"type", "markerSetCompletion"}, {"profileId", click.profile},

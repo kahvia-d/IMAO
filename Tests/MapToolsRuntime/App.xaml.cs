@@ -100,11 +100,13 @@ public partial class App : Application
                 if (!core.RoutePlanning.Enabled) { await Click(window, "new"); await Until(() => core.RoutePlanning.Enabled, "new route"); }
                 await Task.Delay(150);
                 Check(Descendants((DependencyObject)window.Content).OfType<Button>().Count(b => b.Tag is string key &&
-                    key is not ("back" or "close") && b.Visibility == Visibility.Visible) >= 17, "active route and editing expose all seventeen real route actions");
+                    key is not ("back" or "close") && b.Visibility == Visibility.Visible) >= 18, "active route and editing expose all eighteen real route actions");
                 await Capture(folder, $"{width}-route", window, game.Handle, Check);
                 var routeScroll = GetField<ScrollViewer>(window, "routeScroll")!;
                 var routeActions = Descendants((DependencyObject)window.Content).OfType<Button>().Where(b => b.Tag is string key &&
                     key is not ("back" or "close") && b.Visibility == Visibility.Visible).ToArray();
+                Check(routeActions.Any(button => Equals(button.Tag, "tool:point") && Equals(button.Content, "单点选择")),
+                    "the route toolbox exposes a separately selectable single-point mode for controller input");
                 foreach (var button in routeActions)
                 {
                     button.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
@@ -112,6 +114,10 @@ public partial class App : Application
                     Check(InsideViewport(button, routeScroll), $"{width} route action {button.Tag} can scroll fully into its real viewport");
                 }
                 await Capture(folder, $"{width}-route-bottom", window, game.Handle, Check);
+                await Click(window, "tool:point"); await Until(() => window.CanvasTool == "point", "single-point canvas");
+                Check(core.RoutePlanning.Tool == "point" && core.Commands.Last(c => c.Type == "markerMapToolsUpdate").Data.GetProperty("canvasTool").GetString() == "point",
+                    "single-point selection tool reaches route state and the native controller canvas");
+                core.FinishCanvas(); await Until(() => window.CanvasTool == "pan", "single-point canvas exit");
                 await Click(window, "tool:box"); await Until(() => window.CanvasTool == "box" && window.CanInteract, "box canvas");
                 Check(core.Commands.Last(c => c.Type == "markerMapToolsUpdate").Data.GetProperty("canvasTool").GetString() == "box", "canvas mode reaches native protocol");
                 for (int idle = 0; idle < 8; ++idle)

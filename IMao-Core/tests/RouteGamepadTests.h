@@ -1,10 +1,49 @@
 #pragma once
 #include "Runtime/RouteGamepadBridge.h"
 #include "Runtime/RouteGamepadControls.h"
+#include "Runtime/MapToolsBridge.h"
+#include "Runtime/OverlayPacing.h"
+#include "Runtime/RoutePointSelectionInput.h"
 #include <string>
 
 inline void TestRouteGamepad(void (*check)(bool, const std::string&)) {
     using namespace std::chrono_literals;
+    check(MapToolsBridge::SupportsCanvasTool("point"), "map tools native canvas accepts the single-point tool");
+    check(RouteMarkerMouseActionFor(true, false, "pan", "p:42") == RouteMarkerMouseAction::Capture &&
+        RouteMarkerMouseActionFor(true, false, "pan", "g:42") == RouteMarkerMouseAction::Capture,
+        "planning point and grouped-marker clicks own the mouse down so the game cannot receive them");
+    check(RouteMarkerMouseActionFor(true, false, "point", "g:42") == RouteMarkerMouseAction::Capture &&
+        RouteMarkerMouseActionFor(true, false, "pan", "p:42", false, true) == RouteMarkerMouseAction::Capture &&
+        RouteMarkerMouseActionFor(true, false, "pan", "p:42", false, false) == RouteMarkerMouseAction::Forward &&
+        RouteMarkerMouseActionFor(true, true, "pan", "p:42") == RouteMarkerMouseAction::Forward &&
+        RouteMarkerMouseActionFor(true, false, "pan", "route:tool") == RouteMarkerMouseAction::Forward,
+        "fresh route markers stay captured across focus loss while stale, right-click and toolbar input is forwarded");
+    check(RoutePointSelectionKeepsCanvas(true, "point") && !RoutePointSelectionKeepsCanvas(true, "pan") &&
+        !RoutePointSelectionKeepsCanvas(false, "point"),
+        "mouse toggles in route point mode keep the selection canvas active");
+    check(RouteMarkerClickDismissesTools(true, false, true) &&
+        !RouteMarkerClickDismissesTools(true, true, true) &&
+        !RouteMarkerClickDismissesTools(true, false, false),
+        "only mouse marker clicks dismiss tools; repeated canvas gamepad selections keep the window open");
+    check(RouteGamepadSelectionHasFocus(true, false, true) &&
+        !RouteGamepadSelectionHasFocus(true, true, false) &&
+        RouteGamepadSelectionHasFocus(false, true, false) &&
+        !RouteGamepadSelectionHasFocus(false, false, true),
+        "tools gamepad selections require tools focus while overlay gamepad selections require overlay focus");
+    check(IsRoutePointHit("p:42") && !IsRoutePointHit("g:42"), "gamepad single select only accepts a concrete marker hit");
+    check(OverlayPacing::FramePeriod(true) == std::chrono::microseconds(16667) &&
+        OverlayPacing::FramePeriod(false) == OverlayPacing::kFramePeriod,
+        "active route canvas renders at 60 Hz while idle overlay pacing remains unchanged");
+    check(RouteSnapSelectionTarget("p:42") == "p:42" && RouteSnapSelectionTarget("g:42") == "p:42" &&
+        RouteSnapSelectionTarget("route:tool") .empty(), "snap hits resolve markers and grouped-marker anchors only");
+    check(RoutePointActionFor("p:42") == RoutePointAction::Toggle &&
+        RoutePointActionFor("g:42") == RoutePointAction::Toggle &&
+        RoutePointActionFor("route:tool") == RoutePointAction::Snap,
+        "A toggles a marker hit and requests snapping only when the cursor misses");
+    const std::vector<RouteSnapPoint> snapCandidates{{"p:far", 20, 10}, {"p:near", 4, 3}};
+    const auto nearestSnap = NearestRouteSnapPoint(snapCandidates, 0, 0);
+    check(nearestSnap && nearestSnap->selectionTarget == "p:near" && nearestSnap->x == 4 && nearestSnap->y == 3,
+        "snap chooses the nearest visible selectable point region");
     const auto start = RouteGamepadBridge::Clock::time_point{10s};
     {
         RouteGamepadDisplayLease lease;
@@ -126,6 +165,28 @@ inline void TestRouteGamepad(void (*check)(bool, const std::string&)) {
     controls.Update(A, 0, 0, false, true, false, 20);
     check(controls.Update(B, 0, 0, false, true, false, 40).cancelDraw &&
         controls.Update(0, 0, 0, false, true, false, 60).exit, "B cancels drawing before returning game focus on release");
+    controls.Reset(); controls.Update(0, 0, 0, false, true, false, 0, true);
+    check(controls.Update(A, 0, 0, false, true, false, 20, true).togglePoint &&
+        !controls.Update(A, 1, 0, false, true, false, 120, true).togglePoint,
+        "single-point action triggers on A down and does not repeat while held");
+    controls.Update(0, 0, 0, false, true, false, 220, true);
+    check(controls.Update(A, 0, 0, false, true, false, 240, true).togglePoint,
+        "single-point action rearms after A release for the next press");
+    controls.Update(0, 0, 0, false, true, false, 260, true);
+    controls.Update(A, 0, 0, false, true, false, 280, true);
+    check(controls.Update(B, 0, 0, false, true, false, 300, true).cancelDraw &&
+        !controls.Update(0, 0, 0, false, true, false, 320, true).togglePoint,
+        "B cancels a pending single-point activation without toggling");
+    controls.Reset(); controls.Update(0, 0, 0, false, true, false, 0, true);
+    controls.Update(0x0040, 0, 0, false, true, false, 20, true);
+    controls.Update(0, 0, 0, false, true, false, 40, true);
+    check(controls.Update(A, 0, 0, false, true, false, 60, true).togglePoint,
+        "A remains the single-point action after an inert LS click");
+    controls.Reset(); controls.Update(0, 0, 0, false, true, false, 0, true);
+    const auto deadzone = controls.Update(0, .35, 0, false, true, false, 20, true);
+    const auto halfAxis = controls.Update(0, .675, 0, false, true, false, 40, true);
+    check(std::abs(deadzone.dx) < 1e-9 && std::abs(halfAxis.dx - .01) < 1e-9,
+        "cursor speed scales smoothly from the stick deadzone to full deflection");
     controls.Reset(); controls.Update(0, 0, 0, false, true, false, 0);
     controls.Update(A, 0, 0, false, true, false, 20);
     check(controls.Update(A, 0, 0, true, true, false, 40).cancelDraw,

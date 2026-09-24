@@ -35,6 +35,8 @@ AutoRoute::Plan Prepare(){
     const auto* scene=Scene::Find(1);Json points=Json::array();
     for(const auto& pair:std::vector<std::pair<std::string,double>>{{"first",100},{"done",400},{"skip",500},{"second",0}})
         points.push_back({{"id",pair.first},{"x",pair.second/scene->scale*100},{"y",0},{"stateId",scene->kuroStateId}});
+    points.push_back({{"id","layered"},{"x",300/scene->scale*100},{"y",0},
+        {"stateId",scene->kuroStateId},{"floorId","16"},{"level","-1/16"}});
     DrawItemBase::itemsJsonData_World=Json::array({{{"id","chest"},{"name","test"},{"location",points}}});
     RoutePlanningService::Initialize();Command({{"action","new"},{"sceneId",1}});
     Command({{"action","setStart"},{"sceneId",1},{"x",100},{"y",0}});
@@ -66,6 +68,11 @@ void VerifyViewportSelection(const AutoRoute::Plan& source){
     const auto& completed=source.stops.at(1);
     const auto& behindTools=source.stops.at(2);
     const auto& outside=source.stops.at(3);
+    auto layered=unobscured;
+    layered.itemId="layered";
+    layered.layer.floorId="16";
+    layered.layer.level="-1/16";
+    const auto layeredKey=AutoRoute::Key(layered);
     const double width=800,height=500;
     const Coordinate exposedPosition{120,120},coveredPosition{500,400};
     const auto build=[&](bool toolsVisible){
@@ -80,24 +87,27 @@ void VerifyViewportSelection(const AutoRoute::Plan& source){
         result.Add(completed,{250,250},width,height,true,toolsVisible);
         result.Add(unobscured,exposedPosition,width,height,false,false);
         result.Add(behindTools,coveredPosition,width,height,false,toolsVisible);
+        result.Add(layered,{300,200},width,height,false,false);
         result.Add(unobscured,exposedPosition,width,height,false,false);
         return result;
     };
     const auto covered=build(true),uncovered=build(false);
     const std::vector<ItemDatas> expected{unobscured,behindTools};
     const auto expectedKeys=SelectionKeys(expected);
-    Check(SelectionKeys(covered.inViewport)==expectedKeys,
-        "viewport candidates keep the obscured marker but exclude every offscreen, nonfinite, completed and duplicate input");
-    Check(SelectionKeys(uncovered.inViewport)==expectedKeys&&
+    auto expectedVisible=expected;expectedVisible.push_back(layered);
+    const auto expectedVisibleKeys=SelectionKeys(expectedVisible);
+    Check(SelectionKeys(covered.inViewport)==expectedVisibleKeys,
+        "viewport visibility retains the obscured and layered markers but excludes offscreen, nonfinite, completed and duplicate input");
+    Check(SelectionKeys(uncovered.inViewport)==expectedVisibleKeys&&
         SelectionKeys(covered.inViewport)==SelectionKeys(uncovered.inViewport),
-        "opening or closing tools cannot change bulk viewport candidate identity");
+        "opening or closing tools cannot change viewport visibility identities");
     Check(covered.onCanvas.size()==1&&AutoRoute::Key(covered.onCanvas.front())==AutoRoute::Key(unobscured)&&
         covered.canvasPositions.size()==1&&covered.canvasPositions.front().x==exposedPosition.x&&covered.canvasPositions.front().y==exposedPosition.y,
-        "covered markers stay out of direct canvas gestures and point-position vectors remain aligned");
+        "box and lasso gesture candidates exclude layered and tools-covered markers with aligned positions");
     Check(SelectionKeys(uncovered.onCanvas)==expectedKeys&&uncovered.canvasPositions.size()==2&&
         uncovered.canvasPositions[0].x==exposedPosition.x&&uncovered.canvasPositions[0].y==exposedPosition.y&&
         uncovered.canvasPositions[1].x==coveredPosition.x&&uncovered.canvasPositions[1].y==coveredPosition.y,
-        "closing the tools restores both gesture candidates with their original aligned positions");
+        "closing the tools restores the ground gesture candidates with their original aligned positions");
     AutoRoute::ViewportCandidates coincident;
     coincident.Add(unobscured,exposedPosition,width,height,false,false);
     coincident.Add(behindTools,exposedPosition,width,height,false,false);
@@ -107,6 +117,32 @@ void VerifyViewportSelection(const AutoRoute::Plan& source){
         "same-coordinate markers retain both distinct identities in bulk and gesture candidate sets");
 
     Command({{"action","new"},{"sceneId",source.sceneId}});
+    const auto pointTool = RoutePlanningService::Command({{"action","tool"},{"tool","point"}});
+    Check(pointTool.value("accepted",false)&&RoutePlanningService::View().tool=="point",
+        "the route service accepts the internal single-point selection tool");
+    const auto togglePoint=[&](const ItemDatas& point){
+        const auto view=RoutePlanningService::View();
+        return RoutePlanningService::TogglePoint(point,{{"profileId",view.profileId},
+            {"expectedSceneId",view.sceneId},{"expectedGeneration",view.generation}});
+    };
+    auto toggled=togglePoint(unobscured);
+    Check(toggled.value("accepted",false)&&RoutePlanningService::View().selected.size()==1&&
+        AutoRoute::Key(RoutePlanningService::View().selected.front())==AutoRoute::Key(unobscured),
+        "point toggle adds a previously unselected route target");
+    toggled=togglePoint(unobscured);
+    Check(toggled.value("accepted",false)&&RoutePlanningService::View().selected.empty(),
+        "toggling an already selected route target removes it");
+    toggled=togglePoint(unobscured);
+    Check(toggled.value("accepted",false)&&RoutePlanningService::View().selected.size()==1,
+        "a removed route target can be selected again exactly once");
+    Command({{"action","undo"}});
+    Check(RoutePlanningService::View().selected.empty(),
+        "undo reverses a single-point selection toggle");
+    toggled=togglePoint(layered);
+    Check(toggled.value("accepted",false)&&RoutePlanningService::View().selected.size()==1&&
+        RoutePlanningService::View().selected.front().layer.floorId=="16",
+        "explicit single-point selection continues to allow layered targets");
+    Command({{"action","clear"}});
     RoutePlanningService::ObserveMap(source.sceneId,covered.inViewport);
     const auto addVisible=[](){
         const auto view=RoutePlanningService::View();
@@ -115,26 +151,34 @@ void VerifyViewportSelection(const AutoRoute::Plan& source){
     };
     addVisible();
     auto selected=RoutePlanningService::View();
-    Check(SelectionKeys(selected.selected)==expectedKeys&&selected.hiddenCount==0,
-        "ObserveMap to real addVisible selects the tools-covered identity without adding offscreen or completed markers");
+    auto expectedAfterBulk=expected;
+    const auto expectedAfterBulkKeys=SelectionKeys(expectedAfterBulk);
+    Check(SelectionKeys(selected.selected)==expectedAfterBulkKeys&&selected.hiddenCount==0,
+        "addVisible adds only ground points and excludes layered markers");
     addVisible();
-    Check(SelectionKeys(RoutePlanningService::View().selected)==expectedKeys,
-        "repeated addVisible does not duplicate either overlapping identity");
+    Check(SelectionKeys(RoutePlanningService::View().selected)==expectedAfterBulkKeys,
+        "repeated addVisible does not duplicate ground points and continues to exclude layered markers");
     RoutePlanningService::ObserveMap(source.sceneId,uncovered.inViewport);
-    Check(RoutePlanningService::View().hiddenCount==0&&SelectionKeys(RoutePlanningService::View().selected)==expectedKeys,
+    Check(RoutePlanningService::View().hiddenCount==0&&SelectionKeys(RoutePlanningService::View().selected)==expectedAfterBulkKeys,
         "collapsing the tools does not make previously selected viewport points become hidden or alter the draft");
     Command({{"action","undo"}});
     Check(RoutePlanningService::View().selected.empty(),
-        "one undo reverses the entire viewport append even after a duplicate append and tools collapse");
+        "one undo reverses the entire viewport append after repeated addition and tools collapse");
 
     // Preserve a previously selected offscreen member, so hidden-count stability
-    // and undo are checked against a nonempty prior draft as well.
+    // and undo are checked against a nonempty prior draft as well. A deliberately
+    // selected layered point must remain visible, and normal one-point additions
+    // must continue to be able to include it.
+    Command({{"action","add"},{"keys",std::vector<std::string>{layeredKey}}});
+    RoutePlanningService::ObserveMap(source.sceneId,covered.inViewport);
+    Check(RoutePlanningService::View().hiddenCount==0,
+        "a previously selected layered marker remains visible in the full viewport visibility set");
     Command({{"action","add"},{"keys",std::vector<std::string>{AutoRoute::Key(outside)}}});
     const auto before=RoutePlanningService::View().selected;
     RoutePlanningService::ObserveMap(source.sceneId,covered.inViewport);
     Check(RoutePlanningService::View().hiddenCount==1,"an existing genuinely offscreen selection is counted as hidden");
     addVisible();
-    auto combined=expected;combined.push_back(outside);
+    auto combined=expectedAfterBulk;combined.push_back(layered);combined.push_back(outside);
     Check(SelectionKeys(RoutePlanningService::View().selected)==SelectionKeys(combined)&&RoutePlanningService::View().hiddenCount==1,
         "bulk append retains the previous offscreen selection and does not count tools coverage as hidden");
     RoutePlanningService::ObserveMap(source.sceneId,uncovered.inViewport);
@@ -142,9 +186,11 @@ void VerifyViewportSelection(const AutoRoute::Plan& source){
         "removing tools coverage leaves the true offscreen hidden count unchanged");
     Command({{"action","undo"}});
     selected=RoutePlanningService::View();
-    Check(SelectionKeys(selected.selected)==SelectionKeys(before)&&selected.selected.size()==1&&
-        selected.selected.front().itemMapROC.x==outside.itemMapROC.x&&
-        selected.selected.front().itemMapROC.y==outside.itemMapROC.y&&selected.hiddenCount==1,
+    const auto restoredOutside=std::find_if(selected.selected.begin(),selected.selected.end(),
+        [&](const ItemDatas& point){return AutoRoute::Key(point)==AutoRoute::Key(outside);});
+    Check(SelectionKeys(selected.selected)==SelectionKeys(before)&&selected.selected.size()==2&&
+        restoredOutside!=selected.selected.end()&&restoredOutside->itemMapROC.x==outside.itemMapROC.x&&
+        restoredOutside->itemMapROC.y==outside.itemMapROC.y&&selected.hiddenCount==1,
         "undo restores the exact nonempty prior selection and its original coordinates and hidden count");
     Check(activeBefore&&selected.active&&selected.active->id==activeBefore->id&&
         AutoRoute::SameOrder(selected.active->stops,activeBefore->stops)&&selected.active->skipHistory==activeBefore->skipHistory,

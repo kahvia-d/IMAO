@@ -9,6 +9,7 @@
     <OutputPath>../../out/map-tools-runtime/</OutputPath><ApplicationManifest>app.manifest</ApplicationManifest><DefaultLanguage>zh-CN</DefaultLanguage>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../IMao-WinUI.Core/IMao-WinUI.Core.csproj" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
     <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.250402" />
     <Manifest Include="$(ApplicationManifest)" />
@@ -25,6 +26,7 @@
     <Compile Include="../../IMao-WinUI/Services/GamepadWindowChrome.cs" Link="Production/GamepadWindowChrome.cs" />
     <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="Production/GamepadInput.cs" />
     <Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="Production/MapFilterCatalog.cs" />
+    <Compile Include="../../IMao-WinUI/Helpers/ResourceSessionPaths.cs" Link="Production/ResourceSessionPaths.cs" />
     <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="Production/RoutePlanningState.cs" />
     <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" />
     <Compile Include="../../IMao-WinUI/Models/CoreRuntimeStatus.cs" Link="Production/CoreRuntimeStatus.cs" />

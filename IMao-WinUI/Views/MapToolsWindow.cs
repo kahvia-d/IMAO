@@ -144,8 +144,10 @@ internal sealed class MapToolsWindow : Window
         CanvasTool = tool;
         routeButtons.Visibility = tool == "pan" ? Visibility.Visible : Visibility.Collapsed;
         summary.Text = tool == "pan" ? summary.Text : tool switch
-        { "box" => "矩形框选", "lasso" => "自由套索", _ => "指定起点" };
-        routeStatus.Text = tool == "pan" ? routeStatus.Text : "左摇杆移动光标 · 按住 A 绘制，松开提交\n也可直接用鼠标拖动地图选区 · B 取消";
+        { "point" => "单点选择", "box" => "矩形框选", "lasso" => "自由套索", _ => "指定起点" };
+        routeStatus.Text = tool == "pan" ? routeStatus.Text : tool == "point"
+            ? "左摇杆移动光标 · A 切换点位 · B 返回路线工具栏"
+            : "左摇杆移动光标 · 按住 A 绘制，松开提交\n也可直接用鼠标拖动地图选区 · B 取消";
         if (tool == "pan") RenderRoute(state);
         LayoutForGame();
     }
@@ -180,7 +182,7 @@ internal sealed class MapToolsWindow : Window
         void Add(string key, string label, bool enabled = true, bool primary = false) => entries.Add((key, label, enabled, primary));
         if (next.Enabled)
         {
-            Add("tool:pan", "移动地图"); Add("tool:box", "矩形框选"); Add("tool:lasso", "自由套索"); Add("tool:start", "指定起点");
+            Add("tool:pan", "移动地图"); Add("tool:point", "单点选择"); Add("tool:box", "矩形框选"); Add("tool:lasso", "自由套索"); Add("tool:start", "指定起点");
             Add("addVisible", "加入当前视野"); Add("undo", "撤销"); Add("clear", "清空", next.SelectedCount > 0);
             Add("generate", "生成预览", !next.Computing && next.Start.Valid && next.SelectedCount > 0, true);
             Add("activate", "开始指引", !next.Computing && next.Preview is not null, true); Add("end", "退出选点");

@@ -9,6 +9,7 @@
 
 namespace AutoRoute {
 inline constexpr std::size_t MaxTargets = 500;
+inline bool IsSurfaceTarget(const ItemDatas& item) { return item.layer.floorId.empty(); }
 inline std::string Key(const ItemDatas& item) {
     return std::to_string(item.layer.stateId) + ":" + item.itemId;
 }

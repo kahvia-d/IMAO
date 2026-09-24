@@ -483,6 +483,8 @@ int ImGuiOverWindows::start()
     // its window so the compositor can ignore it entirely.
     std::uint64_t lastPresentedHash = 0, skippedPresents = 0;
     bool hasPresented = false, overlayWindowHidden = false;
+    bool lastPresentedMap = false, focusHandoffHeld = false;
+    OverlayPacing::FocusHandoffHold focusHandoff;
     int consecutiveEmptyFrames = 0;
     // Diagnostic only (Diagnostics > hold the overlay present). Holding a frame whose content is the
     // status bar alone keeps the window in the composition while skipping the render and the present,
@@ -546,6 +548,38 @@ int ImGuiOverWindows::start()
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         if (!pump(maxWait))
             break;
+        const auto toolsWindow = MapToolsBridge::Shared().Read(DrawItemBase::MarkerProfile());
+        const auto framePeriod = OverlayPacing::FramePeriod(toolsWindow.canvasReady);
+        const auto markerFrame = app.ReadOverlayFrame();
+        const auto foreground = GetForegroundWindow();
+        const auto toolsHwnd = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(toolsWindow.hostHwnd));
+        const bool toolsRegisteredForGame = toolsWindow.registered &&
+            toolsWindow.gameHwnd == reinterpret_cast<std::uintptr_t>(h_window) &&
+            IsWindowVisible(toolsHwnd) && !IsIconic(toolsHwnd);
+        const auto focusOwner = toolsRegisteredForGame && foreground == toolsHwnd
+            ? OverlayPacing::FocusHandoffForeground::Tools
+            : foreground == h_window ? OverlayPacing::FocusHandoffForeground::Game
+            : foreground == nullptr ? OverlayPacing::FocusHandoffForeground::None
+            : OverlayPacing::FocusHandoffForeground::Other;
+        const bool mapReady = markerFrame && markerFrame->Fresh(frameStart) && markerFrame->focused &&
+            markerFrame->mapVisible && markerFrame->clientRect.right == GameRect.right &&
+            markerFrame->clientRect.bottom == GameRect.bottom &&
+            app.ReadOverlayVisibility()->AllowsMap(markerFrame->frameId) &&
+            DrawItemBase::IsMarkerDisplayContext(h_window);
+        const bool holdFocusHandoff = focusHandoff.ShouldHold(toolsRegisteredForGame, focusOwner,
+            mapReady, hasPresented && lastPresentedMap && !overlayWindowHidden, frameStart);
+        if (holdFocusHandoff) {
+            if (!focusHandoffHeld) Diagnostics::Record("overlay-focus-handoff", "holding last map surface");
+            focusHandoffHeld = true;
+            // Do not resize to the minimap or clear the surface while the next game frame catches up.
+            beginWait();
+            if (!framePacer.WaitUntil(frameStart + framePeriod, pumpDuringWait)) break;
+            continue;
+        }
+        if (focusHandoffHeld) {
+            Diagnostics::Record("overlay-focus-handoff", "hold ended");
+            focusHandoffHeld = false;
+        }
         // Which rectangle this frame's window has to cover is decided before it is moved. Only the big
         // map needs the whole client, because its viewport markers can land anywhere on it; every other
         // frame - including the ones before the minimap has been detected at all - is a small window.
@@ -562,11 +596,8 @@ int ImGuiOverWindows::start()
         // The same flag picks the window's rectangle and the bar's switch, so a bar the player enabled is
         // never drawn where the window cannot reach it.
         bool bigMapFrame = false;
-        {
-            const auto markerFrame = app.ReadOverlayFrame();
-            bigMapFrame = markerFrame && markerFrame->mapVisible;
-            minimapWindowRequested = !forceFullOverlay && markerFrame && !markerFrame->mapVisible;
-        }
+        bigMapFrame = markerFrame && markerFrame->mapVisible;
+        minimapWindowRequested = !forceFullOverlay && markerFrame && !markerFrame->mapVisible;
         RECT physicalGame{};
         // The client-space rectangle the mini window covers, and the offset its drawing is presented
         // at. Both stay empty/zero in the normal full-client mode.
@@ -596,8 +627,6 @@ int ImGuiOverWindows::start()
                 continue;
             }
         }
-        const auto toolsWindow = MapToolsBridge::Shared().Read(DrawItemBase::MarkerProfile());
-        const auto toolsHwnd = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(toolsWindow.hostHwnd));
         if (toolsWindow.registered && toolsWindow.gameHwnd == reinterpret_cast<std::uintptr_t>(h_window) &&
             IsWindowVisible(toolsHwnd) && (GetWindowLongPtrW(toolsHwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) &&
             (GetForegroundWindow() == toolsHwnd || GetForegroundWindow() == h_window) &&
@@ -662,7 +691,7 @@ int ImGuiOverWindows::start()
             }
             // Recreated devices must also pass readback before any NewFrame.
             beginWait();
-            if (!framePacer.WaitUntil(frameStart + kOverlayFramePeriod, pumpDuringWait)) break;
+            if (!framePacer.WaitUntil(frameStart + framePeriod, pumpDuringWait)) break;
             continue;
         }
 
@@ -704,8 +733,9 @@ int ImGuiOverWindows::start()
 
         // Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         const auto buildStarted = std::chrono::steady_clock::now();
+        bool mapDrawnThisFrame = false;
         if (buildOverlayFrame) {
-            const auto frame = app.ReadOverlayFrame();
+            const auto frame = markerFrame;
             const auto capture = app.ReadCapturedFrame();
             const auto visibility = app.ReadOverlayVisibility();
             ++renderedFrames;
@@ -878,6 +908,7 @@ int ImGuiOverWindows::start()
             Notification::DrawInfo();
             //Debug::DebugWindow(io,app);
             DrawOverlayDiagnosticsProbe();
+            mapDrawnThisFrame = drewMap;
             buildTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - buildStarted).count();
         }
 
@@ -986,6 +1017,7 @@ int ImGuiOverWindows::start()
             }
             lastPresentedHash = contentHash;
             hasPresented = true;
+            lastPresentedMap = mapDrawnThisFrame;
         }
         else {
             // The last surface stays on screen, so there is nothing to repaint.
@@ -996,7 +1028,7 @@ int ImGuiOverWindows::start()
         // Keep fractional milliseconds and include rendering cost in pacing. The wait keeps servicing
         // queued input so this thread's hooks are never deferred for the rest of the frame.
         beginWait();
-        if (!framePacer.WaitUntil(frameStart + kOverlayFramePeriod, pumpDuringWait)) break;
+        if (!framePacer.WaitUntil(frameStart + framePeriod, pumpDuringWait)) break;
 
         // 在渲染周期结束后释放纹理
        //for (auto texture : texturesToRelease) {

@@ -98,7 +98,7 @@ $unwanted = @(Get-ChildItem -LiteralPath $package -Recurse -File | Where-Object 
     $_.FullName -match '(?i)[\\/](SavedPoints|SavedRoutes|Logs|diagnostics|obj|\.git|ResourceUpdates|ProgramUpdates)[\\/]|\.pdb$|\.log$|\.user$|[\\/]Map_features\.yml$|[\\/]imgui\.ini$|[\\/]IMao.*Tests\.exe$|private.*key|signing-key|\.pfx$|\.pem$'
 })
 if ($unwanted.Count) { throw ('Private/development files in program package: ' + ($unwanted.Name -join ', ')) }
-foreach ($relative in @('IMao-WinUI.exe','IMao-WinUI.dll','IMao-WinUI.Core.dll','IMao-CoreHost.exe','coreclr.dll','hostfxr.dll','hostpolicy.dll','Microsoft.ui.xaml.dll','Microsoft.WindowsAppRuntime.dll','resources.pri','vcomp140.dll','msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll','Assets/Updates/bundled-snapshot.json','build-info.json')) {
+foreach ($relative in @('IMao-WinUI.exe','IMao-WinUI.dll','IMao-WinUI.Core.dll','IMao-CoreHost.exe','KuroSyncBridge.exe','coreclr.dll','hostfxr.dll','hostpolicy.dll','Microsoft.ui.xaml.dll','Microsoft.WindowsAppRuntime.dll','resources.pri','vcomp140.dll','msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll','Assets/Updates/bundled-snapshot.json','build-info.json')) {
     if (-not (Test-Path -LiteralPath (Join-Path $package $relative) -PathType Leaf)) { throw "Missing runtime file: $relative" }
 }
 # The base map features are retired when they are not in the source tree; the pack simply leaves without them.
