@@ -240,6 +240,26 @@ ship with the program cost no extra download.
 
 </details>
 
+### Update fails: "更新地址必须来自本项目的 GitHub Releases"
+
+**Every build made before 2026-09-24 (including 2026.9.21.1 and 2026.9.23.1) is stuck here.** The project
+repository was renamed, and those builds hard-coded the old repository path into their update check.
+GitHub answers the old path with a `301` to the new one, the old updater rejects the redirect target, and
+so **every download of an update fails** — checking for updates still shows the new release notes, but the
+moment it tries to download it errors out. This is a defect in the program, not your network.
+
+**What to do (a one-time fix, in order):**
+
+1. Go to **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** and download
+   **`IMao-v<version>-windows-x64.zip`** by hand.
+2. **Exit IMao completely** (including the tray icon).
+3. Unzip it into a **new folder** and run `IMao-Launcher.exe` from there to make sure it starts.
+4. Once you are happy, replace your old install folder with the new one (or just keep using the new folder).
+
+> **Nothing is lost**: marker completion records, routes, filters and personal settings live under
+> `%LOCALAPPDATA%\IMao-WinUI`, **not in the program folder**, so replacing the program files does not touch
+> them. After this one swap, automatic updates work again and you will not have to do it by hand.
+
 ## Development
 
 To build it yourself or contribute:

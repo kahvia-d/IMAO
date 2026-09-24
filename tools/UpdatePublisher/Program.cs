@@ -15,11 +15,10 @@ static class Publisher
     static readonly DateTimeOffset ZipEpoch = new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
     static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".json", ".png", ".jpg", ".jpeg", ".webp", ".imf", ".imx", ".yml", ".yaml", ".md", ".txt" };
-    // The repository moved kahvia-d/WWMAP-TOOLS -> kahvia-d/IMAO. Newly published URLs use the
-    // current slug; the legacy one is still accepted so an already-published catalog can be
-    // verified or reused after the rename (GitHub redirects those downloads).
+    // The repository was renamed kahvia-d/WWMAP-TOOLS -> kahvia-d/IMAO. Newly published URLs use the
+    // current name. Validation deliberately does not pin the name (see RequireGithub): a manifest
+    // signed before a rename keeps working, so a rename cannot lock clients out of their updates.
     const string RepoSlug = "kahvia-d/IMAO";
-    static readonly string[] AcceptedRepoSlugs = { "kahvia-d/IMAO", "kahvia-d/WWMAP-TOOLS" };
     public static async Task<int> Run(string[] args)
     {
         try
@@ -168,9 +167,10 @@ static class Publisher
     }
     static void RequireGithub(string value, bool asset)
     {
+        // No repository name here on purpose: pinning it is exactly what turned a rename into an outage.
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.Host != "github.com" ||
-            !AcceptedRepoSlugs.Any(slug => uri.AbsolutePath.StartsWith(asset ? $"/{slug}/releases/download/" : $"/{slug}/releases/", StringComparison.Ordinal)) || uri.UserInfo.Length != 0 || uri.Query.Length != 0)
-            throw new InvalidDataException("Only this repository's GitHub Releases URLs are permitted.");
+            !uri.AbsolutePath.Contains(asset ? "/releases/download/" : "/releases/", StringComparison.Ordinal) || uri.UserInfo.Length != 0 || uri.Query.Length != 0)
+            throw new InvalidDataException("Only GitHub Releases URLs are permitted.");
     }
     static ResourcePackage Package(string source, string output, SnapshotPackage package, string baseUrl)
     {
@@ -582,14 +582,15 @@ static class Publisher
         Reject("tampered payload rejected", () => VerifyEnvelope(alteredPath, keys, false));
         Reject("path traversal rejected", () => SafeFile(root, "../escape.json"));
         Reject("executable extension rejected", () => { File.WriteAllText(Path.Combine(source, "bad.exe"), "bad"); Package(source, Path.Combine(root, "bad"), new() { Id = "map-data", Version = "2", Kind = "map-data" }, "https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/test"); });
-        Reject("unknown release host rejected", () => RequireGithub("https://example.com/kahvia-d/WWMAP-TOOLS/releases/download/test/a.zip", true));
-        Reject("another repository's release rejected", () => RequireGithub("https://github.com/someone-else/IMAO/releases/download/test/a.zip", true));
-        // The rename must not orphan anything already published under the old slug.
+        Reject("unknown release host rejected", () => RequireGithub("https://example.com/kahvia-d/IMAO/releases/download/test/a.zip", true));
+        Reject("a non-Releases GitHub path is rejected", () => RequireGithub("https://github.com/kahvia-d/IMAO/raw/main/update.json", true));
+        Reject("an asset URL without /releases/download/ is rejected", () => RequireGithub("https://github.com/kahvia-d/IMAO/releases/tag/v1", true));
+        // Publishing is meant to survive a repository rename: the owner/repo part must stay out of the rule.
         RequireGithub("https://github.com/kahvia-d/IMAO/releases/download/test/a.zip", true);
         RequireGithub("https://github.com/kahvia-d/IMAO/releases/tag/v1", false);
         RequireGithub("https://github.com/kahvia-d/WWMAP-TOOLS/releases/download/test/a.zip", true);
         RequireGithub("https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/v1", false);
-        passed.Add("both the current and the pre-rename repository slug are accepted for release URLs");
+        passed.Add("release URL validation is independent of the repository name it was signed under");
         Reject("missing map-data rejected", () => ValidateCatalog(catalog with { Resources = [catalog.Resources[0] with { Packages = [] }] }));
         Reject("reserved Windows filename rejected", () => SafeFile(root, "CON.json"));
         var originalZip = Path.Combine(root, "packages", "map-data-2026.9.9.1.zip");

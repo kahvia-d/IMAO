@@ -14,7 +14,22 @@
 - 构建生成 `Assets/Updates/bundled-snapshot.json`，启用 `map-data`、`kuro-tile-packs.json` 中注册的每个瓦片包，以及 `candidate-packs.json` 中注册的候选包。一个包只有在 `referenceVerification.passed` 为真时才会进入快照；目录存在本身不足以启用它。`requiresGameValidation` 为真的场景还必须在 `Assets/KuroMap/scene-validation.json` 中获得批准：客户端始终传 `--resource-snapshot`，因此 `RuntimeFeatureRepository` 会因任何一个已注册包未获批准而中止整个资源加载，表现为“启动核心失败”。打包还需通过 CoreHost 资源预检。
 - 内置包的版本必须与线上清单使用同一内容身份：某包内容与上一份 `updates/stable.json` 中同 ID 的包逐文件一致时沿用清单里的版本，内容有变化时才使用本程序版本（暂存入口默认读取仓库的 `updates/stable.json`，可用 `-PreviousCatalog` 覆盖）。版本一致时客户端会把随程序内置的资源识别为已安装，不重复下载；不一致会让客户端认为这些包缺失并重新下载整套资源。客户端同时要求发布内容全部内置时才不提示资源更新。
 - 客户端固定读取 `https://raw.githubusercontent.com/kahvia-d/IMAO/main/updates/stable.json`。程序版本、清单序号、资源快照版本和各包版本分别处理。单独发布资源时保留上一清单的程序信息。
-- **仓库改过名**（`kahvia-d/WWMAP-TOOLS` → `kahvia-d/IMAO`），而改名**之前**签名的清单里全是旧 slug 的下载地址。GitHub 对这些旧地址仍然重定向，所以客户端与发布器的地址校验**同时接受新旧两个 slug**（`UpdateSignature.ReleasePathPrefixes`、`UpdatePublisher.AcceptedRepoSlugs`）；**新发布一律写新 slug**。若日后要停用旧 slug，必须先确认线上清单里已没有任何旧地址，否则已安装的客户端会拒绝自己的更新渠道。
+- **地址校验以签名为准，不写仓库名**（`UpdateSignature.ValidateUrl` / `UpdatePublisher.RequireGithub`）：只要求 `https`、默认端口、无 userinfo、主机属于 `github.com` 与 GitHub 的签名附件主机，且 GitHub 路径落在 `/releases/` 内。**载荷的可信度完全来自固定 P-256 公钥对清单的签名，以及清单内记录的每个文件 SHA-256**；URL 规则只是传输卫生，**不是安全边界**。因此**不要**再把 `owner/repo` 写回这条规则。
+
+  > ⚠️ **2026-09-24 的真实故障（务必记住）**：仓库改名 `kahvia-d/WWMAP-TOOLS` → `kahvia-d/IMAO` 之后，旧客户端**无法再更新任何东西**。
+  > 原因是当时的白名单要求路径以 `/kahvia-d/WWMAP-TOOLS/releases/` 开头，而 GitHub 对旧路径返回
+  > `301 → github.com/kahvia-d/IMAO/releases/...`，**重定向目标被客户端拒收**：
+  > ```
+  > github.com/kahvia-d/WWMAP-TOOLS/releases/download/<tag>/<asset>
+  >   301 → github.com/kahvia-d/IMAO/releases/download/<tag>/<asset>   ← 被旧客户端拒绝
+  >   302 → release-assets.githubusercontent.com/...
+  > ```
+  > 清单本身**不重定向**（`raw.githubusercontent.com` 用旧名仍返回 200），所以界面能显示新版本说明，
+  > **一到下载就失败**，报「更新地址必须来自本项目的 GitHub Releases」。这是**自锁**：修复只能靠一次更新发出，而那次更新正是发不出去的那次。
+  >
+  > **教训**：任何把"仓库名 / 域名以外的固定路径"写进安全校验的设计，都会把一次改名变成一次停服。
+  > 需要"只认自己"的地方，应该用**密钥签名**这种**与部署位置无关**的身份，而不是 URL。
+
 - 客户端按发布密钥分别记录该渠道已验证过的最高清单序号与内容哈希，本地测试密钥或预览渠道不会污染正式渠道。只有清单所属程序版本早于当前运行版本时（即回放旧清单的场景）序号下降才会被拒绝；同一程序线内的序号下降或同序号不同内容会在记录中重新同步，并在界面与更新日志里说明。旧版客户端写入的单一全局序号由下一次检查时首个验证通过的渠道继承，不会被丢弃。确实需要重建记录时，可在设置中使用“修复更新状态”，该操作仍会用内置公钥验证当前线上清单。
 - 私钥保存在仓库外，以 Windows 当前用户 DPAPI 加密；客户端只携带 `Assets/Updates/trusted-keys.json`。清单使用 P-256/SHA-256、P1363 签名，封装字段为 `keyId`、Base64 `payload`、Base64 `signature`。私钥换机须先规划密钥迁移与客户端公钥升级；不要删除旧密钥后重新初始化同名密钥。
 

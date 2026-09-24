@@ -84,7 +84,8 @@ await Test("catalog versions, URLs, package kinds and cardinality are enforced",
         catalog with { SchemaVersion = 2 }, catalog with { Sequence = 0 },
         catalog with { App = catalog.App with { Version = "1.2" } },
         catalog with { App = catalog.App with { Version = " 2026.9.9.1 " } },
-        catalog with { App = catalog.App with { Url = "https://github.com/other/repo/releases/tag/1" } },
+        catalog with { App = catalog.App with { Url = "https://github.com/kahvia-d/IMAO/tree/main" } },
+        catalog with { App = catalog.App with { Url = "https://example.com/kahvia-d/releases/tag/1" } },
         catalog with { Resources = [release with { Packages = [] }] },
         catalog with { Resources = [release with { Packages = [p with { Kind = "exe" }] }] },
         catalog with { Resources = [release with { Packages = [p with { Version = "2026.9.9.2 " }] }] },
@@ -93,19 +94,36 @@ await Test("catalog versions, URLs, package kinds and cardinality are enforced",
         catalog with { Resources = [release with { Sequence = 3 }] }
     }) Throws<InvalidDataException>(() => UpdateSignature.ValidateCatalog(bad));
 });
-await Test("release URLs are accepted under both the current and the pre-rename repository slug", async () =>
+await Test("update URLs are validated by scheme and host, never by repository name", async () =>
 {
     using var f = New(); await f.Initialize(); var catalog = f.Catalog(); var release = catalog.Resources[0]; var p = release.Packages[0];
-    // The repository was renamed kahvia-d/WWMAP-TOOLS -> kahvia-d/IMAO. Manifests signed before the
-    // rename still carry the old slug, and GitHub keeps redirecting those downloads, so both have
-    // to validate; otherwise an installed client would reject its own update channel.
-    foreach (var origin in new[] { "https://github.com/kahvia-d/IMAO", "https://github.com/kahvia-d/WWMAP-TOOLS" })
+    // Trust is the P-256 signature over the manifest plus the SHA-256 digests inside it, so the URL
+    // rule is transport hygiene only and must not name the repository: the rename
+    // kahvia-d/WWMAP-TOOLS -> kahvia-d/IMAO once made every installed client reject the 301 redirect
+    // target and refuse the update that carried the fix. Keep the owner/repo out of this rule.
+    foreach (var origin in new[]
+    {
+        "https://github.com/kahvia-d/IMAO",
+        "https://github.com/kahvia-d/WWMAP-TOOLS",
+        "https://github.com/someone-else/some-other-repo",
+    })
     {
         UpdateSignature.ValidateCatalog(catalog with { App = catalog.App with { Url = origin + "/releases/tag/v1" } });
         UpdateSignature.ValidateCatalog(catalog with { Resources = [release with { Packages = [p with { Url = origin + "/releases/download/v1/data.zip" }] }] });
     }
-    foreach (var stranger in new[] { "https://github.com/someone-else/IMAO", "https://github.com/kahvia-d/IMAO-extra", "https://github.com/kahvia-d/other" })
-        Throws<InvalidDataException>(() => UpdateSignature.ValidateCatalog(catalog with { App = catalog.App with { Url = stranger + "/releases/tag/v1" } }));
+    // What must still be refused: another host, an insecure scheme, and a GitHub path that is not a release.
+    foreach (var bad in new[]
+    {
+        "https://example.com/kahvia-d/IMAO/releases/tag/v1",
+        "https://evil-github.com/kahvia-d/IMAO/releases/tag/v1",
+        "http://github.com/kahvia-d/IMAO/releases/tag/v1",
+        "https://github.com/kahvia-d/IMAO/tree/main",
+        "https://user:pass@github.com/kahvia-d/IMAO/releases/tag/v1",
+    })
+        Throws<InvalidDataException>(() => UpdateSignature.ValidateCatalog(catalog with { App = catalog.App with { Url = bad } }));
+    // An asset URL has to be a download URL, and the signed asset hosts are allowed to differ from github.com.
+    Throws<InvalidDataException>(() => UpdateSignature.ValidateCatalog(catalog with { Resources = [release with { Packages = [p with { Url = "https://github.com/kahvia-d/IMAO/releases/tag/v1" }] }] }));
+    UpdateSignature.ValidateCatalog(catalog with { Resources = [release with { Packages = [p with { Url = "https://release-assets.githubusercontent.com/github-production-release-asset/1/2?sp=r&sig=x" }] }] });
 });
 await Test("unsafe resource paths and executables are rejected before transfer", async () =>
 {

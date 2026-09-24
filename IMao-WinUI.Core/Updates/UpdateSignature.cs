@@ -97,37 +97,40 @@ public static class UpdateSignature
         return result;
     }
 
-    // The repository was renamed kahvia-d/WWMAP-TOOLS -> kahvia-d/IMAO. Manifests signed before the
-    // rename still name the old slug, and GitHub keeps redirecting those downloads, so both
-    // prefixes have to validate or every already-installed client would reject its own updates.
-    // New releases are built under IMAO (see tools/UpdatePublisher).
-    private static readonly string[] ReleasePathPrefixes =
+    // Payload trust comes from the pinned P-256 signature, not from the URL: nobody can forge a
+    // manifest without the private key, and every downloaded byte is then checked against the SHA-256
+    // digests recorded inside that signed manifest. The host list below is transport hygiene, not the
+    // security boundary.
+    //
+    // These checks deliberately do NOT name the repository. They used to require the path to start
+    // with "/kahvia-d/WWMAP-TOOLS/releases/", and that turned a repository rename into a
+    // self-inflicted outage: the old path 301-redirects to the new one, so every installed client
+    // rejected the redirect target and could not download the very update that carried the fix. Do
+    // not put a repository name back in here.
+    private static readonly string[] AllowedHosts =
     {
-        "/kahvia-d/IMAO/releases/",
-        "/kahvia-d/WWMAP-TOOLS/releases/",
-    };
-
-    private static readonly string[] StableManifestPaths =
-    {
-        "/kahvia-d/IMAO/main/updates/stable.json",
-        "/kahvia-d/WWMAP-TOOLS/main/updates/stable.json",
+        "github.com",
+        "release-assets.githubusercontent.com",
+        "objects.githubusercontent.com",
+        "raw.githubusercontent.com",
     };
 
     internal static void ValidateUrl(string value, bool asset)
     {
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps || !uri.IsDefaultPort || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Fragment) ||
-            uri.Host != "github.com" || !ReleasePathPrefixes.Any(prefix => uri.AbsolutePath.StartsWith(prefix, StringComparison.Ordinal)))
-            throw new InvalidDataException("更新地址必须来自本项目的 GitHub Releases。");
-        if (asset && !ReleasePathPrefixes.Any(prefix => uri.AbsolutePath.StartsWith(prefix + "download/", StringComparison.Ordinal)))
-            throw new InvalidDataException("资源下载地址必须是本项目的发行附件。");
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps || !uri.IsDefaultPort ||
+            !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Fragment) ||
+            !AllowedHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase))
+            throw new InvalidDataException("更新地址必须是受信任的 HTTPS 来源。");
+        if (uri.Host != "github.com") return; // The asset hosts carry opaque paths and expiring signatures.
+        if (asset && !uri.AbsolutePath.Contains("/releases/download/", StringComparison.Ordinal))
+            throw new InvalidDataException("资源下载地址必须是 GitHub Releases 附件。");
+        if (!asset && !uri.AbsolutePath.Contains("/releases/", StringComparison.Ordinal))
+            throw new InvalidDataException("发行页地址必须是 GitHub Releases 地址。");
     }
 
     internal static void ValidateResponseUri(Uri? uri)
     {
         if (uri is null) return; // Test handlers may omit RequestMessage.
-        if (uri.Scheme != Uri.UriSchemeHttps || !uri.IsDefaultPort || !string.IsNullOrEmpty(uri.UserInfo)) throw new InvalidDataException("下载重定向地址不安全。");
-        if (uri.Host is "release-assets.githubusercontent.com" or "objects.githubusercontent.com") return;
-        if (uri.Host == "raw.githubusercontent.com" && StableManifestPaths.Contains(uri.AbsolutePath)) return;
         ValidateUrl(uri.AbsoluteUri, asset: true);
     }
 }
