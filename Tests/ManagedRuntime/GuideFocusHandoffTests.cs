@@ -21,6 +21,14 @@ internal static class GuideFocusHandoffTests
         // 手指还按着 A：必须等，否则松开那一下会被游戏当成一次闪避。
         check(GuideFocusHandoff.ShouldWait(Sample(GamepadButtons.A), gameIsForeground: false),
             "a held button defers the handoff instead of letting the game see only the release");
+        // 长按 Y 跳过是同一回事：Y 既是触发这次跳过的键，也是游戏里的动作键（跳跃）。
+        // 收窗口时它还按着 → 游戏只看到松开 → 角色跳一下。**2026-09-25 实机反馈**。
+        check(GuideFocusHandoff.ShouldWait(Sample(GamepadButtons.Y), gameIsForeground: false),
+            "the same rule covers the button that triggered the action, not just the completion button");
+        check(GuideFocusHandoff.ShouldWait(Sample(GamepadButtons.X), gameIsForeground: false) &&
+            GuideFocusHandoff.ShouldWait(Sample(GamepadButtons.B), gameIsForeground: false) &&
+            GuideFocusHandoff.ShouldWait(Sample(GamepadButtons.LB | GamepadButtons.X), gameIsForeground: false),
+            "any held button defers the handoff, including the world chords that close the guide");
         check(GuideFocusHandoff.ShouldWait(Sample(leftX: 30_000), gameIsForeground: false),
             "a deflected stick defers the handoff as well");
         check(GuideFocusHandoff.ShouldWait(Sample(leftTrigger: 200), gameIsForeground: false),

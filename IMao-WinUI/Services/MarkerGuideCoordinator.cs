@@ -77,6 +77,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private DispatcherTimer? focusHandoffTimer;
     private IntPtr focusHandoffGame;
     private int focusHandoffDevice = -1;
+    /// <summary>等待手柄回中位之后才执行的收尾动作（隐藏窗口等），见 DeferCloseUntilPadNeutral。</summary>
+    private Action? pendingFocusHandoffClose;
     private long standaloneGamepadGeneration;
     private IntPtr standaloneGameWindow;
     private bool standaloneGamepadOpening;
@@ -1266,7 +1268,19 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 profileId = target.ProfileId, routeId = target.RouteId, key = target.Key, expectedRevision = target.Revision
             }, connectionRequests.Token);
             core.ReportGamepadDiagnostic("guide-skip", "submitted=1 accepted=1");
-            if (session.IsCurrent(generation)) CloseGuide(generation);
+            // 跳过成功要收起攻略，前台随之回到游戏——而玩家这时**手指还按在 Y 上**（Y 就是触发这次跳过
+            // 的那根键）。这一刻把前台还给游戏，游戏会把随后的松开当成一次完整的 Y（游戏里 Y = 跳跃）。
+            // 与长按 A 完成同一条规则：先等手柄回中位，再收窗口、再交还前台。
+            if (session.IsCurrent(generation))
+            {
+                var game = standaloneGameWindow;
+                bool restore = standaloneGamepadGeneration == generation && guide is { } window &&
+                    StandaloneForegroundOwner(window) is not null;
+                if (restore && IsWindow(game) && DeferCloseUntilPadNeutral(game, () => CloseGuide(generation)))
+                    return true;
+                CloseGuide(generation);
+                if (restore && IsWindow(game)) SetForegroundWindow(game);
+            }
             return true;
         }
         catch (Exception e) when (e is IOException or InvalidOperationException or OperationCanceledException)
@@ -1548,8 +1562,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
             bool restore = standaloneGamepadGeneration == generation && guide is { } window && StandaloneForegroundOwner(window) is not null;
             var game = standaloneGameWindow;
             // 长按 A 完成时玩家的手指常常还按着 A：这一刻就交还前台，游戏会把随后的**松开**
-            // 当成一次完整的 A（游戏里 A = 闪避）。先等手柄回中位再交还，见 GuideFocusHandoff。
-            if (restore && IsWindow(game) && DeferFocusHandoffUntilNeutral(game)) return;
+            // 当成一次完整的 A（游戏里 A = 闪避）。先等手柄回中位再收窗口、再交还，见 GuideFocusHandoff。
+            if (restore && IsWindow(game) && DeferCloseUntilPadNeutral(game, HideClosedGuide)) return;
             HideClosedGuide();
             if (restore && IsWindow(game)) SetForegroundWindow(game);
         }
@@ -1560,15 +1574,21 @@ public sealed class MarkerGuideCoordinator : IDisposable
     /// <summary>
     /// 「按住的键先松开，再把这些键交还给游戏」——见 <see cref="GuideFocusHandoff"/>。
     ///
-    /// 返回 true 表示这次已经改成"稍后交还"，调用方**不要**立刻收窗口/换前台。
-    /// 手柄此刻本来就是松开的（含没有读到手柄）时返回 false，照旧立刻交还。
+    /// 返回 true 表示这次已经改成"稍后收窗口并交还前台"，调用方**不要**立刻做这两件事。
+    /// <paramref name="close"/> 是那一刻才执行的动作（通常是隐藏窗口，可能还跟着一次
+    /// `SetForegroundWindow`）。手柄此刻本来就是松开的（含没有读到手柄）时返回 false，照旧立刻执行。
+    ///
+    /// **每一个"攻略收起后前台回到游戏"的路径都要走这里**，不只是长按 A 完成那条：
+    /// 长按 Y 跳过、长按 A/B/X 完成、LB+X 收起攻略都一样——玩家按着手柄键的那一刻把前台还给游戏，
+    /// 游戏就会把随后的松开当成一次完整的按键（A = 闪避、Y = 跳跃……）。
     /// </summary>
-    private bool DeferFocusHandoffUntilNeutral(IntPtr game)
+    private bool DeferCloseUntilPadNeutral(IntPtr game, Action close)
     {
         if (ReadGamepadSample is not { } read || GetForegroundWindow() == game) return false;
         var sample = read(GamepadDevice);
         if (!GuideFocusHandoff.ShouldWait(sample, gameIsForeground: false)) return false;
         focusHandoffGame = game; focusHandoffDevice = GamepadDevice;
+        pendingFocusHandoffClose = close;
         pendingFocusHandoff.Begin(Environment.TickCount64);
         core.ReportGamepadDiagnostic("guide-focus",
             $"handoff-deferred buttons={sample.Buttons} lt={sample.LeftTrigger} rt={sample.RightTrigger}");
@@ -1582,10 +1602,12 @@ public sealed class MarkerGuideCoordinator : IDisposable
             focusHandoffTimer?.Stop();
             var target = focusHandoffGame;
             focusHandoffGame = IntPtr.Zero;
+            var closeNow = pendingFocusHandoffClose;
+            pendingFocusHandoffClose = null;
             core.ReportGamepadDiagnostic("guide-focus",
                 $"handoff-now buttons={current.Buttons} neutral={current.Neutral} gameAlive={IsWindow(target)}");
-            // 这一次完成会话可能已经被别的操作收掉了：那时什么都不用做。
-            if (standaloneGameWindow == target) HideClosedGuide();
+            // 这一次会话可能已经被别的操作收掉了：那时 closeNow 里的判断会自己什么都不做。
+            closeNow?.Invoke();
             if (IsWindow(target)) SetForegroundWindow(target);
         };
         focusHandoffTimer.Start();
