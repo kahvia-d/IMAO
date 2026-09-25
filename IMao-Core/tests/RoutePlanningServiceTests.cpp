@@ -2,6 +2,7 @@
 #include "Runtime/RoutePlanStore.h"
 #include "Runtime/RouteViewportCandidates.h"
 #include "Runtime/RouteToolbarNavigation.h"
+#include "Runtime/OverlayPanelLayout.h"
 #include <algorithm>
 #include <iostream>
 #include <limits>
@@ -294,6 +295,35 @@ void VerifyRouteToolbarNavigation(){
     Check(RouteToolbarNextKey({},"route:tool:pan",1)=="route:tool:pan",
         "an empty toolbar keeps the current selection");
 }
+// 排版 + 选择的组合验证：用真正的 OverlayPanel::Pack 排按钮，再按真实几何做方向选择。
+// 只有这一层被验过，"算法正确但实机没有水平相邻按钮"这种可能才算排除掉。
+void VerifyToolbarLayoutNavigation(){
+    const auto layoutFor=[](const std::vector<OverlayPanel::ButtonMeasure>& measures){
+        const auto layout=OverlayPanel::Pack(1920.0f,0.0f,1.0f,measures,true,1);
+        std::vector<MarkerHitRegion> regions;
+        for(std::size_t i=0;i<layout.buttons.size();++i){
+            const auto& box=layout.buttons[i];
+            MarkerHitRegion region;region.left=box.left;region.top=box.top;region.right=box.right;region.bottom=box.bottom;
+            region.key="route:"+std::to_string(i);regions.push_back(region);
+        }
+        return regions;};
+    // 九个等宽按钮（含分组换行），1920 宽下应当排成多行。
+    std::vector<OverlayPanel::ButtonMeasure> measures;
+    for(int i=0;i<9;++i) measures.push_back({140.0f,i<5?0:1});
+    const auto regions=layoutFor(measures);
+    Check(regions.size()==9,"the test layout keeps every measured button");
+    const auto sameRow=[](const MarkerHitRegion& a,const MarkerHitRegion& b){
+        return std::abs((a.top+a.bottom)/2-(b.top+b.bottom)/2)<1.0;};
+    Check(sameRow(regions[0],regions[1])&&regions[1].left>regions[0].right,
+        "the first two buttons share a row and sit side by side");
+    Check(RouteToolbarNextKey(regions,regions[0].key,1)==regions[1].key,
+        "a real packed layout moves right to the next button in the row");
+    Check(RouteToolbarNextKey(regions,regions[1].key,-1)==regions[0].key,
+        "a real packed layout moves left to the previous button in the row");
+    Check(!sameRow(regions[0],regions[8]),"the last button lands in a different row");
+    Check(RouteToolbarNextKey(regions,regions[0].key,2)==regions[5].key,
+        "a real packed layout moves down into the next row");
+}
 }
 int main(int argc,char** argv){
     StructuredLogger::root=std::filesystem::absolute(argc>1?argv[1]:"out/auto-replan-native/service-data");
@@ -344,6 +374,7 @@ int main(int argc,char** argv){
         VerifyViewportSelection(original);
         VerifyGuideSkipGuard(original);
         VerifyRouteToolbarNavigation();
+        VerifyToolbarLayoutNavigation();
     }catch(const std::exception& e){++failures;std::cerr<<"UNEXPECTED: "<<e.what()<<'\n';}
     RoutePlanningService::Shutdown();
     std::cout<<"RoutePlanningService harness failures="<<failures<<'\n';return failures?1:0;
