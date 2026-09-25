@@ -455,6 +455,18 @@ void GuideHotkeyRoutingTests() {
     Expect(AutoRoute::GuideSkipReleaseDelivered(/*guideVisible*/ true, /*guideIdentity*/ true) &&
         !AutoRoute::GuideSkipReleaseDelivered(false, false) && !AutoRoute::GuideSkipReleaseDelivered(true, false),
         "a skip key-up is forwarded only while the identified guide is still visible");
+
+    // 手柄的攻略快捷键是开关：同一档案的攻略窗口已经开着时，这一下是关掉它。
+    Expect(AutoRoute::GuideShortcutClosesVisibleGuide(/*guideIntent*/ true, /*gamepad*/ true, /*guideVisible*/ true, /*sameProfile*/ true),
+        "the gamepad guide shortcut closes a guide window that is already open");
+    Expect(!AutoRoute::GuideShortcutClosesVisibleGuide(true, true, true, /*sameProfile*/ false),
+        "a guide window belonging to another profile is not ours to close");
+    Expect(!AutoRoute::GuideShortcutClosesVisibleGuide(true, true, /*guideVisible*/ false, true),
+        "with no guide window the same shortcut opens one instead");
+    Expect(!AutoRoute::GuideShortcutClosesVisibleGuide(/*guideIntent*/ false, true, true, true),
+        "the completion chord never closes a guide");
+    Expect(!AutoRoute::GuideShortcutClosesVisibleGuide(true, /*gamepad*/ false, true, true),
+        "the keyboard guide key decides open/close in the managed layer, not here");
 }
 
 void HotkeyConfigurationTests() {

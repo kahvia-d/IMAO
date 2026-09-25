@@ -43,8 +43,12 @@ internal static class CursorCandidateTests
             Check(f.Entries.Select(entry => entry.Selection?.PointId).SequenceEqual([First.PointId]), "cursor point is present without route or nearby candidates");
             await f.Coordinator.HandleGamepadAsync(GamepadAction.Accept);
             await f.WaitDetailAsync(First);
-            Check(f.Count(ResolveOperation) == 1 && f.Count("markerSetCompletion") == 0 && f.Count("markerGetRouteGuide") == 0,
-                "A freshly resolves the cursor identity without completion or route fallback");
+            // markerGetRouteGuide 这一次是"跳过资格"的核对：按产品规则，这份攻略展示的点位如果
+            // 恰好就是当前导航目标，也要显示跳过按钮，所以打开时问一次核心当前目标是谁。
+            // 附近-chooser 那条路特意不查（resolveSkip: false），这里查，两者都是有意为之。
+            Check(f.Count(ResolveOperation) == 1 && f.Count("markerSetCompletion") == 0 && f.Count("markerGetRouteGuide") == 1,
+                $"A freshly resolves the cursor identity without completion or route fallback (resolve={f.Count(ResolveOperation)} " +
+                $"completion={f.Count("markerSetCompletion")} route={f.Count("markerGetRouteGuide")})");
             f.CheckResolveIdentity(First);
         }, log);
 

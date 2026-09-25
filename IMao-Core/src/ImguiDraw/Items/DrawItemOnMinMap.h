@@ -47,5 +47,7 @@ private:
 	// nearby range itself: it asks the managed side once to open the active route target
 	// guide with the same event the route toolbar uses. Returns false when the answer could
 	// not be published, which keeps the ordinary "no nearby point" notice instead.
-	static bool OpenRouteGuideFallback(std::uint64_t gameHwnd);
+	// The same event is the "close it again" half of the shortcut when a guide is already
+	// visible; `reason` only names the two cases in the log.
+	static bool OpenRouteGuideFallback(std::uint64_t gameHwnd, const std::string& reason = "guide-empty");
 };

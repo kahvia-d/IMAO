@@ -44,4 +44,13 @@ inline bool GuideHotkeyOwned(GuideHotkeyKind kind, bool modifiers, bool guideVis
 // 跳过键的抬起必须送到托管层，否则窗口那侧的 600 毫秒计时会一直跑下去。
 inline bool GuideSkipReleaseDelivered(bool guideVisible, bool guideIdentity) { return guideVisible && guideIdentity; }
 
+// 手柄的攻略快捷键（LB+X）是开关：攻略窗口已经开着（同一档案）时，这一下是"关掉它"，
+// 与键盘攻略键一致，而不是再去查一次附近点位。
+//
+// 只认手柄：键盘攻略键走关联调用，开关由托管层自己判断（那边知道会话是不是开着），
+// 原生再补发一次会变成"开了又关"。
+inline bool GuideShortcutClosesVisibleGuide(bool guideIntent, bool gamepad, bool guideVisible, bool sameProfile) {
+    return guideIntent && gamepad && guideVisible && sameProfile;
+}
+
 } // namespace AutoRoute

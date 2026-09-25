@@ -24,6 +24,8 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
     // 手柄开出的攻略窗口与游戏之间用 LS 切换聚焦。这个闩锁同样在状态机之外：默认聚焦在游戏时
     // 那段手柄输入根本不走状态机，而切换也不该被"请先松开按键"之类的等待挡住。
     private readonly GuideFocusToggleLatch guideFocusToggle = new();
+    // 被动攻略里 LB/RB 这两个入口键同样只看上升沿。
+    private readonly GamepadEntryLatch passiveEntry = new();
     private bool guideFocusOwned;
     private int configuredDevice = -1;
     private string message = "手柄适配已关闭";
@@ -263,6 +265,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             {
                 guideFocusOwned = guides.IsStandaloneGamepadGuideOpen;
                 guideFocusToggle.Prime(sample.Buttons);
+                passiveEntry.Prime(sample.Buttons);
             }
             var focusFired = guideFocusOwned && guideFocusToggle.Observe(sample.Buttons);
             if (focusFired && !guides.IsGamepadReturnPending)
@@ -272,13 +275,18 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                 _ = DispatchAsync(GamepadAction.ToggleGuideFocus);
                 return;
             }
-            // 攻略窗口开着但聚焦在游戏上：这段输入完全留给游戏，我们不解释、不产生动作，
-            // 也不因为"窗口不是前台"就停掉会话（LS 才是一键回来的路）。
+            // 攻略窗口开着但聚焦在游戏上：这段输入基本留给游戏，我们不解释、不产生动作，
+            // 也不因为"窗口不是前台"就停掉会话（LS 才是一键切换的路）。
+            // 只有两组键例外：LS 切换聚焦（上面），以及 LB/RB 这两个"呼出攻略的入口"——
+            // 大地图里按 LB 打开工具台、再按一次同一个「当前目标攻略」就能把攻略收回去，
+            // 也就是"用同一套入口开关"。其余按键（含 A/B/X/Y）完全不碰。
             if (context.Mode == GamepadInputMode.GuidePassive)
             {
                 input.Reset();
                 Diagnose(gate + "/guide-passive");
-                SetMessage("攻略已打开 · 按 LS 切换到攻略窗口");
+                SetMessage("攻略已打开 · LS 切换到攻略窗口 · LB 工具台");
+                if (sample.AxesNeutral && passiveEntry.Observe(sample.Buttons))
+                    _ = DispatchAsync((sample.Buttons & GamepadButtons.LB) != 0 ? GamepadAction.OpenToolbar : GamepadAction.OpenAssistant);
                 return;
             }
             var update = input.Update(sample, context, now);

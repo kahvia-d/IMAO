@@ -79,11 +79,17 @@ internal static class NearbyChooserTests
             await fixture.OpenAsync("guide");
             await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Down);
             await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Accept);
-            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail, "selected nearby guide opens");
+            // 手柄开出的攻略现在一律不抢前台：选完点位后是 GuidePassive（手柄留给游戏），
+            // 想操作攻略窗口要先按 LS。这里断言它确实开着、且没有抢前台。
+            await UntilAsync(() => fixture.Coordinator.IsStandaloneGamepadGuideOpen &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "selected nearby guide opens passively, without taking the foreground");
             Check(fixture.Count("markerResolveNearbyCandidate") == 1 && fixture.Count("markerGetRouteGuide") == 0 &&
                 fixture.Count("markerCompleteNearbyCandidate") == 0 && fixture.Details.OnlineRequests.Single().PointId == Second.PointId,
                 "guide intent is nearby-only and preserves exact selected point without writes");
+            // 被动状态下 B 由窗口自己那条关闭入口处理（手柄在游戏那边）。
             await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Back);
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen, "the passive guide still closes on B");
         }, log);
 
         await CaseAsync("slow reading survives but stale submit stays visible and retries same explicit identity", async fixture =>

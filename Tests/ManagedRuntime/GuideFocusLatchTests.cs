@@ -33,5 +33,21 @@ internal static class GuideFocusLatchTests
         check(!others.Observe(GamepadButtons.Menu) && !others.Observe(GamepadButtons.R3) &&
             !others.Observe(GamepadButtons.LB) && !others.Observe(GamepadButtons.None),
             "menu, right-stick click, shoulder buttons and neutral are not the focus switch");
+
+        // 被动攻略里 LB/RB 这两个"呼出攻略的入口"保留可用（大地图按 LB 打开工具台，
+        // 再按同一入口就是关掉攻略），同样只认上升沿。
+        var entry = new GamepadEntryLatch();
+        check(!entry.Observe(GamepadButtons.None) && !entry.Observe(GamepadButtons.A),
+            "only LB and RB are the passive guide entry keys");
+        check(entry.Observe(GamepadButtons.LB), "pressing LB asks for the map tools entry once");
+        check(!entry.Observe(GamepadButtons.LB), "holding LB does not ask again");
+        check(!entry.Observe(GamepadButtons.None) && entry.Observe(GamepadButtons.RB),
+            "releasing and pressing the other entry asks again");
+        check(!entry.Observe(GamepadButtons.RB | GamepadButtons.A),
+            "holding RB with another button down does not ask again");
+        entry.Prime(GamepadButtons.RB);
+        check(!entry.Observe(GamepadButtons.RB), "a baseline taken while the entry is already held does not spend it");
+        check(!entry.Observe(GamepadButtons.None) && entry.Observe(GamepadButtons.RB),
+            "after that baseline a fresh press asks again");
     }
 }

@@ -106,8 +106,7 @@ internal static class RouteControllerTests
                 type = "markerGuideShortcut", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
                 contextGeneration = 17UL, profileId = "local", routeId = fixture.Core.ActiveRouteId,
                 key = "8:" + Target.PointId, screenX = 40, screenY = 100
-            });
-            // 新行为：呼出攻略**不抢前台**——玩家可以继续用手柄玩，想看细节时按 LS 切过来。
+            });            // 新行为：呼出攻略**不抢前台**——玩家可以继续用手柄玩，想看细节时按 LS 切过来。
             await UntilAsync(() => fixture.Guide is { IsGuideVisible: true } shown &&
                 fixture.Details.PictureRequests.Contains(fixture.Details.Pictures[0]),
                 "standalone shortcut shows the real guide and loads its first controlled picture");
@@ -195,11 +194,18 @@ internal static class RouteControllerTests
             Check(fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.List,
                 "A press alone does not choose or complete a candidate");
             sample = sample with { Buttons = GamepadButtons.None };
-            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail &&
-                fixture.Guide?.Selection?.PointId == second.PointId,
-                "A release opens only the explicitly highlighted second candidate's real guide");
+            // 从选择列表里点开的攻略同样是被动打开：聚焦回到游戏，玩家按 LS 才操作攻略窗口。
+            await UntilAsync(() => fixture.Guide?.Selection?.PointId == second.PointId &&
+                GetForegroundWindow() == fixture.GameHandle &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "A release opens the explicitly highlighted second candidate's real guide without taking the foreground");
             Check(!fixture.Core.Commands.Any(value => value.Operation == "markerSetCompletion"),
                 "candidate navigation and guide opening preserve all completion records");
+            await Task.Delay(80);
+            sample = sample with { Buttons = GamepadButtons.L3 }; await Task.Delay(60);
+            sample = sample with { Buttons = GamepadButtons.None };
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail,
+                "LS hands the pad to the guide that the chooser opened");
             await Task.Delay(80);
             sample = sample with { Buttons = GamepadButtons.B }; await Task.Delay(90);
             sample = sample with { Buttons = GamepadButtons.None };
@@ -207,7 +213,30 @@ internal static class RouteControllerTests
                 "selected candidate guide closes on B release");
         }, log);
 
-        await CaseAsync("toolbar source-window handoff opens the guide and ends the host without reclaiming foreground", async fixture =>
+        await CaseAsync("the same gamepad shortcut closes the guide it opened", async fixture =>
+        {
+            var shortcut = new
+            {
+                type = "markerGuideShortcut", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
+                contextGeneration = 17UL, profileId = "local", routeId = fixture.Core.ActiveRouteId,
+                key = "8:" + Target.PointId, screenX = 40, screenY = 100
+            };
+            fixture.Core.Emit(shortcut);
+            await UntilAsync(() => fixture.Guide is { IsGuideVisible: true } && fixture.Coordinator.IsStandaloneGamepadGuideOpen &&
+                GetForegroundWindow() == fixture.GameHandle,
+                "the shortcut opens the guide and leaves the game in front");
+            Check(fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "the opened guide is passive until LS asks for the pad");
+            // 同一套入口再按一次 = 关掉它（不用先把聚焦切到攻略窗口）。
+            fixture.Core.Emit(shortcut);
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "the same shortcut closes the guide it opened");
+            Check(GetForegroundWindow() == fixture.GameHandle && fixture.Guide is not { IsGuideVisible: true } &&
+                !fixture.Core.Commands.Any(value => value.Operation is "markerSetCompletion" or "markerGamepadWorldAction"),
+                "closing from the shortcut returns to the game and completes nothing");
+        }, log);
+
+        await CaseAsync("toolbar handoff shows the guide passively and its own entry closes it again", async fixture =>
         {
             await fixture.Controller.BeginAsync(fixture.Context, 0);
             fixture.Tick(GamepadButtons.None);
@@ -216,27 +245,31 @@ internal static class RouteControllerTests
             await Task.Delay(20); fixture.Tick(GamepadButtons.None);
             await released.Seen.Task;
             released.Reply.SetResult(Phase("handoff"));
-            fixture.Core.Emit(new
+            var shortcut = new
             {
                 type = "markerGuideShortcut", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
                 sourceHwnd = fixture.Host.ToInt64(), contextGeneration = 17UL,
                 profileId = "local", routeId = fixture.Core.ActiveRouteId, key = "8:" + Target.PointId,
                 screenX = 40, screenY = 100
-            });
-            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail &&
-                fixture.Guide is { IsGuideVisible: true } guide && GetForegroundWindow() == Handle(guide),
-                "sourceHwnd authorizes activation from the real transparent host to the ordinary guide");
+            };
+            fixture.Core.Emit(shortcut);
+            // 工具条那条路同样不抢前台：宿主窗口把前台交还游戏，攻略只是置顶显示出来。
+            await UntilAsync(() => fixture.Guide is { IsGuideVisible: true } guide &&
+                GetForegroundWindow() == fixture.GameHandle &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "the toolbar handoff shows the guide and hands the foreground back to the game");
             fixture.Tick(GamepadButtons.None);
             await Task.Delay(60);
-            Check(!fixture.Controller.IsOpen && !IsWindow(fixture.Host) && fixture.Guide is { } visible &&
-                GetForegroundWindow() == Handle(visible) &&
+            Check(!fixture.Controller.IsOpen && !IsWindow(fixture.Host) &&
                 fixture.Core.Commands.Count(value => value.Operation == "markerRouteGamepadEnd") == 1,
-                "handoff cleanup ends native ownership and leaves the guide foreground instead of stealing focus back to the game");
+                "handoff cleanup ends native ownership and leaves the game in front");
             Check(!fixture.Core.Commands.Any(value => value.Operation == "markerSetCompletion"),
                 "toolbar guide handoff does not modify completion records");
-            await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Back);
-            Check(!fixture.Coordinator.IsStandaloneGamepadGuideOpen && GetForegroundWindow() == fixture.GameHandle,
-                "the handed-off guide returns to the original game on B");
+            // 同一个入口再按一次（工具条里还是「当前目标攻略」）：关掉攻略，不需要先切换聚焦。
+            fixture.Core.Emit(shortcut);
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "pressing the same entry again closes the handed-off guide");
+            Check(GetForegroundWindow() == fixture.GameHandle, "closing the handed-off guide stays on the game");
         }, log);
     }
 

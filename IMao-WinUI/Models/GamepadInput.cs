@@ -72,6 +72,32 @@ public sealed class GuideFocusToggleLatch
     }
 }
 
+/// <summary>
+/// 被动攻略（窗口开着、但手柄归游戏）里保留下来的两个入口键：LB 大地图工具台、RB 点位助手。
+/// 只认上升沿：按住不放不会反复打开，松开后再按才算下一次。
+///
+/// 保留它们是为了"用同一套入口把攻略收回去"：大地图里按 LB 打开工具台，
+/// 再按一次同一个「当前目标攻略」就是关掉这份攻略。
+/// </summary>
+public sealed class GamepadEntryLatch
+{
+    public const GamepadButtons Buttons = GamepadButtons.LB | GamepadButtons.RB;
+
+    private GamepadButtons seen;
+
+    /// <summary>把当前按键状态当作基线：已经按着的入口不算一次，必须先松开再按。</summary>
+    public void Prime(GamepadButtons buttons) => seen = buttons & Buttons;
+
+    /// <summary>返回 true 表示"这一刻刚按下 LB 或 RB"，调用方应当执行那个入口。</summary>
+    public bool Observe(GamepadButtons buttons)
+    {
+        var entry = buttons & Buttons;
+        var fired = entry != GamepadButtons.None && entry != seen;
+        seen = entry;
+        return fired;
+    }
+}
+
 public readonly record struct GamepadSample(bool Connected, int DeviceId, GamepadButtons Buttons,
     byte LeftTrigger = 0, byte RightTrigger = 0, short LeftX = 0, short LeftY = 0,
     short RightX = 0, short RightY = 0)

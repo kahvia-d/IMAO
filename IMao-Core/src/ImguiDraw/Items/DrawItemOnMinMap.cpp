@@ -9,6 +9,7 @@
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/RuntimeStatus.h"
 #include "../../Runtime/GamepadContext.h"
+#include "../../Runtime/GuideHotkeyRouting.h"
 #include "../../Runtime/StructuredLogger.h"
 
 #include <chrono>
@@ -175,7 +176,7 @@ void DrawItemOnMinMap::SavePlayerNearItemPoint(const ItemMarkerFrame& frame, con
     HandlePlayerNearbyAction(false, gamepad, gameHwnd);
 }
 
-bool DrawItemOnMinMap::OpenRouteGuideFallback(std::uint64_t gameHwnd) {
+bool DrawItemOnMinMap::OpenRouteGuideFallback(std::uint64_t gameHwnd, const std::string& reason) {
     // The managed side uses this coordinate only to pick the monitor the guide opens on.
     // The desktop cursor is not a substitute: the player can leave it on a second screen,
     // and the guide would then open away from the game. The game window's own centre is
@@ -192,7 +193,7 @@ bool DrawItemOnMinMap::OpenRouteGuideFallback(std::uint64_t gameHwnd) {
     DrawItemBase::PublishMarkerEvent({{"type", "markerGuideShortcut"}, {"gamepad", true},
         {"profileId", DrawItemBase::MarkerProfile()}, {"gameHwnd", gameHwnd}, {"sourceHwnd", gameHwnd},
         {"screenX", x}, {"screenY", y}});
-    StructuredLogger::Record("info", "gamepad", "guide-route-fallback", "reason=guide-empty");
+    StructuredLogger::Record("info", "gamepad", "guide-route-fallback", "reason=" + reason);
     return true;
 }
 
@@ -207,6 +208,16 @@ nlohmann::json DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamep
         if (publish) DrawItemBase::NotifyNearby("当前位置暂不可用，请等小地图定位恢复后重试。", "position-unavailable");
         return {{"outcome", "position-unavailable"}};
     }
+    // 手柄的攻略快捷键是开关：这份攻略窗口已经开着（同一档案）时，这一下是"关掉它"，
+    // 与键盘攻略键一致。托管层收到这条事件时窗口还开着，会走关闭分支（标记成 guide-toggle，
+    // 与"空范围回退"区分开）。走键盘关联调用的那条路（gamepad=false）不走这里：键盘由托管层
+    // 自己判断开关，这里再发一次会变成开了又关。
+    const auto openGuide = DrawItemBase::VisibleGuideWindow();
+    if (AutoRoute::GuideShortcutClosesVisibleGuide(guide, gamepad, !openGuide.empty(),
+            openGuide.value("profileId", std::string{}) == DrawItemBase::MarkerProfile())) {
+        if (publish && OpenRouteGuideFallback(observation.gameHwnd, "guide-visible-toggle"))
+            return {{"outcome", "guide-toggle"}, {"guideToggle", true}};
+    }
     const auto intent = guide ? NearbySelection::Intent::Guide : NearbySelection::Intent::Complete;
     std::erase_if(observation.candidates, [&](const auto& candidate) {
         return !NearbySelection::Includes(candidate, intent) || DrawItemBase::IsPointCompleted(observation.sceneName, candidate.item);
@@ -219,7 +230,7 @@ nlohmann::json DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamep
         // first may fall back to the active route target. Position-unavailable keeps its own
         // outcome above, so a shaky fix can never open a route guide by accident.
         const auto emptyOutcome = guide ? "guide-empty" : "complete-empty";
-        if (guide && gamepad && publish && OpenRouteGuideFallback(observation.gameHwnd))
+        if (guide && gamepad && publish && OpenRouteGuideFallback(observation.gameHwnd, "guide-empty"))
             return {{"outcome", "guide-empty"}, {"routeGuideFallback", true}};
         if (publish) DrawItemBase::NotifyNearby(guide ? "附近小范围内没有未完成点位，请靠近标记后重试。" :
             "完成范围内没有符合当前筛选的未完成点位。", emptyOutcome);
