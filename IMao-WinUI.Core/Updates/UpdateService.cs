@@ -50,18 +50,21 @@ public sealed class UpdateService : IDisposable
     ];
 
     /// <summary>
-    /// The order the sources are tried in: the domestic mirror first, the canonical host behind it.
+    /// The order the sources are tried in: the canonical host first, the domestic mirror behind it.
     ///
     /// The order is a latency decision, not a trust one - every source is held to the same pinned signature -
-    /// and it is set for the players this channel exists for. Most of them are in mainland China, where the
-    /// canonical host needs a proxy and the mirror does not; the earlier attempt is the one that usually
-    /// answers, and a source that has another behind it is cut short rather than allowed to stall the check.
-    /// A player outside China pays the mirror's latency first, which is why this single line is where the
-    /// order would change if that turns out to matter more.
+    /// and the canonical host leads because it is the channel's origin, it answers in a fraction of a second
+    /// wherever it is reachable, and its copy is the one that is never behind a CDN cache. The mirror exists
+    /// for the players who cannot reach it at all, and pays for that by being the later attempt.
+    ///
+    /// The cost sits on the players the mirror exists for: a client that cannot reach the canonical host waits
+    /// out that attempt before the mirror is tried, which is why a source with another behind it is cut short
+    /// rather than allowed to stall the check. Reversing this call is one line and would move the wait to
+    /// everyone outside mainland China instead.
     ///
     /// Declared after both lists so static initialisation order cannot matter.
     /// </summary>
-    private static readonly Uri[] Sources = [.. ManifestMirrors, StableUri];
+    private static readonly Uri[] Sources = [StableUri, .. ManifestMirrors];
     private readonly BuildInfo _build;
     private readonly TrustedUpdateKey[] _keys;
     private readonly ResourceSnapshotService _snapshots;

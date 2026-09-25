@@ -247,29 +247,29 @@ await Test("real published channel recovers a client that recorded the pre-rewri
     False(published.StateConflictDetected); True(result.Catalog is not null);
     True(result.StateNotice.Contains("112")); False(result.Skipped);
 });
-await Test("the check asks the domestic mirror first and stops there when it answers", async () =>
+await Test("the check asks the canonical host first and stops there when it answers", async () =>
 {
-    // Most players of this channel are in mainland China, where the canonical host needs a proxy and the mirror
-    // does not, so the mirror is the attempt that usually answers and the canonical host is never contacted.
+    // The canonical host leads: it is the channel's origin, answers in a fraction of a second where it is
+    // reachable, and its copy is never behind a CDN cache. The mirror is not contacted at all.
     using var f = New(); await f.Initialize();
-    f.Publish(f.Catalog(3));
-    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = f.Sign(f.Catalog(4));
-    var result = await f.Updates.CheckAsync();
-    Equal(4L, result.Catalog!.Sequence);
-    Equal("Gitee 镜像", result.ManifestSource);
-    EqualSequence([UpdateService.ManifestMirrors[0].AbsoluteUri], f.Network.Requests);
-});
-await Test("an unreachable mirror falls back to the canonical host", async () =>
-{
-    // The mirror carries the same signed envelope and is verified identically, so the fallback adds availability
-    // without adding any trust. It is also what covers a player outside China, or a Gitee outage.
-    using var f = New(); await f.Initialize();
-    f.Network.Unreachable.Add(UpdateService.ManifestMirrors[0].AbsoluteUri);
     f.Publish(f.Catalog(3));
     var result = await f.Updates.CheckAsync();
     Equal(3L, result.Catalog!.Sequence);
     Equal("GitHub", result.ManifestSource);
-    EqualSequence([UpdateService.ManifestMirrors[0].AbsoluteUri, UpdateService.StableUri.AbsoluteUri], f.Network.Requests);
+    EqualSequence([UpdateService.StableUri.AbsoluteUri], f.Network.Requests);
+});
+await Test("an unreachable canonical host falls back to the configured mirror", async () =>
+{
+    // The canonical host is exactly what a client in mainland China cannot reach, and the check used to die
+    // with it. The mirror carries the same signed envelope and is verified identically, so the fallback adds
+    // availability without adding any trust.
+    using var f = New(); await f.Initialize();
+    f.Network.Unreachable.Add(UpdateService.StableUri.AbsoluteUri);
+    f.Publish(f.Catalog(4));
+    var result = await f.Updates.CheckAsync();
+    Equal(4L, result.Catalog!.Sequence);
+    Equal("Gitee 镜像", result.ManifestSource);
+    EqualSequence([UpdateService.StableUri.AbsoluteUri, UpdateService.ManifestMirrors[0].AbsoluteUri], f.Network.Requests);
 });
 await Test("a source that answers without verifying is never silently replaced by the next one", async () =>
 {
@@ -278,9 +278,9 @@ await Test("a source that answers without verifying is never silently replaced b
     using var f = New(); await f.Initialize();
     f.Publish(f.Catalog(3));
     // After Publish, so the tampered bytes are what the first source actually serves.
-    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = Unverifiable(f.Sign(f.Catalog(3)));
+    f.Network.Routes[UpdateService.StableUri.AbsoluteUri] = Unverifiable(f.Sign(f.Catalog(3)));
     await ThrowsAsync<InvalidDataException>(() => f.Updates.CheckAsync());
-    EqualSequence([UpdateService.ManifestMirrors[0].AbsoluteUri], f.Network.Requests);
+    EqualSequence([UpdateService.StableUri.AbsoluteUri], f.Network.Requests);
     True(f.Updates.LastCheckResult is null);
 });
 await Test("an unverifiable envelope from the last source is refused too", async () =>
@@ -288,10 +288,11 @@ await Test("an unverifiable envelope from the last source is refused too", async
     // The same rule at the end of the chain: bytes held to the pinned signature, and a failure there is a
     // failure rather than a reason to keep looking.
     using var f = New(); await f.Initialize();
-    f.Network.Unreachable.Add(UpdateService.ManifestMirrors[0].AbsoluteUri);
-    f.Network.Routes[UpdateService.StableUri.AbsoluteUri] = Unverifiable(f.Sign(f.Catalog(3)));
+    f.Network.Unreachable.Add(UpdateService.StableUri.AbsoluteUri);
+    f.Publish(f.Catalog(3));
+    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = Unverifiable(f.Sign(f.Catalog(3)));
     await ThrowsAsync<InvalidDataException>(() => f.Updates.CheckAsync());
-    EqualSequence([UpdateService.ManifestMirrors[0].AbsoluteUri, UpdateService.StableUri.AbsoluteUri], f.Network.Requests);
+    EqualSequence([UpdateService.StableUri.AbsoluteUri, UpdateService.ManifestMirrors[0].AbsoluteUri], f.Network.Requests);
 });
 await Test("every manifest source being unreachable reports the transport failure", async () =>
 {
@@ -541,15 +542,14 @@ await TestPure("a source has a short stable name, and an unknown host keeps its 
 await Test("a check reports the source that actually answered, fallback included", async () =>
 {
     using var f = New(); await f.Initialize();
-    // The mirror is asked first, so with both reachable it is the one whose name the player sees.
+    // The canonical host is asked first, so with both reachable it is the one whose name the player sees.
     f.Publish(f.Catalog(3));
-    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = f.Sign(f.Catalog(3));
-    Equal("Gitee 镜像", (await f.Updates.CheckAsync()).ManifestSource);
-    // Then the mirror goes away and the canonical host answers, and the name follows what happened.
-    f.Network.Unreachable.Add(UpdateService.ManifestMirrors[0].AbsoluteUri);
+    Equal("GitHub", (await f.Updates.CheckAsync()).ManifestSource);
+    // Then the canonical host goes away and the mirrored envelope answers, and the name follows what happened.
+    f.Network.Unreachable.Add(UpdateService.StableUri.AbsoluteUri);
     f.Publish(f.Catalog(4));
     var fallback = await f.Updates.CheckAsync();
-    Equal("GitHub", fallback.ManifestSource);
+    Equal("Gitee 镜像", fallback.ManifestSource);
     Equal(4L, fallback.Catalog!.Sequence);
 });
 await Test("connectivity probes cover the download sources, and a missing CDK is neither pass nor fail", async () =>
