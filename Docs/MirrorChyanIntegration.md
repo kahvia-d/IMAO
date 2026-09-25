@@ -166,6 +166,47 @@ Invoke-WebRequest 'https://mirrorchyan.com/api/resources/March7thAssistant/lates
    所以它每次都带 `os`/`arch`；而 `MaaResource` 不分区，就一个都不带。**我们属于前者**：2026-09-25 实测
    `IMAO` 不带 `os`/`arch` 就是 `8001`，`os=win&arch=x64` 才通——所以客户端一律带上这两个参数。
 
+### 5.6 实测：Mirror酱的包与我们的签名清单是什么关系
+
+在 `v2026.9.25.2` 补传成功后实测：
+
+| 项 | 值 |
+| --- | --- |
+| Mirror酱 `update_type=full` 返回的 `sha256` / `filesize` | `16411d91c27e649d…` / 968.4 MB |
+| GitHub 上 `IMao-v2026.9.25.2-windows-x64.zip` 的 digest | `sha256:16411d91c27e649d…` / 968.4 MB |
+| 结论 | **完全一致**：Mirror酱 的 `full` 包就是那份 `-ManualInstallZip` 整包，逐字节相同 |
+| 签名清单里的 `app.package.sha256` | `88e0308cb4e99cad…`，`size` ≈ 0 |
+
+**最后一行是关键**：我们是分片发布，清单里 `app.package` 描述的是 `-shards.json` **描述符**，
+整包按设计**不写进签名清单**（`Docs/ResourceUpdates.md`：「`-ManualInstallZip` 不写进签名清单」）。所以：
+
+- **不能**拿清单的 `package.sha256` 去校验 Mirror酱下载来的归档——那两个哈希描述的根本不是同一个东西。
+- **但这不影响安全**，因为边界从来不是归档哈希：从 Mirror酱拿到的 zip 只被当成"一袋文件"，
+  只取签名清单声明过的路径，**逐文件核对 size + SHA-256**，最后仍由 `VerifyDirectoryAsync` 要求
+  目录与清单**完全一一对应**。`full` 与 `incremental` 走同一条路，后者只是文件少一些。
+- Mirror酱 的 `sha256` 仍然有用：它是"解压前就发现坏包"的**优化**，不是判据。
+
+> 可选项（不在本期范围）：给清单 `app` 加一个整包摘要字段，让 `full` 包在解压近 1 GB 之前就被拒。
+> 这属于 schema 变更，必须遵守"**先发认识新字段的客户端，再签含新字段的清单**"的顺序纪律，
+> 否则旧客户端会整份拒收清单——就是 §3.1 那个陷阱。
+
+### 5.7 实测：增量包确实是按需生成的
+
+只要带上 `cdk` 和 `current_version`，同一个版本对会给出不同结果：
+
+| 请求 | `update_type` | `url` |
+| --- | --- | --- |
+| `cdk` + 不带 `current_version` | `full` | 有（968.4 MB） |
+| `cdk` + `current_version=v2026.9.25.1` | **`full`** | 有（968.4 MB） |
+| `cdk` + `current_version=v2026.9.25.2`（已最新） | — | **无** |
+
+第二行就是 MAA 那段 `TryWaitForMirrorChyanOtaAsync` 描述的现场：**9.25.1→9.25.2 的增量包还在打包，
+期间返回完整包**。所以客户端必须：
+
+1. 判 `update_type`，是 `full` 时**隔十几秒再问一次**，别把它当定论；
+2. 仍为 `full` 时若可能要下近 1 GB，**先让用户确认**（MAA 的 `_requiresFullPackageConfirmation`）；
+3. **已是最新时 `url` 是缺失的**，不能当成错误——`HasUpdate` 只看版本比较。
+
 ## 6. 尚未解决、必须拍板的两件事
 
 ### 6.1 `stable.json` 的国内可达性（真正的阻塞点）
