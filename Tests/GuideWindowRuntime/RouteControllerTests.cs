@@ -318,6 +318,9 @@ internal static class RouteControllerTests
         await CaseAsync("a single nearby candidate opens its guide without ever building the chooser", async fixture =>
         {
             fixture.Core.GamepadContext = fixture.GameplayContext;
+            // Core.Commands 是整个套件共用的账本（Fixture 每例新建，FakeCoreHost 不是），
+            // 所以"这一例查了几次路线目标"必须看增量，不能看总数。
+            int routeGuideQueriesBefore = fixture.Core.Commands.Count(value => value.Operation == "markerGetRouteGuide");
             var sample = new GamepadSample(true, 0, GamepadButtons.None);
             using var service = new GamepadInputService(fixture.Core, fixture.Coordinator,
                 slot => slot == 0 ? sample : new(false, slot, GamepadButtons.None));
@@ -353,6 +356,15 @@ internal static class RouteControllerTests
                 "no chooser window is created or activated for a single candidate");
             Check(fixture.Core.Commands.Count(value => value.Operation == "markerGetNearbyGuide") == 1,
                 "the unique candidate is resolved through the same correlated query the keyboard entry uses");
+            // 「附近」这条路径**不查路线目标、也不提供跳过**（规格 §2.2/§4）：玩家是站在点位旁边想
+            // 看它怎么收集，不是要把路线往前推。以前这里会白查一次 markerGetRouteGuide，而且只要
+            // 这个点恰好也是当前导航目标，攻略里就会冒出一个能用的「跳过」。
+            int routeGuideQueries = fixture.Core.Commands.Count(value => value.Operation == "markerGetRouteGuide") - routeGuideQueriesBefore;
+            Check(routeGuideQueries == 0 && !fixture.Coordinator.HasGuideSkipAuthorization &&
+                fixture.Guide is { SkipButtonVisible: false },
+                $"a nearby guide asks nothing about the route target and never offers a skip " +
+                $"(queries={routeGuideQueries} authorised={fixture.Coordinator.HasGuideSkipAuthorization} " +
+                $"buttonVisible={fixture.Guide?.SkipButtonVisible})");
         }, log);
 
         await CaseAsync("the same gamepad shortcut closes the guide it opened", async fixture =>
@@ -498,6 +510,40 @@ internal static class RouteControllerTests
             fixture.Core.Emit(shortcut);
             await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
                 "the same shortcut opens the target guide once the route is guiding again");
+        }, log);
+
+        // 规格 §2.2：「导航停止/暂停 → 立刻隐藏跳过」。这条路以前没有实现也没有用例：打开路径查
+        // IsGuiding，刷新路径不查，而原生在暂停时**仍然返回当前目标**，于是身份校验全都能通过。
+        // 这里同时用上夹具里那个一直没人调用的 PublishRoutePlanning()。
+        await CaseAsync("pausing the route revokes an already granted skip", async fixture =>
+        {
+            var shortcut = new
+            {
+                type = "markerGuideShortcut", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
+                contextGeneration = 17UL, profileId = "local", routeId = fixture.Core.ActiveRouteId,
+                key = "8:" + Target.PointId, screenX = 40, screenY = 100
+            };
+            fixture.Core.RoutePlanning = fixture.Core.RoutePlanning with { NavigationStatus = "navigating" };
+            fixture.Core.Emit(shortcut);
+            await UntilAsync(() => fixture.Guide is { IsGuideVisible: true, SkipButtonVisible: true } &&
+                fixture.Coordinator.HasGuideSkipAuthorization,
+                "the navigating route target offers a skip entry");
+
+            // 路线暂停：核心答复里的 navigationStatus 变了，资格必须跟着撤销。
+            fixture.Core.RoutePlanning = fixture.Core.RoutePlanning with { NavigationStatus = "paused" };
+            fixture.Core.PublishRoutePlanning();
+            await UntilAsync(() => fixture.Guide is { SkipButtonVisible: false } &&
+                !fixture.Coordinator.HasGuideSkipAuthorization,
+                "pausing the route takes the skip entry away without closing the guide");
+            Check(fixture.Guide is { IsGuideVisible: true },
+                "revoking the skip leaves the guide itself open");
+
+            // 恢复指引：同一个入口重新给回资格（证明上面那次撤销不是因为窗口被换掉了）。
+            fixture.Core.RoutePlanning = fixture.Core.RoutePlanning with { NavigationStatus = "navigating" };
+            fixture.Core.PublishRoutePlanning();
+            await UntilAsync(() => fixture.Guide is { SkipButtonVisible: true } &&
+                fixture.Coordinator.HasGuideSkipAuthorization,
+                "resuming the route restores the skip entry on the same guide");
         }, log);
 
         await CaseAsync("toolbar handoff shows the guide passively and its own entry closes it again", async fixture =>

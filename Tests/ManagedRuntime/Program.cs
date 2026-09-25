@@ -26,6 +26,7 @@ try
     GamepadInputTests.Run(root, Check);
     GuideSkipHoldGestureTests.Run(Check);
     GuideFocusLatchTests.Run(Check);
+    GuideFocusHandoffTests.Run(Check);
     GuidePictureAndFocusTests.Run(Check);
     GamepadDirectionSelectionTests.Run(Check);
     GamepadNavigationListTests.Run(Check);
@@ -133,6 +134,34 @@ try
     Check(configFailed && config.Read() == savedConfig, "failed runtime commit preserves memory and disk");
     try { config.Update(old => old with { MapUpdateCycle = 0 }); } catch (ArgumentException) { }
     Check(config.Read() == savedConfig, "invalid runtime values cannot change configuration");
+
+    // Version 5 introduces the guide skip key. A file written before it has no such field, so the
+    // deserializer supplies our default (G=71) rather than the player's choice — and if they had bound
+    // G to something else, the duplicate check used to fail and the whole file was backed up as
+    // corrupt. Every setting reset because we added a key is not an acceptable way to ship a feature.
+    string skipKeyPath = Path.Combine(root, "runtime-skip-key.json");
+    File.WriteAllText(skipKeyPath, "{\"ConfigVersion\":4,\"NearestCompletionKey\":71,\"StatusBarEnabled\":false}");
+    var skipKeyConfig = new RuntimeConfigurationStore(skipKeyPath).Read();
+    Check(skipKeyConfig.GuideSkipKey == 0 && skipKeyConfig.NearestCompletionKey == 71 && !skipKeyConfig.StatusBarEnabled,
+        "a file written before the skip key disables the new default instead of resetting every setting");
+    Check(Directory.GetFiles(root, "runtime-skip-key.json.corrupt-*").Length == 0,
+        "the colliding new default is not mistaken for a corrupt configuration");
+    Check(skipKeyConfig.CaptureWay == 1 && skipKeyConfig.OverlayPresentMode == 0,
+        "an older file still receives the other schema migrations alongside the new-key one");
+    // A file that already carries the current version was written with the field present, so a
+    // collision there really is a bad file and must stay an error.
+    File.WriteAllText(skipKeyPath, "{\"ConfigVersion\":5,\"NearestCompletionKey\":71,\"GuideSkipKey\":71}");
+    var stored = new RuntimeConfigurationStore(skipKeyPath).Read();
+    Check(stored.GuideSkipKey == 71 && stored.NearestCompletionKey == 90,
+        "a file at the current version with a real duplicate falls back to defaults instead of being migrated");
+    Check(Directory.GetFiles(root, "runtime-skip-key.json.corrupt-*").Length == 1,
+        "a genuine duplicate at the current version is still treated as a corrupt file");
+    // No collision: the new default stays.
+    File.WriteAllText(skipKeyPath, "{\"ConfigVersion\":4,\"NearestCompletionKey\":90}");
+    Check(new RuntimeConfigurationStore(skipKeyPath).Read().GuideSkipKey == 71,
+        "a file written before the skip key keeps the new default when nothing collides with it");
+    Check(RuntimeConfiguration.HotkeyFields(new RuntimeConfiguration()).Length == 7,
+        "the shared hotkey field list covers every binding, so validation and migration cannot drift apart");
 
     if (args.Length > 0)
     {

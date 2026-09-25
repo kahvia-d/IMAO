@@ -26,6 +26,7 @@
     <Compile Include="../../IMao-WinUI/Models/GuidePlacement.cs" Link="GuidePlacement.cs" />
     <Compile Include="../../IMao-WinUI/Models/GuidePictureKeys.cs" Link="GuidePictureKeys.cs" />
     <Compile Include="../../IMao-WinUI/Models/GuideWindowFocus.cs" Link="GuideWindowFocus.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GuideFocusHandoff.cs" Link="GuideFocusHandoff.cs" />
     <Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="MapFilterCatalog.cs" />
     <Compile Include="../../IMao-WinUI/Helpers/UserDataPaths.cs" Link="UserDataPaths.cs" />
     <Compile Include="../../IMao-WinUI/Services/CoreHostService.cs" Link="CoreHostService.cs" />

@@ -456,6 +456,34 @@ void GuideHotkeyRoutingTests() {
         !AutoRoute::GuideSkipReleaseDelivered(false, false) && !AutoRoute::GuideSkipReleaseDelivered(true, false),
         "a skip key-up is forwarded only while the identified guide is still visible");
 
+    // **按下与抬起必须配对**。旧写法在抬起时重新问一遍"攻略还在不在、还有没有身份"，于是
+    // "按下被攻略吃掉、按住期间攻略关掉（跳过成功、完成当前点、玩家按 B/LB+X）"的那一次会把
+    // 一个 key-up 漏给游戏——而游戏从没收到对应的 key-down。所有权由第一次按下决定，只此一处。
+    using AutoRoute::GuideKeyOwner;
+    const auto fresh = AutoRoute::GuideKeyOwnership{};
+    Expect(!AutoRoute::GuideKeyOwnedNow(fresh.skip) && !AutoRoute::GuideKeyOwnedNow(fresh.picture),
+        "a fresh key ownership sends both keys to the game");
+    Expect(AutoRoute::RecordGuideKeyDown(GuideKeyOwner::Game, /*firstDown*/ true, /*owned*/ true) == GuideKeyOwner::Guide &&
+        AutoRoute::RecordGuideKeyDown(GuideKeyOwner::Game, true, /*owned*/ false) == GuideKeyOwner::Game,
+        "the first key-down decides which side owns the key");
+    // 自动重复不改变结论：按住不放时后面那些 key-down 不能把所有权翻回去。
+    Expect(AutoRoute::RecordGuideKeyDown(GuideKeyOwner::Guide, /*firstDown*/ false, /*owned*/ false) == GuideKeyOwner::Guide &&
+        AutoRoute::RecordGuideKeyDown(GuideKeyOwner::Game, false, /*owned*/ true) == GuideKeyOwner::Game,
+        "an auto-repeat key-down never changes the owner the first press established");
+    // 按下被吃掉 → 抬起也一定被吃掉（哪怕这一刻攻略已经不可见）；按下被放行 → 抬起也放行。
+    Expect(AutoRoute::GuideKeyOwnedNow(GuideKeyOwner::Guide) && !AutoRoute::GuideKeyOwnedNow(GuideKeyOwner::Game),
+        "an owned press keeps its key-up, a passed-through press keeps its own");
+    {
+        // 两个键各有一份所有权，互不影响（两个键可以同时按着）。
+        AutoRoute::GuideKeyOwnership both;
+        both.skip = AutoRoute::RecordGuideKeyDown(both.skip, true, true);
+        Expect(AutoRoute::GuideKeyOwnedNow(both.skip) && !AutoRoute::GuideKeyOwnedNow(both.picture),
+            "owning the skip key does not claim the picture keys at the same time");
+        both.Reset();
+        Expect(!AutoRoute::GuideKeyOwnedNow(both.skip) && !AutoRoute::GuideKeyOwnedNow(both.picture),
+            "uninstalling the hook forgets both keys instead of leaving one owned");
+    }
+
     // 手柄的攻略快捷键是开关：同一档案的攻略窗口已经开着时，这一下是关掉它。
     Expect(AutoRoute::GuideShortcutClosesVisibleGuide(/*guideIntent*/ true, /*gamepad*/ true, /*guideVisible*/ true, /*sameProfile*/ true),
         "the gamepad guide shortcut closes a guide window that is already open");
@@ -510,35 +538,54 @@ void GuideHotkeyRoutingTests() {
 
 void HotkeyConfigurationTests() {
     using Json = nlohmann::json;
+    // **七个字段全部比较。** 这里曾经只比前五个，于是第 6、7 个绑定（工具总开关、长按跳过）
+    // 的打包/解包完全没有网：把 Apply 里的 `(71ULL << 48)` 删掉，或者把 Snapshot 的 `>> 48`
+    // 写成别的位数，全套原生断言依旧全绿，实机却是 G 永久失效。新增绑定必须同时加到这里。
     const auto same = [](RuntimeHotkeyBindings a, RuntimeHotkeyBindings b) {
         return a.nearestCompletionKey == b.nearestCompletionKey && a.manualRouteKey == b.manualRouteKey &&
             a.currentTargetGuideKey == b.currentTargetGuideKey && a.guidePreviousImageKey == b.guidePreviousImageKey &&
-            a.guideNextImageKey == b.guideNextImageKey;
+            a.guideNextImageKey == b.guideNextImageKey && a.toggleEnabledKey == b.toggleEnabledKey &&
+            a.guideSkipKey == b.guideSkipKey;
     };
     RuntimeHotkeys::Apply({});
     const auto defaults = RuntimeHotkeys::Snapshot();
-    Expect(same(defaults, {90, 81, 119, 33, 34}), "default bindings are Z, Q, F8 and PageUp/PageDown guide pagination");
+    Expect(same(defaults, {90, 81, 119, 33, 34, 120, 71}),
+        "default bindings are Z, Q, F8, PageUp/PageDown pagination, F9 and G for the route-target skip");
     Expect(RuntimeHotkeys::Label(defaults.currentTargetGuideKey) == "F8" && RuntimeHotkeys::Label(90) == "Z" &&
-        RuntimeHotkeys::Label(33) == "PageUp" && RuntimeHotkeys::Label(34) == "PageDown", "hotkey display labels match all five keys");
-    RuntimeHotkeys::Apply({0, 0, 0, 0, 0});
-    Expect(same(RuntimeHotkeys::Snapshot(), {0, 0, 0, 0, 0}), "all five bindings may be disabled without a duplicate-key conflict");
+        RuntimeHotkeys::Label(33) == "PageUp" && RuntimeHotkeys::Label(34) == "PageDown",
+        "hotkey display labels match the guide keys");
+    // 第 7 个字段要走满 8 位：值放在第 48 位以后，掩码或移位写错就只有非默认值能发现，
+    // 所以下面这条往返用例刻意用一个**不等于默认值**的键（H=72，默认是 G=71）。
+    const RuntimeHotkeyBindings roundTrip{90, 81, 119, 33, 34, 120, 72};
+    RuntimeHotkeys::Apply(roundTrip);
+    Expect(same(RuntimeHotkeys::Snapshot(), roundTrip),
+        "all seven bindings survive the packed round trip, including the seventh in the high 64-bit page");
+    Expect(!same(RuntimeHotkeys::Snapshot(), defaults),
+        "the seventh binding really is published rather than left at its default");
+    RuntimeHotkeys::Apply({0, 0, 0, 0, 0, 0, 0});
+    // 这条以前写的是五个 0：省略的字段被值初始化成 0，所以看起来"全部禁用"通过了，
+    // 实际上第 6、7 个键从来没被这条断言看过。现在七个都写出来，比较器也看得见它们。
+    Expect(same(RuntimeHotkeys::Snapshot(), {0, 0, 0, 0, 0, 0, 0}), "all seven bindings may be disabled without a duplicate-key conflict");
     const auto partialDisabled = RuntimeHotkeys::ValidateConfiguration({{"nearestCompletionKey", 65}});
     RuntimeHotkeys::Apply(partialDisabled);
-    Expect(same(RuntimeHotkeys::Snapshot(), {65, 0, 0, 0, 0}), "partial hotkey update preserves unspecified disabled bindings");
+    Expect(same(RuntimeHotkeys::Snapshot(), {65, 0, 0, 0, 0, 0, 0}), "partial hotkey update preserves unspecified disabled bindings");
     RuntimeHotkeys::Apply(defaults);
     const auto partial = RuntimeHotkeys::ValidateConfiguration({{"currentTargetGuideKey", 112}});
-    Expect(same(partial, {90, 81, 112}) && same(RuntimeHotkeys::Snapshot(), defaults), "validation preserves unspecified defaults and never publishes before Apply");
+    Expect(same(partial, {90, 81, 112, 33, 34, 120, 71}) && same(RuntimeHotkeys::Snapshot(), defaults),
+        "validation preserves unspecified defaults and never publishes before Apply");
     for (const int reserved : {27, 77, 121, 16, 17, 18, -1, 256}) {
         RejectsAny([&] { RuntimeHotkeys::Apply({reserved, 81, 119}); }, "reserved, modifier or out-of-range key cannot be configured");
         Expect(same(RuntimeHotkeys::Snapshot(), defaults), "rejected key leaves published bindings unchanged");
     }
-    const std::array<int RuntimeHotkeyBindings::*, 5> fields{&RuntimeHotkeyBindings::nearestCompletionKey,
+    // 重复键校验要覆盖**每一对**字段：原来数组写死 5，新增的绑定不在任何一对里。
+    const std::array<int RuntimeHotkeyBindings::*, 7> fields{&RuntimeHotkeyBindings::nearestCompletionKey,
         &RuntimeHotkeyBindings::manualRouteKey, &RuntimeHotkeyBindings::currentTargetGuideKey,
-        &RuntimeHotkeyBindings::guidePreviousImageKey, &RuntimeHotkeyBindings::guideNextImageKey};
+        &RuntimeHotkeyBindings::guidePreviousImageKey, &RuntimeHotkeyBindings::guideNextImageKey,
+        &RuntimeHotkeyBindings::toggleEnabledKey, &RuntimeHotkeyBindings::guideSkipKey};
     for (std::size_t i = 0; i < fields.size(); ++i) for (std::size_t j = i + 1; j < fields.size(); ++j) {
         auto duplicate = defaults; duplicate.*fields[j] = duplicate.*fields[i];
         RejectsAny([&] { RuntimeHotkeys::Apply(duplicate); }, "every pair of nonzero bindings rejects a duplicate key");
-        Expect(same(RuntimeHotkeys::Snapshot(), defaults), "duplicate binding rejection leaves all five keys unchanged");
+        Expect(same(RuntimeHotkeys::Snapshot(), defaults), "duplicate binding rejection leaves all seven keys unchanged");
     }
     for (const auto* field : {"currentTargetGuideKey", "guidePreviousImageKey", "guideNextImageKey"})
     for (const Json malformed : {Json(1.5), Json(true), Json("F8"), Json(nullptr), Json(-1), Json(256)}) {
@@ -548,15 +595,16 @@ void HotkeyConfigurationTests() {
             "noninteger or invalid JSON binding rejects the entire configuration update");
         Expect(same(RuntimeHotkeys::Snapshot(), defaults), "malformed configuration never partially publishes its valid prefix");
     }
-    RuntimeHotkeys::Apply({33, 34, 119, 90, 81});
-    Expect(same(RuntimeHotkeys::Snapshot(), {33, 34, 119, 90, 81}), "PageUp/PageDown can be assigned to any action while preserving uniqueness");
+    // 省略的字段会被值初始化成 0，所以这里显式写出全部七个：工具总开关与长按跳过都被禁用。
+    RuntimeHotkeys::Apply({33, 34, 119, 90, 81, 0, 0});
+    Expect(same(RuntimeHotkeys::Snapshot(), {33, 34, 119, 90, 81, 0, 0}), "PageUp/PageDown can be assigned to any action while preserving uniqueness");
     RuntimeHotkeys::Apply(defaults);
     const auto pageOnly = RuntimeHotkeys::ValidateConfiguration({{"guidePreviousImageKey", 65}});
-    Expect(same(pageOnly, {90, 81, 119, 65, 34}), "a partial previous-page change preserves the other four keys");
+    Expect(same(pageOnly, {90, 81, 119, 65, 34, 120, 71}), "a partial previous-page change preserves the other six keys");
     const auto swapped = RuntimeHotkeys::ValidateConfiguration({{"nearestCompletionKey", 81}, {"manualRouteKey", 90},
         {"guidePreviousImageKey", 34}, {"guideNextImageKey", 33}});
     RuntimeHotkeys::Apply(swapped);
-    Expect(same(RuntimeHotkeys::Snapshot(), {81, 90, 119, 34, 33}), "valid swaps publish both page keys and other bindings together");
+    Expect(same(RuntimeHotkeys::Snapshot(), {81, 90, 119, 34, 33, 120, 71}), "valid swaps publish both page keys and other bindings together");
     std::atomic_bool ready = false, finished = false;
     std::atomic_int torn = 0, reads = 0;
     std::thread reader([&] {
@@ -568,9 +616,12 @@ void HotkeyConfigurationTests() {
         } while (!finished.load());
     });
     while (!ready.load()) std::this_thread::yield();
-    for (int i = 0; i < 10000; ++i) RuntimeHotkeys::Apply(i % 2 ? defaults : swapped);
+    for (int i = 0; i < 10000; ++i) RuntimeHotkeys::Apply(i % 2 == 1 ? defaults : swapped);
     finished = true; reader.join();
-    Expect(reads > 0 && torn == 0, "input threads observe complete old or new five-key snapshots including the high 64-bit page field");
+    // 单条 std::atomic<uint64_t> 的 load 按定义不会撕裂，所以"torn == 0"本身证明不了什么；
+    // 这条的价值在于：比较器现在看得见第 6、7 个字段，任何一次读到半新半旧都会被记成 torn。
+    // 先把 32 位读法放回去（把打包拆成两个 32 位字段）这条才会真的有可能失败。
+    Expect(reads > 0 && torn == 0, "input threads observe complete old or new seven-key snapshots including the high 64-bit page field");
     RuntimeHotkeys::Apply({});
 }
 void GuidePaginationTests() {

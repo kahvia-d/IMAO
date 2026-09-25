@@ -55,5 +55,6 @@
     <Compile Include="../../IMao-WinUI/Models/GuidePlacement.cs" Link="Production/GuidePlacement.cs" />
     <Compile Include="../../IMao-WinUI/Models/GuidePictureKeys.cs" Link="Production/GuidePictureKeys.cs" />
     <Compile Include="../../IMao-WinUI/Models/GuideWindowFocus.cs" Link="Production/GuideWindowFocus.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GuideFocusHandoff.cs" Link="Production/GuideFocusHandoff.cs" />
   </ItemGroup>
 </Project>
