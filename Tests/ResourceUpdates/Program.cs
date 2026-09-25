@@ -42,6 +42,8 @@ async Task Test(string name, Func<Task> action)
     // multi-stage install broke, which is the part that costs time to work out afterwards.
     catch (Exception ex) { failed.Add(name + ": " + ex); Console.WriteLine("FAIL " + name + ": " + ex); }
 }
+/// <summary>For checks that are pure logic and have nothing to await, so they still use the same reporting.</summary>
+Task TestPure(string name, Action action) => Test(name, () => { action(); return Task.CompletedTask; });
 Fixture New() => new(Path.Combine(suiteRoot, Guid.NewGuid().ToString("N")));
 
 await Test("trusted P-256 signature verifies exact signed bytes", async () =>
@@ -296,6 +298,89 @@ await Test("the publishing scripts mirror the channel to the address the client 
     var playbook = await File.ReadAllTextAsync(Path.Combine(scripts, "Set-GiteeMirror.ps1"))
         + await File.ReadAllTextAsync(Path.Combine(scripts, "Publish-ResourceUpdate.ps1"));
     foreach (var mirror in UpdateService.ManifestMirrors) True(playbook.Contains(mirror.OriginalString, StringComparison.Ordinal));
+});
+// ---- MirrorChyan check channel ---------------------------------------------------------------------
+// The response bodies below are the real shapes captured from the live IMAO resource on 2026-09-25.
+const string McFree = """{"code":0,"msg":"current resource latest version is v2026.9.25.1","data":{"version_name":"v2026.9.25.1","version_number":29,"channel":"stable","os":"windows","arch":"amd64","release_note":"# 2026.9.25.1"}}""";
+const string McCdk = """{"code":0,"msg":"success","data":{"version_name":"v2026.9.25.1","version_number":29,"url":"https://mirrorchyan.com/resources/download/abc","sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","channel":"stable","os":"windows","arch":"amd64","update_type":"full","release_note":"# 2026.9.25.1","filesize":968400000,"cdk_expired_time":1790000000}}""";
+const string McCurrent = """{"code":0,"msg":"current resource latest version is v2026.9.25.1","data":{"version_name":"v2026.9.25.1","version_number":29,"channel":"stable","os":"windows","arch":"amd64","release_note":"placeholder"}}""";
+await TestPure("MirrorChyan requests carry the platform contract and keep the CDK out of logs", () =>
+{
+    // os/arch are not optional: the resource is registered per platform, and a request without them is
+    // answered 8001 even when no CDK is involved.
+    var anonymous = MirrorChyanChannel.BuildRequestUri(cdk: null, currentVersion: null);
+    True(anonymous.Query.Contains("os=win") && anonymous.Query.Contains("arch=x64"));
+    True(anonymous.Query.Contains("user_agent=" + MirrorChyanChannel.UserAgent) && anonymous.Query.Contains("channel=stable"));
+    False(anonymous.Query.Contains("cdk="));
+    False(anonymous.Query.Contains("current_version="));
+
+    var credentialed = MirrorChyanChannel.BuildRequestUri("cdk-secret-value", "v2026.9.25.1");
+    True(credentialed.Query.Contains("cdk=cdk-secret-value") && credentialed.Query.Contains("current_version=v2026.9.25.1"));
+    // The CDK rides in the query string, which is exactly the part that reaches logs and reports.
+    var logged = MirrorChyanChannel.Describe(credentialed);
+    False(logged.Contains("cdk-secret-value"));
+    True(logged.Contains("cdk=***"));
+    True(logged.Contains("arch=x64"));
+});
+await TestPure("a free MirrorChyan check reports the version but offers nothing to download", () =>
+{
+    var result = MirrorChyanChannel.Parse(McFree, "2026.9.9.1");
+    Equal(MirrorChyanError.None, result.Error);
+    Equal("2026.9.25.1", result.Version);
+    True(result.HasUpdate);
+    True(result.DownloadUrl is null);
+    True(result.ReleaseNote.StartsWith("# 2026.9.25.1"));
+    False(result.IsCdkProblem);
+});
+await TestPure("a CDK check exposes the package, its digest and the expiry", () =>
+{
+    var result = MirrorChyanChannel.Parse(McCdk, "2026.9.9.1");
+    Equal(MirrorChyanError.None, result.Error);
+    Equal("https://mirrorchyan.com/resources/download/abc", result.DownloadUrl!);
+    Equal(968400000L, result.Size!.Value);
+    Equal(MirrorChyanChannel.FullPackage, result.UpdateType);
+    // A full package is also what MirrorChyan serves while it is still building the incremental one, so
+    // the caller is told to ask again instead of treating this as the last word.
+    True(result.ShouldAskAgainForIncremental);
+    Equal(DateTimeOffset.FromUnixTimeSeconds(1790000000), result.CdkExpiresAt!.Value);
+});
+await TestPure("MirrorChyan's literal placeholder note is not a note, and current is current", () =>
+{
+    var result = MirrorChyanChannel.Parse(McCurrent, "2026.9.25.1");
+    Equal(MirrorChyanError.None, result.Error);
+    False(result.HasUpdate);
+    Equal("", result.ReleaseNote);
+});
+await TestPure("MirrorChyan CDK errors are CDK problems, not update failures", () =>
+{
+    var invalid = MirrorChyanChannel.Parse("""{"code":7002,"msg":"Please confirm that you have entered the correct cdkey","data":{"version_name":"v2026.9.25.1"}}""", "2026.9.9.1");
+    Equal(MirrorChyanError.KeyInvalid, invalid.Error);
+    True(invalid.IsCdkProblem);
+    True(invalid.Message.Contains("不正确"));
+    // The version still arrives alongside the error, so a bad CDK cannot hide an available release.
+    Equal("2026.9.25.1", invalid.Version);
+    foreach (var code in new[] { 7001, 7003, 7004, 7005 })
+        True(MirrorChyanChannel.Parse($"{{\"code\":{code},\"msg\":\"x\"}}", "2026.9.9.1").IsCdkProblem);
+    False(MirrorChyanChannel.Parse("""{"code":8001,"msg":"resource not found"}""", "2026.9.9.1").IsCdkProblem);
+});
+await TestPure("MirrorChyan answers this client cannot use stay inert", () =>
+{
+    // A second channel must never break the check the signed catalog already answered, so every one of
+    // these is a reported state rather than an exception.
+    Equal(MirrorChyanError.Malformed, MirrorChyanChannel.Parse("not json at all", "2026.9.9.1").Error);
+    Equal(MirrorChyanError.Malformed, MirrorChyanChannel.Parse("""{"msg":"no code"}""", "2026.9.9.1").Error);
+    Equal(MirrorChyanError.Malformed, MirrorChyanChannel.Parse("""{"code":0,"msg":"success"}""", "2026.9.9.1").Error);
+    Equal(MirrorChyanError.ResourceNotFound, MirrorChyanChannel.Parse("""{"code":8001,"msg":"resource not found"}""", "2026.9.9.1").Error);
+    Equal(MirrorChyanError.Unexpected, MirrorChyanChannel.Parse("""{"code":-7,"msg":"severe"}""", "2026.9.9.1").Error);
+    // A tag this client cannot compare is not an update: a resource-only tag parses as no version at all
+    // rather than as something newer than the program.
+    var untaggable = MirrorChyanChannel.Parse("""{"code":0,"msg":"success","data":{"version_name":"maps-2026.9.10.1"}}""", "2026.9.9.1");
+    Equal(MirrorChyanError.Malformed, untaggable.Error);
+    False(untaggable.HasUpdate);
+    Equal("", MirrorChyanChannel.NormalizeVersion("maps-2026.9.10.1"));
+    Equal("2026.9.25.1", MirrorChyanChannel.NormalizeVersion("v2026.9.25.1"));
+    Equal("2026.9.25.1", MirrorChyanChannel.NormalizeVersion("2026.9.25.1"));
+    Equal("", MirrorChyanChannel.NormalizeVersion(""));
 });
 await Test("compatible resource choice is independent of program update", async () =>
 {
