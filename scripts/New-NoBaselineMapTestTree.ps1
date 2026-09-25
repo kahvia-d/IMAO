@@ -82,27 +82,71 @@ function New-LinkedEntry([string]$LinkPath, [string]$TargetPath) {
 
 # 1. Binaries. Assets is rebuilt below, so it is skipped here.
 [IO.Directory]::CreateDirectory($RunRoot) | Out-Null
+# A binary directory that already exists used to be skipped whole, which silently kept every
+# nested build output stale: Views\SettingsPage.xbf stayed at an older revision and opening the
+# settings or usage page then crashed against the newer generated code. Walk in and sync only
+# the files that really differ, so an untouched build still costs almost nothing.
+function Sync-BinaryDirectory([string]$Source, [string]$Destination) {
+    $script:copiedBinaries = 0
+    $script:reusedBinaries = 0
+    Sync-BinaryLevel $Source $Destination
+}
+
+function Sync-BinaryLevel([string]$Source, [string]$Destination) {
+    [IO.Directory]::CreateDirectory($Destination) | Out-Null
+    foreach ($entry in @(Get-ChildItem -LiteralPath $Source -Force)) {
+        $target = Join-Path $Destination $entry.Name
+        # Never follow or overwrite a reparse point that points outside the run root.
+        $existing = if (Test-Path -LiteralPath $target) { Get-Item -LiteralPath $target -Force } else { $null }
+        if ($null -ne $existing -and $existing.LinkType) {
+            $resolved = [IO.Path]::GetFullPath($existing.Target ?? $existing.FullName)
+            if (-not $resolved.StartsWith($RunRoot, [StringComparison]::OrdinalIgnoreCase)) { continue }
+        }
+        if ($entry.PSIsContainer) {
+            if ($null -ne $existing -and -not $existing.PSIsContainer) {
+                Remove-Item -LiteralPath $target -Force
+                $existing = $null
+            }
+            Sync-BinaryLevel $entry.FullName $target
+            continue
+        }
+        if ($null -ne $existing -and $existing.PSIsContainer) {
+            Remove-Item -LiteralPath $target -Recurse -Force
+            $existing = $null
+        }
+        # Byte comparison is what actually matters here; the mtime changes on every relink.
+        if ($null -ne $existing -and $existing.Length -eq $entry.Length -and
+            [Linq.Enumerable]::SequenceEqual(
+                [IO.File]::ReadAllBytes($entry.FullName), [IO.File]::ReadAllBytes($target))) {
+            ++$script:reusedBinaries
+            continue
+        }
+        Copy-Item -LiteralPath $entry.FullName -Destination $target -Force
+        ++$script:copiedBinaries
+    }
+}
+
 $copiedBinaries = 0
 $reusedBinaries = 0
 foreach ($entry in @(Get-ChildItem -LiteralPath $BinaryRoot -Force)) {
     if ($entry.Name -eq 'Assets') { continue }
     $destination = Join-Path $RunRoot $entry.Name
     if ($entry.PSIsContainer) {
-        if (Test-Path -LiteralPath $destination) { ++$reusedBinaries; continue }
-        Copy-Item -LiteralPath $entry.FullName -Destination $destination -Recurse -Force
+        # 非 Assets 的顶层目录里只有构建产物，逐个文件比对后同步。
+        Sync-BinaryDirectory $entry.FullName $destination
+        $copiedBinaries += $script:copiedBinaries
+        $reusedBinaries += $script:reusedBinaries
+    }
+    elseif ((Test-Path -LiteralPath $destination) -and
+        (Get-Item -LiteralPath $destination).Length -eq $entry.Length -and
+        [Linq.Enumerable]::SequenceEqual(
+            [IO.File]::ReadAllBytes($entry.FullName), [IO.File]::ReadAllBytes($destination))) {
+        ++$reusedBinaries
     }
     else {
-        # Byte comparison is what actually matters here; the mtime changes on every relink.
-        if ((Test-Path -LiteralPath $destination) -and
-            (Get-Item -LiteralPath $destination).Length -eq $entry.Length -and
-            [Linq.Enumerable]::SequenceEqual(
-                [IO.File]::ReadAllBytes($entry.FullName), [IO.File]::ReadAllBytes($destination))) {
-            ++$reusedBinaries
-            continue
-        }
         Copy-Item -LiteralPath $entry.FullName -Destination $destination -Force
+        ++$copiedBinaries
     }
-    ++$copiedBinaries
 }
 Write-Host "  binaries: $copiedBinaries copied, $reusedBinaries already current"
 
