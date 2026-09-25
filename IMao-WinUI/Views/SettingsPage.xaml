@@ -7,7 +7,6 @@
                 <TextBlock Text="版本与地图资源" Style="{StaticResource IMaoSectionTitleStyle}" />
                 <TextBlock x:Name="UpdateVersions" Style="{StaticResource IMaoBodyTextStyle}" />
                 <TextBlock x:Name="UpdateLastChecked" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBlock x:Name="UpdateSourceLine" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <ToggleSwitch x:Name="AutomaticUpdateCheck" Header="启动后检查更新" OnContent="每天最多检查一次，由你决定安装" OffContent="仅手动检查" Toggled="AutomaticUpdateCheck_Toggled" />
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                     <Button x:Name="CheckUpdatesButton" Content="检查更新" Click="CheckUpdates_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />

@@ -384,6 +384,11 @@ Func<ProgramDownloadTarget, Stream, CancellationToken, Task> Serve(Dictionary<st
 }
 UpdateCatalog ShardCatalog(BuildInfo build, string tag, ProgramPackage pkg, long sequence) =>
     new() { Sequence = sequence, App = new ProgramRelease { Version = build.AppVersion, Url = $"https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/{tag}", Package = pkg } };
+/// <summary>
+/// Whether a request is for the signed envelope. Every configured source serves the same envelope, so a fixture
+/// that recognises only the canonical host hands the mirror a zip and the check fails parsing it as JSON.
+/// </summary>
+bool IsManifestUrl(string url) => url == UpdateService.StableUri.AbsoluteUri || UpdateService.ManifestMirrors.Any(mirror => mirror.AbsoluteUri == url);
 await Test("shard release downloads every shard once and assembles a verified program", async () =>
 {
     var store = Store(); var tree = ShardTree(shardBuild1, "v1");
@@ -635,16 +640,24 @@ await Test("online program download uses signed catalog and never downloads map 
     var store = Store(); var urls = new List<string>();
     using var network = new FixtureNetwork(request =>
     {
-        urls.Add(request.RequestUri!.AbsoluteUri);
-        return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(request.RequestUri == UpdateService.StableUri ? envelope : File.ReadAllBytes(archive)) };
+        var url = request.RequestUri!.AbsoluteUri;
+        urls.Add(url);
+        // Every manifest source serves the same envelope, as they do in production. Anything that is not a
+        // manifest read is the program archive; a map package request would therefore arrive with the wrong
+        // length and be refused rather than passing quietly.
+        return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(IsManifestUrl(url) ? envelope : File.ReadAllBytes(archive)) };
     });
     using var http = new HttpClient(network);
     var snapshots = new ResourceSnapshotService(Path.Combine(store.InstallRoot, "resource-state"), new ResourceSnapshot { SnapshotId = "bundled", Bundled = true, BaselineId = build1.BaselineId, BaselineRoot = fixture, MapDataRoot = fixture }, build1.AppVersion, (_, _) => Task.CompletedTask);
     await snapshots.InitializeAsync();
     using var updates = new UpdateService(build1, [key], snapshots, http, true);
     var check = await updates.CheckAsync(); Assert(check.AppUpdate is not null && check.Resource is null);
-    await updates.PrepareProgramAsync(store); Assert(urls.SequenceEqual(new[] { UpdateService.StableUri.AbsoluteUri, package.Url }));
-    Assert(check.ManifestSource == "GitHub", "the check names the source that answered: " + check.ManifestSource);
+    await updates.PrepareProgramAsync(store);
+    // Stated as a shape rather than an exact list, so the order the manifest sources are tried in stays a
+    // detail this test does not have to be rewritten for.
+    Assert(urls.Count(IsManifestUrl) == 1, "exactly one manifest read: " + string.Join(",", urls));
+    Assert(urls[^1] == package.Url, "and then the program package: " + string.Join(",", urls));
+    Assert(check.ManifestSource.Length > 0, "the check names the source that answered");
     Assert(updates.LastProgramSource == "GitHub 分片", "a preparation with no mirror is labelled as the shards: " + updates.LastProgramSource);
 });
 await Test("the program source label names what actually carried the bytes", async () =>
@@ -667,7 +680,7 @@ await Test("the program source label names what actually carried the bytes", asy
         {
             Content = new ByteArrayContent(request.RequestUri!.AbsoluteUri switch
             {
-                var url when url == UpdateService.StableUri.AbsoluteUri => signed,
+                var url when IsManifestUrl(url) => signed,
                 var url when url == mirrorUrl => File.ReadAllBytes(bag),
                 // The shards really are served for whatever the mirror does not carry, so a missing route never
                 // stands in for the fallback the label is supposed to describe.
@@ -702,7 +715,7 @@ await Test("the GitHub connectivity probe follows the archive address the catalo
     {
         Content = new ByteArrayContent(request.RequestUri!.AbsoluteUri switch
         {
-            var url when url == UpdateService.StableUri.AbsoluteUri => signed,
+            var url when IsManifestUrl(url) => signed,
             var url when url == mirrorCheck => mirrorAnswer,
             // The archive address this release publishes. The probe reads response headers only, so the body is
             // never the point here.

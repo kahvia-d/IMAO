@@ -41,18 +41,27 @@ public sealed class UpdateService : IDisposable
     // kahvia-d/WWMAP-TOOLS; GitHub still redirects that path, but read the new one.
     public static readonly Uri StableUri = new("https://raw.githubusercontent.com/kahvia-d/IMAO/main/updates/stable.json");
 
-    // Mirrors of the same signed envelope, tried in order only after StableUri is unreachable. The
-    // canonical entry point cannot be reached from mainland China without a proxy, and the check used
-    // to die with it. A mirror is trusted for nothing but availability: every source must satisfy the
-    // same pinned P-256 signature before a byte of it is used, so a hostile mirror can at worst refuse
-    // to serve. Mirrors are pure availability, never authority.
+    // Mirrors of the same signed envelope. A mirror is trusted for nothing but availability: every source
+    // must satisfy the same pinned P-256 signature before a byte of it is used, so a hostile mirror can at
+    // worst refuse to serve. Mirrors are pure availability, never authority.
     public static readonly IReadOnlyList<Uri> ManifestMirrors =
     [
         new("https://gitee.com/tan-xuedong/imao-updates/raw/main/stable.json"),
     ];
 
-    // Declared after both lists so static initialisation order cannot matter.
-    private static readonly Uri[] Sources = [StableUri, .. ManifestMirrors];
+    /// <summary>
+    /// The order the sources are tried in: the domestic mirror first, the canonical host behind it.
+    ///
+    /// The order is a latency decision, not a trust one - every source is held to the same pinned signature -
+    /// and it is set for the players this channel exists for. Most of them are in mainland China, where the
+    /// canonical host needs a proxy and the mirror does not; the earlier attempt is the one that usually
+    /// answers, and a source that has another behind it is cut short rather than allowed to stall the check.
+    /// A player outside China pays the mirror's latency first, which is why this single line is where the
+    /// order would change if that turns out to matter more.
+    ///
+    /// Declared after both lists so static initialisation order cannot matter.
+    /// </summary>
+    private static readonly Uri[] Sources = [.. ManifestMirrors, StableUri];
     private readonly BuildInfo _build;
     private readonly TrustedUpdateKey[] _keys;
     private readonly ResourceSnapshotService _snapshots;

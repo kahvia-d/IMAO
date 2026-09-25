@@ -89,9 +89,10 @@ public sealed partial class SettingsPage : Page
         try
         {
             UpdateVersions.Text = $"程序 {updates.ProgramVersion}  ·  地图资源 {updates.ResourceVersion}";
-            UpdateLastChecked.Text = "上次检查：" + updates.LastCheckedText;
-            UpdateSourceLine.Text = updates.UpdateSourceText;
-            UpdateSourceLine.Visibility = string.IsNullOrEmpty(updates.UpdateSourceText) ? Visibility.Collapsed : Visibility.Visible;
+            // One line, not two: a source that starts being named after the first check would otherwise make the
+            // card grow a row the moment it has something to say.
+            UpdateLastChecked.Text = $"上次检查：{updates.LastCheckedText}"
+                + (updates.UpdateSourceText.Length > 0 ? "　·　" + updates.UpdateSourceText : "");
             AutomaticUpdateCheck.IsOn = updates.AutoCheckEnabled;
             CheckUpdatesButton.IsEnabled = ImportResourcesButton.IsEnabled = !updates.Busy;
             InstallResourcesButton.IsEnabled = !updates.Busy && updates.ResourceAvailable;
