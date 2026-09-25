@@ -239,23 +239,23 @@ internal sealed class MapToolsWindow : Window
         if (delta != 0)
         {
             // Navigate by visual row where possible; retain deterministic fallback before layout.
+            // 选择规则本身放在 GamepadDirectionSelection 里（纯函数，有单测），这里只负责测量几何。
             var current = navigation[navigationIndex].Button;
             var origin = current.TransformToVisual(root).TransformPoint(new(0, 0));
             double cx = origin.X + current.ActualWidth / 2, cy = origin.Y + current.ActualHeight / 2;
-            var candidates = navigation.Select((n, i) =>
+            var offsets = navigation.Select(n =>
             {
                 var point = n.Button.TransformToVisual(root).TransformPoint(new(0, 0));
-                return (Index: i, X: point.X + n.Button.ActualWidth / 2 - cx, Y: point.Y + n.Button.ActualHeight / 2 - cy);
-            }).Where(p => action switch
-            { GamepadAction.Left => p.X < -4, GamepadAction.Right => p.X > 4, GamepadAction.Up => p.Y < -4, _ => p.Y > 4 });
+                return (X: point.X + n.Button.ActualWidth / 2 - cx, Y: point.Y + n.Button.ActualHeight / 2 - cy);
+            }).ToList();
             var fromKey = navigation[navigationIndex].Key;
-            var best = candidates.OrderBy(p => action is GamepadAction.Left or GamepadAction.Right ? Math.Abs(p.X) + Math.Abs(p.Y) * 4 : Math.Abs(p.Y) + Math.Abs(p.X) * 2).FirstOrDefault((Index: -1, X: 0d, Y: 0d));
-            navigationIndex = best.Index >= 0 ? best.Index : Math.Clamp(navigationIndex + delta, 0, navigation.Count - 1);
+            var chosen = GamepadDirectionSelection.Select(offsets, action, navigationIndex);
+            navigationIndex = chosen >= 0 ? chosen : Math.Clamp(navigationIndex + delta, 0, navigation.Count - 1);
             // 诊断：把"这一页到底有没有那个方向的相邻按钮"写进日志，避免只能靠猜。
             DirectionDiagnostic?.Invoke(
                 $"page={Page} action={action} from='{fromKey}' to='{navigation[navigationIndex].Key}' " +
-                $"geometricCandidates={candidates.Count()} usedIndexFallback={best.Index < 0} " +
-                $"offsets=[{string.Join(" ", navigation.Select(n => { var point = n.Button.TransformToVisual(root).TransformPoint(new(0, 0)); return "(" + (int)Math.Round(point.X + n.Button.ActualWidth / 2 - cx) + "," + (int)Math.Round(point.Y + n.Button.ActualHeight / 2 - cy) + ")"; }))}]");
+                $"geometricNeighbour={chosen >= 0} usedIndexFallback={chosen < 0} " +
+                $"offsets=[{string.Join(" ", offsets.Select(offset => "(" + (int)Math.Round(offset.X) + "," + (int)Math.Round(offset.Y) + ")"))}]");
             selectedKey = navigation[navigationIndex].Key; FocusCurrent();
         }
     }
