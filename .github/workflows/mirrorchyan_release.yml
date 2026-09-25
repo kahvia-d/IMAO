@@ -22,7 +22,30 @@ jobs:
             filename: 'IMao-*-windows-x64.zip'
 
     steps:
+      # Not every release carries this archive, so check before uploading instead of failing.
+      # A shard release only re-uploads the whole program zip when it changed, and a resource-only
+      # release never carries one: v2026.9.20.2 and ext-v0.1.1 both lack IMao-*-windows-x64.zip.
+      # Without this guard those releases end in a failed job and a pointless call to MirrorChyan.
+      - name: Check the release carries a whole-program archive
+        id: package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Passed through the environment rather than interpolated into the script, so a tag can
+          # never be read as shell syntax.
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          count=$(gh release view "$TAG" --repo kahvia-d/IMAO --json assets \
+            --jq '[.assets[].name | select(test("^IMao-.*-windows-x64[.]zip$"))] | length')
+          if [ "${count:-0}" -gt 0 ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Mirroring::$TAG carries $count whole-program archive(s)."
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Nothing to mirror::$TAG carries no IMao-*-windows-x64.zip, skipping."
+          fi
+
       - uses: MirrorChyan/uploading-action@v1
+        if: steps.package.outputs.found == 'true'
         with:
           filetype: latest-release
           filename: ${{ matrix.filename }}
