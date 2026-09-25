@@ -261,3 +261,13 @@ $after = (Invoke-Gh @('api',"repos/$repo/contents/updates/stable.json?ref=main")
 $remoteBytes = [Convert]::FromBase64String(($after.content -replace '\s',''))
 if ([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($remoteBytes)) -ne $report.signedManifestSha256) { throw 'Stable channel verification failed after promotion.' }
 Write-Host "Verified release https://github.com/$repo/releases/tag/$tag and promoted stable sequence $($report.sequence)."
+
+# ---------------------------------------------------------------- Gitee mirror of the stable channel
+# See scripts/Set-GiteeMirror.ps1 for what the mirror is and why it is never authority. It runs strictly
+# after the canonical channel advanced, so the mirror can never lead it, and a failure is reported as a
+# warning: GitHub is already live, and a release must not fail because a convenience copy did not.
+try {
+    & (Join-Path $PSScriptRoot 'Set-GiteeMirror.ps1') -Manifest $manifest -ExpectedSha256 $report.signedManifestSha256
+} catch {
+    Write-Warning "Gitee mirror update failed and does not affect this release: $($_.Exception.Message)"
+}
