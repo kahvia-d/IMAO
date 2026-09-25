@@ -143,9 +143,11 @@ internal static class RouteControllerTests
 
             // LS 再按一次：把聚焦交还游戏，攻略继续显示。
             // 每次松开都要留够时间让 16 毫秒的服务采样看到"已松开"，否则下一次按下只是同一次按住。
+            // 这里尤其关键：聚焦切换是异步派遣，而 UI 线程解码图片/激活窗口时采样间隔会被拉长，
+            // 固定 60 毫秒的松开窗口曾经偶发被整段跳过（闩锁不复位 → 下一次 LS 被吃掉）。
             await Task.Delay(80);
-            sample = sample with { Buttons = GamepadButtons.L3 }; await Task.Delay(60);
-            sample = sample with { Buttons = GamepadButtons.None }; await Task.Delay(60);
+            sample = sample with { Buttons = GamepadButtons.L3 }; await Task.Delay(80);
+            sample = sample with { Buttons = GamepadButtons.None }; await Task.Delay(200);
             await UntilAsync(() => GetForegroundWindow() == fixture.GameHandle &&
                 fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
                 "LS hands the pad back to the game");
@@ -153,19 +155,115 @@ internal static class RouteControllerTests
                 IsWindowVisible(Handle(still)),
                 "leaving the guide keeps it open and visible for reading while playing");
 
-            // 回到攻略窗口再按 B：关闭并回到游戏。
-            sample = sample with { Buttons = GamepadButtons.L3 }; await Task.Delay(60);
-            sample = sample with { Buttons = GamepadButtons.None };
+            // 回到攻略窗口再按 B：**退出攻略聚焦、回到游戏**，攻略继续显示（与 LS 同义）。
+            // 收起整份攻略改用 LB+X —— 见这条用例末尾。
+            sample = sample with { Buttons = GamepadButtons.L3 }; await Task.Delay(80);
+            sample = sample with { Buttons = GamepadButtons.None }; await Task.Delay(200);
             await UntilAsync(() => fixture.Guide is { } focused && GetForegroundWindow() == Handle(focused),
                 "LS takes the pad back to the guide");
             await Task.Delay(80);
             sample = sample with { Buttons = GamepadButtons.B }; await Task.Delay(90);
-            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen, "B press alone does not close the guide");
+            Check(GetForegroundWindow() == Handle(fixture.Guide!) && fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "B press alone does not hand the focus back yet");
             sample = sample with { Buttons = GamepadButtons.None };
-            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen, "B release closes standalone gamepad guide");
-            Check(GetForegroundWindow() == fixture.GameHandle &&
-                !fixture.Core.Commands.Any(value => value.Operation is "markerSetCompletion" or "markerGamepadWorldAction"),
-                "guide navigation and B close return to the game without producing a completion");
+            await UntilAsync(() => GetForegroundWindow() == fixture.GameHandle &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "B release hands the pad back to the game, exactly like LS");
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && fixture.Guide is { IsGuideVisible: true } reading &&
+                IsWindowVisible(Handle(reading)),
+                "B leaves the guide open and visible for reading while playing");
+            Check(!fixture.Core.Commands.Any(value => value.Operation is "markerSetCompletion" or "markerGamepadWorldAction"),
+                "guide navigation, B and the focus handoff never produce a completion");
+
+            // LB+X 才是"收起这份攻略"，被动状态下同样有效。
+            await Task.Delay(80);
+            sample = sample with { Buttons = GamepadButtons.LB }; await Task.Delay(70);
+            sample = sample with { Buttons = GamepadButtons.LB | GamepadButtons.X }; await Task.Delay(70);
+            sample = sample with { Buttons = GamepadButtons.None };
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "LB+X dismisses the standalone guide from the passive state");
+            Check(GetForegroundWindow() == fixture.GameHandle && fixture.Guide is not { IsGuideVisible: true },
+                "dismissing the guide leaves the game in front and the window hidden");
+        }, log);
+
+        await CaseAsync("X enlarges the picture and the pad stays with the guide until B returns to it", async fixture =>
+        {
+            fixture.Core.GamepadContext = fixture.GameplayContext;
+            fixture.Details.Pictures = ["https://test.invalid/route-page-one", "https://test.invalid/route-page-two"];
+            var sample = new GamepadSample(true, 0, GamepadButtons.None);
+            using var service = new GamepadInputService(fixture.Core, fixture.Coordinator,
+                slot => slot == 0 ? sample : new(false, slot, GamepadButtons.None));
+            async Task PressAsync(GamepadButtons buttons)
+            { sample = sample with { Buttons = buttons }; await Task.Delay(70); }
+            async Task ReleaseAsync()
+            { sample = sample with { Buttons = GamepadButtons.None }; await Task.Delay(70); }
+            await UntilAsync(() => fixture.Core.GamepadDiagnostics.Any(value => value.Contains("state=gameplay-ready/ready")),
+                "service observes the controlled gameplay context");
+            fixture.Core.Emit(new
+            {
+                type = "markerGuideShortcut", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
+                contextGeneration = 17UL, profileId = "local", routeId = fixture.Core.ActiveRouteId,
+                key = "8:" + Target.PointId, screenX = 40, screenY = 100
+            });
+            await UntilAsync(() => fixture.Guide is { IsGuideVisible: true } shown && EnlargeEnabled(shown),
+                "the standalone guide brings up a decoded picture");
+            var guide = fixture.Guide!;
+            // X 只在攻略窗口（Detail）解释，所以先按 LS 把聚焦切过来。
+            await PressAsync(GamepadButtons.L3);
+            await ReleaseAsync();
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail,
+                "LS hands the pad to the guide window");
+
+            // X：放大图片。大图是独立窗口，前台随之转到大图窗口。
+            await PressAsync(GamepadButtons.X);
+            Check(!guide.IsGamepadImageOpen, "an X press alone enlarges nothing yet");
+            await ReleaseAsync();
+            await UntilAsync(() => guide.IsGamepadImageOpen && guide.ImageWindow is { IsPictureVisible: true },
+                "the X release opens the real enlarged picture window");
+            var image = guide.ImageWindow!;
+            await UntilAsync(() => GetForegroundWindow() == image.Handle, "the enlarged picture takes the foreground");
+            // 关键回归（2026-09-25 实机：放大后按 B 没反应）：这一刻手柄必须仍然归攻略解释，
+            // 而不是因为"攻略窗口自己不是前台"被判成聚焦在游戏上。
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Image,
+                "the pad still belongs to the guide while the enlarged picture is in front");
+            Check(fixture.Core.Commands.Last(value => value.Operation == "markerSetGuideWindow")
+                .Arguments.GetProperty("hwnd").GetInt64() == image.Handle.ToInt64(),
+                "the core follows the enlarged picture window for its guide shortcuts");
+            // 大图打开让上下文从 Detail 变成 Image，输入解释器因此要求"先松开再按"一次。
+            // 而这一刻 UI 线程正在解码图片、激活大图窗口，采样间隔可能被拉长到一百多毫秒——
+            // 固定延时不保证那一次中性采样真的发生过（否则 B 会被当成上一次手势的尾巴吞掉）。
+            // 所以等输入服务自己报出 Image/ready：它只在真的处理过一个中性采样之后才会这么写。
+            await UntilAsync(() => fixture.Core.GamepadDiagnostics.Any(value =>
+                value.Contains("input-state") && value.Contains("assistant-Image/ready")),
+                "the pad interpreter is ready for the next gesture after the picture opened");
+
+            // B：从大图返回攻略窗口——焦点落回攻略窗口，模式回到 Detail。
+            await PressAsync(GamepadButtons.B);
+            await ReleaseAsync();
+            await UntilAsync(() => !guide.IsGamepadImageOpen && GetForegroundWindow() == Handle(guide) &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail,
+                "B returns from the enlarged picture to the focused guide window");
+
+            // B 再一次：退出攻略聚焦、回到游戏，攻略继续显示（与 LS 同义）。
+            await PressAsync(GamepadButtons.B);
+            await ReleaseAsync();
+            await UntilAsync(() => GetForegroundWindow() == fixture.GameHandle &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "B on the guide window hands the pad back to the game");
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && guide.IsGuideVisible,
+                "the guide stays open after B exits the focus");
+            // 被动状态下 B 归游戏，永远到不了攻略窗口。
+            await PressAsync(GamepadButtons.B);
+            await ReleaseAsync();
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && GetForegroundWindow() == fixture.GameHandle,
+                "B while the game owns the pad never reaches the guide");
+
+            // LB+X 收起这份攻略。
+            await PressAsync(GamepadButtons.LB);
+            await PressAsync(GamepadButtons.LB | GamepadButtons.X);
+            await ReleaseAsync();
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "LB+X still dismisses the guide after all of that");
         }, log);
 
         await CaseAsync("gamepad nearby candidates require one explicit selection before opening its guide", async fixture =>
@@ -209,8 +307,12 @@ internal static class RouteControllerTests
             await Task.Delay(80);
             sample = sample with { Buttons = GamepadButtons.B }; await Task.Delay(90);
             sample = sample with { Buttons = GamepadButtons.None };
-            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
-                "selected candidate guide closes on B release");
+            // B 只是退出攻略聚焦：攻略留给玩家继续看，收起整份攻略是 LB+X。
+            await UntilAsync(() => GetForegroundWindow() == fixture.GameHandle &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "B on the selected candidate's guide hands the pad back to the game");
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && fixture.Guide?.Selection?.PointId == second.PointId,
+                "the candidate's guide stays open showing the same point");
         }, log);
 
         await CaseAsync("a single nearby candidate opens its guide without ever building the chooser", async fixture =>
@@ -433,6 +535,10 @@ internal static class RouteControllerTests
                 "pressing the same entry again closes the handed-off guide");
             Check(GetForegroundWindow() == fixture.GameHandle, "closing the handed-off guide stays on the game");
         }, log);
+
+        // 全部用例跑完才汇报：一条失败不能把后面的证据一起吞掉。
+        if (failures.Count > 0)
+            throw new InvalidOperationException($"{failures.Count} case(s) failed: {string.Join(" | ", failures)}");
     }
 
     private static async Task CaseAsync(string name, Func<Fixture, Task> test, Action<string> log)
@@ -444,8 +550,16 @@ internal static class RouteControllerTests
             await test(fixture).WaitAsync(TimeSpan.FromSeconds(15));
             log("PASS " + name);
         }
+        catch (Exception e)
+        {
+            // 一条用例失败不再中断整个套件：后面的用例同样是证据，隐藏它们只会让"早就坏了几条"
+            // 留到以后才被发现（这个套件里就曾有一条陈旧的期望挡在四条用例前面）。
+            failures.Add(name + ": " + e.Message);
+            log("FAIL " + name + ": " + e.Message);
+        }
         finally { foreach (string diagnostic in fixture.Core.GamepadDiagnostics) log("SERVICE " + diagnostic); }
     }
+    private static readonly List<string> failures = [];
 
     private sealed class Fixture : IDisposable
     {
@@ -511,6 +625,9 @@ internal static class RouteControllerTests
     private static JsonElement Phase(string phase) => JsonSerializer.SerializeToElement(new { sessionId = 77UL, phase });
     private static int PictureIndex(MarkerGuideWindow guide) =>
         (int)(guide.GetType().GetField("pictureIndex", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(guide) ?? -1);
+    /// <summary>放大按钮可用 = 当前这张图真的解码成功了，X/Enter 才有东西可放大。</summary>
+    private static bool EnlargeEnabled(MarkerGuideWindow guide) =>
+        Read<Button>(guide, "enlarge") is { IsEnabled: true };
     private static T? Read<T>(object source, string field) where T : class =>
         (T?)source.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(source);
     private static IntPtr Handle(Window window) => WinRT.Interop.WindowNative.GetWindowHandle(window);

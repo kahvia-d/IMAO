@@ -61,8 +61,10 @@
 |---|---|
 | 手柄开出的攻略（大世界 LB+X 的路线回退、大地图工具条「当前目标攻略」、「附近点位」选择列表里选中的那个点） | **窗口置顶显示但不激活**，前台交还游戏：可以继续用手柄玩，攻略就在旁边看 |
 | 想操作攻略窗口 | 按 **LS（左摇杆按下）**：把前台切到攻略窗口，这时 A/B/翻页/长按 A 完成/长按 Y 跳过才作用于攻略 |
-| 想接着玩 | 再按一次 LS：把前台交还游戏，**攻略继续显示**（不关闭）。放大看图也会随之一并收起，免得单独悬在游戏上方 |
-| 想关掉攻略 | **LB+X**：攻略开着时这条世界快捷键就是"收起"（托管层直接关，不绕原生那条依赖世界观测的路）。也可以 LS 切到攻略窗口后按 B |
+| 想接着玩 | 再按一次 **LS**，或按 **B**（见下）：把前台交还游戏，**攻略继续显示**（不关闭）。放大看图也会随之一并收起，免得单独悬在游戏上方 |
+| 想关掉攻略 | **LB+X**：攻略开着时这条世界快捷键就是"收起"（托管层直接关，不绕原生那条依赖世界观测的路） |
+| 聚焦在攻略窗口时按 B | **退出攻略聚焦、回到游戏**（与 LS 同义，攻略继续显示）。要收起整份攻略是 **LB+X**；关闭按钮也仍然收起它 |
+| **X 放大图片** | 大图是独立窗口，前台随之转到大图窗口；这时手柄**仍然归攻略**（`Image` 模式，扳机缩放/摇杆平移/B 返回都在）。按 **B** 收起大图并**回到攻略窗口**（焦点自然衔接），再按 B 才是"退出聚焦回到游戏" |
 | **LB+B 完成附近点位** | **两种聚焦状态都能用**：聚焦在游戏、或聚焦在攻略窗口上都可以。完成后如果核心回的是"攻略展示的那个点位已完成"，攻略窗口一并关闭 |
 | 单独按一下 LB | **什么都不做**（大地图上的"打开工具台"只在大地图生效，不会弹在攻略上面闪一下） |
 | 大地图工具台的 LB 入口 | 保持"只在大地图出现" |
@@ -83,10 +85,18 @@
 > 后两条要求"聚焦在攻略窗口时"也能用，而原生那条世界快捷键原本要求游戏在前台，所以把
 > "游戏前台 **或 我们自己的攻略窗口前台**"抽成 `WorldChordAllowed`，四处判定（关联应答入队、
 > App 的 Take 与可见性、附近动作本身）统一改用它；别的程序在前台时两者都 false，和弦照旧不生效。
+>
+> 2026-09-25 第五次修正（本次）：实机反馈"**X 放大图片之后焦点没到大图窗口**，按 B 回不去，
+> 也没法像还没定义聚焦切换时那样自然衔接"，同时要求"**聚焦在攻略窗口时 B 也能退出聚焦回游戏**"。
+> 根因是"这份攻略是不是占着前台"只看攻略窗口自己：大图是**独立窗口**，打开时前台转到大图窗口，
+> 于是这一刻被判成"聚焦在游戏上"（`GuidePassive`）——手柄整个让给游戏，B 返回、扳机缩放、
+> 摇杆平移全部失效。现在判定改看**一对窗口**（`GuideWindowFocus` 纯函数），并顺手把 B 定成
+> "退出聚焦"（与 LS 同义）：收起大图、退出聚焦都不再关掉整份攻略。
 
 **实现要点**：
 
-- "这段手柄输入归谁"只看"攻略窗口是不是前台窗口"（`MarkerGuideCoordinator.GetGamepadInputContext`）：
+- "这段手柄输入归谁"只看"**这份攻略**（攻略窗口 **加上它打开的放大图片窗口**）是不是占着前台"
+  （`MarkerGuideCoordinator.StandaloneForegroundOwner` → 纯函数 `Models/GuideWindowFocus.cs`）：
   是前台 → `Detail`/`Image`（攻略导航、完成、跳过全部启用）；不是前台 → 新增的
   `GamepadInputMode.GuidePassive`：这段输入留给游戏，只保留 LS（切换聚焦）和下面那两条世界和弦，
   单独按 LB 与其余按键（含 A/B/X/Y/RB）完全不碰。
@@ -98,8 +108,11 @@
 - LS 的按下检测放在输入状态机**之外**（`GamepadInputService` 里的 `GuideFocusToggleLatch`）：
   被动模式下这段输入不走状态机，而这个切换也不该被"请先松开按键"之类的等待挡住。
   两条和弦同样只看原始样本；攻略一打开时三者都取一次基线，玩家已经按着的键不算一次。
-- 攻略详情页里的 LB（上一张）与 B（返回）不受影响：解释器遇到"LB+B"这种混合按键会自行取消，
-  和弦由上面的闩锁单独认，两者不会互相吃掉。
+- 攻略详情页里的 LB（上一张）不受影响：解释器遇到"LB+B"这种混合按键会自行取消，
+  和弦由上面的闩锁单独认，两者不会互相吃掉。**B 在新键位下是"退出聚焦"**（不是关窗）：
+  它由 `HandleGamepadAsync(Back)` 转成"把这份攻略占着的前台交还游戏"，攻略继续显示；
+  助手会话（RB 列表）里打开的攻略保持原义（B 回到列表），窗口自己的关闭按钮走"收起这份攻略"
+  那条路（`CloseStandaloneGuideAsync`，与 LB+X 同一条）。
 - **唯一候选的"附近攻略"不再先建选择窗口**（实机反馈：手柄呼出时即便范围内只有一个点位，
   也会有一瞬间的选择窗口；键鼠 F8 没有这个现象）。根因是那条路先创建并**激活**选择窗口，
   再因为只有一个候选自动把它选掉。现在改用与键盘入口**完全相同的关联查询**
@@ -111,15 +124,27 @@
   而是补发一次 `markerGuideShortcut`（`reason=guide-visible-toggle`），托管层据此关闭。
   托管层同时放宽了那两道"前台必须在游戏/源窗口上"与"需要交接租约"的门槛——关窗不改前台归属。
 - 窗口侧：`ShowMarkerAsync(activate: false)` 用 `SW_SHOWNOACTIVATE` 显示（`HideGuide` 走的是
-  `AppWindow.Hide`，不显式显示会停在隐藏状态）；手柄提示常驻「LS 切换聚焦（游戏 ↔ 攻略）」。
+  `AppWindow.Hide`，不显式显示会停在隐藏状态）；手柄提示常驻「LS / B 退出聚焦回到游戏 · LB+X 收起攻略」。
+- **大图窗口的前台归属**：`GuideWindowFocus.Owner(前台, 游戏, 攻略窗口, 攻略可见, 大图窗口, 大图可见)`
+  返回 `Other/Game/Guide/GuidePicture`，`GuideOwns` 只认后两者。手柄上下文、LS/B 的聚焦切换、
+  交还前台、诊断日志全部只问它一处。大图**没开着**时它的句柄一律不算数（句柄可能被系统复用），
+  攻略窗口不可见时也不认它。
+- **从大图返回 vs 交还前台是两条路**：关大图时窗口记下"关之前它是不是当时的前台窗口"
+  （`GuideImageStage.ReturnToGuide` / `LeaveForeground`）。玩家按 B/Enter/ESC/关闭按钮 → 前台回到
+  攻略窗口；而 LS/B 退出聚焦、LB+X 收起攻略是**先把前台交还游戏、再收起大图**
+  （先收会让"从哪个窗口交还"的前提当场失效），这时前台必须留在游戏上、不能再被 `Activate()` 抢回攻略窗口。
+- **LS 闩锁在派遣期间也要跟着按键走**：聚焦切换是异步派遣，派遣期间输入服务原本整段 `return`，
+  于是"松开 LS"那一帧没人看见，闩锁停在"还按着"，玩家下一次按 LS 被当成同一次按住而失效
+  （实机与用例里连按两次 LS 只生效一次）。现在边沿记录在派遣判定**之前**，真正发号仍等派遣空闲。
 
 **注意**：LS 是单击语义，而这个键同样会送到游戏——如果游戏里 L3 绑定了动作（例如疾跑/蹲下），
 按 LS 切聚焦时游戏也会响应（本项目不拦截手柄输入）。若实机觉得冲突，可改成"按住 LS"或"LS+RB"
 等组合，边沿语义与用例在 `Tests/ManagedRuntime/GuideFocusLatchTests.cs`。键鼠那条线不受影响：
 Z 与 G 只要"攻略可见 + 游戏或攻略窗口在前台"就生效，不需要先点窗口。
 
-**证据**：`GuideWindowRuntime.exe --test-route-controller`（10 例全过）里的
+**证据**：`GuideWindowRuntime.exe --test-route-controller`（11 例全过）里的
 「standalone gamepad guide keeps the game focused and LS toggles focus」、
+「X enlarges the picture and the pad stays with the guide until B returns to it」、
 「a single nearby candidate opens its guide without ever building the chooser」、
 「the same gamepad shortcut closes the guide it opened」、
 「LB alone is idle, LB+B completes and LB+X dismisses」、
@@ -128,11 +153,64 @@ Z 与 G 只要"攻略可见 + 游戏或攻略窗口在前台"就生效，不需�
 呼出后前台仍在游戏、`GuidePassive` 不吃 A 键；唯一候选直接开攻略，且**选择窗口从未被创建或激活**
 （没有 `markerBindNearbyCandidates`、没有 `choices-activation`）——把这条修复临时关掉，这条用例
 就失败在"没有建选择窗口"那一句上；LS 切到攻略窗口后翻页生效；再按 LS 前台回到游戏且攻略仍然可见；
+**B 在攻略窗口上是"退出聚焦"**（攻略继续显示）、被动状态下 B 完全到不了攻略；
+**X 放大后前台转到大图窗口，模式仍然是 `Image`**（核心同步登记大图句柄用于攻略快捷键）、
+**B 从大图回到攻略窗口**、再按 B 退出聚焦回游戏、最后 LB+X 收起攻略；
 单独按 LB 什么都不做也不弹工具台；LB+B 在**两种聚焦状态**下都会请核心完成附近点位，且不会顺手翻页
 或关闭攻略；核心回"攻略展示的点位已完成"时攻略窗口一并关闭，回别的点位时保持打开；LB+X 收起攻略；
 路线暂停时按同一个快捷键只提示一句、不打开攻略，改成指引中再按就正常打开。
-另有纯模型用例 `Tests/ManagedRuntime/GuideFocusLatchTests.cs`（LS 与两条和弦的边沿/组合规则）与
-`RoutePlanningState.IsGuiding` 的用例。
+
+**反向证明（用例真的抓得住旧行为）**：把"这份攻略是不是占着前台"改回只看攻略窗口自己
+（`!IsForeground(direct)`），三条用例分别失败在
+`the pad still belongs to the guide while the enlarged picture is in front`、
+`B release hands the pad back to the game, exactly like LS`、
+`B on the selected candidate's guide hands the pad back to the game`；
+把 `RootKeyDown` 里的图片路由关掉，键鼠那条用例失败在 `the guide window consumes Enter`。
+
+另有纯模型用例 `Tests/ManagedRuntime/GuideFocusLatchTests.cs`（LS 与两条和弦的边沿/组合规则）、
+`GuidePictureAndFocusTests.cs`（Enter/ESC 路由与"一对窗口"的前台归属，含隐藏大图句柄/已关闭攻略
+的过期句柄不算数）与 `RoutePlanningState.IsGuiding` 的用例。
+
+## 键鼠：Enter 放大图片，Enter / ESC 退出大图（2026-09-25）
+
+**实机反馈**：键鼠模式下呼出攻略窗口后**没有任何键能放大攻略图片**（只有"放大图片"按钮）；并明确要求
+Enter 同时作为"放大"与"退出大图"的快捷键，**ESC 也退出大图且是默认生效、不可修改的按键**。
+
+**规则**（纯函数 `Models/GuidePictureKeys.cs`，被两个窗口共用）：
+
+| 按键 | 攻略窗口（大图没开） | 攻略窗口（大图开着） | 大图窗口 |
+|---|---|---|---|
+| Enter | 打开大图（当前这张图真能放大时） | 收起大图 | 收起大图、回到攻略窗口 |
+| ESC | 什么都不做（它不负责关整份攻略） | 收起大图 | 收起大图、回到攻略窗口 |
+
+- Enter/ESC 都是**固定键**：`RuntimeConfiguration.IsSupportedHotkey` 只接受字母、数字、F1–F12、
+  PageUp/PageDown，所以玩家不可能把它们分配给别的功能，也就不会有冲突（用例钉住这一点）。
+- **这两个键和 Z/G 一样不受"攻略窗口是不是前台"限制**：F8 打开的攻略窗口在生产里常常拿不到键盘焦点
+  （实机日志里连按 F8 的 `guide-shortcut action=close-visible-guide foreground=<game>` 就是证据），
+  只在窗口里监听 `PreviewKeyDown` 是不够的。原生钩子按纯函数
+  `GuideHotkeyRouting.h` 的 `GuidePictureKeyOwned` 判定归属（攻略可见 + 游戏或攻略在前台），
+  再把 `{"type":"markerGuidePictureKey","key":13|27}` 转交托管层执行一次并吞掉这个键（与跳过键同一套路）；
+  其中 **ESC 只有在大图真的开着时才归攻略**——否则会把大地图的"取消手势/回到平移"吃掉。
+  原生侧据此需要知道"现在登记的是不是大图窗口"，所以 `markerSetGuideWindow` 的载荷多了一个
+  `picture: true` 标记（`MarkerGuideProtocol::Registration` 只接受 true，缺省即攻略正文）。
+  诊断：`guide-picture-key`（`key/imageOpen/pictureAvailable/fg`）。
+- 窗口自己收到按键时走同一条规则（`MarkerGuideWindow.PressKey` / `GuideImageWindow.PressKey`），
+  所以没有核心钩子的环境（测试夹具、核心未启动）行为一致。
+- 大图窗口收起时前台回到攻略窗口（`GuideImageStage.ReturnToGuide` → `back.Activate()`），
+  所以键鼠这条线上 Enter/ESC 的进出也是自然衔接的。
+- 「放大图片」按钮的悬停提示写着「放大图片（Enter）」；使用指南里同步说明 Enter/ESC 与手柄的 X/B。
+
+**证据**：`GuideWindowRuntime.exe`（真实窗口）新增用例
+「Enter enlarges the guide picture and Enter or Esc closes the big picture」验证：Enter 真的开出
+独立大图窗口并拿到键盘焦点、ESC 收起它并把焦点交回攻略窗口、Enter 在大图里同样收起（同一个键两个方向）、
+无关按键不被消费、大图开着时翻页失败会在**大图窗口**里报错且标题跟着页码走，
+以及**钩子转交那条路**（`markerGuidePictureKey`）能开出/收起同一份大图、别的档案的转交不生效。
+这条用例同时取代了原先断言已被删除的 `MarkerGuideDialog`/`imageDialog` 字段、长期失败的旧用例。
+
+**反向证明**：把 `RootKeyDown` 里的图片路由关掉，这条用例失败在 `the guide window consumes Enter`。
+原生侧的归属规则由 `IMaoRoutePlanningTests.exe` 的 `GuideHotkeyRoutingTests` 钉住（Enter 在"游戏前台"
+时归攻略、ESC 没有大图时不归攻略、没有攻略窗口时不归攻略、别的程序在前台时不归攻略），
+`MarkerGuideProtocolTests` 钉住 `picture` 标记只接受 true。
 
 ## 尚未做的游戏内验收
 

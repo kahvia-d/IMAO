@@ -53,5 +53,7 @@
     <Compile Include="../../IMao-WinUI/Models/GuideSkipHoldGesture.cs" Link="Production/GuideSkipHoldGesture.cs" />
     <Compile Include="../../IMao-WinUI/Models/CoreRuntimeStatus.cs" Link="Production/CoreRuntimeStatus.cs" />
     <Compile Include="../../IMao-WinUI/Models/GuidePlacement.cs" Link="Production/GuidePlacement.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GuidePictureKeys.cs" Link="Production/GuidePictureKeys.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GuideWindowFocus.cs" Link="Production/GuideWindowFocus.cs" />
   </ItemGroup>
 </Project>

@@ -26,6 +26,7 @@ try
     GamepadInputTests.Run(root, Check);
     GuideSkipHoldGestureTests.Run(Check);
     GuideFocusLatchTests.Run(Check);
+    GuidePictureAndFocusTests.Run(Check);
     GamepadDirectionSelectionTests.Run(Check);
     GamepadNavigationListTests.Run(Check);
     GuideSkipKeyConfigurationTests.Run(root, Check);

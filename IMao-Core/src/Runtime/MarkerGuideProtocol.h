@@ -33,6 +33,11 @@ inline nlohmann::json Registration(const nlohmann::json& command, const std::str
     result["stateId"] = static_cast<int>(state);
     result["pointId"] = command.at("pointId");
     result["selectionGeneration"] = Integer(command.at("selectionGeneration"), false);
+    // 放大图片窗口走同一个登记通道，但它不是"攻略正文"：原生侧要据此决定 ESC 归不归攻略
+    // （大图没开时 ESC 必须留给大地图的取消手势，见 GuideHotkeyRouting.h 的 GuidePictureKeyOwned）。
+    // 只接受 true：没带这个字段就是攻略正文，缺省 false。
+    if (command.contains("picture") && command.at("picture").is_boolean() && command.at("picture").get<bool>())
+        result["picture"] = true;
     return result;
 }
 

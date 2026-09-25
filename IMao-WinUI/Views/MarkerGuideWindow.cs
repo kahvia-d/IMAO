@@ -12,6 +12,17 @@ using Windows.System;
 
 namespace IMao_WinUI.Views;
 
+/// <summary>大图窗口的一次变动，协调器据此决定原生登记与前台的去向。</summary>
+internal enum GuideImageStage
+{
+    /// <summary>大图窗口刚显示出来（前台通常随之转到大图窗口）。</summary>
+    Opened,
+    /// <summary>玩家在大图上按了返回（B / Enter / Esc / 关闭按钮）：前台该回到攻略窗口。</summary>
+    ReturnToGuide,
+    /// <summary>关窗属于"交还前台"或"收起攻略"的一部分：前台必须留在游戏上，不能抢回来。</summary>
+    LeaveForeground
+}
+
 // Keyboard ownership is window-scoped. Controller isolation is validated separately by the input service.
 public sealed class MarkerGuideWindow : Window
 {
@@ -87,8 +98,12 @@ public sealed class MarkerGuideWindow : Window
     internal bool IsGamepadImageOpen => imageVisible;
     /// <summary>The enlarged picture's HWND while it is open, so gamepad focus can follow it.</summary>
     internal nint ImageWindowHandle => imageVisible ? imageWindow?.Handle ?? 0 : 0;
+    /// <summary>放大图片窗口本身（可见时），协调器用它把前台从大图交还出去。</summary>
+    internal GuideImageWindow? ImageWindow => imageVisible ? imageWindow : null;
+    /// <summary>当前这张图能不能放大（与「放大图片」按钮同一条判据）：Enter 也只在能放大时开图。</summary>
+    internal bool IsPictureAvailable => enlarge.IsEnabled;
     /// <summary>Raised when the enlarged picture opens or closes, so the core can follow the front window.</summary>
-    internal Action<Window, bool>? ImageWindowChanged { get; set; }
+    internal Action<Window, GuideImageStage>? ImageWindowChanged { get; set; }
     internal bool CanCompleteGamepad => gamepadMode && IsGuideVisible && !imageVisible && selected?.Completed == false && !completing;
     /// <summary>
     /// 跳过资格：只表示"这个点位就是当前导航目标"，不等于"现在可以按"。
@@ -117,6 +132,11 @@ public sealed class MarkerGuideWindow : Window
     internal void PressSkipHotkey() => RootKeyDown(skipHotkey);
     /// <summary>松开跳过快捷键，与 <see cref="PressSkipHotkey"/> 配对。</summary>
     internal void ReleaseSkipHotkey() => RootKeyUp(skipHotkey);
+    /// <summary>
+    /// 键盘按下入口：窗口的 PreviewKeyDown 与用例都走这里（同 <see cref="PressSkipHotkey"/> 的写法）。
+    /// Enter/ESC 的图片路由、跳过键的长按判定都由 RootKeyDown 自己按纯函数决定。
+    /// </summary>
+    internal bool PressKey(int key) => RootKeyDown(key);
     /// <summary>「跳过」按钮的单击路径：像完成按钮一样直接提交一次跳过。</summary>
     internal Task ClickSkipButtonAsync() => SkipCurrentAsync();
     internal string GamepadViewToken => $"{generation}:{pictureIndex}:{(imageVisible ? "image" : "detail")}";
@@ -186,6 +206,8 @@ public sealed class MarkerGuideWindow : Window
         imagePanel.Children.Add(pagingHint);
         SetPagingHotkeys(33, 34);
         enlarge.HorizontalAlignment = HorizontalAlignment.Center;
+        // Enter 也是这个按钮：攻略窗口里按 Enter 放大，大图里再按 Enter（或 ESC）收起来。
+        ToolTipService.SetToolTip(enlarge, "放大图片（Enter）");
         imagePanel.Children.Add(enlarge);
         body.Children.Add(imagePanel);
         body.Children.Add(guideLink);
@@ -343,6 +365,10 @@ public sealed class MarkerGuideWindow : Window
         var window = imageWindow;
         if (window is null) return;
         imageVisible = false;
+        // 关窗之前先记下"大图是不是当时的前台窗口"：只有那种情况下前台才该回到攻略窗口。
+        // 交还前台那一路（LS / B 退出聚焦、LB+X 收起攻略）会先把前台还给游戏再收起大图，
+        // 那一刻它已经不是前台了——前台必须留在游戏上，不能再被抢回攻略窗口。
+        bool wasForeground = GetForegroundWindow() == WinRT.Interop.WindowNative.GetWindowHandle(window);
         if (destroy)
         {
             // Only here is the reference dropped, so the window really goes away.
@@ -353,7 +379,8 @@ public sealed class MarkerGuideWindow : Window
         {
             window.HideImage();
         }
-        if (ImageWindowChanged is { } changed) changed(window, false);
+        if (ImageWindowChanged is { } changed)
+            changed(window, wasForeground ? GuideImageStage.ReturnToGuide : GuideImageStage.LeaveForeground);
     }
 
     private void SetPictureStatus(string message)
@@ -476,7 +503,7 @@ public sealed class MarkerGuideWindow : Window
         imageWindow.ShowImage(currentImagePath,
             $"攻略图片 · {pictureIndex + 1}/{currentDetail?.PictureUrls.Length ?? 1}",
             pictureStatus.Text, lastGameBounds, gamepadMode);
-        if (ImageWindowChanged is { } changed) changed(imageWindow, true);
+        if (ImageWindowChanged is { } changed) changed(imageWindow, GuideImageStage.Opened);
         await Task.CompletedTask;
     }
 
@@ -501,7 +528,9 @@ public sealed class MarkerGuideWindow : Window
         // 提示里常驻"长按 Y 跳过"：跳过按钮本身就是"这一刻有没有资格"的唯一指示，
         // 让提示随资格变化会在窗口复用时留下上一状态的文字。
         // LS 切换聚焦也写在这里：手柄呼出的攻略默认把聚焦留给游戏，玩家得知道怎么切过来。
-        gamepadHint.Text = "LS 切换聚焦（游戏 ↔ 攻略） · A 确认 · B 关闭 · X 放大图片 · LB/RB 翻图 · 长按 A 完成 · 长按 Y 跳过当前目标";
+        // B 与 LS 同义（退出攻略聚焦、回到游戏），收起整份攻略是 LB+X——这三条都要写清楚，
+        // 否则玩家在攻略窗口上按 B 会以为攻略坏了（它只是把聚焦还给了游戏）。
+        gamepadHint.Text = "LS / B 退出聚焦回到游戏 · A 确认 · X 放大图片 · LB/RB 翻图 · LB+X 收起攻略 · 长按 A 完成 · 长按 Y 跳过当前目标";
         if (!enabled && imageVisible) CloseImageWindow();
         SetGamepadHoldProgress(0);
         UpdateCompletionButton();
@@ -579,6 +608,11 @@ public sealed class MarkerGuideWindow : Window
     /// <summary>返回 true 表示这次按下属于跳过键并被消费。</summary>
     private bool RootKeyDown(int key)
     {
+        // 图片键先判：Enter 开关大图、ESC 收起大图。规则全在纯函数里（见 GuidePictureKeys），
+        // 这里不再加任何条件——外面多一个 `&&` 就等于绕开了那条用例。
+        var picture = GuidePictureKeys.InGuide(key, imageVisible, enlarge.IsEnabled);
+        if (picture == GuidePictureAction.OpenPicture) { _ = ShowEnlargedAsync(); return true; }
+        if (picture == GuidePictureAction.ClosePicture) { CloseImageWindow(); return true; }
         if (gamepadMode && key is >= 195 and <= 218) return true;
         if (gamepadMode || skipHotkey == 0 || key != skipHotkey || !CanSkip) return false;
         // 自动重复的按下消息不算新的一次按住；但资格失效后的重复消息要能重新开始。

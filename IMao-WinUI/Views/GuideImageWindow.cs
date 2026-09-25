@@ -31,7 +31,10 @@ public sealed class GuideImageWindow : Window
 
     internal ScrollViewer View => scroll;
     internal nint Handle => WinRT.Interop.WindowNative.GetWindowHandle(this);
-    /// <summary>Raised when the player closes the picture from its own chrome or with Esc.</summary>
+    internal string HeaderText => title.Text;
+    internal string StatusText => status.Text;
+    internal bool IsPictureVisible => !closed && AppWindow.IsVisible;
+    /// <summary>Raised when the player closes the picture from its own chrome, with Enter or with Esc.</summary>
     internal Action? Dismissed { get; set; }
 
     public GuideImageWindow()
@@ -73,15 +76,22 @@ public sealed class GuideImageWindow : Window
         root.Children.Add(footer);
 
         Content = root;
-        root.PreviewKeyDown += (_, e) =>
-        {
-            if (e.Key != Windows.System.VirtualKey.Escape) return;
-            e.Handled = true;
-            _ = CloseFromChromeAsync();
-        };
+        root.PreviewKeyDown += (_, e) => { if (PressKey((int)e.Key)) e.Handled = true; };
         chrome = new GamepadWindowChrome(this);
         AppWindow.Resize(new SizeInt32(960, 720));
         Closed += (_, _) => { closed = true; chrome.Dispose(); };
+    }
+
+    /// <summary>
+    /// 大图窗口自己的按键入口：**Enter 与 ESC 都收起大图**，规则本身在纯函数
+    /// <see cref="GuidePictureKeys.InPicture"/> 里（窗口的 PreviewKeyDown 与用例都走这里，
+    /// 外面不允许再加条件）。返回 true 表示这个键被消费、不再传给别的控件。
+    /// </summary>
+    internal bool PressKey(int key)
+    {
+        if (GuidePictureKeys.InPicture(key) != GuidePictureAction.ClosePicture) return false;
+        _ = CloseFromChromeAsync();
+        return true;
     }
 
     /// <summary>
@@ -95,7 +105,7 @@ public sealed class GuideImageWindow : Window
         status.Text = statusText;
         hint.Text = gamepad
             ? "LT 缩小 · RT 放大 · 右摇杆/方向键平移 · B 返回攻略"
-            : "滚轮或按钮缩放 · 滚动条平移 · Esc 关闭";
+            : "滚轮或按钮缩放 · 滚动条平移 · Enter / Esc 关闭大图";
         anchor = gameBounds;
         workArea = gameBounds is { } game
             ? DisplayArea.GetFromRect(game, DisplayAreaFallback.Nearest).WorkArea

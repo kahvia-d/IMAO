@@ -476,6 +476,36 @@ void GuideHotkeyRoutingTests() {
         "world chords work with the game in front or with our own guide window in front");
     Expect(!AutoRoute::WorldChordAllowed(false, false),
         "another application in front keeps the world chords unavailable");
+
+    // 攻略图片的固定按键：Enter（放大/退出大图）与 ESC（退出大图）。它们不进可配置绑定表，
+    // 所以分类单独一条；每条归属断言都对着钩子真实传的那组参数。
+    using AutoRoute::GuidePictureKeyKind;
+    Expect(AutoRoute::ClassifyGuidePictureKey(AutoRoute::GuidePictureEnterKey) == GuidePictureKeyKind::Enter &&
+        AutoRoute::ClassifyGuidePictureKey(AutoRoute::GuidePictureEscapeKey) == GuidePictureKeyKind::Escape &&
+        AutoRoute::ClassifyGuidePictureKey(90) == GuidePictureKeyKind::None &&
+        AutoRoute::ClassifyGuidePictureKey(71) == GuidePictureKeyKind::None &&
+        AutoRoute::ClassifyGuidePictureKey(0) == GuidePictureKeyKind::None,
+        "Enter and Escape are classified as picture keys and no configurable guide key is");
+    // Enter：攻略可见 + 游戏在前台（F8 打开的攻略窗口在生产里常常拿不到前台）。
+    Expect(AutoRoute::GuidePictureKeyOwned(GuidePictureKeyKind::Enter, /*guideVisible*/ true, /*pictureVisible*/ false,
+        /*gameFocused*/ true, /*guideFocused*/ false),
+        "Enter enlarges the picture while the game - not the guide - holds the foreground");
+    Expect(AutoRoute::GuidePictureKeyOwned(GuidePictureKeyKind::Enter, true, false, false, /*guideFocused*/ true),
+        "a focused guide window owns Enter as well");
+    Expect(!AutoRoute::GuidePictureKeyOwned(GuidePictureKeyKind::Enter, /*guideVisible*/ false, false, true, false),
+        "with no guide window Enter stays with the game");
+    Expect(!AutoRoute::GuidePictureKeyOwned(GuidePictureKeyKind::Enter, true, false, false, false),
+        "another application in front keeps Enter with that application");
+    // ESC：只有大图真的开着才归攻略——否则会把大地图的"取消手势/回到平移"吃掉。
+    Expect(AutoRoute::GuidePictureKeyOwned(GuidePictureKeyKind::Escape, /*guideVisible*/ true, /*pictureVisible*/ true,
+        /*gameFocused*/ true, /*guideFocused*/ false),
+        "Esc closes the enlarged picture while the game holds the foreground");
+    Expect(!AutoRoute::GuidePictureKeyOwned(GuidePictureKeyKind::Escape, true, /*pictureVisible*/ false, true, true),
+        "Esc without an open enlarged picture stays with the map gestures");
+    Expect(!AutoRoute::GuidePictureKeyOwned(GuidePictureKeyKind::Escape, /*guideVisible*/ false, true, true, false),
+        "Esc with no guide window at all is never ours");
+    Expect(!AutoRoute::GuidePictureKeyOwned(GuidePictureKeyKind::None, true, true, true, true),
+        "an unclassified key is never claimed by the picture routing");
 }
 
 void HotkeyConfigurationTests() {
@@ -662,6 +692,21 @@ void MarkerGuideProtocolTests() {
     for (const Json invalid : std::vector<Json>{"", nullptr, 42, true}) {
         auto malformed = registration; malformed["pointId"] = invalid;
         Rejects([&] { MarkerGuideProtocol::Registration(malformed, "local"); }, "guide identity requires a nonempty opaque string point ID");
+    }
+    // 放大图片窗口用同一个登记通道，但多一个 `picture` 标记：原生钩子据此决定 ESC 归不归攻略
+    // （大图没开时 ESC 必须留给大地图的取消手势）。只接受 true，别的写法都不能凭空造出"大图开着"。
+    Expect(MarkerGuideProtocol::Registration(registration, "local").count("picture") == 0,
+        "an ordinary guide registration never claims an enlarged picture");
+    auto picture = registration; picture["picture"] = true;
+    Expect(MarkerGuideProtocol::Registration(picture, "local").value("picture", false),
+        "the enlarged picture window registers itself as a picture window");
+    auto notPicture = registration; notPicture["picture"] = false;
+    Expect(MarkerGuideProtocol::Registration(notPicture, "local") == registration,
+        "an explicit false picture flag is the same as an ordinary guide registration");
+    for (const Json invalid : std::vector<Json>{1, "true", nullptr, 0}) {
+        auto malformed = registration; malformed["picture"] = invalid;
+        Expect(MarkerGuideProtocol::Registration(malformed, "local") == registration,
+            "a non-boolean picture flag cannot claim the picture routing");
     }
     const Json context = {{"guideSelectionGeneration", 72057594037927937ULL}, {"guideWindowHwnd", 1234}};
     auto command = context; command["pointId"] = "1409977912641277952";

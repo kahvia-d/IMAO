@@ -74,7 +74,8 @@
   攻略窗口没有键盘焦点。这两个键的归属改由原生钩子判定（攻略窗口可见 + 游戏或攻略窗口在前台），
   见 §7.4。攻略窗口可见期间这两个键由攻略窗口独占，游戏收不到。
 - **手柄：** 可跳过的**详情页**上长按 **Y** 600 ms；短按 Y 保留原有"打开路线菜单"行为。
-  手柄呼出的攻略默认把手柄留给游戏，长按 Y 前先按一次 **LS** 把聚焦切到攻略窗口
+  手柄呼出的攻略默认把手柄留给游戏，长按 Y 前先按一次 **LS**（或 **B**：聚焦在攻略窗口时 B 与 LS 同义——
+  退出聚焦回到游戏）把聚焦切到攻略窗口
   （详见 [攻略浮窗](MarkerGuideWindow_20260908.md) 的 2026-09-25 小节）。
 - 键盘按住必须当前**可跳过**；资格失效、切换攻略、切到图片页、按住不足 600 ms、混合按键（带
   Ctrl/Alt/Shift/Win）→ 一律取消，不产生写入。玩家切到别的程序时这些键不归攻略窗口，也不计时。
@@ -128,11 +129,14 @@
 | `IMao-Core/src/ImguiDraw/Items/DrawItemOnMinMap.cpp` | `outcome` 区分空范围与定位失败；手柄空范围发起路线回退事件 |
 | `IMao-Core/src/Runtime/RoutePlanningService.cpp` | `GuideTarget` 附带 `navigationStatus`；既有 `skip` 守卫与持久化不变 |
 | `IMao-Core/src/Runtime/RuntimeHotkeys.h` | `guideSkipKey` 字段、冲突校验、快照与打包同步 |
-| `IMao-Core/src/Runtime/GuideHotkeyRouting.h` | 攻略键的归属规则（纯函数，被原生用例钉住）：可见的攻略窗口拥有 Z/G，不要求它在前台 |
-| `IMao-WinUI/Services/MarkerGuideCoordinator.cs` | 仅 `guide-empty` 回退；跳过资格刷新与提交；附近路径不查路线目标 |
+| `IMao-Core/src/Runtime/GuideHotkeyRouting.h` | 攻略键的归属规则（纯函数，被原生用例钉住）：可见的攻略窗口拥有 Z/G，不要求它在前台；**图片键 Enter/ESC** 另有一条 `GuidePictureKeyOwned`（ESC 只在大图开着时归攻略） |
+| `IMao-Core/src/ImguiDraw/Items/DrawMarkerInteraction.cpp`、`Runtime/MarkerGuideProtocol.h` | 钩子把归属成立的 Enter/ESC 转交托管层并吞掉这个键（与跳过键同一套路）；登记载荷带 `picture` 标记 |
+| `IMao-WinUI/Services/MarkerGuideCoordinator.cs` | 仅 `guide-empty` 回退；跳过资格刷新与提交；附近路径不查路线目标；键鼠图片键（`markerGuidePictureKey`）转交 |
 | `IMao-WinUI/Views/MarkerGuideWindow.cs` | 跳过入口、文案、双通道长按、取消条件、手柄进度归属 |
 | `IMao-WinUI/Models/GuideSkipHoldGesture.cs` | 单通道按住计时模型 |
 | `IMao-WinUI/Models/GamepadInput.cs` | `CanSkip` / `SkipGuideStop` / `HoldAction` |
+| `IMao-WinUI/Models/GuidePictureKeys.cs` | 图片键盘路由（纯函数）：Enter 开关大图，Enter/ESC 退出大图；两个窗口共用 |
+| `IMao-WinUI/Models/GuideWindowFocus.cs` | "这份攻略（含它的大图窗口）是不是占着前台"（纯函数）：手柄上下文 / 聚焦切换 / 交还前台只问它 |
 | `IMao-WinUI/Models/RuntimeConfiguration.cs`、`Views/SettingsPage.xaml{,.cs}` | 跳过键的配置、界面与冲突校验 |
 
 ## 6. 验收证据（本次实跑）
@@ -140,23 +144,36 @@
 | 套件 | 命令 | 结果 |
 |---|---|---|
 | 原生路线规划 | `x64\Release\IMaoRoutePlanningTests.exe` | `Route planning tests passed` |
+| 原生标记/交互 | `x64\Release\IMaoMarkerTests.exe` | `passed` |
 | 原生路线服务守卫 | `out\auto-replan-native\IMaoRoutePlanningServiceTests.exe <dir>` | `failures=0` |
-| 托管单测 | `Tests\ManagedRuntime\bin\x64\Release\net8.0\ManagedRuntime.exe` | exit 0，**669 PASS / 0 FAIL** |
-| 真实窗口（攻略） | `GuideWindowRuntime.exe`（默认模式跑 GuideWindowTests + GamepadWindowTests） | **25 PASS / 1 FAIL**，见下 |
-| 真实窗口（路线工具栏） | `GuideWindowRuntime.exe --test-route-controller` | **6 PASS / 0 FAIL** |
-| 真实窗口（附近选择器） | `GuideWindowRuntime.exe --test-nearby-chooser` | 2 PASS / 1 FAIL（本会话前台限制，见下） |
+| 托管单测 | `Tests\ManagedRuntime\bin\x64\Release\net8.0\ManagedRuntime.exe` | exit 0，**706 PASS / 0 FAIL** |
+| 真实窗口（攻略 + 手柄窗口） | `GuideWindowRuntime.exe`（默认模式） | **31 PASS / 0 FAIL** |
+| 真实窗口（路线工具栏 / 手柄攻略） | `GuideWindowRuntime.exe --test-route-controller` | **11 PASS / 0 FAIL** |
+| 真实窗口（附近选择器） | `GuideWindowRuntime.exe --test-nearby-chooser` | **7 PASS / 0 FAIL** |
+| 真实窗口（助手可见性） | `GuideWindowRuntime.exe --test-assistant-visibility` | 7 PASS / 0 FAIL |
+| 真实窗口（光标候选） | `GuideWindowRuntime.exe --test-cursor-candidates` | 1 PASS / 1 FAIL（本会话前台限制，见下） |
 | 生产工程 | `dotnet build IMao-WinUI\IMao-WinUI.csproj -c Release -p:Platform=x64 -r win-x64` | 0 错误（含 XAML 编译） |
 
-攻略套件里唯一那条失败是**过期的用例**，与 F8 无关：`enlarged paging failure shows current page and
+攻略套件里原先那条失败是**过期的用例**，与 F8 无关：`enlarged paging failure shows current page and
 a visible error` 断言的是 `MarkerGuideWindow` 上名为 `imageDialog` / `enlargedStatus` / `enlargedPicture`
 的控件，而放大看图在 `60e62de`（2026-09-20）就搬到了独立窗口 `GuideImageWindow`，这三个字段
-早已不存在，用例必然超时。它此前一直没跑过，因为套件更早就在 F8 那条用例上失败（§7.1）。
-要恢复这条覆盖需要按现在的 `GuideImageWindow` 重写，属于翻页/看图那条线，没有顺手改。
+早已不存在，用例必然超时。**2026-09-25 已按现在的 `GuideImageWindow` 重写**
+（「Enter enlarges the guide picture and Enter or Esc closes the big picture」），
+顺便覆盖了 Enter/ESC 的进出与"失败的那一页在大图窗口里报错"。
+
+附近选择器套件里也有三条**过期用例**（都在这次才真正跑起来，因为套件以前在更早的一条上就中断了）：
+「saved choice returns and closes」与「fresh retry completes original identity」断言的是
+"保存后列表自动关闭"的老行为，而现在的产品规则是**列表在一次保存后继续开着**（同一组里通常还要点
+下一个点位），所以改成断言"保存成功、身份不变、列表仍在前台"再按 B 关闭；
+「single nearby guide opens directly…」的夹具没有按生产形状应答 `markerGetNearbyGuide`
+（要回 `selection`），断言也用旧的 `Detail` 模式，已同步成"被动打开、不建选择窗口"。
+两个套件的 `CaseAsync` 现在**收集全部失败再统一汇报**，一条失败不会再吞掉后面的用例。
 
 本会话无法执行、需要真实桌面/游戏的部分：
 
-- `--test-nearby-chooser` 第 3 例与 `--test-gamepad-return`：断言依赖"受控窗口取得前台焦点"，
-  在本会话里超时。**回退前的同一提交上这两条同样失败**，与跳过和 F8 都无关；有真实桌面的会话可直接复跑。
+- `--test-cursor-candidates` 的「real assistant list has foreground」与
+  `--test-gamepad-return`：断言依赖"受控窗口取得前台焦点"，在本会话里超时。
+  **回退前的同一提交上这两条同样失败**，与本次改动无关；有真实桌面的会话可直接复跑。
 - `IMao-WinUI.exe` 需要提权，设置页与实机手感无法由自动化验证。
 - `IMaoRoutePlanningServiceTests` 带真实的自动重排线程与 2 秒确认间隔，对磁盘负载敏感：
   有一次与其它原生套件并行复跑时出现 2 处失败，随后单独复跑 4 次全部 `failures=0`。

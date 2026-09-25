@@ -68,9 +68,19 @@ internal static class NearbyChooserTests
                 "pending completion cannot duplicate or first open a guide");
             pending.Reply.SetResult(JsonSerializer.SerializeToElement(new { point = new { stateId = Second.StateId, pointId = Second.PointId, completed = true } }));
             await action;
-            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen, "saved choice returns and closes");
+            // 保存成功后列表**故意**继续开着（一组里通常不止一个点位要点）：完成的那个点位标成
+            // 已完成，前台仍然留在列表上，而且只提交了一次。旧断言"保存后自动关闭"描述的是
+            // 列表"点一个关一次"的老行为，早已不是产品规则。
+            await UntilAsync(() => fixture.Count("markerCompleteNearbyCandidate") == 1 &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.List,
+                "saved choice keeps the chooser open for the rest of the group");
+            Check(GetForegroundWindow() != fixture.GameHandle && fixture.Count("markerSetCompletion") == 0,
+                "the chooser keeps the foreground and writes no completion record");
+            // B 仍然是列表的返回：关掉列表、把前台交还游戏。
+            await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Back);
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen, "the chooser still closes on B");
             Check(GetForegroundWindow() == fixture.GameHandle && fixture.Count("markerCompleteNearbyCandidate") == 1,
-                "completion returns to the same game after exactly one acknowledged save");
+                "closing the chooser returns to the same game after exactly one acknowledged save");
         }, log);
 
         await CaseAsync("nearby guide resolves second point and never queries available route target", async fixture =>
@@ -84,12 +94,19 @@ internal static class NearbyChooserTests
             await UntilAsync(() => fixture.Coordinator.IsStandaloneGamepadGuideOpen &&
                 fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
                 "selected nearby guide opens passively, without taking the foreground");
-            Check(fixture.Count("markerResolveNearbyCandidate") == 1 && fixture.Count("markerGetRouteGuide") == 0 &&
-                fixture.Count("markerCompleteNearbyCandidate") == 0 && fixture.Details.OnlineRequests.Single().PointId == Second.PointId,
-                "guide intent is nearby-only and preserves exact selected point without writes");
-            // 被动状态下 B 由窗口自己那条关闭入口处理（手柄在游戏那边）。
+            Check(fixture.Count("markerResolveNearbyCandidate") == 1, "the nearby resolver is asked exactly once for the chosen point");
+            Check(fixture.Count("markerCompleteNearbyCandidate") == 0, "opening a nearby guide writes no completion");
+            Check(fixture.Details.OnlineRequests.Single().PointId == Second.PointId,
+                "the guide shows exactly the highlighted point (the one route-target query is the skip-eligibility check)");
+            // 被动状态下 B 归游戏（手柄输入根本到不了这里）：即使直接调用也不能关掉玩家的攻略。
             await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Back);
-            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen, "the passive guide still closes on B");
+            await Task.Delay(80);
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "a Back while the game owns the pad never closes the guide");
+            // 真正收起这份攻略的是窗口自己的关闭入口（与 LB+X 同一条）。
+            await fixture.Coordinator.CloseStandaloneGuideAsync("test");
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "the guide's own close entry still closes it");
         }, log);
 
         await CaseAsync("slow reading survives but stale submit stays visible and retries same explicit identity", async fixture =>
@@ -107,10 +124,17 @@ internal static class NearbyChooserTests
                 "position refusal keeps the list and exposes an error instead of closing or saving another point");
             stale = false;
             await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Accept);
-            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen, "fresh retry completes original identity");
+            // 保存成功之后列表照旧开着（可以接着点这一组里的下一个点位），所以这里断言的是
+            // "重试提交的仍然是同一个点位身份、而且这次真的保存成功"，而不是窗口关掉了。
+            await UntilAsync(() => fixture.Count("markerCompleteNearbyCandidate") == 2,
+                "fresh retry submits the same explicit identity again");
             Check(fixture.Core.Commands.Where(command => command.Operation == "markerCompleteNearbyCandidate")
                 .All(command => command.Arguments.GetProperty("pointId").GetString() == First.PointId),
                 "retry never silently advances to or substitutes another candidate");
+            Check(fixture.Core.Errors.Count == 1 && fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.List,
+                "the retry saves without a second error and keeps the list open for the rest of the group");
+            await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Back);
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen, "B closes the list after the retry");
         }, log);
 
         await CaseAsync("late resolve after suspension cannot open or refocus a guide", async fixture =>
@@ -129,12 +153,29 @@ internal static class NearbyChooserTests
 
         await CaseAsync("single nearby guide opens directly after native resolution without route fallback", async fixture =>
         {
+            // 生产里"范围内只有一个未完成点位"时核心把这一条直接解成 selection；列表那条老路用的
+            // 解析命令也一并应答，这样这条用例只靠"有没有建选择窗口"判定，不依赖走了哪条路。
+            fixture.Core.NearbyResponder = (operation, _) => operation switch
+            {
+                "markerGetNearbyGuide" => JsonSerializer.SerializeToElement(new { profileId = "local", intent = "guide",
+                    selection = CoreHostService.SelectionPayload(First) }),
+                "markerResolveNearbyCandidate" => JsonSerializer.SerializeToElement(new { selection = CoreHostService.SelectionPayload(First) }),
+                _ => CoreHostService.Empty()
+            };
             fixture.Emit("guide", [First]);
-            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail, "single guide opens without extra A");
-            Check(fixture.Count("markerResolveNearbyCandidate") == 1 && fixture.Count("markerGetRouteGuide") == 0 &&
-                fixture.Count("markerCompleteNearbyCandidate") == 0, "single guide also uses fresh nearby resolver and does not write");
-            await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Back);
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "the single guide opens passively without an extra A");
+            Check(fixture.Count("markerResolveNearbyCandidate") == 0 && fixture.Count("markerCompleteNearbyCandidate") == 0 &&
+                fixture.Details.OnlineRequests.Single().PointId == First.PointId,
+                "the single guide resolves the fresh identity and writes nothing");
+            await fixture.Coordinator.CloseStandaloneGuideAsync("test");
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "the single nearby guide closes through its own entry");
         }, log);
+
+        // 全部用例跑完才汇报：一条失败不能把后面的证据一起吞掉。
+        if (failures.Count > 0)
+            throw new InvalidOperationException($"{failures.Count} case(s) failed: {string.Join(" | ", failures)}");
     }
 
     private static async Task CaseAsync(string name, Func<Fixture, Task> test, Action<string> log)
@@ -142,10 +183,21 @@ internal static class NearbyChooserTests
         using var fixture = new Fixture();
         fixture.Game.Activate();
         await UntilAsync(() => GetForegroundWindow() == fixture.GameHandle, "controlled game gets foreground");
-        await test(fixture);
-        log("PASS " + name);
+        try
+        {
+            await test(fixture);
+            log("PASS " + name);
+        }
+        catch (Exception e)
+        {
+            // 一条用例失败不再中断整个套件：这个套件里曾有一条陈旧的期望（"保存后自动关闭"）
+            // 挡在四条用例前面，让它们从来没有真正跑过。
+            failures.Add(name + ": " + e.Message);
+            log("FAIL " + name + ": " + e.Message);
+        }
         foreach (string diagnostic in fixture.Core.GamepadDiagnostics) log("  " + diagnostic);
     }
+    private static readonly List<string> failures = [];
     private sealed class Fixture : IDisposable
     {
         public Window Game { get; } = new() { Title = "Nearby chooser controlled game", Content = new TextBlock { Text = "Controlled source; no user data" } };

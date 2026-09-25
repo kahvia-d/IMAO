@@ -258,9 +258,13 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                     _ => "等待大地图或大世界画面"
                 }));
             }
-            if (dispatching) { Diagnose("dispatching"); input.Reset(); return; }
             // LS：手柄开出的攻略窗口 ↔ 游戏 切换聚焦。攻略一打开就重新取一次基线，
             // 避免"玩家握着摇杆按出攻略"在开窗瞬间白送一次切换。
+            //
+            // 这一段必须在 `if (dispatching)` **之前**：LS 闩锁是纯物理边沿检测，只看"这一刻按下没有"。
+            // 聚焦切换本身是异步派遣（几十毫秒），派遣期间如果整个跳过这段，松开 LS 的那一帧就没人看见，
+            // 闩锁会停在"还按着"，玩家下一次按下 LS 被当成同一次按住而失效（实机表现：连按两次 LS
+            // 只有一次生效）。所以这里只负责**记录边沿**，真正发号仍然等派遣空闲。
             if (guides.IsStandaloneGamepadGuideOpen != guideFocusOwned)
             {
                 guideFocusOwned = guides.IsStandaloneGamepadGuideOpen;
@@ -268,6 +272,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                 guideChord.Reset();
             }
             var focusFired = guideFocusOwned && guideFocusToggle.Observe(sample.Buttons);
+            if (dispatching) { Diagnose("dispatching"); input.Reset(); return; }
             if (focusFired && !guides.IsGamepadReturnPending)
             {
                 core.ReportGamepadDiagnostic("guide-focus-toggle",
@@ -293,7 +298,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             {
                 input.Reset();
                 Diagnose(gate + "/guide-passive");
-                SetMessage("攻略已打开 · LS 切换聚焦 · LB+X 收起攻略 · LB+B 完成附近点位");
+                SetMessage("攻略已打开 · LS / B 退出聚焦回到游戏 · LB+X 收起攻略 · LB+B 完成附近点位");
                 return;
             }
             var update = input.Update(sample, context, now);
@@ -302,7 +307,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             { lastHold = update.HoldProgress; lastHoldAction = update.HoldAction; guides.SetGamepadHoldProgress(lastHold, lastHoldAction); }
             if (guides.IsStandaloneGamepadGuideOpen)
                 SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" :
-                    "攻略窗口 · LS 切回游戏 / B 关闭 / LB·RB 翻图 / X 放大图片 / 长按 A 完成 / 长按 Y 跳过");
+                    "攻略窗口 · LS / B 退出聚焦回到游戏 / LB+X 收起攻略 / LB·RB 翻图 / X 放大图片 / 长按 A 完成 / 长按 Y 跳过");
             else if (guides.IsGamepadSessionOpen)
                 SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" : "点位助手 · A 确认 / B 返回 / X 放大图片 / 长按 A 完成当前点");
             else if (context.Mode == GamepadInputMode.Map)

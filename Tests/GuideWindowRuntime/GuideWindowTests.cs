@@ -500,26 +500,64 @@ internal static class GuideWindowTests
             Check(f.Core.Errors.Count == 0, "empty refresh and reopening reported no lifecycle errors");
         }, log);
 
-        await CaseAsync("enlarged paging failure shows current page and a visible error", async f =>
+        await CaseAsync("Enter enlarges the guide picture and Enter or Esc closes the big picture", async f =>
         {
             f.Details.Pictures = ["https://test.invalid/page-one.png", "https://test.invalid/page-two.png"];
             await f.Coordinator.ShowAsync(A);
-            await UntilAsync(() => Read<Button>(f.Window!, "enlarge")!.IsEnabled, "first image ready to enlarge");
-            Invoke(Read<Button>(f.Window!, "enlarge")!);
-            await UntilAsync(() => Read<ContentDialog>(f.Window!, "imageDialog")?.XamlRoot is not null &&
-                Read<TextBlock>(f.Window!, "enlargedStatus") is not null, "actual enlarged image dialog is open");
+            await UntilAsync(() => Visible(f) && Read<Button>(f.Window!, "enlarge")!.IsEnabled, "first controlled image decoded");
+            var window = f.Window!;
+            Check(!window.IsGamepadImageOpen && window.ImageWindow is null, "nothing is enlarged before the key is pressed");
+
+            // Enter = 放大图片：打开的是真实的独立大图窗口，并且它自己拿到键盘焦点。
+            Check(window.PressKey(GuidePictureKeys.Enter), "the guide window consumes Enter");
+            await UntilAsync(() => window.ImageWindow is { IsPictureVisible: true } opened && IsWindowVisible(opened.Handle),
+                "Enter really opens the enlarged picture window");
+            var image = window.ImageWindow!;
+            Check(image.HeaderText.Contains("1/2"), $"the enlarged picture shows the current page (title={image.HeaderText})");
+            await UntilAsync(() => GetForegroundWindow() == image.Handle, "the enlarged picture takes the keyboard focus");
+
+            // ESC：默认生效、不可修改的退出键，收起大图并把焦点交回攻略窗口。
+            Check(image.PressKey(GuidePictureKeys.Escape), "the enlarged picture consumes Esc");
+            await UntilAsync(() => !window.IsGamepadImageOpen && !image.IsPictureVisible, "Esc closes the enlarged picture");
+            await UntilAsync(() => GetForegroundWindow() == Handle(window), "the guide window takes the focus back after Esc");
+
+            // Enter 同时是退出键：大图开着时再按一次也是收起（同一个键两个方向）。
+            Check(window.PressKey(GuidePictureKeys.Enter), "Enter opens the picture again");
+            await UntilAsync(() => window.ImageWindow is { IsPictureVisible: true } again && GetForegroundWindow() == again.Handle,
+                "the same picture window is reused and focused again");
+            Check(window.ImageWindow!.PressKey(GuidePictureKeys.Enter), "the enlarged picture consumes Enter");
+            await UntilAsync(() => !window.IsGamepadImageOpen, "Enter inside the big picture closes it again");
+            await UntilAsync(() => GetForegroundWindow() == Handle(window), "the guide window takes the focus back after Enter");
+            Check(!window.PressKey(65) && !window.PressKey(0), "unrelated keys are not consumed by the picture routing");
+
+            // 大图开着时翻页：大图跟着换页，失败的那一页在大图窗口里报错。
+            Check(window.PressKey(GuidePictureKeys.Enter), "Enter reopens the picture for paging");
+            await UntilAsync(() => window.ImageWindow is { IsPictureVisible: true }, "picture open before paging");
             f.Details.FailedPictures.Add(f.Details.Pictures[1]);
             f.Page(1);
-            await UntilAsync(() => Read<TextBlock>(f.Window!, "enlargedStatus")?.Text.Contains("暂时无法加载") == true,
-                "failed second image is reported inside the dialog");
-            var dialog = Read<ContentDialog>(f.Window!, "imageDialog")!;
-            var notice = Read<TextBlock>(f.Window!, "enlargedStatus")!;
-            await UntilAsync(() => notice.ActualHeight > 0, "dialog error text participates in actual visible layout");
-            Check(dialog.Title.ToString()!.Contains("2/2") && Page(f) == "2 / 2" && notice.Visibility == Visibility.Visible &&
-                Read<Image>(f.Window!, "enlargedPicture")!.Source is null,
-                "failed enlarged paging updates both page labels, clears the old image and shows the error in the dialog");
-            dialog.Hide();
-            await UntilAsync(() => Read<ContentDialog>(f.Window!, "imageDialog") is null, "test enlarged dialog closes cleanly");
+            await UntilAsync(() => Page(f) == "2 / 2" && window.ImageWindow!.StatusText.Contains("暂时无法加载"),
+                "a failed page is reported inside the real enlarged picture window");
+            Check(window.ImageWindow!.HeaderText.Contains("2/2"),
+                $"the enlarged title follows the guide page (title={window.ImageWindow!.HeaderText})");
+            f.Page(-1);
+            await UntilAsync(() => Page(f) == "1 / 2" && window.ImageWindow!.HeaderText.Contains("1/2"),
+                "paging back updates the enlarged picture title as well");
+            Check(window.ImageWindow!.PressKey(GuidePictureKeys.Escape) && !window.IsGamepadImageOpen,
+                "Esc still closes the enlarged picture after paging");
+
+            // 原生钩子那条路：生产里 F8 打开的攻略窗口常常拿不到键盘焦点（实机日志里
+            // `close-visible-guide foreground=<game>`），所以钩子判定归属后把这一下转交过来，
+            // 协调器按同一套规则执行一次。窗口自己收不到键盘时这就是唯一生效的通路。
+            await UntilAsync(() => window.IsPictureAvailable, "the first page is decoded again after paging");
+            f.Core.Emit(new { type = "markerGuidePictureKey", key = GuidePictureKeys.Enter, profileId = "local" });
+            await UntilAsync(() => window.ImageWindow is { IsPictureVisible: true },
+                "the forwarded Enter opens the same enlarged picture");
+            f.Core.Emit(new { type = "markerGuidePictureKey", key = GuidePictureKeys.Escape, profileId = "local" });
+            await UntilAsync(() => !window.IsGamepadImageOpen, "the forwarded Esc closes it again");
+            // 别的档案的转交不生效：身份不符时绝不动当前这份攻略。
+            f.Core.Emit(new { type = "markerGuidePictureKey", key = GuidePictureKeys.Enter, profileId = "other" });
+            await Task.Delay(80);
+            Check(!window.IsGamepadImageOpen && Visible(f), "a forwarded picture key for another profile is ignored");
         }, log);
     }
 

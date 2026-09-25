@@ -103,11 +103,31 @@ public sealed class MarkerGuideCoordinator : IDisposable
     public bool IsStandaloneGamepadGuideOpen => !disposed &&
         (standaloneGamepadGeneration != 0 && session.IsCurrent(standaloneGamepadGeneration) || chooserGamepad && chooser is not null);
     public bool IsStandaloneGamepadGuideOpening => IsStandaloneGamepadGuideOpen && (standaloneGamepadOpening || chooserGamepadOpening);
-    /// <summary>手柄开出的攻略窗口此刻是不是前台窗口（决定这段手柄输入归谁）。</summary>
-    public bool IsStandaloneGuideForeground => guide is { IsGuideVisible: true } window && IsForeground(window);
+    /// <summary>手柄开出的攻略（窗口本身或它的大图窗口）此刻是不是前台（决定这段手柄输入归谁）。</summary>
+    public bool IsStandaloneGuideForeground => guide is { IsGuideVisible: true } window && StandaloneForegroundOwner(window) is not null;
     /// <summary>测试读取：当前攻略是否持有"跳过当前导航目标"的授权，以及授权针对的点位身份。</summary>
     internal bool HasGuideSkipAuthorization =>
         guideSkipTarget is { } target && session.IsCurrent(target.Generation) && target.Generation == session.Generation;
+
+    /// <summary>
+    /// 这份手柄攻略此刻占着前台的窗口——攻略窗口，或它打开的放大图片窗口；都没在前台时为 null。
+    ///
+    /// 判定只有一个来源（纯函数 <see cref="GuideWindowFocus"/>）：手柄上下文、LS 与 B 的聚焦切换、
+    /// 交还前台、诊断日志全都问它。放大图片是**独立窗口**，打开时前台会转到大图窗口；
+    /// 只比"攻略窗口自己是不是前台"会把这一刻误判成"聚焦在游戏上"，于是手柄整个让给游戏，
+    /// B 返回与扳机缩放全部失效（2026-09-25 实机反馈）。
+    /// </summary>
+    private Window? StandaloneForegroundOwner(MarkerGuideWindow window)
+    {
+        var owner = GuideWindowFocus.Owner(GetForegroundWindow().ToInt64(), standaloneGameWindow.ToInt64(),
+            WindowHandle(window), window.IsGuideVisible, window.ImageWindowHandle.ToInt64(), window.IsGamepadImageOpen);
+        return owner switch
+        {
+            GuideFocusOwner.GuidePicture => window.ImageWindow,
+            GuideFocusOwner.Guide => window,
+            _ => null
+        };
+    }
 
     public GamepadInputContext GetGamepadInputContext()
     {
@@ -118,16 +138,16 @@ public sealed class MarkerGuideCoordinator : IDisposable
             if (chooserGamepad && chooser is { } choices && IsForeground(choices) && !chooserGamepadOpening)
                 return new(GamepadInputMode.List, $"choices:{selectionGeneration}:{chooserActions.Count}:{chooserActionGeneration}",
                     CanCollectAll: chooserCompletesNearby);
-            // 手柄开出的攻略：手柄输入归谁只看"攻略窗口是不是前台窗口"。
+            // 手柄开出的攻略：手柄输入归谁只看"这份攻略（含它的大图窗口）是不是占着前台"。
             // - 是前台：走 Detail/Image，攻略导航、长按 A 完成、长按 Y 跳过都启用。
-            // - 不是前台：说明此刻聚焦在游戏上（默认状态，或玩家按 LS 切回去了）。这段输入
+            // - 不是前台：说明此刻聚焦在游戏上（默认状态，或玩家按 LS / B 切回去了）。这段输入
             //   整个留给游戏——玩家能继续移动、战斗，这正是"看攻略不被限制操作"的意思；
             //   我们只保留 LS 的切换请求（在输入服务里，状态机之外）。
             //   旧实现无论窗口在前台与否都返回 Detail，于是"窗口没前台"时仍然吃掉按键，
             //   却没资格完成/跳过，实机表现为按了没反应。
             if (!standaloneGamepadOpening && guide is { IsGuideVisible: true } direct)
             {
-                if (!IsForeground(direct))
+                if (StandaloneForegroundOwner(direct) is null)
                     return new(GamepadInputMode.GuidePassive, $"guide-passive:{standaloneGamepadGeneration}:{session.Selection?.PointId}");
                 return new(direct.IsGamepadImageOpen ? GamepadInputMode.Image : GamepadInputMode.Detail,
                     $"guide:{standaloneGamepadGeneration}:{session.Selection?.PointId}:{direct.GamepadViewToken}:True",
@@ -290,20 +310,14 @@ public sealed class MarkerGuideCoordinator : IDisposable
         if (action == GamepadAction.Back)
         {
             if (context.Mode == GamepadInputMode.Image) guide?.CloseGamepadImage();
-            // 被动模式（聚焦在游戏上）不会从手柄收到 Back；能走到这里的 Back 来自窗口自己的
-            // 关闭入口，所以同样要能关掉这个攻略。
-            else if (context.Mode == GamepadInputMode.Detail || IsStandaloneGamepadGuideOpen)
+            // 聚焦在手柄攻略窗口上时，B 与 LS 同义：**退出攻略聚焦、回到游戏**，攻略继续显示
+            // （2026-09-25 要求：不只 LS，B 也要能退出攻略聚焦）。收起整份攻略是 LB+X，
+            // 以及再次按下呼出它的那个快捷键——所以这里不再顺手关窗。
+            else if (IsStandaloneGamepadGuideOpen)
             {
-                if (IsStandaloneGamepadGuideOpen)
-                {
-                    if (guide is { } window)
-                    {
-                        long closingGeneration = standaloneGamepadGeneration;
-                        await ReturnBeforeCloseAsync(window, standaloneGameIdentity, () => CloseGuide(closingGeneration));
-                    }
-                }
-                else CloseGuide(gamepadGuideGeneration);
+                if (guide is { } focused) await ReturnStandaloneFocusToGameAsync(focused, "returned-by-b");
             }
+            else if (context.Mode == GamepadInputMode.Detail) CloseGuide(gamepadGuideGeneration);
             else if (gamepadMenuRoute is not null) await BackFromGamepadMenuAsync();
             else await ExitGamepadToGameAsync();
             return;
@@ -361,18 +375,36 @@ public sealed class MarkerGuideCoordinator : IDisposable
     /// 被动攻略里单击 LB：收起这份攻略。大地图上的 LB 是打开工具台，两者不冲突——
     /// 攻略开着时这个键归攻略窗口，工具台保持只在大地图出现。
     /// </summary>
-    private async Task CloseStandaloneGuideAsync()
+    internal async Task CloseStandaloneGuideAsync(string reason = "close-lb-tap")
     {
         if (!IsStandaloneGamepadGuideOpen || guide is not { IsGuideVisible: true } window)
         {
             core.ReportGamepadDiagnostic("guide-shortcut",
-                $"source=gamepad action=close-ignored open={IsStandaloneGamepadGuideOpen} visible={guide?.IsGuideVisible}");
+                $"source=gamepad action=close-ignored reason={reason} open={IsStandaloneGamepadGuideOpen} visible={guide?.IsGuideVisible}");
             return;
         }
         core.ReportGamepadDiagnostic("guide-shortcut",
-            $"source=gamepad action=close-lb-tap foreground={GetForegroundWindow()}");
-        // 攻略窗口自己在前台时先归还前台（与 B 同一条路）；被动状态直接收。
-        await ReturnBeforeCloseAsync(window, standaloneGameIdentity, () => CloseGuide());
+            $"source=gamepad action=close-lb-tap reason={reason} foreground={GetForegroundWindow()}");
+        // 这份攻略自己在前台时先归还前台（与 B 同一条路）；被动状态直接收。
+        // 交还必须从**当前**占着前台的那个窗口发起：放大图片开着时前台是它，不是攻略窗口。
+        var source = StandaloneForegroundOwner(window) ?? window;
+        await ReturnBeforeCloseAsync(source, standaloneGameIdentity, () => CloseGuide());
+    }
+
+    /// <summary>
+    /// 把这份手柄攻略占着的前台交还游戏，攻略继续显示。LS 与 B 走同一条路：
+    /// 攻略窗口在前台就交还它，放大图片在前台就交还大图（成功之后由
+    /// <see cref="ReturnFocusToGameAsync"/> 收起大图）。前台既不是游戏也不是这份攻略时什么都不做。
+    /// </summary>
+    private async Task ReturnStandaloneFocusToGameAsync(MarkerGuideWindow window, string stage)
+    {
+        if (StandaloneForegroundOwner(window) is not { } owner)
+        {
+            core.ReportGamepadDiagnostic("guide-focus",
+                $"{stage} ignored foreground={GetForegroundWindow()} game={standaloneGameWindow}");
+            return;
+        }
+        await ReturnFocusToGameAsync(new IntPtr(WindowHandle(owner)), stage);
     }
 
     private async Task ToggleGuideFocusAsync()
@@ -384,7 +416,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 $"ignored open={IsStandaloneGamepadGuideOpen} visible={guide?.IsGuideVisible}");
             return;
         }
-        if (IsForeground(window)) { await ReturnFocusToGameAsync(new IntPtr(WindowHandle(window)), "returned-to-game"); return; }
+        // 这份攻略占着前台（攻略窗口 **或它打开的放大图片窗口**）→ 交还游戏。
+        if (StandaloneForegroundOwner(window) is not null)
+        { await ReturnStandaloneFocusToGameAsync(window, "returned-to-game"); return; }
         var game = standaloneGameWindow;
         if (game == IntPtr.Zero || GetForegroundWindow() != game)
         {
@@ -400,16 +434,17 @@ public sealed class MarkerGuideCoordinator : IDisposable
 
     /// <summary>
     /// 把前台从我们自己那个窗口交还游戏，但**不关**攻略：玩家要一边看一边玩。
-    /// <paramref name="source"/> 是此刻占着前台的窗口（攻略窗口本身，或呼出它的工具条宿主/选择列表）。
+    /// <paramref name="source"/> 是此刻占着前台的窗口（攻略窗口本身，或它打开的放大图片窗口）。
     /// </summary>
     private async Task ReturnFocusToGameAsync(IntPtr source, string stage)
     {
         if (source == IntPtr.Zero || GetForegroundWindow() != source) return;
-        // 放大看图是另一个窗口：交还前台时一并收起，免得它单独悬在游戏上方。
-        if (guide is { IsGamepadImageOpen: true } open && new IntPtr(WindowHandle(open)) == source) open.CloseGamepadImage();
         var result = await GamepadWindowReturn.TryReturnAsync(standaloneGameIdentity,
             GamepadWindowIdentity.Capture(source), connectionRequests.Token);
         core.ReportGamepadDiagnostic("guide-focus", stage + " " + result.ToString());
+        // 放大图片占着前台时，**交还前台之后**才收起它：先收会让"从哪个窗口交还"的前提
+        // （此刻前台就是它）当场失效；而且它收起时前台已经是游戏，不会再把前台抢回攻略窗口。
+        if (guide is { IsGamepadImageOpen: true } open && new IntPtr(WindowHandle(open)) == source) open.CloseGamepadImage();
         if (!result.Success && GetForegroundWindow() == source)
             core.ReportUserError("未能返回游戏：松开按键后按 LS 重试，或直接点击游戏窗口。");
     }
@@ -536,12 +571,16 @@ public sealed class MarkerGuideCoordinator : IDisposable
         var request = returnRequest; returnRequest = null; request?.Cancel();
     }
 
-    private async Task DismissGuideFromContentAsync(long generation)
+    /// <summary>
+    /// 攻略窗口自己的关闭入口（标题栏那个关闭按钮）。手柄开出的攻略走"收起这份攻略"那条路
+    /// （LB+X 同一条），因为 B 现在只是退出聚焦、不关窗；助手会话里的攻略仍然由 B 那条逻辑处理。
+    /// </summary>
+    internal async Task DismissGuideFromContentAsync(long generation)
     {
         if (returnWindow is not null) { await RetryWindowReturnAsync(); return; }
-        if (session.IsCurrent(generation) && (IsStandaloneGamepadGuideOpen || IsGamepadSessionOpen))
-            await HandleGamepadAsync(GamepadAction.Back);
-        else CloseGuide(generation);
+        if (session.IsCurrent(generation) && IsStandaloneGamepadGuideOpen) { await CloseStandaloneGuideAsync("close-button"); return; }
+        if (session.IsCurrent(generation) && IsGamepadSessionOpen) { await HandleGamepadAsync(GamepadAction.Back); return; }
+        CloseGuide(generation);
     }
 
     private string GamepadPointLabel(MarkerSelection selection, string prefix)
@@ -847,6 +886,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                     if (IsCurrentGuideEvent(value)) await guide!.CompleteCurrentAsync();
                     break;
                 case "markerGuideSkip": ApplyGuideSkipKey(value); break;
+                case "markerGuidePictureKey": ApplyGuidePictureKey(value); break;
                 case "markerGuidePageRequested":
                     if (IsCurrentGuideEvent(value)) await guide!.ChangePictureAsync(Integer(value, "direction"));
                     break;
@@ -917,6 +957,21 @@ public sealed class MarkerGuideCoordinator : IDisposable
         bool down = Flag(value, "down");
         core.ReportGamepadDiagnostic("guide-skip-key", $"down={down} profile={Text(value, "profileId")}");
         if (down) window.PressSkipHotkey(); else window.ReleaseSkipHotkey();
+    }
+
+    /// <summary>
+    /// 原生钩子转交的图片键（Enter / ESC）。这两个键是固定的、不可配置的，归属由
+    /// <see cref="IMao_WinUI.Models.GuidePictureKeys"/> 的纯函数决定；F8 打开的攻略窗口在生产里
+    /// 常常拿不到键盘焦点（实机日志里 `close-visible-guide foreground=&lt;game&gt;`），所以只在窗口里
+    /// 监听是不够的：钩子判定归属后把这一下送过来，窗口只执行一次。
+    /// </summary>
+    private void ApplyGuidePictureKey(JsonElement value)
+    {
+        if (guide is not { IsGuideVisible: true } window || Text(value, "profileId") != session.ProfileId) return;
+        int key = Integer(value, "key");
+        core.ReportGamepadDiagnostic("guide-picture-key",
+            $"key={key} imageOpen={window.IsGamepadImageOpen} pictureAvailable={window.IsPictureAvailable} fg={GetForegroundWindow()}");
+        window.PressKey(key);
     }
 
     internal Task OpenRouteGuideFromToolsAsync(string profileId, nint game, nint source) =>
@@ -1209,7 +1264,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 dismissedGeneration => CloseGuide(dismissedGeneration))
             {
                 ContentDismiss = DismissGuideFromContentAsync,
-                ImageWindowChanged = (window, opened) => _ = GuideImageWindowChangedAsync(window, opened),
+                ImageWindowChanged = (window, stage) => _ = GuideImageChangedAsync(window, stage),
                 SkipDiagnostic = state => core.ReportGamepadDiagnostic("guide-skip-hold", state),
             };
             var window = guide;
@@ -1310,18 +1365,24 @@ public sealed class MarkerGuideCoordinator : IDisposable
 
     private static long WindowHandle(Window window) => WinRT.Interop.WindowNative.GetWindowHandle(window).ToInt64();
 
-    private Task RegisterWindowAsync(Window window, MarkerSelection? selection = null, long generation = 0)
+    /// <summary>
+    /// 把当前窗口登记给原生侧。放大图片窗口走同一个通道，但带 <paramref name="picture"/> = true：
+    /// 原生钩子据此决定 ESC 归不归攻略（大图没开时 ESC 必须留给大地图的取消手势），
+    /// 也据此认出"现在前台的是大图窗口"这件事属于同一份攻略。
+    /// </summary>
+    private Task RegisterWindowAsync(Window window, MarkerSelection? selection = null, long generation = 0,
+        bool picture = false)
     {
         // Remembered so the enlarged picture can be registered with the same identity and
         // hand the registration back to the guide when it closes.
         if (selection is not null) { registeredSelection = selection; registeredGeneration = generation; }
         registeredWindow = window;
         registration = selection is null ? ReferenceEquals(window, gamepadAssistant)
-            ? new { hwnd = WindowHandle(window), assistantGeneration = gamepadGeneration }
-            : (object)new { hwnd = WindowHandle(window) } : (object)new
+            ? new { hwnd = WindowHandle(window), assistantGeneration = gamepadGeneration, picture }
+            : (object)new { hwnd = WindowHandle(window), picture } : (object)new
         {
             hwnd = WindowHandle(window), profileId = selection.ProfileId, stateId = selection.StateId,
-            pointId = selection.PointId, selectionGeneration = generation
+            pointId = selection.PointId, selectionGeneration = generation, picture
         };
         registrationRevision++;
         return PublishRegistrationAsync();
@@ -1349,18 +1410,21 @@ public sealed class MarkerGuideCoordinator : IDisposable
     /// The enlarged picture is a window of its own, so it becomes the window the core's guide
     /// shortcuts and focus checks follow while it is open, and the guide takes it back after.
     /// </summary>
-    private async Task GuideImageWindowChangedAsync(Window window, bool opened)
+    private async Task GuideImageChangedAsync(Window window, GuideImageStage stage)
     {
         if (disposed) return;
         try
         {
-            if (opened) await RegisterWindowAsync(window, registeredSelection, registeredGeneration);
-            else if (registeredSelection is { } selection && session.IsCurrent(registeredGeneration) &&
-                guide is { IsClosed: false, IsGuideVisible: true } back)
-            {
-                await RegisterWindowAsync(back, selection, registeredGeneration);
-                back.Activate();
-            }
+            if (stage == GuideImageStage.Opened)
+            { await RegisterWindowAsync(window, registeredSelection, registeredGeneration, picture: true); return; }
+            if (registeredSelection is not { } selection || !session.IsCurrent(registeredGeneration) ||
+                guide is not { IsClosed: false, IsGuideVisible: true } back) return;
+            await RegisterWindowAsync(back, selection, registeredGeneration);
+            // 只有"玩家在大图上返回"（B / Enter / Esc / 关闭按钮）才把前台交回攻略窗口。
+            // 交还前台那一路（LS / B 退出聚焦、LB+X 收起攻略）关掉大图时前台必须留在游戏上，
+            // 这里再 Activate 一次会把刚交还的前台又抢回攻略窗口——实机表现就是"按了返回，
+            // 焦点却在攻略窗口和游戏之间跳"。
+            if (stage == GuideImageStage.ReturnToGuide) back.Activate();
         }
         catch (OperationCanceledException) { }
         catch (Exception e) { if (!disposed) core.ReportUserError("攻略大图窗口状态未更新：" + e.Message); }
@@ -1370,8 +1434,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private bool IsGuideForeground()
     {
         if (guide is not { IsGuideVisible: true } current) return false;
-        if (IsForeground(current)) return true;
-        return current.IsGamepadImageOpen && GetForegroundWindow() == (IntPtr)current.ImageWindowHandle;
+        return GuideWindowFocus.GuideOwns(GuideWindowFocus.Owner(GetForegroundWindow().ToInt64(), 0,
+            WindowHandle(current), true, current.ImageWindowHandle.ToInt64(), current.IsGamepadImageOpen));
     }
 
     private async Task UnregisterWindowAsync(Window window)
@@ -1449,7 +1513,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
         var result = session.ApplyCompletion(generation, profileId, stateId, pointId, completed, closeOnComplete: closeOnComplete);
         if (result == MarkerGuideCompletionResult.Closed)
         {
-            bool restore = standaloneGamepadGeneration == generation && guide is { } window && IsForeground(window);
+            // 收起的是整份攻略，所以前台要从"这份攻略占着前台的任意窗口"（攻略窗口或它的大图）
+            // 交还游戏；只看攻略窗口自己会在"大图开着时完成点位"那一下把前台丢在半空。
+            bool restore = standaloneGamepadGeneration == generation && guide is { } window && StandaloneForegroundOwner(window) is not null;
             var game = standaloneGameWindow;
             HideClosedGuide();
             if (restore && IsWindow(game)) SetForegroundWindow(game);

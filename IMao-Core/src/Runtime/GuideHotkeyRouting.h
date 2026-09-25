@@ -62,4 +62,36 @@ inline bool WorldChordAllowed(bool gameFocused, bool ourGuideFocused) {
     return gameFocused || ourGuideFocused;
 }
 
+// 攻略图片的固定按键：**Enter**（放大图片 / 退出大图）与 **ESC**（退出大图）。
+// 它们不进可配置绑定表（RuntimeConfiguration 只接受字母、数字、F1–F12、PageUp/PageDown），
+// 所以在这里单独分类，而不是塞进 ClassifyGuideHotkey。
+enum class GuidePictureKeyKind { None, Enter, Escape };
+
+// 与 WinUser.h 的 VK_RETURN / VK_ESCAPE 一致；写成字面值让这个纯函数不依赖 Windows 头。
+constexpr int GuidePictureEnterKey = 13;
+constexpr int GuidePictureEscapeKey = 27;
+
+inline GuidePictureKeyKind ClassifyGuidePictureKey(int key) {
+    if (key == GuidePictureEnterKey) return GuidePictureKeyKind::Enter;
+    if (key == GuidePictureEscapeKey) return GuidePictureKeyKind::Escape;
+    return GuidePictureKeyKind::None;
+}
+
+// 这条图片键此刻归攻略窗口吗？
+//
+// - 必须有一个**可见的**攻略窗口：没有攻略就没有大图可放大、也没有可退出的大图；
+// - Enter 的归属与 Z/G 同一条规则（攻略窗口不必是前台）：F8 打开的攻略窗口在生产里常常拿不到
+//   前台（实机日志里连按 F8 的 `guide-shortcut action=close-visible-guide foreground=<game>`
+//   就是证据），玩家是在游戏前台时按键的；
+// - **ESC 只在大图窗口开着时才归攻略**：大图没开时后台那一下必须留给大地图的"取消手势/回到平移"，
+//   否则会成为第二个"F8 打不开"式的回归（多一个条件/少一个条件都会绕开用例，规则只此一处）；
+// - `pictureVisible` 来自登记载荷里的 `picture` 标记：放大图片窗口用同一个登记通道，
+//   托管层开大图时会带上它（见 MarkerGuideProtocol::Registration）。
+inline bool GuidePictureKeyOwned(GuidePictureKeyKind kind, bool guideVisible, bool pictureVisible,
+    bool gameFocused, bool guideFocused) {
+    if (kind == GuidePictureKeyKind::None || !guideVisible) return false;
+    if (kind == GuidePictureKeyKind::Escape && !pictureVisible) return false;
+    return gameFocused || guideFocused;
+}
+
 } // namespace AutoRoute

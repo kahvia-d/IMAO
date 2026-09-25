@@ -281,6 +281,28 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
     const bool up = message == WM_KEYUP || message == WM_SYSKEYUP;
     if (!down && !up) return CallNextHookEx(keyboardHook, code, message, value);
     const bool focused = DrawItemBase::IsMarkerGameFocused(game);
+    // 图片键（Enter 放大/退出大图、ESC 退出大图）是固定按键，不进可配置绑定表，所以单独判定。
+    // 归属规则是一条纯函数（GuideHotkeyRouting.h）：攻略可见 + 游戏或攻略在前台；ESC 额外要求
+    // **大图正开着**，否则会把大地图的"取消手势/回到平移"吃掉。这里不再加任何别的条件。
+    const auto pictureKey = AutoRoute::ClassifyGuidePictureKey(static_cast<int>(info.vkCode));
+    if (pictureKey != AutoRoute::GuidePictureKeyKind::None) {
+        const auto pictureGuide = DrawItemBase::VisibleGuideWindow();
+        const bool pictureGuideVisible = !pictureGuide.empty();
+        const bool pictureGuideFocused = pictureGuideVisible && GetForegroundWindow() ==
+            reinterpret_cast<HWND>(static_cast<std::uintptr_t>(pictureGuide.value("hwnd", std::uint64_t{0})));
+        const bool pictureModifiers = (GetAsyncKeyState(VK_CONTROL) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000) ||
+            (GetAsyncKeyState(VK_SHIFT) & 0x8000) || (GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000);
+        if (!pictureModifiers && AutoRoute::GuidePictureKeyOwned(pictureKey, pictureGuideVisible,
+            pictureGuide.value("picture", false), focused, pictureGuideFocused)) {
+            // 一次按下对应一次开关：与攻略键同样的"只认第一次按下"，自动重复消息不算新的一次。
+            const bool pictureFirstDown = down && !guideKeys[info.vkCode].IsPressed();
+            guideKeys[info.vkCode].Handle(down, false, false, false); // 只用于跟踪自动重复
+            if (down && pictureFirstDown && guideRequests.size() < 32)
+                guideRequests.push_back({{"type", "markerGuidePictureKey"}, {"key", static_cast<int>(info.vkCode)},
+                    {"profileId", DrawItemBase::MarkerProfile()}});
+            return 1; // 攻略窗口拥有这个键时不再传给游戏
+        }
+    }
     if (info.vkCode != VK_ESCAPE) {
         if (info.vkCode >= guideKeys.size()) return CallNextHookEx(keyboardHook, code, message, value);
         const auto bindings = RuntimeHotkeys::Snapshot();
