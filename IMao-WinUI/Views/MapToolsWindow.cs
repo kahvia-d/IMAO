@@ -29,12 +29,11 @@ internal sealed class MapToolsWindow : Window
     private readonly ScrollViewer routeScroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     private readonly FilterControl filter;
     private readonly Func<string, Task> command;
-    private readonly List<(Button Button, string Key)> navigation = [];
+    private readonly GamepadNavigationList navigation = new();
     private readonly Button back, close;
     private readonly GamepadWindowChrome chrome;
     private RoutePlanningState state = new();
-    private string buttonSignature = "", selectedKey = "";
-    private int navigationIndex;
+    private string buttonSignature = "";
     private bool closed, failedReturn, busy;
     private long animationGeneration;
     private RectInt32 finalBounds;
@@ -129,7 +128,7 @@ internal sealed class MapToolsWindow : Window
     public void ShowPage(string page)
     {
         Page = page is "route" or "filter" ? page : "home";
-        CanvasTool = "pan"; buttonSignature = ""; selectedKey = ""; navigationIndex = 0;
+        CanvasTool = "pan"; buttonSignature = ""; navigation.Reset();
         body.Children.Clear();
         title.Text = Page switch { "route" => "路径自动规划", "filter" => "点位筛选", _ => "地图工具" };
         notice.Text = Page == "filter" ? "勾选后即时保存 · 左摇杆选择 · A 确认 · B 返回" :
@@ -234,41 +233,47 @@ internal sealed class MapToolsWindow : Window
         if (Page == "filter") { filter.HandleGamepad(action); return; }
         RebuildNavigation();
         if (navigation.Count == 0) return;
-        if (action == GamepadAction.Accept) { await command(navigation[navigationIndex].Key); return; }
+        if (action == GamepadAction.Accept) { await command(navigation.CurrentKey); return; }
         int delta = action is GamepadAction.Left or GamepadAction.Up ? -1 : action is GamepadAction.Right or GamepadAction.Down ? 1 : 0;
         if (delta != 0)
         {
             // Navigate by visual row where possible; retain deterministic fallback before layout.
             // 选择规则本身放在 GamepadDirectionSelection 里（纯函数，有单测），这里只负责测量几何。
-            var current = navigation[navigationIndex].Button;
+            var current = (Button)navigation.CurrentControl!;
             var origin = current.TransformToVisual(root).TransformPoint(new(0, 0));
             double cx = origin.X + current.ActualWidth / 2, cy = origin.Y + current.ActualHeight / 2;
-            var offsets = navigation.Select(n =>
+            var offsets = new List<(double X, double Y)>();
+            for (int i = 0; i < navigation.Count; i++)
             {
-                var point = n.Button.TransformToVisual(root).TransformPoint(new(0, 0));
-                return (X: point.X + n.Button.ActualWidth / 2 - cx, Y: point.Y + n.Button.ActualHeight / 2 - cy);
-            }).ToList();
-            var fromKey = navigation[navigationIndex].Key;
-            var chosen = GamepadDirectionSelection.Select(offsets, action, navigationIndex);
-            navigationIndex = chosen >= 0 ? chosen : Math.Clamp(navigationIndex + delta, 0, navigation.Count - 1);
+                var button = (Button)navigation[i].Control;
+                var point = button.TransformToVisual(root).TransformPoint(new(0, 0));
+                offsets.Add((point.X + button.ActualWidth / 2 - cx, point.Y + button.ActualHeight / 2 - cy));
+            }
+            var fromKey = navigation.CurrentKey;
+            var chosen = GamepadDirectionSelection.Select(offsets, action, navigation.Index);
+            navigation.Select(chosen >= 0 ? chosen : navigation.Index + delta);
             // 诊断：把"这一页到底有没有那个方向的相邻按钮"写进日志，避免只能靠猜。
+            // 必须带上 label：两个按钮可以共用同一个指令键（都是 new），只记键会把"移过去了"
+            // 和"没动"写成同一行，正是这次误判的由来。
             DirectionDiagnostic?.Invoke(
-                $"page={Page} action={action} from='{fromKey}' to='{navigation[navigationIndex].Key}' " +
+                $"page={Page} action={action} index={navigation.Index} label='{Label(navigation.CurrentControl)}' " +
+                $"from='{fromKey}' to='{navigation.CurrentKey}' " +
                 $"geometricNeighbour={chosen >= 0} usedIndexFallback={chosen < 0} " +
                 $"offsets=[{string.Join(" ", offsets.Select(offset => "(" + (int)Math.Round(offset.X) + "," + (int)Math.Round(offset.Y) + ")"))}]");
-            selectedKey = navigation[navigationIndex].Key; FocusCurrent();
+            FocusCurrent();
         }
     }
 
+    private static string Label(object? control) => control is Button button ? button.Content?.ToString() ?? "" : "";
+
     private void RebuildNavigation()
     {
-        navigation.Clear();
+        var entries = new List<GamepadNavigationList.Entry>();
         var children = Page == "home" ? home.Children : routeButtons.Children;
         foreach (var button in children.OfType<Button>().Where(b => b.IsEnabled && b.Visibility == Visibility.Visible))
-            navigation.Add((button, (string)button.Tag));
-        navigation.Add((back, "back")); navigation.Add((close, "close"));
-        int selected = navigation.FindIndex(p => p.Key == selectedKey);
-        navigationIndex = selected >= 0 ? selected : Math.Clamp(navigationIndex, 0, Math.Max(0, navigation.Count - 1));
+            entries.Add(new(button, (string)button.Tag));
+        entries.Add(new(back, "back")); entries.Add(new(close, "close"));
+        navigation.Rebuild(entries);
     }
 
     public void FocusCurrent()
@@ -278,15 +283,14 @@ internal sealed class MapToolsWindow : Window
         RebuildNavigation();
         for (int i = 0; i < navigation.Count; i++)
         {
-            var button = navigation[i].Button;
-            button.BorderThickness = new Thickness(i == navigationIndex ? 2 : 1);
-            button.BorderBrush = GamepadWindowChrome.Brush(i == navigationIndex ? "IMaoAccentBrush" : "IMaoBorderBrush", i == navigationIndex ? 0x63D8E8u : 0x304052u);
+            var button = (Button)navigation[i].Control;
+            button.BorderThickness = new Thickness(i == navigation.Index ? 2 : 1);
+            button.BorderBrush = GamepadWindowChrome.Brush(i == navigation.Index ? "IMaoAccentBrush" : "IMaoBorderBrush", i == navigation.Index ? 0x63D8E8u : 0x304052u);
         }
         if (navigation.Count > 0)
         {
-            var button = navigation[navigationIndex].Button;
+            var button = (Button)navigation.CurrentControl!;
             button.Focus(FocusState.Programmatic); button.StartBringIntoView();
-            selectedKey = navigation[navigationIndex].Key;
         }
     }
 

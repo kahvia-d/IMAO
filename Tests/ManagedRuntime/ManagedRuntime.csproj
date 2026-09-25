@@ -22,6 +22,7 @@
     <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="GamepadInput.cs" />
     <Compile Include="../../IMao-WinUI/Models/GuideSkipHoldGesture.cs" Link="GuideSkipHoldGesture.cs" />
     <Compile Include="../../IMao-WinUI/Models/GamepadDirectionSelection.cs" Link="GamepadDirectionSelection.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GamepadNavigationList.cs" Link="GamepadNavigationList.cs" />
     <Compile Include="../../IMao-WinUI/Models/GuidePlacement.cs" Link="GuidePlacement.cs" />
     <Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="MapFilterCatalog.cs" />
     <Compile Include="../../IMao-WinUI/Helpers/UserDataPaths.cs" Link="UserDataPaths.cs" />
