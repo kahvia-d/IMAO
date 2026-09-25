@@ -103,6 +103,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
     public bool IsStandaloneGamepadGuideOpen => !disposed &&
         (standaloneGamepadGeneration != 0 && session.IsCurrent(standaloneGamepadGeneration) || chooserGamepad && chooser is not null);
     public bool IsStandaloneGamepadGuideOpening => IsStandaloneGamepadGuideOpen && (standaloneGamepadOpening || chooserGamepadOpening);
+    /// <summary>手柄开出的攻略窗口此刻是不是前台窗口（决定这段手柄输入归谁）。</summary>
+    public bool IsStandaloneGuideForeground => guide is { IsGuideVisible: true } window && IsForeground(window);
     /// <summary>测试读取：当前攻略是否持有"跳过当前导航目标"的授权，以及授权针对的点位身份。</summary>
     internal bool HasGuideSkipAuthorization =>
         guideSkipTarget is { } target && session.IsCurrent(target.Generation) && target.Generation == session.Generation;
@@ -116,16 +118,20 @@ public sealed class MarkerGuideCoordinator : IDisposable
             if (chooserGamepad && chooser is { } choices && IsForeground(choices) && !chooserGamepadOpening)
                 return new(GamepadInputMode.List, $"choices:{selectionGeneration}:{chooserActions.Count}:{chooserActionGeneration}",
                     CanCollectAll: chooserCompletesNearby);
-            // 手柄开出的攻略：只要窗口还开着就继续接受手柄输入。攻略窗口是无边框置顶窗口，
-            // 激活成功后游戏或覆盖层仍可能抢回前台；旧实现要求"攻略窗口必须是前台窗口"才返回
-            // Detail，一旦被抢走就退化成 Disabled，按 Y 连长按判定都进不去（实机日志里表现为
-            // 一串短按 OpenRouteMenu）。键盘仍要求前台，见 CanSkipFromKeyboardOrPointer。
+            // 手柄开出的攻略：手柄输入归谁只看"攻略窗口是不是前台窗口"。
+            // - 是前台：走 Detail/Image，攻略导航、长按 A 完成、长按 Y 跳过都启用。
+            // - 不是前台：说明此刻聚焦在游戏上（默认状态，或玩家按 LS 切回去了）。这段输入
+            //   整个留给游戏——玩家能继续移动、战斗，这正是"看攻略不被限制操作"的意思；
+            //   我们只保留 LS 的切换请求（在输入服务里，状态机之外）。
+            //   旧实现无论窗口在前台与否都返回 Detail，于是"窗口没前台"时仍然吃掉按键，
+            //   却没资格完成/跳过，实机表现为按了没反应。
             if (!standaloneGamepadOpening && guide is { IsGuideVisible: true } direct)
             {
-                var guideInputReady = IsGuideForeground();
+                if (!IsForeground(direct))
+                    return new(GamepadInputMode.GuidePassive, $"guide-passive:{standaloneGamepadGeneration}:{session.Selection?.PointId}");
                 return new(direct.IsGamepadImageOpen ? GamepadInputMode.Image : GamepadInputMode.Detail,
-                    $"guide:{standaloneGamepadGeneration}:{session.Selection?.PointId}:{direct.GamepadViewToken}:{guideInputReady}",
-                    guideInputReady && !gamepadBusy && direct.CanCompleteGamepad, CanSkip: guideInputReady && !gamepadBusy && direct.CanSkip);
+                    $"guide:{standaloneGamepadGeneration}:{session.Selection?.PointId}:{direct.GamepadViewToken}:True",
+                    !gamepadBusy && direct.CanCompleteGamepad, CanSkip: !gamepadBusy && direct.CanSkip);
             }
             return new(GamepadInputMode.Disabled, "guide:unfocused");
         }
@@ -246,6 +252,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
             if (action == GamepadAction.Back && !returnInFlight) await RetryWindowReturnAsync();
             return;
         }
+        // LS 的聚焦切换必须在上下文判定之前处理：手柄归游戏时上下文是 GuidePassive，
+        // 那正是需要切换的时刻。
+        if (action == GamepadAction.ToggleGuideFocus) { await ToggleGuideFocusAsync(); return; }
         var context = GetGamepadInputContext();
         if (context.Mode == GamepadInputMode.Disabled) return;
         if (chooserGamepad && chooser is { } choices && IsForeground(choices))
@@ -280,7 +289,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
         if (action == GamepadAction.Back)
         {
             if (context.Mode == GamepadInputMode.Image) guide?.CloseGamepadImage();
-            else if (context.Mode == GamepadInputMode.Detail)
+            // 被动模式（聚焦在游戏上）不会从手柄收到 Back；能走到这里的 Back 来自窗口自己的
+            // 关闭入口，所以同样要能关掉这个攻略。
+            else if (context.Mode == GamepadInputMode.Detail || IsStandaloneGamepadGuideOpen)
             {
                 if (IsStandaloneGamepadGuideOpen)
                 {
@@ -337,6 +348,48 @@ public sealed class MarkerGuideCoordinator : IDisposable
         }
         catch (OperationCanceledException) { }
         catch (Exception e) { if (IsGamepadSessionOpen) gamepadAssistant?.SetMessage("操作未完成：" + e.Message); }
+    }
+
+    /// <summary>
+    /// LS：在手柄开出的攻略窗口与游戏之间切换聚焦。
+    /// - 攻略窗口在前台 → 把前台交还游戏，攻略继续显示，玩家接着玩；
+    /// - 游戏在前台 → 激活攻略窗口，这时手柄才操作攻略（A/B/翻页/长按 A 完成/长按 Y 跳过）。
+    /// 前台既不是游戏也不是攻略窗口（玩家切去了别的程序）时什么都不做，不抢别人的焦点。
+    /// </summary>
+    private async Task ToggleGuideFocusAsync()
+    {
+        // 每个提前返回都写一条诊断：这个功能"按了没反应"时，必须能一眼看出是哪一条挡住的。
+        if (!IsStandaloneGamepadGuideOpen || guide is not { IsGuideVisible: true } window)
+        {
+            core.ReportGamepadDiagnostic("guide-focus",
+                $"ignored open={IsStandaloneGamepadGuideOpen} visible={guide?.IsGuideVisible}");
+            return;
+        }
+        if (IsForeground(window)) { await ReturnGuideFocusToGameAsync(); return; }
+        var game = standaloneGameWindow;
+        if (game == IntPtr.Zero || GetForegroundWindow() != game)
+        {
+            core.ReportGamepadDiagnostic("guide-focus", $"ignored foreground={GetForegroundWindow()} game={game}");
+            return;
+        }
+        var activation = await GamepadWindowActivation.TryActivateAsync(window, game, connectionRequests.Token);
+        core.ReportGamepadDiagnostic("guide-focus", activation.ToString());
+        if (!session.IsCurrent(standaloneGamepadGeneration)) return;
+        if (!activation.Success || !IsForeground(window))
+            core.ReportUserError("未能把聚焦切到攻略窗口：松开按键后按 LS 重试，或直接点击攻略窗口。");
+    }
+
+    /// <summary>把前台从攻略窗口交还游戏，但**不关**攻略：玩家要一边看一边玩。</summary>
+    private async Task ReturnGuideFocusToGameAsync()
+    {
+        if (guide is not { IsGuideVisible: true } window || !IsForeground(window)) return;
+        // 放大看图是另一个窗口：切回游戏时一并收起，免得它单独悬在游戏上方。
+        if (window.IsGamepadImageOpen) window.CloseGamepadImage();
+        var result = await GamepadWindowReturn.TryReturnAsync(standaloneGameIdentity,
+            GamepadWindowIdentity.Capture(new IntPtr(WindowHandle(window))), connectionRequests.Token);
+        core.ReportGamepadDiagnostic("guide-focus", "returned-to-game " + result.ToString());
+        if (!result.Success && IsForeground(window))
+            core.ReportUserError("未能返回游戏：松开按键后按 LS 重试，或直接点击游戏窗口。");
     }
 
     /// <summary>手柄长按进度：action 说明这是完成（A）的长按还是跳过（Y）的长按。</summary>
@@ -1168,17 +1221,36 @@ public sealed class MarkerGuideCoordinator : IDisposable
             bool directController = controllerSource != IntPtr.Zero && standaloneGamepadGeneration == generation;
             if (directController && GetForegroundWindow() != controllerSource && GetForegroundWindow() != standaloneGameWindow)
             { CloseGuide(generation); return false; }
+            // 玩家在游戏里直接按出来的攻略（LB+X 的路线回退、大地图工具条的"当前目标攻略"）：
+            // **不抢前台**，前台留在游戏上，玩家可以继续用手柄玩；想操作攻略窗口时按 LS 切换
+            // （见 ToggleGuideFocusAsync）。旧做法在这里 TryActivateAsync，把游戏的前台抢走，
+            // 于是"看攻略"和"继续玩"只能二选一。从手柄菜单/选择列表里点开的攻略不算这种：
+            // 那时玩家本来就停在菜单上，源窗口不是游戏窗口，保持原有的激活行为。
+            bool passiveController = directController && controllerSource == standaloneGameWindow;
             var source = directController ? GetForegroundWindow() : IntPtr.Zero;
             var loading = current.ShowMarkerAsync(session.Selection!, generation, gameBounds, activate: !directController);
             if (directController)
             {
                 _ = ObserveGamepadGuideLoadAsync(loading, generation);
-                var activation = await GamepadWindowActivation.TryActivateAsync(current, source, connectionRequests.Token);
-                core.ReportGamepadDiagnostic("guide-activation", activation.ToString());
-                if (!session.IsCurrent(generation)) return false;
-                if (!activation.Success || !IsForeground(current))
-                { CloseGuide(generation); core.ReportUserError("攻略窗口未能显示，请切回游戏后重试。"); return false; }
-                standaloneGamepadOpening = false;
+                if (passiveController)
+                {
+                    // 窗口以"置顶显示但不激活"的方式出现；前台必须还在游戏上，否则这次呼出作废。
+                    if (!session.IsCurrent(generation)) return false;
+                    if (GetForegroundWindow() != standaloneGameWindow)
+                    { CloseGuide(generation); return false; }
+                    standaloneGamepadOpening = false;
+                    core.ReportGamepadDiagnostic("guide-focus", "opened-passive gameForeground=True");
+                }
+                else
+                {
+                    var activation = await GamepadWindowActivation.TryActivateAsync(current, source, connectionRequests.Token);
+                    core.ReportGamepadDiagnostic("guide-activation", activation.ToString());
+                    if (!session.IsCurrent(generation)) return false;
+                    if (!activation.Success || !IsForeground(current))
+                    { CloseGuide(generation); core.ReportUserError("攻略窗口未能显示，请切回游戏后重试。"); return false; }
+                    standaloneGamepadOpening = false;
+                    core.ReportGamepadDiagnostic("guide-focus", "opened-focused");
+                }
             }
             else if (backgroundDetailsLoad) _ = ObserveGamepadGuideLoadAsync(loading, generation);
             else await loading;

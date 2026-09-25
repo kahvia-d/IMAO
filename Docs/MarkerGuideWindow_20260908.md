@@ -50,6 +50,46 @@
 
 实际窗口证据：`OverlappedPresenter.HasTitleBar=false`、`HasBorder=false`，显示/隐藏时同时核对 `AppWindow.IsVisible` 与原生 `IsWindowVisible`。记录 HWND=3146132、style=`0x144C0000`；完整 `WS_CAPTION` 掩码不存在（Windows 的 `WS_CAPTION` 是 `WS_BORDER | WS_DLGFRAME`，不能把单独残留的 `WS_DLGFRAME` 位误判成标题栏）。证据为 `out/guide-window-harness-build.log` 和 `out/guide-window-runtime/guide-window-tests.log`；复现步骤见该测试目录的 README。
 
+## 手柄呼出攻略不再抢前台，LS 切换聚焦（2026-09-25）
+
+**实机反馈**：手柄呼出攻略后窗口默认取得前台，玩家在游戏里的操作（移动等）随之失效——想看攻略就得停下手。
+手柄按键本来就少，所以这里做"聚焦切换"，而不是再加一个"关闭攻略"的键。
+
+**新行为**：
+
+| 情形 | 现在怎么做 |
+|---|---|
+| 玩家在游戏里直接按出攻略（LB+X 的路线目标回退、大地图工具条「当前目标攻略」） | **窗口置顶显示但不激活**，前台留在游戏上：可以继续用手柄玩，攻略就在旁边看 |
+| 想操作攻略窗口 | 按 **LS（左摇杆按下）**：把前台切到攻略窗口，这时 A/B/翻页/长按 A 完成/长按 Y 跳过才作用于攻略 |
+| 想接着玩 | 再按一次 LS：把前台交还游戏，**攻略继续显示**（不关闭）。放大看图也会随之一并收起，免得单独悬在游戏上方 |
+| 从手柄菜单/选择列表点开的攻略（RB 助手、"附近点位"选择列表） | 保持原有激活行为：那时玩家本来就停在菜单上，源窗口不是游戏窗口 |
+| 前台既不是游戏也不是攻略（玩家切去别的程序） | LS 什么都不做，不抢别人的焦点 |
+
+**实现要点**：
+
+- "这段手柄输入归谁"只看"攻略窗口是不是前台窗口"（`MarkerGuideCoordinator.GetGamepadInputContext`）：
+  是前台 → `Detail`/`Image`（攻略导航、完成、跳过全部启用）；不是前台 → 新增的
+  `GamepadInputMode.GuidePassive`，这段输入整个留给游戏，我们只保留 LS 的切换请求。
+  旧实现无论窗口在前台与否都返回 `Detail`，于是"窗口没有前台"时仍然吃掉按键，却拿不到完成/跳过资格。
+- LS 的按下检测放在输入状态机**之外**（`GamepadInputService` 里的 `GuideFocusToggleLatch`）：
+  被动模式下这段输入不走状态机，而这个切换也不该被"请先松开按键"之类的等待挡住。
+  攻略一打开先用 `Prime` 取一次基线——玩家握着摇杆按出攻略时不该白送一次切换。
+- 切换动作：攻略在前台 → `GamepadWindowReturn` 交还前台；游戏在前台 → `GamepadWindowActivation`
+  激活攻略。两条路都核对目标窗口身份，失败时保留原状态并提示重试，不静默；每个提前返回都写
+  `guide-focus` 诊断，实机"按了没反应"时能一眼看出是哪一条挡住的。
+- 窗口侧：`ShowMarkerAsync(activate: false)` 用 `SW_SHOWNOACTIVATE` 显示（`HideGuide` 走的是
+  `AppWindow.Hide`，不显式显示会停在隐藏状态）；手柄提示常驻「LS 切换聚焦（游戏 ↔ 攻略）」。
+
+**注意**：LS 是单击语义，而这个键同样会送到游戏——如果游戏里 L3 绑定了动作（例如疾跑/蹲下），
+按 LS 切聚焦时游戏也会响应（本项目不拦截手柄输入）。若实机觉得冲突，可改成"按住 LS"或"LS+RB"
+等组合，边沿语义与用例在 `Tests/ManagedRuntime/GuideFocusLatchTests.cs`。键鼠那条线不受影响：
+Z 与 G 只要"攻略可见 + 游戏或攻略窗口在前台"就生效，不需要先点窗口。
+
+**证据**：`GuideWindowRuntime.exe --test-route-controller` 的
+「standalone gamepad guide keeps the game focused and LS toggles focus」在真实窗口上验证：
+呼出后前台仍在游戏、`GuidePassive` 不吃 A 键；LS 切到攻略窗口后翻页生效；再按 LS 前台回到游戏且攻略
+仍然可见；第三次 LS 回到攻略窗口后 B 才关闭并返回游戏。
+
 ## 尚未做的游戏内验收
 
 尚未进行真实游戏的键盘钩子、窗口拖动、Z 保存后的焦点交接和图片放大期间关闭验收；离线通过不计作游戏内验收通过。新版已更新至常用 `x64/Release/IMao-WinUI.exe`，无需继续使用独立预览目录。本次检查启动的旧预览实例已关闭，未修改用户点位进度。

@@ -21,6 +21,10 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
     private int selectedDevice = -1;
     private bool querying, dispatching, disposed, enabled, configurationPending, toggling;
     private readonly ExplorationChordLatch explorationChord = new();
+    // 手柄开出的攻略窗口与游戏之间用 LS 切换聚焦。这个闩锁同样在状态机之外：默认聚焦在游戏时
+    // 那段手柄输入根本不走状态机，而切换也不该被"请先松开按键"之类的等待挡住。
+    private readonly GuideFocusToggleLatch guideFocusToggle = new();
+    private bool guideFocusOwned;
     private int configuredDevice = -1;
     private string message = "手柄适配已关闭";
     private string sessionProfile = "";
@@ -253,11 +257,38 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                 }));
             }
             if (dispatching) { Diagnose("dispatching"); input.Reset(); return; }
+            // LS：手柄开出的攻略窗口 ↔ 游戏 切换聚焦。攻略一打开就重新取一次基线，
+            // 避免"玩家握着摇杆按出攻略"在开窗瞬间白送一次切换。
+            if (guides.IsStandaloneGamepadGuideOpen != guideFocusOwned)
+            {
+                guideFocusOwned = guides.IsStandaloneGamepadGuideOpen;
+                guideFocusToggle.Prime(sample.Buttons);
+            }
+            var focusFired = guideFocusOwned && guideFocusToggle.Observe(sample.Buttons);
+            if (focusFired && !guides.IsGamepadReturnPending)
+            {
+                core.ReportGamepadDiagnostic("guide-focus-toggle",
+                    $"buttons={sample.Buttons} foreground={GetForegroundWindow()} guideForeground={guides.IsStandaloneGuideForeground}");
+                _ = DispatchAsync(GamepadAction.ToggleGuideFocus);
+                return;
+            }
+            // 攻略窗口开着但聚焦在游戏上：这段输入完全留给游戏，我们不解释、不产生动作，
+            // 也不因为"窗口不是前台"就停掉会话（LS 才是一键回来的路）。
+            if (context.Mode == GamepadInputMode.GuidePassive)
+            {
+                input.Reset();
+                Diagnose(gate + "/guide-passive");
+                SetMessage("攻略已打开 · 按 LS 切换到攻略窗口");
+                return;
+            }
             var update = input.Update(sample, context, now);
             Diagnose(gate + (update.WaitingForRelease ? "/release-required" : "/ready"));
             if (Math.Abs(lastHold - update.HoldProgress) > .015 || (lastHold != 0 && update.HoldProgress == 0))
             { lastHold = update.HoldProgress; lastHoldAction = update.HoldAction; guides.SetGamepadHoldProgress(lastHold, lastHoldAction); }
-            if (guides.IsGamepadSessionOpen || guides.IsStandaloneGamepadGuideOpen)
+            if (guides.IsStandaloneGamepadGuideOpen)
+                SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" :
+                    "攻略窗口 · LS 切回游戏 / B 关闭 / LB·RB 翻图 / X 放大图片 / 长按 A 完成 / 长按 Y 跳过");
+            else if (guides.IsGamepadSessionOpen)
                 SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" : "点位助手 · A 确认 / B 返回 / X 放大图片 / 长按 A 完成当前点");
             else if (context.Mode == GamepadInputMode.Map)
                 SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" :

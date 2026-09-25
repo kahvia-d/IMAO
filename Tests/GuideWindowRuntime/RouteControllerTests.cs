@@ -92,7 +92,7 @@ internal static class RouteControllerTests
             await UntilAsync(() => !fixture.Controller.HasHost, "interrupted input returns foreground before disposing its host");
         }, log);
 
-        await CaseAsync("standalone gamepad guide gets foreground and real service handles RB/LB pages and B close", async fixture =>
+        await CaseAsync("standalone gamepad guide keeps the game focused and LS toggles focus", async fixture =>
         {
             fixture.Core.GamepadContext = fixture.GameplayContext;
             fixture.Details.Pictures = ["https://test.invalid/route-page-one", "https://test.invalid/route-page-two"];
@@ -107,12 +107,31 @@ internal static class RouteControllerTests
                 contextGeneration = 17UL, profileId = "local", routeId = fixture.Core.ActiveRouteId,
                 key = "8:" + Target.PointId, screenX = 40, screenY = 100
             });
-            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail &&
-                fixture.Guide is { IsGuideVisible: true } current && GetForegroundWindow() == Handle(current) &&
+            // 新行为：呼出攻略**不抢前台**——玩家可以继续用手柄玩，想看细节时按 LS 切过来。
+            await UntilAsync(() => fixture.Guide is { IsGuideVisible: true } shown &&
                 fixture.Details.PictureRequests.Contains(fixture.Details.Pictures[0]),
-                "standalone shortcut activates the real guide and loads its first controlled picture");
-            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && !fixture.Coordinator.IsGamepadSessionOpen,
-                "world shortcut opens the standalone guide without creating a map assistant");
+                "standalone shortcut shows the real guide and loads its first controlled picture");
+            Check(GetForegroundWindow() == fixture.GameHandle,
+                "the game keeps the foreground; the guide does not steal it");
+            Check(IsWindowVisible(Handle(fixture.Guide!)) && fixture.Coordinator.IsStandaloneGamepadGuideOpen &&
+                !fixture.Coordinator.IsGamepadSessionOpen,
+                "the guide is really on screen for the world shortcut without creating a map assistant");
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "the pad belongs to the game while the guide is passive");
+            var page = PictureIndex(fixture.Guide!);
+            await Task.Delay(80);
+            sample = sample with { Buttons = GamepadButtons.A }; await Task.Delay(90);
+            sample = sample with { Buttons = GamepadButtons.None }; await Task.Delay(90);
+            Check(PictureIndex(fixture.Guide!) == page && fixture.Coordinator.IsStandaloneGamepadGuideOpen &&
+                !fixture.Core.Commands.Any(value => value.Operation == "markerSetCompletion"),
+                "buttons pressed while the game owns the pad never reach the guide");
+
+            // LS：把聚焦切到攻略窗口。
+            sample = sample with { Buttons = GamepadButtons.L3 }; await Task.Delay(60);
+            sample = sample with { Buttons = GamepadButtons.None };
+            await UntilAsync(() => fixture.Guide is { } guide && GetForegroundWindow() == Handle(guide) &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail,
+                "LS hands the pad to the guide window");
             await Task.Delay(80);
             sample = sample with { Buttons = GamepadButtons.RB }; await Task.Delay(90);
             Check(PictureIndex(fixture.Guide!) == 0, "RB press alone leaves the original guide page visible");
@@ -122,6 +141,24 @@ internal static class RouteControllerTests
             sample = sample with { Buttons = GamepadButtons.LB }; await Task.Delay(90);
             sample = sample with { Buttons = GamepadButtons.None };
             await UntilAsync(() => PictureIndex(fixture.Guide!) == 0, "LB release returns to the first guide picture");
+
+            // LS 再按一次：把聚焦交还游戏，攻略继续显示。
+            // 每次松开都要留够时间让 16 毫秒的服务采样看到"已松开"，否则下一次按下只是同一次按住。
+            await Task.Delay(80);
+            sample = sample with { Buttons = GamepadButtons.L3 }; await Task.Delay(60);
+            sample = sample with { Buttons = GamepadButtons.None }; await Task.Delay(60);
+            await UntilAsync(() => GetForegroundWindow() == fixture.GameHandle &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "LS hands the pad back to the game");
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && fixture.Guide is { IsGuideVisible: true } still &&
+                IsWindowVisible(Handle(still)),
+                "leaving the guide keeps it open and visible for reading while playing");
+
+            // 回到攻略窗口再按 B：关闭并回到游戏。
+            sample = sample with { Buttons = GamepadButtons.L3 }; await Task.Delay(60);
+            sample = sample with { Buttons = GamepadButtons.None };
+            await UntilAsync(() => fixture.Guide is { } focused && GetForegroundWindow() == Handle(focused),
+                "LS takes the pad back to the guide");
             await Task.Delay(80);
             sample = sample with { Buttons = GamepadButtons.B }; await Task.Delay(90);
             Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen, "B press alone does not close the guide");

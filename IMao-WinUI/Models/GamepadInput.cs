@@ -1,6 +1,8 @@
 namespace IMao_WinUI.Models;
 
-public enum GamepadInputMode { Disabled, Map, List, Detail, Menu, Image, Gameplay }
+public enum GamepadInputMode { Disabled, Map, List, Detail, Menu, Image, Gameplay,
+    /// <summary>手柄开出的攻略窗口开着，但聚焦在游戏上：这段手柄输入全部留给游戏，只等 LS 的切换请求。</summary>
+    GuidePassive }
 public readonly record struct GamepadInputContext(GamepadInputMode Mode, string Token, bool CanComplete = false,
     GamepadButtons EntryButton = GamepadButtons.LB, bool CanCollectAll = false, bool CanSkip = false);
 public enum GamepadAction
@@ -8,6 +10,8 @@ public enum GamepadAction
     OpenAssistant, Up, Down, Left, Right, Accept, Back, PreviousPage, NextPage,
     OpenRouteMenu, Complete, ScrollUp, ScrollDown, ScrollLeft, ScrollRight,
     OpenToolbar, CompleteCurrent, ToggleGuide, SkipGuideStop,
+    // 手柄开出的攻略窗口与游戏之间切换聚焦（LS 单击）。
+    ToggleGuideFocus,
     // The nearby completion list: hold to collect every listed point; the guide detail
     // page: one press enlarges the picture; the enlarged picture: trigger zoom.
     CompleteAll, ExpandImage, ZoomIn, ZoomOut
@@ -39,6 +43,31 @@ public sealed class ExplorationChordLatch
         var complete = (buttons & Chord) == Chord;
         var fired = complete && !latched;
         latched = complete;
+        return fired;
+    }
+}
+
+/// <summary>
+/// LS（左摇杆按下）在手柄开出的攻略窗口与游戏之间切换聚焦：单击一次切换一次，按住不放只算一次。
+///
+/// 攻略打开时先用 <see cref="Prime"/> 记下"这一刻 LS 是不是已经按着"：玩家要是握着摇杆按出攻略，
+/// 开窗瞬间不该白送一次切换。<see cref="Observe"/> 只看上升沿，与探索和弦同样的边沿语义。
+/// </summary>
+public sealed class GuideFocusToggleLatch
+{
+    public const GamepadButtons Button = GamepadButtons.L3;
+
+    private bool latched;
+
+    /// <summary>把当前按键状态当作基线：按着 LS 也不会触发一次切换，必须先松开再按。</summary>
+    public void Prime(GamepadButtons buttons) => latched = (buttons & Button) != 0;
+
+    /// <summary>返回 true 表示"这一刻刚按下 LS"，调用方应当切换一次聚焦。</summary>
+    public bool Observe(GamepadButtons buttons)
+    {
+        var down = (buttons & Button) != 0;
+        var fired = down && !latched;
+        latched = down;
         return fired;
     }
 }

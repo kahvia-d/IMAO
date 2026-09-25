@@ -287,6 +287,10 @@ public sealed class MarkerGuideWindow : Window
         PlaceAtGameLeft(selection, gameBounds);
         IsGuideVisible = true;
         if (activate) Activate();
+        // 手柄开出的攻略默认不抢前台：窗口置顶显示，前台留在游戏上（handle 那侧会校验前台还在游戏）。
+        // HideGuide 用的是 AppWindow.Hide，所以这里必须显式再显示一次，否则窗口会停在隐藏状态。
+        // SW_SHOWNOACTIVATE = 4：显示但不激活，也不改变前台窗口。
+        else ShowWindow(WinRT.Interop.WindowNative.GetWindowHandle(this), 4);
         try
         {
             var local = await details.GetLocalAsync(selection, token);
@@ -496,7 +500,8 @@ public sealed class MarkerGuideWindow : Window
         gamepadHint.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
         // 提示里常驻"长按 Y 跳过"：跳过按钮本身就是"这一刻有没有资格"的唯一指示，
         // 让提示随资格变化会在窗口复用时留下上一状态的文字。
-        gamepadHint.Text = "X 放大图片 · B 返回列表 · LB/RB 翻图 · 右摇杆滚动 · 长按 A 完成 · 长按 Y 跳过当前目标";
+        // LS 切换聚焦也写在这里：手柄呼出的攻略默认把聚焦留给游戏，玩家得知道怎么切过来。
+        gamepadHint.Text = "LS 切换聚焦（游戏 ↔ 攻略） · A 确认 · B 关闭 · X 放大图片 · LB/RB 翻图 · 长按 A 完成 · 长按 Y 跳过当前目标";
         if (!enabled && imageVisible) CloseImageWindow();
         SetGamepadHoldProgress(0);
         UpdateCompletionButton();
@@ -805,6 +810,10 @@ public sealed class MarkerGuideWindow : Window
     private static extern bool ReleaseCapture();
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessageW(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+    /// <summary>SW_SHOWNOACTIVATE：显示但不激活。手柄呼出攻略时前台必须留在游戏上。</summary>
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShowWindow(IntPtr window, int command);
 
     private void CancelLoads()
     {
