@@ -133,6 +133,11 @@ internal sealed class RouteGamepadController(CoreHostService core) : IDisposable
                     buttons = (ushort)sample.Buttons, leftX = Axis(sample.LeftX), leftY = Axis(sample.LeftY),
                     otherInput = Other(sample)
                 }, token);
+                // 工具栏的方向切换在原生侧完成；这里记录真正送出去的摇杆值，
+                // 才能区分"左右没被识别"和"任务栏那个方向本来就没有相邻按钮"。
+                if (!sample.AxesNeutral || sample.Buttons != GamepadButtons.None)
+                    core.ReportGamepadDiagnostic("route-toolbar",
+                        $"sent seq={sequence} buttons={sample.Buttons} leftX={Axis(sample.LeftX):F2} leftY={Axis(sample.LeftY):F2} rawX={sample.LeftX} rawY={sample.LeftY}");
                 if (operation != generation) return;
                 string phase = result.TryGetProperty("phase", out var p) ? p.GetString() ?? "ended" : "ended";
                 if (phase == "handoff") { PrepareHandoff(); return; }

@@ -342,6 +342,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
         }
         if (IsStandaloneGamepadGuideOpen || gamepadGuideGeneration != 0 && session.IsCurrent(gamepadGuideGeneration))
         {
+            if (action is GamepadAction.SkipGuideStop)
+                core.ReportGamepadDiagnostic("guide-skip-hold",
+                    $"service-hold value={value:F2} window={(guide is null ? "null" : guide.SkipInputSnapshot)}");
             // The interpreter only ever reports the two guide holds; anything else cannot be
             // attributed to this window and is reported as "no hold" so both bars collapse.
             var holdAction = action is GamepadAction.Complete or GamepadAction.SkipGuideStop ? action : null;
@@ -853,6 +856,10 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 var nearby = await core.ExecuteMarkerAsync("markerGetNearbyGuide", new { profileId }, request.Token);
                 if (!session.IsCurrent(generation) || disposed) return;
                 CloseGuide(generation);
+                core.ReportGamepadDiagnostic("guide-shortcut",
+                    $"source=keyboard profile={profileId} nearby-outcome='{Text(nearby, "outcome")}' " +
+                    $"hasSelection={nearby.TryGetProperty("selection", out var probe) && probe.ValueKind == JsonValueKind.Object} " +
+                    $"hasCandidates={nearby.TryGetProperty("candidates", out _)}");
                 // An unambiguous nearest point comes back resolved, so pressing the key
                 // opens its guide without showing a list of one.
                 if (Text(nearby, "profileId") == profileId && nearby.TryGetProperty("selection", out var single) &&
@@ -866,6 +873,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 }
                 if (Text(nearby, "profileId") == profileId && nearby.TryGetProperty("candidates", out _))
                     await ShowCandidatesAsync(nearby);
+                if (Text(nearby, "outcome") != "guide-empty")
+                    core.ReportUserError("当前位置暂不可用，请等小地图定位恢复后重试。");
                 return;
             }
             while (session.IsCurrent(generation))
@@ -876,6 +885,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 if (!session.IsCurrent(generation) || disposed) return;
                 // A completion observed while awaiting the response invalidates that target snapshot.
                 if (completionVersion != completionGeneration) continue;
+                core.ReportGamepadDiagnostic("guide-shortcut",
+                    $"source=gamepad profile={profileId} status='{Text(result, "navigationStatus")}' " +
+                    $"route='{Text(result, "routeId")}' hasSelection={result.TryGetProperty("selection", out var seen) && seen.ValueKind == JsonValueKind.Object}");
                 if (Text(result, "profileId") != profileId || !result.TryGetProperty("selection", out var target) ||
                     target.ValueKind == JsonValueKind.Null)
                 {
@@ -924,27 +936,63 @@ public sealed class MarkerGuideCoordinator : IDisposable
         long refresh = ++guideSkipRefreshGeneration;
         guideSkipTarget = null;
         guide?.SetSkipAvailability(false);
-        if (selection.Completed || !session.IsCurrent(generation)) return;
+        if (selection.Completed || !session.IsCurrent(generation))
+        {
+            core.ReportGamepadDiagnostic("guide-skip",
+                $"skip-eligible=0 reason={(selection.Completed ? "guide-point-completed" : "session-superseded")} point={selection.StateId}:{selection.PointId}");
+            return;
+        }
         try
         {
             var route = routeGuide ?? await core.ExecuteMarkerAsync("markerGetRouteGuide",
                 new { profileId = selection.ProfileId }, connectionRequests.Token);
             if (disposed || !session.IsCurrent(generation) || refresh != guideSkipRefreshGeneration ||
                 session.Selection is not { } selected || selected.ProfileId != selection.ProfileId ||
-                selected.StateId != selection.StateId || selected.PointId != selection.PointId) return;
-            if (Text(route, "profileId") != selection.ProfileId ||
-                Text(route, "routeId") is not { Length: > 0 } routeId ||
-                !route.TryGetProperty("selection", out var target) || target.ValueKind != JsonValueKind.Object) return;
+                selected.StateId != selection.StateId || selected.PointId != selection.PointId)
+            {
+                core.ReportGamepadDiagnostic("guide-skip",
+                    $"skip-eligible=0 reason=stale-or-superseded refreshFresh={refresh == guideSkipRefreshGeneration} " +
+                    $"sessionCurrent={session.IsCurrent(generation)} point={selection.StateId}:{selection.PointId}");
+                return;
+            }
+            if (Text(route, "profileId") != selection.ProfileId)
+            {
+                core.ReportGamepadDiagnostic("guide-skip",
+                    $"skip-eligible=0 reason=profile-mismatch reply='{Text(route, "profileId")}' expected='{selection.ProfileId}'");
+                return;
+            }
+            if (Text(route, "routeId") is not { Length: > 0 } routeId)
+            {
+                core.ReportGamepadDiagnostic("guide-skip",
+                    $"skip-eligible=0 reason=no-active-route-status={Text(route, "navigationStatus")}");
+                return;
+            }
+            if (!route.TryGetProperty("selection", out var target) || target.ValueKind != JsonValueKind.Object)
+            {
+                core.ReportGamepadDiagnostic("guide-skip",
+                    $"skip-eligible=0 reason=no-current-target status={Text(route, "navigationStatus")} route={routeId}");
+                return;
+            }
             var current = ReadSelection(target);
             if (current.Completed || current.ProfileId != selection.ProfileId ||
-                current.StateId != selection.StateId || current.PointId != selection.PointId) return;
+                current.StateId != selection.StateId || current.PointId != selection.PointId)
+            {
+                core.ReportGamepadDiagnostic("guide-skip",
+                    $"skip-eligible=0 reason=identity-mismatch status={Text(route, "navigationStatus")} route={routeId} " +
+                    $"guide-point={selection.StateId}:{selection.PointId} target-point={current.StateId}:{current.PointId}");
+                return;
+            }
             guideSkipTarget = (generation, selection.ProfileId, routeId,
                 $"{selection.StateId}:{selection.PointId}", Unsigned(route, "revision"), selection.StateId, selection.PointId);
             guide?.SetSkipAvailability(true);
+            core.ReportGamepadDiagnostic("guide-skip",
+                $"skip-eligible=1 status={Text(route, "navigationStatus")} route={routeId} " +
+                $"point={selection.StateId}:{selection.PointId} revision={Unsigned(route, "revision")}");
         }
         catch (Exception e) when (e is IOException or InvalidOperationException or OperationCanceledException)
         {
             if (session.IsCurrent(generation)) guide?.SetSkipAvailability(false);
+            core.ReportGamepadDiagnostic("guide-skip", $"skip-eligible=0 reason=query-failed error={e.Message}");
         }
     }
 
@@ -958,20 +1006,30 @@ public sealed class MarkerGuideCoordinator : IDisposable
         if (guideSkipTarget is not { } target || target.Generation != generation ||
             target.ProfileId != selection.ProfileId || target.StateId != selection.StateId ||
             target.PointId != selection.PointId || !session.IsCurrent(generation) ||
-            guide is not { IsGuideVisible: true }) return false;
+            guide is not { IsGuideVisible: true })
+        {
+            core.ReportGamepadDiagnostic("guide-skip",
+                $"submitted=0 reason=not-authorised hasTarget={guideSkipTarget is not null} " +
+                $"sessionCurrent={session.IsCurrent(generation)} point={selection.StateId}:{selection.PointId}");
+            return false;
+        }
         guideSkipTarget = null;
         guide.SetSkipAvailability(false);
         try
         {
+            core.ReportGamepadDiagnostic("guide-skip",
+                $"submitted=1 route={target.RouteId} key={target.Key} revision={target.Revision}");
             await core.ExecuteRoutePlanningAsync("skip", new
             {
                 profileId = target.ProfileId, routeId = target.RouteId, key = target.Key, expectedRevision = target.Revision
             }, connectionRequests.Token);
+            core.ReportGamepadDiagnostic("guide-skip", "submitted=1 accepted=1");
             if (session.IsCurrent(generation)) CloseGuide(generation);
             return true;
         }
         catch (Exception e) when (e is IOException or InvalidOperationException or OperationCanceledException)
         {
+            core.ReportGamepadDiagnostic("guide-skip", $"submitted=1 accepted=0 error={e.Message}");
             if (session.IsCurrent(generation))
             {
                 core.ReportUserError("路线目标未跳过：" + e.Message);
@@ -994,6 +1052,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             {
                 ContentDismiss = DismissGuideFromContentAsync,
                 ImageWindowChanged = (window, opened) => _ = GuideImageWindowChangedAsync(window, opened),
+                SkipDiagnostic = state => core.ReportGamepadDiagnostic("guide-skip-hold", state),
             };
             var window = guide;
             window.Closed += async (_, _) =>
