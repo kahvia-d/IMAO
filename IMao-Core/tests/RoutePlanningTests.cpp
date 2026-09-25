@@ -396,6 +396,10 @@ void HotkeyPressOwnershipTests() {
 // 是前台窗口**。实机反馈：只有先用鼠标点一下攻略窗口，Z 与 G 才生效；玩家在游戏里按键时
 // 窗口拿不到键盘焦点，所以"谁是前台窗口"这条判定必须放在这里，而不是要求窗口自己在前台。
 // 开关攻略（F8）是例外：它必须在还没有攻略窗口时也能用。
+//
+// 用例必须按钩子**实际传的那一组参数**来写。2026-09-25 就是在这里漏了一步：钩子里在函数外面
+// 多写了一个 `&& guideIdentity`，于是"还没有攻略窗口"的 F8 打不开任何攻略，而当时的用例只测了
+// 函数本身、全绿通过。现在钩子只调用这一个函数，下面每条都对着它的一种真实输入。
 void GuideHotkeyRoutingTests() {
     using AutoRoute::GuideHotkeyKind;
     const RuntimeHotkeyBindings bindings{};
@@ -412,25 +416,45 @@ void GuideHotkeyRoutingTests() {
     Expect(AutoRoute::ClassifyGuideHotkey(disabled, 71) == GuideHotkeyKind::None,
         "a disabled binding stops claiming its key");
 
-    // 这一条就是实机 bug 本身：攻略窗口可见、玩家在游戏里按键（前台是游戏，不是攻略窗口）。
-    for (const auto kind : {GuideHotkeyKind::CompleteShownPoint, GuideHotkeyKind::Skip, GuideHotkeyKind::ToggleGuide})
-        Expect(AutoRoute::GuideHotkeyOwned(kind, /*guideVisible*/ true, /*guideFocused*/ false, /*gameFocused*/ true),
-            "a visible guide owns its hotkeys while the game - not the guide - holds the foreground");
-    // 开关攻略必须能在"还没有攻略窗口"时用；把它和 Z/G 用同一条规则会直接让 F8 打不开窗口。
-    Expect(AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::ToggleGuide, /*guideVisible*/ false, false, /*gameFocused*/ true),
-        "the guide key still opens the guide when no guide window exists yet");
-    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::CompleteShownPoint, false, false, true) &&
-        !AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, false, false, true),
-        "completion and skip need a visible guide; with none they stay with the game");
-    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::CompleteShownPoint, true, false, false) &&
-        !AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, true, false, false),
-        "another application in front means these keys are not ours");
-    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::ToggleGuide, true, false, false),
-        "the guide key also stays with the game when a third application is in front");
-    Expect(AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, true, /*guideFocused*/ true, false),
+    // 开/关攻略：**还没有攻略窗口**（游戏中按 F8 打开它）也必须归我们，否则这个键什么都打不开。
+    // 这是 2026-09-25 实机回归的那一条：可见性/身份都不能参与 ToggleGuide 的判定。
+    Expect(AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::ToggleGuide, /*modifiers*/ false,
+        /*guideVisible*/ false, /*guideIdentity*/ false, /*guideFocused*/ false, /*gameFocused*/ true),
+        "the guide key opens the guide when no guide window and no identity exist yet");
+    Expect(AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::ToggleGuide, false, true, true, false, true),
+        "the guide key also closes a guide the game is not focusing");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::ToggleGuide, false, true, true, false, false),
+        "the guide key stays with the game while a third application is in front");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::ToggleGuide, /*modifiers*/ true, false, false, false, true),
+        "a modified guide key is never ours");
+
+    // 这一条就是 Z/G 的实机 bug：攻略窗口可见、玩家在游戏里按键（前台是游戏，不是攻略窗口）。
+    for (const auto kind : {GuideHotkeyKind::CompleteShownPoint, GuideHotkeyKind::Skip})
+        Expect(AutoRoute::GuideHotkeyOwned(kind, false, /*guideVisible*/ true, /*guideIdentity*/ true,
+            /*guideFocused*/ false, /*gameFocused*/ true),
+            "a visible guide owns completion and skip while the game - not the guide - holds the foreground");
+    Expect(AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, false, true, true, /*guideFocused*/ true, false),
         "a focused guide still owns its keys");
-    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::None, true, true, true),
-        "an unrelated key is never claimed");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::CompleteShownPoint, false, true, true, false, false) &&
+        !AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, false, true, true, false, false),
+        "another application in front means these keys are not ours");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::CompleteShownPoint, false, false, false, false, true) &&
+        !AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, false, false, false, false, true),
+        "completion and skip need a visible guide; with none they stay with the game");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::CompleteShownPoint, false, true, /*guideIdentity*/ false, false, true) &&
+        !AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, false, true, false, false, true),
+        "an overlap chooser without a selected point keeps the key with the game");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, true, true, true, true, true) &&
+        !AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::CompleteShownPoint, true, true, true, true, true),
+        "a modified completion or skip key is never ours");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::None, false, true, true, true, true) &&
+        !AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::PageBack, false, true, true, true, true),
+        "unrelated keys and paging (decided by PageRequest) are never claimed here");
+
+    // 跳过键的抬起只有"那个可见且有身份的窗口"才需要转交，用来停掉窗口那侧的 600 毫秒计时。
+    Expect(AutoRoute::GuideSkipReleaseDelivered(/*guideVisible*/ true, /*guideIdentity*/ true) &&
+        !AutoRoute::GuideSkipReleaseDelivered(false, false) && !AutoRoute::GuideSkipReleaseDelivered(true, false),
+        "a skip key-up is forwarded only while the identified guide is still visible");
 }
 
 void HotkeyConfigurationTests() {

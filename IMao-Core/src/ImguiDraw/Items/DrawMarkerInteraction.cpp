@@ -302,10 +302,10 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
             guideWindow.value("profileId", "") == DrawItemBase::MarkerProfile();
         const bool modifiers = (GetAsyncKeyState(VK_CONTROL) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000) ||
             (GetAsyncKeyState(VK_SHIFT) & 0x8000) || (GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000);
-        // 攻略窗口可见时这些键归它所有，**不要求攻略窗口是前台窗口**（见 GuideHotkeyRouting.h）：
-        // 玩家在游戏里按键时窗口拿不到键盘焦点，原来那条前台判定让 Z 与 G 只有点过窗口后才生效。
-        // 开关攻略（F8）不要求窗口已存在，否则打不开任何攻略。
-        const bool owned = !modifiers && guideIdentity && AutoRoute::GuideHotkeyOwned(kind, guideVisible, guideFocused, focused);
+        // 这一条就是"这个键此刻归谁"的全部判定，只能调用这一个函数：外面再加任何 `&&`
+        // 都会绕开它的用例（写这一版时多加了 `&& guideIdentity`，F8 就再也打不开攻略了）。
+        const bool owned = AutoRoute::GuideHotkeyOwned(kind, modifiers, guideVisible, guideIdentity,
+            guideFocused, focused);
         if (skipKey) {
             // 跳过键只转交"按下/松开"：按多久、算不算一次跳过都由窗口那侧决定。
             const bool skipFirstDown = down && !guideKeys[info.vkCode].IsPressed();
@@ -316,7 +316,8 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
                     guideRequests.push_back({{"type", "markerGuideSkip"}, {"down", true},
                         {"profileId", DrawItemBase::MarkerProfile()}});
             } else {
-                if (!guideIdentity) return CallNextHookEx(keyboardHook, code, message, value);
+                if (!AutoRoute::GuideSkipReleaseDelivered(guideVisible, guideIdentity))
+                    return CallNextHookEx(keyboardHook, code, message, value);
                 if (guideRequests.size() < 32)
                     guideRequests.push_back({{"type", "markerGuideSkip"}, {"down", false},
                         {"profileId", DrawItemBase::MarkerProfile()}});
@@ -327,7 +328,8 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
         const auto pageRequest = pageDirection ? MarkerGuideProtocol::PageRequest(guideWindow, DrawItemBase::MarkerProfile(),
             focused, guideFocused, pageDirection) : nlohmann::json(nullptr);
         const bool pageGuide = !pageRequest.is_null();
-        const bool eligible = !modifiers && ((guideKey && owned) || completeGuide || pageGuide);
+        // owned 已经把"攻略键 + 完成键"这一类算完；翻页键仍由 PageRequest 自己判定。
+        const bool eligible = !modifiers && (owned || pageGuide);
         const bool firstDown = down && !guideKeys[info.vkCode].IsPressed();
         const auto action = guideKeys[info.vkCode].Handle(down, eligible, focused || guideFocused, false);
         if (down) RuntimeHotkeyPressOwnership::RecordKeyDown(static_cast<int>(info.vkCode), firstDown,
