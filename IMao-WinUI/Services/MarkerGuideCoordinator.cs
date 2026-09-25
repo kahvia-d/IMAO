@@ -598,7 +598,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             gamepadGuideGeneration = generation;
             gamepadGuideRouteId = !fromCursor && gamepadRouteTarget is { } target && SamePoint(selection, target) && gamepadRouteId.Length > 0
                 ? gamepadRouteId : null;
-            if (await ShowCurrentAsync(selection, generation, backgroundDetailsLoad: true, resolveSkip: false) &&
+            if (await ShowCurrentAsync(selection, generation, backgroundDetailsLoad: true) &&
                 GamepadCurrent(operation) && ReferenceEquals(gamepadAssistant, assistant) &&
                 gamepadGuideGeneration == generation && guide is { } current && IsForeground(current))
                 assistant.AppWindow.Hide();
@@ -961,7 +961,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
         {
             var route = routeGuide ?? await core.ExecuteMarkerAsync("markerGetRouteGuide",
                 new { profileId = selection.ProfileId }, connectionRequests.Token);
-            // 这一轮的结果已经过期（有更新的刷新，或窗口换了点位）：直接放弃，不动现有资格。
+            // 这一轮的结果已经过期（有更新的刷新，或窗口换了点位）：放弃这轮结论，但把**已确认**
+            // 的资格补写回窗口——资格只要确认过就该一直生效，直到拿到确定的否定结论。
             if (disposed || !session.IsCurrent(generation) || refresh != guideSkipRefreshGeneration ||
                 session.Selection is not { } selected || selected.ProfileId != selection.ProfileId ||
                 selected.StateId != selection.StateId || selected.PointId != selection.PointId)
@@ -969,6 +970,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 core.ReportGamepadDiagnostic("guide-skip",
                     $"skip-eligible=keep reason=stale-or-superseded refreshFresh={refresh == guideSkipRefreshGeneration} " +
                     $"sessionCurrent={session.IsCurrent(generation)} point={selection.StateId}:{selection.PointId}");
+                if (!disposed && session.IsCurrent(generation))
+                    guide?.SetSkipAvailability(guideSkipTarget is { } kept && kept.Generation == generation);
                 return;
             }
             if (Text(route, "profileId") != selection.ProfileId)
@@ -1146,6 +1149,12 @@ public sealed class MarkerGuideCoordinator : IDisposable
             }
             else if (backgroundDetailsLoad) _ = ObserveGamepadGuideLoadAsync(loading, generation);
             else await loading;
+            // 窗口此刻才真正显示出来：把"这次查到的资格"再应用一次。
+            // 只推一次是不够的——RefreshSkipTargetAsync 很可能在窗口还没就绪时就写了那一次，
+            // 之后没有任何补写，窗口就会停在"协调器说有、窗口说没有"的分裂状态（实机表现：
+            // 跳过按钮出现一下，之后长按 Y 毫无反应）。
+            if (session.IsCurrent(generation) && ReferenceEquals(guide, current))
+                current.SetSkipAvailability(guideSkipTarget is { } confirmed && confirmed.Generation == generation);
             return true;
         }
         catch { CloseGuide(generation); throw; }
@@ -1481,7 +1490,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                                 controllerSource: new IntPtr(WindowHandle(window)));
                             if (shown) { chooserGamepad = chooserGamepadOpening = false; chooserActions.Clear(); chooser = null; window.Close(); }
                         }
-                        else { window.Close(); chooser = null; await ShowAsync(chosen, resolveSkip: false); }
+                        else { window.Close(); chooser = null; await ShowAsync(chosen); }
                     }
                     catch (Exception e)
                     {

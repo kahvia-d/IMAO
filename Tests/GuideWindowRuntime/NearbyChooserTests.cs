@@ -29,8 +29,12 @@ internal static class NearbyChooserTests
             Check(fixture.Details.OnlineRequests.Count == 0, "cancelled keyboard lookup cannot reopen guide");
             fixture.F8();
             await UntilAsync(() => fixture.Details.OnlineRequests.Count == 1, "keyboard single guide auto opens");
-            Check(fixture.Count("markerGetRouteGuide") == 0 && fixture.Count("markerResolveNearbyCandidate") == 1 &&
-                fixture.Details.OnlineRequests.Single().PointId == First.PointId, "keyboard uses nearest candidate instead of route");
+            // 攻略点位来自附近候选，而不是路线回退：只能有一次候选解析。那次 markerGetRouteGuide
+            // 是"跳过资格"的核对——按产品规则，附近打开的点位如果恰好是当前导航目标，也要显示
+            // 跳过按钮，所以这条路必须问一次核心当前目标是谁。
+            Check(fixture.Count("markerGetRouteGuide") == 1 && fixture.Count("markerResolveNearbyCandidate") == 1 &&
+                fixture.Details.OnlineRequests.Single().PointId == First.PointId,
+                "keyboard uses the nearest candidate and only asks the route target for skip eligibility");
             fixture.F8();
         }, log);
 
