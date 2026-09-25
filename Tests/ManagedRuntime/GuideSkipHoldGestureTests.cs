@@ -1,8 +1,13 @@
 using IMao_WinUI.Models;
 
 /// <summary>
-/// 「按住跳过」的计时模型：键盘与鼠标是两个独立通道，各自计时，资格失效不能累计时间。
+/// 「按住跳过」的计时模型：资格失效不累计时间、一次按住只完成一次。
 /// 每个用例都用独立的实例，避免把"上一条断言留下的状态"当成被测行为。
+///
+/// ⚠️ 最后那段"键鼠两个通道"是**更早的设计**：鼠标那一侧现在是单击即提交
+/// （`MarkerGuideWindow` 里 `skip.Click`），生产只有一个 `keyboardSkipGesture` 实例。
+/// 保留它的价值只在于证明"这个类是实例无关的、两个实例互不影响"；
+/// **不要照它去生产里再加一个实例。**
 /// </summary>
 internal static class GuideSkipHoldGestureTests
 {

@@ -4,8 +4,14 @@ namespace IMao_WinUI.Models;
 /// 一次可以被取消的"按住"手势：从起点计时，满 GamepadInputInterpreter.HoldMilliseconds
 /// 算完成一次，之后不再重复完成，直到下一次 Begin。
 ///
-/// 为什么单独成一个类型：键盘跳过键和鼠标"跳过"按钮是两个独立的输入通道，各自需要一个实例。
-/// 共用一个实例会让"先按住鼠标再按 G"把已经累计的时间清零，甚至永远凑不满 600 毫秒。
+/// 为什么单独成一个类型：它有"起点、可取消、完成一次就不再完成"这套状态，和按键重复消息的
+/// 去重（`keyboardSkipHandled`）是两件事，混在一起就会互相干扰。
+///
+/// ⚠️ **这个类型的注释曾经写着"键盘跳过键与鼠标「跳过」按钮是两个独立通道，各自需要一个实例"。**
+/// 那个设计在 `d97d977` 就没了：鼠标那一侧改成**单击即提交**，窗口里只剩
+/// `keyboardSkipGesture` 一个实例（手柄 Y 的进度由输入服务按 `GamepadAction` 推进，不走这里）。
+/// `Tests/ManagedRuntime/GuideSkipHoldGestureTests.cs` 里"两个通道各自计时"那段断言的也是更早的
+/// 设计——它现在的价值只是证明"这个类是实例无关的"，不要照它去加第二个实例。
 /// </summary>
 public sealed class GuideSkipHoldGesture
 {
