@@ -146,7 +146,7 @@ Invoke-WebRequest 'https://mirrorchyan.com/api/resources/March7thAssistant/lates
 | `res_id` | **待申请** | 联系集成开发 QQ 群 `1026040805` 获取；`Docs` 与官方 Skill 都明确要求不要编造 |
 | `current_version` | `"v" + <四段版本>` | 必须与上传时的 `version_name` 同格式，否则永远拿全量包 |
 | `user_agent` | `IMAO_APP` | 对应统计面板的「签到源」；`mirrorchyan_web` 是保留值，不能用 |
-| `os` / `arch` | **待定**：要么都不传，要么固定 `windows`/`amd64` | 按平台分别上传才传，且必须与上传侧一致；不一致就是 404/8001。我们只有 win-x64，**倾向都不传**，简单且没有 8001 风险 |
+| `os` / `arch` | **必填：`os=win&arch=x64`** | 2026-09-25 对真实资源 `IMAO` 实测确认：资源是**按平台分区**的，**不带这两个参数一律 `8001`（HTTP 404）**，`os=windows&arch=amd64` 等别名同样可用（响应归一成 `windows`/`amd64`）。**免费检查也必须带。** 上传侧（`mirrorchyan_release.yml` 的 `matrix`）已经是 `os: win, arch: x64`，两边一致 |
 | `channel` | `stable` | 我们目前只有稳定渠道 |
 | 跳转链接 | `https://mirrorchyan.com/zh/projects?rid=<rid>&source=imao_app_settings` | `source` 对应「付费源」统计 |
 
@@ -163,8 +163,8 @@ Invoke-WebRequest 'https://mirrorchyan.com/api/resources/March7thAssistant/lates
    必须判 `data.update_type`：`full` 时**等 10 秒重问一次**，仍是 `full` 才当作"没有增量包"，
    并且**在下载约 950 MB 的整包之前先让用户确认**（MAA 用 `_requiresFullPackageConfirmation` 做这件事）。
 2. **`os`/`arch` 必须与上传侧的分区一致。** MAA 的 `MAA` 资源是按 `win/x64`、`win/arm64`、`macos/*` 分别上传的，
-   所以它每次都带 `os`/`arch`；而 `MaaResource` 不分区，就一个都不带。我们只有 win-x64，
-   **要么上传时也按 `os=win&arch=x64` 分区、请求时一并带上，要么两边都不带**——不一致就是 §4 表里的 404/8001。
+   所以它每次都带 `os`/`arch`；而 `MaaResource` 不分区，就一个都不带。**我们属于前者**：2026-09-25 实测
+   `IMAO` 不带 `os`/`arch` 就是 `8001`，`os=win&arch=x64` 才通——所以客户端一律带上这两个参数。
 
 ## 6. 尚未解决、必须拍板的两件事
 
@@ -219,6 +219,28 @@ Invoke-WebRequest 'https://gitee.com/oschina/git-osc/raw/master/README.md' `
 费用参考（对象存储，国内节点，按量）：存储约 0.12 元/GB/月；外网流出约 0.5 元/GB。
 我们分片发布的常见更新只下 `ui` 分片（58.6 MB）≈ **0.03 元/次**；全量 949 MB ≈ **0.5 元/次**。
 分片机制在这里是有直接经济价值的。
+
+#### P0 已落实（2026-09-25）
+
+- `res_id` = **`IMAO`**，资源**按平台分区**（上传侧 `os: win, arch: x64`）。
+- 上传令牌存为 Actions secret `MirrorChyanUploadToken`（GitHub 显示成全大写 `MIRRORCHYANUPLOADTOKEN`，正常）。
+- Mirror酱官方 PR #2（`MirrorChyanDesu`）已合并进 `main`（`cc08907`），带来
+  `.github/workflows/mirrorchyan_release.yml` 与 `mirrorchyan_release_note.yml`
+  ——**这是本仓库的第一批 GitHub Actions**（此前没有 `.github` 目录，全部发布都在本地完成）。
+- **已知缺陷**：workflow 的触发是 `release: published` 且没有守卫，抓的是 `IMao-*-windows-x64.zip`。
+  有些发布**没有这个整包**（实测 `v2026.9.20.2`、`ext-v0.1.1` 都没有），那类发布会让该 job 失败。
+  PR 作者无法再改，但**合并后的文件我们自己在仓库里就能改**；以后要修的话，改动方向见下一段。
+- `workflow_dispatch` 带着 `tag` 输入，因此可以**补传历史版本**（`release: published` 不会追溯触发）：
+  ```powershell
+  gh workflow run mirrorchyan_release.yml --repo kahvia-d/IMAO -f tag=v2026.9.25.2
+  ```
+- 两点供应链事实，知情即可：action 用的是浮动标签 `@v1`；而 `uploading-action` 运行时还会从
+  **会移动的 `refs/heads/v1` 分支** `wget` 一个 Python 脚本并以你的令牌执行，所以**钉 SHA 也钉不住它**。
+  MAA、March7thAssistant 同样如此，属生态现状。
+
+如果以后要修那个触发缺陷，最小改动是**只留 `workflow_dispatch`**，由 `Publish-ResourceUpdate.ps1` 在
+推进完 `stable.json` 之后用 `gh workflow run` 触发——顺序变成"权威渠道先动、镜像后跟"，既没有无整包
+release 的红叉，也不会在 `release` 事件上并联出第二条远端点。
 
 #### 第一步已实施（2026-09-25）：清单多来源
 
