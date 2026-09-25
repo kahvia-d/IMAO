@@ -1318,10 +1318,11 @@ public sealed class MarkerGuideCoordinator : IDisposable
             // never flashes the button. The route reply that opened this guide is reused when
             // the caller already has it.
             //
-            // A nearby guide deliberately asks nothing: it was opened because the player is
-            // standing next to the point, and an extra route lookup there would make a nearby
-            // key press depend on an unrelated query. Skipping stays unavailable until the
-            // route context is the reason this guide is open.
+            // **每一条打开路径都要问**，包括"附近"那条：走到点位旁边才发现这个点不好收、想下次再来，
+            // 正是「附近」入口存在的理由，所以那份攻略也必须能给出「跳过」。判据仍是
+            // "展示的点位 == 原生当前导航目标"，不是"这份攻略是因为路线才打开的"。
+            // `resolveSkip` 现在是恒为 true 的显式表达（没有调用方传 false），保留它只是为了
+            // 把"这条路径要不要核对资格"写在调用点上；真要再关掉某条路径，务必同时改 §2.2。
             if (resolveSkip) await RefreshSkipTargetAsync(selection, generation, routeGuide);
             if (!session.IsCurrent(generation) || disposed) return false;
             var bounds = await core.ExecuteMarkerAsync("markerGetGameWindowBounds", new { }, connectionRequests.Token);
@@ -1765,15 +1766,14 @@ public sealed class MarkerGuideCoordinator : IDisposable
                             standaloneGamepadGeneration = guideGeneration; standaloneGameWindow = game;
                             standaloneGameIdentity = chooserGameIdentity;
                             standaloneGamepadOpening = true;
-                            // 「附近」这条路径不查路线目标，也不提供跳过：玩家是站在点位旁边想看它怎么收集，
-                            // 不是要把路线往前推。规格 §2.2/§4 如此，而且少一次 IPC 查询就少一次
-                            // "这次按下去要不要指望核心回话"的失败面。
+                            // 「附近」这条路径**也要**核对跳过资格：玩家走到点位旁边才发现这个点不好收、
+                            // 想下次再来，正是"附近"这条入口存在的理由。所以只要展示的这个点恰好是
+                            // 当前导航目标，这份攻略就该给出「跳过」。为此多问一次核心当前目标是谁。
                             bool shown = await ShowCurrentAsync(chosen, guideGeneration,
-                                controllerSource: new IntPtr(WindowHandle(window)), resolveSkip: false);
+                                controllerSource: new IntPtr(WindowHandle(window)));
                             if (shown) { chooserGamepad = chooserGamepadOpening = false; chooserActions.Clear(); chooser = null; window.Close(); }
                         }
-                        // 同上：「附近」路径不查路线目标、不提供跳过（规格 §4 的那句 resolveSkip: false）。
-                        else { window.Close(); chooser = null; await ShowAsync(chosen, resolveSkip: false); }
+                        else { window.Close(); chooser = null; await ShowAsync(chosen); }
                     }
                     catch (Exception e)
                     {
@@ -1951,9 +1951,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
         standaloneGameWindow = game;
         standaloneGameIdentity = GamepadWindowIdentity.Capture(game);
         standaloneGamepadOpening = true;
-        // 「附近」路径不查路线目标、也不提供跳过（规格 §2.2/§4）：玩家站在点位旁边是想看它怎么收集，
-        // 不是要把路线往前推。少这一次查询同时也少一个"按下去还得指望核心回话"的失败面。
-        if (await ShowCurrentAsync(chosen, generation, controllerSource: game, resolveSkip: false)) return true;
+        // 与候选列表那条路一样：附近打开的点位如果正好是当前导航目标，这份攻略要能给出「跳过」。
+        if (await ShowCurrentAsync(chosen, generation, controllerSource: game)) return true;
         // 代次已经被别的操作顶掉（玩家自己操作过）：不要再弹出列表。
         if (!session.IsCurrent(generation)) return true;
         CloseGuide(generation);

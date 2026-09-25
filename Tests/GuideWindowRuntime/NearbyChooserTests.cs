@@ -30,15 +30,11 @@ internal static class NearbyChooserTests
             fixture.F8();
             await UntilAsync(() => fixture.Details.OnlineRequests.Count == 1, "keyboard single guide auto opens");
             // 攻略点位来自附近候选，而不是路线回退：只能有一次候选解析。
-            // **这条路径不问路线目标**（规格 §2.2/§4 的 resolveSkip: false）。这里原本断言的是
-            // "那次 markerGetRouteGuide 是跳过资格的核对"，注释还写成产品规则——但规则恰恰相反：
-            // 旁边这个点如果正好是当前导航目标，旧实现会因此给出一个能用的「跳过」按钮。
-            // 断言和注释一起按规格改回来。
-            Check(fixture.Count("markerGetRouteGuide") == 0 && fixture.Count("markerResolveNearbyCandidate") == 1 &&
+            // 那次 markerGetRouteGuide 是**跳过资格**的核对（现行设计：附近打开的点位如果恰好是
+            // 当前导航目标，这份攻略就要显示「跳过」——玩家走到旁边才发现不好收、想下次再来）。
+            Check(fixture.Count("markerGetRouteGuide") == 1 && fixture.Count("markerResolveNearbyCandidate") == 1 &&
                 fixture.Details.OnlineRequests.Single().PointId == First.PointId,
-                "keyboard opens the nearest candidate without ever asking for the route target");
-            Check(!fixture.Coordinator.HasGuideSkipAuthorization,
-                "the keyboard nearby guide holds no skip authorisation even while a route is navigating");
+                "keyboard uses the nearest candidate and asks the core for the current target once");
             // 候选答复就是 markerCandidates 事件本身，没有 outcome 字段；协调器不能因此把它当成定位丢失。
             Check(fixture.Core.Errors.Count == 0, "a candidate list is never reported as a lost position");
             fixture.F8();
@@ -102,13 +98,13 @@ internal static class NearbyChooserTests
             Check(fixture.Count("markerCompleteNearbyCandidate") == 0, "opening a nearby guide writes no completion");
             Check(fixture.Details.OnlineRequests.Single().PointId == Second.PointId,
                 "the guide shows exactly the highlighted point");
-            // 「附近」这条路径不查路线目标（规格 §4 的 resolveSkip: false）。这条计数断言曾经因为
-            // 实现里真的查了一次而被删掉，注释还替它辩解"那一次是跳过资格的查询"——于是"附近攻略
-            // 也会提供跳过"这个与规格相反的行为就没有任何东西挡着了。现在实现按规格走，断言回来。
-            Check(fixture.Count("markerGetRouteGuide") == 0,
-                "a nearby guide never queries the route target and therefore offers no skip");
-            Check(!fixture.Coordinator.HasGuideSkipAuthorization,
-                "the nearby guide holds no skip authorisation");
+            // 「附近」这条路径**要**核对跳过资格：玩家走到点位旁边才发现这个点不好收、想下次再来，
+            // 正是这条入口存在的理由。所以那次 markerGetRouteGuide 是有意为之，而且只要展示的点
+            // 恰好是当前导航目标，这份攻略就该拿到「跳过」。
+            // （这条计数断言曾经被删掉、又曾经被按过期规格改成 ==0；现在的注释是这条路径的**现行**
+            //  设计——如果哪天要改回"附近不给跳过"，请连同这里、RouteControllerTests 与 §2.2 一起改。）
+            Check(fixture.Count("markerGetRouteGuide") == 1,
+                "a nearby guide asks the core for the current target so it can offer a skip");
             // 被动状态下 B 归游戏（手柄输入根本到不了这里）：即使直接调用也不能关掉玩家的攻略。
             await fixture.Coordinator.HandleGamepadAsync(GamepadAction.Back);
             await Task.Delay(80);

@@ -356,15 +356,18 @@ internal static class RouteControllerTests
                 "no chooser window is created or activated for a single candidate");
             Check(fixture.Core.Commands.Count(value => value.Operation == "markerGetNearbyGuide") == 1,
                 "the unique candidate is resolved through the same correlated query the keyboard entry uses");
-            // 「附近」这条路径**不查路线目标、也不提供跳过**（规格 §2.2/§4）：玩家是站在点位旁边想
-            // 看它怎么收集，不是要把路线往前推。以前这里会白查一次 markerGetRouteGuide，而且只要
-            // 这个点恰好也是当前导航目标，攻略里就会冒出一个能用的「跳过」。
+            // 「附近」这条路径**要**核对跳过资格（现行设计）：玩家走到点位旁边才发现这个点不好收、
+            // 想下次再来，正是这条入口存在的理由。所以它一定会查一次路线目标，并且只要展示的这个点
+            // 恰好是当前导航目标，攻略就该拿到「跳过」。
             int routeGuideQueries = fixture.Core.Commands.Count(value => value.Operation == "markerGetRouteGuide") - routeGuideQueriesBefore;
-            Check(routeGuideQueries == 0 && !fixture.Coordinator.HasGuideSkipAuthorization &&
-                fixture.Guide is { SkipButtonVisible: false },
-                $"a nearby guide asks nothing about the route target and never offers a skip " +
-                $"(queries={routeGuideQueries} authorised={fixture.Coordinator.HasGuideSkipAuthorization} " +
-                $"buttonVisible={fixture.Guide?.SkipButtonVisible})");
+            Check(routeGuideQueries == 1,
+                $"a nearby guide asks the core for the current target exactly once so it can offer a skip " +
+                $"(queries={routeGuideQueries})");
+            // 而这个点**就是**当前导航目标（Fixture 把路线当前目标设成了 Target），所以这份"附近"
+            // 打开的攻略必须给出「跳过」。用户要的正是这个：走到旁边才发现不好收，就地跳过、下次再来。
+            await UntilAsync(() => fixture.Guide is { IsGuideVisible: true, SkipButtonVisible: true } &&
+                fixture.Coordinator.HasGuideSkipAuthorization,
+                "the nearby guide of the current navigation target offers a skip");
         }, log);
 
         await CaseAsync("the same gamepad shortcut closes the guide it opened", async fixture =>
