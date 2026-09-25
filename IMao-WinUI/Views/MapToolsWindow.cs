@@ -46,6 +46,8 @@ internal sealed class MapToolsWindow : Window
     public bool CanInteract => !closed && !busy && !IsAnimating;
     public nint Handle { get; }
     public event Action? GeometryChanged;
+    /// <summary>诊断出口：记录方向选择实际看到的几何候选（由控制器写进 gamepad 日志）。</summary>
+    internal Action<string>? DirectionDiagnostic { get; set; }
 
     public MapToolsWindow(FilterSelectionService filters, Func<string, Task> command)
     {
@@ -246,8 +248,14 @@ internal sealed class MapToolsWindow : Window
                 return (Index: i, X: point.X + n.Button.ActualWidth / 2 - cx, Y: point.Y + n.Button.ActualHeight / 2 - cy);
             }).Where(p => action switch
             { GamepadAction.Left => p.X < -4, GamepadAction.Right => p.X > 4, GamepadAction.Up => p.Y < -4, _ => p.Y > 4 });
+            var fromKey = navigation[navigationIndex].Key;
             var best = candidates.OrderBy(p => action is GamepadAction.Left or GamepadAction.Right ? Math.Abs(p.X) + Math.Abs(p.Y) * 4 : Math.Abs(p.Y) + Math.Abs(p.X) * 2).FirstOrDefault((Index: -1, X: 0d, Y: 0d));
             navigationIndex = best.Index >= 0 ? best.Index : Math.Clamp(navigationIndex + delta, 0, navigation.Count - 1);
+            // 诊断：把"这一页到底有没有那个方向的相邻按钮"写进日志，避免只能靠猜。
+            DirectionDiagnostic?.Invoke(
+                $"page={Page} action={action} from='{fromKey}' to='{navigation[navigationIndex].Key}' " +
+                $"geometricCandidates={candidates.Count()} usedIndexFallback={best.Index < 0} " +
+                $"offsets=[{string.Join(" ", navigation.Select(n => { var point = n.Button.TransformToVisual(root).TransformPoint(new(0, 0)); return "(" + (int)Math.Round(point.X + n.Button.ActualWidth / 2 - cx) + "," + (int)Math.Round(point.Y + n.Button.ActualHeight / 2 - cy) + ")"; }))}]");
             selectedKey = navigation[navigationIndex].Key; FocusCurrent();
         }
     }

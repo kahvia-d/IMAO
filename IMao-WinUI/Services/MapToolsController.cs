@@ -101,6 +101,9 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
         {
             window = new MapToolsWindow(filters, CommandAsync);
             var created = window;
+            // 方向导航的几何候选写进 gamepad 日志：实机报告"左右换不了选项"时，这是唯一能区分
+            // "那个方向本来没有相邻按钮"和"方向没被识别"的证据。
+            created.DirectionDiagnostic = detail => core.ReportGamepadDiagnostic("map-tools-direction", detail);
             created.GeometryChanged += () => { ++layoutRevision; geometryDirty = true; };
             created.Closed += (_, _) => { if (ReferenceEquals(window, created)) _ = RetireAsync(); };
             created.Prepare(game);
