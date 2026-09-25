@@ -38,8 +38,10 @@ internal static class GuideWindowTests
             Check(window.SkipButtonEnabled && window.SkipButtonText == "跳过",
                 $"the skip entry stays a short label (text={window.SkipButtonText})");
 
-            // 同一路线上的另一个点位：即使有当前目标，也不该出现跳过入口。
-            f.Core.AuthoritativeTarget = B;
+            // 同一路线上的另一个点位：当前导航目标仍然是 A，所以展示 B 时不该出现跳过入口。
+            // 这里不能像以前那样把 AuthoritativeTarget 改成 B：它代表"原生核心当前导航的目标"
+            // （markerGetRouteGuide 答复里的 selection 就是它），改成 B 等于宣称 B 才是目标，
+            // 那么给 B 跳过才是对的，这条断言就成了自相矛盾的设置。
             await f.Coordinator.ShowAsync(B);
             await UntilAsync(() => f.Window is { IsGuideVisible: true } shown && shown.Selection?.PointId == B.PointId,
                 "the other point of the same route is showing");
@@ -47,7 +49,6 @@ internal static class GuideWindowTests
                 "another point on the same route never offers the current-target skip");
 
             // 回到当前导航目标，用真实窗口的按住路径提交一次跳过。
-            f.Core.AuthoritativeTarget = A;
             await f.Coordinator.ShowAsync(A);
             await UntilAsync(() => f.Window is { IsGuideVisible: true, SkipButtonVisible: true } &&
                 f.Coordinator.HasGuideSkipAuthorization, "returning to the navigation target restores the skip entry");
