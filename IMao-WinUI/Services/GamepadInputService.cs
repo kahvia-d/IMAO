@@ -28,6 +28,9 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
     private string sessionScene = "";
     private long configurationGeneration;
     private double lastHold;
+    // 手柄的两条长按语义（A 完成 / Y 跳过）共用一条进度通道，必须记住是哪一条，
+    // 否则跳过进度会画到完成条上。
+    private GamepadAction? lastHoldAction;
     private long lastTickAt, diagnosticAt;
     private string lastDiagnosticState = "";
     private GamepadButtons lastEntryButtons;
@@ -253,7 +256,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             var update = input.Update(sample, context, now);
             Diagnose(gate + (update.WaitingForRelease ? "/release-required" : "/ready"));
             if (Math.Abs(lastHold - update.HoldProgress) > .015 || (lastHold != 0 && update.HoldProgress == 0))
-            { lastHold = update.HoldProgress; guides.SetGamepadHoldProgress(lastHold); }
+            { lastHold = update.HoldProgress; lastHoldAction = update.HoldAction; guides.SetGamepadHoldProgress(lastHold, lastHoldAction); }
             if (guides.IsGamepadSessionOpen || guides.IsStandaloneGamepadGuideOpen)
                 SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" : "点位助手 · A 确认 / B 返回 / X 放大图片 / 长按 A 完成当前点");
             else if (context.Mode == GamepadInputMode.Map)
@@ -261,7 +264,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                     $"手柄 {selectedDevice + 1} 已连接 · LB 地图工具台 / RB 点位助手");
             else if (context.Mode == GamepadInputMode.Gameplay)
                 SetMessage(update.WaitingForRelease ? "请先松开按键和扳机" :
-                    "大世界 · LB＋B 完成附近点位 / LB＋X 附近点位攻略");
+                    "大世界 · LB＋B 完成附近点位 / LB＋X 附近或当前路线目标攻略");
             if (update.Action is { } action) _ = DispatchAsync(action);
         }
         catch (Exception e)

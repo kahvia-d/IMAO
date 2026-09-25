@@ -91,6 +91,7 @@
                 <ComboBox x:Name="NearestCompletionKey" Header="完成点位" HorizontalAlignment="Stretch" />
                 <ComboBox x:Name="ManualRouteKey" Header="记录手绘线段端点" HorizontalAlignment="Stretch" />
                 <ComboBox x:Name="CurrentTargetGuideKey" Header="打开或关闭攻略" HorizontalAlignment="Stretch" />
+                <ComboBox x:Name="GuideSkipKey" Header="攻略内长按跳过当前路线目标" HorizontalAlignment="Stretch" />
                 <controls:WrapPanel HorizontalSpacing="16" VerticalSpacing="12">
                     <ComboBox x:Name="GuidePreviousImageKey" Header="攻略上一张" Width="210" />
                     <ComboBox x:Name="GuideNextImageKey" Header="攻略下一张" Width="210" />

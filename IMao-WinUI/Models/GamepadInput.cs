@@ -2,12 +2,12 @@ namespace IMao_WinUI.Models;
 
 public enum GamepadInputMode { Disabled, Map, List, Detail, Menu, Image, Gameplay }
 public readonly record struct GamepadInputContext(GamepadInputMode Mode, string Token, bool CanComplete = false,
-    GamepadButtons EntryButton = GamepadButtons.LB, bool CanCollectAll = false);
+    GamepadButtons EntryButton = GamepadButtons.LB, bool CanCollectAll = false, bool CanSkip = false);
 public enum GamepadAction
 {
     OpenAssistant, Up, Down, Left, Right, Accept, Back, PreviousPage, NextPage,
     OpenRouteMenu, Complete, ScrollUp, ScrollDown, ScrollLeft, ScrollRight,
-    OpenToolbar, CompleteCurrent, ToggleGuide,
+    OpenToolbar, CompleteCurrent, ToggleGuide, SkipGuideStop,
     // The nearby completion list: hold to collect every listed point; the guide detail
     // page: one press enlarges the picture; the enlarged picture: trigger zoom.
     CompleteAll, ExpandImage, ZoomIn, ZoomOut
@@ -55,7 +55,7 @@ public readonly record struct GamepadSample(bool Connected, int DeviceId, Gamepa
 }
 
 public readonly record struct GamepadInputUpdate(GamepadAction? Action = null, double HoldProgress = 0,
-    bool WaitingForRelease = false);
+    bool WaitingForRelease = false, GamepadAction? HoldAction = null);
 
 // Pure state machine: an input belongs to one device and one UI/point context.
 // It never emits keyboard events, changes completion records, or claims to block the game.
@@ -118,13 +118,18 @@ public sealed class GamepadInputInterpreter
             return new(WaitingForRelease: true);
         }
 
-        // Two deliberate holds write something and are therefore holds rather than taps:
-        // A on a point detail completes it, X over the nearby completion list collects
-        // the whole group. The press stays a pending tap as well, so releasing early still
-        // emits the plain A (accept) instead of being swallowed.
+        // Completing a point, collecting a group and skipping the eligible route target are
+        // deliberate holds rather than taps. The press stays a pending tap as well, so
+        // releasing early still emits the plain action (A accept / Y route menu) instead of
+        // being swallowed.
         if (sample.AxesNeutral && sample.Buttons == GamepadButtons.A &&
             context.Mode == GamepadInputMode.Detail && context.CanComplete)
         { pendingRelease = GamepadButtons.A; repeating = null; return Hold(GamepadAction.Complete, now); }
+        // Y only becomes a hold on a guide whose point is the current navigation target;
+        // everywhere else it keeps its short-press route-menu meaning.
+        if (sample.AxesNeutral && sample.Buttons == GamepadButtons.Y &&
+            context.Mode == GamepadInputMode.Detail && context.CanSkip)
+        { pendingRelease = GamepadButtons.Y; repeating = null; return Hold(GamepadAction.SkipGuideStop, now); }
         if (sample.AxesNeutral && sample.Buttons == GamepadButtons.X &&
             context.Mode == GamepadInputMode.List && context.CanCollectAll)
         { pendingRelease = GamepadButtons.X; repeating = null; return Hold(GamepadAction.CompleteAll, now); }
@@ -262,9 +267,11 @@ public sealed class GamepadInputInterpreter
     {
         if (holdAction != action) { holdAction = action; holdStarted = now; }
         double progress = Math.Clamp((now - holdStarted) / (double)HoldMilliseconds, 0, 1);
-        if (progress < 1) return new(HoldProgress: progress);
+        // HoldAction 必须一路带着：攻略窗口用它区分"长按 A 完成"和"长按 Y 跳过"，
+        // 两者共用同一条进度通道，丢了动作就会把跳过进度画到完成条上。
+        if (progress < 1) return new(HoldProgress: progress, HoldAction: action);
         holdAction = null; waiting = true;
-        return new(action, 1, true);
+        return new(action, 1, true, action);
     }
 
     /// <summary>An analog control used as a repeated discrete step (the zoom triggers).</summary>

@@ -54,6 +54,7 @@ public sealed partial class SettingsPage : Page
         NearestCompletionKey.ItemsSource = choices;
         ManualRouteKey.ItemsSource = choices;
         CurrentTargetGuideKey.ItemsSource = choices;
+        GuideSkipKey.ItemsSource = choices;
         GuidePreviousImageKey.ItemsSource = choices;
         GuideNextImageKey.ItemsSource = choices;
         ToggleEnabledKey.ItemsSource = choices;
@@ -540,6 +541,7 @@ public sealed partial class SettingsPage : Page
         NearestCompletionKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.NearestCompletionKey);
         ManualRouteKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.ManualRouteKey);
         CurrentTargetGuideKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.CurrentTargetGuideKey);
+        GuideSkipKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.GuideSkipKey);
         GuidePreviousImageKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.GuidePreviousImageKey);
         GuideNextImageKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.GuideNextImageKey);
         ToggleEnabledKey.SelectedIndex = Array.IndexOf(SupportedKeys, configuration.ToggleEnabledKey);
@@ -552,6 +554,7 @@ public sealed partial class SettingsPage : Page
         var configuration = coreHost.Configuration;
         CurrentBindings.Text = $"已保存的绑定：点位完成 {RuntimeConfiguration.HotkeyName(configuration.NearestCompletionKey)}；" +
             $"手绘端点 {RuntimeConfiguration.HotkeyName(configuration.ManualRouteKey)}；攻略浮窗开关 {RuntimeConfiguration.HotkeyName(configuration.CurrentTargetGuideKey)}；" +
+            $"攻略内长按跳过 {RuntimeConfiguration.HotkeyName(configuration.GuideSkipKey)}；" +
             $"攻略上一张 {RuntimeConfiguration.HotkeyName(configuration.GuidePreviousImageKey)}；下一张 {RuntimeConfiguration.HotkeyName(configuration.GuideNextImageKey)}；" +
             $"开始/停止探索 {RuntimeConfiguration.HotkeyName(configuration.ToggleEnabledKey)}（手柄：LB+Start）。";
 
@@ -560,9 +563,11 @@ public sealed partial class SettingsPage : Page
     private async void SaveShortcuts_Click(object sender, RoutedEventArgs e)
     {
         if (NearestCompletionKey.SelectedIndex >= 0 && ManualRouteKey.SelectedIndex >= 0 && CurrentTargetGuideKey.SelectedIndex >= 0 &&
+            GuideSkipKey.SelectedIndex >= 0 &&
             GuidePreviousImageKey.SelectedIndex >= 0 && GuideNextImageKey.SelectedIndex >= 0 && ToggleEnabledKey.SelectedIndex >= 0)
             await SaveBindingsAsync(SupportedKeys[NearestCompletionKey.SelectedIndex], SupportedKeys[ManualRouteKey.SelectedIndex],
-                SupportedKeys[CurrentTargetGuideKey.SelectedIndex], SupportedKeys[GuidePreviousImageKey.SelectedIndex],
+                SupportedKeys[CurrentTargetGuideKey.SelectedIndex], SupportedKeys[GuideSkipKey.SelectedIndex],
+                SupportedKeys[GuidePreviousImageKey.SelectedIndex],
                 SupportedKeys[GuideNextImageKey.SelectedIndex], SupportedKeys[ToggleEnabledKey.SelectedIndex]);
     }
 
@@ -570,10 +575,10 @@ public sealed partial class SettingsPage : Page
     {
         var defaults = new RuntimeConfiguration();
         await SaveBindingsAsync(defaults.NearestCompletionKey, defaults.ManualRouteKey, defaults.CurrentTargetGuideKey,
-            defaults.GuidePreviousImageKey, defaults.GuideNextImageKey, defaults.ToggleEnabledKey);
+            defaults.GuideSkipKey, defaults.GuidePreviousImageKey, defaults.GuideNextImageKey, defaults.ToggleEnabledKey);
     }
 
-    private async Task SaveBindingsAsync(int nearest, int manual, int guide, int previousImage, int nextImage, int toggleEnabled)
+    private async Task SaveBindingsAsync(int nearest, int manual, int guide, int guideSkip, int previousImage, int nextImage, int toggleEnabled)
     {
         if (saving) return;
         saving = true;
@@ -581,6 +586,7 @@ public sealed partial class SettingsPage : Page
         try
         {
             bool accepted = await coreHost.ConfigureAsync(nearestCompletionKey: nearest, manualRouteKey: manual, currentTargetGuideKey: guide,
+                guideSkipKey: guideSkip,
                 guidePreviousImageKey: previousImage, guideNextImageKey: nextImage, toggleEnabledKey: toggleEnabled);
             ShortcutMessage.Severity = accepted ? InfoBarSeverity.Success : InfoBarSeverity.Error;
             ShortcutMessage.Message = accepted ? "快捷键已保存并应用，重启后会恢复。" :

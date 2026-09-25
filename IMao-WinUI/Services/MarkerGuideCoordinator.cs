@@ -56,6 +56,16 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private bool gamepadBusy;
     private bool gamepadSkipConfirmation;
     private bool gamepadMenuReturnsToGuide;
+    /// <summary>
+    /// The authorisation for "long press to skip the current navigation target", or null when the
+    /// open guide is not that target. It is only ever filled from a native reply: the client's own
+    /// route snapshot can be older than the core's, and using it as the authorisation would let a
+    /// stale snapshot release a skip that the core must refuse.
+    /// </summary>
+    private (long Generation, string ProfileId, string RouteId, string Key, ulong Revision,
+        int StateId, string PointId)? guideSkipTarget;
+    /// <summary>Invalidates an in-flight eligibility probe when the guide or route changed.</summary>
+    private long guideSkipRefreshGeneration;
     private long standaloneGamepadGeneration;
     private IntPtr standaloneGameWindow;
     private bool standaloneGamepadOpening;
@@ -93,6 +103,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
     public bool IsStandaloneGamepadGuideOpen => !disposed &&
         (standaloneGamepadGeneration != 0 && session.IsCurrent(standaloneGamepadGeneration) || chooserGamepad && chooser is not null);
     public bool IsStandaloneGamepadGuideOpening => IsStandaloneGamepadGuideOpen && (standaloneGamepadOpening || chooserGamepadOpening);
+    /// <summary>测试读取：当前攻略是否持有"跳过当前导航目标"的授权，以及授权针对的点位身份。</summary>
+    internal bool HasGuideSkipAuthorization =>
+        guideSkipTarget is { } target && session.IsCurrent(target.Generation) && target.Generation == session.Generation;
 
     public GamepadInputContext GetGamepadInputContext()
     {
@@ -106,7 +119,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             if (!standaloneGamepadOpening && IsGuideForeground() && guide is { } direct)
                 return new(direct.IsGamepadImageOpen ? GamepadInputMode.Image : GamepadInputMode.Detail,
                     $"guide:{standaloneGamepadGeneration}:{session.Selection?.PointId}:{direct.GamepadViewToken}",
-                    !gamepadBusy && direct.CanCompleteGamepad);
+                    !gamepadBusy && direct.CanCompleteGamepad, CanSkip: !gamepadBusy && direct.CanSkip);
             return new(GamepadInputMode.Disabled, "guide:unfocused");
         }
         if (!IsGamepadSessionOpen) return new(GamepadInputMode.Disabled, "closed");
@@ -114,7 +127,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
             guide is { } current)
             return new(current.IsGamepadImageOpen ? GamepadInputMode.Image : GamepadInputMode.Detail,
                 $"gamepad:{gamepadGeneration}:{gamepadProfile}:{gamepadScene}:{session.Selection?.PointId}:{gamepadGuideGeneration}:{current.GamepadViewToken}:{(gamepadGuideRouteId is null ? "" : core.RoutePlanning.Active?.Id)}",
-                !gamepadBusy && current.CanCompleteGamepad && (gamepadGuideRouteId is null || core.RoutePlanning.Active?.Id == gamepadGuideRouteId));
+                !gamepadBusy && current.CanCompleteGamepad && (gamepadGuideRouteId is null || core.RoutePlanning.Active?.Id == gamepadGuideRouteId),
+                CanSkip: !gamepadBusy && current.CanSkip);
         if (gamepadAssistant is { IsClosed: false } assistant && IsForeground(assistant))
             // Highlight changes deliberately do not change this token: navigation may repeat.
             return new(gamepadMenuRoute is null ? GamepadInputMode.List : GamepadInputMode.Menu,
@@ -286,6 +300,14 @@ public sealed class MarkerGuideCoordinator : IDisposable
                     try { await current.CompleteCurrentAsync(); }
                     finally { gamepadBusy = false; current.SetGamepadHoldProgress(0); }
                 }
+                // Holding Y on the current navigation target's guide skips that route stop.
+                // Anywhere else Y keeps its short-press route-menu meaning.
+                else if (action == GamepadAction.SkipGuideStop && context.CanSkip)
+                {
+                    gamepadBusy = true;
+                    try { await current.SkipCurrentAsync(); }
+                    finally { gamepadBusy = false; current.SetGamepadHoldProgress(0); }
+                }
                 else if (action is GamepadAction.PreviousPage or GamepadAction.NextPage)
                     _ = current.ChangePictureAsync(action == GamepadAction.PreviousPage ? -1 : 1);
                 else current.HandleGamepadViewAction(action);
@@ -307,7 +329,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
         catch (Exception e) { if (IsGamepadSessionOpen) gamepadAssistant?.SetMessage("操作未完成：" + e.Message); }
     }
 
-    public void SetGamepadHoldProgress(double value)
+    /// <summary>手柄长按进度：action 说明这是完成（A）的长按还是跳过（Y）的长按。</summary>
+    public void SetGamepadHoldProgress(double value, GamepadAction? action = null)
     {
         // The nearby completion list shows its own hold, because holding X there collects
         // the whole group instead of completing the one point a detail page shows.
@@ -318,7 +341,12 @@ public sealed class MarkerGuideCoordinator : IDisposable
             return;
         }
         if (IsStandaloneGamepadGuideOpen || gamepadGuideGeneration != 0 && session.IsCurrent(gamepadGuideGeneration))
-            guide?.SetGamepadHoldProgress(GetGamepadInputContext().CanComplete ? value : 0);
+        {
+            // The interpreter only ever reports the two guide holds; anything else cannot be
+            // attributed to this window and is reported as "no hold" so both bars collapse.
+            var holdAction = action is GamepadAction.Complete or GamepadAction.SkipGuideStop ? action : null;
+            guide?.SetGamepadHoldProgress(value, holdAction);
+        }
     }
 
     public void SuspendGamepad(string reason)
@@ -557,7 +585,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             gamepadGuideGeneration = generation;
             gamepadGuideRouteId = !fromCursor && gamepadRouteTarget is { } target && SamePoint(selection, target) && gamepadRouteId.Length > 0
                 ? gamepadRouteId : null;
-            if (await ShowCurrentAsync(selection, generation, backgroundDetailsLoad: true) &&
+            if (await ShowCurrentAsync(selection, generation, backgroundDetailsLoad: true, resolveSkip: false) &&
                 GamepadCurrent(operation) && ReferenceEquals(gamepadAssistant, assistant) &&
                 gamepadGuideGeneration == generation && guide is { } current && IsForeground(current))
                 assistant.AppWindow.Hide();
@@ -683,7 +711,17 @@ public sealed class MarkerGuideCoordinator : IDisposable
         {
             var configuration = core.Configuration;
             guide?.SetPagingHotkeys(configuration.GuidePreviousImageKey, configuration.GuideNextImageKey);
+            guide?.SetSkipHotkey(configuration.GuideSkipKey);
             return;
+        }
+        // The route may have advanced, paused or stopped since the guide opened, so the skip
+        // authorisation is revoked first and then re-resolved against the core.
+        if (e.PropertyName == nameof(CoreHostService.RoutePlanning) && guide is { IsGuideVisible: true } &&
+            session.Selection is { } shown)
+        {
+            guideSkipTarget = null;
+            guide.SetSkipAvailability(false);
+            _ = RefreshSkipTargetAsync(shown, session.Generation);
         }
         if (e.PropertyName == nameof(CoreHostService.RoutePlanning) && IsGamepadSessionOpen &&
             gamepadGuideRouteId is not null && core.RoutePlanning.Active?.Id != gamepadGuideRouteId)
@@ -847,7 +885,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 if (selection.Completed || selection.StateId <= 0 || selection.PointId.Length == 0 ||
                     !session.SetSelection(generation, selection)) { CloseGuide(generation); return; }
                 if (await ShowCurrentAsync(selection, generation, completionVersion,
-                    controllerSource: controller ? source : default))
+                    controllerSource: controller ? source : default, routeGuide: result))
                 {
                     if (guide is { } shown) handoffLease?.Complete(new IntPtr(WindowHandle(shown)));
                     return;
@@ -863,7 +901,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
         }
     }
 
-    public async Task ShowAsync(MarkerSelection selection)
+    public async Task ShowAsync(MarkerSelection selection, bool resolveSkip = true)
     {
         if (disposed) return;
         if (IsGamepadSessionOpen) SuspendGamepad("改用普通点位攻略");
@@ -871,17 +909,88 @@ public sealed class MarkerGuideCoordinator : IDisposable
         selectionGeneration++;
         chooser?.Close(); chooser = null;
         long generation = session.Open(selection);
-        await ShowCurrentAsync(selection, generation);
+        await ShowCurrentAsync(selection, generation, resolveSkip: resolveSkip);
+    }
+
+    /// <summary>
+    /// Decides whether the guide that is being shown is the point the core is currently navigating
+    /// to, and remembers the route key plus revision that a skip must be submitted with.
+    /// The reply's own <c>selection</c> only describes the current target, so when there is no
+    /// navigation at all it says nothing about "the guide is not the target" — the button simply
+    /// must not appear.
+    /// </summary>
+    private async Task RefreshSkipTargetAsync(MarkerSelection selection, long generation, JsonElement? routeGuide = null)
+    {
+        long refresh = ++guideSkipRefreshGeneration;
+        guideSkipTarget = null;
+        guide?.SetSkipAvailability(false);
+        if (selection.Completed || !session.IsCurrent(generation)) return;
+        try
+        {
+            var route = routeGuide ?? await core.ExecuteMarkerAsync("markerGetRouteGuide",
+                new { profileId = selection.ProfileId }, connectionRequests.Token);
+            if (disposed || !session.IsCurrent(generation) || refresh != guideSkipRefreshGeneration ||
+                session.Selection is not { } selected || selected.ProfileId != selection.ProfileId ||
+                selected.StateId != selection.StateId || selected.PointId != selection.PointId) return;
+            if (Text(route, "profileId") != selection.ProfileId ||
+                Text(route, "routeId") is not { Length: > 0 } routeId ||
+                !route.TryGetProperty("selection", out var target) || target.ValueKind != JsonValueKind.Object) return;
+            var current = ReadSelection(target);
+            if (current.Completed || current.ProfileId != selection.ProfileId ||
+                current.StateId != selection.StateId || current.PointId != selection.PointId) return;
+            guideSkipTarget = (generation, selection.ProfileId, routeId,
+                $"{selection.StateId}:{selection.PointId}", Unsigned(route, "revision"), selection.StateId, selection.PointId);
+            guide?.SetSkipAvailability(true);
+        }
+        catch (Exception e) when (e is IOException or InvalidOperationException or OperationCanceledException)
+        {
+            if (session.IsCurrent(generation)) guide?.SetSkipAvailability(false);
+        }
+    }
+
+    /// <summary>
+    /// Submits one skip for the point the guide was authorised for. Everything is re-checked here:
+    /// the window keeps the previous answer while the player holds the key, and the core's own
+    /// routeId/key/revision guards are the final word if the route moved in the meantime.
+    /// </summary>
+    private async Task<bool> SkipGuideStopAsync(MarkerSelection selection, long generation)
+    {
+        if (guideSkipTarget is not { } target || target.Generation != generation ||
+            target.ProfileId != selection.ProfileId || target.StateId != selection.StateId ||
+            target.PointId != selection.PointId || !session.IsCurrent(generation) ||
+            guide is not { IsGuideVisible: true }) return false;
+        guideSkipTarget = null;
+        guide.SetSkipAvailability(false);
+        try
+        {
+            await core.ExecuteRoutePlanningAsync("skip", new
+            {
+                profileId = target.ProfileId, routeId = target.RouteId, key = target.Key, expectedRevision = target.Revision
+            }, connectionRequests.Token);
+            if (session.IsCurrent(generation)) CloseGuide(generation);
+            return true;
+        }
+        catch (Exception e) when (e is IOException or InvalidOperationException or OperationCanceledException)
+        {
+            if (session.IsCurrent(generation))
+            {
+                core.ReportUserError("路线目标未跳过：" + e.Message);
+                _ = RefreshSkipTargetAsync(selection, generation);
+            }
+            return false;
+        }
     }
 
     private async Task<bool> ShowCurrentAsync(MarkerSelection selection, long generation, long? routeCompletionVersion = null,
-        bool backgroundDetailsLoad = false, IntPtr controllerSource = default)
+        bool backgroundDetailsLoad = false, IntPtr controllerSource = default, JsonElement? routeGuide = null,
+        bool resolveSkip = true)
     {
         // Never register B while A is still visible and could receive its completion shortcut.
         guide?.HideGuide();
         if (guide is null || guide.IsClosed)
         {
-            guide = new MarkerGuideWindow(details, SetCompletionAsync, dismissedGeneration => CloseGuide(dismissedGeneration))
+            guide = new MarkerGuideWindow(details, SetCompletionAsync, SkipGuideStopAsync,
+                dismissedGeneration => CloseGuide(dismissedGeneration))
             {
                 ContentDismiss = DismissGuideFromContentAsync,
                 ImageWindowChanged = (window, opened) => _ = GuideImageWindowChangedAsync(window, opened),
@@ -898,8 +1007,22 @@ public sealed class MarkerGuideCoordinator : IDisposable
         }
         var current = guide;
         current.SetGamepadMode(IsGamepadSessionOpen && gamepadGuideGeneration == generation || standaloneGamepadGeneration == generation);
+        // A recycled window must never keep the previous point's skip button.
+        current.SetSkipAvailability(false);
+        current.SetSkipHotkey(core.Configuration.GuideSkipKey);
+        guideSkipTarget = null;
         try
         {
+            // Resolve the skip authorisation before anything is shown, so an ineligible guide
+            // never flashes the button. The route reply that opened this guide is reused when
+            // the caller already has it.
+            //
+            // A nearby guide deliberately asks nothing: it was opened because the player is
+            // standing next to the point, and an extra route lookup there would make a nearby
+            // key press depend on an unrelated query. Skipping stays unavailable until the
+            // route context is the reason this guide is open.
+            if (resolveSkip) await RefreshSkipTargetAsync(selection, generation, routeGuide);
+            if (!session.IsCurrent(generation) || disposed) return false;
             var bounds = await core.ExecuteMarkerAsync("markerGetGameWindowBounds", new { }, connectionRequests.Token);
             if (!session.IsCurrent(generation) || disposed) return false;
             RectInt32? gameBounds = null;
@@ -1041,6 +1164,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
         standaloneGamepadGeneration = 0; standaloneGamepadOpening = false;
         CancelOpeningRequest();
         selectionGeneration++;
+        // The skip authorisation belongs to the guide that is going away.
+        guideSkipTarget = null;
+        guide?.SetSkipAvailability(false);
         if (guide is not { } window) return;
         if (IsGamepadSessionOpen && gamepadGuideGeneration != 0 && !session.IsCurrent(gamepadGuideGeneration))
         {
@@ -1271,7 +1397,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                                 controllerSource: new IntPtr(WindowHandle(window)));
                             if (shown) { chooserGamepad = chooserGamepadOpening = false; chooserActions.Clear(); chooser = null; window.Close(); }
                         }
-                        else { window.Close(); chooser = null; await ShowAsync(chosen); }
+                        else { window.Close(); chooser = null; await ShowAsync(chosen, resolveSkip: false); }
                     }
                     catch (Exception e)
                     {

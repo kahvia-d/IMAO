@@ -17,6 +17,7 @@ public sealed class MarkerGuideWindow : Window
 {
     private readonly MarkerDetailService details;
     private readonly Func<MarkerSelection, bool, long, Task<bool>> setCompletion;
+    private readonly Func<MarkerSelection, long, Task<bool>> skipRouteTarget;
     private readonly Action<long> dismiss;
     private readonly Grid root = new() { Padding = new Thickness(20), RowSpacing = 12 };
     private readonly TextBlock name = new() { FontSize = 23, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
@@ -32,6 +33,9 @@ public sealed class MarkerGuideWindow : Window
     private readonly Button next = new() { Content = "下一张" };
     private readonly Button enlarge = new() { Content = "放大图片" };
     private readonly Button completion = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly Button skip = new() { HorizontalAlignment = HorizontalAlignment.Stretch,
+        Visibility = Visibility.Collapsed };
+    private readonly ProgressBar skipHold = new() { Minimum = 0, Maximum = 1, Height = 5, Visibility = Visibility.Collapsed };
     private readonly Button refresh = new() { Content = "刷新攻略" };
     private readonly HyperlinkButton sourceLink = new() { Content = "在库街区查看" };
     private readonly HyperlinkButton guideLink = new() { Content = "打开攻略链接", Visibility = Visibility.Collapsed };
@@ -44,6 +48,25 @@ public sealed class MarkerGuideWindow : Window
     private int pictureIndex;
     private string? currentImagePath;
     private bool completing;
+    // 跳过资格只由核心答复决定：客户端快照（core.RoutePlanning）会先于原生状态到达，
+    // 拿它当授权等于让过期的快照放行一次不该发生的跳过。
+    private bool skipAvailable;
+    private bool skipping;
+    private int skipHotkey = 71;
+    private readonly DispatcherTimer skipTimer = new() { Interval = TimeSpan.FromMilliseconds(30) };
+    // 键盘与鼠标各自一个按住手势：两个通道独立计时，先后按下互不影响。
+    private readonly GuideSkipHoldGesture keyboardSkipGesture = new();
+    private readonly GuideSkipHoldGesture pointerSkipGesture = new();
+    private bool keyboardSkipHeld;
+    private bool pointerSkipHeld;
+    // 这一轮按键已经算过一次起始（含自动重复消息），必须等抬起才重新开始。
+    private bool keyboardSkipHandled;
+    // 资格短暂失效（切到图片页、路线状态变化）时挂起，而不是假装玩家松了手：
+    // 手还按着就把计时重新从 0 开始，避免跨失效期累计时间凑满 600 毫秒。
+    private bool pendingKeyboardSkip;
+    private bool pendingPointerSkip;
+    // 手柄 Y 的进度由输入服务推进，这里只负责显示；null 表示当前没有手柄按住。
+    private GamepadAction? gamepadSkipHoldAction;
     /// <summary>The enlarged picture lives in its own half-screen window; it is created once.</summary>
     // One window per guide window, reused for every picture: it is only hidden while the guide
     // stays open, and destroyed with the guide. Creating a new one per open leaked a hidden
@@ -67,6 +90,23 @@ public sealed class MarkerGuideWindow : Window
     /// <summary>Raised when the enlarged picture opens or closes, so the core can follow the front window.</summary>
     internal Action<Window, bool>? ImageWindowChanged { get; set; }
     internal bool CanCompleteGamepad => gamepadMode && IsGuideVisible && !imageVisible && selected?.Completed == false && !completing;
+    /// <summary>跳过只对"当前导航目标"开放；资格来自核心的 <c>navigationStatus + 点位身份</c>。</summary>
+    internal bool CanSkip => skipAvailable && IsGuideVisible && !imageVisible && selected?.Completed == false && !skipping;
+    /// <summary>测试与协调器读取按钮文案，确保它一直写着当前实际绑定的键。</summary>
+    internal string SkipButtonText => skip.Content as string ?? string.Empty;
+    /// <summary>跳过入口是否可见/可用，测试用它断言"只有当前导航目标提供跳过"。</summary>
+    internal bool SkipButtonVisible => skip.Visibility == Visibility.Visible;
+    internal bool SkipButtonEnabled => skip.IsEnabled;
+    /// <summary>键鼠按住的进度条是否正在显示，测试用它断言"显示进度即代表开始计时"。</summary>
+    internal bool SkipHoldVisible => skipHold.Visibility == Visibility.Visible;
+    /// <summary>模拟一次指南窗口内的跳过键按下，用于真实窗口的接线测试。</summary>
+    internal void PressSkipHotkeyForTest() => RootKeyDown(skipHotkey);
+    /// <summary>模拟一次跳过键抬起。</summary>
+    internal void ReleaseSkipHotkeyForTest() => RootKeyUp(skipHotkey);
+    /// <summary>模拟一次"跳过"按钮上的鼠标按住。</summary>
+    internal void PressSkipButtonForTest() => BeginPointerSkipHold();
+    /// <summary>模拟一次"跳过"按钮上的鼠标松开。</summary>
+    internal void ReleaseSkipButtonForTest() => EndPointerSkipHold();
     internal string GamepadViewToken => $"{generation}:{pictureIndex}:{(imageVisible ? "image" : "detail")}";
     internal Func<long, Task>? ContentDismiss { get; set; }
 
@@ -78,11 +118,13 @@ public sealed class MarkerGuideWindow : Window
     }
 
     public MarkerGuideWindow(MarkerDetailService details, Func<MarkerSelection, bool, long, Task<bool>> setCompletion,
-        Action<long> dismiss)
+        Func<MarkerSelection, long, Task<bool>> skipRouteTarget, Action<long> dismiss)
     {
         this.details = details;
         this.setCompletion = setCompletion;
+        this.skipRouteTarget = skipRouteTarget;
         this.dismiss = dismiss;
+        SetSkipHotkey(skipHotkey);
         nonClientProcedure = HandleNonClientMessage;
         Title = "收集物攻略 · IMao";
         GamepadWindowChrome.ApplyTheme(root);
@@ -144,6 +186,8 @@ public sealed class MarkerGuideWindow : Window
         footer.Children.Add(gamepadHint);
         footer.Children.Add(gamepadHold);
         footer.Children.Add(completion);
+        footer.Children.Add(skipHold);
+        footer.Children.Add(skip);
         var links = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         links.Children.Add(sourceLink);
         links.Children.Add(refresh);
@@ -152,7 +196,27 @@ public sealed class MarkerGuideWindow : Window
         Grid.SetRow(footer, 2);
         root.Children.Add(footer);
         Content = root;
-        root.PreviewKeyDown += (_, e) => { if (gamepadMode && (int)e.Key is >= 195 and <= 218) e.Handled = true; };
+        root.PreviewKeyDown += (_, e) => { if (RootKeyDown((int)e.Key)) e.Handled = true; };
+        root.PreviewKeyUp += (_, e) => { if (RootKeyUp((int)e.Key)) e.Handled = true; };
+        // 失去前台就不再算作"按住"：玩家已经切到游戏或别的窗口了。
+        Activated += (_, e) =>
+        {
+            if (e.WindowActivationState != WindowActivationState.Deactivated) return;
+            ResetSkipInputs();
+            CancelSkipHold();
+        };
+        skipTimer.Tick += (_, _) => TickSkipHold();
+        skip.PointerPressed += (_, e) =>
+        {
+            if (!e.GetCurrentPoint(skip).Properties.IsLeftButtonPressed) return;
+            if (BeginPointerSkipHold()) { skip.CapturePointer(e.Pointer); e.Handled = true; }
+        };
+        skip.PointerReleased += (_, e) =>
+        {
+            skip.ReleasePointerCapture(e.Pointer);
+            if (EndPointerSkipHold()) e.Handled = true;
+        };
+        skip.PointerCaptureLost += (_, _) => EndPointerSkipHold();
         AppWindow.Resize(new SizeInt32(440, 660));
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
@@ -179,6 +243,8 @@ public sealed class MarkerGuideWindow : Window
         {
             RemoveWindowSubclass(handle, nonClientProcedure, 1);
             IsClosed = true; IsGuideVisible = false; CancelLoads();
+            ResetSkipInputs();
+            CancelSkipHold();
             // Destroy, not hide: a hidden picture window outlives this one and WinUI only exits
             // once the last window is gone, which left the process running with nothing on screen.
             CloseImageWindow(destroy: true);
@@ -194,6 +260,10 @@ public sealed class MarkerGuideWindow : Window
         HideImageDialog();
         generation = selectionGeneration;
         completing = false;
+        skipping = false;
+        skipAvailable = false;
+        ResetSkipInputs();
+        CancelSkipHold();
         lastGameBounds = gameBounds;
         SetGamepadHoldProgress(0);
         selectionCancellation = new CancellationTokenSource();
@@ -241,6 +311,10 @@ public sealed class MarkerGuideWindow : Window
         IsGuideVisible = false;
         selected = null;
         completing = false;
+        skipping = false;
+        skipAvailable = false;
+        ResetSkipInputs();
+        CancelSkipHold();
         CancelLoads();
         HideImageDialog();
         AppWindow.Hide();
@@ -413,21 +487,212 @@ public sealed class MarkerGuideWindow : Window
 
     internal void SetGamepadMode(bool enabled)
     {
+        ResetSkipInputs();
+        CancelSkipHold();
         gamepadMode = enabled;
         gamepadHint.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
-        gamepadHint.Text = "X 放大图片 · B 返回列表 · LB/RB 翻图 · 右摇杆滚动 · 长按 A 完成";
+        // 提示里常驻"长按 Y 跳过"：跳过按钮本身就是"这一刻有没有资格"的唯一指示，
+        // 让提示随资格变化会在窗口复用时留下上一状态的文字。
+        gamepadHint.Text = "X 放大图片 · B 返回列表 · LB/RB 翻图 · 右摇杆滚动 · 长按 A 完成 · 长按 Y 跳过当前目标";
         if (!enabled && imageVisible) CloseImageWindow();
         SetGamepadHoldProgress(0);
         UpdateCompletionButton();
     }
 
-    internal void SetGamepadHoldProgress(double value)
+    /// <summary>手柄长按进度由输入服务推进；progress 为 null 表示当前没有手柄按住。</summary>
+    internal void SetGamepadHoldProgress(double value, GamepadAction? action = null)
     {
-        gamepadHold.Value = double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 0;
+        gamepadSkipHoldAction = action == GamepadAction.SkipGuideStop ? action : null;
+        var progress = double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 0;
+        gamepadHold.Value = action == GamepadAction.Complete ? progress : 0;
         gamepadHold.Visibility = CanCompleteGamepad && gamepadHold.Value > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (gamepadSkipHoldAction is null || !CanSkip) return;
+        skipHold.Value = progress;
+        skipHold.Visibility = progress > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     internal void SetGamepadStatus(string value) { if (gamepadMode && IsGuideVisible) status.Text = value; }
+
+    /// <summary>键盘跳过键设成 0 等于禁用；按钮文案始终写出当前实际生效的键。</summary>
+    internal void SetSkipHotkey(int key)
+    {
+        ResetSkipInputs();
+        CancelSkipHold();
+        skipHotkey = key;
+        skip.Content = key == 0 ? "长按跳过当前路线目标" :
+            $"长按跳过当前路线目标（{RuntimeConfiguration.HotkeyName(key)} / 手柄 Y）";
+    }
+
+    /// <summary>
+    /// 资格由协调器按原生答复设置：只有"当前导航目标"的攻略才会打开跳过入口。
+    /// 撤销资格必须同时清掉正在进行的按住，否则玩家会在资格消失后继续攒进度。
+    /// </summary>
+    internal void SetSkipAvailability(bool available)
+    {
+        skipAvailable = available;
+        if (!available) { ResetSkipInputs(); CancelSkipHold(); }
+        skip.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        skip.IsEnabled = available && !skipping;
+    }
+
+    internal async Task SkipCurrentAsync()
+    {
+        if (!CanSkip || selected is not { } selection) return;
+        long requestGeneration = generation;
+        skipping = true;
+        ResetSkipInputs();
+        CancelSkipHold();
+        skip.IsEnabled = false;
+        try
+        {
+            if (!await skipRouteTarget(selection, requestGeneration) && IsCurrent(selection, requestGeneration))
+                status.Text = "路线目标未跳过，请重试";
+        }
+        catch (Exception)
+        {
+            if (IsCurrent(selection, requestGeneration)) status.Text = "路线目标未跳过，请重试";
+        }
+        finally
+        {
+            if (IsCurrent(selection, requestGeneration)) { skipping = false; skip.IsEnabled = skipAvailable; }
+        }
+    }
+
+    private bool IsGuideForeground() => GetForegroundWindow() == WinRT.Interop.WindowNative.GetWindowHandle(this);
+
+    /// <summary>返回 true 表示这次按下属于跳过键并被消费。</summary>
+    private bool RootKeyDown(int key)
+    {
+        if (gamepadMode && key is >= 195 and <= 218) return true;
+        if (gamepadMode || skipHotkey == 0 || key != skipHotkey || !CanSkip) return false;
+        // 自动重复的按下消息不算新的一次按住；但资格失效后的重复消息要能重新开始。
+        if (!keyboardSkipHandled && IsGuideForeground())
+        {
+            keyboardSkipHandled = true;
+            keyboardSkipHeld = true;
+            ResolvePendingSkipInputs();
+            keyboardSkipGesture.Begin(Environment.TickCount64, eligible: true);
+            ShowSkipHold();
+        }
+        return true;
+    }
+
+    /// <summary>返回 true 表示这次抬起属于跳过键并被消费。</summary>
+    private bool RootKeyUp(int key)
+    {
+        if (gamepadMode || skipHotkey == 0 || key != skipHotkey || !keyboardSkipHandled) return false;
+        keyboardSkipHeld = false;
+        keyboardSkipHandled = false;
+        keyboardSkipGesture.Cancel();
+        CancelSkipHoldIfIdle();
+        return true;
+    }
+
+    /// <summary>返回 true 表示这次按下真的开始了一次跳过计时（需要捕获鼠标）。</summary>
+    private bool BeginPointerSkipHold()
+    {
+        if (!CanSkip || !IsGuideForeground()) return false;
+        pointerSkipHeld = true;
+        ResolvePendingSkipInputs();
+        pointerSkipGesture.Begin(Environment.TickCount64, eligible: true);
+        ShowSkipHold();
+        return true;
+    }
+
+    /// <summary>返回 true 表示这次松开真的结束了本窗口的一次跳过按住。</summary>
+    private bool EndPointerSkipHold()
+    {
+        if (!pointerSkipHeld) return false;
+        pointerSkipHeld = false;
+        pointerSkipGesture.Cancel();
+        CancelSkipHoldIfIdle();
+        return true;
+    }
+
+    /// <summary>
+    /// 两个输入通道各自计时，取按下更早的那个显示进度：任一通道满门槛只提交一次。
+    /// </summary>
+    private void TickSkipHold()
+    {
+        if (!CanSkip || !IsGuideForeground())
+        { RevokeSkipHold(); return; }
+        ResolvePendingSkipInputs();
+        if (!keyboardSkipHeld && !pointerSkipHeld && gamepadSkipHoldAction is null)
+        { CancelSkipHold(); return; }
+        var now = Environment.TickCount64;
+        var keyboard = 0.0;
+        var pointer = 0.0;
+        var keyboardDone = false;
+        var pointerDone = false;
+        if (keyboardSkipHeld) keyboard = keyboardSkipGesture.Update(now, eligible: true, out keyboardDone);
+        if (pointerSkipHeld) pointer = pointerSkipGesture.Update(now, eligible: true, out pointerDone);
+        if (keyboardDone || pointerDone)
+        {
+            ResetSkipInputs();
+            CancelSkipHold();
+            _ = SkipCurrentAsync();
+            return;
+        }
+        var progress = Math.Max(keyboard, pointer);
+        if (progress > 0 && gamepadSkipHoldAction is null)
+        {
+            skipHold.Value = progress;
+            skipHold.Visibility = Visibility.Visible;
+        }
+    }
+
+    private void ShowSkipHold()
+    {
+        skipHold.Value = 0;
+        skipHold.Visibility = Visibility.Visible;
+        skipTimer.Start();
+    }
+
+    /// <summary>资格消失或窗口不再前台：取消这一次按住，但手还按着就标记成"挂起"。</summary>
+    private void RevokeSkipHold()
+    {
+        if (keyboardSkipHeld) { keyboardSkipGesture.Cancel(); pendingKeyboardSkip = true; }
+        if (pointerSkipHeld) { pointerSkipGesture.Cancel(); pendingPointerSkip = true; }
+        gamepadSkipHoldAction = null;
+        skipTimer.Stop();
+        skipHold.Value = 0;
+        skipHold.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>把挂起的通道重新起算，保证 600 毫秒只统计"资格有效且窗口前台"的时间。</summary>
+    private void ResolvePendingSkipInputs()
+    {
+        var now = Environment.TickCount64;
+        if (pendingKeyboardSkip) { pendingKeyboardSkip = false; keyboardSkipGesture.Begin(now, eligible: keyboardSkipHeld); }
+        if (pendingPointerSkip) { pendingPointerSkip = false; pointerSkipGesture.Begin(now, eligible: pointerSkipHeld); }
+    }
+
+    /// <summary>放弃正在进行的按住，但保留"手还按着"的通道状态（资格恢复后可以接着计时）。</summary>
+    private void CancelSkipHold()
+    {
+        keyboardSkipGesture.Cancel();
+        pointerSkipGesture.Cancel();
+        pendingKeyboardSkip = pendingPointerSkip = false;
+        gamepadSkipHoldAction = null;
+        skipTimer.Stop();
+        skipHold.Value = 0;
+        skipHold.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>松开一只手时调用：还有别的通道按着就继续计时，否则收起进度。</summary>
+    private void CancelSkipHoldIfIdle()
+    {
+        if (keyboardSkipHeld || pointerSkipHeld) return;
+        CancelSkipHold();
+    }
+
+    private void ResetSkipInputs()
+    {
+        keyboardSkipHeld = pointerSkipHeld = keyboardSkipHandled = false;
+        pendingKeyboardSkip = pendingPointerSkip = false;
+        keyboardSkipGesture.Cancel();
+        pointerSkipGesture.Cancel();
+    }
 
     internal void CloseGamepadImage() => HideImageDialog();
 
@@ -522,6 +787,8 @@ public sealed class MarkerGuideWindow : Window
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr window);
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
     private delegate IntPtr SubclassProcedure(IntPtr window, uint message, IntPtr wParam, IntPtr lParam, nuint id, nuint data);
     private IntPtr HandleNonClientMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam, nuint id, nuint data) =>
         message == 0x0083 ? IntPtr.Zero : DefSubclassProc(window, message, wParam, lParam); // WM_NCCALCSIZE
