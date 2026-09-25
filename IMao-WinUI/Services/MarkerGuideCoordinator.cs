@@ -1274,12 +1274,13 @@ public sealed class MarkerGuideCoordinator : IDisposable
             if (session.IsCurrent(generation))
             {
                 var game = standaloneGameWindow;
-                bool restore = standaloneGamepadGeneration == generation && guide is { } window &&
-                    StandaloneForegroundOwner(window) is not null;
+                bool standalone = standaloneGamepadGeneration == generation;
+                bool restore = standalone && guide is { } window && StandaloneForegroundOwner(window) is not null;
                 if (restore && IsWindow(game) && DeferCloseUntilPadNeutral(game, () => CloseGuide(generation)))
                     return true;
                 CloseGuide(generation);
-                if (restore && IsWindow(game)) SetForegroundWindow(game);
+                // 同上：前台必须有明确归宿，不能指望"窗口藏了系统会挑游戏"。
+                if (standalone && IsWindow(game)) ReturnForegroundToGame(game, "guide-skip-closed");
             }
             return true;
         }
@@ -1559,16 +1560,36 @@ public sealed class MarkerGuideCoordinator : IDisposable
         {
             // 收起的是整份攻略，所以前台要从"这份攻略占着前台的任意窗口"（攻略窗口或它的大图）
             // 交还游戏；只看攻略窗口自己会在"大图开着时完成点位"那一下把前台丢在半空。
-            bool restore = standaloneGamepadGeneration == generation && guide is { } window && StandaloneForegroundOwner(window) is not null;
+            bool standalone = standaloneGamepadGeneration == generation;
+            bool restore = standalone && guide is { } window && StandaloneForegroundOwner(window) is not null;
             var game = standaloneGameWindow;
             // 长按 A 完成时玩家的手指常常还按着 A：这一刻就交还前台，游戏会把随后的**松开**
             // 当成一次完整的 A（游戏里 A = 闪避）。先等手柄回中位再收窗口、再交还，见 GuideFocusHandoff。
             if (restore && IsWindow(game) && DeferCloseUntilPadNeutral(game, HideClosedGuide)) return;
             HideClosedGuide();
-            if (restore && IsWindow(game)) SetForegroundWindow(game);
+            // **前台一定要有明确归宿**：只要这是手柄开出的攻略、游戏窗口还在，就把前台交给游戏，
+            // 不再要求"收窗口前这份攻略正好占着前台"。实机反馈（2026-09-25）：长按 A 完成之后
+            // 手柄焦点跑到既不是攻略窗口、也不是游戏的地方，于是 LS 切不了聚焦、B 也退不出攻略。
+            // 原来这里的条件是 `restore &&`：前台不是攻略窗口时不还原，窗口一藏，前台就落到
+            // 谁都不是的地方（我们自己的别的窗口、或桌面上任意一个）。
+            if (standalone && IsWindow(game)) ReturnForegroundToGame(game, "guide-closed");
         }
         else if (result == MarkerGuideCompletionResult.Updated && session.Selection is { } selection)
             guide?.UpdateCompletion(selection, generation);
+    }
+
+    /// <summary>
+    /// 把前台交还游戏，并把结果写进诊断——**不弹提示**：`SetForegroundWindow` 在"我们的进程本来
+    /// 就没有前台权"的时候会失败，那是正常情况（玩家这会儿在别的程序上），拿它报错只会刷屏。
+    /// 失败时日志里有 `foreground-return accepted=False`，实机复现时照着这一行就能判断。
+    /// </summary>
+    private void ReturnForegroundToGame(IntPtr game, string stage)
+    {
+        var before = GetForegroundWindow();
+        if (before == game || !IsWindow(game)) return;
+        bool accepted = SetForegroundWindow(game);
+        core.ReportGamepadDiagnostic("guide-focus",
+            $"{stage} foreground-return accepted={accepted} before={before} game={game} after={GetForegroundWindow()}");
     }
 
     /// <summary>
@@ -1608,7 +1629,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 $"handoff-now buttons={current.Buttons} neutral={current.Neutral} gameAlive={IsWindow(target)}");
             // 这一次会话可能已经被别的操作收掉了：那时 closeNow 里的判断会自己什么都不做。
             closeNow?.Invoke();
-            if (IsWindow(target)) SetForegroundWindow(target);
+            // 收窗口之后前台必须有归宿：等手松开的这段窗口期里前台可能已经飘到别处，
+            // 所以这里**无条件**把它交还游戏（`ReturnForegroundToGame` 自己会在已经在游戏上时跳过）。
+            ReturnForegroundToGame(target, "handoff-now");
         };
         focusHandoffTimer.Start();
         return true;

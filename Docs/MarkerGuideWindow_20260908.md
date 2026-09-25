@@ -83,8 +83,24 @@
 > **每一个"攻略收起后前台回到游戏"的路径都走它**——长按 A 完成、长按 Y 跳过、大世界里
 > LB+X 收起攻略、LB+B 完成附近点位。判断标准只有一条：**收起窗口的那一刻，手柄是不是回中位了**。
 
+> **2026-09-25 实机第二次补报：长按 A 完成之后，手柄焦点跑到"谁都不是"的地方**，于是 LS 切不了
+> 聚焦、B 也退不出攻略。根因是**前台交还被 `restore` 挡住了**：
+> `restore = standaloneGamepadGeneration == generation && StandaloneForegroundOwner(window) != null`
+> 只在"收窗口那一刻这份攻略正好占着前台"时为真，而前台交还写成 `if (restore) SetForegroundWindow(game)`。
+> 前台不是攻略窗口时（延迟等待期间、玩家切过聚焦、大图刚收起……）**没有任何人把游戏放回前台**，
+> 窗口一藏，系统只会挑"下一个"窗口——那未必是游戏。
+> 修法：**前台必须有明确归宿**。只要这是手柄开出的攻略、游戏窗口还在，收起后就无条件调用
+> `ReturnForegroundToGame(game, stage)`（它自己会在前台已经是游戏时跳过），不再看 `restore`；
+> 延迟等待那一跳（`handoff-now`）也走同一条。诊断新增
+> `guide-focus <stage> foreground-return accepted=… before=… game=… after=…`——
+> 下次再出现"焦点不知道去哪了"，这一行能直接分辨是"没交还"还是"交还被拒"。
+> **这条没有自动化用例**：本套件共享真实桌面前台，"把前台切给攻略窗口"在本会话里稳定失败
+> （`guide-focus-toggle` 一次都不出现，模式停在 GuidePassive），硬写会假红；
+> 手工复现步骤：手柄呼出攻略 → LS 把聚焦切到攻略窗口 → 长按 A 完成 → 立刻按 LS / B，看是否还能切换。
+
 纯规则由 `Tests/ManagedRuntime/GuideFocusHandoffTests.cs` 钉住（按住 A/Y/X/B/LB+X、摇杆偏出、
 扳机按下都要等；松开的立刻交还；死区内的小抖动不算按住；到上限必须放弃等待；取消后不再触发）。
+
 **真实手柄上的手感**：长按 A 收集完不再闪避（2026-09-25 实机确认现象）、长按 Y 跳过完不再触发
 游戏动作（本次修正的目标）。
 

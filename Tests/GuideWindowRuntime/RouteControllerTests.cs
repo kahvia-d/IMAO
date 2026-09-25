@@ -585,6 +585,14 @@ internal static class RouteControllerTests
             Check(GetForegroundWindow() == fixture.GameHandle, "closing the handed-off guide stays on the game");
         }, log);
 
+        // 实机反馈（2026-09-25）：手柄在攻略界面长按 A 完成之后，手柄焦点跑到既不是攻略窗口、
+        // 也不是游戏的地方，于是 LS 切不了聚焦、B 也退不出攻略。
+        //
+        // **这条暂时没有自动化用例**：它要在"按住 A 不放"的那几百毫秒里观察前台，而本套件共享
+        // 真实桌面前台——"把前台切给攻略窗口"这一步在本会话里稳定失败（`guide-focus-toggle`
+        // 一次都不出现，模式一直停在 GuidePassive），硬写会假红。
+        // 修法与手工复现步骤见 Docs/MarkerGuideWindow_20260908.md 的 2026-09-25 小节。
+
         // 全部用例跑完才汇报：一条失败不能把后面的证据一起吞掉。
         if (failures.Count > 0)
             throw new InvalidOperationException($"{failures.Count} case(s) failed: {string.Join(" | ", failures)}");
