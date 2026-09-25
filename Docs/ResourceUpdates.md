@@ -13,7 +13,7 @@
 - 基础资源继续随程序提供。一个 `map-data` 包完整包含八个现有场景的点位、分类、图标、校准、场景准入和本地攻略数据；`tile` 和 `candidate` 分别按地区打包。五份原先嵌入 DLL 的点位在构建时复制到输出的 `Assets/KuroMap/runtime`，只统一既有两个分类 ID 别名，不改变点位 ID、坐标或状态 ID。
 - 构建生成 `Assets/Updates/bundled-snapshot.json`，启用 `map-data`、`kuro-tile-packs.json` 中注册的每个瓦片包，以及 `candidate-packs.json` 中注册的候选包。一个包只有在 `referenceVerification.passed` 为真时才会进入快照；目录存在本身不足以启用它。`requiresGameValidation` 为真的场景还必须在 `Assets/KuroMap/scene-validation.json` 中获得批准：客户端始终传 `--resource-snapshot`，因此 `RuntimeFeatureRepository` 会因任何一个已注册包未获批准而中止整个资源加载，表现为“启动核心失败”。打包还需通过 CoreHost 资源预检。
 - 内置包的版本必须与线上清单使用同一内容身份：某包内容与上一份 `updates/stable.json` 中同 ID 的包逐文件一致时沿用清单里的版本，内容有变化时才使用本程序版本（暂存入口默认读取仓库的 `updates/stable.json`，可用 `-PreviousCatalog` 覆盖）。版本一致时客户端会把随程序内置的资源识别为已安装，不重复下载；不一致会让客户端认为这些包缺失并重新下载整套资源。客户端同时要求发布内容全部内置时才不提示资源更新。
-- 客户端固定读取 `https://raw.githubusercontent.com/kahvia-d/IMAO/main/updates/stable.json`。程序版本、清单序号、资源快照版本和各包版本分别处理。单独发布资源时保留上一清单的程序信息。
+- 客户端读取签名清单时按顺序尝试多个来源：先是 `https://raw.githubusercontent.com/kahvia-d/IMAO/main/updates/stable.json`，然后是 `https://gitee.com/tan-xuedong/imao-updates/raw/main/stable.json`。只在国内无代理时不可达的那一跳上换源；**只有"够不到"（连接失败、超时、拒绝服务）才换下一个来源**，而重定向到不受信任主机、响应过大、验签失败一律就地失败，不会静默改用镜像——那是指纹/篡改信号，镜像只负责可达性。每一份来源都必须通过同一个固定公钥验签，所以镜像不引入任何新的信任。最后一个来源的失败原样抛出，只配置一个来源时行为与从前完全一致。程序版本、清单序号、资源快照版本和各包版本分别处理。单独发布资源时保留上一清单的程序信息。
 - **地址校验以签名为准，不写仓库名**（`UpdateSignature.ValidateUrl` / `UpdatePublisher.RequireGithub`）：只要求 `https`、默认端口、无 userinfo、主机属于 `github.com` 与 GitHub 的签名附件主机，且 GitHub 路径落在 `/releases/` 内。**载荷的可信度完全来自固定 P-256 公钥对清单的签名，以及清单内记录的每个文件 SHA-256**；URL 规则只是传输卫生，**不是安全边界**。因此**不要**再把 `owner/repo` 写回这条规则。
 
   > ⚠️ **2026-09-24 的真实故障（务必记住）**：仓库改名 `kahvia-d/WWMAP-TOOLS` → `kahvia-d/IMAO` 之后，旧客户端**无法再更新任何东西**。
