@@ -41,6 +41,10 @@
     <Compile Include="../../IMao-WinUI/Services/GamepadWindowChrome.cs" Link="Production/GamepadWindowChrome.cs" />
     <Compile Include="../../IMao-WinUI/Services/LayerFloorNames.cs" Link="Production/LayerFloorNames.cs" />
     <Compile Include="../../IMao-WinUI.Core/Updates/*.cs" Link="Production/Updates/%(Filename)%(Extension)" />
+    <!-- The update sources name these two. Named one by one rather than by folder: Helpers/Json.cs would pull
+         Newtonsoft.Json into a harness that has no other use for it. -->
+    <Compile Include="../../IMao-WinUI.Core/Helpers/AtomicFile.cs" Link="Production/Helpers/%(Filename)%(Extension)" />
+    <Compile Include="../../IMao-WinUI.Core/Helpers/CurrentUserDpapi.cs" Link="Production/Helpers/%(Filename)%(Extension)" />
     <Compile Include="../../IMao-WinUI/Helpers/ResourceSessionPaths.cs" Link="Production/ResourceSessionPaths.cs" />
     <Compile Include="../../IMao-WinUI/Services/GamepadWindowReturn.cs" Link="Production/GamepadWindowReturn.cs" />
     <Compile Include="../../IMao-WinUI/Services/RouteGamepadController.cs" Link="Production/RouteGamepadController.cs" Condition="Exists('../../IMao-WinUI/Services/RouteGamepadController.cs')" />

@@ -11,6 +11,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../IMao-WinUI.Core/Updates/*.cs" Link="Updates/%(Filename)%(Extension)" />
+    <!-- The update sources name these two, and this project compiles them by glob rather than referencing the
+         assembly, so they have to be listed. Named one by one on purpose: Helpers/Json.cs would drag
+         Newtonsoft.Json into the launcher, which has no other use for it. -->
+    <Compile Include="../../IMao-WinUI.Core/Helpers/AtomicFile.cs" Link="Helpers/%(Filename)%(Extension)" />
+    <Compile Include="../../IMao-WinUI.Core/Helpers/CurrentUserDpapi.cs" Link="Helpers/%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../Assets/Updates/trusted-keys.json" LogicalName="trusted-keys.json" />
   </ItemGroup>
 </Project>
