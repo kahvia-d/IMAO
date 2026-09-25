@@ -306,10 +306,9 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
         const auto action = guideKeys[info.vkCode].Handle(down, eligible, focused || guideFocused, false);
         if (down) RuntimeHotkeyPressOwnership::RecordKeyDown(static_cast<int>(info.vkCode), firstDown,
             action != AutoRoute::EscapeAction::PassThrough);
-        // Only the leading edge opens or closes a guide. Windows keeps sending key-down for an
-        // auto-repeating key (about ten a second), and every repeat still asks for ReturnToPan,
-        // so acting on all of them meant the second press closed the guide the first one opened:
-        // holding the key for a moment looked like "the key does nothing".
+        // 攻略键的请求只在"第一次按下"时产生。状态机本身对重复 key-down 返回 PassThrough，
+        // 所以这个判定目前是冗余的——但需求就是"一次按下对应一次开/关"，把它写成显式条件，
+        // 以后有人改状态机时不会悄悄退化成"每次重复都开关一次"。用例见 RoutePlanningTests。
         if (action == AutoRoute::EscapeAction::ReturnToPan && firstDown) {
             nlohmann::json event;
             if (completeGuide) {

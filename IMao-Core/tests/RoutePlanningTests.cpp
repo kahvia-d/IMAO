@@ -459,6 +459,21 @@ void HotkeyConfigurationTests() {
 void GuidePaginationTests() {
     using Json = nlohmann::json;
     using AutoRoute::EscapeAction;
+    // 攻略键：一次按下只产生一次开/关请求。实机报告"按 F8 没反应"，日志里 0.9 秒内出现 10 次
+    // guide-shortcut —— 每次都会走一遍 ToggleGuideAsync（开着就关），连按就等于开了又关。
+    // 状态机把重复 key-down 归成 Consume（不是 PassThrough），所以"只有 ReturnToPan 才发请求"
+    // 这条判断本身就挡住了重复；钩子里那个 firstDown 条件是冗余的显式表达，这里把它钉死。
+    {
+        AutoRoute::PlanningEscapeKey key;
+        Expect(key.Handle(true, true, true, false) == EscapeAction::ReturnToPan,
+            "the first guide-key down asks for one open or close");
+        Expect(key.Handle(true, true, true, false) == EscapeAction::Consume,
+            "a repeated guide-key down is consumed and asks for nothing");
+        Expect(key.Handle(false, true, true, false) == EscapeAction::Consume,
+            "the matching key-up is consumed so the game never sees it");
+        Expect(key.Handle(true, true, true, false) == EscapeAction::ReturnToPan,
+            "the next physical press asks again");
+    }
     const Json first = {{"hwnd", 1234}, {"profileId", "local"}, {"stateId", 8},
         {"pointId", "1409977912641277952"}, {"selectionGeneration", 71}};
     auto next = first; next["pointId"] = "1409980210964680704"; next["selectionGeneration"] = 72;
