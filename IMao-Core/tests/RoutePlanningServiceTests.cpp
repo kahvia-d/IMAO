@@ -1,6 +1,7 @@
 #include "RoutePlanningServiceTestHost.h"
 #include "Runtime/RoutePlanStore.h"
 #include "Runtime/RouteViewportCandidates.h"
+#include "Runtime/RouteToolbarNavigation.h"
 #include <algorithm>
 #include <iostream>
 #include <limits>
@@ -264,6 +265,35 @@ void VerifyGuideSkipGuard(const AutoRoute::Plan& original){
             "an exhausted skip history rejects the extra undo and leaves route progress alone");
     }
 }
+// 路线工具栏的方向选择：屏幕上 y 向下增长，同一行里的按钮必须能左右移动。
+// 这条用例存在的理由：实机报告"左摇杆只能上下切换"，需要能直接证伪或证实。
+void VerifyRouteToolbarNavigation(){
+    const auto button=[](const char* key,double left,double top,double right,double bottom){
+        MarkerHitRegion region;region.key=key;region.left=left;region.top=top;region.right=right;region.bottom=bottom;return region;};
+    // 三行按钮，每行三个，行内水平间距 40，行间距 50。
+    const std::vector<MarkerHitRegion> buttons{
+        button("route:tool:pan",0,0,100,40),button("route:tool:point",140,0,240,40),button("route:tool:box",280,0,380,40),
+        button("route:tool:lasso",0,90,100,130),button("route:tool:start",140,90,240,130),button("route:addVisible",280,90,380,130),
+        button("route:undo",0,180,100,220),button("route:clear",140,180,240,220),button("route:generate",280,180,380,220)};
+    Check(RouteToolbarNextKey(buttons,"route:tool:point",-1)=="route:tool:pan",
+        "a left press selects the button on the left in the same row");
+    Check(RouteToolbarNextKey(buttons,"route:tool:point",1)=="route:tool:box",
+        "a right press selects the button on the right in the same row");
+    Check(RouteToolbarNextKey(buttons,"route:tool:pan",-1)=="route:tool:pan",
+        "the leftmost button of a row has no left neighbour");
+    Check(RouteToolbarNextKey(buttons,"route:tool:box",1)=="route:tool:box",
+        "the rightmost button of a row has no right neighbour");
+    Check(RouteToolbarNextKey(buttons,"route:tool:point",-2)=="route:tool:point",
+        "an up press needs a button in a row above, not just anywhere");
+    Check(RouteToolbarNextKey(buttons,"route:tool:lasso",-2)=="route:tool:pan",
+        "an up press moves to the row above");
+    Check(RouteToolbarNextKey(buttons,"route:tool:pan",2)=="route:tool:lasso",
+        "a down press moves to the row below");
+    Check(RouteToolbarNextKey(buttons,"route:missing",1)==buttons.front().key,
+        "an unknown selected key falls back to the first button");
+    Check(RouteToolbarNextKey({},"route:tool:pan",1)=="route:tool:pan",
+        "an empty toolbar keeps the current selection");
+}
 }
 int main(int argc,char** argv){
     StructuredLogger::root=std::filesystem::absolute(argc>1?argv[1]:"out/auto-replan-native/service-data");
@@ -313,6 +343,7 @@ int main(int argc,char** argv){
         Check(RoutePlanningService::View().active->skipped.empty(),"original skip can still be undone after automatic reordering");
         VerifyViewportSelection(original);
         VerifyGuideSkipGuard(original);
+        VerifyRouteToolbarNavigation();
     }catch(const std::exception& e){++failures;std::cerr<<"UNEXPECTED: "<<e.what()<<'\n';}
     RoutePlanningService::Shutdown();
     std::cout<<"RoutePlanningService harness failures="<<failures<<'\n';return failures?1:0;

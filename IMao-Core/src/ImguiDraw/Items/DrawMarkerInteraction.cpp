@@ -14,6 +14,7 @@
 #include "../../Runtime/OverlayPacing.h"
 #include "../../Runtime/RouteGamepadBridge.h"
 #include "../../Runtime/RouteGamepadControls.h"
+#include "../../Runtime/RouteToolbarNavigation.h"
 #include "../../Runtime/RoutePointSelectionInput.h"
 #include "../../Runtime/GamepadContext.h"
 #include "../../Runtime/GamepadCursorTargets.h"
@@ -831,20 +832,7 @@ std::vector<MarkerHitRegion> RouteGamepadButtons() {
     return buttons;
 }
 void NavigateRouteToolbar(const std::vector<MarkerHitRegion>& buttons, int direction) {
-    if (buttons.empty()) return;
-    const auto current = std::find_if(buttons.begin(), buttons.end(), [](const auto& value) { return value.key == routeGamepadSelected; });
-    if (current == buttons.end()) { routeGamepadSelected = buttons.front().key; return; }
-    const double x = (current->left + current->right) / 2, y = (current->top + current->bottom) / 2;
-    double best = std::numeric_limits<double>::max();
-    for (const auto& next : buttons) {
-        const double dx = (next.left + next.right) / 2 - x, dy = (next.top + next.bottom) / 2 - y;
-        const bool horizontal = std::abs(direction) == 1;
-        const double primary = horizontal ? dx * direction : dy * (direction / 2);
-        if (primary <= 1) continue;
-        const double cross = horizontal ? std::abs(dy) : std::abs(dx);
-        const double score = primary + cross * 5;
-        if (score < best) { best = score; routeGamepadSelected = next.key; }
-    }
+    routeGamepadSelected = RouteToolbarNextKey(buttons, routeGamepadSelected, direction);
 }
 void ProcessRouteGamepad(const RECT& rect, POINT origin, bool suppressFrameInput = false) {
     auto& bridge = RouteGamepadBridge::Shared();
