@@ -24,6 +24,19 @@ public sealed class UpdateService : IDisposable
     // Canonical location of the update channel. The repository used to be called
     // kahvia-d/WWMAP-TOOLS; GitHub still redirects that path, but read the new one.
     public static readonly Uri StableUri = new("https://raw.githubusercontent.com/kahvia-d/IMAO/main/updates/stable.json");
+
+    // Mirrors of the same signed envelope, tried in order only after StableUri is unreachable. The
+    // canonical entry point cannot be reached from mainland China without a proxy, and the check used
+    // to die with it. A mirror is trusted for nothing but availability: every source must satisfy the
+    // same pinned P-256 signature before a byte of it is used, so a hostile mirror can at worst refuse
+    // to serve. Mirrors are pure availability, never authority.
+    public static readonly IReadOnlyList<Uri> ManifestMirrors =
+    [
+        new("https://gitee.com/tan-xuedong/imao-updates/raw/main/stable.json"),
+    ];
+
+    // Declared after both lists so static initialisation order cannot matter.
+    private static readonly Uri[] Sources = [StableUri, .. ManifestMirrors];
     private readonly BuildInfo _build;
     private readonly TrustedUpdateKey[] _keys;
     private readonly ResourceSnapshotService _snapshots;
@@ -577,29 +590,63 @@ public sealed class UpdateService : IDisposable
         return entries;
     }
 
+    /// <summary>
+    /// Reads the signed envelope from the first source that answers, in order.
+    ///
+    /// A source is skipped only when it could not be reached or refused to serve. Everything else - a
+    /// redirect to a host we do not read from, a response that is too large, or bytes that do not verify -
+    /// stops the whole check instead of quietly handing over to the next source. Those are integrity
+    /// signals, and a mirror is only ever needed for reachability, never to paper over a source that
+    /// answered wrongly. The last source's failure is deliberately not caught, so with a single
+    /// configured source the caller sees exactly the error it always saw.
+    /// </summary>
     private async Task<byte[]> DownloadManifestAsync(CancellationToken ct)
     {
-        using var response = await GetResponseAsync(StableUri, ct).ConfigureAwait(false);
+        for (var index = 0; index < Sources.Length; index++)
+        {
+            var isLast = index == Sources.Length - 1;
+            byte[] bytes;
+            try { bytes = await FetchManifestAsync(Sources[index], isLast, ct).ConfigureAwait(false); }
+            catch (Exception ex) when (!isLast && IsUnreachable(ex)) { continue; }
+            UpdateSignature.Verify(bytes, _keys, _allowTestKeys);
+            return bytes;
+        }
+        throw new InvalidDataException("没有配置可用的更新清单来源。");
+    }
+
+    /// <summary>A source that could not be reached or refused to serve, which is the only reason to try another one.</summary>
+    private static bool IsUnreachable(Exception ex) => ex is HttpRequestException or TimeoutException or IOException;
+
+    private async Task<byte[]> FetchManifestAsync(Uri source, bool isLast, CancellationToken ct)
+    {
+        // Only a source that has another source behind it is worth cutting short: the next source keeps
+        // the check alive, whereas shortening the final attempt would turn a slow-but-working link into
+        // a failure. With a single source configured this is exactly the previous 30 second timeout.
+        var responseTimeout = TimeSpan.FromSeconds(isLast ? 30 : 12);
+        using var response = await GetResponseAsync(source, UpdateSignature.ValidateManifestHost, responseTimeout, ct).ConfigureAwait(false);
         if (response.Content.Headers.ContentLength > UpdateSignature.MaxManifestBytes) throw new InvalidDataException("更新清单过大。");
         await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         return await ReadBoundedAsync(stream, UpdateSignature.MaxManifestBytes, ct).ConfigureAwait(false);
     }
 
-    private async Task<HttpResponseMessage> GetResponseAsync(Uri uri, CancellationToken ct)
+    private Task<HttpResponseMessage> GetResponseAsync(Uri uri, CancellationToken ct) =>
+        GetResponseAsync(uri, UpdateSignature.ValidateResponseUri, TimeSpan.FromSeconds(30), ct);
+
+    private async Task<HttpResponseMessage> GetResponseAsync(Uri uri, Action<Uri?> allow, TimeSpan responseTimeout, CancellationToken ct)
     {
         for (var redirects = 0; redirects < 6; redirects++)
         {
-            UpdateSignature.ValidateResponseUri(uri);
+            allow(uri);
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.Headers.UserAgent.ParseAdd("WWMAP-TOOLS/" + _build.AppVersion);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(30));
+            timeout.CancelAfter(responseTimeout);
             HttpResponseMessage response;
             try { response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false); }
             catch (OperationCanceledException ex) when (!ct.IsCancellationRequested) { throw new TimeoutException("连接或等待下载响应超时，请重试。", ex); }
             try
             {
-                UpdateSignature.ValidateResponseUri(response.RequestMessage?.RequestUri);
+                allow(response.RequestMessage?.RequestUri);
                 if (response.StatusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Redirect or HttpStatusCode.RedirectMethod or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect)
                 {
                     var location = response.Headers.Location ?? throw new InvalidDataException("下载重定向缺少地址。");

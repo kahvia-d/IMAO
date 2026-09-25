@@ -151,7 +151,8 @@ await Test("network error persists as failure and is throttled without claiming 
     using var f = New(); await f.Initialize(); f.Network.Fail = true;
     await ThrowsAsync<HttpRequestException>(() => f.Updates.CheckAsync(true));
     True(!string.IsNullOrEmpty(f.Updates.LastError)); True(f.Updates.LastCheckResult is null);
-    True((await f.Updates.CheckAsync(true)).Skipped); Equal(1, f.Network.Requests.Count);
+    // One failed check now attempts every configured manifest source exactly once before giving up.
+    True((await f.Updates.CheckAsync(true)).Skipped); Equal(1 + UpdateService.ManifestMirrors.Count, f.Network.Requests.Count);
 });
 await Test("corrupt update state disables updater without crashing app or resetting sequence", async () =>
 {
@@ -243,6 +244,58 @@ await Test("real published channel recovers a client that recorded the pre-rewri
     var result = await published.CheckAsync();
     False(published.StateConflictDetected); True(result.Catalog is not null);
     True(result.StateNotice.Contains("112")); False(result.Skipped);
+});
+await Test("unreachable canonical manifest source falls back to the configured mirror", async () =>
+{
+    // The canonical host is exactly what a client in mainland China cannot reach, and the check used to
+    // die with it. The mirror carries the same signed envelope and is verified identically, so the
+    // fallback adds availability without adding any trust.
+    using var f = New(); await f.Initialize();
+    f.Network.Unreachable.Add(UpdateService.StableUri.AbsoluteUri);
+    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = f.Sign(f.Catalog(3));
+    var result = await f.Updates.CheckAsync();
+    Equal(3L, result.Catalog!.Sequence);
+    EqualSequence([UpdateService.StableUri.AbsoluteUri, UpdateService.ManifestMirrors[0].AbsoluteUri], f.Network.Requests);
+});
+await Test("a reachable canonical source that does not verify is never silently replaced by a mirror", async () =>
+{
+    // Reachable-but-unverifiable is the tamper signal, and a mirror is only ever needed for
+    // reachability. Handing over here would hide the signal, so the second source must not be consulted.
+    using var f = New(); await f.Initialize();
+    f.Network.Routes[UpdateService.StableUri.AbsoluteUri] = Unverifiable(f.Sign(f.Catalog(3)));
+    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = f.Sign(f.Catalog(3));
+    await ThrowsAsync<InvalidDataException>(() => f.Updates.CheckAsync());
+    EqualSequence([UpdateService.StableUri.AbsoluteUri], f.Network.Requests);
+    True(f.Updates.LastCheckResult is null);
+});
+await Test("a mirror envelope that does not verify is refused", async () =>
+{
+    // A mirror is availability, never authority: bytes it serves are held to the same pinned signature
+    // as the canonical source, and a failure there is a failure, not a reason to keep looking.
+    using var f = New(); await f.Initialize();
+    f.Network.Unreachable.Add(UpdateService.StableUri.AbsoluteUri);
+    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = Unverifiable(f.Sign(f.Catalog(3)));
+    await ThrowsAsync<InvalidDataException>(() => f.Updates.CheckAsync());
+    EqualSequence([UpdateService.StableUri.AbsoluteUri, UpdateService.ManifestMirrors[0].AbsoluteUri], f.Network.Requests);
+});
+await Test("every manifest source being unreachable reports the transport failure", async () =>
+{
+    using var f = New(); await f.Initialize();
+    foreach (var source in new[] { UpdateService.StableUri }.Concat(UpdateService.ManifestMirrors)) f.Network.Unreachable.Add(source.AbsoluteUri);
+    // The last source's own failure is what surfaces, so the transport error type and message a caller
+    // could already rely on are unchanged by the presence of mirrors.
+    await ThrowsAsync<HttpRequestException>(() => f.Updates.CheckAsync());
+    Equal(1 + UpdateService.ManifestMirrors.Count, f.Network.Requests.Count);
+});
+await Test("the publishing scripts mirror the channel to the address the client actually reads", async () =>
+{
+    // The mirror address has to exist in two places: the client compiles it in, and the publishing side
+    // pushes to it. Renaming one without the other would silently stop serving the clients that need the
+    // mirror most, so the two are held together here.
+    var scripts = Path.Combine(RepositoryRoot(), "scripts");
+    var playbook = await File.ReadAllTextAsync(Path.Combine(scripts, "Set-GiteeMirror.ps1"))
+        + await File.ReadAllTextAsync(Path.Combine(scripts, "Publish-ResourceUpdate.ps1"));
+    foreach (var mirror in UpdateService.ManifestMirrors) True(playbook.Contains(mirror.OriginalString, StringComparison.Ordinal));
 });
 await Test("compatible resource choice is independent of program update", async () =>
 {
@@ -1115,6 +1168,19 @@ static void EqualSequence(IEnumerable<string> expected, IEnumerable<string> actu
 }
 static void Throws<T>(Action action) where T : Exception { try { action(); } catch (T) { return; } throw new Exception("Expected " + typeof(T).Name); }
 static async Task ThrowsAsync<T>(Func<Task> action) where T : Exception { try { await action(); } catch (T) { return; } throw new Exception("Expected " + typeof(T).Name); }
+/// <summary>
+/// A structurally intact envelope that cannot verify: the signature keeps its encoding and its 64 byte
+/// length, so the signature check itself is the only thing that can reject it.
+/// </summary>
+static byte[] Unverifiable(byte[] envelope)
+{
+    var json = Encoding.UTF8.GetString(envelope);
+    var field = json.LastIndexOf("signature", StringComparison.Ordinal);
+    if (field < 0) throw new Exception("Signed envelope has no signature field.");
+    var open = json.IndexOf('"', json.IndexOf(':', field) + 1);
+    var close = json.IndexOf('"', open + 1);
+    return Encoding.UTF8.GetBytes(json[..(open + 1)] + Convert.ToBase64String(new byte[64]) + json[close..]);
+}
 
 sealed class InlineProgress(Action<UpdateProgress> report) : IProgress<UpdateProgress>
 {
@@ -1127,11 +1193,13 @@ sealed class FakeNetwork : HttpMessageHandler
     public List<string> Requests { get; } = new();
     public bool Fail { get; set; }
     public bool Timeout { get; set; }
+    /// <summary>Individual URLs that refuse to answer, so a test can break one manifest source and leave the rest working.</summary>
+    public HashSet<string> Unreachable { get; } = new(StringComparer.Ordinal);
     public Uri? Redirect { get; set; }
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested(); var url = request.RequestUri!.AbsoluteUri; Requests.Add(url);
-        if (Fail) throw new HttpRequestException("Injected network failure.");
+        if (Fail || Unreachable.Contains(url)) throw new HttpRequestException("Injected network failure.");
         if (Timeout) throw new TaskCanceledException("Injected transport timeout.");
         if (Redirect is not null) { var redirect = new HttpResponseMessage(HttpStatusCode.Redirect) { RequestMessage = request }; redirect.Headers.Location = Redirect; return Task.FromResult(redirect); }
         if (!Routes.TryGetValue(url, out var bytes)) throw new HttpRequestException("Unknown test URL: " + url);

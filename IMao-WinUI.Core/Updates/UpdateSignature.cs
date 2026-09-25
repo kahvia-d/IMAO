@@ -133,4 +133,29 @@ public static class UpdateSignature
         if (uri is null) return; // Test handlers may omit RequestMessage.
         ValidateUrl(uri.AbsoluteUri, asset: true);
     }
+
+    // The hosts an update-manifest *source* may use, including its redirect targets. This list is
+    // deliberately wider than AllowedHosts, and that is safe because the two rules guard different
+    // things: AllowedHosts vets a URL that a *signed* catalog points a download at, while this one
+    // only decides where we are willing to fetch the envelope from. Nothing fetched through it is
+    // used before the pinned P-256 key verifies it, so a hostile source can at worst refuse to serve.
+    // Gitee answers with a 302 to a signed, expiring raw.giteeusercontent.com URL, which is why that
+    // host has to be accepted too.
+    //
+    // Do NOT merge these hosts into AllowedHosts: a mirror must never become somewhere a signed
+    // catalog can point a download at.
+    private static readonly string[] ManifestSourceHosts =
+    {
+        "raw.githubusercontent.com",
+        "gitee.com",
+    };
+
+    internal static void ValidateManifestHost(Uri? uri)
+    {
+        if (uri is null) return; // Test handlers may omit RequestMessage.
+        if (uri.Scheme != Uri.UriSchemeHttps || !uri.IsDefaultPort || !string.IsNullOrEmpty(uri.UserInfo) ||
+            !(ManifestSourceHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase) ||
+              uri.Host.EndsWith(".giteeusercontent.com", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("更新清单来源必须是受信任的 HTTPS 地址。");
+    }
 }
