@@ -521,21 +521,23 @@ public sealed class MarkerGuideWindow : Window
         var progress = double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 0;
         gamepadHold.Value = action == GamepadAction.Complete ? progress : 0;
         gamepadHold.Visibility = CanCompleteGamepad && gamepadHold.Value > 0 ? Visibility.Visible : Visibility.Collapsed;
-        if (gamepadSkipHoldAction is null || !CanSkip) return;
-        skipHold.Value = progress;
-        skipHold.Visibility = progress > 0 ? Visibility.Visible : Visibility.Collapsed;
+        // 跳过进度条要按"这一份采样属于哪条长按"来归零：松开 Y 之后输入服务会送来
+        // action=null / progress=0，旧写法在 gamepadSkipHoldAction 变成 null 时直接 return，
+        // 于是值归零了、可见性却留在 Visible —— 表现就是松手后进度条不消失。
+        skipHold.Value = action == GamepadAction.SkipGuideStop ? progress : 0;
+        skipHold.Visibility = CanSkip && skipHold.Value > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (gamepadSkipHoldAction is null && !keyboardSkipHeld && !pointerSkipHeld) skipTimer.Stop();
     }
 
     internal void SetGamepadStatus(string value) { if (gamepadMode && IsGuideVisible) status.Text = value; }
 
-    /// <summary>键盘跳过键设成 0 等于禁用；按钮文案始终写出当前实际生效的键。</summary>
+    /// <summary>按键绑定只用于键盘输入判定；按钮文案固定为"跳过"（键名与手柄 Y 由使用指南说明）。</summary>
     internal void SetSkipHotkey(int key)
     {
         ResetSkipInputs();
         CancelSkipHold();
         skipHotkey = key;
-        skip.Content = key == 0 ? "长按跳过当前路线目标" :
-            $"长按跳过当前路线目标（{RuntimeConfiguration.HotkeyName(key)} / 手柄 Y）";
+        skip.Content = "跳过";
     }
 
     /// <summary>

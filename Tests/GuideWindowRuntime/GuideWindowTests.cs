@@ -34,8 +34,9 @@ internal static class GuideWindowTests
             await UntilAsync(() => f.Window is { IsGuideVisible: true, SkipButtonVisible: true } &&
                 f.Coordinator.HasGuideSkipAuthorization, "the current navigation target offers a skip entry");
             var window = f.Window!;
-            Check(window.SkipButtonEnabled && window.SkipButtonText.Contains(RuntimeConfiguration.HotkeyName(71)),
-                $"the skip entry names the actually configured key (text={window.SkipButtonText})");
+            // 按钮文案就是"跳过"：按键绑定与手柄 Y 由使用指南说明，按钮本身保持简短。
+            Check(window.SkipButtonEnabled && window.SkipButtonText == "跳过",
+                $"the skip entry stays a short label (text={window.SkipButtonText})");
 
             // 同一路线上的另一个点位：即使有当前目标，也不该出现跳过入口。
             f.Core.AuthoritativeTarget = B;
@@ -65,6 +66,17 @@ internal static class GuideWindowTests
                 "a 0.6 second hold submits exactly the authorised target and route");
             pending.Reply.SetResult(JsonSerializer.SerializeToElement(f.Core.RoutePlanning));
             await UntilAsync(() => Hidden(f), "an accepted skip closes the guide");
+
+            // 手柄那条进度条：松开 Y 之后输入服务会送来 action=null / progress=0。
+            // 旧写法在那一刻直接 return，值归零了但可见性留在 Visible——用户看到进度条不消失。
+            await f.Coordinator.ShowAsync(A);
+            await UntilAsync(() => f.Window is { IsGuideVisible: true, SkipButtonVisible: true } shown && shown.SkipHoldVisible == false,
+                "reopened guide starts with a collapsed skip progress bar");
+            var reopened = f.Window!;
+            reopened.SetGamepadHoldProgress(0.5, GamepadAction.SkipGuideStop);
+            Check(reopened.SkipHoldVisible, "a controller Y hold shows the skip progress bar");
+            reopened.SetGamepadHoldProgress(0, null);
+            Check(!reopened.SkipHoldVisible, "releasing Y collapses the skip progress bar again");
         }, log);
         await CaseAsync("real HWND has no system title bar and F8 toggles it", async f =>
         {
