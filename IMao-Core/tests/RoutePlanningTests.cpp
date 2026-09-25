@@ -464,15 +464,31 @@ void GuidePaginationTests() {
     // 状态机把重复 key-down 归成 Consume（不是 PassThrough），所以"只有 ReturnToPan 才发请求"
     // 这条判断本身就挡住了重复；钩子里那个 firstDown 条件是冗余的显式表达，这里把它钉死。
     {
-        AutoRoute::PlanningEscapeKey key;
-        Expect(key.Handle(true, true, true, false) == EscapeAction::ReturnToPan,
+        // 每个场景用独立实例：状态机是有状态的，前一个场景留下的 pressed_/owned_ 会污染下一个。
+        AutoRoute::PlanningEscapeKey first;
+        Expect(first.Handle(true, true, true, false) == EscapeAction::ReturnToPan,
             "the first guide-key down asks for one open or close");
-        Expect(key.Handle(true, true, true, false) == EscapeAction::Consume,
+        Expect(first.Handle(true, true, true, false) == EscapeAction::Consume,
             "a repeated guide-key down is consumed and asks for nothing");
-        Expect(key.Handle(false, true, true, false) == EscapeAction::Consume,
+        Expect(first.Handle(false, true, true, false) == EscapeAction::Consume,
             "the matching key-up is consumed so the game never sees it");
-        Expect(key.Handle(true, true, true, false) == EscapeAction::ReturnToPan,
-            "the next physical press asks again");
+
+        // 按住不放：Windows 连续送 down 而没有 up，整串只能产生一次请求。
+        AutoRoute::PlanningEscapeKey held;
+        int requests = 0;
+        if (held.Handle(true, true, true, false) == EscapeAction::ReturnToPan) ++requests;
+        for (int repeat = 0; repeat < 20; ++repeat)
+            if (held.Handle(true, true, true, false) == EscapeAction::ReturnToPan) ++requests;
+        Expect(requests == 1, "holding the guide key down stays a single request");
+        held.Handle(false, true, true, false);
+        Expect(held.Handle(true, true, true, false) == EscapeAction::ReturnToPan,
+            "releasing and pressing again is a new request");
+
+        // 攻略窗口打开后游戏失去前台：那几次 down 不能算作请求，也不能把所有权交出去。
+        AutoRoute::PlanningEscapeKey unfocused;
+        unfocused.Handle(true, true, true, false);
+        Expect(unfocused.Handle(true, true, false, false) == EscapeAction::Consume,
+            "a held key whose focus moved to the guide is still consumed, not passed to the game");
     }
     const Json first = {{"hwnd", 1234}, {"profileId", "local"}, {"stateId", 8},
         {"pointId", "1409977912641277952"}, {"selectionGeneration", 71}};
