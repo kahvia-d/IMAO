@@ -428,6 +428,96 @@ await TestPure("the CDK store refuses values that cannot be a CDK and masks the 
     Equal("••", MirrorChyanCredentialVault.Mask("ab"));
     Equal("", MirrorChyanCredentialVault.Mask(null));
 });
+// ---- MirrorChyan download plan ---------------------------------------------------------------------
+static string McJson(string version, string updateType, string? url = "https://mirrorchyan.com/resources/download/abc") =>
+    "{\"code\":0,\"msg\":\"success\",\"data\":{\"version_name\":\"v" + version + "\",\"url\":\"" + (url ?? "") +
+    "\",\"update_type\":\"" + updateType + "\",\"filesize\":1015425025,\"sha256\":\"16411d91c27e649df7d27df5229b5f100433f9e053996339e1b1bb5b680fd076\"}}";
+static HttpResponseMessage McResponse(string body) => new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+
+// A version the running program does not match, so the check's own version comparison is not what decides.
+const string McTarget = "2026.9.25.2";
+
+await Test("without a CDK MirrorChyan is never even asked", async () =>
+{
+    using var f = New(); await f.Initialize();
+    using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, new HttpClient(f.Network), true, () => f.Now, () => f.FreeBytes);
+    True(await updater.ResolveMirrorChyanPackageAsync(new ProgramRelease { Version = McTarget }) is null);
+    Equal(0, f.Network.Requests.Count);
+});
+await Test("a CDK resolves the signed release's package, and takes the incremental on a second ask", async () =>
+{
+    using var f = New(); await f.Initialize();
+    // MirrorChyan answers with the whole archive while it is still assembling the difference. A second
+    // question is what turns a gigabyte into a delta, so the plan has to reflect the retry.
+    var calls = 0;
+    using var network = new CallbackNetwork(_ => McResponse(McJson(McTarget, ++calls == 1 ? "full" : "incremental")));
+    using var http = new HttpClient(network);
+    using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, http, true, () => f.Now, () => f.FreeBytes,
+        cdkProvider: () => "test-cdk", mirrorRetryDelay: _ => Task.CompletedTask);
+    var plan = await updater.ResolveMirrorChyanPackageAsync(new ProgramRelease { Version = McTarget });
+    True(plan is not null);
+    Equal(MirrorChyanChannel.IncrementalPackage, plan!.UpdateType);
+    False(plan.IsWholePackage);
+    Equal(1015425025L, plan.Size!.Value);
+    True(plan.Url.EndsWith("abc", StringComparison.Ordinal));
+    Equal(2, calls);
+    // The client's side of the platform contract: os/arch are mandatory, the current version is spelled the
+    // way the publishing side uploads it, and the CDK rides in the query string.
+    Equal(2, network.Requests.Count);
+    True(network.Requests[0].Contains("os=win") && network.Requests[0].Contains("arch=x64"));
+    True(network.Requests[0].Contains("current_version=v" + f.Build.AppVersion));
+    True(network.Requests[0].Contains("cdk=test-cdk"));
+});
+await Test("a whole package still resolves when MirrorChyan never finishes the incremental", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var calls = 0;
+    using var network = new CallbackNetwork(_ => { calls++; return McResponse(McJson(McTarget, "full")); });
+    using var http = new HttpClient(network);
+    using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, http, true, () => f.Now, () => f.FreeBytes,
+        cdkProvider: () => "test-cdk", mirrorRetryDelay: _ => Task.CompletedTask);
+    var plan = await updater.ResolveMirrorChyanPackageAsync(new ProgramRelease { Version = McTarget });
+    // It is a usable plan, flagged so the caller can ask the player before pulling close to a gigabyte.
+    True(plan is not null && plan.IsWholePackage);
+    Equal(2, calls);
+});
+await Test("MirrorChyan is only used for exactly the version the signed catalog described", async () =>
+{
+    using var f = New(); await f.Initialize();
+    using var network = new CallbackNetwork(_ => McResponse(McJson("2026.9.24.1", "incremental")));
+    using var http = new HttpClient(network);
+    using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, http, true, () => f.Now, () => f.FreeBytes,
+        cdkProvider: () => "test-cdk", mirrorRetryDelay: _ => Task.CompletedTask);
+    // Serving a different release is the one thing that must never be tolerated: the catalog, not
+    // MirrorChyan, is what says which release is real.
+    True(await updater.ResolveMirrorChyanPackageAsync(new ProgramRelease { Version = McTarget }) is null);
+});
+await Test("every MirrorChyan failure falls back quietly instead of throwing", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var bodies = new[]
+    {
+        """{"code":7002,"msg":"Please confirm that you have entered the correct cdkey"}""",
+        """{"code":8001,"msg":"resource not found"}""",
+        """{"code":0,"msg":"current resource latest version is v2026.9.25.2","data":{"version_name":"v2026.9.25.2","release_note":"placeholder"}}""",
+        "not json at all",
+        "",
+    };
+    foreach (var body in bodies)
+    {
+        using var network = new CallbackNetwork(_ => McResponse(body));
+        using var http = new HttpClient(network);
+        using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, http, true, () => f.Now, () => f.FreeBytes,
+            cdkProvider: () => "test-cdk", mirrorRetryDelay: _ => Task.CompletedTask);
+        True(await updater.ResolveMirrorChyanPackageAsync(new ProgramRelease { Version = McTarget }) is null);
+    }
+    // A transport failure, which is the case a player without a working CDK path actually hits.
+    using var failing = new CallbackNetwork(_ => throw new HttpRequestException("offline"));
+    using var failingHttp = new HttpClient(failing);
+    using var transportUpdater = new UpdateService(f.Build, [f.Key], f.Snapshots, failingHttp, true, () => f.Now, () => f.FreeBytes,
+        cdkProvider: () => "test-cdk", mirrorRetryDelay: _ => Task.CompletedTask);
+    True(await transportUpdater.ResolveMirrorChyanPackageAsync(new ProgramRelease { Version = McTarget }) is null);
+});
 await Test("compatible resource choice is independent of program update", async () =>
 {
     using var f = New(); await f.Initialize(); var catalog = f.Catalog(4); var compatible = f.Catalog(2).Resources[0];
@@ -1316,6 +1406,20 @@ static byte[] Unverifiable(byte[] envelope)
 sealed class InlineProgress(Action<UpdateProgress> report) : IProgress<UpdateProgress>
 {
     public void Report(UpdateProgress value) => report(value);
+}
+
+/// <summary>
+/// A handler that answers per request rather than per URL, which is what a retry against the same URL needs.
+/// </summary>
+sealed class CallbackNetwork(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
+{
+    public List<string> Requests { get; } = new();
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Requests.Add(request.RequestUri!.AbsoluteUri);
+        return Task.FromResult(respond(request));
+    }
 }
 
 sealed class FakeNetwork : HttpMessageHandler

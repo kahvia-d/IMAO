@@ -50,9 +50,12 @@ public sealed class UpdateService : IDisposable
     private byte[]? _checkedEnvelope;
     private readonly string _initializationError;
     private readonly string _stateReadError = "";
+    private readonly Func<string?>? _cdkProvider;
+    private readonly Func<CancellationToken, Task> _mirrorRetryDelay;
 
     public UpdateService(BuildInfo build, IEnumerable<TrustedUpdateKey> keys, ResourceSnapshotService snapshots,
-        HttpClient? httpClient = null, bool allowTestKeys = false, Func<DateTimeOffset>? clock = null, Func<long>? availableBytes = null, string? initializationError = null)
+        HttpClient? httpClient = null, bool allowTestKeys = false, Func<DateTimeOffset>? clock = null, Func<long>? availableBytes = null, string? initializationError = null,
+        Func<string?>? cdkProvider = null, Func<CancellationToken, Task>? mirrorRetryDelay = null)
     {
         _build = build;
         UpdateSignature.RequireVersion(build.AppVersion);
@@ -62,6 +65,8 @@ public sealed class UpdateService : IDisposable
         _initializationError = initializationError ?? "";
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         _freeSpace = availableBytes ?? (() => new DriveInfo(Path.GetPathRoot(_snapshots.Root)!).AvailableFreeSpace);
+        _cdkProvider = cdkProvider;
+        _mirrorRetryDelay = mirrorRetryDelay ?? (token => Task.Delay(MirrorChyanIncrementalRetryDelay, token));
         _statePath = Path.Combine(snapshots.Root, "update-state.json");
         try { _state = LoadState(); }
         catch (InvalidDataException ex) { _stateReadError = ex.Message; _state = new UpdaterState { AutoCheckEnabled = false, LastError = ex.Message }; }
@@ -100,6 +105,76 @@ public sealed class UpdateService : IDisposable
             await CopyVerifiedAsync(input, output, target.Size, target.Sha256,
                 n => progress?.Report(new UpdateProgress("下载新版程序 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size)), token).ConfigureAwait(false);
         }, progress, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// How long to wait before asking MirrorChyan a second time for a version whose incremental package it
+    /// is still building. Until that package exists it answers with the whole archive.
+    /// </summary>
+    private static readonly TimeSpan MirrorChyanIncrementalRetryDelay = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan MirrorChyanQueryTimeout = TimeSpan.FromSeconds(20);
+
+    /// <summary>
+    /// Resolves where MirrorChyan would serve <paramref name="release"/>, or null when this channel cannot
+    /// serve it.
+    ///
+    /// Every refusal is silent and every failure is absorbed, because MirrorChyan is an alternative to the
+    /// signed download and never a requirement for it: no CDK, an expired CDK, a quota, an outage or an
+    /// answer this client cannot read all mean the same thing to the caller - use the signed channel. The
+    /// one thing enforced strictly is identity. The served version must equal the version the signed
+    /// catalog described, because the catalog, not MirrorChyan, is what says a release is real.
+    /// </summary>
+    public async Task<MirrorChyanPackage?> ResolveMirrorChyanPackageAsync(ProgramRelease release, CancellationToken ct = default)
+    {
+        var cdk = _cdkProvider?.Invoke();
+        if (string.IsNullOrWhiteSpace(cdk)) return null;
+        // The publishing side uploads the git tag as version_name, so the same spelling is what matches an
+        // incremental package to the version this installation is running.
+        var request = MirrorChyanChannel.BuildRequestUri(cdk, "v" + _build.AppVersion);
+        var result = await QueryMirrorChyanAsync(request, ct).ConfigureAwait(false);
+        if (result.Error != MirrorChyanError.None || string.IsNullOrEmpty(result.DownloadUrl)) return null;
+        if (!string.Equals(result.Version, release.Version, StringComparison.Ordinal)) return null;
+        if (result.ShouldAskAgainForIncremental)
+        {
+            // MirrorChyan assembles the incremental package on demand, so the first caller for a version pair
+            // is answered with the whole archive. Asking once more usually turns a gigabyte into a handful of
+            // megabytes, which is worth ten seconds of waiting before the download even starts.
+            await _mirrorRetryDelay(ct).ConfigureAwait(false);
+            var retried = await QueryMirrorChyanAsync(request, ct).ConfigureAwait(false);
+            if (retried.Error == MirrorChyanError.None && !string.IsNullOrEmpty(retried.DownloadUrl) &&
+                string.Equals(retried.Version, release.Version, StringComparison.Ordinal)) result = retried;
+            else if (result.DownloadUrl is null) return null;
+        }
+        return new MirrorChyanPackage(result.DownloadUrl!, result.Version, result.UpdateType, result.Size, result.Sha256);
+    }
+
+    /// <summary>
+    /// One MirrorChyan request, reduced to a result it can never throw out of.
+    ///
+    /// Deliberately not routed through <see cref="GetResponseAsync(Uri, CancellationToken)"/>: that path
+    /// enforces the host list for URLs a *signed catalog* points at, and widening it to cover a mirror is
+    /// exactly the coupling the contract forbids. A private request that answers a question nobody signed
+    /// anything about is the safe shape.
+    /// </summary>
+    private async Task<MirrorChyanResult> QueryMirrorChyanAsync(Uri request, CancellationToken ct)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(MirrorChyanQueryTimeout);
+            using var message = new HttpRequestMessage(HttpMethod.Get, request);
+            message.Headers.UserAgent.ParseAdd("WWMAP-TOOLS/" + _build.AppVersion);
+            using var response = await _http.SendAsync(message, HttpCompletionOption.ResponseContentRead, timeout.Token).ConfigureAwait(false);
+            // The status is deliberately not checked: MirrorChyan reports business outcomes in the body, and
+            // the ones that matter here arrive as failures - 7002 as 403, 8001 as 404 - each still carrying
+            // the payload, sometimes including the versions, that the caller needs.
+            var body = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
+            return MirrorChyanChannel.Parse(body, _build.AppVersion);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or IOException)
+        {
+            return MirrorChyanChannel.Unreachable(ex.Message);
+        }
     }
 
     public async Task SetAutoCheckEnabledAsync(bool enabled, CancellationToken ct = default)

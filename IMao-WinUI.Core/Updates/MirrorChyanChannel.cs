@@ -68,6 +68,20 @@ public sealed record MirrorChyanResult
 }
 
 /// <summary>
+/// A MirrorChyan package that has been checked against the release it claims to be. It exists only after
+/// the served version was found to equal the version the signed catalog described, so the caller may treat
+/// it as "somewhere to fetch this release's bytes", and nothing more than that.
+/// </summary>
+public sealed record MirrorChyanPackage(string Url, string Version, string UpdateType, long? Size, string? Sha256)
+{
+    /// <summary>
+    /// True when MirrorChyan will send the whole program archive rather than a difference. That is worth
+    /// confirming with the player first: ours is close to a gigabyte.
+    /// </summary>
+    public bool IsWholePackage => UpdateType == MirrorChyanChannel.FullPackage;
+}
+
+/// <summary>
 /// The MirrorChyan side of updating: URL shape, response shape, error codes and version normalization.
 ///
 /// Everything here is pure so it can be tested without a network, and everything here is *optional*:
