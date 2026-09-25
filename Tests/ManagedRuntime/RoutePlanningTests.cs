@@ -30,6 +30,14 @@ internal static class RoutePlanningTests
             state.Selected[0].FloorLabel == "未知", "route UI preserves origin starts and reports unknown floors explicitly");
         check(state.NavigationLabel.Contains("定位") && state.SavedRoutes[0].Label.Contains("一号路线"),
             "route status and saved-route names have readable UI labels");
+        // 只有"指引中"才允许把攻略回退到路线当前目标：暂停/结束后那个目标不再是玩家跟着走的点。
+        // waitingForLocation 也算指引中——进大地图会清掉定位，但那条路线仍在指引。
+        check(RoutePlanningState.IsGuiding("navigating") && RoutePlanningState.IsGuiding("waitingForLocation") &&
+            !RoutePlanningState.IsGuiding("paused") && !RoutePlanningState.IsGuiding("finished") &&
+            !RoutePlanningState.IsGuiding("") && !RoutePlanningState.IsGuiding(null),
+            "only an actively guiding route (including waiting for a location) may fall back to its current target");
+        check(state.Guiding && !(state with { NavigationStatus = "paused" }).Guiding,
+            "the route snapshot exposes the same guiding rule as the reply");
         VerifyHotkeyConfiguration(check);
     }
 

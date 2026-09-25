@@ -24,8 +24,8 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
     // 手柄开出的攻略窗口与游戏之间用 LS 切换聚焦。这个闩锁同样在状态机之外：默认聚焦在游戏时
     // 那段手柄输入根本不走状态机，而切换也不该被"请先松开按键"之类的等待挡住。
     private readonly GuideFocusToggleLatch guideFocusToggle = new();
-    // 被动攻略里"单独按一下 LB"收起攻略；同样只看原始样本，不走状态机。
-    private readonly GuideDismissTapLatch dismissTap = new();
+    // 攻略开着时在原始样本上认两条世界和弦（LB+B 完成、LB+X 开关攻略），不走状态机。
+    private readonly GuideWorldChordLatch guideChord = new();
     private bool guideFocusOwned;
     private int configuredDevice = -1;
     private string message = "手柄适配已关闭";
@@ -265,7 +265,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             {
                 guideFocusOwned = guides.IsStandaloneGamepadGuideOpen;
                 guideFocusToggle.Prime(sample.Buttons);
-                dismissTap.Reset();
+                guideChord.Reset();
             }
             var focusFired = guideFocusOwned && guideFocusToggle.Observe(sample.Buttons);
             if (focusFired && !guides.IsGamepadReturnPending)
@@ -275,19 +275,25 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                 _ = DispatchAsync(GamepadAction.ToggleGuideFocus);
                 return;
             }
-            // 攻略窗口开着但聚焦在游戏上：这段输入基本留给游戏，我们不解释、不产生动作，
-            // 也不因为"窗口不是前台"就停掉会话（LS 才是切换聚焦的路）。
-            // 只有两个键例外：LS 切换聚焦（上面），以及"单独按一下 LB"收起这份攻略——
-            // 大地图上 LB 是打开工具台，攻略开着时它归攻略窗口，工具台保持只在大地图出现
-            // （否则它会弹在攻略上面闪一下又自己关掉，实机反馈）。
-            // 其余按键（含 A/B/X/Y/RB）完全不碰；LB+X 那种组合交给原生按世界快捷键处理。
+            // 攻略开着时的两条世界和弦：LB+B 完成附近点位、LB+X 收起这份攻略。
+            // 它们不依赖聚焦状态：攻略窗口自己在前台时原生收不到，手柄归游戏时攻略又不解释手柄。
+            // 攻略开着，所以 LB+X 一定是"收起"，直接走托管层，不绕原生那条依赖世界观测的路。
+            if (guideFocusOwned && !guides.IsGamepadReturnPending && guideChord.Observe(sample) is { } chord)
+            {
+                var dispatched = chord == GamepadAction.ToggleGuide ? GamepadAction.CloseGuide : chord;
+                core.ReportGamepadDiagnostic("guide-world-chord",
+                    $"chord={chord} dispatch={dispatched} buttons={sample.Buttons} mode={context.Mode} " +
+                    $"foreground={GetForegroundWindow()}");
+                _ = DispatchAsync(dispatched);
+                return;
+            }
+            // 攻略窗口开着但聚焦在游戏上：这段输入留给游戏，我们只留 LS（切换聚焦）与上面两条和弦。
+            // 单独按 LB 什么都不做——大地图上的"打开工具台"只在大地图生效，不会弹在攻略上面。
             if (context.Mode == GamepadInputMode.GuidePassive)
             {
                 input.Reset();
                 Diagnose(gate + "/guide-passive");
-                SetMessage("攻略已打开 · LS 切换聚焦 · 单击 LB 收起攻略");
-                if (dismissTap.Observe(sample.Buttons))
-                    _ = DispatchAsync(GamepadAction.CloseGuide);
+                SetMessage("攻略已打开 · LS 切换聚焦 · LB+X 收起攻略 · LB+B 完成附近点位");
                 return;
             }
             var update = input.Update(sample, context, now);

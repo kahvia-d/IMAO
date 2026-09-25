@@ -41,6 +41,17 @@ public sealed record RoutePlanningState
         _ => "已暂停"
     };
 
+    /// <summary>
+    /// 路线是否处于"指引中"。只有这时才允许把攻略回退到路线当前目标：
+    /// 路线暂停/结束后，"当前目标"不再是玩家正在跟着走的下一个点，凭它弹出一份攻略
+    /// 会让玩家莫名其妙（实机反馈）。`waitingForLocation` 也算指引中——进大地图会清掉
+    /// 玩家定位，但那条路线仍在指引，这正是大地图上按攻略键要能用的原因。
+    /// </summary>
+    public static bool IsGuiding(string? navigationStatus) =>
+        navigationStatus is "navigating" or "waitingForLocation";
+
+    public bool Guiding => IsGuiding(NavigationStatus);
+
     public string AutoReplanLabel => !AutoReplanEnabled ? "实时规划已关闭" : AutoReplanComputing ? "正在调整路线" : AutoReplanStatus switch
     {
         "waitingForLocation" => "等待可靠定位",

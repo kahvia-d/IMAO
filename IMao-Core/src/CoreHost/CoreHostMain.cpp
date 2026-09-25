@@ -12,6 +12,7 @@
 #include "../Runtime/RuntimeHotkeys.h"
 #include "../Runtime/MarkerGuideProtocol.h"
 #include "../Runtime/GamepadContext.h"
+#include "../Runtime/GuideHotkeyRouting.h"
 #include "../Runtime/GamepadCursorTargets.h"
 #include "../Runtime/GamepadCursorGeometry.h"
 #include "../Runtime/FrameState.h"
@@ -527,8 +528,12 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
                     GamepadWorldActions::Request request{*action, command.at("profileId").get<std::string>(),
                         MarkerGuideProtocol::Integer(command.at("contextGeneration"), false),
                         MarkerGuideProtocol::Integer(command.at("gameHwnd"), false)};
+                    // 玩家可能正聚焦在我们自己的攻略窗口上：那时游戏不在前台，但这两条世界和弦
+                    // 仍然该生效（实机要求 LB+B 在两种聚焦下都能用），见 WorldChordAllowed。
+                    const bool chordAllowed = AutoRoute::WorldChordAllowed(current.data.value("gameFocused", false),
+                        !DrawItemBase::FocusedGuideWindow().empty());
                     if (!GamepadWorldActions::Shared().Enqueue(request, current.view,
-                        current.data.at("available").get<bool>() && current.data.at("gameFocused").get<bool>()))
+                        current.data.at("available").get<bool>() && chordAllowed))
                         throw std::invalid_argument("当前大世界画面或焦点已变化，手柄操作未执行");
                     result = {{"accepted", true}, {"data", {{"queued", true}}}};
                 } else if (type == "markerMapToolsRegister") {

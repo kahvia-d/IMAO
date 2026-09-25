@@ -34,31 +34,55 @@ internal static class GuideFocusLatchTests
             !others.Observe(GamepadButtons.LB) && !others.Observe(GamepadButtons.None),
             "menu, right-stick click, shoulder buttons and neutral are not the focus switch");
 
-        // 被动攻略里"单独按一下 LB"= 收起攻略。组合键（LB+X 那套世界快捷键）不算，
-        // 否则会"刚被这里关掉、又被组合键打开"。
-        var tap = new GuideDismissTapLatch();
-        check(!tap.Observe(GamepadButtons.None) && !tap.Observe(GamepadButtons.RB) && !tap.Observe(GamepadButtons.A),
-            "only a plain LB press can dismiss the passive guide");
-        check(!tap.Observe(GamepadButtons.LB), "pressing LB arms the dismiss without firing yet");
-        check(!tap.Observe(GamepadButtons.LB), "holding LB does not dismiss the guide");
-        check(tap.Observe(GamepadButtons.None), "releasing LB alone dismisses the guide once");
-        check(!tap.Observe(GamepadButtons.None), "the release is not reported twice");
+        // 攻略开着时的两条世界和弦：LB+B 完成附近点位、LB+X 开关这份攻略。
+        // 与世界里的和弦同规则；**单独按 LB 什么都不做**（大地图上的工具台入口只在大地图生效）。
+        var chord = new GuideWorldChordLatch();
+        check(chord.Observe(new(true, 0, GamepadButtons.None)) is null &&
+            chord.Observe(new(true, 0, GamepadButtons.A)) is null &&
+            chord.Observe(new(true, 0, GamepadButtons.RB)) is null,
+            "only the LB chords do anything while a guide is open");
+        check(chord.Observe(new(true, 0, GamepadButtons.LB)) is null &&
+            chord.Observe(new(true, 0, GamepadButtons.None)) is null,
+            "a single LB press and release does nothing at all");
+        check(chord.Observe(new(true, 0, GamepadButtons.LB)) is null &&
+            chord.Observe(new(true, 0, GamepadButtons.LB | GamepadButtons.B)) is null &&
+            chord.Observe(new(true, 0, GamepadButtons.None)) == GamepadAction.CompleteCurrent,
+            "LB then B completes the nearby point on release");
+        check(chord.Observe(new(true, 0, GamepadButtons.LB | GamepadButtons.X)) is null &&
+            chord.Observe(new(true, 0, GamepadButtons.None)) == GamepadAction.ToggleGuide,
+            "LB and X in one sample asks for the guide toggle on release, without a second report");
+        check(chord.Observe(new(true, 0, GamepadButtons.B)) is null &&
+            chord.Observe(new(true, 0, GamepadButtons.LB | GamepadButtons.B)) is null &&
+            chord.Observe(new(true, 0, GamepadButtons.None)) is null,
+            "B before LB is not a chord, matching the world rule");
 
-        var chord = new GuideDismissTapLatch();
-        chord.Observe(GamepadButtons.LB);
-        check(!chord.Observe(GamepadButtons.LB | GamepadButtons.X) && !chord.Observe(GamepadButtons.X) &&
-            !chord.Observe(GamepadButtons.None),
-            "LB+X is the world shortcut's job, not a dismiss tap");
-        check(!chord.Observe(GamepadButtons.LB) && chord.Observe(GamepadButtons.None),
-            "after the cancelled chord a fresh plain tap dismisses again");
+        var releasedFirst = new GuideWorldChordLatch();
+        releasedFirst.Observe(new(true, 0, GamepadButtons.LB));
+        releasedFirst.Observe(new(true, 0, GamepadButtons.LB | GamepadButtons.B));
+        check(releasedFirst.Observe(new(true, 0, GamepadButtons.B)) is null &&
+            releasedFirst.Observe(new(true, 0, GamepadButtons.None)) == GamepadAction.CompleteCurrent,
+            "releasing LB before B still completes once both are up");
 
-        // 攻略打开时已经按着 LB：取基线后必须先松开再按，不能把开窗那次按住算成收起。
-        // （取基线的语义也由 Reset 表达：此刻按着的不算一次。）
-        var tapPrimed = new GuideDismissTapLatch();
-        tapPrimed.Observe(GamepadButtons.LB);
-        tapPrimed.Reset();
-        check(!tapPrimed.Observe(GamepadButtons.None), "a baseline taken while LB is held does not dismiss on its release");
-        check(!tapPrimed.Observe(GamepadButtons.LB) && tapPrimed.Observe(GamepadButtons.None),
-            "a fresh press and release still dismisses after that baseline");
+        var mixed = new GuideWorldChordLatch();
+        mixed.Observe(new(true, 0, GamepadButtons.LB));
+        mixed.Observe(new(true, 0, GamepadButtons.LB | GamepadButtons.B));
+        check(mixed.Observe(new(true, 0, GamepadButtons.LB | GamepadButtons.B | GamepadButtons.Y)) is null &&
+            mixed.Observe(new(true, 0, GamepadButtons.None)) is null,
+            "a third button pressed during the chord cancels it");
+        var trigger = new GuideWorldChordLatch();
+        trigger.Observe(new(true, 0, GamepadButtons.LB));
+        trigger.Observe(new(true, 0, GamepadButtons.LB | GamepadButtons.B));
+        check(trigger.Observe(new(true, 0, GamepadButtons.None, RightTrigger: 200)) is null,
+            "releasing the chord with a trigger still held is refused, like the world gesture");
+
+        var primedChord = new GuideWorldChordLatch();
+        primedChord.Observe(new(true, 0, GamepadButtons.LB | GamepadButtons.B));
+        primedChord.Reset();
+        check(primedChord.Observe(new(true, 0, GamepadButtons.None)) is null &&
+            primedChord.Observe(new(true, 0, GamepadButtons.LB)) is null &&
+            primedChord.Observe(new(true, 0, GamepadButtons.None)) is null &&
+            primedChord.Observe(new(true, 0, GamepadButtons.LB | GamepadButtons.B)) is null &&
+            primedChord.Observe(new(true, 0, GamepadButtons.None)) == GamepadAction.CompleteCurrent,
+            "a chord held while the guide opens is not spent; a fresh one still works");
     }
 }

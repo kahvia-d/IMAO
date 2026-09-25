@@ -637,7 +637,9 @@ internal static class GuideWindowTests
             Core.RoutePlanning = new RoutePlanningState
             {
                 ProfileId = "local", Revision = 1, Active = new AutomaticRoute { Id = "test-route", SceneName = "World", SceneId = 1 },
-                CurrentTarget = new RouteStop { Key = "8:" + A.PointId, StateId = 8, PointId = A.PointId, NameId = A.NameId }
+                CurrentTarget = new RouteStop { Key = "8:" + A.PointId, StateId = 8, PointId = A.PointId, NameId = A.NameId },
+                // 路线在指引中：只有这时才允许攻略回退到路线当前目标（见 RoutePlanningState.IsGuiding）。
+                NavigationStatus = "navigating"
             };
             // 键盘攻略键先问附近范围。这里给出原生"范围内确实没有未完成点位"的答复
             // （outcome=guide-empty），协调器据此回退到当前导航目标。

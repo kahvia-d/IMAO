@@ -95,6 +95,7 @@ public sealed class CoreHostService : INotifyPropertyChanged
         else response = operation switch
         {
             "markerGetRouteGuide" => RouteGuideResponse(),
+            "markerGamepadWorldAction" => JsonSerializer.SerializeToElement(new { queued = true }),
             "markerGetGameWindowBounds" => GameWindowBounds,
             "markerGetGamepadTargets" => GamepadTargets,
             "markerGetGamepadContext" => GamepadContext,

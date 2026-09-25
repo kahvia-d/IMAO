@@ -236,12 +236,18 @@ internal static class RouteControllerTests
                 "closing from the shortcut returns to the game and completes nothing");
         }, log);
 
-        await CaseAsync("a plain LB tap dismisses the passive guide instead of opening the toolbar", async fixture =>
+        await CaseAsync("LB alone is idle, LB+B completes and LB+X dismisses", async fixture =>
         {
             fixture.Core.GamepadContext = fixture.GameplayContext;
             var sample = new GamepadSample(true, 0, GamepadButtons.None);
             using var service = new GamepadInputService(fixture.Core, fixture.Coordinator,
                 slot => slot == 0 ? sample : new(false, slot, GamepadButtons.None));
+            // 和弦闩锁要求"先松开再按"（与世界里的和弦同规则），而服务每 16 毫秒采样一次：
+            // 按下和松开都必须留够时间让采样看到，否则下一次按下会被当成同一次按住。
+            async Task PressAsync(GamepadButtons buttons)
+            { sample = sample with { Buttons = buttons }; await Task.Delay(70); }
+            async Task ReleaseAsync()
+            { sample = sample with { Buttons = GamepadButtons.None }; await Task.Delay(70); }
             await UntilAsync(() => fixture.Core.GamepadDiagnostics.Any(value => value.Contains("state=gameplay-ready/ready")),
                 "service observes the controlled gameplay context");
             fixture.Core.Emit(new
@@ -253,23 +259,103 @@ internal static class RouteControllerTests
             await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
                 "the guide is open and passive");
 
-            // LB+X 那套世界组合键不算"单击 LB"：这里按住 LB 再补 X，松开后什么都不该发生
-            // （世界组合键由原生处理，不能在这里被误解成"收起又被打开"）。
-            sample = sample with { Buttons = GamepadButtons.LB }; await Task.Delay(60);
+            // 单独按一下 LB：什么都不做——大地图上的工具台入口只在大地图生效，不会弹在攻略上面。
+            await PressAsync(GamepadButtons.LB);
             Check(!fixture.Controller.HasHost, "holding LB over a passive guide does not open the map toolbar");
-            sample = sample with { Buttons = GamepadButtons.LB | GamepadButtons.X }; await Task.Delay(60);
-            sample = sample with { Buttons = GamepadButtons.None }; await Task.Delay(90);
-            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && !fixture.Controller.HasHost,
-                "LB+X is left to the world shortcut and does not dismiss the guide from here");
+            await ReleaseAsync();
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && !fixture.Controller.HasHost &&
+                !fixture.Coordinator.IsGamepadSessionOpen,
+                "a single LB press does nothing at all while the guide is open");
 
-            // 单独按一下 LB 再松开：收起攻略，且**不**打开工具台。
-            sample = sample with { Buttons = GamepadButtons.LB }; await Task.Delay(60);
-            sample = sample with { Buttons = GamepadButtons.None };
+            // LB+B：请核心完成附近点位（世界那条路），攻略保持打开。
+            await PressAsync(GamepadButtons.LB);
+            await PressAsync(GamepadButtons.LB | GamepadButtons.B);
+            await ReleaseAsync();
+            await UntilAsync(() => fixture.Core.Commands.Any(value => value.Operation == "markerGamepadWorldAction"),
+                "LB+B asks the core to complete the nearby point while the guide is open");
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen &&
+                fixture.Core.Commands.Last(value => value.Operation == "markerGamepadWorldAction")
+                    .Arguments.GetProperty("action").GetString() == "completeCurrent",
+                "the chord completes and leaves the guide open until the core answers");
+            await Task.Delay(80);
+
+            // 核心回一条"另一个点位已完成"：攻略展示的不是它，窗口保持打开。
+            var other = Target with { PointId = "1409980210964680704" };
+            fixture.Core.Emit(new
+            {
+                type = "markerCompletionChanged", profileId = "local", source = "local", revision = 41UL,
+                point = new { stateId = other.StateId, pointId = other.PointId, completed = true }
+            });
+            await Task.Delay(120);
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "completing another point keeps the guide window open");
+
+            // 聚焦到攻略窗口上（LS）后 LB+B 同样要生效，而且不能顺手把攻略翻页或关掉。
+            var page = PictureIndex(fixture.Guide!);
+            await PressAsync(GamepadButtons.L3);
+            await ReleaseAsync();
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail,
+                "LS puts the guide window in front");
+            await PressAsync(GamepadButtons.LB);
+            await PressAsync(GamepadButtons.LB | GamepadButtons.B);
+            await ReleaseAsync();
+            await UntilAsync(() => fixture.Core.Commands.Count(value => value.Operation == "markerGamepadWorldAction") == 2,
+                "LB+B completes the nearby point while the guide window holds the focus too");
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && PictureIndex(fixture.Guide!) == page,
+                "the chord in front of the guide neither closes it nor turns a page");
+
+            // LS 把聚焦交还游戏，再试 LB+X：收起这份攻略（不绕原生那条依赖世界观测的路）。
+            await PressAsync(GamepadButtons.L3);
+            await ReleaseAsync();
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "LS hands the pad back to the game again");
+
+            // LB+X：收起这份攻略（不绕原生那条依赖世界观测的路）。
+            await PressAsync(GamepadButtons.LB);
+            await PressAsync(GamepadButtons.LB | GamepadButtons.X);
+            await ReleaseAsync();
             await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
-                "a plain LB tap dismisses the guide");
-            Check(!fixture.Controller.HasHost && !fixture.Coordinator.IsGamepadSessionOpen &&
-                GetForegroundWindow() == fixture.GameHandle,
-                "dismissing with LB never pops the map toolbar over the guide and stays on the game");
+                "LB+X dismisses the guide while the guide window is open");
+            Check(GetForegroundWindow() == fixture.GameHandle && !fixture.Controller.HasHost,
+                "dismissing with the chord stays on the game and opens no toolbar");
+
+            // 再打开一次：这次核心回的是"攻略展示的那个点位已完成" → 顺便关闭攻略窗口。
+            fixture.Core.Emit(new
+            {
+                type = "markerGuideShortcut", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
+                contextGeneration = 17UL, profileId = "local", routeId = fixture.Core.ActiveRouteId,
+                key = "8:" + Target.PointId, screenX = 40, screenY = 100
+            });
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "the guide is open again");
+            fixture.Core.Emit(new
+            {
+                type = "markerCompletionChanged", profileId = "local", source = "local", revision = 42UL,
+                point = new { stateId = Target.StateId, pointId = Target.PointId, completed = true }
+            });
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "completing the point the guide shows closes the guide window as well");
+        }, log);
+
+        await CaseAsync("the route target guide only opens while the route is guiding", async fixture =>
+        {
+            var shortcut = new
+            {
+                type = "markerGuideShortcut", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
+                contextGeneration = 17UL, profileId = "local", routeId = fixture.Core.ActiveRouteId,
+                key = "8:" + Target.PointId, screenX = 40, screenY = 100
+            };
+            fixture.Core.RoutePlanning = fixture.Core.RoutePlanning with { NavigationStatus = "paused" };
+            fixture.Core.Emit(shortcut);
+            await UntilAsync(() => fixture.Core.Errors.Any(error => error.Contains("正在导航的路线目标")),
+                "a paused route reports instead of opening its target guide");
+            Check(!fixture.Coordinator.IsStandaloneGamepadGuideOpen && fixture.Guide is not { IsGuideVisible: true },
+                "no guide window opens while the route is paused");
+
+            fixture.Core.RoutePlanning = fixture.Core.RoutePlanning with { NavigationStatus = "navigating" };
+            fixture.Core.Emit(shortcut);
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "the same shortcut opens the target guide once the route is guiding again");
         }, log);
 
         await CaseAsync("toolbar handoff shows the guide passively and its own entry closes it again", async fixture =>
@@ -295,8 +381,8 @@ internal static class RouteControllerTests
                 fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
                 "the toolbar handoff shows the guide and hands the foreground back to the game");
             fixture.Tick(GamepadButtons.None);
-            await Task.Delay(60);
-            Check(!fixture.Controller.IsOpen && !IsWindow(fixture.Host) &&
+            // 交接清理是异步的（归还前台 + 注销原生会话）：等结果，别用固定延时赌它跑完。
+            await UntilAsync(() => !fixture.Controller.IsOpen && !IsWindow(fixture.Host) &&
                 fixture.Core.Commands.Count(value => value.Operation == "markerRouteGamepadEnd") == 1,
                 "handoff cleanup ends native ownership and leaves the game in front");
             Check(!fixture.Core.Commands.Any(value => value.Operation == "markerSetCompletion"),
@@ -351,7 +437,9 @@ internal static class RouteControllerTests
             Core.RoutePlanning = new()
             {
                 ProfileId = "local", Revision = 1, Active = new AutomaticRoute { Id = "test-route", SceneName = "World", SceneId = 1 },
-                CurrentTarget = new RouteStop { Key = "8:" + Target.PointId, StateId = 8, PointId = Target.PointId, NameId = Target.NameId }
+                CurrentTarget = new RouteStop { Key = "8:" + Target.PointId, StateId = 8, PointId = Target.PointId, NameId = Target.NameId },
+                // 路线在指引中：只有这时才允许把攻略回退到路线当前目标（见 RoutePlanningState.IsGuiding）。
+                NavigationStatus = "navigating"
             };
             Core.RouteGamepadResponder = (operation, command) =>
             {

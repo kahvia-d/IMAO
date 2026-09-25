@@ -75,27 +75,66 @@ public sealed class GuideFocusToggleLatch
 }
 
 /// <summary>
-/// 被动攻略（窗口开着、手柄归游戏）里"按一下 LB"= 收起这份攻略。
+/// 攻略开着时的两条世界手柄和弦：**LB+B 完成附近点位**、**LB+X 开关这份攻略**。
 ///
-/// 只认"单独按 LB 再松开"：中途按下别的键（典型是 LB+X 那套世界组合键）就作废，交给原生那条
-/// 世界快捷键去开关——否则会出现"刚被这里关掉、又被组合键打开"的闪烁。
+/// 为什么必须在这里认：攻略窗口自己在前台时游戏不在前台，原生那条世界快捷键收不到；而游戏在前台
+/// （被动）时攻略又不解释手柄。两条路都指望不上，只能在原始样本上认。
 ///
-/// 大地图上 LB 本来是打开工具台；攻略开着时这个键归攻略窗口，工具台因此保持"只在大地图出现"，
-/// 不会在攻略上面一闪而过（实机反馈）。
+/// 规则与世界里的和弦一致：LB 先按（或同一帧齐按），补上 B/X 后松开生效；反向按、补别的键、
+/// 中途换键、松开时还按着扳机都作废。**单独按一下 LB 什么都不做**（攻略详情页的"上一张"仍由
+/// 解释器负责，它遇到这种混合按键会自行取消，两者不冲突）。
 /// </summary>
-public sealed class GuideDismissTapLatch
+public sealed class GuideWorldChordLatch
 {
-    private bool pressed;
+    private enum Stage { Idle, Pending, Armed, Barrier }
 
-    /// <summary>取基线：此刻已经按着的 LB 不算一次，必须重新按一次。</summary>
-    public void Reset() => pressed = false;
+    private Stage stage = Stage.Idle;
+    private GamepadAction? armed;
 
-    /// <summary>返回 true 表示"单独按下的 LB 刚被松开"，调用方应当收起攻略。</summary>
-    public bool Observe(GamepadButtons buttons)
+    /// <summary>攻略一打开就取一次基线：此刻按着的键不算一次和弦。</summary>
+    public void Reset() { stage = Stage.Idle; armed = null; }
+
+    /// <summary>返回本刻要执行的动作；一次和弦只返回一次，其余时候为 null。</summary>
+    public GamepadAction? Observe(GamepadSample sample)
     {
-        if (buttons == GamepadButtons.LB) { pressed = true; return false; }
-        if (buttons == GamepadButtons.None) { var fired = pressed; pressed = false; return fired; }
-        pressed = false; // 组合键或别的键：这次不算"单独按一下 LB"
+        var buttons = sample.Buttons;
+        switch (stage)
+        {
+            case Stage.Armed:
+                if (buttons == GamepadButtons.None)
+                {
+                    // 松开时扳机也要回正：混合输入一律作废（与世界里的和弦同一条规则）。
+                    var action = sample.LeftTrigger <= 30 && sample.RightTrigger <= 30 ? armed : null;
+                    Reset();
+                    return action;
+                }
+                // 允许先松 LB 或先松 B/X，只要还按着的是这个和弦里的键。
+                if (buttons != GamepadButtons.None &&
+                    (buttons & (GamepadButtons.LB | GamepadButtons.B | GamepadButtons.X)) == buttons) return null;
+                stage = Stage.Barrier;
+                return null;
+            case Stage.Pending:
+                if (buttons == GamepadButtons.LB) return null;
+                if (Arm(buttons)) return null;
+                stage = buttons == GamepadButtons.None ? Stage.Idle : Stage.Barrier;
+                return null;
+            case Stage.Barrier:
+                if (buttons == GamepadButtons.None) stage = Stage.Idle;
+                return null;
+            default:
+                if (buttons == GamepadButtons.LB) { stage = Stage.Pending; return null; }
+                if (Arm(buttons)) return null;
+                if (buttons != GamepadButtons.None) stage = Stage.Barrier;
+                return null;
+        }
+    }
+
+    private bool Arm(GamepadButtons buttons)
+    {
+        if (buttons == (GamepadButtons.LB | GamepadButtons.B))
+        { stage = Stage.Armed; armed = GamepadAction.CompleteCurrent; return true; }
+        if (buttons == (GamepadButtons.LB | GamepadButtons.X))
+        { stage = Stage.Armed; armed = GamepadAction.ToggleGuide; return true; }
         return false;
     }
 }

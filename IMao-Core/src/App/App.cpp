@@ -1,6 +1,7 @@
 #include "../Feature/Match/SceneMapFeatures.h"
 #include "App.h"
 #include "../Runtime/GamepadWorldActions.h"
+#include "../Runtime/GuideHotkeyRouting.h"
 #include "../Runtime/LayeredMapState.h"
 #include "..\Coordinate\locationCalculator\RelativeCoordinates.h"
 #include "../Coordinate/VisualLocalization/RecoveryPolicy.h"
@@ -2478,13 +2479,16 @@ void App::Thread_KeyMonitoring_SavePlayerNearItemPoint() {
             RuntimeStatus::Snapshot().coreState == "running" && IsWindow(hwnd) &&
             IsWindowVisible(hwnd) && !IsIconic(hwnd) && GetWindowThreadProcessId(hwnd, &gameProcess) &&
             gameProcess == gamepadContext.gameProcessId;
+        // 玩家可能正聚焦在我们自己的攻略窗口上（游戏因此不在前台）：那时这两条世界和弦仍然
+        // 要生效，见 WorldChordAllowed。别的程序在前台时两个条件都是 false。
+        const bool worldChordAllowed = AutoRoute::WorldChordAllowed(DrawItemBase::IsMarkerGameFocused(hwnd),
+            !DrawItemBase::FocusedGuideWindow().empty());
         const bool gamepadWorldVisible = presented->Fresh() && presented->minimapVisible && frame &&
-            liveGame && overlayVisibility.Read()->AllowsMinimap(frame->frameId) && DrawItemBase::IsMarkerGameFocused(hwnd) &&
+            liveGame && overlayVisibility.Read()->AllowsMinimap(frame->frameId) && worldChordAllowed &&
             frame->minimapMarkers.profileId == profile && frame->minimapMarkers.sceneName == gamepadContext.sceneName;
         // Both world shortcuts resolve the current nearby observation. Explicit
         // route-guide controls use their separate markerGuideShortcut event.
-        if (const auto request = GamepadWorldActions::Shared().Take(gamepadContext,
-            liveGame && DrawItemBase::IsMarkerGameFocused(hwnd))) {
+        if (const auto request = GamepadWorldActions::Shared().Take(gamepadContext, liveGame && worldChordAllowed)) {
             if (gamepadWorldVisible)
                 DrawItemOnMinMap::HandlePlayerNearbyAction(request->action == GamepadWorldActions::Action::ToggleGuide,
                     true, request->gameHwnd);

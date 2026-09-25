@@ -467,6 +467,15 @@ void GuideHotkeyRoutingTests() {
         "the completion chord never closes a guide");
     Expect(!AutoRoute::GuideShortcutClosesVisibleGuide(true, /*gamepad*/ false, true, true),
         "the keyboard guide key decides open/close in the managed layer, not here");
+
+    // 世界手柄和弦（LB+B 完成、LB+X 攻略）在"游戏前台"或"我们自己的攻略窗口前台"时都可用；
+    // 别的程序在前台时两个条件都是 false，和弦照旧不生效。
+    Expect(AutoRoute::WorldChordAllowed(/*gameFocused*/ true, /*ourGuideFocused*/ false) &&
+        AutoRoute::WorldChordAllowed(false, /*ourGuideFocused*/ true) &&
+        AutoRoute::WorldChordAllowed(true, true),
+        "world chords work with the game in front or with our own guide window in front");
+    Expect(!AutoRoute::WorldChordAllowed(false, false),
+        "another application in front keeps the world chords unavailable");
 }
 
 void HotkeyConfigurationTests() {

@@ -53,4 +53,13 @@ inline bool GuideShortcutClosesVisibleGuide(bool guideIntent, bool gamepad, bool
     return guideIntent && gamepad && guideVisible && sameProfile;
 }
 
+// 世界手柄和弦（LB+B 完成附近点位、LB+X 攻略开关）此刻能不能用。
+//
+// 条件是"游戏在前台，**或者我们自己的攻略窗口在前台**"：玩家聚焦在攻略窗口上时游戏当然不在
+// 前台，但那条和弦仍然是给这个世界用的（实机要求：不管聚焦在游戏还是攻略窗口，LB+B 都要生效）。
+// 别的程序在前台时两者都是 false，和弦照旧不生效。
+inline bool WorldChordAllowed(bool gameFocused, bool ourGuideFocused) {
+    return gameFocused || ourGuideFocused;
+}
+
 } // namespace AutoRoute

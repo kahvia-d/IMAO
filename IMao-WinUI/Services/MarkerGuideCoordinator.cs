@@ -1015,6 +1015,15 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 core.ReportGamepadDiagnostic("guide-shortcut",
                     $"source={(controller ? "gamepad" : "keyboard-route-fallback")} profile={profileId} status='{Text(result, "navigationStatus")}' " +
                     $"route='{Text(result, "routeId")}' hasSelection={result.TryGetProperty("selection", out var seen) && seen.ValueKind == JsonValueKind.Object}");
+                // 只有路线**指引中**才允许打开"路线当前目标"的攻略：暂停/结束后那个目标不再是
+                // 玩家正在跟着走的下一个点，凭它弹出攻略只会让人莫名其妙（实机反馈）。
+                // 提示与"空范围且没有目标"共用用户确认过的那一句，不再各报一次。
+                if (!RoutePlanningState.IsGuiding(Text(result, "navigationStatus")))
+                {
+                    CloseGuide(generation);
+                    core.ReportUserError("附近没有未完成点位，也没有正在导航的路线目标。");
+                    return;
+                }
                 if (Text(result, "profileId") != profileId || !result.TryGetProperty("selection", out var target) ||
                     target.ValueKind == JsonValueKind.Null)
                 {

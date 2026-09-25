@@ -202,7 +202,9 @@ nlohmann::json DrawItemOnMinMap::HandlePlayerNearbyAction(bool guide, bool gamep
     const auto game = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(observation.gameHwnd));
     DWORD pid = 0;
     if (!observation.available || (gameHwnd && observation.gameHwnd != gameHwnd) ||
-        !DrawItemBase::IsMarkerGameFocused(game) || !IsWindowVisible(game) || IsIconic(game) ||
+        !AutoRoute::WorldChordAllowed(DrawItemBase::IsMarkerGameFocused(game),
+            !DrawItemBase::FocusedGuideWindow().empty()) ||
+        !IsWindowVisible(game) || IsIconic(game) ||
         !GetWindowThreadProcessId(game, &pid) || pid != observation.gameProcessId ||
         observation.filterRevision != DrawItemBase::MarkerFilterRevision()) {
         if (publish) DrawItemBase::NotifyNearby("当前位置暂不可用，请等小地图定位恢复后重试。", "position-unavailable");
