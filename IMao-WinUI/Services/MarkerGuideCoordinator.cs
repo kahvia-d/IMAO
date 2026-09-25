@@ -1502,6 +1502,14 @@ public sealed class MarkerGuideCoordinator : IDisposable
         if ((controller || nearby) && (!IsWindow(game) || GetForegroundWindow() != game)) return;
         if (IsGamepadSessionOpen) SuspendGamepad("改用普通候选选择");
         CloseGuide();
+        // 只有一个候选的"附近攻略"直接打开，**不创建选择窗口**。
+        // 以前是先把选择窗口建出来并激活、再因为只有一个候选自动把它选掉，实机表现为
+        // "一闪而过的选择窗口"。键盘入口没有这个现象：核心直接把唯一候选解析成 selection 返回。
+        // 这里用同一个关联查询把身份重新解析一次，解析不出唯一身份才退回下面那条列表老路
+        // （多候选、组合里其实不止一个、点位或位置已变化）。
+        if (controller && nearby && !complete && Integer(page, "total") == 1 &&
+            page.GetProperty("candidates").GetArrayLength() == 1 &&
+            await ShowSingleNearbyGuideAsync(page)) return;
         long generation = ++selectionGeneration;
         string profileId = Text(page, "profileId");
         long revision = page.GetProperty("selectionRevision").GetInt64();
@@ -1767,6 +1775,50 @@ public sealed class MarkerGuideCoordinator : IDisposable
         else window.Activate();
         await AddPageAsync(page);
         if (IsCurrent() && singleGuide is not null) await singleGuide();
+    }
+
+    /// <summary>
+    /// 唯一候选的"附近攻略"：用与键盘入口相同的关联查询（markerGetNearbyGuide）重新解析身份，
+    /// 成功就直接打开这份攻略——standalone 手柄攻略、被动打开（不抢前台）、不创建选择窗口。
+    /// 返回 true 表示这次已经处理完（无论开没开成），调用方不要再建选择窗口；
+    /// 返回 false 表示没能确定唯一身份，调用方回退到列表那条路，行为与以前一致。
+    /// </summary>
+    private async Task<bool> ShowSingleNearbyGuideAsync(JsonElement page)
+    {
+        string profileId = Text(page, "profileId");
+        var game = new IntPtr(Long(page, "gameHwnd"));
+        if (game == IntPtr.Zero || !IsWindow(game) || GetForegroundWindow() != game) return false;
+        JsonElement reply;
+        try
+        {
+            reply = await core.ExecuteMarkerAsync("markerGetNearbyGuide", new { profileId }, connectionRequests.Token);
+        }
+        catch (Exception e)
+        {
+            core.ReportGamepadDiagnostic("nearby-single-unresolved", "query-failed " + e.Message);
+            return false;
+        }
+        if (disposed || Text(reply, "profileId") != profileId ||
+            !reply.TryGetProperty("selection", out var single) || single.ValueKind != JsonValueKind.Object)
+        {
+            core.ReportGamepadDiagnostic("nearby-single-unresolved",
+                $"outcome='{Text(reply, "outcome")}' hasCandidates={reply.TryGetProperty("candidates", out _)}");
+            return false;
+        }
+        var chosen = ReadSelection(single);
+        if (chosen.StateId <= 0 || chosen.PointId.Length == 0 || chosen.Completed) return false;
+        core.ReportGamepadDiagnostic("nearby-single-direct", $"point={chosen.StateId}:{chosen.PointId} revision=none");
+        // 会话与窗口状态和"从选择列表里点开"完全一致，只是没有那个列表窗口。
+        long generation = session.Open(chosen);
+        standaloneGamepadGeneration = generation;
+        standaloneGameWindow = game;
+        standaloneGameIdentity = GamepadWindowIdentity.Capture(game);
+        standaloneGamepadOpening = true;
+        if (await ShowCurrentAsync(chosen, generation, controllerSource: game)) return true;
+        // 代次已经被别的操作顶掉（玩家自己操作过）：不要再弹出列表。
+        if (!session.IsCurrent(generation)) return true;
+        CloseGuide(generation);
+        return false;
     }
 
     private static string NearbyFailureMessage(string reason) => reason switch

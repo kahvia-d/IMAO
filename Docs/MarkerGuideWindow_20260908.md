@@ -100,6 +100,11 @@
   两条和弦同样只看原始样本；攻略一打开时三者都取一次基线，玩家已经按着的键不算一次。
 - 攻略详情页里的 LB（上一张）与 B（返回）不受影响：解释器遇到"LB+B"这种混合按键会自行取消，
   和弦由上面的闩锁单独认，两者不会互相吃掉。
+- **唯一候选的"附近攻略"不再先建选择窗口**（实机反馈：手柄呼出时即便范围内只有一个点位，
+  也会有一瞬间的选择窗口；键鼠 F8 没有这个现象）。根因是那条路先创建并**激活**选择窗口，
+  再因为只有一个候选自动把它选掉。现在改用与键盘入口**完全相同的关联查询**
+  （`markerGetNearbyGuide`）重新解析唯一身份后直接打开，解析不出唯一身份（多候选、或点位/位置
+  已变化）才退回原来那条列表老路。诊断：`nearby-single-direct` / `nearby-single-unresolved`。
 - 打开时不激活窗口，并把前台交还游戏：工具条那条路由它自己的交接归还，选择列表那条路
   由 `ReturnFocusToGameAsync` 归还（否则窗口一关，玩家会被留在一个已经不存在的菜单上）。
 - 关闭用同一入口：原生在"这次是攻略意图 + 手柄 + 已有一份同档案的可见攻略窗口"时不再查附近点位，
@@ -113,16 +118,19 @@
 等组合，边沿语义与用例在 `Tests/ManagedRuntime/GuideFocusLatchTests.cs`。键鼠那条线不受影响：
 Z 与 G 只要"攻略可见 + 游戏或攻略窗口在前台"就生效，不需要先点窗口。
 
-**证据**：`GuideWindowRuntime.exe --test-route-controller`（9 例全过）里的
+**证据**：`GuideWindowRuntime.exe --test-route-controller`（10 例全过）里的
 「standalone gamepad guide keeps the game focused and LS toggles focus」、
+「a single nearby candidate opens its guide without ever building the chooser」、
 「the same gamepad shortcut closes the guide it opened」、
 「LB alone is idle, LB+B completes and LB+X dismisses」、
 「the route target guide only opens while the route is guiding」、
 「toolbar handoff shows the guide passively and its own entry closes it again」在真实窗口上验证：
-呼出后前台仍在游戏、`GuidePassive` 不吃 A 键；LS 切到攻略窗口后翻页生效；再按 LS 前台回到游戏且攻略
-仍然可见；单独按 LB 什么都不做也不弹工具台；LB+B 在**两种聚焦状态**下都会请核心完成附近点位，
-且不会顺手翻页或关闭攻略；核心回"攻略展示的点位已完成"时攻略窗口一并关闭，回别的点位时保持打开；
-LB+X 收起攻略；路线暂停时按同一个快捷键只提示一句、不打开攻略，改成指引中再按就正常打开。
+呼出后前台仍在游戏、`GuidePassive` 不吃 A 键；唯一候选直接开攻略，且**选择窗口从未被创建或激活**
+（没有 `markerBindNearbyCandidates`、没有 `choices-activation`）——把这条修复临时关掉，这条用例
+就失败在"没有建选择窗口"那一句上；LS 切到攻略窗口后翻页生效；再按 LS 前台回到游戏且攻略仍然可见；
+单独按 LB 什么都不做也不弹工具台；LB+B 在**两种聚焦状态**下都会请核心完成附近点位，且不会顺手翻页
+或关闭攻略；核心回"攻略展示的点位已完成"时攻略窗口一并关闭，回别的点位时保持打开；LB+X 收起攻略；
+路线暂停时按同一个快捷键只提示一句、不打开攻略，改成指引中再按就正常打开。
 另有纯模型用例 `Tests/ManagedRuntime/GuideFocusLatchTests.cs`（LS 与两条和弦的边沿/组合规则）与
 `RoutePlanningState.IsGuiding` 的用例。
 

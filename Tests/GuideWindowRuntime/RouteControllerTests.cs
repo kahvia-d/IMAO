@@ -213,6 +213,46 @@ internal static class RouteControllerTests
                 "selected candidate guide closes on B release");
         }, log);
 
+        await CaseAsync("a single nearby candidate opens its guide without ever building the chooser", async fixture =>
+        {
+            fixture.Core.GamepadContext = fixture.GameplayContext;
+            var sample = new GamepadSample(true, 0, GamepadButtons.None);
+            using var service = new GamepadInputService(fixture.Core, fixture.Coordinator,
+                slot => slot == 0 ? sample : new(false, slot, GamepadButtons.None));
+            await UntilAsync(() => fixture.Core.GamepadDiagnostics.Any(value => value.Contains("state=gameplay-ready/ready")),
+                "service observes the controlled gameplay context");
+            // 唯一候选的关联解析：与键盘入口收到的是同一种答复。
+            // 同时应答"选择列表那条老路"用的解析命令，这样这条用例只靠"有没有建选择窗口"判定，
+            // 不依赖哪条路被走到。
+            fixture.Core.NearbyResponder = (operation, _) => operation switch
+            {
+                "markerGetNearbyGuide" => JsonSerializer.SerializeToElement(new { profileId = "local", intent = "guide",
+                    selection = CoreHostService.SelectionPayload(Target) }),
+                "markerResolveNearbyCandidate" => JsonSerializer.SerializeToElement(new { selection = CoreHostService.SelectionPayload(Target) }),
+                _ => CoreHostService.Empty()
+            };
+            fixture.Core.Emit(new
+            {
+                type = "markerCandidates", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
+                profileId = "local", nearbySession = 9UL, intent = "guide", selectionRevision = 31L,
+                total = 1, hasMore = false,
+                candidates = new[] { CoreHostService.SelectionPayload(Target) }
+            });
+            await UntilAsync(() => fixture.Guide is { IsGuideVisible: true } shown &&
+                shown.Selection?.PointId == Target.PointId && fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "the single candidate opens its own guide directly");
+            Check(GetForegroundWindow() == fixture.GameHandle &&
+                fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "the guide still opens passively, without taking the foreground");
+            // 关键：选择窗口从来没有被建出来（以前是先建出来并激活，再自动选掉 → 一闪而过）。
+            Check(Read<object>(fixture.Coordinator, "chooser") is null &&
+                !fixture.Core.Commands.Any(value => value.Operation == "markerBindNearbyCandidates") &&
+                !fixture.Core.GamepadDiagnostics.Any(value => value.Contains("choices-activation")),
+                "no chooser window is created or activated for a single candidate");
+            Check(fixture.Core.Commands.Count(value => value.Operation == "markerGetNearbyGuide") == 1,
+                "the unique candidate is resolved through the same correlated query the keyboard entry uses");
+        }, log);
+
         await CaseAsync("the same gamepad shortcut closes the guide it opened", async fixture =>
         {
             var shortcut = new
