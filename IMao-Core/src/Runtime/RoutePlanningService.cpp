@@ -393,7 +393,7 @@ Json RoutePlanningService::GuideTarget(const Json& command){
                 {"completed",false},{"screenX",x},{"screenY",y}};
         }
         return {{"accepted",true},{"data",{{"profileId",r.profile},{"routeId",r.active?r.active->id:std::string{}},
-            {"revision",r.revision},{"selection",std::move(selection)}}}};
+            {"revision",r.revision},{"navigationStatus",NavigationLocked()},{"selection",std::move(selection)}}}};
     }catch(const std::exception& e){return {{"accepted",false},{"message",e.what()},{"data",Json::object()}};}
 }
 RoutePlanningView RoutePlanningService::View(){

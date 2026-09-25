@@ -43,4 +43,9 @@ private:
 
 	static std::vector<ItemDatas> GetAndFilterItemsData(const RECT& rect, const Coordinate& playerROC, float minMapRadius, double terrainScale);
 	static bool GetBasicDataBySenceId(int senceId);
+	// The gamepad has no correlated caller for LB+X, so the world context answers an empty
+	// nearby range itself: it asks the managed side once to open the active route target
+	// guide with the same event the route toolbar uses. Returns false when the answer could
+	// not be published, which keeps the ordinary "no nearby point" notice instead.
+	static bool OpenRouteGuideFallback(std::uint64_t gameHwnd);
 };

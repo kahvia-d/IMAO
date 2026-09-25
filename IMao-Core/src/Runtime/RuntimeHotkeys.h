@@ -13,6 +13,9 @@ struct RuntimeHotkeyBindings {
     int guidePreviousImageKey = 33;    // PageUp
     int guideNextImageKey = 34;        // PageDown
     int toggleEnabledKey = 120;        // F9（VK_F9 = 120；118 是 F7）：启用/暂停工具（手柄对应 LB+按下RS）
+    // 攻略窗口内长按跳过当前导航目标（手柄对应长按 Y）。核心不做按键处理：攻略窗口自己
+    // 监听前台按键，这里只保存绑定、做冲突校验并把值同步给托管侧。
+    int guideSkipKey = 71;             // G
 };
 
 // A guide-owned press must not become a game completion when the guide hides
@@ -35,14 +38,14 @@ private:
 };
 
 // WinUI persists these with the existing RuntimeConfiguration. One packed
-// atomic value publishes all five bindings together to polling/input threads.
+// atomic value publishes all seven bindings together to polling/input threads.
 class RuntimeHotkeys {
 public:
     static RuntimeHotkeyBindings Snapshot() {
         const auto value = packed_.load();
         return {static_cast<int>(value & 255), static_cast<int>((value >> 8) & 255), static_cast<int>((value >> 16) & 255),
             static_cast<int>((value >> 24) & 255), static_cast<int>((value >> 32) & 255),
-            static_cast<int>((value >> 40) & 255)};
+            static_cast<int>((value >> 40) & 255), static_cast<int>((value >> 48) & 255)};
     }
     static bool IsAllowed(int key) {
         return key == 0 || key == 33 || key == 34 || (key >= 48 && key <= 57) || (key >= 65 && key <= 90 && key != 77) ||
@@ -50,7 +53,7 @@ public:
     }
     static void Validate(const RuntimeHotkeyBindings& value) {
         const std::array keys{value.nearestCompletionKey, value.manualRouteKey, value.currentTargetGuideKey,
-            value.guidePreviousImageKey, value.guideNextImageKey, value.toggleEnabledKey};
+            value.guidePreviousImageKey, value.guideNextImageKey, value.toggleEnabledKey, value.guideSkipKey};
         for (std::size_t i = 0; i < keys.size(); ++i) {
             if (!IsAllowed(keys[i])) throw std::invalid_argument("快捷键仅支持字母、数字、F1–F12、PageUp、PageDown 或禁用；M、F10 和 Esc 为保留键");
             for (std::size_t j = 0; j < i; ++j)
@@ -72,6 +75,7 @@ public:
         read("guidePreviousImageKey", value.guidePreviousImageKey);
         read("guideNextImageKey", value.guideNextImageKey);
         read("toggleEnabledKey", value.toggleEnabledKey);
+        read("guideSkipKey", value.guideSkipKey);
         Validate(value);
         return value;
     }
@@ -82,7 +86,8 @@ public:
             (static_cast<std::uint64_t>(value.currentTargetGuideKey) << 16) |
             (static_cast<std::uint64_t>(value.guidePreviousImageKey) << 24) |
             (static_cast<std::uint64_t>(value.guideNextImageKey) << 32) |
-            (static_cast<std::uint64_t>(value.toggleEnabledKey) << 40));
+            (static_cast<std::uint64_t>(value.toggleEnabledKey) << 40) |
+            (static_cast<std::uint64_t>(value.guideSkipKey) << 48));
     }
     static std::string Label(int key) {
         if (key == 0) return "未设置";
@@ -94,5 +99,5 @@ public:
     }
 private:
     inline static std::atomic<std::uint64_t> packed_{90ULL | (81ULL << 8) | (119ULL << 16) | (33ULL << 24) | (34ULL << 32) |
-        (120ULL << 40)};
+        (120ULL << 40) | (71ULL << 48)};
 };

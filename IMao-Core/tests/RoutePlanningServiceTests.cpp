@@ -196,6 +196,74 @@ void VerifyViewportSelection(const AutoRoute::Plan& source){
         AutoRoute::SameOrder(selected.active->stops,activeBefore->stops)&&selected.active->skipHistory==activeBefore->skipHistory,
         "viewport-only draft regression leaves the previously tested active route and undo-skip history unchanged");
 }
+// 「攻略内长按跳过当前导航目标」的原生守卫：攻略窗口只能跳过核心当前指向的那个点。
+// key / routeId / expectedRevision 都是可选字段，但一旦带上就必须与核心当前状态一致；
+// 身份与修订号紧挨着读取和使用，因为服务在后台仍会推进修订号，测试不能依赖两个独立读数之间没有变化。
+void VerifyGuideSkipGuard(const AutoRoute::Plan& original){
+    const auto initial=RoutePlanningService::View();
+    Check(initial.active&&initial.currentTargetIndex>=0,"guide skip guard needs a current navigation target");
+    const auto targetView=RoutePlanningService::GuideTarget({{"profileId","local"},{"screenX",40},{"screenY",100}});
+    const auto data=targetView.at("data");
+    Check(targetView.value("accepted",false)&&data.contains("navigationStatus")&&
+        data.at("navigationStatus").get<std::string>()==initial.navigationStatus,
+        "the guide target reply publishes the navigation status the managed side authorises a skip with");
+    Check(!data.value("routeId",std::string{}).empty()&&data.contains("revision")&&data.at("selection").is_object(),
+        "the guide target reply still carries the route identity, revision and the current target");
+    const auto routeId=data.at("routeId").get<std::string>();
+
+    // 不是当前目标的点位：带上的 key 与核心目标不一致，必须整条拒绝。
+    {
+        const auto before=RoutePlanningService::View();
+        const auto staleKey=AutoRoute::Key(before.active->stops[before.currentTargetIndex])+":not-the-target";
+        const auto result=RoutePlanningService::Command({{"action","skip"},{"profileId","local"},{"routeId",routeId},
+            {"key",staleKey},{"expectedRevision",before.revision}});
+        const auto after=RoutePlanningService::View();
+        Check(!result.value("accepted",false)&&after.active->skipped==before.active->skipped&&
+            after.currentTargetIndex==before.currentTargetIndex,
+            "a skip for a point that is not the current target is rejected without changing progress");
+    }
+    // 其它路线：routeId 与活动路线不符。
+    {
+        const auto before=RoutePlanningService::View();
+        const auto result=RoutePlanningService::Command({{"action","skip"},{"profileId","local"},{"routeId","other-route"},
+            {"key",AutoRoute::Key(before.active->stops[before.currentTargetIndex])},{"expectedRevision",before.revision}});
+        const auto after=RoutePlanningService::View();
+        Check(!result.value("accepted",false)&&after.active->skipped==before.active->skipped,
+            "a skip bound to another route is rejected without changing progress");
+    }
+    // 过期的修订号：窗口拿着旧答复提交时不能生效。
+    {
+        const auto before=RoutePlanningService::View();
+        const auto result=RoutePlanningService::Command({{"action","skip"},{"profileId","local"},{"routeId",routeId},
+            {"key",AutoRoute::Key(before.active->stops[before.currentTargetIndex])},{"expectedRevision",before.revision+7}});
+        const auto after=RoutePlanningService::View();
+        Check(!result.value("accepted",false)&&after.active->skipped==before.active->skipped,
+            "a skip carrying a stale revision is rejected without changing progress");
+    }
+    // 当前目标本身：接受，只写路线进度，并把当前目标推进到下一个。
+    {
+        const auto before=RoutePlanningService::View();
+        const auto key=AutoRoute::Key(before.active->stops[before.currentTargetIndex]);
+        const auto result=RoutePlanningService::Command({{"action","skip"},{"profileId","local"},{"routeId",routeId},
+            {"key",key},{"expectedRevision",before.revision}});
+        const auto after=RoutePlanningService::View();
+        Check(result.value("accepted",false)&&after.active->skipped.count(key)==1&&after.currentTargetIndex>=0&&
+            AutoRoute::Key(after.active->stops[after.currentTargetIndex])!=key,
+            ("the current navigation target can be skipped and the route advances "+
+                result.value("message",std::string{"<none>"})).c_str());
+        const auto undo=RoutePlanningService::Command({{"action","undoSkip"}});
+        const auto undone=RoutePlanningService::View();
+        // 只和"跳过之前"比较：本用例不改动更早的历史，撤一次必须精确回到那一刻。
+        Check(undo.value("accepted",false)&&undone.active->skipped==before.active->skipped&&
+            undone.active->skipHistory==before.active->skipHistory&&
+            AutoRoute::Key(undone.active->stops[undone.currentTargetIndex])==key,
+            "the skipped guide target can be undone and restores the route progress from just before the skip");
+        // 历史已经用尽：再撤一次必须被拒，而不是去改别的点位状态。
+        const auto secondUndo=RoutePlanningService::Command({{"action","undoSkip"}});
+        Check(!secondUndo.value("accepted",false)&&RoutePlanningService::View().active->skipped==before.active->skipped,
+            "an exhausted skip history rejects the extra undo and leaves route progress alone");
+    }
+}
 }
 int main(int argc,char** argv){
     StructuredLogger::root=std::filesystem::absolute(argc>1?argv[1]:"out/auto-replan-native/service-data");
@@ -244,6 +312,7 @@ int main(int argc,char** argv){
         Command({{"action","undoSkip"}});
         Check(RoutePlanningService::View().active->skipped.empty(),"original skip can still be undone after automatic reordering");
         VerifyViewportSelection(original);
+        VerifyGuideSkipGuard(original);
     }catch(const std::exception& e){++failures;std::cerr<<"UNEXPECTED: "<<e.what()<<'\n';}
     RoutePlanningService::Shutdown();
     std::cout<<"RoutePlanningService harness failures="<<failures<<'\n';return failures?1:0;
