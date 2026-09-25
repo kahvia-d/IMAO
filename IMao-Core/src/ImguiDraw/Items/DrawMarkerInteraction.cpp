@@ -305,7 +305,11 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
         const auto action = guideKeys[info.vkCode].Handle(down, eligible, focused || guideFocused, false);
         if (down) RuntimeHotkeyPressOwnership::RecordKeyDown(static_cast<int>(info.vkCode), firstDown,
             action != AutoRoute::EscapeAction::PassThrough);
-        if (action == AutoRoute::EscapeAction::ReturnToPan) {
+        // Only the leading edge opens or closes a guide. Windows keeps sending key-down for an
+        // auto-repeating key (about ten a second), and every repeat still asks for ReturnToPan,
+        // so acting on all of them meant the second press closed the guide the first one opened:
+        // holding the key for a moment looked like "the key does nothing".
+        if (action == AutoRoute::EscapeAction::ReturnToPan && firstDown) {
             nlohmann::json event;
             if (completeGuide) {
                 event = guideWindow;
