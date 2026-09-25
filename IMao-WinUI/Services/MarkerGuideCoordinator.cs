@@ -116,19 +116,29 @@ public sealed class MarkerGuideCoordinator : IDisposable
             if (chooserGamepad && chooser is { } choices && IsForeground(choices) && !chooserGamepadOpening)
                 return new(GamepadInputMode.List, $"choices:{selectionGeneration}:{chooserActions.Count}:{chooserActionGeneration}",
                     CanCollectAll: chooserCompletesNearby);
-            if (!standaloneGamepadOpening && IsGuideForeground() && guide is { } direct)
+            // 手柄开出的攻略：只要窗口还开着就继续接受手柄输入。攻略窗口是无边框置顶窗口，
+            // 激活成功后游戏或覆盖层仍可能抢回前台；旧实现要求"攻略窗口必须是前台窗口"才返回
+            // Detail，一旦被抢走就退化成 Disabled，按 Y 连长按判定都进不去（实机日志里表现为
+            // 一串短按 OpenRouteMenu）。键盘仍要求前台，见 CanSkipFromKeyboardOrPointer。
+            if (!standaloneGamepadOpening && guide is { IsGuideVisible: true } direct)
+            {
+                var guideInputReady = IsGuideForeground();
                 return new(direct.IsGamepadImageOpen ? GamepadInputMode.Image : GamepadInputMode.Detail,
-                    $"guide:{standaloneGamepadGeneration}:{session.Selection?.PointId}:{direct.GamepadViewToken}",
-                    !gamepadBusy && direct.CanCompleteGamepad, CanSkip: !gamepadBusy && direct.CanSkip);
+                    $"guide:{standaloneGamepadGeneration}:{session.Selection?.PointId}:{direct.GamepadViewToken}:{guideInputReady}",
+                    guideInputReady && !gamepadBusy && direct.CanCompleteGamepad, CanSkip: guideInputReady && !gamepadBusy && direct.CanSkip);
+            }
             return new(GamepadInputMode.Disabled, "guide:unfocused");
         }
         if (!IsGamepadSessionOpen) return new(GamepadInputMode.Disabled, "closed");
-        if (gamepadGuideGeneration != 0 && session.IsCurrent(gamepadGuideGeneration) && IsGuideForeground() &&
-            guide is { } current)
+        if (gamepadGuideGeneration != 0 && session.IsCurrent(gamepadGuideGeneration) &&
+            guide is { IsGuideVisible: true } current)
+        {
+            var modalGuideInputReady = IsGuideForeground();
             return new(current.IsGamepadImageOpen ? GamepadInputMode.Image : GamepadInputMode.Detail,
-                $"gamepad:{gamepadGeneration}:{gamepadProfile}:{gamepadScene}:{session.Selection?.PointId}:{gamepadGuideGeneration}:{current.GamepadViewToken}:{(gamepadGuideRouteId is null ? "" : core.RoutePlanning.Active?.Id)}",
-                !gamepadBusy && current.CanCompleteGamepad && (gamepadGuideRouteId is null || core.RoutePlanning.Active?.Id == gamepadGuideRouteId),
-                CanSkip: !gamepadBusy && current.CanSkip);
+                $"gamepad:{gamepadGeneration}:{gamepadProfile}:{gamepadScene}:{session.Selection?.PointId}:{gamepadGuideGeneration}:{current.GamepadViewToken}:{(gamepadGuideRouteId is null ? "" : core.RoutePlanning.Active?.Id)}:{modalGuideInputReady}",
+                modalGuideInputReady && !gamepadBusy && current.CanCompleteGamepad && (gamepadGuideRouteId is null || core.RoutePlanning.Active?.Id == gamepadGuideRouteId),
+                CanSkip: modalGuideInputReady && !gamepadBusy && current.CanSkip);
+        }
         if (gamepadAssistant is { IsClosed: false } assistant && IsForeground(assistant))
             // Highlight changes deliberately do not change this token: navigation may repeat.
             return new(gamepadMenuRoute is null ? GamepadInputMode.List : GamepadInputMode.Menu,
