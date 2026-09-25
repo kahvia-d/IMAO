@@ -98,10 +98,51 @@ internal static class GuideWindowTests
             await UntilAsync(() => Visible(f) && f.Window!.Selection?.PointId == A.PointId, "third F8 reopens the current route guide");
             LogWindowGeometry(window, log);
             CheckNoTopStrip(window);
-            Check(f.Core.Commands.Count(c => c.Operation == "markerGetRouteGuide") == 1,
-                "reopening queries the authoritative route target once");
+            // 每次打开都会用一次权威目标查询决定跳过资格：首次打开一次，F8 回退时再一次。
+            Check(f.Core.Commands.Count(c => c.Operation == "markerGetRouteGuide") == 2,
+                "each open resolves the authoritative route target exactly once");
+            Check(f.Core.Commands.Count(c => c.Operation == "markerGetNearbyGuide") == 1,
+                "the reopened guide came from the nearby probe falling back to the target");
             f.F8();
             await UntilAsync(() => Hidden(f), "fourth F8 hides again");
+        }, log);
+
+        await CaseAsync("an empty nearby range falls back to the current route target", async f =>
+        {
+            f.F8();
+            await UntilAsync(() => Visible(f) && f.Window!.Selection?.PointId == A.PointId,
+                "the shortcut opens the point the route is navigating to when nothing is nearby");
+            Check(f.Core.Commands.Count(c => c.Operation == "markerGetNearbyGuide") == 1,
+                "the nearby range is still probed before any route target is opened");
+            Check(f.Core.Commands.Count(c => c.Operation == "markerGetRouteGuide") == 1,
+                "the fallback resolves the target through the authoritative query, not the key event's snapshot");
+            Check(f.Core.Errors.Count == 0, "falling back to the current target is not reported as a problem");
+            Check(f.Window!.SkipButtonVisible && f.Coordinator.HasGuideSkipAuthorization,
+                "the point it fell back to is the navigation target, so the guide offers the skip");
+            f.F8();
+            await UntilAsync(() => Hidden(f), "a second press closes the guide the fallback opened");
+        }, log);
+
+        await CaseAsync("a lost position never falls back to the route target", async f =>
+        {
+            f.Core.NearbyResponder = (_, _) => JsonSerializer.SerializeToElement(new { profileId = "local", outcome = "position-unavailable" });
+            f.F8();
+            await UntilAsync(() => f.Core.Errors.Count > 0, "a shaky minimap fix is reported");
+            await SettleAsync();
+            Check(Hidden(f) && f.Core.Commands.All(c => c.Operation != "markerGetRouteGuide"),
+                "a lost position opens nothing, not even the route target it might have fallen back to");
+        }, log);
+
+        await CaseAsync("an empty nearby range with no route target reports instead of opening", async f =>
+        {
+            f.Core.AuthoritativeTarget = null;
+            f.F8();
+            await UntilAsync(() => f.Core.Errors.Count > 0, "the empty range with no target is reported");
+            await SettleAsync();
+            Check(Hidden(f) && f.Core.Commands.All(c => c.Operation != "markerSetGuideWindow"),
+                "no guide window is registered when the core has no current target");
+            Check(f.Core.Errors.Count(error => error == "附近没有未完成点位，也没有正在导航的路线目标。") == 1,
+                "one combined sentence says both that nothing is nearby and that there is no navigation target");
         }, log);
 
         await CaseAsync("second F8 cancels a pending route lookup", async f =>
@@ -538,6 +579,10 @@ internal static class GuideWindowTests
                 ProfileId = "local", Revision = 1, Active = new AutomaticRoute { Id = "test-route", SceneName = "World", SceneId = 1 },
                 CurrentTarget = new RouteStop { Key = "8:" + A.PointId, StateId = 8, PointId = A.PointId, NameId = A.NameId }
             };
+            // 键盘攻略键先问附近范围。这里给出原生"范围内确实没有未完成点位"的答复
+            // （outcome=guide-empty），协调器据此回退到当前导航目标。
+            // 定位丢失是另一个 outcome，见"a lost position never falls back"那条用例。
+            Core.NearbyResponder = (_, _) => JsonSerializer.SerializeToElement(new { profileId = "local", outcome = "guide-empty" });
             Coordinator = new(Core, Details);
         }
         internal void F8() => Core.Emit(new

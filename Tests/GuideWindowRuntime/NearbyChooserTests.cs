@@ -35,6 +35,8 @@ internal static class NearbyChooserTests
             Check(fixture.Count("markerGetRouteGuide") == 1 && fixture.Count("markerResolveNearbyCandidate") == 1 &&
                 fixture.Details.OnlineRequests.Single().PointId == First.PointId,
                 "keyboard uses the nearest candidate and only asks the route target for skip eligibility");
+            // 候选答复就是 markerCandidates 事件本身，没有 outcome 字段；协调器不能因此把它当成定位丢失。
+            Check(fixture.Core.Errors.Count == 0, "a candidate list is never reported as a lost position");
             fixture.F8();
         }, log);
 

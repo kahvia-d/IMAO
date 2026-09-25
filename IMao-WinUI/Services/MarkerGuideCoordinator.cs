@@ -865,7 +865,6 @@ public sealed class MarkerGuideCoordinator : IDisposable
             {
                 var nearby = await core.ExecuteMarkerAsync("markerGetNearbyGuide", new { profileId }, request.Token);
                 if (!session.IsCurrent(generation) || disposed) return;
-                CloseGuide(generation);
                 core.ReportGamepadDiagnostic("guide-shortcut",
                     $"source=keyboard profile={profileId} nearby-outcome='{Text(nearby, "outcome")}' " +
                     $"hasSelection={nearby.TryGetProperty("selection", out var probe) && probe.ValueKind == JsonValueKind.Object} " +
@@ -875,17 +874,33 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 if (Text(nearby, "profileId") == profileId && nearby.TryGetProperty("selection", out var single) &&
                     single.ValueKind == JsonValueKind.Object)
                 {
+                    CloseGuide(generation);
                     var resolved = ReadSelection(single);
                     if (resolved.StateId <= 0 || resolved.PointId.Length == 0)
                         core.ReportUserError("附近点位身份无效，请靠近标记后重试。");
                     else await ShowAsync(resolved);
                     return;
                 }
+                // 多个候选返回的是 markerCandidates 事件本身，它没有 outcome 字段。原来这里不返回，
+                // 于是紧接着那行"位置不可用"的判定把候选列表的按键也当成定位丢失，弹出一条假报错。
                 if (Text(nearby, "profileId") == profileId && nearby.TryGetProperty("candidates", out _))
+                {
+                    CloseGuide(generation);
                     await ShowCandidatesAsync(nearby);
+                    return;
+                }
                 if (Text(nearby, "outcome") != "guide-empty")
+                {
+                    CloseGuide(generation);
                     core.ReportUserError("当前位置暂不可用，请等小地图定位恢复后重试。");
-                return;
+                    return;
+                }
+                // 附近范围内确实没有未完成点位：键盘入口在这里自己回退到当前导航目标，接着走下面
+                // 那段和手柄相同的目标解析。以前这里直接返回、指望原生再补发一次手柄事件，而原生
+                // 只为**手柄组合键**补发（CoreHostMain 的关联应答路径传的是 gamepad=false），
+                // F8 于是在空范围上永远打不开攻略。
+                // 定位丢失走上面那个分支，绝不回退：位置抖动时打开一个不相干的点位是错的。
+                core.ReportGamepadDiagnostic("guide-route-fallback", "reason=guide-empty source=keyboard");
             }
             while (session.IsCurrent(generation))
             {
@@ -896,12 +911,16 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 // A completion observed while awaiting the response invalidates that target snapshot.
                 if (completionVersion != completionGeneration) continue;
                 core.ReportGamepadDiagnostic("guide-shortcut",
-                    $"source=gamepad profile={profileId} status='{Text(result, "navigationStatus")}' " +
+                    $"source={(controller ? "gamepad" : "keyboard-route-fallback")} profile={profileId} status='{Text(result, "navigationStatus")}' " +
                     $"route='{Text(result, "routeId")}' hasSelection={result.TryGetProperty("selection", out var seen) && seen.ValueKind == JsonValueKind.Object}");
                 if (Text(result, "profileId") != profileId || !result.TryGetProperty("selection", out var target) ||
                     target.ValueKind == JsonValueKind.Null)
                 {
-                    CloseGuide(generation); core.ReportUserError("当前没有可打开攻略的路线目标。"); return;
+                    // 用户确认过的合并提示：一句话同时说明"附近没有点位"和"没有可回退的导航目标"，
+                    // 不让原生与托管各报一次。空范围以外的失败原因有自己的提示，不走这里。
+                    CloseGuide(generation);
+                    core.ReportUserError("附近没有未完成点位，也没有正在导航的路线目标。");
+                    return;
                 }
                 var selection = ReadSelection(target);
                 if (selection.Completed || selection.StateId <= 0 || selection.PointId.Length == 0 ||
