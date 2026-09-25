@@ -34,7 +34,9 @@ public partial class App : Application
         var snapshots = new ResourceSnapshotService(updateRoot, new ResourceSnapshot { SnapshotId = "bundled-ui-fixture", BaselineId = "fixture", BaselineRoot = AppContext.BaseDirectory, MapDataRoot = AppContext.BaseDirectory, Bundled = true }, "2026.9.9.1");
         await snapshots.InitializeAsync();
         var updateEngine = new UpdateService(new BuildInfo { BaselineId = "fixture" }, Array.Empty<TrustedUpdateKey>(), snapshots, new HttpClient(new OfflineUpdatesHandler()));
-        var updates = new UpdateUiController(updateEngine, snapshots);
+        // A vault over the fixture root: the page renders the CDK state, and this keeps that off the real
+        // user's own credential store.
+        var updates = new UpdateUiController(updateEngine, snapshots, new MirrorChyanCredentialVault(updateRoot));
         TestApp.Services[typeof(UpdateUiController)] = updates;
         TestApp.Services[typeof(INavigationService)]=navigation;
         foreach(var type in new[] { typeof(StartViewModel),typeof(FilterViewModel),typeof(FunctionViewModel),typeof(SettingsViewModel),typeof(UsageGuideViewModel),typeof(DiagnosticsViewModel) }) TestApp.Services[type]=Activator.CreateInstance(type)!;

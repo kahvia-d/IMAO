@@ -108,6 +108,7 @@ public sealed partial class SettingsPage : Page
             ResourceUpdateNotes.Visibility = string.IsNullOrEmpty(updates.Notes) ? Visibility.Collapsed : Visibility.Visible;
             ResourceUpdateMessage.Severity = updates.Failed ? InfoBarSeverity.Warning : updates.HasPending ? InfoBarSeverity.Success : InfoBarSeverity.Informational;
             ResourceUpdateMessage.Message = updates.ProgramPending && !updates.Failed ? "程序更新已准备完成，可点击“退出并更新”，也可稍后重新打开。" : updates.HasPending && !updates.Failed ? "资源已准备完成，退出并重新打开软件后生效。" : updates.Message;
+            RenderMirrorChyan();
             RenderRegions();
         }
         finally { restoringUpdates = false; }
@@ -478,7 +479,54 @@ public sealed partial class SettingsPage : Page
     }
     private async void RollbackResources_Click(object sender, RoutedEventArgs e) => await updates.RollbackAsync();
     private async void RepairUpdateState_Click(object sender, RoutedEventArgs e) => await updates.RepairAsync();
-    private async void DownloadProgram_Click(object sender, RoutedEventArgs e) => await updates.DownloadProgramAsync();
+    private async void DownloadProgram_Click(object sender, RoutedEventArgs e) => await updates.DownloadProgramAsync(ConfirmWholePackageAsync);
+
+    /// <summary>
+    /// MirrorChyan builds its incremental package on demand, so the first answer for a version pair is the
+    /// whole archive. Ours is close to a gigabyte, which is worth a question rather than a surprise.
+    /// </summary>
+    private async Task<bool> ConfirmWholePackageAsync(string question)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "下载完整程序包",
+            Content = question,
+            PrimaryButtonText = "继续下载",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    /// <summary>
+    /// The CDK is never put back into the control. The page says whether one is stored and what its last four
+    /// characters are, so an empty box always means "leave what is there alone".
+    /// </summary>
+    private void RenderMirrorChyan()
+    {
+        MirrorChyanCdkState.Text = updates.CdkStateText;
+        MirrorChyanCdkBox.IsEnabled = SaveCdkButton.IsEnabled = ClearCdkButton.IsEnabled = !updates.Busy;
+        ClearCdkButton.IsEnabled = !updates.Busy && updates.CdkConfigured;
+    }
+
+    private void SaveCdk_Click(object sender, RoutedEventArgs e)
+    {
+        updates.SaveCdk(MirrorChyanCdkBox.Password);
+        // The value lives in the encrypted store now; keeping a copy in a control would only be one more place
+        // it could end up in a screenshot or a crash dump.
+        MirrorChyanCdkBox.Password = string.Empty;
+        RenderUpdates();
+    }
+
+    private void ClearCdk_Click(object sender, RoutedEventArgs e)
+    {
+        updates.ClearCdk();
+        MirrorChyanCdkBox.Password = string.Empty;
+        RenderUpdates();
+    }
+
+    private void OpenMirrorChyan_Click(object sender, RoutedEventArgs e) => updates.OpenMirrorPage();
     private async void RestartProgram_Click(object sender, RoutedEventArgs e) => await updates.RestartProgramAsync();
     private async void RollbackProgram_Click(object sender, RoutedEventArgs e) => await updates.RollbackProgramAsync();
     private void CancelUpdate_Click(object sender, RoutedEventArgs e) => updates.Cancel();

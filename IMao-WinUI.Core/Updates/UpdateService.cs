@@ -106,8 +106,7 @@ public sealed class UpdateService : IDisposable
         AcceptCatalog(catalog, envelope);
         if (UpdateSignature.RequireVersion(catalog.App.Version) <= UpdateSignature.RequireVersion(_build.AppVersion))
             throw new InvalidOperationException("没有比当前程序更新的版本。");
-        IProgramFileSupplier? source = mirror is null ? null : new MirrorChyanProgramSource(mirror,
-            (uri, token) => GetResponseAsync(uri, UpdateSignature.ValidateMirrorHost, MirrorChyanDownloadTimeout, token),
+        IProgramFileSupplier? source = mirror is null ? null : new MirrorChyanProgramSource(mirror, FetchMirrorAsync,
             Path.Combine(programs.Root, "staging", "mirror"), progress);
         await programs.PrepareAsync(envelope, async (target, output, token) =>
         {
@@ -161,6 +160,14 @@ public sealed class UpdateService : IDisposable
         }
         return new MirrorChyanPackage(result.DownloadUrl!, result.Version, result.UpdateType, result.Size, result.Sha256);
     }
+
+    /// <summary>
+    /// Fetches a resolved MirrorChyan URL. Exposed to the assembly so the opt-in live check exercises this
+    /// exact transport - the host rules and the redirect that carries a time-limited key - rather than a
+    /// second copy of it that could pass while the real one fails.
+    /// </summary>
+    internal Task<HttpResponseMessage> FetchMirrorAsync(Uri uri, CancellationToken ct) =>
+        GetResponseAsync(uri, UpdateSignature.ValidateMirrorHost, MirrorChyanDownloadTimeout, ct);
 
     /// <summary>
     /// One MirrorChyan request, reduced to a result it can never throw out of.

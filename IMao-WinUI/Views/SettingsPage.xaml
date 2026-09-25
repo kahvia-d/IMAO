@@ -28,6 +28,19 @@
         </Border>
         <Border Style="{StaticResource IMaoCardStyle}">
             <StackPanel Spacing="12">
+                <TextBlock Text="更新下载源" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <TextBlock Text="GitHub 在国内常常连不上。填写 Mirror酱 的 CDK 后，程序更新会先试国内 CDN，失败再自动回退 GitHub；检查更新不受影响，没有 CDK 也能照常使用。CDK 只以加密形式保存在本机，不会写进日志、导出或崩溃报告。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                    <PasswordBox x:Name="MirrorChyanCdkBox" Width="280" PlaceholderText="粘贴 Mirror酱 CDK" PasswordRevealMode="Peek" />
+                    <Button x:Name="SaveCdkButton" Content="保存 CDK" Click="SaveCdk_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <Button x:Name="ClearCdkButton" Content="清除 CDK" Click="ClearCdk_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <Button x:Name="OpenMirrorChyanButton" Content="前往 Mirror酱" Click="OpenMirrorChyan_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                </controls:WrapPanel>
+                <TextBlock x:Name="MirrorChyanCdkState" Style="{StaticResource IMaoSecondaryTextStyle}" />
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource IMaoCardStyle}">
+            <StackPanel Spacing="12">
                 <TextBlock Text="地图区域" Style="{StaticResource IMaoSectionTitleStyle}" />
                 <TextBlock Text="每个区域是一份独立的特征包：关掉的区域不再加载，定位范围相应缩小。随程序分发的区域不占用下载量；不需要的区域可以直接删掉本机副本腾出空间，之后重新打开会重新下载它一个。列表按库街区大地图的国家分组，点国家标题可以折叠整组。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <TextBlock x:Name="RegionSummary" Style="{StaticResource IMaoBodyTextStyle}" />

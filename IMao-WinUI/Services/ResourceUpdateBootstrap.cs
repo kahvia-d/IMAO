@@ -66,7 +66,7 @@ internal static class ResourceUpdateBootstrap
         return new ResourceSnapshotService(Path.Combine(UserDataPaths.Root, "ResourceUpdates"), bundled, info.AppVersion, PreflightAsync, Path.Combine(AppContext.BaseDirectory, "IMao-CoreHost.exe"));
     }
 
-    public static UpdateService CreateUpdater(ResourceSnapshotService snapshots)
+    public static UpdateService CreateUpdater(ResourceSnapshotService snapshots, MirrorChyanCredentialVault credentials)
     {
         string path = Path.Combine(AppContext.BaseDirectory, "Assets", "Updates", "trusted-keys.json");
         TrustedUpdateKeys keys = new();
@@ -82,7 +82,9 @@ internal static class ResourceUpdateBootstrap
             keys = new();
             initializationError = "更新功能暂不可用，请重新安装完整程序包：" + error.Message;
         }
-        return new UpdateService(ReadBuildInfo(), keys.Keys, snapshots, initializationError: initializationError);
+        // The CDK is read on demand rather than cached: the player can change it in the settings page while the
+        // program is running, and the next update attempt should use what is there then.
+        return new UpdateService(ReadBuildInfo(), keys.Keys, snapshots, initializationError: initializationError, cdkProvider: credentials.Read);
     }
 
     private static string ResolveBundledPath(string assets, string relative)

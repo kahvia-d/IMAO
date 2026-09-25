@@ -73,7 +73,9 @@ public partial class App : Application
             services.AddSingleton<KuroProgressSyncService>();
             services.AddSingleton<KuroAutoSyncService>();
             services.AddSingleton<ResourceSnapshotService>(_ => ResourceUpdateBootstrap.CreateSnapshots());
-            services.AddSingleton<UpdateService>(provider => ResourceUpdateBootstrap.CreateUpdater(provider.GetRequiredService<ResourceSnapshotService>()));
+            services.AddSingleton(_ => new MirrorChyanCredentialVault(UserDataPaths.Root));
+            services.AddSingleton<UpdateService>(provider => ResourceUpdateBootstrap.CreateUpdater(
+                provider.GetRequiredService<ResourceSnapshotService>(), provider.GetRequiredService<MirrorChyanCredentialVault>()));
             services.AddSingleton<UpdateUiController>();
             services.AddSingleton<MarkerDetailService>();
             services.AddSingleton<MarkerGuideCoordinator>();

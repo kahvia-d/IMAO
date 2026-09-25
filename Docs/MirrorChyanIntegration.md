@@ -207,6 +207,42 @@ Invoke-WebRequest 'https://mirrorchyan.com/api/resources/March7thAssistant/lates
 2. 仍为 `full` 时若可能要下近 1 GB，**先让用户确认**（MAA 的 `_requiresFullPackageConfirmation`）；
 3. **已是最新时 `url` 是缺失的**，不能当成错误——`HasUpdate` 只看版本比较。
 
+### 5.8 真实端到端验证（2026-09-25，用测试 CDK 打真实服务）
+
+整条链路跑通了，不是纸上推演：
+
+```powershell
+# opt-in，不进常规套件（需要 CDK）；CDK 走命令行，不落仓库
+ProgramUpdates real-mirror <cdk> 2026.9.25.1 updates/stable.json Assets/Updates/trusted-keys.json out/real-mirror-check download
+```
+
+```
+real-mirror: asking for 2026.9.25.2 as a client running 2026.9.25.1
+real-mirror: version=2026.9.25.2 update_type=incremental whole=False size=90350084 urlHost=mirrorchyan.com
+real-mirror: the package supplied 11 of 1412 files
+real-mirror: the incremental subset is signed-record clean; the shards would supply the remainder
+```
+
+覆盖到的东西：`os=win&arch=x64` 契约、版本一致性校验、`full → 重问一次 → incremental` 的重试、
+`mirrorchyan.com` 的 302、`download2.mirrorchyan.com` 的时效 `auth_key`、只取签名清单声明过的路径、
+以及**每个文件落盘时就按签名 SHA-256 校验**。全程 10 秒。
+
+那 11 个文件正是 9.25.1→9.25.2 真正变了的：`KuroSyncBridge.exe` 65.3 MB、`IMao-Launcher.exe` 64.9 MB、
+`IMao-CoreHost.exe` 35.2 MB、`resources.pri` 1.4 MB、`IMao-WinUI.dll` 1.2 MB 等等。
+
+#### 一个诚实的尺寸对比
+
+| 下载方式 | 这一次要多少 |
+| --- | --- |
+| Mirror酱 整包（增量还没打出来时） | 968 MB |
+| **Mirror酱 增量** | **86 MB**（90,350,084 字节） |
+| 我们自己的 GitHub 分片集合（`ui` 58.6 + `core` 25.8） | ≈ 84 MB |
+
+所以**对分片发布来说，Mirror酱 的价值是国内可达性，不是省流量**——这一次它和自己算的分片基本持平。
+真要说省流量，两边各有胜场：Mirror酱 按文件 diff，"很多分片都变了"时明显更省；
+我们的分片按片，"某个大分片只动了一点"时更省（`assets-tiles` 653 MB 那种）。
+不要对外宣传成"快 10 倍"，那是拿增量和整包比。
+
 ## 6. 尚未解决、必须拍板的两件事
 
 ### 6.1 `stable.json` 的国内可达性（真正的阻塞点）
@@ -381,7 +417,7 @@ Mirror酱是**一个 `res_id` 对应一个压缩包**（`uploading-action` 的 `
 | **P1** | 免费通知 + 引导：`CheckAsync` 并发调 API；清单失败时也能显示"有新版本 vX"并给出国内可下载入口；设置页加 Mirror酱 跳转链接 | P0 的 `res_id` | **没 VPN、没 CDK 的玩家第一次能知道有新版，并拿到能打开的下载入口** |
 | **P2** | 清单国内镜像（§6.1 方案一）：`StableUri` 改有序列表 | 选定镜像宿主 | 检查更新在国内可用，不再依赖代理 |
 | **P2 ✅** | **已完成（2026-09-25）**：清单多来源（GitHub → Gitee 镜像）、发布脚本推送镜像、5 条回归测试 | Gitee 仓库 + 令牌 | **检查更新在国内可用，不再依赖代理**（仍受"下载走 GitHub"限制） |
-| **P3** | CDK 路径：设置项 + DPAPI 存储 + 错误码处理 + 镜像下载通道 + 逐文件校验 + 回退分片 | P0、P2 | 付费玩家一键快速更新，且全程受签名清单保护 |
+| **P3 ✅** | **已完成（2026-09-25）**：CDK 设置项与 DPAPI 存储、整包下载前确认、镜像下载通道（zip 当"文件袋" + 逐文件校验 + 回退分片）、opt-in 真实端到端检查（§5.8） | P0、P2 | 付费玩家一键更新，且全程受签名清单保护 |
 | **P4**（可选） | 地区包的独立 `res_id`；日活/来源统计的 `source` 参数铺开 | P3 | 地区包也走国内 CDN |
 
 ## 9. 验收清单（照官方 Skill 的清单，按我们自己的安全模型改写）

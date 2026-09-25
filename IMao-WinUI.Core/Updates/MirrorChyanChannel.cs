@@ -110,6 +110,12 @@ public static class MirrorChyanChannel
 
     public static readonly Uri Endpoint = new($"https://mirrorchyan.com/api/resources/{ResourceId}/latest");
 
+    /// <summary>
+    /// Where a player can read about the service, buy a CDK and download by hand. The <c>source</c>
+    /// parameter is what MirrorChyan's panel counts as where a purchase came from.
+    /// </summary>
+    public static readonly Uri ProjectPage = new($"https://mirrorchyan.com/zh/projects?rid={ResourceId}&source=imao_app_settings");
+
     /// <summary>MirrorChyan spells "no release notes here" as this literal string.</summary>
     private const string PlaceholderNote = "placeholder";
 

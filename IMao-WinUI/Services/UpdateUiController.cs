@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using IMao_WinUI.Core.Updates;
 using IMao_WinUI.Helpers;
 
@@ -9,6 +10,7 @@ public sealed class UpdateUiController : INotifyPropertyChanged
 {
     private readonly UpdateService updater;
     private readonly ResourceSnapshotService snapshots;
+    private readonly MirrorChyanCredentialVault credentials;
     // Changes are published from whichever thread finished the work; a background check completes on a pool
     // thread. Subscribers rebuild visuals, so the notification has to arrive on the interface thread.
     private readonly Microsoft.UI.Dispatching.DispatcherQueue? dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
@@ -17,9 +19,9 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     private Func<Task>? restartProgram;
     private ProgramUpdateState programState = new();
     private TaskCompletionSource<bool>? idle;
-    public UpdateUiController(UpdateService updater, ResourceSnapshotService snapshots)
+    public UpdateUiController(UpdateService updater, ResourceSnapshotService snapshots, MirrorChyanCredentialVault credentials)
     {
-        this.updater = updater; this.snapshots = snapshots;
+        this.updater = updater; this.snapshots = snapshots; this.credentials = credentials;
         if (!string.IsNullOrEmpty(snapshots.LastNotice)) Message = snapshots.LastNotice;
         if (!string.IsNullOrEmpty(updater.InitializationError)) { Failed = true; Message = updater.InitializationError; }
     }
@@ -55,16 +57,36 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         Changed();
     }
 
-    public Task DownloadProgramAsync()
+    public Task DownloadProgramAsync(Func<string, Task<bool>>? confirmWholePackage = null)
     {
         if (!CanInstallProgram) { OpenProgramRelease(); return Task.CompletedTask; }
         return RunAsync(async ct =>
         {
-            await updater.PrepareProgramAsync(programs!, Progress(), ct);
+            var progress = Progress();
+            progress.Report(new UpdateProgress("正在准备更新来源", 0, 0));
+            // Resolve the source before downloading anything. A CDK that cannot serve this release - expired,
+            // wrong, out of quota, or simply a different version - must cost the player nothing but the
+            // question, and the signed shards then do the work exactly as they always have. The resolver also
+            // waits out MirrorChyan's on-demand packaging here, which is why the stage above is shown first.
+            var release = updater.LastCheckResult?.AppUpdate;
+            var plan = release is null ? null : await updater.ResolveMirrorChyanPackageAsync(release, ct);
+            if (plan is not null && plan.IsWholePackage && confirmWholePackage is not null &&
+                !await confirmWholePackage("Mirror酱 目前提供的是完整程序包（约 " + PackageSize(plan) + "），而不是增量包。"
+                    + "这会下载接近 1 GB 的流量。要继续吗？"))
+            {
+                Message = "已取消下载。当前程序与地图资源未改变。";
+                return;
+            }
+            await updater.PrepareProgramAsync(programs!, progress, ct, plan);
             programState = programs!.ReadState();
-            Message = "新版程序已准备完成。可以继续使用，或点击“退出并更新”。";
+            Message = plan is null
+                ? "新版程序已准备完成。可以继续使用，或点击“退出并更新”。"
+                : "新版程序已准备完成（来源：Mirror酱）。可以继续使用，或点击“退出并更新”。";
         });
     }
+
+    private static string PackageSize(MirrorChyanPackage plan) =>
+        plan.Size is long bytes and > 0 ? (bytes / 1048576.0).ToString("F0") + " MB" : "未知大小";
 
     public Task RollbackProgramAsync() => RunAsync(async ct =>
     {
@@ -171,6 +193,42 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     {
         try { await updater.SetAutoCheckEnabledAsync(enabled); Changed(); }
         catch (Exception error) { Failed = true; Message = "无法保存更新设置：" + error.Message; Changed(); }
+    }
+
+    /// <summary>
+    /// Whether a MirrorChyan CDK is stored. The value never leaves the encrypted store: the interface is told
+    /// that one exists and, at most, its last four characters, which is all a mask needs - the plaintext has
+    /// no business in a control, a log or a support bundle.
+    /// </summary>
+    public bool CdkConfigured => credentials.HasCredential;
+
+    public string CdkMasked => MirrorChyanCredentialVault.Mask(credentials.Read());
+
+    public string CdkStateText => CdkConfigured
+        ? $"已保存 Mirror酱 CDK（{CdkMasked}）。程序更新会先试 Mirror酱，失败再回退 GitHub。"
+        : "未填写 CDK。检查更新不受影响；填写后程序更新可以从 Mirror酱 下载，不必依赖 GitHub。";
+
+    public void SaveCdk(string cdk)
+    {
+        try { credentials.Save(cdk); Failed = false; Message = "已保存 Mirror酱 CDK（" + MirrorChyanCredentialVault.Mask(cdk) + "）。"; }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or CryptographicException)
+        { Failed = true; Message = "无法保存 Mirror酱 CDK：" + error.Message; }
+        Changed();
+    }
+
+    public void ClearCdk()
+    {
+        try { credentials.Clear(); Failed = false; Message = "已清除 Mirror酱 CDK；程序更新将直接使用 GitHub。"; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        { Failed = true; Message = "无法清除 Mirror酱 CDK：" + error.Message; }
+        Changed();
+    }
+
+    /// <summary>Opens MirrorChyan's page for this project, which is also where a CDK is bought.</summary>
+    public void OpenMirrorPage()
+    {
+        try { Process.Start(new ProcessStartInfo(MirrorChyanChannel.ProjectPage.AbsoluteUri) { UseShellExecute = true }); }
+        catch (Exception error) { ShowError(error); }
     }
 
     public void Cancel() => operation?.Cancel();

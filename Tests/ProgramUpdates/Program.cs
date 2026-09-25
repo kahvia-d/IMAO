@@ -48,6 +48,70 @@ if (args.FirstOrDefault() == "child")
     await Task.Delay(200);
     return 0;
 }
+if (args.FirstOrDefault() == "real-mirror")
+{
+    // Opt-in check against the live MirrorChyan service, which needs a CDK and is therefore never part of the
+    // ordinary suite:
+    //   ProgramUpdates real-mirror <cdk> <fromVersion> <envelope.json> <trusted-keys.json> <workdir> [download]
+    // The CDK is an argument and is never echoed. It is a credential, and an integration that could only be
+    // exercised by storing one in the repository would not be exercised at all.
+    var mirrorCdk = args[1];
+    var fromVersion = args[2];
+    var realEnvelope = File.ReadAllBytes(Path.GetFullPath(args[3]));
+    var mirrorKeys = JsonSerializer.Deserialize<TrustedUpdateKeys>(File.ReadAllText(Path.GetFullPath(args[4])), UpdateJson.Options)!;
+    var mirrorWork = Path.GetFullPath(args[5]); Directory.CreateDirectory(mirrorWork);
+    var mirrorDownload = args.Length > 6 && args[6] == "download";
+
+    var mirrorCatalog = UpdateSignature.Verify(realEnvelope, mirrorKeys.Keys);
+    var mirrorRelease = mirrorCatalog.App;
+    var mirrorPackage = mirrorRelease.Package ?? throw new Exception("the signed catalog has no program package");
+    var mirrorSnapshots = new ResourceSnapshotService(Path.Combine(mirrorWork, "snapshots"),
+        new ResourceSnapshot { SnapshotId = "mirror-check", BaselineId = mirrorPackage.BaselineId, BaselineRoot = mirrorWork, MapDataRoot = mirrorWork, Bundled = true },
+        fromVersion, (_, _) => Task.CompletedTask);
+    await mirrorSnapshots.InitializeAsync();
+    using var mirrorUpdater = new UpdateService(new BuildInfo { AppVersion = fromVersion, BaselineId = mirrorPackage.BaselineId },
+        mirrorKeys.Keys, mirrorSnapshots, cdkProvider: () => mirrorCdk);
+    Console.WriteLine($"real-mirror: asking for {mirrorRelease.Version} as a client running {fromVersion}");
+    var mirrorPlan = await mirrorUpdater.ResolveMirrorChyanPackageAsync(mirrorRelease);
+    if (mirrorPlan is null)
+    {
+        Console.WriteLine("real-mirror: no usable package (no CDK, a CDK error, a version mismatch, or unreachable)");
+        return 2;
+    }
+    Console.WriteLine($"real-mirror: version={mirrorPlan.Version} update_type={mirrorPlan.UpdateType} whole={mirrorPlan.IsWholePackage} " +
+        $"size={mirrorPlan.Size} urlHost={new Uri(mirrorPlan.Url).Host}");
+    Assert(mirrorPlan.Version == mirrorRelease.Version, "a plan is only ever offered for the release the signed catalog described");
+    if (!mirrorDownload)
+    {
+        Console.WriteLine("real-mirror: pass 'download' to also fetch it and check the supplied tree against the catalog");
+        return 0;
+    }
+    // The whole path, end to end: the real redirect, the real archive, and the same directory check a real
+    // installation has to pass before anything is allowed to run.
+    var mirrorApp = Path.Combine(mirrorWork, "app");
+    if (Directory.Exists(mirrorApp)) Directory.Delete(mirrorApp, true);
+    Directory.CreateDirectory(mirrorApp);
+    var supplied = await new MirrorChyanProgramSource(mirrorPlan, mirrorUpdater.FetchMirrorAsync, Path.Combine(mirrorWork, "scratch"))
+        .SupplyAsync(mirrorPackage, mirrorApp, default);
+    Console.WriteLine($"real-mirror: the package supplied {supplied.Count} of {mirrorPackage.Files.Count} files");
+    if (supplied.Count == 0) { Console.WriteLine("real-mirror: nothing was usable; the shards would have done the work"); return 3; }
+    var declaredPaths = mirrorPackage.Files.Select(f => f.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    Assert(supplied.All(declaredPaths.Contains), "only paths the signed catalog declares are ever taken out of the archive");
+    if (mirrorPlan.IsWholePackage)
+    {
+        await ProgramPackageValidation.VerifyDirectoryAsync(mirrorApp, mirrorRelease);
+        Console.WriteLine("real-mirror: a whole package supplied the entire tree, and it satisfies the signed catalog exactly");
+    }
+    else
+    {
+        // An incremental package is a subset by definition: the rest comes from the shards, and the assembled
+        // directory is only complete after that. What this run does show is the part that matters for reading a
+        // foreign archive at all - every file it supplied was checked against the signed record as it landed.
+        Assert(supplied.Count < mirrorPackage.Files.Count, "an incremental package is a subset of the tree");
+        Console.WriteLine("real-mirror: the incremental subset is signed-record clean; the shards would supply the remainder");
+    }
+    return 0;
+}
 if (args.FirstOrDefault() == "real-program")
 {
     // Opt-in end-to-end check against a real prepared release: the client fetches the real shard set and
