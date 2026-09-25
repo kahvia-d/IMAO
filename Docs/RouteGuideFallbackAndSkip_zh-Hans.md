@@ -176,10 +176,10 @@
 | 原生路线规划 | `x64\Release\IMaoRoutePlanningTests.exe` | `Route planning tests passed` |
 | 原生标记/交互 | `x64\Release\IMaoMarkerTests.exe` | `passed` |
 | 原生路线服务守卫 | `out\auto-replan-native\IMaoRoutePlanningServiceTests.exe <dir>` | `failures=0` |
-| 托管单测 | `Tests\ManagedRuntime\bin\x64\Release\net8.0\ManagedRuntime.exe` | exit 0，**706 PASS / 0 FAIL** |
+| 托管单测 | `Tests\ManagedRuntime\bin\x64\Release\net8.0\ManagedRuntime.exe` | exit 0，**727 PASS / 0 FAIL**（2026-09-25 复查后 +21 条） |
 | 真实窗口（攻略 + 手柄窗口） | `GuideWindowRuntime.exe`（默认模式） | **31 PASS / 0 FAIL** |
-| 真实窗口（路线工具栏 / 手柄攻略） | `GuideWindowRuntime.exe --test-route-controller` | **11 PASS / 0 FAIL** |
-| 真实窗口（附近选择器） | `GuideWindowRuntime.exe --test-nearby-chooser` | **7 PASS / 0 FAIL** |
+| 真实窗口（路线工具栏 / 手柄攻略） | `GuideWindowRuntime.exe --test-route-controller` | **12 PASS / 0 FAIL**（新增"暂停撤销跳过"） |
+| 真实窗口（附近选择器） | `GuideWindowRuntime.exe --test-nearby-chooser` | **7 PASS / 0 FAIL**（两条计数断言按规格改回） |
 | 真实窗口（助手可见性） | `GuideWindowRuntime.exe --test-assistant-visibility` | 7 PASS / 0 FAIL |
 | 真实窗口（光标候选） | `GuideWindowRuntime.exe --test-cursor-candidates` | 1 PASS / 1 FAIL（本会话前台限制，见下） |
 | 生产工程 | `dotnet build IMao-WinUI\IMao-WinUI.csproj -c Release -p:Platform=x64 -r win-x64` | 0 错误（含 XAML 编译） |
@@ -309,6 +309,24 @@ const bool owned = !modifiers && guideIdentity && GuideHotkeyOwned(kind, guideVi
 注意后两条走的是托管层收到的**事件**，绕过原生钩子，所以它们**抓不到**上面这类钩子回归——
 钩子那一侧只有 `GuideHotkeyRoutingTests` 这一道网。
 
+
+### C. 仍然没有网的地方（下一轮优先）
+
+1. **手柄长按 Y 的端到端**：没有任何用例把 `GamepadAction.SkipGuideStop` 喂进协调器那一条
+   （`MarkerGuideCoordinator` 里 `else if (action == GamepadAction.SkipGuideStop && context.CanSkip)`）。
+   只测到了两端——解释器与进度条——中间的 `CanSkip` 接线没有断言。§7.2 那次实机事故
+   （`CanSkip` 恒 false → 长按 Y 毫无反应）正出在这里。
+2. **跳过失败路径**：`SkipGuideStopAsync` 的 catch（报错 + 重新刷新资格）与窗口那句
+   「路线目标未跳过，请重试」没有用例，所有用例都回成功。
+3. **不可跳过时按跳过键 / 跳过键被禁用**：`MarkerGuideWindow.RootKeyDown` 里
+   `if (gamepadMode || skipHotkey == 0 || key != skipHotkey || !CanSkip) return false;`
+   两个分支都没命中。
+4. **键盘自动重复不得重复提交**：`if (!keyboardSkipHandled) { … }` 没有窗口级用例。
+5. **原生钩子的接线**：`GuideHotkeyRoutingTests` 只测纯函数，`GuideWindowRuntime` 只测托管层
+   收到的事件——"钩子里多加一个 `&&`"这类回归两边都抓不到（§7.4 已经吃过一次）。
+   这是**已知缺口**，不是本轮新引入的。
+6. `RouteToolbarNextKey` 没有直接用例（抽出来就是为了能测，但方向选择那条只有托管侧
+   `GamepadDirectionSelection` 有网）。
 
 ## 8. 诊断记录（排查用，长期保留）
 
