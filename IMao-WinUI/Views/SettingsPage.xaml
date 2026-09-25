@@ -35,9 +35,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="更新下载源" Style="{StaticResource IMaoSectionTitleStyle}" VerticalAlignment="Center" />
-                    <!-- Each source gets a chip so a player can see at a glance which one is answering. The mark is
-                         the standard check or cancel glyph and the short word beside it says the same thing, because
-                         a lone glyph is a guess and "未填 CDK" is neither of the two. -->
+                    <!-- One chip per place a *program package* can come from, which is what this row is about: the
+                         signed channel's release assets and the mirror. The mark is the standard check or cancel
+                         glyph and the short word beside it says the same thing, because a lone glyph is a guess
+                         and "未填 CDK" is neither of the two. -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <Border x:Name="GitHubSourceChip" CornerRadius="6" Padding="9,4" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -45,14 +46,6 @@
                                 <TextBlock Text="GitHub" FontSize="12" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
                                 <FontIcon x:Name="GitHubSourceMark" FontSize="11" VerticalAlignment="Center" />
                                 <TextBlock x:Name="GitHubSourceStatus" Text="未检测" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
-                        <Border x:Name="GiteeSourceChip" CornerRadius="6" Padding="9,4" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontSize="12" Glyph="&#xE753;" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
-                                <TextBlock Text="Gitee 镜像" FontSize="12" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
-                                <FontIcon x:Name="GiteeSourceMark" FontSize="11" VerticalAlignment="Center" />
-                                <TextBlock x:Name="GiteeSourceStatus" Text="未检测" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
                         <Border x:Name="MirrorSourceChip" CornerRadius="6" Padding="9,4" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
@@ -63,7 +56,7 @@
                                 <TextBlock x:Name="MirrorSourceStatus" Text="未填 CDK" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
-                        <Button x:Name="RefreshConnectivityButton" Click="RefreshConnectivity_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="9,4" ToolTipService.ToolTip="重新检测各来源的连通性">
+                        <Button x:Name="RefreshConnectivityButton" Click="RefreshConnectivity_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="9,4" ToolTipService.ToolTip="重新检测各下载源的连通性">
                             <FontIcon FontSize="12" Glyph="&#xE72C;" />
                         </Button>
                     </StackPanel>

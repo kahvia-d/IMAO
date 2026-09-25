@@ -537,36 +537,37 @@ await Test("a check reports the source that actually answered, fallback included
     Equal("Gitee 镜像", fallback.ManifestSource);
     Equal(4L, fallback.Catalog!.Sequence);
 });
-await Test("connectivity probes report each source, and a missing CDK is neither pass nor fail", async () =>
+await Test("connectivity probes cover the download sources, and a missing CDK is neither pass nor fail", async () =>
 {
     using var f = New(); await f.Initialize();
+    // The row is about where program bytes come from, so it covers GitHub's release assets and the mirror -
+    // and nothing else. A manifest mirror is not a download source.
     f.Network.Routes[UpdateService.StableUri.AbsoluteUri] = f.Sign(f.Catalog());
-    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = f.Sign(f.Catalog());
     f.Network.Routes[MirrorChyanChannel.BuildRequestUri(null, "v" + f.Build.AppVersion).AbsoluteUri] = Encoding.UTF8.GetBytes(
         """{"code":0,"msg":"current resource latest version is v2026.9.25.1","data":{"version_name":"v2026.9.25.1"}}""");
     using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, new HttpClient(f.Network), true, () => f.Now, () => f.FreeBytes);
     var probes = await updater.ProbeSourcesAsync();
-    Equal(3, probes.Count);
+    Equal(2, probes.Count);
     Equal("GitHub", probes[0].Name);
     True(probes[0].Reachable == true);
-    Equal("Gitee 镜像", probes[1].Name);
-    True(probes[1].Reachable == true);
-    Equal("Mirror酱", probes[2].Name);
+    Equal("程序下载", probes[0].Role);
+    Equal("Mirror酱", probes[1].Name);
     // The service answered, but without a CDK it cannot serve this installation: neither a tick nor a cross.
-    True(probes[2].Reachable is null);
-    True(probes[2].Detail.Contains("未填写 CDK"));
+    True(probes[1].Reachable is null);
+    True(probes[1].Detail.Contains("未填写 CDK"));
+    // Both manifest hosts were tried for the envelope, and the mirror one is not part of the download row.
+    True(probes.All(probe => probe.Name != "Gitee 镜像"));
 });
 await Test("a CDK the service rejects is unusable rather than unknown", async () =>
 {
     using var f = New(); await f.Initialize();
     f.Network.Routes[UpdateService.StableUri.AbsoluteUri] = f.Sign(f.Catalog());
-    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = f.Sign(f.Catalog());
     f.Network.Routes[MirrorChyanChannel.BuildRequestUri("test-cdk", "v" + f.Build.AppVersion).AbsoluteUri] = Encoding.UTF8.GetBytes(
         """{"code":7002,"msg":"Please confirm that you have entered the correct cdkey"}""");
     using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, new HttpClient(f.Network), true, () => f.Now, () => f.FreeBytes, cdkProvider: () => "test-cdk");
     var probes = await updater.ProbeSourcesAsync();
-    True(probes[2].Reachable == false);
-    True(probes[2].Detail.Contains("不正确"));
+    True(probes[1].Reachable == false);
+    True(probes[1].Detail.Contains("不正确"));
 });
 await Test("an unreachable source is a probe result, never an exception", async () =>
 {
@@ -574,7 +575,7 @@ await Test("an unreachable source is a probe result, never an exception", async 
     foreach (var source in new[] { UpdateService.StableUri }.Concat(UpdateService.ManifestMirrors)) f.Network.Unreachable.Add(source.AbsoluteUri);
     using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, new HttpClient(f.Network), true, () => f.Now, () => f.FreeBytes);
     var probes = await updater.ProbeSourcesAsync();
-    Equal(3, probes.Count);
+    Equal(2, probes.Count);
     True(probes.All(probe => probe.Reachable == false));
     True(probes.All(probe => probe.Detail.Length > 0));
 });

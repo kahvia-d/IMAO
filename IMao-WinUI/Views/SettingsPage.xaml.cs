@@ -518,21 +518,20 @@ public sealed partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Renders the three source chips from the last probe. A chip has three states, which is why a probe's
-    /// reachability is nullable: reachable, not reachable, and "the question does not apply yet" - a mirror
-    /// that answers but has no CDK configured is neither a success nor a failure.
+    /// Renders the download-source chips from the last probe. A chip has three states, which is why a probe's
+    /// reachability is nullable: reachable, not reachable, and "the question does not apply yet" - a mirror that
+    /// answers but has no CDK configured is neither a success nor a failure.
     /// </summary>
     private void RenderConnectivity()
     {
         var probes = updates.Connectivity;
         RenderProbe(probes.FirstOrDefault(probe => probe.Name == "GitHub"), GitHubSourceChip, GitHubSourceMark, GitHubSourceStatus);
-        RenderProbe(probes.FirstOrDefault(probe => probe.Name == "Gitee 镜像"), GiteeSourceChip, GiteeSourceMark, GiteeSourceStatus);
         RenderProbe(probes.FirstOrDefault(probe => probe.Name == "Mirror酱"), MirrorSourceChip, MirrorSourceMark, MirrorSourceStatus);
         RefreshConnectivityButton.IsEnabled = !updates.ProbingConnectivity;
-        ConnectivitySummary.Text = updates.ProbingConnectivity ? "正在检测各来源的连通性…"
+        ConnectivitySummary.Text = updates.ProbingConnectivity ? "正在检测各下载源的连通性…"
             : updates.ConnectivityCheckedAt is { } at
-                ? $"连通性最后检测：{at:HH:mm:ss}　·　只发探测请求，不下载任何内容"
-                : "连通性尚未检测；点右侧的刷新按钮可以随时检测。不会因此下载任何内容。";
+                ? $"下载源连通性最后检测：{at:HH:mm:ss}　·　只发探测请求，不下载任何内容"
+                : "下载源连通性尚未检测；点右侧的刷新按钮可以随时检测。不会因此下载任何内容。";
     }
 
     private void RenderProbe(SourceProbe? probe, Border chip, FontIcon mark, TextBlock status)

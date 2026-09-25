@@ -26,8 +26,8 @@ public sealed record UpdateCheckResult
 }
 
 /// <summary>
-/// Whether one update source answered, and what it said. The connectivity row on the settings page reads
-/// three of these: the signed channel's two sources and the mirror the program package can come from.
+/// Whether one place a program package can come from answered, and what it said. The connectivity row on the
+/// settings page reads both of these: the signed channel's release assets, and the mirror.
 /// </summary>
 /// <param name="Reachable">
 /// <c>true</c> when this source can serve this installation, <c>false</c> when it cannot, and <c>null</c>
@@ -760,33 +760,52 @@ public sealed class UpdateService : IDisposable
     private static readonly TimeSpan SourceProbeTimeout = TimeSpan.FromSeconds(8);
 
     /// <summary>
-    /// Asks every source whether it can serve this installation, for the settings page's connectivity row.
-    /// Each probe is independent and none of them throws: a source that cannot be reached is the answer.
+    /// Asks every place a *program package* can come from whether it can serve this installation, for the
+    /// settings page's connectivity row. The signed channel's manifest sources are not among them: one of those
+    /// is a manifest mirror, and a row about where the bytes come from has no business reporting on where the
+    /// catalogue was read. Each probe is independent and none of them throws.
     /// </summary>
-    public async Task<IReadOnlyList<SourceProbe>> ProbeSourcesAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<SourceProbe>> ProbeSourcesAsync(CancellationToken ct = default) =>
+        [await ProbeGitHubPackageAsync(ct).ConfigureAwait(false), await ProbeMirrorAsync(ct).ConfigureAwait(false)];
+
+    /// <summary>
+    /// The package a fallback download would actually fetch: the one the signed catalog names, when a check has
+    /// already produced a catalog, and GitHub's canonical host until then. Probing the real address matters,
+    /// because "GitHub is reachable" and "this release's archive is reachable" are different questions.
+    /// </summary>
+    private Uri GitHubPackageProbeTarget()
     {
-        var probes = new List<SourceProbe>(Sources.Length + 1);
-        foreach (var source in Sources) probes.Add(await ProbeManifestSourceAsync(source, ct).ConfigureAwait(false));
-        probes.Add(await ProbeMirrorAsync(ct).ConfigureAwait(false));
-        return probes;
+        try
+        {
+            if (_checkedEnvelope is not null)
+            {
+                var catalog = UpdateSignature.Verify(_checkedEnvelope, _keys, _allowTestKeys);
+                if (catalog.App.Package is { } package && Uri.TryCreate(package.Url, UriKind.Absolute, out var url)) return url;
+            }
+        }
+        catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException) { }
+        return StableUri;
     }
 
-    private async Task<SourceProbe> ProbeManifestSourceAsync(Uri source, CancellationToken ct)
+    private async Task<SourceProbe> ProbeGitHubPackageAsync(CancellationToken ct)
     {
-        var name = DescribeManifestSource(source);
+        var target = GitHubPackageProbeTarget();
         var clock = Stopwatch.StartNew();
         try
         {
-            // Headers only: the question is reachability, and the body is a signed envelope the check itself
-            // will read when it matters.
-            using var response = await GetResponseAsync(source, UpdateSignature.ValidateManifestHost, SourceProbeTimeout, ct).ConfigureAwait(false);
+            // Headers only, and through the signed catalog's host rules because that is where this address came
+            // from when a check has run.
+            using var response = await GetResponseAsync(target, UpdateSignature.ValidateResponseUri, SourceProbeTimeout, ct).ConfigureAwait(false);
             clock.Stop();
-            return new SourceProbe(name, "更新清单", true, $"可以连上（HTTP {(int)response.StatusCode}）", clock.ElapsedMilliseconds);
+            var detail = target == StableUri
+                ? $"可以连上 GitHub（以更新清单主机探测，尚未检查更新）HTTP {(int)response.StatusCode}"
+                : $"可以连上本版本的程序包地址（HTTP {(int)response.StatusCode}）";
+            return new SourceProbe("GitHub", "程序下载", true, detail, clock.ElapsedMilliseconds);
         }
         catch (Exception ex) when (ex is HttpRequestException or TimeoutException or IOException or InvalidDataException or OperationCanceledException)
         {
             clock.Stop();
-            return new SourceProbe(name, "更新清单", false, ex.Message, clock.ElapsedMilliseconds);
+            return new SourceProbe("GitHub", "程序下载", false, ex.Message, clock.ElapsedMilliseconds);
         }
     }
 

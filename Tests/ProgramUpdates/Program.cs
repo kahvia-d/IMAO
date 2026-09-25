@@ -685,6 +685,43 @@ await Test("the program source label names what actually carried the bytes", asy
     Assert(await LabelAsync(mirrorUrl) == "Mirror酱", "a whole tree from the mirror is credited to it");
     Assert(await LabelAsync(null) == "GitHub 分片", "without a mirror the shards carry the release");
 });
+await Test("the GitHub connectivity probe follows the archive address the catalog names", async () =>
+{
+    // The settings row is about where program bytes come from, so once a check has named this release's archive
+    // the probe asks that address. "GitHub is reachable" and "this release is reachable" are different questions.
+    var store = Store();
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", ShardTree(shardBuild1, "v1"));
+    var signed = Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10));
+    var snapshots = new ResourceSnapshotService(Path.Combine(store.InstallRoot, "resource-state"),
+        new ResourceSnapshot { SnapshotId = "bundled", Bundled = true, BaselineId = shardBuild1.BaselineId, BaselineRoot = fixture, MapDataRoot = fixture },
+        shardBuild1.AppVersion, (_, _) => Task.CompletedTask);
+    await snapshots.InitializeAsync();
+    var mirrorCheck = MirrorChyanChannel.BuildRequestUri(null, "v" + shardBuild1.AppVersion).AbsoluteUri;
+    var mirrorAnswer = Encoding.UTF8.GetBytes("""{"code":0,"msg":"success","data":{"version_name":"v2026.9.25.1"}}""");
+    using var network = new FixtureNetwork(request => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new ByteArrayContent(request.RequestUri!.AbsoluteUri switch
+        {
+            var url when url == UpdateService.StableUri.AbsoluteUri => signed,
+            var url when url == mirrorCheck => mirrorAnswer,
+            // The archive address this release publishes. The probe reads response headers only, so the body is
+            // never the point here.
+            var url when url == pkg.Url => [],
+            var url when served.ContainsKey(url) => File.ReadAllBytes(served[url]),
+            var url => throw new InvalidOperationException("unexpected request in this fixture: " + url),
+        })
+    });
+    using var http = new HttpClient(network);
+    using var updates = new UpdateService(shardBuild1, [key], snapshots, http, true);
+    // The check is what gives the service a catalog to read the archive address from; whether it also reports a
+    // newer program is beside the point here.
+    await updates.CheckAsync();
+    var probes = await updates.ProbeSourcesAsync();
+    Assert(probes.Count == 2 && probes[0].Name == "GitHub" && probes[1].Name == "Mirror酱", "the row covers the two download sources");
+    Assert(probes[0].Reachable == true, "the archive address answers: " + probes[0].Detail);
+    Assert(probes[0].Detail.Contains("程序包地址"), "the detail names what was actually probed: " + probes[0].Detail);
+    Assert(probes[1].Reachable is null, "no CDK is neither a pass nor a fail");
+});
 await Test("launcher crash terminates both application and its native-style descendant", async () =>
 {
     var store = Store();
