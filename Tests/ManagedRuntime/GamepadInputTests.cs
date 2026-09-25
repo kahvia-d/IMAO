@@ -14,11 +14,64 @@ internal static class GamepadInputTests
         VerifyGameplay(check);
         VerifyNewReleaseBoundaries(check);
         VerifyCompletion(check);
+        VerifyGuideSkip(check);
         VerifyReleasedActions(check);
         VerifyCancellationBoundaries(check);
         VerifyDirectionalRepeat(check);
         VerifyConfiguration(root, check);
         VerifyToolToggleChord(check);
+    }
+
+    // 攻略内「长按 Y 跳过当前导航目标」：只有 CanSkip（当前导航目标的攻略）才把 Y 变成
+    // 长按语义；时长不足仍是原来的一次 Y（打开路线菜单）。
+    //
+    // 采样必须像真实手柄轮询一样连续（间隔远小于 250 毫秒）：解释器把"超过 250 毫秒没采样"
+    // 当成输入流中断并要求先松手，用一大步喂进去会绕过真实的按住路径。
+    private static void VerifyGuideSkip(Action<bool, string> check)
+    {
+        var skipContext = Detail with { CanSkip = true };
+        var shortHold = new InputRun(skipContext);
+        shortHold.Step(GamepadButtons.Y);
+        var partial = shortHold.Hold(GamepadButtons.Y, 500);
+        check(partial.All(update => update.Action != GamepadAction.SkipGuideStop) &&
+            partial.Any(update => update.HoldProgress is > 0 and < 1 && update.HoldAction == GamepadAction.SkipGuideStop),
+            "长按 Y 未满 600 毫秒只显示跳过进度、不跳过");
+        var earlyRelease = shortHold.Step(GamepadButtons.None);
+        check(earlyRelease.Action == GamepadAction.OpenRouteMenu,
+            "松开太早时 Y 退回普通短按（打开路线菜单）");
+
+        // 按住总时长由"起始步 + 后续步"共同决定：Hold(500) 一共只累计 550 毫秒，
+        // Hold(600) 累计到 650 毫秒，跨过 600 毫秒门槛。
+        var justUnder = new InputRun(skipContext);
+        justUnder.Step(GamepadButtons.Y);
+        check(justUnder.Hold(GamepadButtons.Y, 500).All(update => update.Action != GamepadAction.SkipGuideStop),
+            "长按 Y 累计不满 600 毫秒时不提交跳过");
+
+        var justOver = new InputRun(skipContext);
+        justOver.Step(GamepadButtons.Y);
+        var crossed = justOver.Hold(GamepadButtons.Y, 600);
+        check(crossed.Count(update => update.Action == GamepadAction.SkipGuideStop) == 1,
+            "长按 Y 跨过 600 毫秒门槛时提交一次跳过");
+
+        var fullHold = new InputRun(skipContext);
+        fullHold.Step(GamepadButtons.Y);
+        var completed = fullHold.Hold(GamepadButtons.Y, 620);
+        var skips = completed.Where(update => update.Action == GamepadAction.SkipGuideStop).ToList();
+        check(skips.Count == 1 && skips[0].HoldAction == GamepadAction.SkipGuideStop,
+            "继续按住不会重复提交，且带上跳过动作类别");
+        check(fullHold.Step(GamepadButtons.None).Action is null,
+            "跳过提交后的松开不再产生路线菜单动作");
+
+        var ineligible = new InputRun(Detail);
+        check(ineligible.Hold(GamepadButtons.Y, 700).All(update => update.Action != GamepadAction.SkipGuideStop),
+            "不是当前导航目标的攻略上，长按 Y 不能跳过");
+
+        // Y 的跳过长按不能影响 A 的完成长按，反之亦然。
+        var completion = new InputRun(skipContext);
+        var completionUpdates = completion.Hold(GamepadButtons.A, 620);
+        check(completionUpdates.Any(update => update.Action == GamepadAction.Complete) &&
+            completionUpdates.All(update => update.Action != GamepadAction.SkipGuideStop),
+            "可跳过的详情页上 A 仍是完成长按");
     }
 
     // 「开始探索 / 停止探索」的手柄和弦：**LB + Start**，按下即触发，而且**不走状态机**——

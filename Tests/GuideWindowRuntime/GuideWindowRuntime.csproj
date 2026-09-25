@@ -30,6 +30,7 @@
     <Manifest Include="$(ApplicationManifest)" />
     <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
     <Compile Include="../../IMao-WinUI/Views/MarkerGuideWindow.cs" Link="Production/MarkerGuideWindow.cs" />
+    <Compile Include="../../IMao-WinUI/Views/GuideImageWindow.cs" Link="Production/GuideImageWindow.cs" />
     <Compile Include="../../IMao-WinUI/Views/GamepadAssistantWindow.cs" Link="Production/GamepadAssistantWindow.cs" />
     <Compile Include="$(GamepadSourceRoot)/MarkerGuideCoordinator.cs" Link="Production/MarkerGuideCoordinator.cs" />
     <Compile Include="../../IMao-WinUI/Services/XInputControllerReader.cs" Link="Production/XInputControllerReader.cs" />
@@ -38,6 +39,9 @@
     <Compile Include="../../IMao-WinUI/Services/GamepadWindowActivation.cs" Link="Production/GamepadWindowActivation.cs" Condition="Exists('../../IMao-WinUI/Services/GamepadWindowActivation.cs')" />
     <Compile Include="../../IMao-WinUI/Services/GamepadWindowVisibility.cs" Link="Production/GamepadWindowVisibility.cs" />
     <Compile Include="../../IMao-WinUI/Services/GamepadWindowChrome.cs" Link="Production/GamepadWindowChrome.cs" />
+    <Compile Include="../../IMao-WinUI/Services/LayerFloorNames.cs" Link="Production/LayerFloorNames.cs" />
+    <Compile Include="../../IMao-WinUI.Core/Updates/*.cs" Link="Production/Updates/%(Filename)%(Extension)" />
+    <Compile Include="../../IMao-WinUI/Helpers/ResourceSessionPaths.cs" Link="Production/ResourceSessionPaths.cs" />
     <Compile Include="../../IMao-WinUI/Services/GamepadWindowReturn.cs" Link="Production/GamepadWindowReturn.cs" />
     <Compile Include="../../IMao-WinUI/Services/RouteGamepadController.cs" Link="Production/RouteGamepadController.cs" Condition="Exists('../../IMao-WinUI/Services/RouteGamepadController.cs')" />
     <Compile Include="../../IMao-WinUI/Views/RouteGamepadInputHost.cs" Link="Production/RouteGamepadInputHost.cs" Condition="Exists('../../IMao-WinUI/Views/RouteGamepadInputHost.cs')" />
@@ -46,6 +50,7 @@
     <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="Production/RoutePlanningState.cs" />
     <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" />
     <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="Production/GamepadInput.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GuideSkipHoldGesture.cs" Link="Production/GuideSkipHoldGesture.cs" />
     <Compile Include="../../IMao-WinUI/Models/CoreRuntimeStatus.cs" Link="Production/CoreRuntimeStatus.cs" />
     <Compile Include="../../IMao-WinUI/Models/GuidePlacement.cs" Link="Production/GuidePlacement.cs" />
   </ItemGroup>

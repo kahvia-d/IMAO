@@ -4,6 +4,15 @@ using System.Text.Json;
 
 namespace IMao_WinUI.Services;
 
+// 手柄 LB+Start 的启停和弦要走 CoreHostService.ToggleExplorationAsync 与外壳的窗口尺寸检查，
+// 这里给出与生产签名一致的最小替身（真实实现在外壳工程里，只包含界面层代码）。
+public enum ExplorationToggleResult { Started, Stopped, WindowSizeRejected }
+
+internal static class GameWindow
+{
+    internal static bool CheckGameWindowSize() => true;
+}
+
 internal sealed record RecordedCommand(string Operation, JsonElement Arguments);
 
 internal sealed class DeferredCommand
@@ -15,6 +24,8 @@ internal sealed class DeferredCommand
 // Only the methods used by the production coordinator are present. No process, pipe, storage or network exists here.
 public sealed class CoreHostService : INotifyPropertyChanged
 {
+    public Task<ExplorationToggleResult> ToggleExplorationAsync(bool gameWindowSizeValid, CancellationToken cancellationToken = default) =>
+        Task.FromResult(ExplorationToggleResult.Started);
     private readonly Dictionary<string, Queue<DeferredCommand>> deferred = new();
     private bool connected = true;
     public event EventHandler<JsonElement>? MarkerEvent;
@@ -25,6 +36,8 @@ public sealed class CoreHostService : INotifyPropertyChanged
         set { connected = value; PropertyChanged?.Invoke(this, new(nameof(IsConnected))); }
     }
     public RoutePlanningState RoutePlanning { get; set; } = new();
+    /// <summary>测试用它模拟一次原生 routePlanning 推送（资格会随路线状态刷新）。</summary>
+    internal void PublishRoutePlanning() => PropertyChanged?.Invoke(this, new(nameof(RoutePlanning)));
     public CoreRuntimeStatus Status { get; set; } = new() { CoreState = "running" };
     private RuntimeConfiguration configuration = new();
     public RuntimeConfiguration Configuration
@@ -118,6 +131,8 @@ public sealed class CoreHostService : INotifyPropertyChanged
     internal JsonElement RouteGuideResponse() => JsonSerializer.SerializeToElement(new
     {
         profileId = ActiveProfile, routeId = ActiveRouteId, revision = AuthoritativeRevision,
+        // 原生 GuideTarget 的答复带导航状态；跳过资格只由这份答复决定，不能用客户端快照代替。
+        navigationStatus = RoutePlanning.NavigationStatus,
         selection = AuthoritativeTarget is { } target ? SelectionPayload(target) : null
     });
     internal static object SelectionPayload(MarkerSelection point) => new

@@ -24,6 +24,8 @@ try
     KuroSyncTests.Run(root, Check);
     RoutePlanningTests.Run(Check);
     GamepadInputTests.Run(root, Check);
+    GuideSkipHoldGestureTests.Run(Check);
+    GuideSkipKeyConfigurationTests.Run(root, Check);
     GamepadDiagnosticTests.Run(root, Check);
     GuidePlacementTests.Run(Check);
     await KuroAutoSyncTests.RunAsync(root, Check);

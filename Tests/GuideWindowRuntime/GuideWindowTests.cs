@@ -26,6 +26,46 @@ internal static class GuideWindowTests
     public static async Task RunAsync(Action<string> log)
     {
         PlacementTests(log);
+        await CaseAsync("guide skip needs the current navigation target and a real 0.6 second hold", async f =>
+        {
+            // 路线正在导航、当前目标是 A：只有 A 的攻略可以跳过。
+            f.Core.RoutePlanning = f.Core.RoutePlanning with { NavigationStatus = "navigating" };
+            await f.Coordinator.ShowAsync(A);
+            await UntilAsync(() => f.Window is { IsGuideVisible: true, SkipButtonVisible: true } &&
+                f.Coordinator.HasGuideSkipAuthorization, "the current navigation target offers a skip entry");
+            var window = f.Window!;
+            Check(window.SkipButtonEnabled && window.SkipButtonText.Contains(RuntimeConfiguration.HotkeyName(71)),
+                $"the skip entry names the actually configured key (text={window.SkipButtonText})");
+
+            // 同一路线上的另一个点位：即使有当前目标，也不该出现跳过入口。
+            f.Core.AuthoritativeTarget = B;
+            await f.Coordinator.ShowAsync(B);
+            await UntilAsync(() => f.Window is { IsGuideVisible: true } shown && shown.Selection?.PointId == B.PointId,
+                "the other point of the same route is showing");
+            Check(!f.Window!.SkipButtonVisible && !f.Coordinator.HasGuideSkipAuthorization,
+                "another point on the same route never offers the current-target skip");
+
+            // 回到当前导航目标，用真实窗口的按住路径提交一次跳过。
+            f.Core.AuthoritativeTarget = A;
+            await f.Coordinator.ShowAsync(A);
+            await UntilAsync(() => f.Window is { IsGuideVisible: true, SkipButtonVisible: true } &&
+                f.Coordinator.HasGuideSkipAuthorization, "returning to the navigation target restores the skip entry");
+            window = f.Window!;
+            var pending = f.Core.DeferNext("routePlanning:skip");
+            window.PressSkipHotkeyForTest();
+            Check(window.SkipHoldVisible, "pressing the configured key starts the visible hold progress");
+            window.ReleaseSkipHotkeyForTest();
+            await SettleAsync();
+            Check(f.Core.Commands.Count(command => command.Operation == "routePlanning:skip") == 0,
+                "releasing before 0.6 seconds never submits a skip");
+            window.PressSkipHotkeyForTest();
+            var command = await pending.Seen.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Check(command.GetProperty("key").GetString() == "8:" + A.PointId &&
+                command.GetProperty("routeId").GetString() == "test-route",
+                "a 0.6 second hold submits exactly the authorised target and route");
+            pending.Reply.SetResult(JsonSerializer.SerializeToElement(f.Core.RoutePlanning));
+            await UntilAsync(() => Hidden(f), "an accepted skip closes the guide");
+        }, log);
         await CaseAsync("real HWND has no system title bar and F8 toggles it", async f =>
         {
             await f.Coordinator.ShowAsync(A);
