@@ -771,6 +771,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 case "markerGuideCompleteRequested":
                     if (IsCurrentGuideEvent(value)) await guide!.CompleteCurrentAsync();
                     break;
+                case "markerGuideSkip": ApplyGuideSkipKey(value); break;
                 case "markerGuidePageRequested":
                     if (IsCurrentGuideEvent(value)) await guide!.ChangePictureAsync(Integer(value, "direction"));
                     break;
@@ -829,6 +830,19 @@ public sealed class MarkerGuideCoordinator : IDisposable
         session.IsCurrent(Long(value, "selectionGeneration")) && Long(value, "hwnd") == WindowHandle(guide) &&
         current.ProfileId == Text(value, "profileId") && current.StateId == Integer(value, "stateId") &&
         current.PointId == Text(value, "pointId");
+
+    /// <summary>
+    /// 原生钩子转交的跳过键。玩家在游戏里按住 G 时攻略窗口不是前台窗口，收不到键盘事件，
+    /// 所以按下/松开由核心判定（攻略窗口可见 + 有前台窗口）后送到这里。
+    /// 这里只驱动窗口那条 600 毫秒计时：提交与资格校验仍在窗口与 SkipGuideStopAsync。
+    /// </summary>
+    private void ApplyGuideSkipKey(JsonElement value)
+    {
+        if (guide is not { IsGuideVisible: true } window || Text(value, "profileId") != session.ProfileId) return;
+        bool down = Flag(value, "down");
+        core.ReportGamepadDiagnostic("guide-skip-key", $"down={down} profile={Text(value, "profileId")}");
+        if (down) window.PressSkipHotkey(); else window.ReleaseSkipHotkey();
+    }
 
     internal Task OpenRouteGuideFromToolsAsync(string profileId, nint game, nint source) =>
         ToggleGuideAsync(JsonSerializer.SerializeToElement(new

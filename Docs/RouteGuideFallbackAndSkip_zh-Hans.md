@@ -1,7 +1,7 @@
 # 路线攻略回退与攻略内长按跳过（实施与验收记录）
 
 **状态：** 已实现并通过自动化验收；实机手感待玩家确认。键盘攻略键（F8）的空范围回退
-在 §7.1 修正后才真正生效。
+在 §7.1 修正后才真正生效；「跳过」按钮改为单击提交、Z/G 不再要求攻略窗口在前台，见 §2.4 与 §7.4。
 **分支：** `codex/route-guide-skip`（基线 `25adfde`；实现提交 `6047a63` / `7690872` / `836ce9b`，
 后续修正见 §7）
 
@@ -63,11 +63,14 @@
 - **键鼠：** 配置键（默认 **G**，可改可禁用）**按住 600 ms**，带进度条；窗口内「跳过」**按钮**
   就是一个按钮——**单击即提交一次**。（2026-09-25 实机反馈：按钮原来也被"按住 600 毫秒"判定拦下，
   鼠标点一下只会闪一下进度条再取消，等于没反应。）
+- **键鼠不需要先点一下攻略窗口：** 玩家在游戏里按 Z（完成当前点位）或长按 G 时，前台是游戏、
+  攻略窗口没有键盘焦点。这两个键的归属改由原生钩子判定（攻略窗口可见 + 游戏或攻略窗口在前台），
+  见 §7.4。攻略窗口可见期间这两个键由攻略窗口独占，游戏收不到。
 - **手柄：** 可跳过的**详情页**上长按 **Y** 600 ms；短按 Y 保留原有"打开路线菜单"行为。
-- 输入必须在攻略窗口**前台**且当前**可跳过**；窗口外、失焦、切换攻略、切到图片页、按住不足
-  600 ms、混合按键 → 一律取消，不产生写入。
+- 键盘按住必须当前**可跳过**；资格失效、切换攻略、切到图片页、按住不足 600 ms、混合按键（带
+  Ctrl/Alt/Shift/Win）→ 一律取消，不产生写入。玩家切到别的程序时这些键不归攻略窗口，也不计时。
 - 一次长按**最多提交一次**（键盘自动重复消息不得重复提交）。
-- **键鼠两个通道各自计时**：先按下的通道不会被后按下的清零，也不会被后按下的提前提交。
+- **键盘与手柄各自计时**：两条通道互不影响，任一通道满 600 毫秒只提交一次。
 
 ### 2.5 可发现性
 
@@ -89,14 +92,16 @@
    键盘关联调用传 `gamepad=false`，托管层必须自己回退。
 3. `markerGetRouteGuide` 的答复新增 `navigationStatus`，保留 `{ profileId, routeId, revision, selection }`。
 4. 跳过授权只来自该答复；`key` 形如 `stateId:pointId`，与 `routeId`、`revision` 一起作为提交参数。
-5. 配置字段 `GuideSkipKey` / `guideSkipKey`，默认虚拟键码 `71`(G)。核心**不做**按键处理：只保存
-   绑定、参与冲突校验并同步给攻略窗口（攻略窗口按前台窗口事件处理 G）。
+5. 配置字段 `GuideSkipKey` / `guideSkipKey`，默认虚拟键码 `71`(G)。核心**不决定"按够 600 毫秒"**，
+   但会在攻略窗口可见、且游戏或攻略窗口在前台时，把按下/松开作为
+   `markerGuideSkip { down, profileId }` 事件转交给托管层；托管层只把它送进窗口那条计时通道。
+   核心负责吞掉这个键，游戏不会同时收到它。
 
 ## 4. 关键设计决定与踩过的坑
 
 | 曾经的做法 | 问题 | 现在的做法 |
 |---|---|---|
-| 键鼠共用一个按住计时器，松开任一路就 `Begin` 重启 | 先按住鼠标再按 G 会把已累计时间清零，甚至永远凑不满 600 ms | 两个通道各持一个 `GuideSkipHoldGesture`，各自计时 |
+| 键鼠共用一个按住计时器，松开任一路就 `Begin` 重启 | 先按住鼠标再按 G 会把已累计时间清零，甚至永远凑不满 600 ms | 键盘与手柄各自计时，互不影响 |
 | 资格失效时直接清空按住状态 | 玩家手还按着，资格恢复后进度不再继续，只能重按 | 标记为"挂起"，资格恢复时从**当前时刻**重新起算（不跨失效期累计时间） |
 | 回退以 `navigationStatus == "navigating"` 为前提 | 打开大地图时核心必然处于 `waitingForLocation`（进入大地图会清掉玩家定位），而路线工具栏正好在那里 | 打开攻略只要求"有当前目标 + 有落点"；`navigationStatus` 只用于**跳过资格** |
 | 「跳过」按钮文案里带键名 | 玩家要的是简短按钮，键位说明属于使用指南 | 按钮固定「跳过」，键名只在指南与设置页出现 |
@@ -114,6 +119,7 @@
 | `IMao-Core/src/ImguiDraw/Items/DrawItemOnMinMap.cpp` | `outcome` 区分空范围与定位失败；手柄空范围发起路线回退事件 |
 | `IMao-Core/src/Runtime/RoutePlanningService.cpp` | `GuideTarget` 附带 `navigationStatus`；既有 `skip` 守卫与持久化不变 |
 | `IMao-Core/src/Runtime/RuntimeHotkeys.h` | `guideSkipKey` 字段、冲突校验、快照与打包同步 |
+| `IMao-Core/src/Runtime/GuideHotkeyRouting.h` | 攻略键的归属规则（纯函数，被原生用例钉住）：可见的攻略窗口拥有 Z/G，不要求它在前台 |
 | `IMao-WinUI/Services/MarkerGuideCoordinator.cs` | 仅 `guide-empty` 回退；跳过资格刷新与提交；附近路径不查路线目标 |
 | `IMao-WinUI/Views/MarkerGuideWindow.cs` | 跳过入口、文案、双通道长按、取消条件、手柄进度归属 |
 | `IMao-WinUI/Models/GuideSkipHoldGesture.cs` | 单通道按住计时模型 |
@@ -127,7 +133,7 @@
 | 原生路线规划 | `x64\Release\IMaoRoutePlanningTests.exe` | `Route planning tests passed` |
 | 原生路线服务守卫 | `out\auto-replan-native\IMaoRoutePlanningServiceTests.exe <dir>` | `failures=0` |
 | 托管单测 | `Tests\ManagedRuntime\bin\x64\Release\net8.0\ManagedRuntime.exe` | exit 0，**669 PASS / 0 FAIL** |
-| 真实窗口（攻略） | `GuideWindowRuntime.exe`（默认模式跑 GuideWindowTests + GamepadWindowTests） | **23 PASS / 1 FAIL**，见下 |
+| 真实窗口（攻略） | `GuideWindowRuntime.exe`（默认模式跑 GuideWindowTests + GamepadWindowTests） | **25 PASS / 1 FAIL**，见下 |
 | 真实窗口（路线工具栏） | `GuideWindowRuntime.exe --test-route-controller` | **6 PASS / 0 FAIL** |
 | 真实窗口（附近选择器） | `GuideWindowRuntime.exe --test-nearby-chooser` | 2 PASS / 1 FAIL（本会话前台限制，见下） |
 | 生产工程 | `dotnet build IMao-WinUI\IMao-WinUI.csproj -c Release -p:Platform=x64 -r win-x64` | 0 错误（含 XAML 编译） |
@@ -201,6 +207,28 @@ if (guide && gamepad && publish && OpenRouteGuideFallback(observation.gameHwnd))
 有活动路线"时「开始选点」与「新建路线」共用指令键 `new`，而选中身份用的是键，重建导航表时
 永远命中第一个）。详见 [地图工具台](MapTools_20260908.md) 的 2026-09-25 小节。
 
+### 7.4 不点一下攻略窗口，Z 与 G 就没反应
+
+**实机反馈**：键鼠打开的攻略，必须先用鼠标点一下窗口，Z（完成当前点位）和长按 G（跳过）才生效。
+
+**根因**：两个键都要求"攻略窗口是前台窗口"。
+- Z 走原生钩子，条件是 `completeGuide = completionKey && guideFocused && guideIdentity`；
+- G 干脆只由攻略窗口自己的 `PreviewKeyDown` 处理，而窗口没有键盘焦点时收不到这个键。
+
+玩家在游戏里按键时前台是游戏，所以两条都失效。
+
+**修法**：把"这个键此刻归谁"抽成纯函数 `GuideHotkeyRouting.h` 并由原生钩子统一判定——
+攻略窗口**可见**、并且游戏或攻略窗口**至少有一个在前台**，Z 与 G 就归攻略窗口所有，与
+"攻略窗口自己是不是前台"无关。开关攻略（F8）是例外：它必须在还没有攻略窗口时也能用，
+把它和 Z/G 用同一条规则会直接让 F8 打不开任何东西（改这条时真的踩过一次，用例已钉住）。
+
+G 现在由原生钩子转交按下/松开（`markerGuideSkip`），窗口那侧不再要求前台；攻略窗口可见期间
+这个键由攻略窗口独占，游戏不会同时收到。Z 的完成路径沿用原有事件，只是不再要求窗口在前台。
+
+**回归网**：原生 `RoutePlanningTests` 的 `GuideHotkeyRoutingTests` 钉住分类与归属（含
+"没有攻略窗口时 F8 仍然可用"）；`Tests/GuideWindowRuntime` 新增两条真实窗口用例：把前台交给
+受控"游戏"窗口后，Z 仍能完成当前点位、`markerGuideSkip` 的按下/松开仍能计时并提交一次跳过。
+
 
 ## 8. 诊断记录（排查用，长期保留）
 
@@ -212,6 +240,7 @@ if (guide && gamepad && publish && OpenRouteGuideFallback(observation.gameHwnd))
 | `guide-shortcut` | F8 / 手柄两条入口各收到什么；键盘那条缺失即表示按键没进来 |
 | `guide-skip` | 跳过资格逐条分支与不合格原因；提交与接受结果 |
 | `guide-skip-hold` | 窗口侧按住通道与资格快照（同状态只记一次，不刷屏） |
+| `guide-skip-key` | 原生钩子把跳过键的按下/松开转交给托管层（`down=True/False`）；没有这一条就说明键没进钩子 |
 | `route-toolbar` | 工具栏实际送出的摇杆值 |
 
 ## 9. 实机验收清单（请玩家确认）
@@ -219,8 +248,10 @@ if (guide && gamepad && publish && OpenRouteGuideFallback(observation.gameHwnd))
 - [ ] 大地图上开一条路线并开始导航：走到没有未完成点位的区域按攻略键 → 打开当前目标攻略。
 - [ ] 同一操作在大地图界面（定位为 `waitingForLocation`）也要能打开。
 - [ ] 路线中较后的点位：即使手动打开它的攻略，也不显示跳过。
-- [ ] 当前目标攻略：按住 G（或「跳过」按钮 / 手柄 Y）0.6 秒 → 推进到下一个点；按住不足 0.6 秒不生效。
-- [ ] 按住鼠标的同时再按 G：不要互相清零，任一通道满 0.6 秒即提交一次。
+- [ ] 攻略可见时**不用先点一下窗口**：直接按 Z 完成当前点位；长按 G 0.6 秒 → 推进到下一个点（前台是游戏也要生效）。
+- [ ] 当前目标攻略：按住 G 0.6 秒（或手柄长按 Y）→ 推进；不足 0.6 秒不生效。
+- [ ] 鼠标**单击**「跳过」按钮 → 立即跳过一次（不需要按住）。
 - [ ] 跳过之后用路线页的撤销跳过恢复，完成记录不变。
 - [ ] 改键/禁用跳过键后，攻略窗口按钮文案跟着变；禁用后按键不再触发。
-- [ ] 窗口外按 G 不触发跳过；手柄 Y 在别处仍是路线菜单。
+- [ ] 攻略窗口可见期间 G / Z 不会同时触发游戏里的同名按键（键由攻略独占）；攻略关掉后游戏恢复收到它们。
+- [ ] 手柄 Y 在别处仍是路线菜单。

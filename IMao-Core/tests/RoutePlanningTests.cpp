@@ -4,6 +4,7 @@
 #include "Runtime/RoutePlanStore.h"
 #include "Runtime/PlanningEscapeKey.h"
 #include "Runtime/RuntimeHotkeys.h"
+#include "Runtime/GuideHotkeyRouting.h"
 #include "Runtime/MarkerGuideProtocol.h"
 #include <chrono>
 #include <iostream>
@@ -391,6 +392,47 @@ void HotkeyPressOwnershipTests() {
     Expect(!RuntimeHotkeyPressOwnership::BlocksPolling(90), "lifecycle reset clears old hook ownership");
 }
 
+// 攻略窗口可见时，Z（完成当前点位）与 G（长按跳过）必须归攻略窗口所有——**不要求攻略窗口
+// 是前台窗口**。实机反馈：只有先用鼠标点一下攻略窗口，Z 与 G 才生效；玩家在游戏里按键时
+// 窗口拿不到键盘焦点，所以"谁是前台窗口"这条判定必须放在这里，而不是要求窗口自己在前台。
+// 开关攻略（F8）是例外：它必须在还没有攻略窗口时也能用。
+void GuideHotkeyRoutingTests() {
+    using AutoRoute::GuideHotkeyKind;
+    const RuntimeHotkeyBindings bindings{};
+    Expect(AutoRoute::ClassifyGuideHotkey(bindings, 90) == GuideHotkeyKind::CompleteShownPoint &&
+        AutoRoute::ClassifyGuideHotkey(bindings, 71) == GuideHotkeyKind::Skip &&
+        AutoRoute::ClassifyGuideHotkey(bindings, 119) == GuideHotkeyKind::ToggleGuide &&
+        AutoRoute::ClassifyGuideHotkey(bindings, 33) == GuideHotkeyKind::PageBack &&
+        AutoRoute::ClassifyGuideHotkey(bindings, 34) == GuideHotkeyKind::PageForward &&
+        AutoRoute::ClassifyGuideHotkey(bindings, 65) == GuideHotkeyKind::None,
+        "each configured guide key maps to its own action and no other key is claimed");
+
+    auto disabled = bindings;
+    disabled.guideSkipKey = 0;
+    Expect(AutoRoute::ClassifyGuideHotkey(disabled, 71) == GuideHotkeyKind::None,
+        "a disabled binding stops claiming its key");
+
+    // 这一条就是实机 bug 本身：攻略窗口可见、玩家在游戏里按键（前台是游戏，不是攻略窗口）。
+    for (const auto kind : {GuideHotkeyKind::CompleteShownPoint, GuideHotkeyKind::Skip, GuideHotkeyKind::ToggleGuide})
+        Expect(AutoRoute::GuideHotkeyOwned(kind, /*guideVisible*/ true, /*guideFocused*/ false, /*gameFocused*/ true),
+            "a visible guide owns its hotkeys while the game - not the guide - holds the foreground");
+    // 开关攻略必须能在"还没有攻略窗口"时用；把它和 Z/G 用同一条规则会直接让 F8 打不开窗口。
+    Expect(AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::ToggleGuide, /*guideVisible*/ false, false, /*gameFocused*/ true),
+        "the guide key still opens the guide when no guide window exists yet");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::CompleteShownPoint, false, false, true) &&
+        !AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, false, false, true),
+        "completion and skip need a visible guide; with none they stay with the game");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::CompleteShownPoint, true, false, false) &&
+        !AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, true, false, false),
+        "another application in front means these keys are not ours");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::ToggleGuide, true, false, false),
+        "the guide key also stays with the game when a third application is in front");
+    Expect(AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::Skip, true, /*guideFocused*/ true, false),
+        "a focused guide still owns its keys");
+    Expect(!AutoRoute::GuideHotkeyOwned(GuideHotkeyKind::None, true, true, true),
+        "an unrelated key is never claimed");
+}
+
 void HotkeyConfigurationTests() {
     using Json = nlohmann::json;
     const auto same = [](RuntimeHotkeyBindings a, RuntimeHotkeyBindings b) {
@@ -688,7 +730,7 @@ void Benchmark() {
 }
 }
 int main() {
-    try { SolverTests(); GeometryTests(); StoreTests(); EscapeOwnershipTests(); DrawingVisibilityTests(); AutoReplanTests(); HotkeyPressOwnershipTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
+    try { SolverTests(); GeometryTests(); StoreTests(); EscapeOwnershipTests(); DrawingVisibilityTests(); AutoReplanTests(); HotkeyPressOwnershipTests(); GuideHotkeyRoutingTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
     catch (const std::exception& error) { ++failures; std::cerr << "UNEXPECTED: " << error.what() << '\n'; }
     if (failures) { std::cerr << failures << " route planning test(s) failed\n"; return 1; }
     std::cout << "Route planning tests passed\n";

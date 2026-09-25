@@ -261,8 +261,54 @@ internal static class GuideWindowTests
                 "the accepted shortcut sends exactly one completion request");
         }, log);
 
-        await CaseAsync("old completion acknowledgement and events cannot close B", async f =>
+        await CaseAsync("the completion key reaches a visible guide while the game has the foreground", async f =>
         {
+            await f.Coordinator.ShowAsync(A);
+            await UntilAsync(() => Visible(f), "guide visible before the game takes the foreground");
+            var window = f.Window!;
+            // 实机报告：只有先用鼠标点一下攻略窗口，Z 才生效。这里把前台交还给"游戏"，
+            // 攻略窗口仍然可见——正是那个状态。原生钩子在"攻略窗口可见 + 有前台窗口"时发送事件。
+            f.Game.Activate();
+            await UntilAsync(() => GetForegroundWindow() == f.GameHandle && GetForegroundWindow() != Handle(window),
+                "the controlled game holds the foreground while the guide stays visible");
+            var request = f.Core.DeferNext("markerSetCompletion");
+            f.Core.Emit(new { type = "markerGuideCompleteRequested", profileId = "local", stateId = 8,
+                pointId = A.PointId, selectionGeneration = f.Session.Generation, hwnd = Handle(window).ToInt64() });
+            var command = await request.Seen.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Check(command.GetProperty("pointId").GetString() == A.PointId &&
+                command.GetProperty("guideWindowHwnd").GetInt64() == Handle(window).ToInt64(),
+                "the completion key completes the shown point without the guide being the foreground window");
+            request.Reply.SetResult(CoreHostService.Empty());
+            await UntilAsync(() => Hidden(f), "the completed point closes the guide");
+        }, log);
+
+        await CaseAsync("the skip key reaches a visible guide while the game has the foreground", async f =>
+        {
+            await f.Coordinator.ShowAsync(A);
+            await UntilAsync(() => f.Window is { IsGuideVisible: true, SkipButtonVisible: true } && f.Coordinator.HasGuideSkipAuthorization,
+                "the navigation target guide offers its skip");
+            var window = f.Window!;
+            f.Game.Activate();
+            await UntilAsync(() => GetForegroundWindow() == f.GameHandle && GetForegroundWindow() != Handle(window),
+                "the controlled game holds the foreground while the guide stays visible");
+            var pending = f.Core.DeferNext("routePlanning:skip");
+            // 原生钩子转交的按下/松开：窗口不是前台窗口，也必须开始计时。
+            f.Core.Emit(new { type = "markerGuideSkip", down = true, profileId = "local" });
+            await UntilAsync(() => window.SkipHoldVisible, "a forwarded skip press starts the hold without window focus");
+            f.Core.Emit(new { type = "markerGuideSkip", down = false, profileId = "local" });
+            await SettleAsync();
+            Check(f.Core.Commands.Count(command => command.Operation == "routePlanning:skip") == 0,
+                "a short forwarded press submits nothing");
+            f.Core.Emit(new { type = "markerGuideSkip", down = true, profileId = "local" });
+            var command = await pending.Seen.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Check(command.GetProperty("key").GetString() == "8:" + A.PointId &&
+                command.GetProperty("routeId").GetString() == "test-route",
+                "holding the forwarded key for 0.6 seconds submits the authorised target");
+            pending.Reply.SetResult(JsonSerializer.SerializeToElement(f.Core.RoutePlanning));
+            await UntilAsync(() => Hidden(f), "the accepted skip closes the guide");
+        }, log);
+
+        await CaseAsync("old completion acknowledgement and events cannot close B", async f =>        {
             await f.Coordinator.ShowAsync(A);
             var request = f.Core.DeferNext("markerSetCompletion");
             Task saving = f.Window!.CompleteCurrentAsync();
@@ -582,6 +628,9 @@ internal static class GuideWindowTests
         internal MarkerGuideCoordinator Coordinator { get; }
         internal MarkerGuideWindow? Window => Read<MarkerGuideWindow>(Coordinator, "guide");
         internal MarkerGuideSession Session => Read<MarkerGuideSession>(Coordinator, "session") ?? throw new InvalidOperationException("Production session not found");
+        /// <summary>受控"游戏"窗口：用来把前台从攻略窗口拿走，复现"玩家在游戏里按键"的状态。</summary>
+        internal Window Game { get; } = new() { Title = "Guide hotkey controlled game", Content = new TextBlock { Text = "Controlled source; no user data" } };
+        internal nint GameHandle => WinRT.Interop.WindowNative.GetWindowHandle(Game);
         internal Fixture()
         {
             Core.AuthoritativeTarget = A;
@@ -624,8 +673,9 @@ internal static class GuideWindowTests
             }
             Core.Emit(message);
         }
-        public void Dispose() => Coordinator.Dispose();
+        public void Dispose() { Coordinator.Dispose(); Game.Close(); }
     }
+    [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
     private static extern nint GetWindowLongPtrW(nint window, int index);

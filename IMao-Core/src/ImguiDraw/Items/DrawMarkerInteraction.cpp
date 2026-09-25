@@ -8,6 +8,7 @@
 #include "../../Runtime/RouteGeometry.h"
 #include "../../Runtime/RouteViewportCandidates.h"
 #include "../../Runtime/PlanningEscapeKey.h"
+#include "../../Runtime/GuideHotkeyRouting.h"
 #include "../../Runtime/RuntimeHotkeys.h"
 #include "../../Runtime/MarkerGuideProtocol.h"
 #include "../../Runtime/LayeredMapState.h"
@@ -283,25 +284,50 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
     if (info.vkCode != VK_ESCAPE) {
         if (info.vkCode >= guideKeys.size()) return CallNextHookEx(keyboardHook, code, message, value);
         const auto bindings = RuntimeHotkeys::Snapshot();
-        const bool guideKey = bindings.currentTargetGuideKey > 0 && static_cast<int>(info.vkCode) == bindings.currentTargetGuideKey;
-        const bool completionKey = bindings.nearestCompletionKey > 0 && static_cast<int>(info.vkCode) == bindings.nearestCompletionKey;
-        const int pageDirection = bindings.guidePreviousImageKey > 0 && static_cast<int>(info.vkCode) == bindings.guidePreviousImageKey ? -1 :
-            bindings.guideNextImageKey > 0 && static_cast<int>(info.vkCode) == bindings.guideNextImageKey ? 1 : 0;
-        const auto guideWindow = down && (guideKey || completionKey || pageDirection) ? DrawItemBase::VisibleGuideWindow() : nlohmann::json::object();
+        const auto kind = AutoRoute::ClassifyGuideHotkey(bindings, static_cast<int>(info.vkCode));
+        if (kind == AutoRoute::GuideHotkeyKind::None) return CallNextHookEx(keyboardHook, code, message, value);
+        const bool guideKey = kind == AutoRoute::GuideHotkeyKind::ToggleGuide;
+        const bool skipKey = kind == AutoRoute::GuideHotkeyKind::Skip;
+        const int pageDirection = kind == AutoRoute::GuideHotkeyKind::PageBack ? -1 :
+            kind == AutoRoute::GuideHotkeyKind::PageForward ? 1 : 0;
+        // 攻略窗口的身份在"按下"和"抬起"都要用：跳过键的抬起也必须送出去，否则窗口那侧的
+        // 600 毫秒计时会一直跑下去。
+        const auto guideWindow = DrawItemBase::VisibleGuideWindow();
         const bool guideVisible = !guideWindow.empty();
         const bool guideFocused = guideVisible && GetForegroundWindow() ==
-            reinterpret_cast<HWND>(static_cast<std::uintptr_t>(guideWindow.at("hwnd").get<std::uint64_t>()));
-        const bool modifiers = (GetAsyncKeyState(VK_CONTROL) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000) ||
-            (GetAsyncKeyState(VK_SHIFT) & 0x8000) || (GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000);
+            reinterpret_cast<HWND>(static_cast<std::uintptr_t>(guideWindow.value("hwnd", std::uint64_t{0})));
         // The chooser has no identity, so its completion key must pass through.
         // Closing a visible or pending guide never requires a current route.
         const bool guideIdentity = guideVisible && guideWindow.contains("selectionGeneration") &&
             guideWindow.value("profileId", "") == DrawItemBase::MarkerProfile();
-        const bool completeGuide = completionKey && guideFocused && guideIdentity;
+        const bool modifiers = (GetAsyncKeyState(VK_CONTROL) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000) ||
+            (GetAsyncKeyState(VK_SHIFT) & 0x8000) || (GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000);
+        // 攻略窗口可见时这些键归它所有，**不要求攻略窗口是前台窗口**（见 GuideHotkeyRouting.h）：
+        // 玩家在游戏里按键时窗口拿不到键盘焦点，原来那条前台判定让 Z 与 G 只有点过窗口后才生效。
+        // 开关攻略（F8）不要求窗口已存在，否则打不开任何攻略。
+        const bool owned = !modifiers && guideIdentity && AutoRoute::GuideHotkeyOwned(kind, guideVisible, guideFocused, focused);
+        if (skipKey) {
+            // 跳过键只转交"按下/松开"：按多久、算不算一次跳过都由窗口那侧决定。
+            const bool skipFirstDown = down && !guideKeys[info.vkCode].IsPressed();
+            guideKeys[info.vkCode].Handle(down, false, false, false); // 只用于跟踪自动重复
+            if (down) {
+                if (!owned) return CallNextHookEx(keyboardHook, code, message, value);
+                if (skipFirstDown && guideRequests.size() < 32)
+                    guideRequests.push_back({{"type", "markerGuideSkip"}, {"down", true},
+                        {"profileId", DrawItemBase::MarkerProfile()}});
+            } else {
+                if (!guideIdentity) return CallNextHookEx(keyboardHook, code, message, value);
+                if (guideRequests.size() < 32)
+                    guideRequests.push_back({{"type", "markerGuideSkip"}, {"down", false},
+                        {"profileId", DrawItemBase::MarkerProfile()}});
+            }
+            return 1; // 攻略窗口拥有这个键时不再传给游戏
+        }
+        const bool completeGuide = kind == AutoRoute::GuideHotkeyKind::CompleteShownPoint && owned;
         const auto pageRequest = pageDirection ? MarkerGuideProtocol::PageRequest(guideWindow, DrawItemBase::MarkerProfile(),
             focused, guideFocused, pageDirection) : nlohmann::json(nullptr);
         const bool pageGuide = !pageRequest.is_null();
-        const bool eligible = !modifiers && ((guideKey && (focused || guideFocused)) || completeGuide || pageGuide);
+        const bool eligible = !modifiers && ((guideKey && owned) || completeGuide || pageGuide);
         const bool firstDown = down && !guideKeys[info.vkCode].IsPressed();
         const auto action = guideKeys[info.vkCode].Handle(down, eligible, focused || guideFocused, false);
         if (down) RuntimeHotkeyPressOwnership::RecordKeyDown(static_cast<int>(info.vkCode), firstDown,

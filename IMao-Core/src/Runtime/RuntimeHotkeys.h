@@ -13,8 +13,9 @@ struct RuntimeHotkeyBindings {
     int guidePreviousImageKey = 33;    // PageUp
     int guideNextImageKey = 34;        // PageDown
     int toggleEnabledKey = 120;        // F9（VK_F9 = 120；118 是 F7）：启用/暂停工具（手柄对应 LB+按下RS）
-    // 攻略窗口内长按跳过当前导航目标（手柄对应长按 Y）。核心不做按键处理：攻略窗口自己
-    // 监听前台按键，这里只保存绑定、做冲突校验并把值同步给托管侧。
+    // 攻略窗口内长按跳过当前导航目标（手柄对应长按 Y）。核心不决定"按够 600 毫秒"这件事，
+    // 但**要**在攻略窗口可见时把按下/松开转交给托管层：玩家在游戏里按这个键时，攻略窗口
+    // 拿不到键盘焦点（见 GuideHotkeyRouting.h），计时与提交都由窗口那侧完成。
     int guideSkipKey = 71;             // G
 };
 
