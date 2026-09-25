@@ -54,17 +54,16 @@ public sealed class MarkerGuideWindow : Window
     private bool skipping;
     private int skipHotkey = 71;
     private readonly DispatcherTimer skipTimer = new() { Interval = TimeSpan.FromMilliseconds(30) };
-    // 键盘与鼠标各自一个按住手势：两个通道独立计时，先后按下互不影响。
+    // 键盘快捷键要按住 600 毫秒（防止打字或误触推进路线）；手柄 Y 的进度由输入服务推进。
+    // 「跳过」按钮不走这条路：它是一个按钮，单击就提交——实机报告"点按钮没反应"，
+    // 因为按钮当时也在按"按住 600 毫秒"判定，点一下只闪一下进度条。
     private readonly GuideSkipHoldGesture keyboardSkipGesture = new();
-    private readonly GuideSkipHoldGesture pointerSkipGesture = new();
     private bool keyboardSkipHeld;
-    private bool pointerSkipHeld;
     // 这一轮按键已经算过一次起始（含自动重复消息），必须等抬起才重新开始。
     private bool keyboardSkipHandled;
     // 资格短暂失效（切到图片页、路线状态变化）时挂起，而不是假装玩家松了手：
-    // 手还按着就把计时重新从 0 开始，避免跨失效期累计时间凑满 600 毫秒。
+    // 手还按着就把计时重新从 0 开始，避免跨失效期累计耗时凑满 600 毫秒。
     private bool pendingKeyboardSkip;
-    private bool pendingPointerSkip;
     // 手柄 Y 的进度由输入服务推进，这里只负责显示；null 表示当前没有手柄按住。
     private GamepadAction? gamepadSkipHoldAction;
     private string lastSkipDiagnostic = string.Empty;
@@ -98,29 +97,28 @@ public sealed class MarkerGuideWindow : Window
     /// 把前台塞进这里会让长按 Y 永远无效）。
     /// </summary>
     internal bool CanSkip => skipAvailable && IsGuideVisible && !imageVisible && selected?.Completed == false && !skipping;
-    /// <summary>键鼠通道还需要窗口是前台窗口，键盘事件与鼠标点击都只送到前台窗口。</summary>
-    internal bool CanSkipFromKeyboardOrPointer => CanSkip && IsGuideForeground();
     /// <summary>测试与协调器读取按钮文案，确保它一直写着当前实际绑定的键。</summary>
     internal string SkipButtonText => skip.Content as string ?? string.Empty;
     /// <summary>跳过按住发生状态变化时回调一次，供协调器写出诊断（同状态不重复上报）。</summary>
     internal Action<string>? SkipDiagnostic { get; set; }
-    /// <summary>柄/键位两条跳过输入的状态快照，用于诊断输出。</summary>
+    /// <summary>跳过输入通道的状态快照，用于诊断输出。</summary>
     internal string SkipInputSnapshot =>
         $"canSkip={CanSkip} avail={skipAvailable} visible={IsGuideVisible} image={imageVisible} fg={IsGuideForeground()} " +
-        $"completed={selected?.Completed} skipping={skipping} kb={keyboardSkipHeld} ptr={pointerSkipHeld} gs={gamepadSkipHoldAction}";
+        $"completed={selected?.Completed} skipping={skipping} kb={keyboardSkipHeld} gs={gamepadSkipHoldAction}";
     /// <summary>跳过入口是否可见/可用，测试用它断言"只有当前导航目标提供跳过"。</summary>
     internal bool SkipButtonVisible => skip.Visibility == Visibility.Visible;
     internal bool SkipButtonEnabled => skip.IsEnabled;
-    /// <summary>键鼠按住的进度条是否正在显示，测试用它断言"显示进度即代表开始计时"。</summary>
+    /// <summary>键盘按住（快捷键或原生转交的按下）的进度条是否正在显示。</summary>
     internal bool SkipHoldVisible => skipHold.Visibility == Visibility.Visible;
-    /// <summary>模拟一次指南窗口内的跳过键按下，用于真实窗口的接线测试。</summary>
-    internal void PressSkipHotkeyForTest() => RootKeyDown(skipHotkey);
-    /// <summary>模拟一次跳过键抬起。</summary>
-    internal void ReleaseSkipHotkeyForTest() => RootKeyUp(skipHotkey);
-    /// <summary>模拟一次"跳过"按钮上的鼠标按住。</summary>
-    internal void PressSkipButtonForTest() => BeginPointerSkipHold();
-    /// <summary>模拟一次"跳过"按钮上的鼠标松开。</summary>
-    internal void ReleaseSkipButtonForTest() => EndPointerSkipHold();
+    /// <summary>
+    /// 按下跳过快捷键。攻略窗口自己收到键盘事件时直接调用；玩家在游戏里按键、窗口不是前台窗口时
+    /// 由原生钩子转交（协调器从 markerGuideSkip 事件调进来）。
+    /// </summary>
+    internal void PressSkipHotkey() => RootKeyDown(skipHotkey);
+    /// <summary>松开跳过快捷键，与 <see cref="PressSkipHotkey"/> 配对。</summary>
+    internal void ReleaseSkipHotkey() => RootKeyUp(skipHotkey);
+    /// <summary>「跳过」按钮的单击路径：像完成按钮一样直接提交一次跳过。</summary>
+    internal Task ClickSkipButtonAsync() => SkipCurrentAsync();
     internal string GamepadViewToken => $"{generation}:{pictureIndex}:{(imageVisible ? "image" : "detail")}";
     internal Func<long, Task>? ContentDismiss { get; set; }
 
@@ -220,17 +218,8 @@ public sealed class MarkerGuideWindow : Window
             CancelSkipHold();
         };
         skipTimer.Tick += (_, _) => TickSkipHold();
-        skip.PointerPressed += (_, e) =>
-        {
-            if (!e.GetCurrentPoint(skip).Properties.IsLeftButtonPressed) return;
-            if (BeginPointerSkipHold()) { skip.CapturePointer(e.Pointer); e.Handled = true; }
-        };
-        skip.PointerReleased += (_, e) =>
-        {
-            skip.ReleasePointerCapture(e.Pointer);
-            if (EndPointerSkipHold()) e.Handled = true;
-        };
-        skip.PointerCaptureLost += (_, _) => EndPointerSkipHold();
+        // 「跳过」按钮就是按钮：单击提交一次跳过。按住 600 毫秒只约束键盘快捷键与手柄 Y。
+        skip.Click += async (_, _) => await ClickSkipButtonAsync();
         AppWindow.Resize(new SizeInt32(440, 660));
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
@@ -526,7 +515,7 @@ public sealed class MarkerGuideWindow : Window
         // 于是值归零了、可见性却留在 Visible —— 表现就是松手后进度条不消失。
         skipHold.Value = action == GamepadAction.SkipGuideStop ? progress : 0;
         skipHold.Visibility = CanSkip && skipHold.Value > 0 ? Visibility.Visible : Visibility.Collapsed;
-        if (gamepadSkipHoldAction is null && !keyboardSkipHeld && !pointerSkipHeld) skipTimer.Stop();
+        if (gamepadSkipHoldAction is null && !keyboardSkipHeld) skipTimer.Stop();
     }
 
     internal void SetGamepadStatus(string value) { if (gamepadMode && IsGuideVisible) status.Text = value; }
@@ -588,7 +577,9 @@ public sealed class MarkerGuideWindow : Window
         if (gamepadMode && key is >= 195 and <= 218) return true;
         if (gamepadMode || skipHotkey == 0 || key != skipHotkey || !CanSkip) return false;
         // 自动重复的按下消息不算新的一次按住；但资格失效后的重复消息要能重新开始。
-        if (!keyboardSkipHandled && IsGuideForeground())
+        // 这里不检查"攻略窗口是不是前台窗口"：玩家在游戏里长按这个键时窗口拿不到键盘焦点，
+        // 按下/松开由原生钩子（攻略窗口可见且有一个前台窗口）转交过来，见 PressSkipHotkey。
+        if (!keyboardSkipHandled)
         {
             keyboardSkipHandled = true;
             keyboardSkipHeld = true;
@@ -610,54 +601,23 @@ public sealed class MarkerGuideWindow : Window
         return true;
     }
 
-    /// <summary>返回 true 表示这次按下真的开始了一次跳过计时（需要捕获鼠标）。</summary>
-    private bool BeginPointerSkipHold()
-    {
-        if (!CanSkipFromKeyboardOrPointer) return false;
-        pointerSkipHeld = true;
-        ResolvePendingSkipInputs();
-        pointerSkipGesture.Begin(Environment.TickCount64, eligible: true);
-        ShowSkipHold();
-        return true;
-    }
-
-    /// <summary>返回 true 表示这次松开真的结束了本窗口的一次跳过按住。</summary>
-    private bool EndPointerSkipHold()
-    {
-        if (!pointerSkipHeld) return false;
-        pointerSkipHeld = false;
-        pointerSkipGesture.Cancel();
-        CancelSkipHoldIfIdle();
-        return true;
-    }
-
     /// <summary>
-    /// 两个输入通道各自计时，取按下更早的那个显示进度：任一通道满门槛只提交一次。
+    /// 键盘通道独占地计时，满门槛提交一次。前台变化不再取消计时：这个通道的按下/松开已经由
+    /// 原生钩子按"攻略窗口是否可见 + 有没有前台窗口"筛选过，窗口自己再查一次前台会把
+    /// "游戏在前台、玩家在游戏里按键"这种正常情况直接判掉。
     /// </summary>
     private void TickSkipHold()
     {
         if (!CanSkip)
         { RevokeSkipHold(); ReportSkipState("revoked"); return; }
-        // 前台只约束键鼠通道：手柄 Y 由输入服务按自己的上下文分发，攻略窗口不必是前台窗口。
-        if ((keyboardSkipHeld || pointerSkipHeld) && !IsGuideForeground())
-        {
-            if (keyboardSkipHeld) { keyboardSkipGesture.Cancel(); pendingKeyboardSkip = true; keyboardSkipHeld = false; }
-            if (pointerSkipHeld) { pointerSkipGesture.Cancel(); pendingPointerSkip = true; pointerSkipHeld = false; }
-            if (gamepadSkipHoldAction is null) { skipTimer.Stop(); skipHold.Value = 0; skipHold.Visibility = Visibility.Collapsed; }
-            ReportSkipState("lost-foreground");
-            return;
-        }
         ResolvePendingSkipInputs();
-        if (!keyboardSkipHeld && !pointerSkipHeld && gamepadSkipHoldAction is null)
+        if (!keyboardSkipHeld && gamepadSkipHoldAction is null)
         { CancelSkipHold(); ReportSkipState("idle"); return; }
         var now = Environment.TickCount64;
         var keyboard = 0.0;
-        var pointer = 0.0;
         var keyboardDone = false;
-        var pointerDone = false;
         if (keyboardSkipHeld) keyboard = keyboardSkipGesture.Update(now, eligible: true, out keyboardDone);
-        if (pointerSkipHeld) pointer = pointerSkipGesture.Update(now, eligible: true, out pointerDone);
-        if (keyboardDone || pointerDone)
+        if (keyboardDone)
         {
             ResetSkipInputs();
             CancelSkipHold();
@@ -666,10 +626,9 @@ public sealed class MarkerGuideWindow : Window
             _ = SkipCurrentAsync();
             return;
         }
-        var progress = Math.Max(keyboard, pointer);
-        if (progress > 0 && gamepadSkipHoldAction is null)
+        if (keyboard > 0 && gamepadSkipHoldAction is null)
         {
-            skipHold.Value = progress;
+            skipHold.Value = keyboard;
             skipHold.Visibility = Visibility.Visible;
         }
     }
@@ -681,50 +640,45 @@ public sealed class MarkerGuideWindow : Window
         skipTimer.Start();
     }
 
-    /// <summary>资格消失或窗口不再前台：取消这一次按住，但手还按着就标记成"挂起"。</summary>
+    /// <summary>资格消失：取消这一次按住，但手还按着就标记成"挂起"。</summary>
     private void RevokeSkipHold()
     {
         if (keyboardSkipHeld) { keyboardSkipGesture.Cancel(); pendingKeyboardSkip = true; }
-        if (pointerSkipHeld) { pointerSkipGesture.Cancel(); pendingPointerSkip = true; }
         gamepadSkipHoldAction = null;
         skipTimer.Stop();
         skipHold.Value = 0;
         skipHold.Visibility = Visibility.Collapsed;
     }
 
-    /// <summary>把挂起的通道重新起算，保证 600 毫秒只统计"资格有效且窗口前台"的时间。</summary>
+    /// <summary>把挂起的通道重新起算，保证 600 毫秒只统计"资格有效"的时间。</summary>
     private void ResolvePendingSkipInputs()
     {
-        var now = Environment.TickCount64;
-        if (pendingKeyboardSkip) { pendingKeyboardSkip = false; keyboardSkipGesture.Begin(now, eligible: keyboardSkipHeld); }
-        if (pendingPointerSkip) { pendingPointerSkip = false; pointerSkipGesture.Begin(now, eligible: pointerSkipHeld); }
+        if (pendingKeyboardSkip) { pendingKeyboardSkip = false; keyboardSkipGesture.Begin(Environment.TickCount64, eligible: keyboardSkipHeld); }
     }
 
     /// <summary>放弃正在进行的按住，但保留"手还按着"的通道状态（资格恢复后可以接着计时）。</summary>
     private void CancelSkipHold()
     {
         keyboardSkipGesture.Cancel();
-        pointerSkipGesture.Cancel();
-        pendingKeyboardSkip = pendingPointerSkip = false;
+        pendingKeyboardSkip = false;
         gamepadSkipHoldAction = null;
         skipTimer.Stop();
         skipHold.Value = 0;
         skipHold.Visibility = Visibility.Collapsed;
     }
 
-    /// <summary>松开一只手时调用：还有别的通道按着就继续计时，否则收起进度。</summary>
+    /// <summary>松开跳过键时调用：键盘通道已经结束就收起进度。</summary>
     private void CancelSkipHoldIfIdle()
     {
-        if (keyboardSkipHeld || pointerSkipHeld) return;
+        if (keyboardSkipHeld) return;
         CancelSkipHold();
     }
 
     private void ResetSkipInputs()
     {
-        keyboardSkipHeld = pointerSkipHeld = keyboardSkipHandled = false;
-        pendingKeyboardSkip = pendingPointerSkip = false;
+        keyboardSkipHeld = keyboardSkipHandled = false;
+        pendingKeyboardSkip = false;
         keyboardSkipGesture.Cancel();
-        pointerSkipGesture.Cancel();
     }
 
     /// <summary>只在状态串变化时上报一次，避免 30 毫秒一次的计时器刷爆诊断日志。</summary>
@@ -732,7 +686,7 @@ public sealed class MarkerGuideWindow : Window
     {
         if (SkipDiagnostic is not { } report) return;
         var state = $"{stage}|avail={skipAvailable}|visible={IsGuideVisible}|image={imageVisible}|" +
-            $"fg={IsGuideForeground()}|kb={keyboardSkipHeld}|ptr={pointerSkipHeld}|gs={gamepadSkipHoldAction}";
+            $"fg={IsGuideForeground()}|kb={keyboardSkipHeld}|gs={gamepadSkipHoldAction}";
         if (state == lastSkipDiagnostic) return;
         lastSkipDiagnostic = state;
         report(state);

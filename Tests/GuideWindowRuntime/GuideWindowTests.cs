@@ -38,6 +38,16 @@ internal static class GuideWindowTests
             Check(window.SkipButtonEnabled && window.SkipButtonText == "跳过",
                 $"the skip entry stays a short label (text={window.SkipButtonText})");
 
+            // 「跳过」是一个按钮：单击直接提交一次，不需要按住 600 毫秒（实机报告"点按钮没反应"，
+            // 因为按钮当时也被按 600 毫秒的按住判定拦下了）。
+            var clickPending = f.Core.DeferNext("routePlanning:skip");
+            Invoke(Read<Button>(window, "skip")!);
+            var clicked = await clickPending.Seen.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Check(clicked.GetProperty("key").GetString() == "8:" + A.PointId && !window.SkipHoldVisible,
+                "a mouse click on the skip button submits the authorised target straight away");
+            clickPending.Reply.SetResult(JsonSerializer.SerializeToElement(f.Core.RoutePlanning));
+            await UntilAsync(() => Hidden(f), "the clicked skip closes the guide");
+
             // 同一路线上的另一个点位：当前导航目标仍然是 A，所以展示 B 时不该出现跳过入口。
             // 这里不能像以前那样把 AuthoritativeTarget 改成 B：它代表"原生核心当前导航的目标"
             // （markerGetRouteGuide 答复里的 selection 就是它），改成 B 等于宣称 B 才是目标，
@@ -54,13 +64,14 @@ internal static class GuideWindowTests
                 f.Coordinator.HasGuideSkipAuthorization, "returning to the navigation target restores the skip entry");
             window = f.Window!;
             var pending = f.Core.DeferNext("routePlanning:skip");
-            window.PressSkipHotkeyForTest();
+            var submitted = f.Core.Commands.Count(command => command.Operation == "routePlanning:skip");
+            window.PressSkipHotkey();
             Check(window.SkipHoldVisible, "pressing the configured key starts the visible hold progress");
-            window.ReleaseSkipHotkeyForTest();
+            window.ReleaseSkipHotkey();
             await SettleAsync();
-            Check(f.Core.Commands.Count(command => command.Operation == "routePlanning:skip") == 0,
+            Check(f.Core.Commands.Count(command => command.Operation == "routePlanning:skip") == submitted,
                 "releasing before 0.6 seconds never submits a skip");
-            window.PressSkipHotkeyForTest();
+            window.PressSkipHotkey();
             var command = await pending.Seen.Task.WaitAsync(TimeSpan.FromSeconds(5));
             Check(command.GetProperty("key").GetString() == "8:" + A.PointId &&
                 command.GetProperty("routeId").GetString() == "test-route",
