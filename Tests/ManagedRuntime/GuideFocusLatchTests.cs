@@ -34,20 +34,31 @@ internal static class GuideFocusLatchTests
             !others.Observe(GamepadButtons.LB) && !others.Observe(GamepadButtons.None),
             "menu, right-stick click, shoulder buttons and neutral are not the focus switch");
 
-        // 被动攻略里 LB/RB 这两个"呼出攻略的入口"保留可用（大地图按 LB 打开工具台，
-        // 再按同一入口就是关掉攻略），同样只认上升沿。
-        var entry = new GamepadEntryLatch();
-        check(!entry.Observe(GamepadButtons.None) && !entry.Observe(GamepadButtons.A),
-            "only LB and RB are the passive guide entry keys");
-        check(entry.Observe(GamepadButtons.LB), "pressing LB asks for the map tools entry once");
-        check(!entry.Observe(GamepadButtons.LB), "holding LB does not ask again");
-        check(!entry.Observe(GamepadButtons.None) && entry.Observe(GamepadButtons.RB),
-            "releasing and pressing the other entry asks again");
-        check(!entry.Observe(GamepadButtons.RB | GamepadButtons.A),
-            "holding RB with another button down does not ask again");
-        entry.Prime(GamepadButtons.RB);
-        check(!entry.Observe(GamepadButtons.RB), "a baseline taken while the entry is already held does not spend it");
-        check(!entry.Observe(GamepadButtons.None) && entry.Observe(GamepadButtons.RB),
-            "after that baseline a fresh press asks again");
+        // 被动攻略里"单独按一下 LB"= 收起攻略。组合键（LB+X 那套世界快捷键）不算，
+        // 否则会"刚被这里关掉、又被组合键打开"。
+        var tap = new GuideDismissTapLatch();
+        check(!tap.Observe(GamepadButtons.None) && !tap.Observe(GamepadButtons.RB) && !tap.Observe(GamepadButtons.A),
+            "only a plain LB press can dismiss the passive guide");
+        check(!tap.Observe(GamepadButtons.LB), "pressing LB arms the dismiss without firing yet");
+        check(!tap.Observe(GamepadButtons.LB), "holding LB does not dismiss the guide");
+        check(tap.Observe(GamepadButtons.None), "releasing LB alone dismisses the guide once");
+        check(!tap.Observe(GamepadButtons.None), "the release is not reported twice");
+
+        var chord = new GuideDismissTapLatch();
+        chord.Observe(GamepadButtons.LB);
+        check(!chord.Observe(GamepadButtons.LB | GamepadButtons.X) && !chord.Observe(GamepadButtons.X) &&
+            !chord.Observe(GamepadButtons.None),
+            "LB+X is the world shortcut's job, not a dismiss tap");
+        check(!chord.Observe(GamepadButtons.LB) && chord.Observe(GamepadButtons.None),
+            "after the cancelled chord a fresh plain tap dismisses again");
+
+        // 攻略打开时已经按着 LB：取基线后必须先松开再按，不能把开窗那次按住算成收起。
+        // （取基线的语义也由 Reset 表达：此刻按着的不算一次。）
+        var tapPrimed = new GuideDismissTapLatch();
+        tapPrimed.Observe(GamepadButtons.LB);
+        tapPrimed.Reset();
+        check(!tapPrimed.Observe(GamepadButtons.None), "a baseline taken while LB is held does not dismiss on its release");
+        check(!tapPrimed.Observe(GamepadButtons.LB) && tapPrimed.Observe(GamepadButtons.None),
+            "a fresh press and release still dismisses after that baseline");
     }
 }

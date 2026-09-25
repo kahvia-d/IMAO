@@ -24,8 +24,8 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
     // 手柄开出的攻略窗口与游戏之间用 LS 切换聚焦。这个闩锁同样在状态机之外：默认聚焦在游戏时
     // 那段手柄输入根本不走状态机，而切换也不该被"请先松开按键"之类的等待挡住。
     private readonly GuideFocusToggleLatch guideFocusToggle = new();
-    // 被动攻略里 LB/RB 这两个入口键同样只看上升沿。
-    private readonly GamepadEntryLatch passiveEntry = new();
+    // 被动攻略里"单独按一下 LB"收起攻略；同样只看原始样本，不走状态机。
+    private readonly GuideDismissTapLatch dismissTap = new();
     private bool guideFocusOwned;
     private int configuredDevice = -1;
     private string message = "手柄适配已关闭";
@@ -265,7 +265,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             {
                 guideFocusOwned = guides.IsStandaloneGamepadGuideOpen;
                 guideFocusToggle.Prime(sample.Buttons);
-                passiveEntry.Prime(sample.Buttons);
+                dismissTap.Reset();
             }
             var focusFired = guideFocusOwned && guideFocusToggle.Observe(sample.Buttons);
             if (focusFired && !guides.IsGamepadReturnPending)
@@ -276,17 +276,18 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                 return;
             }
             // 攻略窗口开着但聚焦在游戏上：这段输入基本留给游戏，我们不解释、不产生动作，
-            // 也不因为"窗口不是前台"就停掉会话（LS 才是一键切换的路）。
-            // 只有两组键例外：LS 切换聚焦（上面），以及 LB/RB 这两个"呼出攻略的入口"——
-            // 大地图里按 LB 打开工具台、再按一次同一个「当前目标攻略」就能把攻略收回去，
-            // 也就是"用同一套入口开关"。其余按键（含 A/B/X/Y）完全不碰。
+            // 也不因为"窗口不是前台"就停掉会话（LS 才是切换聚焦的路）。
+            // 只有两个键例外：LS 切换聚焦（上面），以及"单独按一下 LB"收起这份攻略——
+            // 大地图上 LB 是打开工具台，攻略开着时它归攻略窗口，工具台保持只在大地图出现
+            // （否则它会弹在攻略上面闪一下又自己关掉，实机反馈）。
+            // 其余按键（含 A/B/X/Y/RB）完全不碰；LB+X 那种组合交给原生按世界快捷键处理。
             if (context.Mode == GamepadInputMode.GuidePassive)
             {
                 input.Reset();
                 Diagnose(gate + "/guide-passive");
-                SetMessage("攻略已打开 · LS 切换到攻略窗口 · LB 工具台");
-                if (sample.AxesNeutral && passiveEntry.Observe(sample.Buttons))
-                    _ = DispatchAsync((sample.Buttons & GamepadButtons.LB) != 0 ? GamepadAction.OpenToolbar : GamepadAction.OpenAssistant);
+                SetMessage("攻略已打开 · LS 切换聚焦 · 单击 LB 收起攻略");
+                if (dismissTap.Observe(sample.Buttons))
+                    _ = DispatchAsync(GamepadAction.CloseGuide);
                 return;
             }
             var update = input.Update(sample, context, now);

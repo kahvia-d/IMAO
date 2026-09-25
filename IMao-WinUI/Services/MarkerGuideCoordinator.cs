@@ -253,8 +253,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
             return;
         }
         // LS 的聚焦切换必须在上下文判定之前处理：手柄归游戏时上下文是 GuidePassive，
-        // 那正是需要切换的时刻。
+        // 那正是需要切换的时刻。LB 单击的"收起攻略"同理。
         if (action == GamepadAction.ToggleGuideFocus) { await ToggleGuideFocusAsync(); return; }
+        if (action == GamepadAction.CloseGuide) { await CloseStandaloneGuideAsync(); return; }
         var context = GetGamepadInputContext();
         if (context.Mode == GamepadInputMode.Disabled) return;
         if (chooserGamepad && chooser is { } choices && IsForeground(choices))
@@ -356,6 +357,24 @@ public sealed class MarkerGuideCoordinator : IDisposable
     /// - 游戏在前台 → 激活攻略窗口，这时手柄才操作攻略（A/B/翻页/长按 A 完成/长按 Y 跳过）。
     /// 前台既不是游戏也不是攻略窗口（玩家切去了别的程序）时什么都不做，不抢别人的焦点。
     /// </summary>
+    /// <summary>
+    /// 被动攻略里单击 LB：收起这份攻略。大地图上的 LB 是打开工具台，两者不冲突——
+    /// 攻略开着时这个键归攻略窗口，工具台保持只在大地图出现。
+    /// </summary>
+    private async Task CloseStandaloneGuideAsync()
+    {
+        if (!IsStandaloneGamepadGuideOpen || guide is not { IsGuideVisible: true } window)
+        {
+            core.ReportGamepadDiagnostic("guide-shortcut",
+                $"source=gamepad action=close-ignored open={IsStandaloneGamepadGuideOpen} visible={guide?.IsGuideVisible}");
+            return;
+        }
+        core.ReportGamepadDiagnostic("guide-shortcut",
+            $"source=gamepad action=close-lb-tap foreground={GetForegroundWindow()}");
+        // 攻略窗口自己在前台时先归还前台（与 B 同一条路）；被动状态直接收。
+        await ReturnBeforeCloseAsync(window, standaloneGameIdentity, () => CloseGuide());
+    }
+
     private async Task ToggleGuideFocusAsync()
     {
         // 每个提前返回都写一条诊断：这个功能"按了没反应"时，必须能一眼看出是哪一条挡住的。

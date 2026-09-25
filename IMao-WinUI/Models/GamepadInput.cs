@@ -12,6 +12,8 @@ public enum GamepadAction
     OpenToolbar, CompleteCurrent, ToggleGuide, SkipGuideStop,
     // 手柄开出的攻略窗口与游戏之间切换聚焦（LS 单击）。
     ToggleGuideFocus,
+    // 攻略开着时单击 LB：收起这份攻略（大地图上的 LB 工具台入口只在大地图生效）。
+    CloseGuide,
     // The nearby completion list: hold to collect every listed point; the guide detail
     // page: one press enlarges the picture; the enlarged picture: trigger zoom.
     CompleteAll, ExpandImage, ZoomIn, ZoomOut
@@ -73,28 +75,28 @@ public sealed class GuideFocusToggleLatch
 }
 
 /// <summary>
-/// 被动攻略（窗口开着、但手柄归游戏）里保留下来的两个入口键：LB 大地图工具台、RB 点位助手。
-/// 只认上升沿：按住不放不会反复打开，松开后再按才算下一次。
+/// 被动攻略（窗口开着、手柄归游戏）里"按一下 LB"= 收起这份攻略。
 ///
-/// 保留它们是为了"用同一套入口把攻略收回去"：大地图里按 LB 打开工具台，
-/// 再按一次同一个「当前目标攻略」就是关掉这份攻略。
+/// 只认"单独按 LB 再松开"：中途按下别的键（典型是 LB+X 那套世界组合键）就作废，交给原生那条
+/// 世界快捷键去开关——否则会出现"刚被这里关掉、又被组合键打开"的闪烁。
+///
+/// 大地图上 LB 本来是打开工具台；攻略开着时这个键归攻略窗口，工具台因此保持"只在大地图出现"，
+/// 不会在攻略上面一闪而过（实机反馈）。
 /// </summary>
-public sealed class GamepadEntryLatch
+public sealed class GuideDismissTapLatch
 {
-    public const GamepadButtons Buttons = GamepadButtons.LB | GamepadButtons.RB;
+    private bool pressed;
 
-    private GamepadButtons seen;
+    /// <summary>取基线：此刻已经按着的 LB 不算一次，必须重新按一次。</summary>
+    public void Reset() => pressed = false;
 
-    /// <summary>把当前按键状态当作基线：已经按着的入口不算一次，必须先松开再按。</summary>
-    public void Prime(GamepadButtons buttons) => seen = buttons & Buttons;
-
-    /// <summary>返回 true 表示"这一刻刚按下 LB 或 RB"，调用方应当执行那个入口。</summary>
+    /// <summary>返回 true 表示"单独按下的 LB 刚被松开"，调用方应当收起攻略。</summary>
     public bool Observe(GamepadButtons buttons)
     {
-        var entry = buttons & Buttons;
-        var fired = entry != GamepadButtons.None && entry != seen;
-        seen = entry;
-        return fired;
+        if (buttons == GamepadButtons.LB) { pressed = true; return false; }
+        if (buttons == GamepadButtons.None) { var fired = pressed; pressed = false; return fired; }
+        pressed = false; // 组合键或别的键：这次不算"单独按一下 LB"
+        return false;
     }
 }
 

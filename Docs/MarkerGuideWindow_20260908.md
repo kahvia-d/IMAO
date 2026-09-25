@@ -62,25 +62,31 @@
 | 手柄开出的攻略（大世界 LB+X 的路线回退、大地图工具条「当前目标攻略」、「附近点位」选择列表里选中的那个点） | **窗口置顶显示但不激活**，前台交还游戏：可以继续用手柄玩，攻略就在旁边看 |
 | 想操作攻略窗口 | 按 **LS（左摇杆按下）**：把前台切到攻略窗口，这时 A/B/翻页/长按 A 完成/长按 Y 跳过才作用于攻略 |
 | 想接着玩 | 再按一次 LS：把前台交还游戏，**攻略继续显示**（不关闭）。放大看图也会随之一并收起，免得单独悬在游戏上方 |
-| 想关掉攻略 | 按**同一个呼出入口**：大世界再按一次 LB+X；大地图按 LB 打开工具台、再按一次同一个「当前目标攻略」（被动状态下 LB/RB 仍然放行，否则玩家没有任何入口能把攻略收回去）。也可以 LS 切到攻略窗口后按 B |
+| 想关掉攻略 | **单击 LB**：攻略开着时这个键归攻略窗口，按一下（单独按、不带别的键）就收起攻略。大世界里的 **LB+X** 同一条世界快捷键也是开关（原生判定）。也可以 LS 切到攻略窗口后按 B |
+| 大地图工具台的 LB 入口 | 保持"只在大地图出现"：攻略开着时不接管这个键，不会弹在攻略上面 |
 | 从 RB 助手列表里打开的攻略 | 保持原有激活行为：那份窗口属于助手会话（列表里的 B 要能回到列表），是玩家主动进菜单浏览的路径 |
 | 前台既不是游戏也不是攻略（玩家切去别的程序） | LS 什么都不做，不抢别人的焦点 |
 
 > 2026-09-25 第二次修正：上一版按"源窗口是不是游戏窗口"区分，于是**大地图工具条那条路仍然抢前台**
 > （实机日志里 `guide-focus opened-focused` × 5，39 次手柄呼出全部带 route，都是工具条入口）。
 > 现在手柄开出的攻略一律被动；只有 RB 助手会话内打开的攻略保持激活。
+>
+> 2026-09-25 第三次修正：上一版在被动状态下放行 LB/RB，想用"同一个入口"把攻略收回去，
+> 结果实机按 LB 弹出了**本该只在大地图出现的工具台**，而且一闪而过（它要求大地图/前台，
+> 下一个 50 毫秒的定时器就把自己关了）。现在把两个触发分开：**攻略开着时 LB 是攻略自己的收起键**
+> （只认"单独按一下 LB 再松开"），工具台回到只在大地图出现；LB+X 那套世界组合键交给原生。
 
 **实现要点**：
 
 - "这段手柄输入归谁"只看"攻略窗口是不是前台窗口"（`MarkerGuideCoordinator.GetGamepadInputContext`）：
   是前台 → `Detail`/`Image`（攻略导航、完成、跳过全部启用）；不是前台 → 新增的
-  `GamepadInputMode.GuidePassive`：这段输入留给游戏，只保留两组键——
-  **LS**（切换聚焦）与 **LB/RB**（这两个是"呼出攻略的入口"，要让玩家能用同一入口把攻略收回去），
-  其余（含 A/B/X/Y）完全不碰。
+  `GamepadInputMode.GuidePassive`：这段输入留给游戏，只保留两个键——
+  **LS**（切换聚焦）与**单独单击 LB**（收起这份攻略），其余（含 A/B/X/Y/RB）完全不碰。
 - LS 的按下检测放在输入状态机**之外**（`GamepadInputService` 里的 `GuideFocusToggleLatch`）：
   被动模式下这段输入不走状态机，而这个切换也不该被"请先松开按键"之类的等待挡住。
-  LB/RB 同样只认上升沿（`GamepadEntryLatch`）。
-- 攻略一打开就先取一次基线（`Prime`）——玩家握着 LS 或 LB 按出攻略时不该白送一次切换/入口。
+  LB 的收起同样是原始样本上的边沿/单击判定（`GuideDismissTapLatch`）：**只认"单独按 LB 再松开"**，
+  中途按下别的键（典型是 LB+X）就作废并交回给原生那条世界快捷键——否则会出现"刚被这里关掉、
+  又被组合键打开"的闪烁。两个闩锁都在攻略一打开时取一次基线，玩家已经按着的键不算一次。
 - 打开时不激活窗口，并把前台交还游戏：工具条那条路由它自己的交接归还，选择列表那条路
   由 `ReturnFocusToGameAsync` 归还（否则窗口一关，玩家会被留在一个已经不存在的菜单上）。
 - 关闭用同一入口：原生在"这次是攻略意图 + 手柄 + 已有一份同档案的可见攻略窗口"时不再查附近点位，
@@ -94,14 +100,16 @@
 等组合，边沿语义与用例在 `Tests/ManagedRuntime/GuideFocusLatchTests.cs`。键鼠那条线不受影响：
 Z 与 G 只要"攻略可见 + 游戏或攻略窗口在前台"就生效，不需要先点窗口。
 
-**证据**：`GuideWindowRuntime.exe --test-route-controller`（7 例全过）里的
+**证据**：`GuideWindowRuntime.exe --test-route-controller`（8 例全过）里的
 「standalone gamepad guide keeps the game focused and LS toggles focus」、
 「the same gamepad shortcut closes the guide it opened」、
+「a plain LB tap dismisses the passive guide instead of opening the toolbar」、
 「toolbar handoff shows the guide passively and its own entry closes it again」在真实窗口上验证：
 呼出后前台仍在游戏、`GuidePassive` 不吃 A 键；LS 切到攻略窗口后翻页生效；再按 LS 前台回到游戏且攻略
-仍然可见；同一入口再按一次即关闭；工具条交接后前台在游戏而不是攻略窗口。
-另有纯模型用例 `Tests/ManagedRuntime/GuideFocusLatchTests.cs`（LS 与 LB/RB 各自：按住只算一次、
-松开再按才算下一次、开窗时已按住不算）。
+仍然可见；单击 LB 收起攻略且**不会**弹出工具台；按住 LB 再补 X 不会被当成"单击 LB"；同一入口再按一次
+（`markerGuideShortcut`）也能关闭；工具条交接后前台在游戏而不是攻略窗口。
+另有纯模型用例 `Tests/ManagedRuntime/GuideFocusLatchTests.cs`（LS 与 LB 单击各自：按住只算一次、
+松开再按才算下一次、组合键不算单击、开窗时已按住不算一次）。
 
 ## 尚未做的游戏内验收
 

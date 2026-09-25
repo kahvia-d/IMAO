@@ -236,6 +236,42 @@ internal static class RouteControllerTests
                 "closing from the shortcut returns to the game and completes nothing");
         }, log);
 
+        await CaseAsync("a plain LB tap dismisses the passive guide instead of opening the toolbar", async fixture =>
+        {
+            fixture.Core.GamepadContext = fixture.GameplayContext;
+            var sample = new GamepadSample(true, 0, GamepadButtons.None);
+            using var service = new GamepadInputService(fixture.Core, fixture.Coordinator,
+                slot => slot == 0 ? sample : new(false, slot, GamepadButtons.None));
+            await UntilAsync(() => fixture.Core.GamepadDiagnostics.Any(value => value.Contains("state=gameplay-ready/ready")),
+                "service observes the controlled gameplay context");
+            fixture.Core.Emit(new
+            {
+                type = "markerGuideShortcut", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
+                contextGeneration = 17UL, profileId = "local", routeId = fixture.Core.ActiveRouteId,
+                key = "8:" + Target.PointId, screenX = 40, screenY = 100
+            });
+            await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                "the guide is open and passive");
+
+            // LB+X 那套世界组合键不算"单击 LB"：这里按住 LB 再补 X，松开后什么都不该发生
+            // （世界组合键由原生处理，不能在这里被误解成"收起又被打开"）。
+            sample = sample with { Buttons = GamepadButtons.LB }; await Task.Delay(60);
+            Check(!fixture.Controller.HasHost, "holding LB over a passive guide does not open the map toolbar");
+            sample = sample with { Buttons = GamepadButtons.LB | GamepadButtons.X }; await Task.Delay(60);
+            sample = sample with { Buttons = GamepadButtons.None }; await Task.Delay(90);
+            Check(fixture.Coordinator.IsStandaloneGamepadGuideOpen && !fixture.Controller.HasHost,
+                "LB+X is left to the world shortcut and does not dismiss the guide from here");
+
+            // 单独按一下 LB 再松开：收起攻略，且**不**打开工具台。
+            sample = sample with { Buttons = GamepadButtons.LB }; await Task.Delay(60);
+            sample = sample with { Buttons = GamepadButtons.None };
+            await UntilAsync(() => !fixture.Coordinator.IsStandaloneGamepadGuideOpen,
+                "a plain LB tap dismisses the guide");
+            Check(!fixture.Controller.HasHost && !fixture.Coordinator.IsGamepadSessionOpen &&
+                GetForegroundWindow() == fixture.GameHandle,
+                "dismissing with LB never pops the map toolbar over the guide and stays on the game");
+        }, log);
+
         await CaseAsync("toolbar handoff shows the guide passively and its own entry closes it again", async fixture =>
         {
             await fixture.Controller.BeginAsync(fixture.Context, 0);
