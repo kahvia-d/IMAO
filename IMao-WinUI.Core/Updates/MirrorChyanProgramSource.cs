@@ -36,8 +36,15 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
         _progress = progress;
     }
 
+    /// <summary>
+    /// How many files the last <see cref="SupplyAsync"/> actually handed over, so the caller can describe the
+    /// transport truthfully. Zero means the mirror contributed nothing and the signed shards did the work.
+    /// </summary>
+    public int SuppliedCount { get; private set; }
+
     public async Task<IReadOnlySet<string>> SupplyAsync(ProgramPackage package, string app, CancellationToken ct)
     {
+        SuppliedCount = 0;
         var supplied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var candidates = new List<string>();
         var archive = Path.Combine(_scratchDirectory, "mirrorchyan-" + Guid.NewGuid().ToString("N") + ".zip");
@@ -70,6 +77,7 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
             _progress?.Report(new UpdateProgress("校验 Mirror酱提供的文件", 0, 0));
             await ProgramPackageValidation.ExtractEntriesAsync(app, provided, entries, ct).ConfigureAwait(false);
             foreach (var path in candidates) supplied.Add(path);
+            SuppliedCount = supplied.Count;
             return supplied;
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or HttpRequestException or TimeoutException or UnauthorizedAccessException

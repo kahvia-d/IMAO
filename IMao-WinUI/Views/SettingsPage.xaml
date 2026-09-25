@@ -7,6 +7,7 @@
                 <TextBlock Text="版本与地图资源" Style="{StaticResource IMaoSectionTitleStyle}" />
                 <TextBlock x:Name="UpdateVersions" Style="{StaticResource IMaoBodyTextStyle}" />
                 <TextBlock x:Name="UpdateLastChecked" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock x:Name="UpdateSourceLine" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <ToggleSwitch x:Name="AutomaticUpdateCheck" Header="启动后检查更新" OnContent="每天最多检查一次，由你决定安装" OffContent="仅手动检查" Toggled="AutomaticUpdateCheck_Toggled" />
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                     <Button x:Name="CheckUpdatesButton" Content="检查更新" Click="CheckUpdates_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
@@ -28,7 +29,45 @@
         </Border>
         <Border Style="{StaticResource IMaoCardStyle}">
             <StackPanel Spacing="12">
-                <TextBlock Text="更新下载源" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="更新下载源" Style="{StaticResource IMaoSectionTitleStyle}" VerticalAlignment="Center" />
+                    <!-- Each source gets a chip so a player can see at a glance which one is answering. The mark is
+                         the standard check or cancel glyph and the short word beside it says the same thing, because
+                         a lone glyph is a guess and "未填 CDK" is neither of the two. -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Border x:Name="GitHubSourceChip" CornerRadius="6" Padding="9,4" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="12" Glyph="&#xE774;" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="GitHub" FontSize="12" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
+                                <FontIcon x:Name="GitHubSourceMark" FontSize="11" VerticalAlignment="Center" />
+                                <TextBlock x:Name="GitHubSourceStatus" Text="未检测" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border x:Name="GiteeSourceChip" CornerRadius="6" Padding="9,4" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="12" Glyph="&#xE753;" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="Gitee 镜像" FontSize="12" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
+                                <FontIcon x:Name="GiteeSourceMark" FontSize="11" VerticalAlignment="Center" />
+                                <TextBlock x:Name="GiteeSourceStatus" Text="未检测" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border x:Name="MirrorSourceChip" CornerRadius="6" Padding="9,4" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="12" Glyph="&#xE896;" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="Mirror酱" FontSize="12" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
+                                <FontIcon x:Name="MirrorSourceMark" FontSize="11" VerticalAlignment="Center" />
+                                <TextBlock x:Name="MirrorSourceStatus" Text="未填 CDK" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Button x:Name="RefreshConnectivityButton" Click="RefreshConnectivity_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="9,4" ToolTipService.ToolTip="重新检测各来源的连通性">
+                            <FontIcon FontSize="12" Glyph="&#xE72C;" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
                 <TextBlock Text="GitHub 在国内常常连不上。填写 Mirror酱 的 CDK 后，程序更新会先试国内 CDN，失败再自动回退 GitHub；检查更新不受影响，没有 CDK 也能照常使用。CDK 只以加密形式保存在本机，不会写进日志、导出或崩溃报告。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                     <PasswordBox x:Name="MirrorChyanCdkBox" Width="280" PlaceholderText="粘贴 Mirror酱 CDK" PasswordRevealMode="Peek" />
@@ -37,6 +76,7 @@
                     <Button x:Name="OpenMirrorChyanButton" Content="前往 Mirror酱" Click="OpenMirrorChyan_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                 </controls:WrapPanel>
                 <TextBlock x:Name="MirrorChyanCdkState" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock x:Name="ConnectivitySummary" Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="12" />
             </StackPanel>
         </Border>
         <Border Style="{StaticResource IMaoCardStyle}">

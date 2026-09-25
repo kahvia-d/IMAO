@@ -79,9 +79,10 @@ public sealed class UpdateUiController : INotifyPropertyChanged
             }
             await updater.PrepareProgramAsync(programs!, progress, ct, plan);
             programState = programs!.ReadState();
-            Message = plan is null
-                ? "新版程序已准备完成。可以继续使用，或点击“退出并更新”。"
-                : "新版程序已准备完成（来源：Mirror酱）。可以继续使用，或点击“退出并更新”。";
+            // Named from what the transport actually was, not from whether a MirrorChyan plan existed: a plan
+            // whose package turned out unusable leaves the signed shards doing the work.
+            var origin = updater.LastProgramSource.Length > 0 ? updater.LastProgramSource : "GitHub 分片";
+            Message = $"新版程序已准备完成（来自 {origin}）。可以继续使用，或点击“退出并更新”。";
         });
     }
 
@@ -229,6 +230,48 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     {
         try { Process.Start(new ProcessStartInfo(MirrorChyanChannel.ProjectPage.AbsoluteUri) { UseShellExecute = true }); }
         catch (Exception error) { ShowError(error); }
+    }
+
+    /// <summary>
+    /// Which source answered the last check, and which transport prepared the last program update. Both come
+    /// from what actually happened rather than from what is configured: a mirror that handed over nothing
+    /// leaves the signed shards doing the work, and saying otherwise would mislead a player about where their
+    /// bytes came from.
+    /// </summary>
+    public string UpdateSourceText
+    {
+        get
+        {
+            var check = updater.LastCheckResult?.ManifestSource is { Length: > 0 } source ? "更新清单来自 " + source : "";
+            var program = updater.LastProgramSource.Length > 0 ? "程序包来自 " + updater.LastProgramSource : "";
+            return string.Join("　·　", new[] { check, program }.Where(part => part.Length > 0));
+        }
+    }
+
+    /// <summary>The last connectivity probe, empty until one has run.</summary>
+    public IReadOnlyList<SourceProbe> Connectivity { get; private set; } = [];
+    public bool ProbingConnectivity { get; private set; }
+    public DateTimeOffset? ConnectivityCheckedAt { get; private set; }
+
+    /// <summary>
+    /// Asks every source whether it can serve this installation. Deliberately outside the busy guard: probing
+    /// is a read-only question and must not disable the update buttons or take over the progress bar.
+    /// </summary>
+    public async Task RefreshConnectivityAsync()
+    {
+        if (ProbingConnectivity) return;
+        ProbingConnectivity = true; Changed();
+        try
+        {
+            Connectivity = await updater.ProbeSourcesAsync();
+            ConnectivityCheckedAt = DateTimeOffset.Now;
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            // Probing never throws by design; this is the guard for the day that stops being true.
+            Connectivity = [new SourceProbe("连通性", "检测", false, error.Message, 0)];
+        }
+        finally { ProbingConnectivity = false; Changed(); }
     }
 
     public void Cancel() => operation?.Cancel();

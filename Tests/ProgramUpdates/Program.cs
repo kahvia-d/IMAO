@@ -644,6 +644,46 @@ await Test("online program download uses signed catalog and never downloads map 
     using var updates = new UpdateService(build1, [key], snapshots, http, true);
     var check = await updates.CheckAsync(); Assert(check.AppUpdate is not null && check.Resource is null);
     await updates.PrepareProgramAsync(store); Assert(urls.SequenceEqual(new[] { UpdateService.StableUri.AbsoluteUri, package.Url }));
+    Assert(check.ManifestSource == "GitHub", "the check names the source that answered: " + check.ManifestSource);
+    Assert(updates.LastProgramSource == "GitHub 分片", "a preparation with no mirror is labelled as the shards: " + updates.LastProgramSource);
+});
+await Test("the program source label names what actually carried the bytes", async () =>
+{
+    // A whole tree from the mirror is Mirror酱; a mirror that supplies nothing leaves the signed shards doing
+    // the work, and the label has to say so rather than credit the mirror for bytes it never sent.
+    var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var bag = MirrorZip("labelled", tree);
+    const string mirrorUrl = "https://mirrorchyan.com/api/resources/download/labelled";
+    var signed = Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10));
+    async Task<string> LabelAsync(string? planUrl)
+    {
+        var store = Store();
+        var snapshots = new ResourceSnapshotService(Path.Combine(store.InstallRoot, "resource-state"),
+            new ResourceSnapshot { SnapshotId = "bundled", Bundled = true, BaselineId = shardBuild1.BaselineId, BaselineRoot = fixture, MapDataRoot = fixture },
+            shardBuild1.AppVersion, (_, _) => Task.CompletedTask);
+        await snapshots.InitializeAsync();
+        using var network = new FixtureNetwork(request => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(request.RequestUri!.AbsoluteUri switch
+            {
+                var url when url == UpdateService.StableUri.AbsoluteUri => signed,
+                var url when url == mirrorUrl => File.ReadAllBytes(bag),
+                // The shards really are served for whatever the mirror does not carry, so a missing route never
+                // stands in for the fallback the label is supposed to describe.
+                var url => File.ReadAllBytes(served[url]),
+            })
+        });
+        using var http = new HttpClient(network);
+        // The running build has to look older than the catalog, or preparing the release is refused outright.
+        using var updates = new UpdateService(shardBuild1 with { AppVersion = "2026.9.10.0" }, [key], snapshots, http, true);
+        await updates.CheckAsync();
+        var plan = planUrl is null ? null : new MirrorChyanPackage(planUrl, shardBuild1.AppVersion, "incremental", new FileInfo(bag).Length, null);
+        await updates.PrepareProgramAsync(store, ct: default, mirror: plan);
+        return updates.LastProgramSource;
+    }
+    Assert(await LabelAsync(mirrorUrl) == "Mirror酱", "a whole tree from the mirror is credited to it");
+    Assert(await LabelAsync(null) == "GitHub 分片", "without a mirror the shards carry the release");
 });
 await Test("launcher crash terminates both application and its native-style descendant", async () =>
 {

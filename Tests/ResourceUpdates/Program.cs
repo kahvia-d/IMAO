@@ -518,6 +518,66 @@ await Test("every MirrorChyan failure falls back quietly instead of throwing", a
         cdkProvider: () => "test-cdk", mirrorRetryDelay: _ => Task.CompletedTask);
     True(await transportUpdater.ResolveMirrorChyanPackageAsync(new ProgramRelease { Version = McTarget }) is null);
 });
+// ---- Source identification and connectivity --------------------------------------------------------
+await TestPure("a source has a short stable name, and an unknown host keeps its own", () =>
+{
+    Equal("GitHub", UpdateService.DescribeManifestSource(UpdateService.StableUri));
+    Equal("Gitee 镜像", UpdateService.DescribeManifestSource(UpdateService.ManifestMirrors[0]));
+    Equal("example.com", UpdateService.DescribeManifestSource(new Uri("https://example.com/stable.json")));
+});
+await Test("a check reports the source that actually answered, fallback included", async () =>
+{
+    using var f = New(); await f.Initialize();
+    f.Publish(f.Catalog(3));
+    Equal("GitHub", (await f.Updates.CheckAsync()).ManifestSource);
+    // The canonical host goes away and the mirrored envelope answers, so the player is told which one it was.
+    f.Network.Unreachable.Add(UpdateService.StableUri.AbsoluteUri);
+    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = f.Sign(f.Catalog(4));
+    var fallback = await f.Updates.CheckAsync();
+    Equal("Gitee 镜像", fallback.ManifestSource);
+    Equal(4L, fallback.Catalog!.Sequence);
+});
+await Test("connectivity probes report each source, and a missing CDK is neither pass nor fail", async () =>
+{
+    using var f = New(); await f.Initialize();
+    f.Network.Routes[UpdateService.StableUri.AbsoluteUri] = f.Sign(f.Catalog());
+    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = f.Sign(f.Catalog());
+    f.Network.Routes[MirrorChyanChannel.BuildRequestUri(null, "v" + f.Build.AppVersion).AbsoluteUri] = Encoding.UTF8.GetBytes(
+        """{"code":0,"msg":"current resource latest version is v2026.9.25.1","data":{"version_name":"v2026.9.25.1"}}""");
+    using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, new HttpClient(f.Network), true, () => f.Now, () => f.FreeBytes);
+    var probes = await updater.ProbeSourcesAsync();
+    Equal(3, probes.Count);
+    Equal("GitHub", probes[0].Name);
+    True(probes[0].Reachable == true);
+    Equal("Gitee 镜像", probes[1].Name);
+    True(probes[1].Reachable == true);
+    Equal("Mirror酱", probes[2].Name);
+    // The service answered, but without a CDK it cannot serve this installation: neither a tick nor a cross.
+    True(probes[2].Reachable is null);
+    True(probes[2].Detail.Contains("未填写 CDK"));
+});
+await Test("a CDK the service rejects is unusable rather than unknown", async () =>
+{
+    using var f = New(); await f.Initialize();
+    f.Network.Routes[UpdateService.StableUri.AbsoluteUri] = f.Sign(f.Catalog());
+    f.Network.Routes[UpdateService.ManifestMirrors[0].AbsoluteUri] = f.Sign(f.Catalog());
+    f.Network.Routes[MirrorChyanChannel.BuildRequestUri("test-cdk", "v" + f.Build.AppVersion).AbsoluteUri] = Encoding.UTF8.GetBytes(
+        """{"code":7002,"msg":"Please confirm that you have entered the correct cdkey"}""");
+    using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, new HttpClient(f.Network), true, () => f.Now, () => f.FreeBytes, cdkProvider: () => "test-cdk");
+    var probes = await updater.ProbeSourcesAsync();
+    True(probes[2].Reachable == false);
+    True(probes[2].Detail.Contains("不正确"));
+});
+await Test("an unreachable source is a probe result, never an exception", async () =>
+{
+    using var f = New(); await f.Initialize();
+    foreach (var source in new[] { UpdateService.StableUri }.Concat(UpdateService.ManifestMirrors)) f.Network.Unreachable.Add(source.AbsoluteUri);
+    using var updater = new UpdateService(f.Build, [f.Key], f.Snapshots, new HttpClient(f.Network), true, () => f.Now, () => f.FreeBytes);
+    var probes = await updater.ProbeSourcesAsync();
+    Equal(3, probes.Count);
+    True(probes.All(probe => probe.Reachable == false));
+    True(probes.All(probe => probe.Detail.Length > 0));
+});
 await Test("compatible resource choice is independent of program update", async () =>
 {
     using var f = New(); await f.Initialize(); var catalog = f.Catalog(4); var compatible = f.Catalog(2).Resources[0];

@@ -7,6 +7,7 @@ using IMao_WinUI.Core.Updates;
 using IMao_WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using System.ComponentModel;
 
 namespace IMao_WinUI.Views;
@@ -64,6 +65,9 @@ public sealed partial class SettingsPage : Page
             RenderUpdates();
             RenderKuroAutoSync();
             RestoreBindings(); RestoreRuntime();
+            // Probe once per session the first time the page is shown; after that the refresh button is the
+            // only thing that spends requests, so opening settings twice is not two rounds of network calls.
+            if (updates.ConnectivityCheckedAt is null) _ = updates.RefreshConnectivityAsync();
             _ = RestoreKuroSyncAsync();
         };
         Unloaded += (_, _) =>
@@ -86,6 +90,8 @@ public sealed partial class SettingsPage : Page
         {
             UpdateVersions.Text = $"程序 {updates.ProgramVersion}  ·  地图资源 {updates.ResourceVersion}";
             UpdateLastChecked.Text = "上次检查：" + updates.LastCheckedText;
+            UpdateSourceLine.Text = updates.UpdateSourceText;
+            UpdateSourceLine.Visibility = string.IsNullOrEmpty(updates.UpdateSourceText) ? Visibility.Collapsed : Visibility.Visible;
             AutomaticUpdateCheck.IsOn = updates.AutoCheckEnabled;
             CheckUpdatesButton.IsEnabled = ImportResourcesButton.IsEnabled = !updates.Busy;
             InstallResourcesButton.IsEnabled = !updates.Busy && updates.ResourceAvailable;
@@ -109,6 +115,7 @@ public sealed partial class SettingsPage : Page
             ResourceUpdateMessage.Severity = updates.Failed ? InfoBarSeverity.Warning : updates.HasPending ? InfoBarSeverity.Success : InfoBarSeverity.Informational;
             ResourceUpdateMessage.Message = updates.ProgramPending && !updates.Failed ? "程序更新已准备完成，可点击“退出并更新”，也可稍后重新打开。" : updates.HasPending && !updates.Failed ? "资源已准备完成，退出并重新打开软件后生效。" : updates.Message;
             RenderMirrorChyan();
+            RenderConnectivity();
             RenderRegions();
         }
         finally { restoringUpdates = false; }
@@ -510,6 +517,62 @@ public sealed partial class SettingsPage : Page
         ClearCdkButton.IsEnabled = !updates.Busy && updates.CdkConfigured;
     }
 
+    /// <summary>
+    /// Renders the three source chips from the last probe. A chip has three states, which is why a probe's
+    /// reachability is nullable: reachable, not reachable, and "the question does not apply yet" - a mirror
+    /// that answers but has no CDK configured is neither a success nor a failure.
+    /// </summary>
+    private void RenderConnectivity()
+    {
+        var probes = updates.Connectivity;
+        RenderProbe(probes.FirstOrDefault(probe => probe.Name == "GitHub"), GitHubSourceChip, GitHubSourceMark, GitHubSourceStatus);
+        RenderProbe(probes.FirstOrDefault(probe => probe.Name == "Gitee 镜像"), GiteeSourceChip, GiteeSourceMark, GiteeSourceStatus);
+        RenderProbe(probes.FirstOrDefault(probe => probe.Name == "Mirror酱"), MirrorSourceChip, MirrorSourceMark, MirrorSourceStatus);
+        RefreshConnectivityButton.IsEnabled = !updates.ProbingConnectivity;
+        ConnectivitySummary.Text = updates.ProbingConnectivity ? "正在检测各来源的连通性…"
+            : updates.ConnectivityCheckedAt is { } at
+                ? $"连通性最后检测：{at:HH:mm:ss}　·　只发探测请求，不下载任何内容"
+                : "连通性尚未检测；点右侧的刷新按钮可以随时检测。不会因此下载任何内容。";
+    }
+
+    private void RenderProbe(SourceProbe? probe, Border chip, FontIcon mark, TextBlock status)
+    {
+        if (probe is null)
+        {
+            mark.Visibility = Visibility.Collapsed;
+            ApplyChipStatus(status, "未检测", "IMaoSecondaryTextBrush");
+            ToolTipService.SetToolTip(chip, "尚未检测这个来源。");
+            return;
+        }
+        if (probe.Reachable is not bool reachable)
+        {
+            mark.Visibility = Visibility.Collapsed;
+            ApplyChipStatus(status, "未填 CDK", "IMaoSecondaryTextBrush");
+        }
+        else
+        {
+            mark.Visibility = Visibility.Visible;
+            mark.Glyph = reachable ? "\uE73E" : "\uE711";
+            mark.Foreground = ThemedBrush(reachable ? "IMaoSuccessBrush" : "IMaoDangerBrush");
+            ApplyChipStatus(status, reachable ? "可用" : "不可达", reachable ? "IMaoSuccessBrush" : "IMaoDangerBrush");
+        }
+        ToolTipService.SetToolTip(chip, $"{probe.Role}：{probe.Detail}（{probe.Milliseconds} 毫秒）");
+    }
+
+    private static void ApplyChipStatus(TextBlock status, string text, string brushKey)
+    {
+        status.Text = text;
+        status.Foreground = ThemedBrush(brushKey);
+    }
+
+    private static Brush ThemedBrush(string key) => (Brush)Application.Current.Resources[key];
+
+    private async void RefreshConnectivity_Click(object sender, RoutedEventArgs e)
+    {
+        await updates.RefreshConnectivityAsync();
+        RenderUpdates();
+    }
+
     private void SaveCdk_Click(object sender, RoutedEventArgs e)
     {
         updates.SaveCdk(MirrorChyanCdkBox.Password);
@@ -517,6 +580,9 @@ public sealed partial class SettingsPage : Page
         // it could end up in a screenshot or a crash dump.
         MirrorChyanCdkBox.Password = string.Empty;
         RenderUpdates();
+        // The Mirror酱 chip is about whether that service can serve *this* installation, so a new key changes
+        // the answer and the row is re-probed rather than left showing the old one.
+        _ = updates.RefreshConnectivityAsync();
     }
 
     private void ClearCdk_Click(object sender, RoutedEventArgs e)
@@ -524,6 +590,7 @@ public sealed partial class SettingsPage : Page
         updates.ClearCdk();
         MirrorChyanCdkBox.Password = string.Empty;
         RenderUpdates();
+        _ = updates.RefreshConnectivityAsync();
     }
 
     private void OpenMirrorChyan_Click(object sender, RoutedEventArgs e) => updates.OpenMirrorPage();

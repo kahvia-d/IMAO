@@ -1,4 +1,5 @@
 #nullable enable
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
@@ -17,7 +18,22 @@ public sealed record UpdateCheckResult
     public string Message { get; init; } = "";
     /// <summary>Non-empty when the stored anti-rollback record had to be re-synced during this check.</summary>
     public string StateNotice { get; init; } = "";
+    /// <summary>
+    /// Which configured source actually served the signed envelope. The check has several, and a player who
+    /// has been told one of them does not work deserves to see which one answered.
+    /// </summary>
+    public string ManifestSource { get; init; } = "";
 }
+
+/// <summary>
+/// Whether one update source answered, and what it said. The connectivity row on the settings page reads
+/// three of these: the signed channel's two sources and the mirror the program package can come from.
+/// </summary>
+/// <param name="Reachable">
+/// <c>true</c> when this source can serve this installation, <c>false</c> when it cannot, and <c>null</c>
+/// when the question does not apply yet - a mirror that answers but has no CDK configured is neither.
+/// </param>
+public sealed record SourceProbe(string Name, string Role, bool? Reachable, string Detail, long Milliseconds);
 
 public sealed class UpdateService : IDisposable
 {
@@ -106,7 +122,7 @@ public sealed class UpdateService : IDisposable
         AcceptCatalog(catalog, envelope);
         if (UpdateSignature.RequireVersion(catalog.App.Version) <= UpdateSignature.RequireVersion(_build.AppVersion))
             throw new InvalidOperationException("没有比当前程序更新的版本。");
-        IProgramFileSupplier? source = mirror is null ? null : new MirrorChyanProgramSource(mirror, FetchMirrorAsync,
+        var mirrorSource = mirror is null ? null : new MirrorChyanProgramSource(mirror, FetchMirrorAsync,
             Path.Combine(programs.Root, "staging", "mirror"), progress);
         await programs.PrepareAsync(envelope, async (target, output, token) =>
         {
@@ -114,9 +130,24 @@ public sealed class UpdateService : IDisposable
             if (response.Content.Headers.ContentLength is long size && size != target.Size) throw new InvalidDataException("程序包下载大小与签名清单不符。");
             await using var input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
             await CopyVerifiedAsync(input, output, target.Size, target.Sha256,
-                n => progress?.Report(new UpdateProgress("下载新版程序 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size)), token).ConfigureAwait(false);
-        }, progress, ct, source).ConfigureAwait(false);
+                n => progress?.Report(new UpdateProgress("从 GitHub 下载 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size)), token).ConfigureAwait(false);
+        }, progress, ct, mirrorSource).ConfigureAwait(false);
+        // What the transport actually was, rather than what it was asked to be: a mirror that handed over
+        // nothing leaves the signed shards doing all the work, and claiming otherwise would be a lie the
+        // player could price in gigabytes.
+        LastProgramSource = mirrorSource switch
+        {
+            null or { SuppliedCount: 0 } => "GitHub 分片",
+            { } source when catalog.App.Package is { } package && source.SuppliedCount == package.Files.Count => "Mirror酱",
+            _ => "Mirror酱 + GitHub 分片",
+        };
     }
+
+    /// <summary>
+    /// Which transport the last successful program preparation actually used, for the interface to show.
+    /// Empty before any program has been prepared.
+    /// </summary>
+    public string LastProgramSource { get; private set; } = "";
 
     /// <summary>
     /// How long to wait before asking MirrorChyan a second time for a version whose incremental package it
@@ -222,12 +253,12 @@ public sealed class UpdateService : IDisposable
         await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
         try
         {
-            var bytes = await DownloadManifestAsync(ct).ConfigureAwait(false);
-            var catalog = UpdateSignature.Verify(bytes, _keys, _allowTestKeys);
-            var notice = AcceptCatalog(catalog, bytes);
-            var result = MakeResult(catalog) with { StateNotice = notice ?? "" };
+            var read = await DownloadManifestAsync(ct).ConfigureAwait(false);
+            var catalog = UpdateSignature.Verify(read.Bytes, _keys, _allowTestKeys);
+            var notice = AcceptCatalog(catalog, read.Bytes);
+            var result = MakeResult(catalog) with { StateNotice = notice ?? "", ManifestSource = DescribeManifestSource(read.Source) };
             await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
-            _checkedEnvelope = bytes;
+            _checkedEnvelope = read.Bytes;
             return LastCheckResult = result;
         }
         catch (Exception ex)
@@ -250,7 +281,8 @@ public sealed class UpdateService : IDisposable
         EnsureAvailable();
         await using var gate = await UpdateStorage.LockAsync(_snapshots.Root, ct).ConfigureAwait(false);
         _state = LoadState();
-        var bytes = await DownloadManifestAsync(ct).ConfigureAwait(false);
+        var read = await DownloadManifestAsync(ct).ConfigureAwait(false);
+        var bytes = read.Bytes;
         var catalog = UpdateSignature.Verify(bytes, _keys, _allowTestKeys);
         var signed = JsonSerializer.Deserialize<SignedUpdateEnvelope>(bytes, UpdateJson.Options)!;
         // Only this channel's record is dropped, and the verified manifest becomes the new baseline
@@ -262,7 +294,7 @@ public sealed class UpdateService : IDisposable
         _state.LastAttempt = _clock();
         _state.LastError = "";
         var notice = AcceptCatalog(catalog, bytes);
-        var result = MakeResult(catalog) with { StateNotice = notice ?? "" };
+        var result = MakeResult(catalog) with { StateNotice = notice ?? "", ManifestSource = DescribeManifestSource(read.Source) };
         await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
         _checkedEnvelope = bytes;
         return LastCheckResult = result;
@@ -696,7 +728,7 @@ public sealed class UpdateService : IDisposable
     /// answered wrongly. The last source's failure is deliberately not caught, so with a single
     /// configured source the caller sees exactly the error it always saw.
     /// </summary>
-    private async Task<byte[]> DownloadManifestAsync(CancellationToken ct)
+    private async Task<ManifestRead> DownloadManifestAsync(CancellationToken ct)
     {
         for (var index = 0; index < Sources.Length; index++)
         {
@@ -705,9 +737,75 @@ public sealed class UpdateService : IDisposable
             try { bytes = await FetchManifestAsync(Sources[index], isLast, ct).ConfigureAwait(false); }
             catch (Exception ex) when (!isLast && IsUnreachable(ex)) { continue; }
             UpdateSignature.Verify(bytes, _keys, _allowTestKeys);
-            return bytes;
+            return new ManifestRead(bytes, Sources[index]);
         }
         throw new InvalidDataException("没有配置可用的更新清单来源。");
+    }
+
+    /// <summary>The envelope and the source that served it, so the interface can name where an answer came from.</summary>
+    private readonly record struct ManifestRead(byte[] Bytes, Uri Source);
+
+    /// <summary>A short, stable name for one configured manifest source, for the interface to show.</summary>
+    public static string DescribeManifestSource(Uri source) => source.Host.ToLowerInvariant() switch
+    {
+        "raw.githubusercontent.com" => "GitHub",
+        "gitee.com" => "Gitee 镜像",
+        var host => host,
+    };
+
+    /// <summary>
+    /// How long a connectivity probe waits for one source. Short on purpose: this answers "can I reach it",
+    /// and a player watching a spinner is not waiting for a download.
+    /// </summary>
+    private static readonly TimeSpan SourceProbeTimeout = TimeSpan.FromSeconds(8);
+
+    /// <summary>
+    /// Asks every source whether it can serve this installation, for the settings page's connectivity row.
+    /// Each probe is independent and none of them throws: a source that cannot be reached is the answer.
+    /// </summary>
+    public async Task<IReadOnlyList<SourceProbe>> ProbeSourcesAsync(CancellationToken ct = default)
+    {
+        var probes = new List<SourceProbe>(Sources.Length + 1);
+        foreach (var source in Sources) probes.Add(await ProbeManifestSourceAsync(source, ct).ConfigureAwait(false));
+        probes.Add(await ProbeMirrorAsync(ct).ConfigureAwait(false));
+        return probes;
+    }
+
+    private async Task<SourceProbe> ProbeManifestSourceAsync(Uri source, CancellationToken ct)
+    {
+        var name = DescribeManifestSource(source);
+        var clock = Stopwatch.StartNew();
+        try
+        {
+            // Headers only: the question is reachability, and the body is a signed envelope the check itself
+            // will read when it matters.
+            using var response = await GetResponseAsync(source, UpdateSignature.ValidateManifestHost, SourceProbeTimeout, ct).ConfigureAwait(false);
+            clock.Stop();
+            return new SourceProbe(name, "更新清单", true, $"可以连上（HTTP {(int)response.StatusCode}）", clock.ElapsedMilliseconds);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TimeoutException or IOException or InvalidDataException or OperationCanceledException)
+        {
+            clock.Stop();
+            return new SourceProbe(name, "更新清单", false, ex.Message, clock.ElapsedMilliseconds);
+        }
+    }
+
+    private async Task<SourceProbe> ProbeMirrorAsync(CancellationToken ct)
+    {
+        var cdk = _cdkProvider?.Invoke();
+        var configured = !string.IsNullOrWhiteSpace(cdk);
+        var clock = Stopwatch.StartNew();
+        var result = await QueryMirrorChyanAsync(MirrorChyanChannel.BuildRequestUri(configured ? cdk : null, "v" + _build.AppVersion), ct).ConfigureAwait(false);
+        clock.Stop();
+        if (result.Error == MirrorChyanError.None)
+        {
+            if (!configured) return new SourceProbe("Mirror酱", "程序下载", null, "可以连上；未填写 CDK，无法从这里下载", clock.ElapsedMilliseconds);
+            var expiry = result.CdkExpiresAt is { } until ? $"，到期 {until.ToLocalTime():yyyy-MM-dd}" : "";
+            return new SourceProbe("Mirror酱", "程序下载", true, "可以连上；CDK 有效" + expiry, clock.ElapsedMilliseconds);
+        }
+        // A CDK the service rejected is an answer from a reachable service, but it still cannot serve this
+        // installation, which is what the row is about.
+        return new SourceProbe("Mirror酱", "程序下载", false, result.Message, clock.ElapsedMilliseconds);
     }
 
     /// <summary>A source that could not be reached or refused to serve, which is the only reason to try another one.</summary>
