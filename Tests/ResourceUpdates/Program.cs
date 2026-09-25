@@ -382,6 +382,52 @@ await TestPure("MirrorChyan answers this client cannot use stay inert", () =>
     Equal("2026.9.25.1", MirrorChyanChannel.NormalizeVersion("2026.9.25.1"));
     Equal("", MirrorChyanChannel.NormalizeVersion(""));
 });
+// ---- MirrorChyan CDK storage -----------------------------------------------------------------------
+await TestPure("the CDK survives a round trip and is never written in plaintext", () =>
+{
+    var root = Path.Combine(suiteRoot, "vault-" + Guid.NewGuid().ToString("N"));
+    var vault = new MirrorChyanCredentialVault(root);
+    const string cdk = "test-cdk-not-a-real-key";
+
+    True(vault.Read() is null);
+    False(vault.HasCredential);
+    vault.Save("  " + cdk + "  \r\n");
+    // Pasting a key usually brings whitespace along; it is the value that matters, not the spelling.
+    Equal(cdk, vault.Read()!);
+    True(vault.HasCredential);
+
+    // The stored bytes are the thing an export, a backup or a support bundle would carry away.
+    var raw = File.ReadAllText(Path.Combine(root, "MirrorChyan", "cdk.json"));
+    False(raw.Contains(cdk, StringComparison.Ordinal));
+    True(raw.Contains("ciphertext", StringComparison.OrdinalIgnoreCase));
+
+    // A credential the program cannot read is absent, not a failure: the player can paste it again.
+    File.WriteAllText(Path.Combine(root, "MirrorChyan", "cdk.json"), "not json at all");
+    True(vault.Read() is null);
+    File.WriteAllText(Path.Combine(root, "MirrorChyan", "cdk.json"), """{"ciphertext":"bm90LWEtY2lwaGVy","savedAt":"2026-09-25T00:00:00+00:00"}""");
+    True(vault.Read() is null);
+
+    vault.Save(cdk);
+    Equal(cdk, vault.Read()!);
+    vault.Clear();
+    True(vault.Read() is null);
+    vault.Clear(); // Clearing what is already gone is not an error.
+});
+await TestPure("the CDK store refuses values that cannot be a CDK and masks the rest", () =>
+{
+    var root = Path.Combine(suiteRoot, "vault-" + Guid.NewGuid().ToString("N"));
+    var vault = new MirrorChyanCredentialVault(root);
+    Throws<ArgumentException>(() => vault.Save(""));
+    Throws<ArgumentException>(() => vault.Save("   "));
+    Throws<ArgumentException>(() => vault.Save("two words"));
+    Throws<ArgumentException>(() => vault.Save(new string('a', 257)));
+    True(vault.Read() is null);
+
+    // Only the tail is ever shown, so a screenshot or a support log cannot give the key away.
+    Equal("…-key", MirrorChyanCredentialVault.Mask("test-cdk-not-a-real-key"));
+    Equal("••", MirrorChyanCredentialVault.Mask("ab"));
+    Equal("", MirrorChyanCredentialVault.Mask(null));
+});
 await Test("compatible resource choice is independent of program update", async () =>
 {
     using var f = New(); await f.Initialize(); var catalog = f.Catalog(4); var compatible = f.Catalog(2).Resources[0];

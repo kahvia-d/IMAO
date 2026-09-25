@@ -7,5 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../IMao-WinUI.Core/Updates/*.cs" Link="Updates/%(Filename)%(Extension)" />
+    <!-- Update code stores the MirrorChyan CDK through these two. They are named one by one on purpose:
+         Helpers/Json.cs would drag Newtonsoft.Json into a suite that has no other use for it. -->
+    <Compile Include="../../IMao-WinUI.Core/Helpers/AtomicFile.cs" Link="Helpers/%(Filename)%(Extension)" />
+    <Compile Include="../../IMao-WinUI.Core/Helpers/CurrentUserDpapi.cs" Link="Helpers/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
