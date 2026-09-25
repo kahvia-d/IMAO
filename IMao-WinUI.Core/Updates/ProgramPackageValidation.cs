@@ -111,12 +111,34 @@ public static class ProgramPackageValidation
     }
 
     /// <summary>
-    /// Reads a program archive against the file list that has to be inside it. Every rejection that stops
+    /// What an archive is required to contain. Both scopes share one parser on purpose: the rules that stop
     /// a hostile archive from escaping the destination or smuggling in a file the signed manifest never
-    /// named lives here, so the whole-archive and the shard paths cannot drift apart.
+    /// named must not be able to drift between the paths that read program archives.
     /// </summary>
-    private static Dictionary<string, ZipArchiveEntry> ReadArchiveEntries(ZipArchive zip, Dictionary<string, ResourceFile> expected)
+    internal enum ArchiveScope
     {
+        /// <summary>Every declared file is present and nothing else is. The whole-archive and shard paths.</summary>
+        Complete,
+        /// <summary>A declared subset is enough and unrecognised entries are ignored. The MirrorChyan transport.</summary>
+        Partial,
+    }
+
+    /// <summary>
+    /// Reads a program archive against the file list that has to be inside it.
+    ///
+    /// In <see cref="ArchiveScope.Partial"/> an entry this program does not recognise is ignored rather
+    /// than refused, and that is deliberate: an incremental package is a subset by definition, and it
+    /// carries its own control file describing the difference. Ignoring is safe because an undeclared entry
+    /// has nowhere to go - the install tree is assembled only from paths the signed catalog names, and the
+    /// directory check at the end requires it to match that list exactly. Declared entries are held to every
+    /// rule the complete scope applies, and structural hazards are refused in both.
+    /// </summary>
+    internal static Dictionary<string, ZipArchiveEntry> ReadArchiveEntries(ZipArchive zip, Dictionary<string, ResourceFile> expected,
+        ArchiveScope scope = ArchiveScope.Complete)
+    {
+        // The complete scope is bounded by the declared list, because the first undeclared entry ends it.
+        // The partial scope ignores unrecognised entries, so its bound has to be explicit.
+        if (scope == ArchiveScope.Partial && zip.Entries.Count > 200_001) throw new InvalidDataException("程序压缩包条目过多。");
         var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in zip.Entries)
@@ -129,17 +151,29 @@ public static class ProgramPackageValidation
                 throw new InvalidDataException("程序压缩包包含链接、重复路径或特殊文件。");
             if (directory)
             {
-                if (entry.Length != 0 || type == 0x8000 || !expected.Keys.Any(p => p.StartsWith(name + "/", StringComparison.OrdinalIgnoreCase))) throw new InvalidDataException("程序压缩包目录无效。");
+                if (entry.Length != 0 || type == 0x8000 ||
+                    (scope == ArchiveScope.Complete && !expected.Keys.Any(p => p.StartsWith(name + "/", StringComparison.OrdinalIgnoreCase))))
+                    throw new InvalidDataException("程序压缩包目录无效。");
                 continue;
             }
-            if (type == 0x4000 || !expected.TryGetValue(name, out var file) || entry.Length != file.Size) throw new InvalidDataException("程序压缩包与签名文件清单不符。");
+            if (type == 0x4000) throw new InvalidDataException("程序压缩包目录类型无效。");
+            if (!expected.TryGetValue(name, out var file))
+            {
+                if (scope == ArchiveScope.Partial) continue;
+                throw new InvalidDataException("程序压缩包与签名文件清单不符。");
+            }
+            if (entry.Length != file.Size) throw new InvalidDataException("程序压缩包与签名文件清单不符。");
             entries.Add(name, entry);
         }
-        if (entries.Count != expected.Count) throw new InvalidDataException("程序压缩包缺少文件。");
+        if (scope == ArchiveScope.Complete && entries.Count != expected.Count) throw new InvalidDataException("程序压缩包缺少文件。");
         return entries;
     }
 
-    private static async Task ExtractEntriesAsync(string destination, IReadOnlyList<ResourceFile> files, Dictionary<string, ZipArchiveEntry> entries, CancellationToken ct)
+    /// <summary>
+    /// Writes <paramref name="files"/> into <paramref name="destination"/>, checking each one against its
+    /// own signed record as it lands. Callers that supply only part of a tree pass only those files.
+    /// </summary>
+    internal static async Task ExtractEntriesAsync(string destination, IReadOnlyList<ResourceFile> files, Dictionary<string, ZipArchiveEntry> entries, CancellationToken ct)
     {
         foreach (var file in files)
         {

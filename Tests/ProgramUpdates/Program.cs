@@ -380,6 +380,113 @@ await Test("a manually installed copy without a signed manifest proves reuse by 
     Assert(requested.Count == 0 && store.ReadState().Pending is not null, "an installation that already holds every byte downloads nothing");
     var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
 });
+// A MirrorChyan package is a bag of candidate files, never a trusted archive. Only paths the signed catalog
+// declares come out of it, each held to the size and digest the catalog recorded, and the signed shards stay
+// the transport of record for everything the bag does not supply.
+string MirrorZip(string tag, IEnumerable<KeyValuePair<string, byte[]>> entries)
+{
+    var path = Path.Combine(output, "mirror-payload", tag + "-" + Guid.NewGuid().ToString("N") + ".zip");
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    using (var zip = new ZipArchive(new FileStream(path, FileMode.CreateNew), ZipArchiveMode.Create))
+        foreach (var entry in entries)
+        {
+            var item = zip.CreateEntry(entry.Key);
+            using var target = item.Open(); target.Write(entry.Value);
+        }
+    return path;
+}
+IProgramFileSupplier Mirror(string zipPath, string updateType, string version) =>
+    new MirrorChyanProgramSource(
+        new MirrorChyanPackage("https://mirrorchyan.com/api/resources/download/fixture", version, updateType, new FileInfo(zipPath).Length, null),
+        (_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(File.ReadAllBytes(zipPath)) }),
+        Path.Combine(output, "mirror-scratch", Guid.NewGuid().ToString("N")));
+await Test("a MirrorChyan package supplies what it carries and only the rest is downloaded", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var requested = new List<string>();
+    var bag = MirrorZip("one-shard", tree.Where(kv => ShardOf(kv.Key) == "core"));
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Serve(served, requested),
+        supplier: Mirror(bag, "incremental", "2026.9.10.1"));
+    Assert(!requested.Any(url => url.Contains("-core.zip", StringComparison.Ordinal)), "a shard the bag supplied is not downloaded: " + string.Join(",", requested));
+    Assert(requested.Count == shardIds.Length - 1, "every other shard is still fetched");
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch.Id), "IMao-CoreHost.exe")).AsSpan().SequenceEqual(tree["IMao-CoreHost.exe"]));
+});
+await Test("a MirrorChyan package covering the whole tree needs no shard at all", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var bag = MirrorZip("whole-tree", tree);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Serve(served, []),
+        supplier: Mirror(bag, "incremental", "2026.9.10.1"));
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    foreach (var file in tree)
+        Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch.Id), file.Key.Replace('/', Path.DirectorySeparatorChar))).AsSpan().SequenceEqual(file.Value),
+            "the tree the bag supplied is the tree that ships: " + file.Key);
+});
+await Test("MirrorChyan's own control entries are ignored rather than refused", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var requested = new List<string>();
+    // An incremental package carries changes.json to describe itself. It is not a declared program file, and
+    // refusing it would make every incremental package unusable.
+    var bag = MirrorZip("control", tree.Where(kv => ShardOf(kv.Key) == "core").Concat(
+    [
+        new KeyValuePair<string, byte[]>("changes.json", "{\"deleted\":[\"gone.exe\"]}"u8.ToArray()),
+        new KeyValuePair<string, byte[]>("removelist.txt", "also-gone.exe"u8.ToArray()),
+    ]));
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Serve(served, requested),
+        supplier: Mirror(bag, "incremental", "2026.9.10.1"));
+    Assert(!requested.Any(url => url.Contains("-core.zip", StringComparison.Ordinal)), "the supplied shard is still skipped");
+    Assert(store.ReadState().Pending is not null);
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+});
+await Test("a MirrorChyan package is abandoned whole when its bytes fail the signed records", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var requested = new List<string>();
+    // The first file is genuine and the second has the right length with the wrong content, so the failure
+    // happens after something has already been written. What the bag wrote has to be undone, because the
+    // shard path writes with CreateNew and would otherwise collide with the leftovers.
+    var good = "Assets/KuroMap/points.json";
+    var rotten = "System.Private.CoreLib.dll";
+    var bag = MirrorZip("tampered", [
+        new KeyValuePair<string, byte[]>(good, tree[good]),
+        new KeyValuePair<string, byte[]>(rotten, "runtime:XX"u8.ToArray()),
+    ]);
+    Assert(tree[rotten].Length == "runtime:XX"u8.Length, "the tampered entry keeps the signed length so only the digest can reject it");
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Serve(served, requested),
+        supplier: Mirror(bag, "incremental", "2026.9.10.1"));
+    Assert(requested.Count == shardIds.Length, "a bag that cannot be trusted supplies nothing: " + string.Join(",", requested));
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch.Id), good.Replace('/', Path.DirectorySeparatorChar))).AsSpan().SequenceEqual(tree[good]));
+});
+await Test("a whole-package claim that is not whole, and a hazardous entry, both fall back to the shards", async () =>
+{
+    var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var core = tree.Where(kv => ShardOf(kv.Key) == "core").ToList();
+    var cases = new (string Bag, string UpdateType, string Why)[]
+    {
+        // "full" means the whole archive; a subset wearing that label is not worth a guess.
+        (MirrorZip("claims-full", core), "full", "a package claiming to be whole must be whole"),
+        // A traversal entry is refused even though nothing from it could ever be written.
+        (MirrorZip("traversal", core.Concat([new KeyValuePair<string, byte[]>("../escaped.exe", [1, 2, 3])])), "incremental", "a traversal entry must be refused"),
+    };
+    foreach (var (bag, updateType, why) in cases)
+    {
+        // A fresh store per case: preparing the same version a second time finds the version already staged
+        // and downloads nothing, which would make the assertion below vacuous.
+        var store = Store();
+        var requested = new List<string>();
+        await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Serve(served, requested),
+            supplier: Mirror(bag, updateType, "2026.9.10.1"));
+        Assert(requested.Count == shardIds.Length, why + ": " + string.Join(",", requested));
+    }
+});
 await Test("malicious ZIP traversal duplicate extra missing and symlink entries rejected", async () =>
 {
     foreach (var kind in new[] { "traversal", "duplicate", "extra", "missing", "symlink" })

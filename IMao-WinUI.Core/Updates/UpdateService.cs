@@ -86,7 +86,16 @@ public sealed class UpdateService : IDisposable
     /// </summary>
     public bool StateConflictDetected { get; private set; }
 
-    public async Task PrepareProgramAsync(ProgramUpdateStore programs, IProgress<UpdateProgress>? progress = null, CancellationToken ct = default)
+    /// <summary>
+    /// Prepares the newer program for the next launch.
+    /// </summary>
+    /// <param name="mirror">
+    /// An optional already-resolved MirrorChyan package for the release in the signed catalog. The caller
+    /// resolves it first - that is where a whole-package download gets confirmed with the player - and the
+    /// store consults it as a source of files before downloading shards. It is an optimisation: the signed
+    /// shards remain the transport of record, and the assembled tree must satisfy the catalog either way.
+    /// </param>
+    public async Task PrepareProgramAsync(ProgramUpdateStore programs, IProgress<UpdateProgress>? progress = null, CancellationToken ct = default, MirrorChyanPackage? mirror = null)
     {
         EnsureAvailable();
         if (_checkedEnvelope is null) throw new InvalidOperationException("请先检查更新。");
@@ -97,6 +106,9 @@ public sealed class UpdateService : IDisposable
         AcceptCatalog(catalog, envelope);
         if (UpdateSignature.RequireVersion(catalog.App.Version) <= UpdateSignature.RequireVersion(_build.AppVersion))
             throw new InvalidOperationException("没有比当前程序更新的版本。");
+        IProgramFileSupplier? source = mirror is null ? null : new MirrorChyanProgramSource(mirror,
+            (uri, token) => GetResponseAsync(uri, UpdateSignature.ValidateMirrorHost, MirrorChyanDownloadTimeout, token),
+            Path.Combine(programs.Root, "staging", "mirror"), progress);
         await programs.PrepareAsync(envelope, async (target, output, token) =>
         {
             using var response = await GetResponseAsync(new Uri(target.Url), token).ConfigureAwait(false);
@@ -104,7 +116,7 @@ public sealed class UpdateService : IDisposable
             await using var input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
             await CopyVerifiedAsync(input, output, target.Size, target.Sha256,
                 n => progress?.Report(new UpdateProgress("下载新版程序 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size)), token).ConfigureAwait(false);
-        }, progress, ct).ConfigureAwait(false);
+        }, progress, ct, source).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -113,6 +125,8 @@ public sealed class UpdateService : IDisposable
     /// </summary>
     private static readonly TimeSpan MirrorChyanIncrementalRetryDelay = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan MirrorChyanQueryTimeout = TimeSpan.FromSeconds(20);
+    /// <summary>Only covers reaching the first byte, which is where the redirect and the signed key live.</summary>
+    private static readonly TimeSpan MirrorChyanDownloadTimeout = TimeSpan.FromSeconds(60);
 
     /// <summary>
     /// Resolves where MirrorChyan would serve <paramref name="release"/>, or null when this channel cannot

@@ -158,4 +158,19 @@ public static class UpdateSignature
               uri.Host.EndsWith(".giteeusercontent.com", StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException("更新清单来源必须是受信任的 HTTPS 地址。");
     }
+
+    // Where a MirrorChyan download may live. Its download URL is a 302 from mirrorchyan.com to a numbered
+    // CDN host - download2.mirrorchyan.com, observed on 2026-09-25 - carrying a time-limited auth_key, so the
+    // redirect has to be followed rather than cached and the whole family of hosts accepted rather than one
+    // spelling of it. Like the manifest sources, and unlike AllowedHosts, nothing here is trusted: the URL
+    // comes from an unsigned answer, and every byte fetched through it is checked against the file records of
+    // the signed catalog before it is used.
+    internal static void ValidateMirrorHost(Uri? uri)
+    {
+        if (uri is null) return; // Test handlers may omit RequestMessage.
+        if (uri.Scheme != Uri.UriSchemeHttps || !uri.IsDefaultPort || !string.IsNullOrEmpty(uri.UserInfo) ||
+            !(uri.Host.Equals("mirrorchyan.com", StringComparison.OrdinalIgnoreCase) ||
+              uri.Host.EndsWith(".mirrorchyan.com", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("Mirror酱 的下载地址必须是它自己的 HTTPS 地址。");
+    }
 }

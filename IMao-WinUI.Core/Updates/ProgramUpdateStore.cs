@@ -72,7 +72,7 @@ public sealed class ProgramUpdateStore
     private Task SaveAsync(ProgramUpdateState state, CancellationToken ct) => UpdateStorage.WriteAsync(StatePath, state, ct);
 
     public async Task PrepareAsync(byte[] envelope, Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download,
-        IProgress<UpdateProgress>? progress = null, CancellationToken ct = default)
+        IProgress<UpdateProgress>? progress = null, CancellationToken ct = default, IProgramFileSupplier? supplier = null)
     {
         var catalog = UpdateSignature.Verify(envelope, keys, testKeys);
         var package = catalog.App.Package ?? throw new InvalidOperationException("此版本需要从发行页手动安装完整程序包。");
@@ -113,7 +113,7 @@ public sealed class ProgramUpdateStore
             try
             {
             var app = Path.Combine(transaction, "app");
-            await AssembleAsync(package, app, transaction, reuseRoot, installed, download, progress, ct);
+            await AssembleAsync(package, app, transaction, reuseRoot, installed, download, progress, ct, supplier);
             progress?.Report(new UpdateProgress("校验新版程序", 0, 0));
             await ProgramPackageValidation.VerifyDirectoryAsync(app, catalog.App, ct);
             progress?.Report(new UpdateProgress("检查新版程序的地图资源", 0, 0));
@@ -193,9 +193,15 @@ public sealed class ProgramUpdateStore
     /// Builds the staged program tree from local bytes and downloads. Every reused file is hashed while it
     /// is copied, so a locally damaged file makes only its own shard fall back to a download; a failed
     /// shard download fails the whole preparation with the installed program untouched.
+    ///
+    /// A supplier, when one is given, runs first and takes over whatever it can provide. It is consulted
+    /// only for a shard release: the whole-archive shape belongs to releases from before shards existed, and
+    /// every release since then is partitioned, so a second path through here would be state to maintain
+    /// for a case that no longer ships.
     /// </summary>
     private async Task AssembleAsync(ProgramPackage package, string app, string transaction, string reuseRoot, List<ResourceFile>? prior,
-        Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download, IProgress<UpdateProgress>? progress, CancellationToken ct)
+        Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download, IProgress<UpdateProgress>? progress, CancellationToken ct,
+        IProgramFileSupplier? supplier = null)
     {
         if (package.Shards.Count == 0)
         {
@@ -206,12 +212,16 @@ public sealed class ProgramUpdateStore
             TryDelete(archive);
             return;
         }
+        // Anything the supplier verified is a file that needs no shard, and a shard every one of whose files
+        // arrived that way is skipped entirely.
+        var supplied = supplier is null ? null : await supplier.SupplyAsync(package, app, ct).ConfigureAwait(false);
         progress?.Report(new UpdateProgress("检查可复用的本机文件", 0, 0));
         var known = prior?.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
         var index = 0;
         foreach (var shard in package.Shards)
         {
             index++;
+            if (supplied is not null && shard.Files.All(supplied.Contains)) continue;
             if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, ct)) continue;
             var archive = Path.Combine(transaction, "shards", shard.Id + ".zip");
             Directory.CreateDirectory(Path.GetDirectoryName(archive)!);

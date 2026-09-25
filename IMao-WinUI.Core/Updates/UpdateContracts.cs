@@ -149,6 +149,23 @@ public sealed record UpdateProgress(string Stage, long Completed, long Total);
 public sealed record ProgramDownloadTarget(string Name, string Url, long Size, string Sha256);
 
 /// <summary>
+/// Somewhere a program's files can come from other than the signed shards. The store asks a supplier to
+/// provide what it can before deciding what still has to be downloaded, so a supplier is an optimisation
+/// over the signed transport and never a replacement for it: whatever it does not supply is fetched the
+/// usual way, and the assembled directory still has to satisfy the signed catalog exactly.
+/// </summary>
+public interface IProgramFileSupplier
+{
+    /// <summary>
+    /// Writes into <paramref name="app"/> the files of <paramref name="package"/> this supplier can provide,
+    /// checking each one it writes against that package's own signed file records. Returns the paths it
+    /// supplied. Returning nothing - because the source is unavailable, unusable, or simply does not carry
+    /// these files - is a normal outcome, not a failure: the caller downloads what is missing.
+    /// </summary>
+    Task<IReadOnlySet<string>> SupplyAsync(ProgramPackage package, string app, CancellationToken ct);
+}
+
+/// <summary>
 /// Local, unsigned user choice: which packages of one signed snapshot the player does not want active.
 /// </summary>
 public sealed record PackageSelection
