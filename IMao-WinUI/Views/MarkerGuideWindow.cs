@@ -548,6 +548,10 @@ public sealed class MarkerGuideWindow : Window
         if (!available) { ResetSkipInputs(); CancelSkipHold(); }
         skip.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
         skip.IsEnabled = available && !skipping;
+        // 撤销资格必须能追到调用方：实机出现过"资格成立后又被撤销、且没有任何诊断"的情况。
+        if (!available)
+            SkipDiagnostic?.Invoke("revoked by " + new System.Diagnostics.StackTrace(1, false).GetFrame(0)?.GetMethod()?.DeclaringType?.Name +
+                "." + new System.Diagnostics.StackTrace(1, false).GetFrame(0)?.GetMethod()?.Name);
         ReportSkipState(available ? "available" : "unavailable");
     }
 

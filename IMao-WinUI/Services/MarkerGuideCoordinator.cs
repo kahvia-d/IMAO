@@ -944,24 +944,30 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private async Task RefreshSkipTargetAsync(MarkerSelection selection, long generation, JsonElement? routeGuide = null)
     {
         long refresh = ++guideSkipRefreshGeneration;
-        guideSkipTarget = null;
-        guide?.SetSkipAvailability(false);
+        // 先把答案算出来，最后才改动资格。旧写法在查询之前就清空，于是任何一次瞬时失败或代际
+        // 刷新（这个函数会随核心的路线状态变化被反复调用）都会把已经确认过的资格永久撤掉，
+        // 表现就是"跳过按钮出现一下、随后按 Y 毫无反应"。
+        var clearOldTarget = guideSkipTarget is { } existing && existing.Generation != generation;
+        if (clearOldTarget) guideSkipTarget = null;
         if (selection.Completed || !session.IsCurrent(generation))
         {
             core.ReportGamepadDiagnostic("guide-skip",
                 $"skip-eligible=0 reason={(selection.Completed ? "guide-point-completed" : "session-superseded")} point={selection.StateId}:{selection.PointId}");
+            guideSkipTarget = null;
+            guide?.SetSkipAvailability(false);
             return;
         }
         try
         {
             var route = routeGuide ?? await core.ExecuteMarkerAsync("markerGetRouteGuide",
                 new { profileId = selection.ProfileId }, connectionRequests.Token);
+            // 这一轮的结果已经过期（有更新的刷新，或窗口换了点位）：直接放弃，不动现有资格。
             if (disposed || !session.IsCurrent(generation) || refresh != guideSkipRefreshGeneration ||
                 session.Selection is not { } selected || selected.ProfileId != selection.ProfileId ||
                 selected.StateId != selection.StateId || selected.PointId != selection.PointId)
             {
                 core.ReportGamepadDiagnostic("guide-skip",
-                    $"skip-eligible=0 reason=stale-or-superseded refreshFresh={refresh == guideSkipRefreshGeneration} " +
+                    $"skip-eligible=keep reason=stale-or-superseded refreshFresh={refresh == guideSkipRefreshGeneration} " +
                     $"sessionCurrent={session.IsCurrent(generation)} point={selection.StateId}:{selection.PointId}");
                 return;
             }
@@ -969,18 +975,24 @@ public sealed class MarkerGuideCoordinator : IDisposable
             {
                 core.ReportGamepadDiagnostic("guide-skip",
                     $"skip-eligible=0 reason=profile-mismatch reply='{Text(route, "profileId")}' expected='{selection.ProfileId}'");
+                guideSkipTarget = null;
+                guide?.SetSkipAvailability(false);
                 return;
             }
             if (Text(route, "routeId") is not { Length: > 0 } routeId)
             {
                 core.ReportGamepadDiagnostic("guide-skip",
                     $"skip-eligible=0 reason=no-active-route-status={Text(route, "navigationStatus")}");
+                guideSkipTarget = null;
+                guide?.SetSkipAvailability(false);
                 return;
             }
             if (!route.TryGetProperty("selection", out var target) || target.ValueKind != JsonValueKind.Object)
             {
                 core.ReportGamepadDiagnostic("guide-skip",
                     $"skip-eligible=0 reason=no-current-target status={Text(route, "navigationStatus")} route={routeId}");
+                guideSkipTarget = null;
+                guide?.SetSkipAvailability(false);
                 return;
             }
             var current = ReadSelection(target);
@@ -990,6 +1002,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 core.ReportGamepadDiagnostic("guide-skip",
                     $"skip-eligible=0 reason=identity-mismatch status={Text(route, "navigationStatus")} route={routeId} " +
                     $"guide-point={selection.StateId}:{selection.PointId} target-point={current.StateId}:{current.PointId}");
+                guideSkipTarget = null;
+                guide?.SetSkipAvailability(false);
                 return;
             }
             guideSkipTarget = (generation, selection.ProfileId, routeId,
@@ -1001,8 +1015,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
         }
         catch (Exception e) when (e is IOException or InvalidOperationException or OperationCanceledException)
         {
-            if (session.IsCurrent(generation)) guide?.SetSkipAvailability(false);
-            core.ReportGamepadDiagnostic("guide-skip", $"skip-eligible=0 reason=query-failed error={e.Message}");
+            // 查询失败（被取消、核心暂时不响应）不能当作"这个点位不是当前目标"：保留上一次的
+            // 确认结果，否则一次瞬时失败就会让长按 Y 彻底失效。真被撤销时会由核心在提交时拒绝。
+            core.ReportGamepadDiagnostic("guide-skip", $"skip-eligible=keep reason=query-failed error={e.Message}");
         }
     }
 
