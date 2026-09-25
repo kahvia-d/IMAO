@@ -43,6 +43,11 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public string StatusMessage => message;
+    /// <summary>
+    /// 当前使用的 XInput 设备号（-1 = 还没选中设备）。协调器在"等手柄回到中位再交还前台"
+    /// 时用它去读同一只手柄，避免各读一只手柄（见 MarkerGuideCoordinator.DeferGamepadFocusHandoff）。
+    /// </summary>
+    internal int SelectedDevice => selectedDevice;
 
     public GamepadInputService(CoreHostService core, MarkerGuideCoordinator guides)
         : this(core, guides, new XInputControllerReader().Read) { }
@@ -65,6 +70,9 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
         guides.AcquireGamepadHandoff = source => mapTools?.AcquireHandoff(source) ?? toolbar.AcquireHandoff(source);
         if (mapTools is not null) { mapTools.StatusChanged += SetMessage; mapTools.Ended += input.Reset; }
         this.readController = readController ?? throw new ArgumentNullException(nameof(readController));
+        // 协调器用同一个读取器判断"手柄是不是已经全部松开"，再决定什么时候把前台交还游戏。
+        guides.ReadGamepadSample = index => readController(index);
+        guides.GamepadDevice = selectedDevice < 0 ? 0 : selectedDevice;
         timer = DispatcherQueue.GetForCurrentThread().CreateTimer();
         timer.Interval = TimeSpan.FromMilliseconds(16);
         timer.Tick += OnTick;
@@ -163,6 +171,8 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
             long tickGap = lastTickAt == 0 ? 0 : now - lastTickAt;
             lastTickAt = now;
             var sample = Sample(now);
+            // 设备号可能在这一刻才被选中；协调器等手柄回中位时读的是同一个号。
+            guides.GamepadDevice = selectedDevice < 0 ? 0 : selectedDevice;
             guides.PollGamepadReturn();
             // 启停和弦（LB+Start）**在状态机之外**先处理：核心停止时没有游戏上下文，
             // 状态机不工作，而那一刻恰恰需要用手柄把工具重新打开（这就是"只能停不能开"的原因）。

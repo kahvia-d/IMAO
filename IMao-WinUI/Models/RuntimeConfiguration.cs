@@ -2,13 +2,16 @@ namespace IMao_WinUI.Models;
 
 public sealed record RuntimeConfiguration
 {
-    // Bumped when a stored default changes meaning. Version 2 promoted the capture method; version 3
-    // promoted the overlay presentation to DirectComposition; version 4 takes that promotion back,
-    // because the measurement behind it does not describe the presentation that shipped. A file written
+    // Bumped when a stored default changes meaning, or when a new setting is introduced whose default a
+    // stored file could not have chosen. Version 2 promoted the capture method; version 3 promoted the
+    // overlay presentation to DirectComposition; version 4 takes that promotion back, because the
+    // measurement behind it does not describe the presentation that shipped. Version 5 introduces the
+    // guide skip key: a file written before it has no such field, so the default (G) is ours rather than
+    // the player's and may be dropped when it collides with a binding they did choose. A file written
     // before a bump carries a value that was never a deliberate choice, so the store migrates it once
     // and a player who changes the setting afterwards is recorded with the current version and never
     // migrated again.
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
     public int ConfigVersion { get; init; } = CurrentSchemaVersion;
 
     // 1 = Windows Graphics Capture: it never asks the game window to render into a device context, and
@@ -52,6 +55,16 @@ public sealed record RuntimeConfiguration
     public int CompletionRangePixels { get; init; } = 15;
     public int GuideRangePixels { get; init; } = 15;
 
+    /// <summary>
+    /// 参与冲突校验的全部快捷键。校验、界面保存与"新增绑定"的迁移都读这一份列表，
+    /// 以后再加绑定就只改这里一处（旧写法在校验与设置页各抄一遍字段名）。
+    /// </summary>
+    public static int[] HotkeyFields(RuntimeConfiguration value) => new[]
+    {
+        value.NearestCompletionKey, value.ManualRouteKey, value.CurrentTargetGuideKey, value.GuideSkipKey,
+        value.GuidePreviousImageKey, value.GuideNextImageKey, value.ToggleEnabledKey
+    };
+
     public void Validate()
     {
         if (CaptureWay is < 0 or > 1) throw new ArgumentException("截图方式无效");
@@ -64,7 +77,7 @@ public sealed record RuntimeConfiguration
             throw new ArgumentException("触发范围必须在 5–120 像素之间");
         if (GamepadEntryButton is not (GamepadButtons.LB or GamepadButtons.RB))
             throw new ArgumentException("手柄助手入口仅支持 LB 或 RB");
-        var keys = new[] { NearestCompletionKey, ManualRouteKey, CurrentTargetGuideKey, GuideSkipKey, GuidePreviousImageKey, GuideNextImageKey, ToggleEnabledKey };
+        var keys = HotkeyFields(this);
         if (keys.Any(key => !IsSupportedHotkey(key)))
             throw new ArgumentException("快捷键支持字母、数字、F1–F12、PageUp、PageDown 或禁用；M 用于地图状态辅助，F10 用于诊断截图，不能分配。");
         var enabledKeys = keys.Where(key => key != 0).ToArray();

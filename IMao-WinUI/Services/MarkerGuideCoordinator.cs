@@ -66,6 +66,17 @@ public sealed class MarkerGuideCoordinator : IDisposable
         int StateId, string PointId)? guideSkipTarget;
     /// <summary>Invalidates an in-flight eligibility probe when the guide or route changed.</summary>
     private long guideSkipRefreshGeneration;
+    /// <summary>
+    /// Reads the pad so a focus handoff can wait for the buttons to come up (see <see cref="GuideFocusHandoff"/>).
+    /// The input service installs it with the same reader it polls, so both always look at one device.
+    /// </summary>
+    internal Func<int, GamepadSample>? ReadGamepadSample { get; set; }
+    /// <summary>Which XInput device the input service is using; -1 before one is selected.</summary>
+    internal int GamepadDevice { get; set; } = -1;
+    private readonly GuideFocusHandoff pendingFocusHandoff = new();
+    private DispatcherTimer? focusHandoffTimer;
+    private IntPtr focusHandoffGame;
+    private int focusHandoffDevice = -1;
     private long standaloneGamepadGeneration;
     private IntPtr standaloneGameWindow;
     private bool standaloneGamepadOpening;
@@ -508,6 +519,13 @@ public sealed class MarkerGuideCoordinator : IDisposable
         selection.Scene.Length > 0 && selection.StateId > 0 && selection.PointId.Length > 0;
     private static bool SamePoint(MarkerSelection a, MarkerSelection b) => a.ProfileId == b.ProfileId && a.StateId == b.StateId && a.PointId == b.PointId;
     private static bool Flag(JsonElement value, string key) => value.TryGetProperty(key, out var p) && p.ValueKind == JsonValueKind.True;
+    /// <summary>
+    /// 「这份答复说路线正在指引吗」。打开攻略与刷新跳过资格**共用这一条**：两处曾各写一份判据，
+    /// 结果打开路径挡住了暂停的路线、刷新路径漏了，暂停后跳过按钮照样可用（与规格 §2.2 相反）。
+    /// 缺字段按"不在指引中"处理——宁可要不到资格，也不要凭一份读不懂的答复放行一次跳过。
+    /// </summary>
+    private static bool RouteIsGuiding(JsonElement route) =>
+        RoutePlanningState.IsGuiding(Text(route, "navigationStatus"));
     private static ulong Unsigned(JsonElement value, string key) => value.TryGetProperty(key, out var p) && p.TryGetUInt64(out var n) ? n : 0;
     private static bool IsForeground(Window window) => GetForegroundWindow() == new IntPtr(WindowHandle(window));
 
@@ -847,7 +865,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             session.Selection is { } shown)
         {
             guideSkipTarget = null;
-            guide.SetSkipAvailability(false);
+            guide.SetSkipAvailability(false, "route-changed");
             _ = RefreshSkipTargetAsync(shown, session.Generation);
         }
         if (e.PropertyName == nameof(CoreHostService.RoutePlanning) && IsGamepadSessionOpen &&
@@ -1073,7 +1091,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 // 只有路线**指引中**才允许打开"路线当前目标"的攻略：暂停/结束后那个目标不再是
                 // 玩家正在跟着走的下一个点，凭它弹出攻略只会让人莫名其妙（实机反馈）。
                 // 提示与"空范围且没有目标"共用用户确认过的那一句，不再各报一次。
-                if (!RoutePlanningState.IsGuiding(Text(result, "navigationStatus")))
+                if (!RouteIsGuiding(result))
                 {
                     CloseGuide(generation);
                     core.ReportUserError("附近没有未完成点位，也没有正在导航的路线目标。");
@@ -1139,7 +1157,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             core.ReportGamepadDiagnostic("guide-skip",
                 $"skip-eligible=0 reason={(selection.Completed ? "guide-point-completed" : "session-superseded")} point={selection.StateId}:{selection.PointId}");
             guideSkipTarget = null;
-            guide?.SetSkipAvailability(false);
+            guide?.SetSkipAvailability(false, selection.Completed ? "guide-point-completed" : "session-superseded");
             return;
         }
         try
@@ -1164,7 +1182,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 core.ReportGamepadDiagnostic("guide-skip",
                     $"skip-eligible=0 reason=profile-mismatch reply='{Text(route, "profileId")}' expected='{selection.ProfileId}'");
                 guideSkipTarget = null;
-                guide?.SetSkipAvailability(false);
+                guide?.SetSkipAvailability(false, "profile-mismatch");
                 return;
             }
             if (Text(route, "routeId") is not { Length: > 0 } routeId)
@@ -1172,7 +1190,18 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 core.ReportGamepadDiagnostic("guide-skip",
                     $"skip-eligible=0 reason=no-active-route-status={Text(route, "navigationStatus")}");
                 guideSkipTarget = null;
-                guide?.SetSkipAvailability(false);
+                guide?.SetSkipAvailability(false, "no-active-route");
+                return;
+            }
+            // 暂停/结束后当前目标**仍然存在**（原生 NavigationLocked() 只在没有活动路线时才让 selection 为空），
+            // 所以上面那些身份校验全都能通过——必须单独挡住"不在指引中"。规格 §2.2 要求
+            // 暂停/停止时立刻隐藏跳过；打开路径也是同一条判据（见 ToggleGuideAsync 的 IsGuiding）。
+            if (!RouteIsGuiding(route))
+            {
+                core.ReportGamepadDiagnostic("guide-skip",
+                    $"skip-eligible=0 reason=not-guiding status={Text(route, "navigationStatus")} route={routeId}");
+                guideSkipTarget = null;
+                guide?.SetSkipAvailability(false, "not-guiding");
                 return;
             }
             if (!route.TryGetProperty("selection", out var target) || target.ValueKind != JsonValueKind.Object)
@@ -1180,7 +1209,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 core.ReportGamepadDiagnostic("guide-skip",
                     $"skip-eligible=0 reason=no-current-target status={Text(route, "navigationStatus")} route={routeId}");
                 guideSkipTarget = null;
-                guide?.SetSkipAvailability(false);
+                guide?.SetSkipAvailability(false, "no-current-target");
                 return;
             }
             var current = ReadSelection(target);
@@ -1191,7 +1220,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                     $"skip-eligible=0 reason=identity-mismatch status={Text(route, "navigationStatus")} route={routeId} " +
                     $"guide-point={selection.StateId}:{selection.PointId} target-point={current.StateId}:{current.PointId}");
                 guideSkipTarget = null;
-                guide?.SetSkipAvailability(false);
+                guide?.SetSkipAvailability(false, "identity-mismatch");
                 return;
             }
             guideSkipTarget = (generation, selection.ProfileId, routeId,
@@ -1227,7 +1256,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             return false;
         }
         guideSkipTarget = null;
-        guide.SetSkipAvailability(false);
+        guide.SetSkipAvailability(false, "skip-submitted");
         try
         {
             core.ReportGamepadDiagnostic("guide-skip",
@@ -1280,7 +1309,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
         var current = guide;
         current.SetGamepadMode(IsGamepadSessionOpen && gamepadGuideGeneration == generation || standaloneGamepadGeneration == generation);
         // A recycled window must never keep the previous point's skip button.
-        current.SetSkipAvailability(false);
+        current.SetSkipAvailability(false, "recycled-window");
         current.SetSkipHotkey(core.Configuration.GuideSkipKey);
         guideSkipTarget = null;
         try
@@ -1461,7 +1490,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
         selectionGeneration++;
         // The skip authorisation belongs to the guide that is going away.
         guideSkipTarget = null;
-        guide?.SetSkipAvailability(false);
+        guide?.SetSkipAvailability(false, "guide-closed");
         if (guide is not { } window) return;
         if (IsGamepadSessionOpen && gamepadGuideGeneration != 0 && !session.IsCurrent(gamepadGuideGeneration))
         {
@@ -1517,11 +1546,49 @@ public sealed class MarkerGuideCoordinator : IDisposable
             // 交还游戏；只看攻略窗口自己会在"大图开着时完成点位"那一下把前台丢在半空。
             bool restore = standaloneGamepadGeneration == generation && guide is { } window && StandaloneForegroundOwner(window) is not null;
             var game = standaloneGameWindow;
+            // 长按 A 完成时玩家的手指常常还按着 A：这一刻就交还前台，游戏会把随后的**松开**
+            // 当成一次完整的 A（游戏里 A = 闪避）。先等手柄回中位再交还，见 GuideFocusHandoff。
+            if (restore && IsWindow(game) && DeferFocusHandoffUntilNeutral(game)) return;
             HideClosedGuide();
             if (restore && IsWindow(game)) SetForegroundWindow(game);
         }
         else if (result == MarkerGuideCompletionResult.Updated && session.Selection is { } selection)
             guide?.UpdateCompletion(selection, generation);
+    }
+
+    /// <summary>
+    /// 「按住的键先松开，再把这些键交还给游戏」——见 <see cref="GuideFocusHandoff"/>。
+    ///
+    /// 返回 true 表示这次已经改成"稍后交还"，调用方**不要**立刻收窗口/换前台。
+    /// 手柄此刻本来就是松开的（含没有读到手柄）时返回 false，照旧立刻交还。
+    /// </summary>
+    private bool DeferFocusHandoffUntilNeutral(IntPtr game)
+    {
+        if (ReadGamepadSample is not { } read || GetForegroundWindow() == game) return false;
+        var sample = read(GamepadDevice);
+        if (!GuideFocusHandoff.ShouldWait(sample, gameIsForeground: false)) return false;
+        focusHandoffGame = game; focusHandoffDevice = GamepadDevice;
+        pendingFocusHandoff.Begin(Environment.TickCount64);
+        core.ReportGamepadDiagnostic("guide-focus",
+            $"handoff-deferred buttons={sample.Buttons} lt={sample.LeftTrigger} rt={sample.RightTrigger}");
+        if (focusHandoffTimer is not null) return true;
+        focusHandoffTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+        focusHandoffTimer.Tick += (_, _) =>
+        {
+            if (!pendingFocusHandoff.IsWaiting) { focusHandoffTimer?.Stop(); return; }
+            var current = ReadGamepadSample?.Invoke(focusHandoffDevice) ?? default;
+            if (!pendingFocusHandoff.ShouldFinish(current, Environment.TickCount64)) return;
+            focusHandoffTimer?.Stop();
+            var target = focusHandoffGame;
+            focusHandoffGame = IntPtr.Zero;
+            core.ReportGamepadDiagnostic("guide-focus",
+                $"handoff-now buttons={current.Buttons} neutral={current.Neutral} gameAlive={IsWindow(target)}");
+            // 这一次完成会话可能已经被别的操作收掉了：那时什么都不用做。
+            if (standaloneGameWindow == target) HideClosedGuide();
+            if (IsWindow(target)) SetForegroundWindow(target);
+        };
+        focusHandoffTimer.Start();
+        return true;
     }
 
     private void ApplyCompletionEvent(JsonElement value, int stateId, string pointId, bool completed)
@@ -1698,11 +1765,15 @@ public sealed class MarkerGuideCoordinator : IDisposable
                             standaloneGamepadGeneration = guideGeneration; standaloneGameWindow = game;
                             standaloneGameIdentity = chooserGameIdentity;
                             standaloneGamepadOpening = true;
+                            // 「附近」这条路径不查路线目标，也不提供跳过：玩家是站在点位旁边想看它怎么收集，
+                            // 不是要把路线往前推。规格 §2.2/§4 如此，而且少一次 IPC 查询就少一次
+                            // "这次按下去要不要指望核心回话"的失败面。
                             bool shown = await ShowCurrentAsync(chosen, guideGeneration,
-                                controllerSource: new IntPtr(WindowHandle(window)));
+                                controllerSource: new IntPtr(WindowHandle(window)), resolveSkip: false);
                             if (shown) { chooserGamepad = chooserGamepadOpening = false; chooserActions.Clear(); chooser = null; window.Close(); }
                         }
-                        else { window.Close(); chooser = null; await ShowAsync(chosen); }
+                        // 同上：「附近」路径不查路线目标、不提供跳过（规格 §4 的那句 resolveSkip: false）。
+                        else { window.Close(); chooser = null; await ShowAsync(chosen, resolveSkip: false); }
                     }
                     catch (Exception e)
                     {
@@ -1880,7 +1951,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
         standaloneGameWindow = game;
         standaloneGameIdentity = GamepadWindowIdentity.Capture(game);
         standaloneGamepadOpening = true;
-        if (await ShowCurrentAsync(chosen, generation, controllerSource: game)) return true;
+        // 「附近」路径不查路线目标、也不提供跳过（规格 §2.2/§4）：玩家站在点位旁边是想看它怎么收集，
+        // 不是要把路线往前推。少这一次查询同时也少一个"按下去还得指望核心回话"的失败面。
+        if (await ShowCurrentAsync(chosen, generation, controllerSource: game, resolveSkip: false)) return true;
         // 代次已经被别的操作顶掉（玩家自己操作过）：不要再弹出列表。
         if (!session.IsCurrent(generation)) return true;
         CloseGuide(generation);

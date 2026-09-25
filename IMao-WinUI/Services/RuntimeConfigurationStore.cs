@@ -27,6 +27,9 @@ internal sealed class RuntimeConfigurationStore
                     ?? throw new JsonException("配置必须是有效对象");
                 value = Migrate(value, StoredSchemaVersion(text));
                 value.Validate();
+                // The file loaded: whatever a migration wanted to say about it is settled, so do not
+                // leave a note behind for a file that turned out to be fine.
+                LoadError = string.Empty;
                 return current = value;
             }
             catch (FileNotFoundException) { return current = new(); }
@@ -80,6 +83,12 @@ internal sealed class RuntimeConfigurationStore
     //   deliberate choice and the two cannot be told apart, so the default wins; a player who wants the
     //   composition surface selects it again and is recorded with version 4 from then on.
     //
+    //   version 5 introduced the guide skip key (default G). A file written before it has no such field,
+    //   so the deserializer supplies our default rather than the player's choice. If that default lands
+    //   on a key they had already bound, the duplicate check below would fail and the whole file would be
+    //   backed up as corrupt — every setting reset because we added a key. Disable the new default in
+    //   that one case instead. See Migrate for what stays a genuine error.
+    //
     // After any migration the file carries the current version, so a player who chooses the other value
     // afterwards is never migrated again.
     private static RuntimeConfiguration Migrate(RuntimeConfiguration value, int storedVersion)
@@ -87,6 +96,18 @@ internal sealed class RuntimeConfigurationStore
         var migrated = value;
         if (storedVersion < 2) migrated = migrated with { CaptureWay = 1 };
         if (storedVersion < 4) migrated = migrated with { OverlayPresentMode = 0 };
+        // A file that predates the guide skip key cannot have chosen its default, so a collision with
+        // one of its own bindings is our problem, not a corrupt file. Only that field is dropped: if the
+        // remaining set is still inconsistent, the file really is damaged and stays an error.
+        if (storedVersion < 5 && migrated.GuideSkipKey != 0 &&
+            new[]
+            {
+                migrated.NearestCompletionKey, migrated.ManualRouteKey, migrated.CurrentTargetGuideKey,
+                migrated.GuidePreviousImageKey, migrated.GuideNextImageKey, migrated.ToggleEnabledKey
+            }.Contains(migrated.GuideSkipKey))
+        {
+            migrated = migrated with { GuideSkipKey = 0 };
+        }
         return migrated;
     }
 

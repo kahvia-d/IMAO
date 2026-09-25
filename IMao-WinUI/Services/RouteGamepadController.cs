@@ -28,6 +28,11 @@ internal sealed class RouteGamepadController(CoreHostService core) : IDisposable
     private GamepadWindowIdentity gameIdentity;
     private bool sending, opening, disposed, stopping, returning, returnFailed, handoff, handoffLeased;
     private bool retryArmed, retryPressed;
+    // What the last `route-toolbar` diagnostic line described. A held stick sends a sample every
+    // tick, and logging each one wrote ~31 lines a second to the gamepad log for as long as the
+    // stick was off centre — drowning the records this round actually needs. Only a change of
+    // buttons/triggers, a fresh departure from neutral, or a direction change is worth a line.
+    private string lastToolbarDiagnostic = "";
     private long handoffAt;
     private CancellationTokenSource? returnRequest;
     private DispatcherQueueTimer? retirementTimer;
@@ -49,7 +54,7 @@ internal sealed class RouteGamepadController(CoreHostService core) : IDisposable
         long operation = ++generation;
         stopping = returning = returnFailed = handoff = handoffLeased = false;
         device = deviceId; opening = true; sequence = retiringSessionId = 0; previous = default;
-        lastQueuedAt = lastTickAt = 0;
+        lastQueuedAt = lastTickAt = 0; lastToolbarDiagnostic = "";
         var cancellation = new CancellationTokenSource(); requests = cancellation;
         ulong prepared = 0;
         try
@@ -135,9 +140,15 @@ internal sealed class RouteGamepadController(CoreHostService core) : IDisposable
                 }, token);
                 // 工具栏的方向切换在原生侧完成；这里记录真正送出去的摇杆值，
                 // 才能区分"左右没被识别"和"任务栏那个方向本来就没有相邻按钮"。
-                if (!sample.AxesNeutral || sample.Buttons != GamepadButtons.None)
+                // 只在输入形状变化时记一行：这个循环对按住的摇杆每个 tick 都跑一次，
+                // 逐样本记录会把 gamepad 日志刷成每秒三十行（见 lastToolbarDiagnostic 的注释）。
+                var toolbarState = ToolbarDiagnosticState(sample);
+                if (toolbarState != lastToolbarDiagnostic)
+                {
+                    lastToolbarDiagnostic = toolbarState;
                     core.ReportGamepadDiagnostic("route-toolbar",
-                        $"sent seq={sequence} buttons={sample.Buttons} leftX={Axis(sample.LeftX):F2} leftY={Axis(sample.LeftY):F2} rawX={sample.LeftX} rawY={sample.LeftY}");
+                        $"sent seq={sequence} {toolbarState} leftX={Axis(sample.LeftX):F2} leftY={Axis(sample.LeftY):F2} rawX={sample.LeftX} rawY={sample.LeftY}");
+                }
                 if (operation != generation) return;
                 string phase = result.TryGetProperty("phase", out var p) ? p.GetString() ?? "ended" : "ended";
                 if (phase == "handoff") { PrepareHandoff(); return; }
@@ -155,6 +166,16 @@ internal sealed class RouteGamepadController(CoreHostService core) : IDisposable
     private static bool Other(GamepadSample sample) => sample.LeftTrigger > 30 || sample.RightTrigger > 30 ||
         Math.Abs((int)sample.RightX) >= GamepadSample.DeadZone || Math.Abs((int)sample.RightY) >= GamepadSample.DeadZone;
     private static double Axis(short value) => Math.Clamp(value / 32767.0, -1, 1);
+
+    /// <summary>
+    /// The coarse shape of one sample, for the <c>route-toolbar</c> diagnostic. Analog values are
+    /// deliberately quantised to -/0/+ per axis: a resting thumb produces a different raw value on
+    /// almost every sample, so comparing raw numbers would log just as often as not comparing at all.
+    /// </summary>
+    private static string ToolbarDiagnosticState(GamepadSample sample) =>
+        $"b={(ushort)sample.Buttons} t={(sample.LeftTrigger > 30 ? 1 : 0)}{(sample.RightTrigger > 30 ? 1 : 0)} " +
+        $"lx={Math.Sign(sample.LeftX / 12000.0)} ly={Math.Sign(sample.LeftY / 12000.0)} " +
+        $"rx={Math.Sign(sample.RightX / 12000.0)} ry={Math.Sign(sample.RightY / 12000.0)}";
 
     public void Stop(string reason, bool restoreGame = false)
     {

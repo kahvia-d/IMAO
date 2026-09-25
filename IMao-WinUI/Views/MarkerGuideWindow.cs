@@ -116,9 +116,15 @@ public sealed class MarkerGuideWindow : Window
     internal string SkipButtonText => skip.Content as string ?? string.Empty;
     /// <summary>跳过按住发生状态变化时回调一次，供协调器写出诊断（同状态不重复上报）。</summary>
     internal Action<string>? SkipDiagnostic { get; set; }
-    /// <summary>跳过输入通道的状态快照，用于诊断输出。</summary>
+    /// <summary>
+    /// 跳过输入通道的状态快照，用于诊断输出。
+    ///
+    /// 这里**不带**"攻略窗口是不是前台"：那正是 §7.2 被推翻的那个判定（把前台塞进资格会让长按 Y
+    /// 永远无效）。上一个人的排查日志里留着这个字段，下一个人很容易照它再次误判，
+    /// 所以它只以 <c>diagFg</c> 的名字出现，并明确标注不参与判定。
+    /// </summary>
     internal string SkipInputSnapshot =>
-        $"canSkip={CanSkip} avail={skipAvailable} visible={IsGuideVisible} image={imageVisible} fg={IsGuideForeground()} " +
+        $"canSkip={CanSkip} avail={skipAvailable} visible={IsGuideVisible} image={imageVisible} diagFg={IsGuideForeground()} " +
         $"completed={selected?.Completed} skipping={skipping} kb={keyboardSkipHeld} gs={gamepadSkipHoldAction}";
     /// <summary>跳过入口是否可见/可用，测试用它断言"只有当前导航目标提供跳过"。</summary>
     internal bool SkipButtonVisible => skip.Visibility == Visibility.Visible;
@@ -566,17 +572,19 @@ public sealed class MarkerGuideWindow : Window
     /// <summary>
     /// 资格由协调器按原生答复设置：只有"当前导航目标"的攻略才会打开跳过入口。
     /// 撤销资格必须同时清掉正在进行的按住，否则玩家会在资格消失后继续攒进度。
+    ///
+    /// <paramref name="reason"/> 由调用方给出，只在撤销时写进诊断。以前这里靠
+    /// <see cref="System.Diagnostics.StackTrace"/> 现取调用方方法名，但异步方法上取到的常常是
+    /// <c>MoveNext</c>／状态机类型，等于既付了取栈的代价又拿不到有用的名字。
     /// </summary>
-    internal void SetSkipAvailability(bool available)
+    internal void SetSkipAvailability(bool available, string reason = "")
     {
         skipAvailable = available;
         if (!available) { ResetSkipInputs(); CancelSkipHold(); }
         skip.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
         skip.IsEnabled = available && !skipping;
         // 撤销资格必须能追到调用方：实机出现过"资格成立后又被撤销、且没有任何诊断"的情况。
-        if (!available)
-            SkipDiagnostic?.Invoke("revoked by " + new System.Diagnostics.StackTrace(1, false).GetFrame(0)?.GetMethod()?.DeclaringType?.Name +
-                "." + new System.Diagnostics.StackTrace(1, false).GetFrame(0)?.GetMethod()?.Name);
+        if (!available && reason.Length > 0) SkipDiagnostic?.Invoke("revoked reason=" + reason);
         ReportSkipState(available ? "available" : "unavailable");
     }
 

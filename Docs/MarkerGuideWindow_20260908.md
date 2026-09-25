@@ -50,6 +50,36 @@
 
 实际窗口证据：`OverlappedPresenter.HasTitleBar=false`、`HasBorder=false`，显示/隐藏时同时核对 `AppWindow.IsVisible` 与原生 `IsWindowVisible`。记录 HWND=3146132、style=`0x144C0000`；完整 `WS_CAPTION` 掩码不存在（Windows 的 `WS_CAPTION` 是 `WS_BORDER | WS_DLGFRAME`，不能把单独残留的 `WS_DLGFRAME` 位误判成标题栏）。证据为 `out/guide-window-harness-build.log` 和 `out/guide-window-runtime/guide-window-tests.log`；复现步骤见该测试目录的 README。
 
+## 交还前台前先等手柄松开（2026-09-25）
+
+**实机反馈**：手柄模式下长按 A 收集完一个点，角色紧接着**闪避**一下。
+
+**根因不在按键转发，而在交还前台的时机。** 本项目**不拦截手柄输入**（见本文下面那条注意），
+游戏一直在读同一只手柄，只是它没有前台时不做响应。长按 A 的那 600 毫秒里前台在攻略窗口上，
+游戏看不见 A；收集一完成：
+
+1. `ApplyCompletion` 判定这次完成要收起攻略；
+2. 攻略窗口隐藏 → 前台自然回到游戏（并伴随一次 `SetForegroundWindow`）；
+3. 玩家的手指这时**还按在 A 上**，几十到两百毫秒后才松开。
+
+游戏是第 2 步才拿回前台的：它没看见按下，却看见了松开，于是把那次松开当成一次**完整的 A**
+（游戏里 A = 闪避）。**这正好是 `Docs/archive/GamepadAdaptationDesign_20260908.md` §6
+「焦点与按住过渡」那条验收项要挡住的"遗留动作"，它一直没被验过。**
+
+**修法**：把"什么时候把前台还给游戏"变成一条受控的等待——`Models/GuideFocusHandoff.cs`（纯函数）
++ `MarkerGuideCoordinator.DeferFocusHandoffUntilNeutral`：
+
+- 手柄**任意键/扳机/摇杆**没有回中位时，先不收窗口、不交还前台；30 毫秒轮询一次，回中位立刻交还；
+- 上限 **2 秒**：玩家一直按着（或手柄读不到）也照旧交还，绝不能把攻略窗口永远停在前台困住玩家；
+- 手柄本来就是松开的（含没有读到手柄）→ 照旧立刻交还，不引入任何额外延迟；
+- 读的是**输入服务同一个读取器、同一个设备号**（`ReadGamepadSample` / `GamepadDevice`），
+  不会出现"两只手柄各读一个"的情况；
+- 诊断：`guide-focus handoff-deferred buttons=… lt=… rt=…` 与 `handoff-now … neutral=True`。
+
+纯规则由 `Tests/ManagedRuntime/GuideFocusHandoffTests.cs` 钉住（按住/摇杆偏出/扳机按下都要等，
+松开的立刻交还，死区内的小抖动不算按住，到上限必须放弃等待，取消后不再触发）。
+**真实手柄上的手感仍未实机验证**：要看的现象是"长按 A 收集完不再闪避"，而自动化只能证明规则与接线。
+
 ## 手柄呼出攻略不再抢前台，LS 切换聚焦（2026-09-25）
 
 **实机反馈**：手柄呼出攻略后窗口默认取得前台，玩家在游戏里的操作（移动等）随之失效——想看攻略就得停下手。

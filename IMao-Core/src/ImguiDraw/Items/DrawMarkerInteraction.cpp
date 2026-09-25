@@ -39,6 +39,8 @@ HHOOK mouseHook = nullptr;
 HHOOK keyboardHook = nullptr;
 AutoRoute::PlanningEscapeKey escapeKey;
 std::array<AutoRoute::PlanningEscapeKey, 256> guideKeys;
+// 跳过键与图片键的"这一次按下归谁"。抬起必须按它放行/吞掉，见 GuideHotkeyRouting.h。
+AutoRoute::GuideKeyOwnership guideKeyOwnership;
 std::deque<nlohmann::json> guideRequests;
 bool mapInteractive = false;
 bool escapeWasDown = false;
@@ -281,6 +283,12 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
     const bool up = message == WM_KEYUP || message == WM_SYSKEYUP;
     if (!down && !up) return CallNextHookEx(keyboardHook, code, message, value);
     const bool focused = DrawItemBase::IsMarkerGameFocused(game);
+    // 自动重复跟踪表按虚拟键码索引，所以**任何**用它之前都要先挡住越界的键。
+    // 低层键盘钩子会送来媒体键(0xAD)、浏览器键(0xAB)、输入法键(0xE5) 这类大于 255 的 vkCode；
+    // 图片键那一段原来是先索引、后检查（检查在下面 `if (info.vkCode != VK_ESCAPE)` 里），
+    // 今天因为只放行 13/27 而侥幸不可达——把检查提到最前面，这个形状就不再靠运气。
+    if (info.vkCode != VK_ESCAPE && info.vkCode >= guideKeys.size())
+        return CallNextHookEx(keyboardHook, code, message, value);
     // 图片键（Enter 放大/退出大图、ESC 退出大图）是固定按键，不进可配置绑定表，所以单独判定。
     // 归属规则是一条纯函数（GuideHotkeyRouting.h）：攻略可见 + 游戏或攻略在前台；ESC 额外要求
     // **大图正开着**，否则会把大地图的"取消手势/回到平移"吃掉。这里不再加任何别的条件。
@@ -292,19 +300,21 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
             reinterpret_cast<HWND>(static_cast<std::uintptr_t>(pictureGuide.value("hwnd", std::uint64_t{0})));
         const bool pictureModifiers = (GetAsyncKeyState(VK_CONTROL) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000) ||
             (GetAsyncKeyState(VK_SHIFT) & 0x8000) || (GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000);
-        if (!pictureModifiers && AutoRoute::GuidePictureKeyOwned(pictureKey, pictureGuideVisible,
-            pictureGuide.value("picture", false), focused, pictureGuideFocused)) {
-            // 一次按下对应一次开关：与攻略键同样的"只认第一次按下"，自动重复消息不算新的一次。
-            const bool pictureFirstDown = down && !guideKeys[info.vkCode].IsPressed();
-            guideKeys[info.vkCode].Handle(down, false, false, false); // 只用于跟踪自动重复
-            if (down && pictureFirstDown && guideRequests.size() < 32)
-                guideRequests.push_back({{"type", "markerGuidePictureKey"}, {"key", static_cast<int>(info.vkCode)},
-                    {"profileId", DrawItemBase::MarkerProfile()}});
-            return 1; // 攻略窗口拥有这个键时不再传给游戏
-        }
+        // 归属只由"第一次按下"决定：此后这个键的自动重复与抬起都跟着它走。
+        // 一次按下对应一次开关——自动重复消息不是新的一次。
+        const bool pictureFirstDown = down && !guideKeys[info.vkCode].IsPressed();
+        guideKeyOwnership.picture = AutoRoute::RecordGuideKeyDown(guideKeyOwnership.picture, pictureFirstDown,
+            !pictureModifiers && AutoRoute::GuidePictureKeyOwned(pictureKey, pictureGuideVisible,
+                pictureGuide.value("picture", false), focused, pictureGuideFocused));
+        guideKeys[info.vkCode].Handle(down, false, false, false); // 只用于跟踪自动重复
+        if (!AutoRoute::GuideKeyOwnedNow(guideKeyOwnership.picture))
+            return CallNextHookEx(keyboardHook, code, message, value);
+        if (down && pictureFirstDown && guideRequests.size() < 32)
+            guideRequests.push_back({{"type", "markerGuidePictureKey"}, {"key", static_cast<int>(info.vkCode)},
+                {"profileId", DrawItemBase::MarkerProfile()}});
+        return 1; // 攻略窗口拥有这个键时不再传给游戏
     }
     if (info.vkCode != VK_ESCAPE) {
-        if (info.vkCode >= guideKeys.size()) return CallNextHookEx(keyboardHook, code, message, value);
         const auto bindings = RuntimeHotkeys::Snapshot();
         const auto kind = AutoRoute::ClassifyGuideHotkey(bindings, static_cast<int>(info.vkCode));
         if (kind == AutoRoute::GuideHotkeyKind::None) return CallNextHookEx(keyboardHook, code, message, value);
@@ -330,20 +340,23 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
             guideFocused, focused);
         if (skipKey) {
             // 跳过键只转交"按下/松开"：按多久、算不算一次跳过都由窗口那侧决定。
+            //
+            // 所有权由第一次按下决定，并且**抬起一定跟着按下走**。原来抬起时重新问一遍
+            // "攻略还在不在/还有没有身份"，于是"按下被攻略吃掉、按住期间攻略关掉（跳过成功、
+            // 完成当前点、玩家按 B/LB+X）"的那一次会把一个 key-up 漏给游戏——而游戏从没收到
+            // 对应的 key-down，表现就是游戏里某个键看起来卡住或被松开。
             const bool skipFirstDown = down && !guideKeys[info.vkCode].IsPressed();
+            guideKeyOwnership.skip = AutoRoute::RecordGuideKeyDown(guideKeyOwnership.skip, skipFirstDown, owned);
             guideKeys[info.vkCode].Handle(down, false, false, false); // 只用于跟踪自动重复
-            if (down) {
-                if (!owned) return CallNextHookEx(keyboardHook, code, message, value);
-                if (skipFirstDown && guideRequests.size() < 32)
-                    guideRequests.push_back({{"type", "markerGuideSkip"}, {"down", true},
-                        {"profileId", DrawItemBase::MarkerProfile()}});
-            } else {
-                if (!AutoRoute::GuideSkipReleaseDelivered(guideVisible, guideIdentity))
-                    return CallNextHookEx(keyboardHook, code, message, value);
-                if (guideRequests.size() < 32)
-                    guideRequests.push_back({{"type", "markerGuideSkip"}, {"down", false},
-                        {"profileId", DrawItemBase::MarkerProfile()}});
-            }
+            if (!AutoRoute::GuideKeyOwnedNow(guideKeyOwnership.skip))
+                return CallNextHookEx(keyboardHook, code, message, value);
+            // 抬起只在"热键被装卸、窗口身份已经找不回来"时放弃转交，否则窗口那侧的 600 毫秒计时
+            // 会一直跑下去。按下那一次则永远转交。
+            if (!down && !AutoRoute::GuideSkipReleaseDelivered(guideVisible, guideIdentity))
+                return CallNextHookEx(keyboardHook, code, message, value);
+            if ((down ? skipFirstDown : true) && guideRequests.size() < 32)
+                guideRequests.push_back({{"type", "markerGuideSkip"}, {"down", down},
+                    {"profileId", DrawItemBase::MarkerProfile()}});
             return 1; // 攻略窗口拥有这个键时不再传给游戏
         }
         const bool completeGuide = kind == AutoRoute::GuideHotkeyKind::CompleteShownPoint && owned;
@@ -1048,6 +1061,7 @@ void DrawMarkerInteraction::Initialize(HWND gameWindow) {
     escapeKey.Reset(); planningEscapeRequested.reset(); ordinaryEscapeRequested = false; escapeWasDown = false;
     RuntimeHotkeyPressOwnership::Reset();
     guideRequests.clear();
+    guideKeyOwnership.Reset();
     for (std::size_t index = 0; index < guideKeys.size(); ++index) {
         guideKeys[index].Reset();
         if ((GetAsyncKeyState(static_cast<int>(index)) & 0x8000) != 0) guideKeys[index].Handle(true, false, false, false);
@@ -1092,6 +1106,7 @@ void DrawMarkerInteraction::Shutdown() {
     keyboardHook = nullptr; escapeKey.Reset(); planningEscapeRequested.reset(); ordinaryEscapeRequested = false;
     RuntimeHotkeyPressOwnership::Reset();
     for (auto& key : guideKeys) key.Reset();
+    guideKeyOwnership.Reset();
     guideRequests.clear();
     gesture = {}; planningBinding = {}; pendingGesture.reset();
 }

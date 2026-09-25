@@ -197,7 +197,10 @@ internal sealed class MapToolsWindow : Window
         {
             Add(next.NavigationStatus is "navigating" or "waitingForLocation" ? "pause" : "resume",
                 next.NavigationStatus is "navigating" or "waitingForLocation" ? "暂停导航" : "继续指引", next.CurrentTarget is not null);
-            Add("guide", "当前目标攻略", next.CurrentTarget is not null);
+            // 「当前目标攻略」的门槛必须与它背后的行为**同源**：打开路线目标的攻略要求路线正在指引
+            // （见 MarkerGuideCoordinator 的 RouteIsGuiding）。以前这里只看"有没有当前目标"，于是
+            // 路线暂停时按钮是亮的，按下去只换来一句"没有正在导航的路线目标"——按钮亮着却什么都不干。
+            Add("guide", "当前目标攻略", next.Guiding && next.CurrentTarget is not null);
             Add("skip", "跳过目标", next.CurrentTarget is not null); Add("undoSkip", "撤销跳过", next.Active.Stops.Any(s => s.Skipped));
             Add("replan", "重新规划", !next.Computing); Add("stop", "退出导航");
         }

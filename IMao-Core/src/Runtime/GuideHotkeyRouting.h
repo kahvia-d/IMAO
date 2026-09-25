@@ -42,7 +42,34 @@ inline bool GuideHotkeyOwned(GuideHotkeyKind kind, bool modifiers, bool guideVis
 }
 
 // 跳过键的抬起必须送到托管层，否则窗口那侧的 600 毫秒计时会一直跑下去。
+//
+// 这只是"在热键被装卸的瞬间还找得到一个窗口"的保守条件；**真正决定放不放行的是所有权**
+// （见下面的 GuideKeyOwnership）：按下被攻略吃掉的那一次，抬起也一定要吃掉，两者必须配对。
 inline bool GuideSkipReleaseDelivered(bool guideVisible, bool guideIdentity) { return guideVisible && guideIdentity; }
+
+// 一次按下之后，这个键（以及它的自动重复与抬起）归谁。
+// 目的只有一个：**让"按下"与"抬起"的归属绝对配对**。
+enum class GuideKeyOwner {
+    Game,       // 我们没吃这一次按下，它的自动重复和抬起都留给游戏
+    Guide       // 我们吃了这一次按下，它的自动重复和抬起都由我们负责
+};
+
+// 记录一次"按下"最终归谁。自动重复消息不改变结论——归谁由第一次按下决定。
+inline GuideKeyOwner RecordGuideKeyDown(GuideKeyOwner owner, bool firstDown, bool owned) {
+    return firstDown ? (owned ? GuideKeyOwner::Guide : GuideKeyOwner::Game) : owner;
+}
+
+// 这一条消息能不能被我们吞掉／转交。按下看这一次的归属判定，抬起只能看**按下时**记下的归属——
+// 这正是原来缺的那一半：旧写法抬起时重新问一遍"攻略还在不在"，于是"按下被吃掉、抬起时攻略已经
+// 关掉"的那一次会把一个 key-up 漏给游戏，而游戏从没收到对应的 key-down。
+inline bool GuideKeyOwnedNow(GuideKeyOwner owner) { return owner == GuideKeyOwner::Guide; }
+
+// 跳过键和图片键各自一份这样的状态（互不影响：两个键可以同时按着）。
+struct GuideKeyOwnership {
+    GuideKeyOwner skip = GuideKeyOwner::Game;
+    GuideKeyOwner picture = GuideKeyOwner::Game;
+    void Reset() { skip = GuideKeyOwner::Game; picture = GuideKeyOwner::Game; }
+};
 
 // 手柄的攻略快捷键（LB+X）是开关：攻略窗口已经开着（同一档案）时，这一下是"关掉它"，
 // 与键盘攻略键一致，而不是再去查一次附近点位。
