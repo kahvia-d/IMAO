@@ -9,6 +9,7 @@
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/RuntimeStatus.h"
 #include "../../Runtime/GamepadContext.h"
+#include "../../Runtime/StructuredLogger.h"
 
 #include <chrono>
 #include <iomanip>
