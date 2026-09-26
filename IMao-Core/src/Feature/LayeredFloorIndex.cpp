@@ -43,7 +43,12 @@ std::vector<std::uint8_t> DecodeOwnMask(const json& node, std::size_t expected) 
     if (!declared->is_number_integer() && !declared->is_number_unsigned()) return mask;
     if (static_cast<std::size_t>(declared->get<long long>()) != expected) return mask;
     const std::string bits = hex->get<std::string>();
-    if (bits.size() * 4 < expected) return mask;
+    // EXACT length, not "at least". A mask that has drifted by even one descriptor still has enough
+    // characters to read, and would then mark the wrong descriptors as the layer's own for the whole
+    // rest of the set - silently, and in every vote. A generator bug on 2026-09-26 produced exactly
+    // that (the capacity of a StringBuilder prefixed the mask with its decimal text); this check is
+    // what turns it into a dropped mask instead of a wrong one.
+    if (bits.size() != (expected + 3) / 4) return mask;
     mask.assign(expected, 0);
     for (std::size_t index = 0; index < expected; ++index) {
         mask[index] = static_cast<std::uint8_t>((NibbleValue(bits[index / 4]) >> (index % 4)) & 1);

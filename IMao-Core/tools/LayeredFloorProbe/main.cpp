@@ -78,6 +78,11 @@ int main(int argc, char** argv) {
     // Optional similarity-fit check over the same descriptor matches the localizer uses.
     bool affineMode = false;
     std::string affineFloorId;
+    // Print every accepted match against one floor as "queryX queryY mapX mapY distance own", so a
+    // plot can show WHICH part of a floor matched and whether the two images are the same place
+    // there. Added for the 虎口山脉 investigation - see Docs/LayeredMapFalsePositive_Hukou_20260926.md.
+    bool dumpMatches = false;
+    std::string dumpFloorId;
     // Same defaults the runtime classifier ships with; see LayeredFloorIndex.h for the
     // calibration these came from.
     int minimumMatches = 10;
@@ -130,6 +135,7 @@ int main(int argc, char** argv) {
             }
             else if (argument == "--affine") { affineMode = true; }
             else if (argument == "--affine-floor") { affineMode = true; affineFloorId = next("--affine-floor"); }
+            else if (argument == "--dump-matches") { dumpMatches = true; dumpFloorId = next("--dump-matches"); }
             else { PrintUsage(); return 2; }
         }
         catch (const std::exception& exception) {
@@ -265,6 +271,27 @@ int main(int argc, char** argv) {
                 }
             }
             std::cout << '\n';
+        }
+        if (dumpMatches) {
+            // The same knnMatch + ratio test Classify runs, but one line per accepted match: where it
+            // landed in the query image, and where that descriptor sits in the map.
+            for (const auto& floor : floors) {
+                if (floor.floorId != dumpFloorId) continue;
+                const bool hasOwn = floor.ownArt.size() ==
+                    static_cast<std::size_t>(floor.features.imgDescriptors.rows);
+                cv::BFMatcher matcher(cv::NORM_L2);
+                std::vector<std::vector<cv::DMatch>> knn;
+                matcher.knnMatch(query.imgDescriptors, floor.features.imgDescriptors, knn, 2);
+                for (const auto& pair : knn) {
+                    if (pair.size() < 2) continue;
+                    if (pair[0].distance >= ratio * pair[1].distance || pair[0].distance >= maxDistance) continue;
+                    const auto& queryPoint = query.imgKeypoints[pair[0].queryIdx].pt;
+                    const auto& mapPoint = floor.features.imgKeypoints[pair[0].trainIdx].pt;
+                    const int own = hasOwn && floor.ownArt[pair[0].trainIdx] != 0 ? 1 : 0;
+                    std::cout << "match " << queryPoint.x << " " << queryPoint.y << " "
+                        << mapPoint.x << " " << mapPoint.y << " " << pair[0].distance << " " << own << '\n';
+                }
+            }
         }
         if (hasAnchor) {
             // Footprint report: what the state machine uses to keep a floor the imagery alone

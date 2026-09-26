@@ -139,7 +139,11 @@ function Get-OwnArtMask {
         if ($tile.Alpha[$y * $tile.Stride + $x * 4 + 3] -gt $AlphaThreshold) { $bits[$i] = 1; ++$own }
     }
 
-    $hex = New-Object Text.StringBuilder ($count / 4 + 1)
+    # [int] is load-bearing: New-Object picks the StringBuilder(String) overload for a non-integral
+    # capacity, which prefixes the whole mask with the decimal text of the capacity ("346.2500" for
+    # 1381 keypoints) and shifts every bit against its descriptor. The runtime now rejects a mask of
+    # the wrong length, but that guard is the second line of defence, not the first.
+    $hex = New-Object Text.StringBuilder ([int]($count / 4 + 1))
     for ($i = 0; $i -lt $count; $i += 4) {
         $nibble = 0
         for ($b = 0; $b -lt 4; ++$b) {

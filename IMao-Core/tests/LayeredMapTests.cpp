@@ -5,9 +5,12 @@
 
 #include "Runtime/LayeredMapState.h"
 #include "Runtime/NearbySelection.h"
+#include "Feature/Processing/FeatureBinaryCodec.h"
 
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -493,6 +496,49 @@ int main() {
             const auto guarded = LayeredFloors::Classify(query, misaligned, 4, 2.0, 0.75f, 0.6f, false, 3);
             Require(guarded.winnerOwnMatches == guarded.winnerMatches,
                 "a misaligned mask must be ignored, not trusted");
+        }
+
+        // The mask is indexed by descriptor POSITION, so a mask that does not line up with the
+        // descriptor set has to be dropped rather than read. A generator bug on 2026-09-26 prefixed
+        // every mask with the decimal text of a StringBuilder capacity ("346.2500" for 1381
+        // keypoints), shifting every bit by 24-32 descriptors; Load then marked the wrong descriptors
+        // as the layer's own and every vote was quietly wrong, while the generator's own report still
+        // showed the correct totals. This pins the guard that turns that into "no mask at all".
+        {
+            const auto root = std::filesystem::temp_directory_path() / "imao-layered-own-mask-test";
+            const auto layerDirectory = root / "layered-floors";
+            std::filesystem::remove_all(root);
+            std::filesystem::create_directories(layerDirectory);
+
+            ImageFeatureData features;
+            features.imgDescriptors = OneHotDescriptors(8);
+            for (int row = 0; row < 8; ++row) features.imgKeypoints.emplace_back(0.0f, 0.0f, 1.0f);
+            std::string error;
+            Require(FeatureBinaryCodec::Save(layerDirectory / "floor.imf", features, {}, error),
+                "the mask fixture .imf must be writable");
+
+            // 8 descriptors need exactly 2 hex characters.
+            const auto writeIndex = [&](const std::string& mask) {
+                std::ofstream index(layerDirectory / "floor-index.json", std::ios::trunc);
+                index << "{\"formatVersion\":1,\"regionId\":\"test\",\"frame\":8,\"gridSize\":64,"
+                    << "\"floors\":[{\"layerId\":1,\"floorId\":\"-1/1\",\"layerName\":\"test\","
+                    << "\"floorName\":\"test\",\"file\":\"floor.imf\",\"keypointCount\":8,"
+                    << "\"ownMask\":\"" << mask << "\",\"ownMaskKeypoints\":8,\"tiles\":[]}]}";
+            };
+
+            LayeredFloors::Index index;
+            writeIndex("1.5000");     // the bug's shape: capacity text glued to a 2-character mask
+            Require(LayeredFloors::Load(root, index, error, 0), "the mask fixture index must load");
+            Require(index.floors.size() == 1 && index.floors[0].ownArt.empty(),
+                "a mask whose length does not match the descriptor set must be dropped, not read");
+
+            writeIndex("10");         // exact length: low bit first, so descriptors 0-3 are own
+            Require(LayeredFloors::Load(root, index, error, 0), "the mask fixture index must load");
+            const auto& own = index.floors[0].ownArt;
+            Require(own.size() == 8 && own[0] == 1 && own[1] == 0 && own[3] == 0 && own[4] == 0,
+                "an exact-length mask must decode bit for bit, low bit first");
+
+            std::filesystem::remove_all(root);
         }
 
         std::cout << "Layered marker role tests passed\n";
