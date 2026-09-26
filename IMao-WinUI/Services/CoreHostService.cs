@@ -27,6 +27,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     private readonly string hostDirectory;
     private readonly ResourceSnapshotService? resourceSnapshots;
     private bool resourceHealthReported;
+    private readonly LocalAccountCatalog? accountLedgers;
     private string desiredMarkerProfile = "local";
     private readonly string markerProfileWarning;
     public event EventHandler<JsonElement>? MarkerEvent;
@@ -39,19 +40,28 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
 
     public CoreHostService() : this(AppContext.BaseDirectory,
         new RuntimeConfigurationStore(Path.Combine(UserDataPaths.Root, "runtime-preferences.json")), new LocalItemFilter(),
-        new LocalMarkerProfileSelection(Path.Combine(UserDataPaths.Root, "kuromap-accounts.json")), ResourceSessionPaths.Snapshots) { }
+        new LocalAccountCatalog(Path.Combine(UserDataPaths.SavedPoints, "accounts.json"),
+            Path.Combine(UserDataPaths.SavedPoints, "profiles"), Path.Combine(UserDataPaths.Root, "kuromap-accounts.json"),
+            Path.Combine(UserDataPaths.KuroSync, "credentials")), ResourceSessionPaths.Snapshots) { }
     internal CoreHostService(string hostDirectory, RuntimeConfigurationStore configuration, LocalItemFilter filters,
-        LocalMarkerProfileSelection? profileSelection = null, ResourceSnapshotService? resourceSnapshots = null)
+        LocalAccountCatalog? accountCatalog = null, ResourceSnapshotService? resourceSnapshots = null)
     {
         this.hostDirectory = hostDirectory;
         this.resourceSnapshots = resourceSnapshots;
         this.configuration = configuration;
         this.filters = filters;
-        // Older versions stored the selected on-disk progress profile in account metadata.
-        // Continue that same local file; no login, credential access, or cloud connection is needed.
-        desiredMarkerProfile = profileSelection?.ProfileId ?? "local";
-        markerProfileWarning = profileSelection?.Warning ?? "";
+        accountLedgers = accountCatalog;
+        // The ledger list lives beside the progress it names, and reads the older account
+        // metadata once while seeding itself. The map starts on whatever the player last
+        // selected; nothing switches it afterwards without the player asking.
+        desiredMarkerProfile = accountCatalog?.ActiveId ?? "local";
+        markerProfileWarning = accountCatalog?.Warning ?? "";
     }
+
+    /// <summary>The player's local progress ledgers, in the order the settings page shows them.</summary>
+    public IReadOnlyList<LocalAccount> LocalAccounts => accountLedgers?.Accounts ?? [];
+    /// <summary>The ledger the map is showing.</summary>
+    public LocalAccount? ActiveLocalAccount => accountLedgers?.Active;
 
     // A reader belongs to one process and never reads fields of its successor.
     private sealed class Session
@@ -203,7 +213,11 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                 ?? throw new IOException("核心尚未连接");
             var data = await SendMarkerLockedAsync(session, operation, arguments, cancellationToken);
             if (operation == "markerSelectProfile")
+            {
                 desiredMarkerProfile = JsonSerializer.SerializeToElement(arguments).GetProperty("profileId").GetString() ?? "local";
+                // Selecting a ledger is the player's decision, so it survives a restart.
+                accountLedgers?.TrySetActive(desiredMarkerProfile, out _);
+            }
             return data;
         }
         finally { lifecycleLock.Release(); }

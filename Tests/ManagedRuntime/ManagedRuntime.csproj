@@ -32,6 +32,7 @@
     <Compile Include="../../IMao-WinUI/Services/CoreHostService.cs" Link="CoreHostService.cs" />
     <Compile Include="../../IMao-WinUI/Services/GamepadDiagnosticLog.cs" Link="GamepadDiagnosticLog.cs" />
     <Compile Include="../../IMao-WinUI/Services/LocalMarkerProfileSelection.cs" Link="LocalMarkerProfileSelection.cs" />
+    <Compile Include="../../IMao-WinUI/Services/LocalAccountCatalog.cs" Link="LocalAccountCatalog.cs" />
     <Compile Include="../../IMao-WinUI/Models/MarkerDetail.cs" Link="MarkerDetail.cs" />
     <Compile Include="../../IMao-WinUI/Models/MarkerGuideSession.cs" Link="MarkerGuideSession.cs" />
     <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="RoutePlanningState.cs" />

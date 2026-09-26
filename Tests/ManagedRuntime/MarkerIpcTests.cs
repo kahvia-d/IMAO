@@ -1,4 +1,4 @@
-﻿using IMao_WinUI.Helpers;
+using IMao_WinUI.Helpers;
 using IMao_WinUI.Services;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -156,7 +156,7 @@ internal static class MarkerIpcTests
 
         CoreHostService NewCore() => new(Path.GetFullPath(hostDirectory),
             new RuntimeConfigurationStore(Path.Combine(directory, "runtime.json")), new LocalItemFilter(filterPath, filterLegacy),
-            new LocalMarkerProfileSelection(profileSelectionPath));
+            new LocalAccountCatalog(Path.Combine(savedPoints, "accounts.json"), Path.Combine(savedPoints, "profiles"), profileSelectionPath));
     }
 
     private static async Task VerifyGamepadWithoutMapAsync(CoreHostService core, JsonElement originalSnapshot, Action<bool, string> check)
