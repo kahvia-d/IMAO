@@ -90,4 +90,30 @@ if (Test-Path -LiteralPath $featurePath) {
     if ([int]$binaryManifest.keypointCount -ne $xmlCount) { throw 'Binary feature manifest does not match the verified XML source.' }
     $featureSourceVerified = 'source-xml'
 }
-Write-Host "Kuro tile feature pack valid: pack=$($manifest.packId) coordinates=$($appearances.Count) tileEntries=$(@($manifest.tiles).Count) layered=$layeredCount keypoints=$xmlCount resource=$($manifest.resourceVersion) featureSource=$featureSourceVerified" -ForegroundColor Green
+# The layered-floor sidecar index carries its own copy of the frame's coordinate transform, and that
+# copy is what the runtime tests the player's position against (LayeredFloors::Contains -> the
+# occupancy grid). A wrong one is invisible: identification keeps working, own-art still dominates,
+# and containment simply never matches, so no floor is ever adopted. The shipped 隐海试验场 index sat
+# in World's frame for three days that way. Checked here against the same resolver the builder uses,
+# so a non-World index built with World's origin cannot ship again.
+$layeredIndexPath = Join-Path $PackRoot 'layered-floors/floor-index.json'
+$layeredFloorCount = 0
+if (Test-Path -LiteralPath $layeredIndexPath) {
+    . (Join-Path $PSScriptRoot 'SceneCoordinateTransform.ps1')
+    $layeredIndex = Get-Content -LiteralPath $layeredIndexPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ([int]$layeredIndex.frame -ne [int]$manifest.source.state) {
+        throw "Layered floor index frame $($layeredIndex.frame) does not match the pack's Kuro state $($manifest.source.state)."
+    }
+    $expectedTransform = Get-SceneCoordinateTransform -SourceRoot (Split-Path -Parent $PSScriptRoot) `
+        -Frame ([int]$layeredIndex.frame) -Scene ([string]$manifest.scene)
+    foreach ($field in 'originX', 'originY', 'scale') {
+        $actual = [double]$layeredIndex.coordinateTransform.$field
+        $wanted = [double]$expectedTransform.$field
+        if ([Math]::Abs($actual - $wanted) -gt 0.001) {
+            throw "Layered floor index $field is $actual but frame $($layeredIndex.frame) resolves to $wanted ($($expectedTransform.Source))."
+        }
+    }
+    $layeredFloorCount = @($layeredIndex.floors).Count
+    if ($layeredFloorCount -lt 1) { throw 'Layered floor index lists no floors.' }
+}
+Write-Host "Kuro tile feature pack valid: pack=$($manifest.packId) coordinates=$($appearances.Count) tileEntries=$(@($manifest.tiles).Count) layered=$layeredCount keypoints=$xmlCount resource=$($manifest.resourceVersion) featureSource=$featureSourceVerified layeredFloors=$layeredFloorCount" -ForegroundColor Green

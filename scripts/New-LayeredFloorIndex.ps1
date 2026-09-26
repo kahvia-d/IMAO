@@ -76,23 +76,18 @@ $registry = Get-Content -LiteralPath (Join-Path $SourceRoot 'map-regions/regions
 $regionRecord = @($registry.regions | Where-Object { $_.id -eq $RegionId })
 if ($regionRecord.Count -ne 1) { throw "Region '$RegionId' is not in the registry exactly once." }
 $scene = [string]$regionRecord[0].scene
-# The footprint grid and the scope centre are both expressed as map coordinates, and 每个 scene 有
-# 自己的坐标系: World is (2474,1957) @1.205 while, for example, 下层金库 is (-3.5,-2.5) @1.2053.
-# Hardcoding World's numbers made every non-World index test containment against the wrong point,
-# so no floor ever contained the player there (runtime log: containing=[] in 下层金库).
-$originX = 2474.0; $originY = 1957.0; $scale = 1.205
-$calibrationPath = Join-Path $SourceRoot 'Assets/KuroMap/scene-calibrations.json'
-if (Test-Path -LiteralPath $calibrationPath) {
-    $calibrations = Get-Content -LiteralPath $calibrationPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $calibration = $calibrations.scenes.PSObject.Properties[$scene]
-    if ($null -ne $calibration) {
-        $originX = [double]$calibration.Value.coordinateTransform.originX
-        $originY = [double]$calibration.Value.coordinateTransform.originY
-        $scale = [double]$calibration.Value.coordinateTransform.scale
-        Write-Host ("  scene transform: origin=({0},{1}) scale={2}" -f [math]::Round($originX, 3), [math]::Round($originY, 3), [math]::Round($scale, 5))
-    }
-    else { Write-Host "  no calibration for scene '$scene'; using the World transform" }
-}
+# The footprint grid and the scope centre are both expressed as map coordinates, and each frame has
+# its own origin: World is (2474,1957) @1.205 while 下层金库 is (-3.5,-2.5) @1.2053 and 隐海试验场 is
+# (7437,13783). Hardcoding World's numbers made every non-World index test containment against a
+# point belonging to another map entirely, so no floor ever contained the player there. The resolver
+# (and the guard that refuses that build) lives in scripts/SceneCoordinateTransform.ps1.
+. (Join-Path $PSScriptRoot 'SceneCoordinateTransform.ps1')
+$sceneTransform = Get-SceneCoordinateTransform -SourceRoot $SourceRoot -Frame $state -Scene $scene
+$originX = $sceneTransform.OriginX; $originY = $sceneTransform.OriginY; $scale = $sceneTransform.Scale
+$transform = @{ originX = $originX; originY = $originY; scale = $scale;
+    virtualMapSize = 850.0; tileSize = 1024 }
+Write-Host ("  scene transform: origin=({0},{1}) scale={2} source={3}" -f `
+        [math]::Round($originX, 3), [math]::Round($originY, 3), [math]::Round($scale, 5), $sceneTransform.Source)
 $sceneId = 1
 foreach ($candidate in (Join-Path $SourceRoot 'Assets/FeaturesDatas/KuroTilePacks'), (Join-Path $SourceRoot "out/map-regions/packs/$RegionId")) {
     $manifestPath = Join-Path $candidate "$RegionId/manifest.json"
@@ -189,8 +184,6 @@ New-Item -ItemType Directory -Force -Path $work | Out-Null
 
 $entries = New-Object System.Collections.ArrayList
 $alphaCache = @{}
-$transform = @{ originX = $originX; originY = $originY; scale = $scale;
-    virtualMapSize = 850.0; tileSize = 1024 }
 foreach ($group in $groups | Sort-Object Name) {
     $first = $group.Group[0]
     $layerId = [int]$first.layerId

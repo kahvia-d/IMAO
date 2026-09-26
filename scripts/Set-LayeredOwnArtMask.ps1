@@ -79,8 +79,18 @@ foreach ($regionDirectory in $regions) {
             $shared = [string]$tile.shared
             if ($shared) { $sharedGrids["$([int]$tile.x),$([int]$tile.y)"] = $shared }
         }
-        $mask = Get-OwnArtMask -Points $points -Transform $transform -TileOverlays $overlays `
-            -AlphaCache $alphaCache -TileSharedGrids $sharedGrids -GridSize ([int]$index.gridSize)
+        # A retro-fit cannot repair a .imf whose coordinates belong to a different frame than the
+        # index; Get-OwnArtMask refuses in that case. Skipping the floor leaves whatever mask it
+        # already has untouched, which is the safe outcome - writing the zero mask it would otherwise
+        # produce would silently switch the own-art veto off for that floor.
+        try {
+            $mask = Get-OwnArtMask -Points $points -Transform $transform -TileOverlays $overlays `
+                -AlphaCache $alphaCache -TileSharedGrids $sharedGrids -GridSize ([int]$index.gridSize)
+        }
+        catch {
+            Write-Warning "$($regionDirectory.Name) $($floor.floorId): $($_.Exception.Message)"
+            continue
+        }
 
         $floor | Add-Member -NotePropertyName ownMask -NotePropertyValue $mask.Hex -Force
         $floor | Add-Member -NotePropertyName ownMaskKeypoints -NotePropertyValue $mask.Total -Force

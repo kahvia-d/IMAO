@@ -126,7 +126,10 @@ function Get-OwnArtMask {
         # "x,y" -> that tile's `shared` grid, the cells the layer copied from the surface.
         [hashtable]$TileSharedGrids = @{},
         [int]$GridSize = 64,
-        [int]$AlphaThreshold = 8)
+        [int]$AlphaThreshold = 8,
+        # Share of keypoints allowed to fall outside -TileOverlays before the coordinate frame is
+        # declared wrong. Measured separation is 0.0% vs 100.0%, so this only has to be a sanity bar.
+        [double]$FrameMismatchTolerance = 0.2)
 
     $count = $Points.Count
     $bits = New-Object byte[] $count
@@ -166,6 +169,19 @@ function Get-OwnArtMask {
         }
         $bits[$i] = 1
         ++$own
+    }
+
+    # A floor's keypoints were extracted from exactly the tiles in -TileOverlays, and written out in
+    # the coordinate frame recorded beside them. Reading them back with a DIFFERENT frame puts them on
+    # other tiles, where no overlay exists - and that is invisible: the alpha read is simply skipped
+    # and the mask comes out all zeroes, which the runtime reads as "none of these descriptors is the
+    # layer's own art" and quietly switches the own-art veto off for that floor.
+    #
+    # The separation is total, so this is a hard error rather than a warning. Every floor of all 90 in
+    # the shipped packs puts 100.0% of its keypoints back on its own tiles; 隐海试验场's index, whose
+    # transform said World while its .imf had been built in frame 905, put 0.0% there.
+    if ($count -gt 0 -and $outside -gt $count * $FrameMismatchTolerance) {
+        throw ("{0:N1}% of {1} keypoints landed outside the tiles they were built from; the .imf was not built with this coordinate transform. Rebuild the floor with scripts/New-LayeredFloorIndex.ps1 rather than retro-fitting a mask onto it." -f (100.0 * $outside / $count), $count)
     }
 
     # [int] is load-bearing: New-Object picks the StringBuilder(String) overload for a non-integral
