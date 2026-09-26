@@ -11,8 +11,18 @@
 //     2560x1440 and a 2560x1600 frame, so it hugs the top edge.  Scaling y by height/900 moved every
 //     such widget 0.178 * yReference pixels too low on a 16:10 client: the task-icon box landed 36px
 //     below the glyph, the state detector then read an empty crop and reported the HUD as absent.
-//   * the coordinate readout keeps its 8..33px gap to the bottom edge in both frames, and the
-//     big-map zoom column moves down by exactly the 160px the frame grew, so both hug the bottom.
+//   * the coordinate readout keeps its 8..33px gap to the bottom edge in both frames, so it hugs the
+//     bottom.
+//   * the big-map zoom column does NOT hug the bottom: it is CENTRED on the client. This file first
+//     recorded it as "moves down by exactly the 160px the frame grew" (i.e. bottom anchored), and a
+//     16:9 client cannot tell the two apart - the anchors coincide whenever height == 900 * scale.
+//     Re-measured 2026-09-26 on four captures (2560x1600 player big map, 1920x1200 window big map,
+//     and the 2560x1440 mouse and controller development captures): the +/- glyph centres and the
+//     RT/LT capsules sit at the client centre offset by 185 and 165 reference units, and the
+//     production shape test in MapUiVisualDetector only fires for a centre-anchored crop. The
+//     bottom-anchored box misses its tolerance by (height - 900 * scale) / 2: 60px at 1920x1200,
+//     80px at 2560x1600, 150px at 1600x1200. That is what made the big map unusable on every client
+//     taller than 16:9 - the controls were never detected, so the state had no confirmation left.
 //   * the central map rectangle is symmetric in the reference (160px left/right, 135px top/bottom),
 //     so it grows around the centre.
 //
@@ -52,7 +62,7 @@ inline constexpr Box kWavePlateCrystal = { 969, 37, 999, 66, AnchorX::Right, Anc
 inline constexpr Box kCoordinateReadout = { 20, 865, 160, 900, AnchorX::Left, AnchorY::Bottom };
 inline constexpr Box kMapCenterArea = { 160, 135, 1440, 765, AnchorX::Center, AnchorY::Center };
 inline constexpr Box kBigMapCompass = { 10, 52, 82, 116, AnchorX::Left, AnchorY::Top };
-inline constexpr Box kBigMapZoomStrip = { 1480, 235, 1540, 645, AnchorX::Right, AnchorY::Bottom };
+inline constexpr Box kBigMapZoomStrip = { 1480, 235, 1540, 645, AnchorX::Right, AnchorY::Center };
 
 /// The single scale and the anchor rules one client size implies.
 struct Layout {

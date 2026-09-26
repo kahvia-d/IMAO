@@ -2,9 +2,14 @@
 // Geometry of the game's HUD layout. The 16:10 and 4K numbers below are measured, not derived:
 //   * 2560x1600, 2026-09-26 player session (`app-init client=2560x1600`, 945 frames reported
 //     `ocr-unsupported frame=2560x1600` with the old resolution whitelist). The minimap circle on that
-//     player's capture spans x 48..294 and y 37..283, the task icon's glyph ends at y=332, the
-//     coordinate readout ink sits at y 1567..1592, and the big-map zoom column is exactly the 160px
-//     lower that the frame grew.
+//     player's capture spans x 48..294 and y 37..283, the task icon's glyph ends at y=332, and the
+//     coordinate readout ink sits at y 1567..1592.
+//   * the same player capture, re-measured the same day with the big map open: the zoom column's +/- glyph
+//     centres are at y 504 and 1064, so the strip top is 456 - centred, NOT the 536 the first reading
+//     ("moved down by the 160px the frame grew") concluded. A 1920x1200 window capture puts the same
+//     pair at 378 and 798 (top 342), the 2560x1440 mouse capture at 424 and 984 (top 376), and the
+//     2560x1440 controller capture's RT/LT capsules at 421.5 and 981.5. Centre and bottom anchors
+//     coincide on 16:9, which is why only a taller client could expose the difference.
 //   * 3840x2160, the same build's 4K capture: the minimap box is 51..315 x 39..304 once the frame is
 //     normalized to 2730x1536, i.e. 72..442 x 55..425 client pixels.
 #include "Coordinate/HudLayout.h"
@@ -37,10 +42,21 @@ inline void TestHudLayout(void (*check)(bool, const std::string&)) {
     const auto readout = ScreenCoordinate::ScreenRect(client16x10, hud::kCoordinateReadout);
     check(readout == cv::Rect(32, 1544, 224, 56),
         "the coordinate readout keeps its gap to the bottom edge on a 16:10 client");
-    // Big map: the zoom column moved down by the 160px the frame grew, so it hugs the bottom.
+    // Big map: the zoom column is centred on the client, so it does not follow the bottom edge. At 16:9
+    // the centre and bottom anchors coincide, which is why the bottom anchor looked right here and was
+    // wrong on every client taller than 16:9 - the state machine then never saw its zoom controls.
     const auto zoom = ScreenCoordinate::ScreenRect(client16x10, hud::kBigMapZoomStrip);
-    check(zoom == cv::Rect(2368, 536, 96, 656),
-        "the big-map zoom column keeps its distance to the bottom edge on a 16:10 client");
+    check(zoom == cv::Rect(2368, 456, 96, 656),
+        "the big-map zoom column is centred on a 16:10 client, not 80px lower against the bottom edge");
+    // The pair the column was re-measured from, in normalized strip units: glyph centres 30 and 380.
+    check(std::abs((504 - zoom.y) - 30 * 1.6) <= 1.0 && std::abs((1064 - zoom.y) - 380 * 1.6) <= 1.0,
+        "the player capture's +/- centres land on the strip's own normalized 30/380 rows");
+    // The window capture that exposed it, at a second scale (1920/1600 = 1.2, also width limited).
+    const RECT client1920x1200{ 0, 0, 1920, 1200 };
+    check(ScreenCoordinate::ScreenRect(client1920x1200, hud::kBigMapZoomStrip) == cv::Rect(1776, 342, 72, 492),
+        "a 1920x1200 client centres the zoom column where that capture shows it");
+    check(std::abs((378 - 342) - 30 * 1.2) <= 1.0 && std::abs((798 - 342) - 380 * 1.2) <= 1.0,
+        "the 1920x1200 capture's +/- centres land on the same normalized rows");
     // It is normalized to 60x410, and the glyph thresholds were measured on that normalization, which
     // is only isotropic while both axes are divided by the same client scale.
     check(std::abs(static_cast<double>(zoom.width) / 60.0 - static_cast<double>(zoom.height) / 410.0) < 0.002 &&
