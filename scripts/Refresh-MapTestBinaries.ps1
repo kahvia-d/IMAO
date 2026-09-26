@@ -19,7 +19,8 @@
 #   pwsh -File scripts\Refresh-MapTestBinaries.ps1              # copy, then report
 #   pwsh -File scripts\Refresh-MapTestBinaries.ps1 -DryRun      # report only
 #
-# Launch the result with (administrator, game running, 16:9):
+# Launch the result with (administrator, game running; any client aspect ratio, the HUD crops follow
+# the game's own scale and anchors):
 #   out\map-test\IMao-WinUI.exe
 
 [CmdletBinding()]
@@ -157,4 +158,4 @@ if ($totalFramed -ne $totalIndexes) {
     Write-Warning 'a layered-floor index is in the wrong coordinate frame; no player position can ever be inside its footprint.'
 }
 Write-Host ''
-Write-Host 'Launch with: out\map-test\IMao-WinUI.exe   (administrator, game running, 16:9)'
+Write-Host 'Launch with: out\map-test\IMao-WinUI.exe   (administrator, game running; any client aspect ratio)'

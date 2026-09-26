@@ -311,4 +311,4 @@ Write-Host "  base atlas removed   : $($removedFeatureFiles -join ', ')"
 Write-Host "  $baselineManifestName : absent by design (skips the features-must-be-listed rule)"
 Write-Host "  tile packages named  : $tilePackCount"
 if ($candidatePath) { Write-Host "  preflight snapshot   : $candidatePath" }
-Write-Host "Launch: $RunRoot\IMao-WinUI.exe  (run as administrator, game open, 16:9)"
+Write-Host "Launch: $RunRoot\IMao-WinUI.exe  (run as administrator, game open, any client aspect ratio)"
