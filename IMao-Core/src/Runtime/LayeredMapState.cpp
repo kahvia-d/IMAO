@@ -41,7 +41,9 @@ constexpr auto kLeftFootprintFor = std::chrono::milliseconds(2500);
 std::chrono::steady_clock::time_point outsideFootprintSince{};
 // A near-tie among the floors the player can be in - 下层金库's 贵金属与艺术品藏区 votes 12/10/5/4
 // for four floors of the same marble hall - is still a decision, but it takes this many matches to
-// make: the winner is the only candidate too often for a small count to mean anything.
+// make: the winner is the only candidate too often for a small count to mean anything. It is a bar on
+// the TOTAL vote, as it always was; what keeps a surface frame out of this path is the own-art share
+// veto applied alongside it (see Classification::ownDominant), not a higher count.
 constexpr int kNearTieMatches = 10;
 std::string pendingFloorId;
 // Consecutive decisive classifications; see kGroupResetFrames.
@@ -115,16 +117,17 @@ std::string JoinFloors(const std::vector<std::string>& floors) {
     return joined;
 }
 
-std::string VoteSummary(const LayeredFloors::Classification& classification, const std::vector<const Entry*>& source) {
+std::string VoteSummary(const std::vector<LayeredFloors::FloorVote>& votes,
+    const std::vector<const Entry*>& source, bool own) {
     std::string summary;
-    for (std::size_t index = 0; index < classification.votes.size() && index < 4; ++index) {
-        const auto& vote = classification.votes[index];
+    for (std::size_t index = 0; index < votes.size() && index < 4; ++index) {
+        const auto& vote = votes[index];
         // The vote carries where it came from: with every region on the table the same floor id
         // can appear more than once, so looking the id up again would report the wrong region.
         const Entry* entry = vote.sourceIndex < source.size() ? source[vote.sourceIndex] : nullptr;
         if (!summary.empty()) summary += " ";
         summary += entry == nullptr ? vote.floorId : entry->regionId + ":" + entry->floor.floorId;
-        summary += "=" + std::to_string(vote.matches);
+        summary += "=" + std::to_string(own ? vote.ownMatches : vote.matches);
     }
     return summary;
 }
@@ -215,6 +218,11 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         // costs one bounded search that falls back to the global sweep anyway.
         // Every floor in the game is a candidate here and the answer only scopes a search, so the
         // capped sample is enough - see FloorEntry::sampleFeatures.
+        //
+        // Deliberately the TOTAL vote and not the own-art one that decides adoption further down:
+        // the capped sample is thin, and this value never reaches `current` - a wrong scope costs
+        // one wasted sweep, it cannot hide a marker. Asking for own-art evidence here would make the
+        // cold start give up on the scoping hint inside a cave, which is the case it exists for.
         const auto classification = LayeredFloors::Classify(minimapFeatures, floors, 4, 1.5, 0.75f, 0.6f, true);
         std::lock_guard lock(stateMutex);
         if (!classification.identified) return;
@@ -338,8 +346,12 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     // evidence, and on the surface above a cave the tie is between the cave's floors and the one
     // the position points at (the field log's 21/21/18 in 入口 while standing in 一层).
     std::vector<std::string> equivalent;
-    bool adopted = classification.identified && winnerContained;
-    if (!adopted && restricted && winnerContained && classification.winnerMatches >= kNearTieMatches) {
+    // `ownDominant` is the veto that keeps a surface frame out of BOTH paths: the floor the vote
+    // named has to have been named by art it draws itself, not by the surface base plate every
+    // co-located floor carries. See Classification::ownDominant for the measurements.
+    bool adopted = classification.identified && winnerContained && classification.ownDominant;
+    if (!adopted && restricted && winnerContained && classification.winnerMatches >= kNearTieMatches &&
+        classification.ownDominant) {
         const bool tieIsLocal = std::all_of(classification.votes.begin(), classification.votes.end(),
             [&](const LayeredFloors::FloorVote& vote) {
                 return vote.matches == 0 ||
@@ -451,6 +463,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
                 " name=" + (entry == nullptr ? std::string("?") : entry->floor.floorName) +
                 " matches=" + std::to_string(classification.winnerMatches) +
                 " runnerUp=" + std::to_string(classification.runnerUpMatches) +
+                " ownMatches=" + std::to_string(classification.winnerOwnMatches) +
+                " ownRunnerUp=" + std::to_string(classification.runnerUpOwnMatches) +
                 " heightDirection=" + std::to_string(current.heightDirection) +
                 " heightRank=" + std::to_string(current.heightRank) +
                 " equivalent=[" + JoinFloors(equivalent) + "]");
@@ -493,6 +507,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             " active=" + std::to_string(current.active) + " floor=" + (current.floorId.empty() ? "-" : current.floorId) +
             " restricted=" + std::to_string(restricted) + " containing=[" + containing + "]" +
             " identified=" + std::to_string(classification.identified) +
+            " ownDominant=" + std::to_string(classification.ownDominant) +
+            " ownFloor=" + (classification.ownFloorId.empty() ? std::string("-") : classification.ownFloorId) +
             " adopted=" + std::to_string(adopted) +
             " winnerContained=" + std::to_string(winnerContained) +
             " decisiveStreak=" + std::to_string(decisiveStreak) +
@@ -500,7 +516,11 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             " equivalent=[" + JoinFloors(current.equivalentFloorIds) + "]" +
             " winner=" + std::to_string(classification.winnerMatches) +
             " runnerUp=" + std::to_string(classification.runnerUpMatches) +
-            " votes=[" + VoteSummary(classification, candidates) + "]");
+            " ownWinner=" + std::to_string(classification.winnerOwnMatches) +
+            " ownShare=" + std::to_string(classification.winnerOwnShare) +
+            " ownRunnerUp=" + std::to_string(classification.runnerUpOwnMatches) +
+            " votes=[" + VoteSummary(classification.votes, candidates, false) + "]" +
+            " ownVotes=[" + VoteSummary(classification.ownVotes, candidates, true) + "]");
     }
 }
 

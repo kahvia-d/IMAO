@@ -76,23 +76,18 @@ $registry = Get-Content -LiteralPath (Join-Path $SourceRoot 'map-regions/regions
 $regionRecord = @($registry.regions | Where-Object { $_.id -eq $RegionId })
 if ($regionRecord.Count -ne 1) { throw "Region '$RegionId' is not in the registry exactly once." }
 $scene = [string]$regionRecord[0].scene
-# The footprint grid and the scope centre are both expressed as map coordinates, and 每个 scene 有
-# 自己的坐标系: World is (2474,1957) @1.205 while, for example, 下层金库 is (-3.5,-2.5) @1.2053.
-# Hardcoding World's numbers made every non-World index test containment against the wrong point,
-# so no floor ever contained the player there (runtime log: containing=[] in 下层金库).
-$originX = 2474.0; $originY = 1957.0; $scale = 1.205
-$calibrationPath = Join-Path $SourceRoot 'Assets/KuroMap/scene-calibrations.json'
-if (Test-Path -LiteralPath $calibrationPath) {
-    $calibrations = Get-Content -LiteralPath $calibrationPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $calibration = $calibrations.scenes.PSObject.Properties[$scene]
-    if ($null -ne $calibration) {
-        $originX = [double]$calibration.Value.coordinateTransform.originX
-        $originY = [double]$calibration.Value.coordinateTransform.originY
-        $scale = [double]$calibration.Value.coordinateTransform.scale
-        Write-Host ("  scene transform: origin=({0},{1}) scale={2}" -f [math]::Round($originX, 3), [math]::Round($originY, 3), [math]::Round($scale, 5))
-    }
-    else { Write-Host "  no calibration for scene '$scene'; using the World transform" }
-}
+# The footprint grid and the scope centre are both expressed as map coordinates, and each frame has
+# its own origin: World is (2474,1957) @1.205 while 下层金库 is (-3.5,-2.5) @1.2053 and 隐海试验场 is
+# (7437,13783). Hardcoding World's numbers made every non-World index test containment against a
+# point belonging to another map entirely, so no floor ever contained the player there. The resolver
+# (and the guard that refuses that build) lives in scripts/SceneCoordinateTransform.ps1.
+. (Join-Path $PSScriptRoot 'SceneCoordinateTransform.ps1')
+$sceneTransform = Get-SceneCoordinateTransform -SourceRoot $SourceRoot -Frame $state -Scene $scene
+$originX = $sceneTransform.OriginX; $originY = $sceneTransform.OriginY; $scale = $sceneTransform.Scale
+$transform = @{ originX = $originX; originY = $originY; scale = $scale;
+    virtualMapSize = 850.0; tileSize = 1024 }
+Write-Host ("  scene transform: origin=({0},{1}) scale={2} source={3}" -f `
+        [math]::Round($originX, 3), [math]::Round($originY, 3), [math]::Round($scale, 5), $sceneTransform.Source)
 $sceneId = 1
 foreach ($candidate in (Join-Path $SourceRoot 'Assets/FeaturesDatas/KuroTilePacks'), (Join-Path $SourceRoot "out/map-regions/packs/$RegionId")) {
     $manifestPath = Join-Path $candidate "$RegionId/manifest.json"
@@ -113,6 +108,11 @@ $gridSize = 64
 $cell = 1024 / $gridSize
 
 Add-Type -AssemblyName System.Drawing
+
+# Which of each floor's descriptors came from the layer's own art rather than the surface base plate
+# the composite carries underneath it. Shipped alongside the descriptors so the runtime can decide a
+# floor on the part of the vote that says anything about the floor's identity.
+. (Join-Path $PSScriptRoot 'LayeredOwnArtMask.ps1')
 
 # A cell counts as shared when most of its opaque pixels are the surface tile's own pixels: the
 # layered map copied that piece instead of drawing its own. Measured across all 161 layered tiles
@@ -183,6 +183,7 @@ $work = Join-Path $SourceRoot 'out/map-regions/floor-index-work'
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 
 $entries = New-Object System.Collections.ArrayList
+$alphaCache = @{}
 foreach ($group in $groups | Sort-Object Name) {
     $first = $group.Group[0]
     $layerId = [int]$first.layerId
@@ -223,19 +224,48 @@ foreach ($group in $groups | Sort-Object Name) {
     $imfManifest = Join-Path $OutputRoot "$tag.imf.manifest.json"
     & $converter $features $imf $imfManifest | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Floor index conversion failed for $tag." }
+    # Read the keypoints back out of the .imf rather than out of features.yml: the mask is indexed by
+    # descriptor position, so it has to be built from the same file, in the same order, that the
+    # runtime loads. (The two agree today - verified element-wise for jinzhou on 2026-09-26 - but that
+    # is the converter's behaviour to keep, not something this script should depend on.)
+    # The occupancy and shared grids are computed here rather than further down because the own-art
+    # mask needs `shared`: ground the layer copied from the surface is not art the layer drew, and
+    # counting it as such put the whole-game false-positive rate at 68% for 下层金库 and 19% for
+    # 拉海洛 (measured 2026-09-26, out/sweep-report.txt).
+    $tileOverlays = @{}
+    $tileOccupancy = @{}
+    $tileShared = @{}
+    foreach ($tile in $group.Group) {
+        $key = "$([int]$tile.x),$([int]$tile.y)"
+        $overlayPath = Join-Path $LayerArchiveRoot "$tileVersion/$state/$($tile.overlay)"
+        if (-not (Test-Path -LiteralPath $overlayPath)) { continue }
+        $surfacePath = Join-Path $tileRoot "$state/${state}_$([int]$tile.x)_$([int]$tile.y).png"
+        $tileOverlays[$key] = $overlayPath
+        $tileOccupancy[$key] = Get-OccupancyHex $overlayPath
+        $tileShared[$key] = Get-SharedHex $overlayPath $surfacePath
+    }
+    $ownMask = $null
+    if ($tileOverlays.Count -gt 0) {
+        $ownMask = Get-OwnArtMask -Points (Read-ImfKeypoints -Path $imf) -Transform $transform `
+            -TileOverlays $tileOverlays -AlphaCache $alphaCache -TileSharedGrids $tileShared -GridSize $gridSize
+    }
     [void]$entries.Add([ordered]@{
         layerId = $layerId; floorId = $floorId
         layerName = [string]$first.layerName; floorName = [string]$first.floorName
         file = "$tag.imf"; keypointCount = $keypoints
+        ownMask = $(if ($null -ne $ownMask) { $ownMask.Hex } else { '' })
+        ownMaskKeypoints = $(if ($null -ne $ownMask) { $ownMask.Total } else { 0 })
         tiles = @($group.Group | ForEach-Object {
-            $overlayPath = Join-Path $LayerArchiveRoot "$tileVersion/$state/$($_.overlay)"
-            $surfacePath = Join-Path $tileRoot "$state/${state}_$([int]$_.x)_$([int]$_.y).png"
-            $occupancy = if (Test-Path -LiteralPath $overlayPath) { Get-OccupancyHex $overlayPath } else { '' }
-            $shared = if (Test-Path -LiteralPath $overlayPath) { Get-SharedHex $overlayPath $surfacePath } else { '' }
-            [ordered]@{ x = [int]$_.x; y = [int]$_.y; occupancy = $occupancy; shared = $shared }
+            $key = "$([int]$_.x),$([int]$_.y)"
+            [ordered]@{ x = [int]$_.x; y = [int]$_.y
+                occupancy = $(if ($tileOccupancy.ContainsKey($key)) { $tileOccupancy[$key] } else { '' })
+                shared = $(if ($tileShared.ContainsKey($key)) { $tileShared[$key] } else { '' }) }
         })
     })
-    Write-Host ("  {0,-16} {1,-22} keypoints={2,6}  tiles={3}" -f $tag, $first.floorName, $keypoints, $group.Count)
+    $ownShare = if ($null -ne $ownMask -and $ownMask.Total -gt 0) { 100.0 * $ownMask.Own / $ownMask.Total } else { 0 }
+    Write-Host ("  {0,-16} {1,-22} keypoints={2,6}  ownArt={3,6} ({4,5:N1}%)  copiedDropped={5,5}  tiles={6}" -f `
+            $tag, $first.floorName, $keypoints, $(if ($null -ne $ownMask) { $ownMask.Own } else { 0 }), $ownShare,
+        $(if ($null -ne $ownMask) { $ownMask.Copied } else { 0 }), $group.Count)
 }
 
 $index = [ordered]@{

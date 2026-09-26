@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <fstream>
 
 using json = nlohmann::json;
@@ -16,6 +17,43 @@ namespace {
 std::string ReadString(const json& node, const char* key) {
     const auto it = node.find(key);
     return it == node.end() || it->is_null() ? std::string() : it->get<std::string>();
+}
+
+int NibbleValue(char nibble) {
+    return nibble >= '0' && nibble <= '9' ? nibble - '0'
+        : (nibble >= 'a' && nibble <= 'f' ? nibble - 'a' + 10
+            : (nibble >= 'A' && nibble <= 'F' ? nibble - 'A' + 10 : 0));
+}
+
+/// The per-descriptor "this layer draws here" grid: one bit per keypoint of the floor's own .imf,
+/// packed four to a hex nibble with the first keypoint in the lowest bit - the same packing
+/// Get-OccupancyHex uses for the footprint grids.
+///
+/// `expected` is the keypoint count the .imf actually carries. A mask whose declared length does
+/// not match it is DROPPED rather than trusted: a mask that has drifted by one descriptor would
+/// mark the wrong half of the set as the layer's own and quietly corrupt every vote, which is far
+/// worse than not having one. An absent or rejected mask leaves both vectors empty, and Classify
+/// reads that as "every descriptor is the layer's own" - an old pack keeps the behaviour it had.
+std::vector<std::uint8_t> DecodeOwnMask(const json& node, std::size_t expected) {
+    std::vector<std::uint8_t> mask;
+    if (expected == 0) return mask;
+    const auto declared = node.find("ownMaskKeypoints");
+    const auto hex = node.find("ownMask");
+    if (declared == node.end() || hex == node.end() || !hex->is_string()) return mask;
+    if (!declared->is_number_integer() && !declared->is_number_unsigned()) return mask;
+    if (static_cast<std::size_t>(declared->get<long long>()) != expected) return mask;
+    const std::string bits = hex->get<std::string>();
+    // EXACT length, not "at least". A mask that has drifted by even one descriptor still has enough
+    // characters to read, and would then mark the wrong descriptors as the layer's own for the whole
+    // rest of the set - silently, and in every vote. A generator bug on 2026-09-26 produced exactly
+    // that (the capacity of a StringBuilder prefixed the mask with its decimal text); this check is
+    // what turns it into a dropped mask instead of a wrong one.
+    if (bits.size() != (expected + 3) / 4) return mask;
+    mask.assign(expected, 0);
+    for (std::size_t index = 0; index < expected; ++index) {
+        mask[index] = static_cast<std::uint8_t>((NibbleValue(bits[index / 4]) >> (index % 4)) & 1);
+    }
+    return mask;
 }
 
 } // namespace
@@ -134,6 +172,11 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
         // measurement that made this split necessary (a 600-descriptor sample picked the wrong
         // floor in 下层金库 where the full set picked the right one).
         entry.sampleFeatures = entry.features;
+        // Which of those descriptors came from this layer's own art rather than the surface base
+        // plate the composite carries underneath it. See FloorEntry::ownArt for why the distinction
+        // is the whole point; absent on an old index, which Classify reads as "all of them".
+        entry.ownArt = DecodeOwnMask(node, entry.features.imgKeypoints.size());
+        entry.sampleOwnArt = entry.ownArt;
         if (maxKeypointsPerFloor > 0 &&
             entry.features.imgKeypoints.size() > static_cast<std::size_t>(maxKeypointsPerFloor)) {
             const std::size_t stride = (entry.features.imgKeypoints.size() +
@@ -151,6 +194,16 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
             entry.sampleFeatures.imgDescriptors = cv::Mat(
                 static_cast<int>(entry.sampleFeatures.imgKeypoints.size()),
                 entry.features.imgDescriptors.cols, CV_32F, descriptors.data()).clone();
+            // The mask has to be cut down by the SAME stride, or the flags stop lining up with the
+            // descriptors they describe and the cold-start vote would read another descriptor's bit.
+            if (!entry.ownArt.empty()) {
+                std::vector<std::uint8_t> sampled;
+                sampled.reserve(entry.sampleFeatures.imgKeypoints.size());
+                for (std::size_t i = 0; i < entry.features.imgKeypoints.size(); i += stride) {
+                    sampled.push_back(entry.ownArt[i]);
+                }
+                entry.sampleOwnArt = std::move(sampled);
+            }
         }
         if (entry.features.imgKeypoints.empty() ||
             entry.features.imgDescriptors.rows != static_cast<int>(entry.features.imgKeypoints.size())) {
@@ -470,7 +523,8 @@ double SharedFraction(const FloorEntry& floor, const Transform& transform, doubl
 }
 
 Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,
-    int minimumMatches, double margin, float ratio, float maxDistance, bool useSamples) {
+    int minimumMatches, double margin, float ratio, float maxDistance, bool useSamples,
+    double minimumOwnShare) {
     Classification result;
     if (query.imgDescriptors.empty() || query.imgDescriptors.rows < 2 || floors.empty()) return result;
 
@@ -480,9 +534,15 @@ Classification Classify(const ImageFeatureData& query, const std::vector<const F
         if (floor == nullptr) continue;
         // The cold start compares every floor in the game and can afford the capped sample; the
         // vote that decides a floor compares a handful and uses the full set.
-        const auto& source = useSamples && !floor->sampleFeatures.imgDescriptors.empty()
-            ? floor->sampleFeatures : floor->features;
+        const bool sampled = useSamples && !floor->sampleFeatures.imgDescriptors.empty();
+        const auto& source = sampled ? floor->sampleFeatures : floor->features;
         if (source.imgDescriptors.empty()) continue;
+        // The flags follow whichever descriptor set is actually being matched, so the capping stride
+        // cannot shift them off their descriptors. An index without the grid - before it existed, or
+        // one whose mask was rejected as misaligned - counts every descriptor as the layer's own,
+        // which is exactly the behaviour that shipped before the distinction was made.
+        const auto& own = sampled ? floor->sampleOwnArt : floor->ownArt;
+        const bool hasOwn = own.size() == static_cast<std::size_t>(source.imgDescriptors.rows);
         std::vector<std::vector<cv::DMatch>> knn;
         matcher.knnMatch(query.imgDescriptors, source.imgDescriptors, knn, 2);
         FloorVote vote;
@@ -493,7 +553,10 @@ Classification Classify(const ImageFeatureData& query, const std::vector<const F
             if (pair.size() < 2) continue;
             // Same test the localizer uses: nearest neighbour must beat the second by a ratio
             // and stay inside an absolute distance.
-            if (pair[0].distance < ratio * pair[1].distance && pair[0].distance < maxDistance) ++vote.matches;
+            if (pair[0].distance < ratio * pair[1].distance && pair[0].distance < maxDistance) {
+                ++vote.matches;
+                if (!hasOwn || own[static_cast<std::size_t>(pair[0].trainIdx)] != 0) ++vote.ownMatches;
+            }
         }
         result.votes.push_back(std::move(vote));
     }
@@ -512,6 +575,28 @@ Classification Classify(const ImageFeatureData& query, const std::vector<const F
     const bool leads = result.runnerUpMatches == 0 ||
         static_cast<double>(result.winnerMatches) >= margin * static_cast<double>(result.runnerUpMatches);
     result.identified = enough && leads;
+
+    // The identity ranking: the same votes ordered by the part of each that came from the layer's OWN
+    // art. Reported for diagnostics only - see Classification::ownDominant for why the decision is
+    // taken on the total vote with the own share as a veto instead.
+    result.ownVotes = result.votes;
+    std::sort(result.ownVotes.begin(), result.ownVotes.end(),
+        [](const FloorVote& left, const FloorVote& right) {
+            if (left.ownMatches != right.ownMatches) return left.ownMatches > right.ownMatches;
+            if (left.matches != right.matches) return left.matches > right.matches;
+            return left.floorId < right.floorId;
+        });
+    result.ownFloorId = result.ownVotes.front().floorId;
+
+    // The veto, on the floor the TOTAL vote named: how much of its evidence is art it draws itself?
+    // The base plate is the same picture for every floor sharing a tile, so a winner whose matches
+    // are mostly base plate has been named by the surface, not by itself.
+    result.winnerOwnMatches = result.votes.front().ownMatches;
+    result.runnerUpOwnMatches = result.votes.size() > 1 ? result.votes[1].ownMatches : 0;
+    result.winnerOwnShare = result.winnerMatches > 0
+        ? static_cast<double>(result.winnerOwnMatches) / static_cast<double>(result.winnerMatches)
+        : 0.0;
+    result.ownDominant = result.winnerMatches > 0 && result.winnerOwnShare >= minimumOwnShare;
     return result;
 }
 

@@ -5,12 +5,17 @@
 
 #include "Runtime/LayeredMapState.h"
 #include "Runtime/NearbySelection.h"
+#include "Feature/Processing/FeatureBinaryCodec.h"
 
 #include <chrono>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -78,6 +83,43 @@ LayeredMap::Snapshot SharedState(int layerId, const std::string& floorId, int le
     snapshot.sharedGround = true;
     snapshot.heightDirection = -1; // 下层金库's 1楼 sits at the bottom, its 4楼 on top
     return snapshot;
+}
+
+// A one-hot descriptor set: two distinct rows are sqrt(2) apart, a row and its copy are 0 apart, so a
+// floor built from copies of query rows matches exactly those rows under Classify's ratio test and
+// nothing else. That makes the vote counts below exact rather than approximate.
+cv::Mat OneHotDescriptors(int rows) {
+    cv::Mat descriptors = cv::Mat::zeros(rows, 128, CV_32FC1);
+    for (int row = 0; row < rows; ++row) descriptors.at<float>(row, row) = 1.0f;
+    return descriptors;
+}
+
+// The query those floors are voted against.
+ImageFeatureData QueryWithDescriptors(int rows) {
+    ImageFeatureData query;
+    query.imgDescriptors = OneHotDescriptors(rows);
+    for (int row = 0; row < rows; ++row) query.imgKeypoints.emplace_back(0.0f, 0.0f, 1.0f);
+    return query;
+}
+
+// A floor whose descriptor set is those rows of the 10-row query, with `own` marking which of them
+// came from the layer's own art. `own` may be left empty (an index built before the grid existed) or
+// deliberately the wrong length (a mask that no longer lines up) - Classify has to cope with both.
+LayeredFloors::FloorEntry ClassifierFloor(const std::string& floorId, int layerId,
+    const std::vector<int>& copiesOf, const std::vector<std::uint8_t>& own) {
+    LayeredFloors::FloorEntry floor;
+    floor.layerId = layerId;
+    floor.floorId = floorId;
+    floor.floorName = floorId;
+    const cv::Mat query = OneHotDescriptors(10);
+    cv::Mat descriptors(static_cast<int>(copiesOf.size()), 128, CV_32FC1);
+    for (std::size_t row = 0; row < copiesOf.size(); ++row) {
+        query.row(copiesOf[row]).copyTo(descriptors.row(static_cast<int>(row)));
+        floor.features.imgKeypoints.emplace_back(0.0f, 0.0f, 1.0f);
+    }
+    floor.features.imgDescriptors = descriptors;
+    floor.ownArt = own;
+    return floor;
 }
 
 } // namespace
@@ -411,6 +453,109 @@ int main() {
             LayeredMap::SetForTest(State(15, "-1/15", -1));
             Require(LayeredMap::RoleFor(Marker(8, "", "")) == MarkerRole::Hidden,
                 "surface markers must hide again off the shared ground");
+        }
+
+        // A surface frame must not adopt the cave under it. The floor the TOTAL vote names also
+        // counts the surface base plate the composite carries underneath every floor, which is the
+        // same picture for every floor sharing a tile - and for a floor that owns its tile outright,
+        // it is the surface the player may be standing on. Measured at 虎口山脉 on 2026-09-26: a frame
+        // captured on the surface voted 寒雾深坑 10-17 against 3-7 on that base plate, and the tool
+        // then hid every surface marker.
+        //
+        // The veto is the FRACTION of the winner's matches that came from art it draws itself, not a
+        // count. An absolute bar cannot work: on a real 眠龙庭·上层 frame the correct floor scores 2-5
+        // own matches, and a surface frame above 寒雾深坑 scores 0-5 for the floor it names. What
+        // separates them is composition - out in the open the winner's matches are almost all base
+        // plate (share 0.00-0.14), inside a cave they are the floor's own drawing (0.24-0.90).
+        {
+            const auto query = QueryWithDescriptors(10);
+            std::vector<LayeredFloors::FloorEntry> floors;
+            // Wins the total vote (8 matches) but only 1 of them came from its own art.
+            floors.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {1, 0, 0, 0, 0, 0, 0, 0}));
+            // Fewer matches overall (4), but every one of them is its own art.
+            floors.push_back(ClassifierFloor("-1/7", 7, {2, 3, 4, 5}, {1, 1, 1, 1}));
+            const auto classification = LayeredFloors::Classify(query, floors, 4, 2.0, 0.75f, 0.6f, false, 0.20);
+            Require(classification.floorId == "-1/1" && classification.winnerMatches == 8,
+                "the total vote must still name the floor the imagery as a whole resembles");
+            Require(classification.winnerOwnMatches == 1 && classification.winnerOwnShare < 0.20,
+                "the winner's own share must be measured on the winner");
+            Require(!classification.ownDominant,
+                "a winner whose matches are mostly the shared base plate must be refused");
+            Require(classification.ownFloorId == "-1/7",
+                "the own-art ranking is still reported, even when it is not the decision");
+
+            // ... and the veto reads the TOTAL winner, not the floor that tops the own-art ranking:
+            // here the total winner's share is 2/8 = 0.25 while the own-ranking winner's is 1.0.
+            std::vector<LayeredFloors::FloorEntry> mixed;
+            mixed.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {1, 1, 0, 0, 0, 0, 0, 0}));
+            mixed.push_back(ClassifierFloor("-1/7", 7, {2, 3}, {1, 1}));
+            const auto dominant = LayeredFloors::Classify(query, mixed, 4, 2.0, 0.75f, 0.6f, false, 0.20);
+            Require(dominant.floorId == "-1/1" && dominant.winnerOwnShare >= 0.20 && dominant.ownDominant,
+                "the winner's own share, not the own-ranking winner's, decides");
+            Require(!LayeredFloors::Classify(query, mixed, 4, 2.0, 0.75f, 0.6f, false, 0.30).ownDominant,
+                "a share below the minimum must be refused even with a clear total lead");
+
+            // An index built before the grid existed carries no mask: every match counts as the
+            // layer's own, so the share is 1.0 and the pack behaves exactly as it did before.
+            std::vector<LayeredFloors::FloorEntry> legacy;
+            legacy.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {}));
+            legacy.push_back(ClassifierFloor("-1/7", 7, {2, 3, 4, 5}, {}));
+            const auto carried = LayeredFloors::Classify(query, legacy, 4, 2.0, 0.75f, 0.6f, false, 0.20);
+            Require(carried.ownFloorId == carried.floorId &&
+                carried.winnerOwnMatches == carried.winnerMatches && carried.ownDominant,
+                "without a mask the own-art vote must equal the total vote");
+
+            // A mask whose length no longer matches the descriptor set is refused rather than
+            // trusted: marking the wrong half of a set as the layer's own would corrupt every vote
+            // silently, which is worse than not having a mask at all.
+            std::vector<LayeredFloors::FloorEntry> misaligned;
+            misaligned.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {1, 0, 0}));
+            const auto guarded = LayeredFloors::Classify(query, misaligned, 4, 2.0, 0.75f, 0.6f, false, 3);
+            Require(guarded.winnerOwnMatches == guarded.winnerMatches,
+                "a misaligned mask must be ignored, not trusted");
+        }
+
+        // The mask is indexed by descriptor POSITION, so a mask that does not line up with the
+        // descriptor set has to be dropped rather than read. A generator bug on 2026-09-26 prefixed
+        // every mask with the decimal text of a StringBuilder capacity ("346.2500" for 1381
+        // keypoints), shifting every bit by 24-32 descriptors; Load then marked the wrong descriptors
+        // as the layer's own and every vote was quietly wrong, while the generator's own report still
+        // showed the correct totals. This pins the guard that turns that into "no mask at all".
+        {
+            const auto root = std::filesystem::temp_directory_path() / "imao-layered-own-mask-test";
+            const auto layerDirectory = root / "layered-floors";
+            std::filesystem::remove_all(root);
+            std::filesystem::create_directories(layerDirectory);
+
+            ImageFeatureData features;
+            features.imgDescriptors = OneHotDescriptors(8);
+            for (int row = 0; row < 8; ++row) features.imgKeypoints.emplace_back(0.0f, 0.0f, 1.0f);
+            std::string error;
+            Require(FeatureBinaryCodec::Save(layerDirectory / "floor.imf", features, {}, error),
+                "the mask fixture .imf must be writable");
+
+            // 8 descriptors need exactly 2 hex characters.
+            const auto writeIndex = [&](const std::string& mask) {
+                std::ofstream index(layerDirectory / "floor-index.json", std::ios::trunc);
+                index << "{\"formatVersion\":1,\"regionId\":\"test\",\"frame\":8,\"gridSize\":64,"
+                    << "\"floors\":[{\"layerId\":1,\"floorId\":\"-1/1\",\"layerName\":\"test\","
+                    << "\"floorName\":\"test\",\"file\":\"floor.imf\",\"keypointCount\":8,"
+                    << "\"ownMask\":\"" << mask << "\",\"ownMaskKeypoints\":8,\"tiles\":[]}]}";
+            };
+
+            LayeredFloors::Index index;
+            writeIndex("1.5000");     // the bug's shape: capacity text glued to a 2-character mask
+            Require(LayeredFloors::Load(root, index, error, 0), "the mask fixture index must load");
+            Require(index.floors.size() == 1 && index.floors[0].ownArt.empty(),
+                "a mask whose length does not match the descriptor set must be dropped, not read");
+
+            writeIndex("10");         // exact length: low bit first, so descriptors 0-3 are own
+            Require(LayeredFloors::Load(root, index, error, 0), "the mask fixture index must load");
+            const auto& own = index.floors[0].ownArt;
+            Require(own.size() == 8 && own[0] == 1 && own[1] == 0 && own[3] == 0 && own[4] == 0,
+                "an exact-length mask must decode bit for bit, low bit first");
+
+            std::filesystem::remove_all(root);
         }
 
         std::cout << "Layered marker role tests passed\n";

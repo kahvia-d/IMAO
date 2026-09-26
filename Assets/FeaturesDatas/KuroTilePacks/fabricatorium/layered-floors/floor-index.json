@@ -5,14 +5,14 @@
   "baseFactor": 0.35,
   "tileResourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
   "coordinateTransform": {
-    "originX": 2474.0,
-    "originY": 1957.0,
+    "originX": 7437.0,
+    "originY": 13783.0,
     "scale": 1.205,
     "virtualMapSize": 850.0,
     "tileSize": 1024
   },
   "gridSize": 64,
-  "generatedAtUtc": "2026-09-23T08:24:02.0501777Z",
+  "generatedAtUtc": "2026-09-26T13:42:32.8667266Z",
   "floors": [
     {
       "layerId": 22,
@@ -21,6 +21,8 @@
       "floorName": "蓄能中枢下层",
       "file": "L22_F-1-22.imf",
       "keypointCount": 3269,
+      "ownMask": "0000000000000000bfeeffeeffffffffdff87f373f0facfffffffffefffffdfffffffffffff6fffeffffefff9f71fefef6fffbecdffffff7fffffff9fbdffeffbffff7fdbfffb1f7ffbffffbfbfffdfeffffffefef6fefefffffbff35f175eeefffdef576ffd6e4de8bdd4858aa6ff593cf9ffefd675f5b89f698bfffb63f7edbdbbeffedfdfeeadbebfffff7fddffbdcfb97f7feffbfdfffffffffbffbf5ffbfbfff6eff7fcafffdffffbffd7effbbd9fbe3f4bb73f7f3fedf243fefdb9f55585c64d4f08132408c040040400000211000000205180310400000906725028a8320d493f200005585529f417fa6a96d7f842020300408796ee0ef67fcfe783ff6713904084390224a100140000000000008040002040000440544001148845340021881953020a0210c04442818000022148260104c0800804280200002001004002103000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "ownMaskKeypoints": 3269,
       "tiles": [
         {
           "x": 0,
