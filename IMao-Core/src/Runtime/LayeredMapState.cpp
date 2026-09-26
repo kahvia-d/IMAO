@@ -40,9 +40,14 @@ constexpr int kClearFrames = 10;
 constexpr auto kLeftFootprintFor = std::chrono::milliseconds(2500);
 std::chrono::steady_clock::time_point outsideFootprintSince{};
 // A near-tie among the floors the player can be in - 下层金库's 贵金属与艺术品藏区 votes 12/10/5/4
-// for four floors of the same marble hall - is still a decision, but it takes this many matches to
-// make: the winner is the only candidate too often for a small count to mean anything.
-constexpr int kNearTieMatches = 10;
+// for four floors of the same marble hall - is still a decision, but it takes this many OWN-art
+// matches to make: the winner is the only candidate too often for a small count to mean anything.
+//
+// It has to be the own-art count, not the total. A frame taken out in the open contains no layer art
+// at all but can still total 10-17 against a floor that owns its tile (measured at 虎口山脉: total
+// 10-17 vs 3-7, own-art vote 0), so a total-count bar here would let the near-tie escape adopt a
+// surface frame - which is exactly the 2026-09-26 report.
+constexpr int kNearTieOwnMatches = 10;
 std::string pendingFloorId;
 // Consecutive decisive classifications; see kGroupResetFrames.
 int decisiveStreak = 0;
@@ -115,16 +120,17 @@ std::string JoinFloors(const std::vector<std::string>& floors) {
     return joined;
 }
 
-std::string VoteSummary(const LayeredFloors::Classification& classification, const std::vector<const Entry*>& source) {
+std::string VoteSummary(const std::vector<LayeredFloors::FloorVote>& votes,
+    const std::vector<const Entry*>& source, bool own) {
     std::string summary;
-    for (std::size_t index = 0; index < classification.votes.size() && index < 4; ++index) {
-        const auto& vote = classification.votes[index];
+    for (std::size_t index = 0; index < votes.size() && index < 4; ++index) {
+        const auto& vote = votes[index];
         // The vote carries where it came from: with every region on the table the same floor id
         // can appear more than once, so looking the id up again would report the wrong region.
         const Entry* entry = vote.sourceIndex < source.size() ? source[vote.sourceIndex] : nullptr;
         if (!summary.empty()) summary += " ";
         summary += entry == nullptr ? vote.floorId : entry->regionId + ":" + entry->floor.floorId;
-        summary += "=" + std::to_string(vote.matches);
+        summary += "=" + std::to_string(own ? vote.ownMatches : vote.matches);
     }
     return summary;
 }
@@ -215,6 +221,11 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         // costs one bounded search that falls back to the global sweep anyway.
         // Every floor in the game is a candidate here and the answer only scopes a search, so the
         // capped sample is enough - see FloorEntry::sampleFeatures.
+        //
+        // Deliberately the TOTAL vote and not the own-art one that decides adoption further down:
+        // the capped sample is thin, and this value never reaches `current` - a wrong scope costs
+        // one wasted sweep, it cannot hide a marker. Asking for own-art evidence here would make the
+        // cold start give up on the scoping hint inside a cave, which is the case it exists for.
         const auto classification = LayeredFloors::Classify(minimapFeatures, floors, 4, 1.5, 0.75f, 0.6f, true);
         std::lock_guard lock(stateMutex);
         if (!classification.identified) return;
@@ -328,9 +339,14 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             return entry->floor.floorId == floorId;
         });
     };
-    // The floor the imagery names has to be one the player can physically be standing in: a cave
-    // whose art the position is outside of is the cave BELOW the player, not the one they are in.
-    const bool winnerContained = contained(classification.floorId);
+    // Which floor the player is on is decided by the OWN-art vote, never by the total. The surface
+    // base plate the composite carries is the same picture for every floor that shares a tile - so
+    // it ties them, which is what the original "9 surface references stayed unknown" calibration
+    // measured - but a floor that owns its tile outright has that base plate to itself, and there
+    // the total vote hands a frame captured ON THE SURFACE to the cave underneath it. Measured at
+    // 虎口山脉: total 10-17 vs 3-7 (over the bar), own-art vote 0. See
+    // Docs/LayeredMapFalsePositive_Hukou_20260926.md.
+    const bool winnerContained = contained(classification.ownFloorId);
     // A near-tie is no longer a decision here - the 2x lead is what says the frame is a cave frame -
     // but 下层金库's 贵金属与艺术品藏区 is four floors of one marble hall voting 12/10/5/4, where the
     // lead never comes. Such a frame still counts when the tie is between floors that share the
@@ -338,20 +354,20 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     // evidence, and on the surface above a cave the tie is between the cave's floors and the one
     // the position points at (the field log's 21/21/18 in 入口 while standing in 一层).
     std::vector<std::string> equivalent;
-    bool adopted = classification.identified && winnerContained;
-    if (!adopted && restricted && winnerContained && classification.winnerMatches >= kNearTieMatches) {
-        const bool tieIsLocal = std::all_of(classification.votes.begin(), classification.votes.end(),
+    bool adopted = classification.ownIdentified && winnerContained;
+    if (!adopted && restricted && winnerContained && classification.winnerOwnMatches >= kNearTieOwnMatches) {
+        const bool tieIsLocal = std::all_of(classification.ownVotes.begin(), classification.ownVotes.end(),
             [&](const LayeredFloors::FloorVote& vote) {
-                return vote.matches == 0 ||
-                    vote.matches * kIndistinguishableFactor < classification.winnerMatches ||
+                return vote.ownMatches == 0 ||
+                    vote.ownMatches * kIndistinguishableFactor < classification.winnerOwnMatches ||
                     contained(vote.floorId);
             });
         if (tieIsLocal) adopted = true;
     }
     if (adopted && restricted) {
-        for (const auto& vote : classification.votes) {
-            if (vote.matches == 0 ||
-                vote.matches * kIndistinguishableFactor < classification.winnerMatches) continue;
+        for (const auto& vote : classification.ownVotes) {
+            if (vote.ownMatches == 0 ||
+                vote.ownMatches * kIndistinguishableFactor < classification.winnerOwnMatches) continue;
             if (contained(vote.floorId)) equivalent.push_back(vote.floorId);
         }
     }
@@ -360,14 +376,14 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     if (adopted) {
         unknownCount = 0;
         // The imagery confirmed a floor, so the rim clock starts over.
-        const bool sameFloor = current.active && classification.floorId == current.floorId;
+        const bool sameFloor = current.active && classification.ownFloorId == current.floorId;
         // A winner that is already in the equivalence set is another candidate for where the
         // player stands, not a floor change. 下层金库's four marble floors trade the lead from
         // frame to frame (9/4, 6/5, 12/5), and treating that as a change flipped every marker's
         // role several times a second.
         const bool equivalentToCurrent = current.active &&
             (std::find(current.equivalentFloorIds.begin(), current.equivalentFloorIds.end(),
-                classification.floorId) != current.equivalentFloorIds.end() ||
+                classification.ownFloorId) != current.equivalentFloorIds.end() ||
              // Symmetric test: this frame cannot separate the winner from the floor already held,
              // so holding is right even when the winner changes. Without it the state flipped
              // A -> B -> A every three frames, which is the flicker the user saw.
@@ -386,8 +402,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             // floors into the group on its own - the "everything is one layer" the user saw now
             // and then. Growing therefore needs kGroupGrowFrames close frames in a row, and
             // shrinking needs kGroupResetFrames decisive ones.
-            const bool decisive = classification.winnerMatches >=
-                2 * std::max(classification.runnerUpMatches, 1) && classification.winnerMatches >= 4;
+            const bool decisive = classification.winnerOwnMatches >=
+                2 * std::max(classification.runnerUpOwnMatches, 1) && classification.winnerOwnMatches >= 4;
             bool applyGroup = false;
             if (decisive) {
                 // Decrement rather than reset the other counter: the two regimes alternate (the log
@@ -421,24 +437,24 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
                 current.equivalentFloorIds.push_back(current.floorId);
             }
         }
-        else if (classification.floorId == pendingFloorId) {
+        else if (classification.ownFloorId == pendingFloorId) {
             ++pendingCount;
         }
         else {
-            pendingFloorId = classification.floorId;
+            pendingFloorId = classification.ownFloorId;
             pendingCount = 1;
         }
         if (pendingCount >= kSwitchFrames && !sameFloor && !equivalentToCurrent) {
             const auto found = std::find_if(candidates.begin(), candidates.end(), [&](const Entry* entry) {
-                return entry->floor.floorId == classification.floorId;
+                return entry->floor.floorId == classification.ownFloorId;
             });
             const Entry* entry = found == candidates.end() ? nullptr : *found;
             current.active = true;
             current.sceneId = sceneId;
             current.kuroStateId = entry == nullptr ? 0 : entry->kuroStateId;
-            current.floorId = classification.floorId;
-            current.level = entry == nullptr ? LayeredFloors::FloorLevel(classification.floorId) : entry->floor.level;
-            current.layerId = entry == nullptr ? LayeredFloors::FloorLayerId(classification.floorId) : entry->floor.layerId;
+            current.floorId = classification.ownFloorId;
+            current.level = entry == nullptr ? LayeredFloors::FloorLevel(classification.ownFloorId) : entry->floor.level;
+            current.layerId = entry == nullptr ? LayeredFloors::FloorLayerId(classification.ownFloorId) : entry->floor.layerId;
             current.heightDirection = entry == nullptr ? 1 : entry->floor.heightDirection;
             current.heightRank = entry == nullptr ? 0 : entry->floor.heightRank;
             current.equivalentFloorIds = equivalent;
@@ -451,6 +467,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
                 " name=" + (entry == nullptr ? std::string("?") : entry->floor.floorName) +
                 " matches=" + std::to_string(classification.winnerMatches) +
                 " runnerUp=" + std::to_string(classification.runnerUpMatches) +
+                " ownMatches=" + std::to_string(classification.winnerOwnMatches) +
+                " ownRunnerUp=" + std::to_string(classification.runnerUpOwnMatches) +
                 " heightDirection=" + std::to_string(current.heightDirection) +
                 " heightRank=" + std::to_string(current.heightRank) +
                 " equivalent=[" + JoinFloors(equivalent) + "]");
@@ -493,6 +511,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             " active=" + std::to_string(current.active) + " floor=" + (current.floorId.empty() ? "-" : current.floorId) +
             " restricted=" + std::to_string(restricted) + " containing=[" + containing + "]" +
             " identified=" + std::to_string(classification.identified) +
+            " ownIdentified=" + std::to_string(classification.ownIdentified) +
+            " ownFloor=" + (classification.ownFloorId.empty() ? std::string("-") : classification.ownFloorId) +
             " adopted=" + std::to_string(adopted) +
             " winnerContained=" + std::to_string(winnerContained) +
             " decisiveStreak=" + std::to_string(decisiveStreak) +
@@ -500,7 +520,10 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             " equivalent=[" + JoinFloors(current.equivalentFloorIds) + "]" +
             " winner=" + std::to_string(classification.winnerMatches) +
             " runnerUp=" + std::to_string(classification.runnerUpMatches) +
-            " votes=[" + VoteSummary(classification, candidates) + "]");
+            " ownWinner=" + std::to_string(classification.winnerOwnMatches) +
+            " ownRunnerUp=" + std::to_string(classification.runnerUpOwnMatches) +
+            " votes=[" + VoteSummary(classification.votes, candidates, false) + "]" +
+            " ownVotes=[" + VoteSummary(classification.ownVotes, candidates, true) + "]");
     }
 }
 

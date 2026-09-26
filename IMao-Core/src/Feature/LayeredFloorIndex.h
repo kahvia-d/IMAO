@@ -74,6 +74,24 @@ struct FloorEntry {
     /// real 下层金库 captures a 600-descriptor sample picks the wrong floor (13 vs 13, 11 vs 10)
     /// where the full set picks 贵金属与艺术品藏区1楼 at 17 vs 8 and 15 vs 6.
     ImageFeatureData sampleFeatures;
+    /// One flag per descriptor in `features`, in the same order: set when that descriptor was
+    /// extracted where THIS layer actually draws (its RGBA overlay is opaque at that pixel), clear
+    /// when it came from the surface base plate the composite carries underneath.
+    ///
+    /// The base plate is the same picture for every floor that shares a tile, and for a floor that
+    /// owns its tile outright it is the surface's own art - so a descriptor taken from it can
+    /// neither separate two co-located floors nor rule a floor out. Only the flags set here are
+    /// evidence about WHICH floor a frame belongs to. See Docs/LayeredMapFalsePositive_Hukou_20260926.md
+    /// for the field case that made this necessary: a frame captured on the surface above 寒雾深坑
+    /// reached 71% of that floor's descriptors, because they were the surface's own features.
+    ///
+    /// Empty on an index built before this grid existed, and that is read as "every descriptor is
+    /// the layer's own" - an old pack keeps exactly the behaviour it had, and the fix engages when
+    /// the pack is rebuilt with the mask (see New-LayeredFloorIndex.ps1).
+    std::vector<std::uint8_t> ownArt;
+    /// `ownArt` reduced by the same stride `Load` applied to `sampleFeatures`, so the cold-start
+    /// vote can ask the same question of the capped set.
+    std::vector<std::uint8_t> sampleOwnArt;
     std::vector<FloorTile> tiles;
     /// How much of this floor's own art is the surface's art instead: shared cells / opaque cells
     /// over the whole floor (0 on an index built before the shared grid existed).
@@ -99,6 +117,11 @@ struct FloorVote {
     int layerId = 0;
     std::string floorId;
     int matches = 0;
+    /// Of `matches`, the ones whose training descriptor sits on this layer's OWN art (see
+    /// FloorEntry::ownArt). Equal to `matches` when the index carries no mask. This is the half of
+    /// the vote that says anything about the floor's identity; `matches` on its own also counts the
+    /// surface base plate every co-located floor shares.
+    int ownMatches = 0;
     // Index of this floor in the vector handed to Classify. Two regions can name a floor the
     // same way, so a caller that wants to report *which* region won cannot look the id up again.
     std::size_t sourceIndex = 0;
@@ -112,6 +135,30 @@ struct Classification {
     int runnerUpMatches = 0;
     // Descending by matches; kept in full so a caller can log why it decided what it did.
     std::vector<FloorVote> votes;
+
+    /// The floor the OWN-art vote names, and its counts. This can differ from `floorId` above, which
+    /// is the floor the imagery as a whole resembles most: the base plate of a co-located floor, or
+    /// of the surface the player is standing on, can outvote the floor's own art in `matches` while
+    /// contributing nothing to `winnerOwnMatches`.
+    std::string ownFloorId;
+    int winnerOwnMatches = 0;
+    int runnerUpOwnMatches = 0;
+    /// The own-art vote cleared `minimumOwnMatches` and leads the runner-up's own-art vote by
+    /// `margin`. This - not `identified` - is what says the imagery is evidence about WHICH floor
+    /// the player is on, and it is what LayeredMapState adopts on. Adopting on `identified` alone is
+    /// what mistook a surface frame at 虎口山脉 for 寒雾深坑.
+    bool ownIdentified = false;
+    /// `votes` ordered by `ownMatches` instead of `matches`, for callers that need the identity
+    /// ranking (the equivalence group is built from this one). Empty when `votes` is empty.
+    std::vector<FloorVote> ownVotes;
+
+    /// Convenience: the vote for `floorId` in the own-art ranking, or nullptr.
+    const FloorVote* OwnVote(const std::string& id) const {
+        for (const auto& vote : ownVotes) {
+            if (vote.floorId == id) return &vote;
+        }
+        return nullptr;
+    }
 };
 
 /// Reads <packDirectory>/layered-floors/floor-index.json plus the .imf files it names.
@@ -194,20 +241,28 @@ bool SharesSurfaceGround(const FloorEntry& floor);
 /// `useSamples` votes against each floor's capped `sampleFeatures` instead of the full set, which
 /// is what the cold start does: it compares every floor in the game and only needs enough to
 /// scope a search.
+///
+/// `minimumOwnMatches` is the same bar for the own-art part of the vote (see FloorEntry::ownArt),
+/// which is the one that decides the floor's IDENTITY. The 2026-09-26 field case re-opened the
+/// surface-frame calibration above: those nine captures were taken where several floors share a
+/// tile, so their shared base plate tied them and no floor reached 2x. At 虎口山脉 寒雾深坑 owns its
+/// tile outright, nothing tied it, and the surface frame voted it 10-17 against 3-7 - over the bar.
+/// The own-art vote at that spot is 0, which is the honest answer.
 Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,
     int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f,
-    bool useSamples = false);
+    bool useSamples = false, int minimumOwnMatches = 8);
 
 /// Convenience overload for callers that hold the floors by value. The pointer form above is the
 /// real one: a FloorEntry owns its descriptors, so passing a vector of them by value copies tens
 /// of megabytes per call once every floor in the game is a candidate.
 inline Classification Classify(const ImageFeatureData& query, const std::vector<FloorEntry>& floors,
     int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f,
-    bool useSamples = false) {
+    bool useSamples = false, int minimumOwnMatches = 8) {
     std::vector<const FloorEntry*> pointers;
     pointers.reserve(floors.size());
     for (const auto& floor : floors) pointers.push_back(&floor);
-    return Classify(query, pointers, minimumMatches, margin, ratio, maxDistance, useSamples);
+    return Classify(query, pointers, minimumMatches, margin, ratio, maxDistance, useSamples,
+        minimumOwnMatches);
 }
 
 /// "-2/3" -> -2. The numerator orders the floors inside one layered map.

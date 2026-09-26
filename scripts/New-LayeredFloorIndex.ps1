@@ -114,6 +114,11 @@ $cell = 1024 / $gridSize
 
 Add-Type -AssemblyName System.Drawing
 
+# Which of each floor's descriptors came from the layer's own art rather than the surface base plate
+# the composite carries underneath it. Shipped alongside the descriptors so the runtime can decide a
+# floor on the part of the vote that says anything about the floor's identity.
+. (Join-Path $PSScriptRoot 'LayeredOwnArtMask.ps1')
+
 # A cell counts as shared when most of its opaque pixels are the surface tile's own pixels: the
 # layered map copied that piece instead of drawing its own. Measured across all 161 layered tiles
 # of the game the population is bimodal - 86.9% of opaque cells are clearly the layer's own art
@@ -183,6 +188,9 @@ $work = Join-Path $SourceRoot 'out/map-regions/floor-index-work'
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 
 $entries = New-Object System.Collections.ArrayList
+$alphaCache = @{}
+$transform = @{ originX = $originX; originY = $originY; scale = $scale;
+    virtualMapSize = 850.0; tileSize = 1024 }
 foreach ($group in $groups | Sort-Object Name) {
     $first = $group.Group[0]
     $layerId = [int]$first.layerId
@@ -223,10 +231,28 @@ foreach ($group in $groups | Sort-Object Name) {
     $imfManifest = Join-Path $OutputRoot "$tag.imf.manifest.json"
     & $converter $features $imf $imfManifest | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Floor index conversion failed for $tag." }
+    # Read the keypoints back out of the .imf rather than out of features.yml: the mask is indexed by
+    # descriptor position, so it has to be built from the same file, in the same order, that the
+    # runtime loads. (The two agree today - verified element-wise for jinzhou on 2026-09-26 - but that
+    # is the converter's behaviour to keep, not something this script should depend on.)
+    $tileOverlays = @{}
+    foreach ($tile in $group.Group) {
+        $overlayPath = Join-Path $LayerArchiveRoot "$tileVersion/$state/$($tile.overlay)"
+        if (Test-Path -LiteralPath $overlayPath) {
+            $tileOverlays["$([int]$tile.x),$([int]$tile.y)"] = $overlayPath
+        }
+    }
+    $ownMask = $null
+    if ($tileOverlays.Count -gt 0) {
+        $ownMask = Get-OwnArtMask -Points (Read-ImfKeypoints -Path $imf) -Transform $transform `
+            -TileOverlays $tileOverlays -AlphaCache $alphaCache
+    }
     [void]$entries.Add([ordered]@{
         layerId = $layerId; floorId = $floorId
         layerName = [string]$first.layerName; floorName = [string]$first.floorName
         file = "$tag.imf"; keypointCount = $keypoints
+        ownMask = $(if ($null -ne $ownMask) { $ownMask.Hex } else { '' })
+        ownMaskKeypoints = $(if ($null -ne $ownMask) { $ownMask.Total } else { 0 })
         tiles = @($group.Group | ForEach-Object {
             $overlayPath = Join-Path $LayerArchiveRoot "$tileVersion/$state/$($_.overlay)"
             $surfacePath = Join-Path $tileRoot "$state/${state}_$([int]$_.x)_$([int]$_.y).png"
@@ -235,7 +261,9 @@ foreach ($group in $groups | Sort-Object Name) {
             [ordered]@{ x = [int]$_.x; y = [int]$_.y; occupancy = $occupancy; shared = $shared }
         })
     })
-    Write-Host ("  {0,-16} {1,-22} keypoints={2,6}  tiles={3}" -f $tag, $first.floorName, $keypoints, $group.Count)
+    $ownShare = if ($null -ne $ownMask -and $ownMask.Total -gt 0) { 100.0 * $ownMask.Own / $ownMask.Total } else { 0 }
+    Write-Host ("  {0,-16} {1,-22} keypoints={2,6}  ownArt={3,6} ({4,5:N1}%)  tiles={5}" -f `
+            $tag, $first.floorName, $keypoints, $(if ($null -ne $ownMask) { $ownMask.Own } else { 0 }), $ownShare, $group.Count)
 }
 
 $index = [ordered]@{

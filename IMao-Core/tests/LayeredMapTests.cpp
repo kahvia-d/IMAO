@@ -7,10 +7,12 @@
 #include "Runtime/NearbySelection.h"
 
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -78,6 +80,43 @@ LayeredMap::Snapshot SharedState(int layerId, const std::string& floorId, int le
     snapshot.sharedGround = true;
     snapshot.heightDirection = -1; // 下层金库's 1楼 sits at the bottom, its 4楼 on top
     return snapshot;
+}
+
+// A one-hot descriptor set: two distinct rows are sqrt(2) apart, a row and its copy are 0 apart, so a
+// floor built from copies of query rows matches exactly those rows under Classify's ratio test and
+// nothing else. That makes the vote counts below exact rather than approximate.
+cv::Mat OneHotDescriptors(int rows) {
+    cv::Mat descriptors = cv::Mat::zeros(rows, 128, CV_32FC1);
+    for (int row = 0; row < rows; ++row) descriptors.at<float>(row, row) = 1.0f;
+    return descriptors;
+}
+
+// The query those floors are voted against.
+ImageFeatureData QueryWithDescriptors(int rows) {
+    ImageFeatureData query;
+    query.imgDescriptors = OneHotDescriptors(rows);
+    for (int row = 0; row < rows; ++row) query.imgKeypoints.emplace_back(0.0f, 0.0f, 1.0f);
+    return query;
+}
+
+// A floor whose descriptor set is those rows of the 10-row query, with `own` marking which of them
+// came from the layer's own art. `own` may be left empty (an index built before the grid existed) or
+// deliberately the wrong length (a mask that no longer lines up) - Classify has to cope with both.
+LayeredFloors::FloorEntry ClassifierFloor(const std::string& floorId, int layerId,
+    const std::vector<int>& copiesOf, const std::vector<std::uint8_t>& own) {
+    LayeredFloors::FloorEntry floor;
+    floor.layerId = layerId;
+    floor.floorId = floorId;
+    floor.floorName = floorId;
+    const cv::Mat query = OneHotDescriptors(10);
+    cv::Mat descriptors(static_cast<int>(copiesOf.size()), 128, CV_32FC1);
+    for (std::size_t row = 0; row < copiesOf.size(); ++row) {
+        query.row(copiesOf[row]).copyTo(descriptors.row(static_cast<int>(row)));
+        floor.features.imgKeypoints.emplace_back(0.0f, 0.0f, 1.0f);
+    }
+    floor.features.imgDescriptors = descriptors;
+    floor.ownArt = own;
+    return floor;
 }
 
 } // namespace
@@ -411,6 +450,49 @@ int main() {
             LayeredMap::SetForTest(State(15, "-1/15", -1));
             Require(LayeredMap::RoleFor(Marker(8, "", "")) == MarkerRole::Hidden,
                 "surface markers must hide again off the shared ground");
+        }
+
+        // Which floor a frame belongs to is decided by the part of the vote that landed on the
+        // layer's OWN art, not by the total. The total also counts the surface base plate the
+        // composite carries underneath every floor, which is the same picture for every floor sharing
+        // a tile - and for a floor that owns its tile outright, it is the surface the player may be
+        // standing on. Measured at 虎口山脉 on 2026-09-26: a frame captured on the surface voted
+        // 寒雾深坑 10-17 against 3-7 on that base plate, and the tool then hid every surface marker.
+        {
+            const auto query = QueryWithDescriptors(10);
+            std::vector<LayeredFloors::FloorEntry> floors;
+            // Wins the total vote (8 matches) but only 1 of them came from its own art.
+            floors.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {1, 0, 0, 0, 0, 0, 0, 0}));
+            // Wins the own-art vote (4 of 4) on fewer matches overall.
+            floors.push_back(ClassifierFloor("-1/7", 7, {2, 3, 4, 5}, {1, 1, 1, 1}));
+            const auto classification = LayeredFloors::Classify(query, floors, 4, 2.0, 0.75f, 0.6f, false, 3);
+            Require(classification.floorId == "-1/1" && classification.winnerMatches == 8,
+                "the total vote must still name the floor the imagery as a whole resembles");
+            Require(classification.ownFloorId == "-1/7" && classification.winnerOwnMatches == 4,
+                "the own-art vote must name the floor whose own art matched");
+            Require(classification.ownIdentified && classification.runnerUpOwnMatches == 1,
+                "4 own-art matches with a 2x lead is a decision");
+            Require(!LayeredFloors::Classify(query, floors, 4, 2.0, 0.75f, 0.6f, false, 5).ownIdentified,
+                "the own-art minimum must be honoured, not bypassed by the 2x lead");
+
+            // An index built before the grid existed carries no mask: every match counts as the
+            // layer's own, so the two rankings agree and the pack behaves exactly as it did before.
+            std::vector<LayeredFloors::FloorEntry> legacy;
+            legacy.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {}));
+            legacy.push_back(ClassifierFloor("-1/7", 7, {2, 3, 4, 5}, {}));
+            const auto carried = LayeredFloors::Classify(query, legacy, 4, 2.0, 0.75f, 0.6f, false, 3);
+            Require(carried.ownFloorId == carried.floorId &&
+                carried.winnerOwnMatches == carried.winnerMatches,
+                "without a mask the own-art vote must equal the total vote");
+
+            // A mask whose length no longer matches the descriptor set is refused rather than
+            // trusted: marking the wrong half of a set as the layer's own would corrupt every vote
+            // silently, which is worse than not having a mask at all.
+            std::vector<LayeredFloors::FloorEntry> misaligned;
+            misaligned.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {1, 0, 0}));
+            const auto guarded = LayeredFloors::Classify(query, misaligned, 4, 2.0, 0.75f, 0.6f, false, 3);
+            Require(guarded.winnerOwnMatches == guarded.winnerMatches,
+                "a misaligned mask must be ignored, not trusted");
         }
 
         std::cout << "Layered marker role tests passed\n";

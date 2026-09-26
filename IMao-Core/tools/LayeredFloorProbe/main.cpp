@@ -26,7 +26,7 @@ void PrintUsage() {
     std::cerr <<
         "Usage: IMaoLayeredFloorProbe --pack <pack dir> --reference <png>\n"
         "       [--full-snapshot] [--crop x,y,w,h] [--map x,y] [--hessian N] [--min-matches N]\n"
-        "       [--margin X] [--ratio X] [--max-distance X] [--no-mask]\n";
+        "       [--min-own-matches N] [--margin X] [--ratio X] [--max-distance X] [--no-mask]\n";
 }
 
 // The same crop the pack builder applies to a full-screen capture for reference
@@ -81,6 +81,10 @@ int main(int argc, char** argv) {
     // Same defaults the runtime classifier ships with; see LayeredFloorIndex.h for the
     // calibration these came from.
     int minimumMatches = 10;
+    // The bar for the own-art vote, which is what decides the floor's identity. Separate flag so a
+    // threshold can be searched over real frames without rebuilding - see
+    // Docs/LayeredMapFalsePositive_Hukou_20260926.md.
+    int minimumOwnMatches = 8;
     // Descriptors kept per floor at load time; 0 keeps all. Used to check how far the per-floor
     // fingerprint can be cut before floor identification degrades.
     int maxKeypoints = 0;
@@ -103,6 +107,7 @@ int main(int argc, char** argv) {
             else if (argument == "--no-mask") useMask = false;
             else if (argument == "--hessian") hessian = std::stod(next("--hessian"));
             else if (argument == "--min-matches") minimumMatches = std::stoi(next("--min-matches"));
+            else if (argument == "--min-own-matches") minimumOwnMatches = std::stoi(next("--min-own-matches"));
             else if (argument == "--max-keypoints") maxKeypoints = std::stoi(next("--max-keypoints"));
             else if (argument == "--samples") useSamples = true;
             else if (argument == "--margin") margin = std::stod(next("--margin"));
@@ -197,8 +202,8 @@ int main(int argc, char** argv) {
             << " keypoints=" << query.imgKeypoints.size()
             << " mask=" << (useMask ? "on" : "off") << '\n';
 
-        const auto classification = LayeredFloors::Classify(query, floors, minimumMatches, margin, ratio, maxDistance, useSamples);
-        std::cout << "votes (matches):\n";
+        const auto classification = LayeredFloors::Classify(query, floors, minimumMatches, margin, ratio, maxDistance, useSamples, minimumOwnMatches);
+        std::cout << "votes (matches / own-art):\n";
         for (const auto& vote : classification.votes) {
             const auto found = std::find_if(floors.begin(), floors.end(), [&](const LayeredFloors::FloorEntry& floor) {
                 return floor.floorId == vote.floorId;
@@ -210,14 +215,19 @@ int main(int argc, char** argv) {
                 : regions[static_cast<std::size_t>(std::distance(floors.begin(), found))];
             std::cout << "  " << (vote.floorId == classification.floorId ? "* " : "  ")
                 << (region.empty() ? "" : region + " ") << vote.floorId << "  " << label
-                << "  " << vote.matches << '\n';
+                << "  " << vote.matches << " / " << vote.ownMatches << '\n';
         }
         std::cout << "decision: " << (classification.identified ? "identified" : "unknown")
             << " floor=" << classification.floorId
             << " winner=" << classification.winnerMatches
-            << " runnerUp=" << classification.runnerUpMatches
+            << " runnerUp=" << classification.runnerUpMatches << "   [total imagery]"
             << " (min=" << minimumMatches << " margin=" << margin << " ratio=" << ratio
             << " maxDistance=" << maxDistance << ")\n";
+        std::cout << "identity: " << (classification.ownIdentified ? "identified" : "unknown")
+            << " floor=" << (classification.ownFloorId.empty() ? "-" : classification.ownFloorId)
+            << " winner=" << classification.winnerOwnMatches
+            << " runnerUp=" << classification.runnerUpOwnMatches << "   [layer's own art only]"
+            << " (minOwn=" << minimumOwnMatches << ")\n";
         // Geometry check: does a similarity fit succeed on the same descriptor matches the
         // localizer uses? Measured per floor set, because several floors can share one tile
         // coordinate and their appearances are then indistinguishable to a plain matcher.
