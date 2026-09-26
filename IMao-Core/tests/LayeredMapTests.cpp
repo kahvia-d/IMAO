@@ -455,37 +455,54 @@ int main() {
                 "surface markers must hide again off the shared ground");
         }
 
-        // Which floor a frame belongs to is decided by the part of the vote that landed on the
-        // layer's OWN art, not by the total. The total also counts the surface base plate the
-        // composite carries underneath every floor, which is the same picture for every floor sharing
-        // a tile - and for a floor that owns its tile outright, it is the surface the player may be
-        // standing on. Measured at 虎口山脉 on 2026-09-26: a frame captured on the surface voted
-        // 寒雾深坑 10-17 against 3-7 on that base plate, and the tool then hid every surface marker.
+        // A surface frame must not adopt the cave under it. The floor the TOTAL vote names also
+        // counts the surface base plate the composite carries underneath every floor, which is the
+        // same picture for every floor sharing a tile - and for a floor that owns its tile outright,
+        // it is the surface the player may be standing on. Measured at 虎口山脉 on 2026-09-26: a frame
+        // captured on the surface voted 寒雾深坑 10-17 against 3-7 on that base plate, and the tool
+        // then hid every surface marker.
+        //
+        // The veto is the FRACTION of the winner's matches that came from art it draws itself, not a
+        // count. An absolute bar cannot work: on a real 眠龙庭·上层 frame the correct floor scores 2-5
+        // own matches, and a surface frame above 寒雾深坑 scores 0-5 for the floor it names. What
+        // separates them is composition - out in the open the winner's matches are almost all base
+        // plate (share 0.00-0.14), inside a cave they are the floor's own drawing (0.24-0.90).
         {
             const auto query = QueryWithDescriptors(10);
             std::vector<LayeredFloors::FloorEntry> floors;
             // Wins the total vote (8 matches) but only 1 of them came from its own art.
             floors.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {1, 0, 0, 0, 0, 0, 0, 0}));
-            // Wins the own-art vote (4 of 4) on fewer matches overall.
+            // Fewer matches overall (4), but every one of them is its own art.
             floors.push_back(ClassifierFloor("-1/7", 7, {2, 3, 4, 5}, {1, 1, 1, 1}));
-            const auto classification = LayeredFloors::Classify(query, floors, 4, 2.0, 0.75f, 0.6f, false, 3);
+            const auto classification = LayeredFloors::Classify(query, floors, 4, 2.0, 0.75f, 0.6f, false, 0.20);
             Require(classification.floorId == "-1/1" && classification.winnerMatches == 8,
                 "the total vote must still name the floor the imagery as a whole resembles");
-            Require(classification.ownFloorId == "-1/7" && classification.winnerOwnMatches == 4,
-                "the own-art vote must name the floor whose own art matched");
-            Require(classification.ownIdentified && classification.runnerUpOwnMatches == 1,
-                "4 own-art matches with a 2x lead is a decision");
-            Require(!LayeredFloors::Classify(query, floors, 4, 2.0, 0.75f, 0.6f, false, 5).ownIdentified,
-                "the own-art minimum must be honoured, not bypassed by the 2x lead");
+            Require(classification.winnerOwnMatches == 1 && classification.winnerOwnShare < 0.20,
+                "the winner's own share must be measured on the winner");
+            Require(!classification.ownDominant,
+                "a winner whose matches are mostly the shared base plate must be refused");
+            Require(classification.ownFloorId == "-1/7",
+                "the own-art ranking is still reported, even when it is not the decision");
+
+            // ... and the veto reads the TOTAL winner, not the floor that tops the own-art ranking:
+            // here the total winner's share is 2/8 = 0.25 while the own-ranking winner's is 1.0.
+            std::vector<LayeredFloors::FloorEntry> mixed;
+            mixed.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {1, 1, 0, 0, 0, 0, 0, 0}));
+            mixed.push_back(ClassifierFloor("-1/7", 7, {2, 3}, {1, 1}));
+            const auto dominant = LayeredFloors::Classify(query, mixed, 4, 2.0, 0.75f, 0.6f, false, 0.20);
+            Require(dominant.floorId == "-1/1" && dominant.winnerOwnShare >= 0.20 && dominant.ownDominant,
+                "the winner's own share, not the own-ranking winner's, decides");
+            Require(!LayeredFloors::Classify(query, mixed, 4, 2.0, 0.75f, 0.6f, false, 0.30).ownDominant,
+                "a share below the minimum must be refused even with a clear total lead");
 
             // An index built before the grid existed carries no mask: every match counts as the
-            // layer's own, so the two rankings agree and the pack behaves exactly as it did before.
+            // layer's own, so the share is 1.0 and the pack behaves exactly as it did before.
             std::vector<LayeredFloors::FloorEntry> legacy;
             legacy.push_back(ClassifierFloor("-1/1", 1, {0, 1, 2, 3, 4, 5, 6, 7}, {}));
             legacy.push_back(ClassifierFloor("-1/7", 7, {2, 3, 4, 5}, {}));
-            const auto carried = LayeredFloors::Classify(query, legacy, 4, 2.0, 0.75f, 0.6f, false, 3);
+            const auto carried = LayeredFloors::Classify(query, legacy, 4, 2.0, 0.75f, 0.6f, false, 0.20);
             Require(carried.ownFloorId == carried.floorId &&
-                carried.winnerOwnMatches == carried.winnerMatches,
+                carried.winnerOwnMatches == carried.winnerMatches && carried.ownDominant,
                 "without a mask the own-art vote must equal the total vote");
 
             // A mask whose length no longer matches the descriptor set is refused rather than

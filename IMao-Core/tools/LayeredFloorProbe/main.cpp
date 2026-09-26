@@ -26,7 +26,7 @@ void PrintUsage() {
     std::cerr <<
         "Usage: IMaoLayeredFloorProbe --pack <pack dir> --reference <png>\n"
         "       [--full-snapshot] [--crop x,y,w,h] [--map x,y] [--hessian N] [--min-matches N]\n"
-        "       [--min-own-matches N] [--margin X] [--ratio X] [--max-distance X] [--no-mask]\n"
+        "       [--min-own-share F] [--margin X] [--ratio X] [--max-distance X] [--no-mask]\n"
         "       [--dump-matches <floorId>]\n"
         "       --batch <list> [--only-floor <ids>]     list = '<label>\\t<image>' per line\n";
 }
@@ -69,7 +69,7 @@ cv::Mat BuildMinimapMask(const cv::Mat& reference) {
 /// of the game practical - the single-query path reloads ~275k descriptors per invocation.
 int RunBatch(const std::string& batchPath, const std::vector<LayeredFloors::FloorEntry>& floors,
     const std::vector<std::string>& floorFilter, bool fullSnapshot, cv::Rect crop, bool useMask,
-    double hessian, int minimumMatches, int minimumOwnMatches, double margin, float ratio,
+    double hessian, int minimumMatches, double minimumOwnShare, double margin, float ratio,
     float maxDistance, bool useSamples, bool dumpVotes) {
     std::ifstream list(batchPath);
     if (!list) { std::cerr << "cannot open batch list " << batchPath << '\n'; return 2; }
@@ -81,7 +81,7 @@ int RunBatch(const std::string& batchPath, const std::vector<LayeredFloors::Floo
             candidates.push_back(&floor);
         }
     }
-    std::cout << "label,identified,floor,winner,runnerUp,ownIdentified,ownFloor,ownWinner,ownRunnerUp,keypoints\n";
+    std::cout << "label,identified,floor,winner,runnerUp,ownDominant,ownFloor,ownWinner,ownRunnerUp,keypoints,ownShare\n";
     std::string line;
     while (std::getline(list, line)) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
@@ -106,12 +106,13 @@ int RunBatch(const std::string& batchPath, const std::vector<LayeredFloors::Floo
             surf->detectAndCompute(gray, cv::noArray(), query.imgKeypoints, query.imgDescriptors);
         }
         const auto classification = LayeredFloors::Classify(query, candidates, minimumMatches, margin,
-            ratio, maxDistance, useSamples, minimumOwnMatches);
+            ratio, maxDistance, useSamples, minimumOwnShare);
         std::cout << label << ',' << (classification.identified ? 1 : 0) << ','
             << classification.floorId << ',' << classification.winnerMatches << ','
-            << classification.runnerUpMatches << ',' << (classification.ownIdentified ? 1 : 0) << ','
+            << classification.runnerUpMatches << ',' << (classification.ownDominant ? 1 : 0) << ','
             << classification.ownFloorId << ',' << classification.winnerOwnMatches << ','
-            << classification.runnerUpOwnMatches << ',' << query.imgKeypoints.size();
+            << classification.runnerUpOwnMatches << ',' << query.imgKeypoints.size()
+            << ',' << classification.winnerOwnShare;
         if (dumpVotes) {
             // The full table, "<floorId>=<own>:<total>" joined by ';'. A sweep gets every candidate
             // floor's own-art vote for every query, so thresholds and margins can be searched
@@ -160,7 +161,7 @@ int main(int argc, char** argv) {
     // The bar for the own-art vote, which is what decides the floor's identity. Separate flag so a
     // threshold can be searched over real frames without rebuilding - see
     // Docs/LayeredMapFalsePositive_Hukou_20260926.md.
-    int minimumOwnMatches = 8;
+    double minimumOwnShare = 0.20;
     // Descriptors kept per floor at load time; 0 keeps all. Used to check how far the per-floor
     // fingerprint can be cut before floor identification degrades.
     int maxKeypoints = 0;
@@ -183,7 +184,7 @@ int main(int argc, char** argv) {
             else if (argument == "--no-mask") useMask = false;
             else if (argument == "--hessian") hessian = std::stod(next("--hessian"));
             else if (argument == "--min-matches") minimumMatches = std::stoi(next("--min-matches"));
-            else if (argument == "--min-own-matches") minimumOwnMatches = std::stoi(next("--min-own-matches"));
+            else if (argument == "--min-own-share") minimumOwnShare = std::stod(next("--min-own-share"));
             else if (argument == "--max-keypoints") maxKeypoints = std::stoi(next("--max-keypoints"));
             else if (argument == "--samples") useSamples = true;
             else if (argument == "--margin") margin = std::stod(next("--margin"));
@@ -260,7 +261,7 @@ int main(int argc, char** argv) {
 
         if (!batchPath.empty()) {
             return RunBatch(batchPath, floors, floorFilter, fullSnapshot, crop, useMask, hessian,
-                minimumMatches, minimumOwnMatches, margin, ratio, maxDistance, useSamples, dumpVotes);
+                minimumMatches, minimumOwnShare, margin, ratio, maxDistance, useSamples, dumpVotes);
         }
 
         std::cout << "floor index: " << floors.size() << " floors from " << loadedPacks << " pack(s)\n";
@@ -303,7 +304,7 @@ int main(int argc, char** argv) {
             << " keypoints=" << query.imgKeypoints.size()
             << " mask=" << (useMask ? "on" : "off") << '\n';
 
-        const auto classification = LayeredFloors::Classify(query, floors, minimumMatches, margin, ratio, maxDistance, useSamples, minimumOwnMatches);
+        const auto classification = LayeredFloors::Classify(query, floors, minimumMatches, margin, ratio, maxDistance, useSamples, minimumOwnShare);
         std::cout << "votes (matches / own-art):\n";
         for (const auto& vote : classification.votes) {
             const auto found = std::find_if(floors.begin(), floors.end(), [&](const LayeredFloors::FloorEntry& floor) {
@@ -324,11 +325,12 @@ int main(int argc, char** argv) {
             << " runnerUp=" << classification.runnerUpMatches << "   [total imagery]"
             << " (min=" << minimumMatches << " margin=" << margin << " ratio=" << ratio
             << " maxDistance=" << maxDistance << ")\n";
-        std::cout << "identity: " << (classification.ownIdentified ? "identified" : "unknown")
-            << " floor=" << (classification.ownFloorId.empty() ? "-" : classification.ownFloorId)
-            << " winner=" << classification.winnerOwnMatches
-            << " runnerUp=" << classification.runnerUpOwnMatches << "   [layer's own art only]"
-            << " (minOwn=" << minimumOwnMatches << ")\n";
+        std::cout << "identity: " << (classification.ownDominant ? "own-dominated" : "base-plate")
+            << " share=" << classification.winnerOwnShare
+            << " own=" << classification.winnerOwnMatches << "/" << classification.winnerMatches
+            << "   [is the winner's evidence its own art?]"
+            << " (minShare=" << minimumOwnShare << ")"
+            << "  ownRankFloor=" << (classification.ownFloorId.empty() ? "-" : classification.ownFloorId) << '\n';
         // Geometry check: does a similarity fit succeed on the same descriptor matches the
         // localizer uses? Measured per floor set, because several floors can share one tile
         // coordinate and their appearances are then indistinguishable to a plain matcher.

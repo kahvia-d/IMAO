@@ -136,18 +136,28 @@ struct Classification {
     // Descending by matches; kept in full so a caller can log why it decided what it did.
     std::vector<FloorVote> votes;
 
-    /// The floor the OWN-art vote names, and its counts. This can differ from `floorId` above, which
-    /// is the floor the imagery as a whole resembles most: the base plate of a co-located floor, or
-    /// of the surface the player is standing on, can outvote the floor's own art in `matches` while
-    /// contributing nothing to `winnerOwnMatches`.
+    /// The floor the OWN-art vote names, and that ranking - diagnostics only. The decision itself is
+    /// taken on the total vote with `ownDominant` below as a veto, because the own ranking is a
+    /// strictly smaller sample and picks a different (and on real frames, wrong) floor far more often.
     std::string ownFloorId;
+    /// The winner's own-art count, the runner-up's, and the share. `winnerOwnMatches` is what the
+    /// veto tests; `ownFloorId`'s ranking is kept so a session log still shows both readings.
     int winnerOwnMatches = 0;
     int runnerUpOwnMatches = 0;
-    /// The own-art vote cleared `minimumOwnMatches` and leads the runner-up's own-art vote by
-    /// `margin`. This - not `identified` - is what says the imagery is evidence about WHICH floor
-    /// the player is on, and it is what LayeredMapState adopts on. Adopting on `identified` alone is
-    /// what mistook a surface frame at 虎口山脉 for 寒雾深坑.
-    bool ownIdentified = false;
+    double winnerOwnShare = 0.0;
+    /// True when the floor the TOTAL vote named got its matches from art that floor draws itself,
+    /// rather than from the surface base plate every co-located floor shares.
+    ///
+    /// An absolute count cannot do this job. On a real 眠龙庭·上层 frame the correct floor scores 2-5
+    /// own matches, and a frame captured on the surface above 寒雾深坑 scores 0-5 for the floor it
+    /// names - the counts overlap. What does not overlap is their composition: out in the open the
+    /// winner's matches are almost all base plate (own/total 0.00-0.14), inside a cave they are the
+    /// floor's own drawing (0.24-0.90). The fraction is also scale-free, which matters because
+    /// 眠龙庭's minimap yields ~54 keypoints where others yield 200+.
+    ///
+    /// Measured 2026-09-26 on 702 synthetic surface positions inside a footprint and on the real
+    /// frames of two player sessions; see Docs/LayeredMapFalsePositive_Hukou_20260926.md section 10.
+    bool ownDominant = false;
     /// `votes` ordered by `ownMatches` instead of `matches`, for callers that need the identity
     /// ranking (the equivalence group is built from this one). Empty when `votes` is empty.
     std::vector<FloorVote> ownVotes;
@@ -242,27 +252,31 @@ bool SharesSurfaceGround(const FloorEntry& floor);
 /// is what the cold start does: it compares every floor in the game and only needs enough to
 /// scope a search.
 ///
-/// `minimumOwnMatches` is the same bar for the own-art part of the vote (see FloorEntry::ownArt),
-/// which is the one that decides the floor's IDENTITY. The 2026-09-26 field case re-opened the
-/// surface-frame calibration above: those nine captures were taken where several floors share a
-/// tile, so their shared base plate tied them and no floor reached 2x. At 虎口山脉 寒雾深坑 owns its
-/// tile outright, nothing tied it, and the surface frame voted it 10-17 against 3-7 - over the bar.
-/// The own-art vote at that spot is 0, which is the honest answer.
+/// `minimumOwnShare` is the veto that keeps a surface frame out. The floor the total vote names has
+/// to have got at least this fraction of its matches from art IT draws; out in the open the matches
+/// are the shared base plate and the fraction sits at 0.00-0.14, inside a cave at 0.24-0.90.
+///
+/// This replaced an earlier attempt that made the own-art vote the decision itself (own >= 8). That
+/// was measured wrong twice over: the synthetic scan that blessed it used the map art as the query,
+/// which is the best case and roughly an order of magnitude above what a rendered minimap yields, and
+/// on real frames 眠龙庭·上层 scores 2-5. With the bar at 8 a floor could be adopted once and then
+/// never corrected or cleared, because the right floor could not reach it either - the two symptoms
+/// the user reported on 2026-09-26 evening.
 Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,
     int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f,
-    bool useSamples = false, int minimumOwnMatches = 8);
+    bool useSamples = false, double minimumOwnShare = 0.20);
 
 /// Convenience overload for callers that hold the floors by value. The pointer form above is the
 /// real one: a FloorEntry owns its descriptors, so passing a vector of them by value copies tens
 /// of megabytes per call once every floor in the game is a candidate.
 inline Classification Classify(const ImageFeatureData& query, const std::vector<FloorEntry>& floors,
     int minimumMatches = 10, double margin = 2.0, float ratio = 0.75f, float maxDistance = 0.6f,
-    bool useSamples = false, int minimumOwnMatches = 8) {
+    bool useSamples = false, double minimumOwnShare = 0.20) {
     std::vector<const FloorEntry*> pointers;
     pointers.reserve(floors.size());
     for (const auto& floor : floors) pointers.push_back(&floor);
     return Classify(query, pointers, minimumMatches, margin, ratio, maxDistance, useSamples,
-        minimumOwnMatches);
+        minimumOwnShare);
 }
 
 /// "-2/3" -> -2. The numerator orders the floors inside one layered map.

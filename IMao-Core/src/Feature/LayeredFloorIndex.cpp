@@ -524,7 +524,7 @@ double SharedFraction(const FloorEntry& floor, const Transform& transform, doubl
 
 Classification Classify(const ImageFeatureData& query, const std::vector<const FloorEntry*>& floors,
     int minimumMatches, double margin, float ratio, float maxDistance, bool useSamples,
-    int minimumOwnMatches) {
+    double minimumOwnShare) {
     Classification result;
     if (query.imgDescriptors.empty() || query.imgDescriptors.rows < 2 || floors.empty()) return result;
 
@@ -576,9 +576,9 @@ Classification Classify(const ImageFeatureData& query, const std::vector<const F
         static_cast<double>(result.winnerMatches) >= margin * static_cast<double>(result.runnerUpMatches);
     result.identified = enough && leads;
 
-    // The identity ranking: the same votes, ordered by the part of each that came from the layer's
-    // OWN art. Without a mask ownMatches equals matches, so this is the same order as above and
-    // every threshold below lands exactly where it did before the mask existed.
+    // The identity ranking: the same votes ordered by the part of each that came from the layer's OWN
+    // art. Reported for diagnostics only - see Classification::ownDominant for why the decision is
+    // taken on the total vote with the own share as a veto instead.
     result.ownVotes = result.votes;
     std::sort(result.ownVotes.begin(), result.ownVotes.end(),
         [](const FloorVote& left, const FloorVote& right) {
@@ -587,12 +587,16 @@ Classification Classify(const ImageFeatureData& query, const std::vector<const F
             return left.floorId < right.floorId;
         });
     result.ownFloorId = result.ownVotes.front().floorId;
-    result.winnerOwnMatches = result.ownVotes.front().ownMatches;
-    result.runnerUpOwnMatches = result.ownVotes.size() > 1 ? result.ownVotes[1].ownMatches : 0;
-    const bool ownEnough = result.winnerOwnMatches >= minimumOwnMatches;
-    const bool ownLeads = result.runnerUpOwnMatches == 0 ||
-        static_cast<double>(result.winnerOwnMatches) >= margin * static_cast<double>(result.runnerUpOwnMatches);
-    result.ownIdentified = ownEnough && ownLeads;
+
+    // The veto, on the floor the TOTAL vote named: how much of its evidence is art it draws itself?
+    // The base plate is the same picture for every floor sharing a tile, so a winner whose matches
+    // are mostly base plate has been named by the surface, not by itself.
+    result.winnerOwnMatches = result.votes.front().ownMatches;
+    result.runnerUpOwnMatches = result.votes.size() > 1 ? result.votes[1].ownMatches : 0;
+    result.winnerOwnShare = result.winnerMatches > 0
+        ? static_cast<double>(result.winnerOwnMatches) / static_cast<double>(result.winnerMatches)
+        : 0.0;
+    result.ownDominant = result.winnerMatches > 0 && result.winnerOwnShare >= minimumOwnShare;
     return result;
 }
 
