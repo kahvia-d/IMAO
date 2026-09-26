@@ -53,7 +53,7 @@ public sealed class ExplorationHotkeyService : IDisposable
             {
                 var result = await coreHost.ToggleExplorationAsync(GameWindow.CheckGameWindowSize());
                 if (result == ExplorationToggleResult.WindowSizeRejected)
-                    coreHost.ReportUserError("游戏窗口尺寸不合适，无法开始探索（与首页按钮同样的要求）。");
+                    coreHost.ReportUserError("没有找到游戏窗口（可能已最小化或太小），无法开始探索（与首页按钮同样的要求）。");
             }
             finally { toggling = false; }
         }

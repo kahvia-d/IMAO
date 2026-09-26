@@ -155,7 +155,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
         {
             var result = await core.ToggleExplorationAsync(GameWindow.CheckGameWindowSize(), lifetime.Token);
             if (result == ExplorationToggleResult.WindowSizeRejected)
-                core.ReportUserError("游戏窗口尺寸不合适，无法开始探索（与首页按钮同样的要求）。");
+                core.ReportUserError("没有找到游戏窗口（可能已最小化或太小），无法开始探索（与首页按钮同样的要求）。");
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or ArgumentException or OperationCanceledException)
         { core.ReportUserError("手柄启停探索失败：" + exception.Message); }

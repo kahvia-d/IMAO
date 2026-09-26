@@ -285,7 +285,7 @@
     <value>打开文件夹</value>
   </data>
   <data name="Start_InfoBar_IncorrectGameWindowSize.Message" xml:space="preserve">
-    <value>你的游戏分辨率不是16:9，这会导致所有地图功能无法正常工作。</value>
+    <value>没有找到鸣潮的游戏窗口（可能已最小化或窗口太小）。请打开游戏并保持窗口可见后再试。</value>
   </data>
   <data name="Button_LoadRoutesData.Content" xml:space="preserve">
     <value>重新加载</value>

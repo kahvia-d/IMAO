@@ -285,7 +285,7 @@
     <value>Open folder</value>
   </data>
   <data name="Start_InfoBar_IncorrectGameWindowSize.Message" xml:space="preserve">
-    <value>Your game resolution is not 16:9, which will cause all map functions to malfunction.</value>
+    <value>No Wuthering Waves game window was found (it may be minimized or too small). Open the game and keep its window visible, then try again.</value>
   </data>
   <data name="Button_LoadRoutesData.Content" xml:space="preserve">
     <value>Reload</value>

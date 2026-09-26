@@ -12,7 +12,7 @@
                     <Button Content="连接与显示设置" Tag="settings" Click="Navigate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                 </controls:WrapPanel>
                 <InfoBar x:Name="Start_InfoBar_FindNotTargetProcess" IsOpen="False" Visibility="Collapsed" Title="正在等待游戏" Message="请先打开鸣潮，并回到可见的游戏画面。" Severity="Warning" CloseButtonClick="Start_InfoBar_FindNotTargetProcess_CloseButtonClick" />
-                <InfoBar x:Name="Start_InfoBar_IncorrectGameWindowSize" IsOpen="False" Visibility="Collapsed" Title="检查游戏窗口" Message="当前窗口比例可能影响地图识别；建议使用 16:9 游戏画面。" Severity="Warning" CloseButtonClick="Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick" />
+                <InfoBar x:Name="Start_InfoBar_IncorrectGameWindowSize" IsOpen="False" Visibility="Collapsed" Title="检查游戏窗口" Message="没有找到鸣潮的游戏窗口（可能已最小化或窗口太小）。请打开游戏并保持窗口可见后再试。" Severity="Warning" CloseButtonClick="Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick" />
             </StackPanel>
         </Border>
         <Border Style="{StaticResource IMaoCardStyle}">
