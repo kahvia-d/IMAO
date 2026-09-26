@@ -1,0 +1,418 @@
+# 虎口山脉标记消失：分层地图误判复盘（2026-09-26）
+
+玩家反馈：在**虎口山脉**附近标记消失。截图两张：① 17:58:01 地表游玩画面（左下角 IMao 坐标 ≈
+`-39x, 1874`），② 大地图停在虎口矿场。
+
+日志：`Logs (2).zip` → `events-20260926.jsonl`（92385 行）、`startup.log`、`corehost-stderr.log`。
+构建：`IMao-v2026.9.26.1-windows-x64`，Kuro 资源版本 `B50F4135DCCC4D8DA87ED33CE95EA31D`。
+
+结论先行：**玩家的猜测方向是对的，但机制不是"在分层地图边缘所以被算作在层内"这么简单。**
+真正的原因是：**分层楼层的特征索引是从「地表 × 0.35 + 叠加层」的合成图上提取的，索引里 71% 的
+特征点落在叠加层完全透明的像素上——也就是地表自己的地图特征。** 于是站在地表的帧也能把该层
+以 2 倍以上的差距投出来，再叠加 `Contains()` 的 1 cell 容差，状态就被置为 active，`RoleFor`
+把今州所有地表标记判成 `Hidden`。
+
+---
+
+## 一、时间线（全部取自日志原文）
+
+| 时刻 | 事件 |
+| --- | --- |
+| 17:54:38 | `coordinate-publish scene=1 map=1849.810,3935.610 world=-518,1642`；`restricted=0`，无楼层包含玩家 |
+| 17:54:46 | 首个 `restricted=1 containing=[-1/7]`，投票 `jinzhou:-1/7=5 runnerUp=4` → 未采纳 |
+| 17:55:54 | `coordinate-publish ... map=2002.845,4212.760 world=-391,1872`，玩家进入 寒雾深坑 足迹 |
+| **17:55:55** | **`layered-floor-change region=jinzhou floor=-1/7 name=寒雾深坑 matches=10 runnerUp=6 heightDirection=1 heightRank=-1`** |
+| 17:56–18:00 | 状态持续 `active=1 floor=-1/7 restricted=1 containing=[-1/7]`，投票 10–17 对 3–7 |
+| 18:01:01 | `corehost-stopped`，重启清空状态（玩家重启 IMao，问题窗口约 5 分钟） |
+
+采纳瞬间的完整证据行（同一帧的分类结果）：
+
+```
+scene=1 active=0 floor=- restricted=1 containing=[-1/7] identified=0 adopted=1
+winnerContained=1 decisiveStreak=0 closeStreak=0 equivalent=[]
+winner=10 runnerUp=6 votes=[jinzhou:-1/7=10 qiqiu:-1/27=6 jinzhou:-2/3=6 qiqiu:-1/25=5]
+```
+
+注意 **`identified=0`**、`adopted=1`。`LayeredFloors::Classify` 的 `identified` 定义是"领先
+亚军 `margin`（=2.0）倍"，10 对 6 只有 1.67 倍，所以主判据是**否**决的。真正采纳它的是
+`LayeredMapState.cpp:342-350` 的**近似平票兜底分支**（本为下层金库「贵金属与艺术品藏区」
+四层 12/10/5/4 那种情况写的）。
+
+`LayeredFloorIndex.h:185-188` 自己写着：`identified=false` 时"调用方必须当成 unknown，
+**绝不能当成猜测的理由**"。而兜底分支恰恰在 `identified=false` 时采纳。它的 `tieIsLocal`
+守卫在 `kIndistinguishableFactor = 1.5` 下退化了：7 × 1.5 = 10.5 < 11 就算"明确落后"，
+于是**任何 ≥10 匹配、且足迹包含玩家的楼层，只要领先 1.5 倍就会被采纳**——等于把
+containment 命中的那条路径的有效门槛从 2.0 降到了 1.5。
+
+## 二、`-1/7` 是什么
+
+`Assets/FeaturesDatas/KuroTilePacks/jinzhou/layered-floors/floor-index.json`：
+
+| layerId | floorId | layerName | floorName | keypoints | tiles |
+| --- | --- | --- | --- | --- | --- |
+| 7 | -1/7 | **虎口山脉** | **寒雾深坑** | 1381 | 1（`x=0, y=-2`）|
+
+即"虎口山脉"这张分层图只有一层"寒雾深坑"，level = **-1**，按代码定义就是**紧贴地表的那一层**
+（`AdjacentToSurface`）。
+
+### 玩家确实在足迹边缘（玩家猜对的部分）
+
+用 `LayeredFloorIndex.cpp::LocateCell/Contains` 复算玩家位置：
+
+```
+17:54:38  game=(-518.0,1642.0) tile=(0,-1) cell=(24,59)  Contains=false  occupied=[]
+17:55:54  game=(-391.0,1872.0) tile=(0,-2) cell=(34,12)  Contains=true   occupied=[34,11 35,11 34,12 35,12 35,13]
+17:58:45  game=(-386.0,1874.0) tile=(0,-2) cell=(34,13)  Contains=true
+```
+
+寒雾深坑 足迹（occupancy 网格 271/4096 格有图）：game x −843.4…−59.8，y 1746.5…2543.4 →
+map x 1457.8…2402.0，y 4061.5…5021.7。玩家在 **(34,12)**，正好落在该层美术左边界上：
+
+```
+row 11  ..................................################
+row 12  ..................................#####.############
+row 13  ...................................P##...###########
+row 14  ..........................................#########
+cols     34 35 36 37 38 ...
+```
+
+到足迹边界只有 **1 个 cell = 16 px = 13.3 map 单位 = 11.0 游戏单位**。而 `Contains()`
+（`LayeredFloorIndex.cpp:405-414`）**故意保留 ±1 cell 容差**（注释：位置有几像素误差、洞窟
+边缘严格判定会抖动），所以站在美术边缘外一点也算"在里"。**玩家的直觉是对的。**
+
+### 但"边缘"不是决定性的（需要修正的部分）
+
+玩家不在 tile 边缘、也不在足迹包围盒边缘，而是在足迹二维投影的内部。而且
+`LayeredFloorIndex.h:132-135` 明确写着：
+
+> 一个坐标可以是多个楼层足迹的交集……在地表则一个都不在——但要注意**站在洞窟正上方地表
+> 共享同一坐标**，所以 containment 永远不能判定"我在不在层里"，只能判定"是哪一层"。
+
+也就是说：**containment 本来就不该承担"在不在层内"的判断**，判断全靠图像投票。出问题的是投票。
+
+## 三、根因：楼层特征索引被地表特征污染
+
+### 构建链路
+
+1. `scripts/New-LayeredTileComposite.ps1:99-125`：分层瓦片 = `地表瓦片 × factor` 再叠上该层
+   RGBA 叠加层，`factor=0.35`（`k035`）。
+2. `scripts/New-LayeredFloorIndex.ps1:194-202`：把**上一步的合成图**（
+   `out/map-regions/composite/jinzhou/k035/L7_F-1-7_8_0_-2.png`）喂给
+   `KuroMapFeatureBuilder.exe`，生成 `L7_F-1-7.imf`。
+
+### 实测（本机复算，脚本见 `out/compare-floor7.py`、`out/keypoint-provenance.py`）
+
+对 `map-regions/layers/B50F4135…/8/7/-1/0_-2.png`：
+
+| 量 | 值 |
+| --- | --- |
+| 叠加层完全透明（alpha ≤ 8）的像素 | **94.53 %**（该层只在 5.47 % 的面积上作画） |
+| 合成图 == 地表 × 0.35 的透明区域占比 | **100.00 %**（NCC 0.9998） |
+| 透明点上的合成/地表亮度比 | **0.350**，σ = 0.003 |
+
+对 `L7_F-1-7.imf` 的 1381 个特征点（`out/map-regions/floor-index-work/L7_F-1-7/features.yml`
+的坐标反算到像素后取叠加层 alpha）：
+
+| 特征点落点 | 数量 | 占比 |
+| --- | --- | --- |
+| 落在外加层自己的美术上 | 397 | 28.7 % |
+| **落在外加层完全透明的像素上 = 地表自己的特征** | **984** | **71.3 %** |
+| 玩家所在 256 px 窗口内 | 357 | 其中 185 个是纯地表特征 |
+
+**关键点**：特征描述子是做对比度归一化的，对整体压暗 0.35 倍几乎不敏感——`Docs/LayeredMapFeatureMeasurement_20260922.md`
+§7.4.1 自己也写过"**SURF 对整体压暗/降饱和不敏感，结构还在**"，当时把它当作"层内还能定位"
+的好消息；**同一条性质反过来成立：站在地表也能匹配到这个层的索引。**
+
+这就直接解释了为什么文档里"SURF 地表帧最多 6 个匹配、从不超过 2 倍"的标定在这里失效：
+本场日志里地表帧对 寒雾深坑 投出 **10–17 对 3–7**。文档的标定（2026-09-23，jinzhou）采样的
+地表帧大概没有落在某个楼层的合成瓦片范围内，所以漏掉了这一类。
+
+### 这是全局性的，不是虎口山脉个案
+
+对全游戏 90 个楼层的特征索引做同样审计（`out/audit-all-floors.py`，输出 `out/audit-all-floors.txt`）：
+
+| 量 | 值 |
+| --- | --- |
+| 审计特征点总数 | 275 006 |
+| 落在该层自己美术上 | 110 395（**40.1 %**） |
+| 落在地表特征上 | 164 611（**59.9 %**） |
+| **地表特征占比 ≥ 50 % 的楼层** | **76 / 90** |
+
+最极端：环木阙·中层 95.3 %、叩天关·中层 89.9 %、叩天关·下层 89.6 %（这些层的叠加层只覆盖
+瓦片的 0.4 %–1.7 %，索引基本就是地表）。
+
+## 四、为什么标记会整片消失
+
+`LayeredMapState.cpp::RoleFor`（:568-609）：
+
+```cpp
+const auto state = Read();  if (!state.active) return MarkerRole::Normal;
+if (item.layer.stateId != 0 && state.kuroStateId != 0 && item.layer.stateId != state.kuroStateId)
+    return MarkerRole::Normal;
+...
+if (mapId.empty() || floorId.empty()) return SurfaceRole(state);   // 普通地表收集品
+```
+
+采纳的 `Entry::kuroStateId` 来自 jinzhou 包 `manifest.json` 的 `source.state = 8`。今州地表的
+普通点位 `layer.floorId/level` 为空、stateId = 8 → 走 `SurfaceRole(state)`；而
+`sharedGround == false` → **`MarkerRole::Hidden`**。
+
+下游两处生效：
+- `DrawItemOnMinMap.cpp:282-283` — `Hidden` 直接 `continue`，小地图不再画（也就不可点）。
+- `NearbySelection.h:64-65` — `Hidden` 不进候选，快捷键也够不着。
+
+**为什么 4 个标记的数没有掉？** 因为 `minimap-near-items`（`DrawItemOnMinMap.cpp:113`）和
+`minimap-marker-sample`（:96）以及 HUD 的 `SetMinimapMarkerCount`（:88）打印的都是
+`nearItemsDatas.size()`，即**角色过滤之前**的数量。所以整个日志里**没有任何一条记录能看出
+`RoleFor` 隐藏了多少个标记**——这也是这份反馈无法直接从日志直接定位的原因（见建议 4）。
+
+`sharedGround` 兜底在这里本来也救不了：实测玩家所在 cell 的 `SharedFraction = 0.05`
+（阈值 0.5）——寒雾深坑在那里的美术是它自己画的，不是抄地表的，判定"非共享地面"是正确的。
+
+## 五、为什么"匹配到错误的层"会致命
+
+`Docs/LayeredMapFeatureMeasurement_20260922.md` §7.4.2 写道：
+
+> 所有层的合成共用同一张底片……**即使匹配到错误的层，算出来的 x/y 仍然是对的**。楼层身份
+> 可以交给点位侧解决。
+
+这句话对定位成立、对标记显示**不成立**——后来的 `RoleFor` 让**楼层身份决定标记可见性**。
+于是"匹配错层"从无害变成了灾难：一个错误的楼层身份会把整张地表地图的标记全部隐藏。
+这是本次事故的架构性原因。
+
+## 六、建议（按性价比排序）
+
+1. **把"定位"和"楼层身份"拆成两件事**（详见第七节 7.5）：定位继续用合成图（底图提供特征量，
+   保住层内召回），**楼层身份 / "在不在层里"必须由落在叠加层自绘画素上的匹配承担**。
+   最小改动是给每个描述子带一个"是否来自叠加层"的标志（建索引时 alpha ≤ 8 的点标 0），
+   投票分 `matches`（定位）与 `ownMatches`（采纳）两个计数。
+   注意：**不能简单地"删掉底图"**——第七节 7.4 实测那样会在 128px 窗口把层内识别从
+   `identified 25 vs 4` 打成 `unknown 7 vs 3`，削掉召回的安全边际。
+2. **在索引重建之前先把门槛抬回去**：采纳必须要求 `classification.identified`（2 倍差距），
+   并给近似平票兜底加约束（例如要求 `InsideWithMargin` 通过，或要求该点附近叠加层覆盖率达标），
+   不要让 `tieIsLocal` 在 1.5 倍时退化。
+3. **加"叠加层覆盖率"闸门**：玩家邻域里该层真正作画的比例过低时，不能认定玩家在该层。
+   本次玩家距美术边界仅 11 游戏单位，覆盖必然稀疏。`InsideWithMargin` 现有注释说它"不是可用的
+   层内判据"，但它的反面（"是否深入美术内部"）正好可以用作闸门。
+4. **补一条诊断**：记录 `RoleFor` 每次隐藏的标记数（以及 active 楼层），否则这类反馈永远
+   只能靠猜。同时建议让 HUD/日志的"标记数"用**过滤后**的数量。
+5. **降低错层的破坏半径**：证据弱时不要"隐藏一切"，退化成"两张图都显示"（共享地面的既有思路），
+   或者把地表标记的隐藏改成需要更强的连续证据。
+
+## 附：本次分析产出的脚本与图
+
+- `out/compare-floor7.py` / `out/floor7-compare-whole-tile.png` / `out/floor7-compare-player-window.png`
+  — 地表瓦片 vs 层 7 叠加层 vs 合成图 三联对照（合成图肉眼可见就是压暗后的地表）。
+- `out/keypoint-provenance.py` — 单层特征点来源统计。
+- `out/audit-all-floors.py` / `out/audit-all-floors.txt` — 全 90 层特征点来源审计。
+- `out/probe-floor.ps1` — 复算 `LocateCell/Contains` 与 occupancy 网格、SharedFraction。
+
+---
+
+# 七、"当初为什么要加地表底图"——文档依据与复现（2026-09-26 补充）
+
+## 7.1 文档确实写了，而且是实测结论
+
+`Docs/LayeredMapFeatureMeasurement_20260922.md`：
+
+- §7（第 163 行）：两张同机位大地图截图逐像素比对 → "**分层视图 ≈ 地表底片（占 83%–99.9% 的
+  像素）+ 一层很薄的洞窟叠加层**"（83.0% 的像素两张完全一致）。
+- §8.1（第 205–208 行）：分层视图把底片压到 **0.197×**（逐像素比值中位数，p25–p75 = 0.194–0.199）。
+- §8.2（第 217–224 行）：**层内小地图 = 当前层叠加在"地表底片"上，没有大地图那层深色遮罩** →
+  工具侧目标影像 = `地表瓦片（未压暗或轻微压暗）+ 当前层的 RGBA 叠加层`。
+
+`Docs/LayeredMapFeaturePackPlan.md` §0（第 142–153 行）是**采纳它的直接理由**。两帧实机层内小地图
+（`referenceVerification`，门限 8px；运行时 Marginal 要 inliers ≥ 8、Strong ≥ 12）：
+
+| 包 | 关键点 | 地表参考（回归） | 眠龙庭 (4,−3) | 叩天关 (3,−3) |
+| --- | ---: | --- | --- | --- |
+| `surface`（当时的现状） | 207205 | ✅ 84 / 79 / 2.88px | 9 / **2** / 3.68 | 3 / **0** / **判失败** |
+| `multi100` | 257060 | ✅ 84 / 79 / 2.88px | 67 / 21 / 3.70 | 33 / 12 / 2.61 |
+| **`multi035`** | **220090** | ✅ **84 / 79 / 2.88px** | 61 / **38** / 3.53 | 42 / **23** / 3.69 |
+
+原文第 150–151 行：
+
+> **现状包在层内不可用**：眠龙庭 only **2** 个 near-anchor（连 3 票的纯平移兜底都不够），叩天关
+> 直接 **0 个、判定失败**。这不是理论风险，是两帧一致的实测。
+
+**一句话：没有底图，玩家在层内根本定位不了。** §7.3 也量过：只叠叠加层（over 黑底）时每层只有
+64–651 个可用特征。
+
+## 7.2 复现（本机，同一套工具链）
+
+用 `x64/RelWithDebInfo/KuroMapFeatureBuilder.exe` + `x64/Release/IMaoFeatureConverter.exe`，
+按 `New-LayeredFloorIndex.ps1` 的流程把今州 9 层各建两套索引：
+
+```
+out/layered-ab/composite-black/   # 变体 black：叠加层 over 黑底，无底图
+out/layered-ab/pack-k035/jinzhou  # 变体 k035 ：已发布合成图（地表 × 0.35 + 叠加层）
+out/layered-ab/pack-black/jinzhou
+```
+
+| floor | k035 | black | 比例 |
+| --- | ---: | ---: | ---: |
+| 叩天关·上层 | 1806 | 580 | 0.32 |
+| 叩天关·中层 | 1611 | 200 | 0.12 |
+| 叩天关·下层 | 1599 | 248 | 0.16 |
+| 环木阙·上层 | 1099 | 200 | 0.18 |
+| 环木阙·中层 | 970 | 64 | 0.07 |
+| 环木阙·下层 | 2385 | 651 | 0.27 |
+| 眠龙庭·上层 | 995 | 331 | 0.33 |
+| 眠龙庭·下层 | 1039 | 528 | 0.51 |
+| **寒雾深坑** | **1381** | **506** | 0.37 |
+| 合计 | **12885** | **3308** | 0.26 |
+
+两条交叉校验，说明复现是忠实的：
+
+1. **k035 列与已发布索引逐层完全一致**（1806/1611/1599/1099/970/2385/995/1039/1381）。
+2. **black 列与文档 §7.3 的"叠加层 over 黑底"一行逐格完全一致**
+   （580 / 200 / 248 / 200 / 64 / 651 / 331 / 528 / 506，合计 **3308**）。
+
+## 7.3 那它为什么会反过来咬人：安全假设漏了一个前提
+
+`LayeredMapFeaturePackPlan.md` 第 37–39 行记录了当时的安全假设：
+
+> **9 张地表参考全部保持 unknown（0 误判）**——地表帧的票数被"共享的压暗底片"摊平
+> （出现 `lowervault 20 vs 20` 这种并列），永远拉不开 2 倍。
+
+这个假设有一个**没有写出来的前提**：底片只有在**同一个 tile 上叠了好几层**时才是"共享"的。
+按 `floor-index.json` 统计 scene 1（今州 / 拉古那 / 梦州 / 七丘 / 冰原 / 黑海岸共用 sceneId = 1）：
+
+- **38 个 tile、75 个楼层**，其中 **20 个 (tile, 楼层) 是独占 tile 的**；
+- **寒雾深坑独占 tile (0,−2)**，附近没有任何别的层与它共用底片；
+- 那 9 张地表参考取在**多层共用的 tile** 上（叩天关 / 环木阙 / 眠龙庭 的 3,−3 / 3,−4 / 4,−3 /
+  4,−4），所以平票、所以 unknown。
+
+用真探针 `IMaoLayeredFloorProbe.exe` 把这一点量出来（`out/layered-ab-run.ps1`；query = 地表瓦片的
+原生分辨率裁切，同心于玩家位置 / 足迹中心）：
+
+| 查询 | 窗口 | k035 | black |
+| --- | ---: | --- | --- |
+| 地表 @ **玩家位置**（tile 0,−2） | 128 | **identified −1/7 = 18 vs 4** | unknown（最高 4） |
+| 同上 | 184 | **identified −1/7 = 34 vs 7** | unknown（最高 6） |
+| 同上 | 234 | **identified −1/7 = 50 vs 7** | unknown（最高 9） |
+| 同上 | 320 | **identified −1/7 = 124 vs 18** | unknown（最高 21） |
+| 地表 @ 足迹中心 | 234 | identified −1/7 = 23 vs 8 | unknown（最高 12） |
+| 已发布地表参考 `references/jinzhou.png`（tile 0,−1） | 184（标准裁切） | unknown，寒雾深坑只有 **1** 票 | unknown |
+| 用户地表帧 `out/map-regions/user-surface-frame.jpg` | 184（标准裁切） | unknown（3 vs 3） | unknown（6 vs 3） |
+
+**同一个"地表帧"，在 tile (0,−1) 只拿 1 票，在 tile (0,−2) 拿 18–124 票——差别只在于那个 tile
+有没有别的层跟它共用底片。** 这就是标定能过、虎口山脉不能过的完整原因。
+
+## 7.4 代价：去掉底图会削薄层内召回（必须一起看）
+
+| 层内查询（足迹中心） | k035 | black |
+| --- | --- | --- |
+| 128 | identified 25 vs 4 | **unknown（7 vs 3）** |
+| 184 | identified 66 vs 7 | identified 35 vs 12 |
+| 234 | identified 121 vs 8 | identified 72 vs 13 |
+| 320 | identified 232 vs 23 | identified 108 vs 28 |
+
+注意这是**合成的最佳情况**（查询就是原生地图裁切，比真实小地图干净得多）。真实小地图更噪，
+所以 128 那一档的失败是个警告：**直接把底图删掉，会削掉层内召回的安全边际。**
+
+## 7.5 所以建议 1 的更准确表述是"拆开两个用途"，不是"删掉底图"
+
+底图同时在干两件事，而它只擅长其中一件：
+
+| 用途 | 底图是否有用 |
+| --- | --- |
+| 提供足够特征量做**定位（x/y）** | ✅ 有用，这正是加它的原因 |
+| 判断**楼层身份 / 在不在层里** | ❌ 没用：同 tile 的层共享它（票被摊平），独占 tile 的层则只剩它能匹配（误报） |
+
+正确做法是**把这两件事分开**：定位继续用合成图；楼层身份的判断由**落在叠加层自绘画素上的匹配**
+承担。最小改动是建索引时给每个描述子加一个"是否来自叠加层"的标志（alpha ≤ 8 的点标 0，随
+`.imf` 下发），投票时分 `matches`（定位）与 `ownMatches`（采纳）两个计数——底图的召回保留，
+误报消失。
+
+复现脚本与产物：
+
+- `out/layered-ab-prep.py` — 生成 black 变体瓦片 + 查询图
+- `out/layered-ab-build.ps1` — 用真 builder/converter 建两套索引并打印特征数表
+- `out/layered-ab-run.ps1` — 用真探针跑 A/B 投票
+- `out/layered-ab-figure.png` — 四联图：地表 / k035（今天的索引来源）/ black（去掉底图）/ 叠加层
+
+---
+
+# 八、修复实现与实测（分支 `fix/layered-own-art-vote`，2026-09-26）
+
+## 8.1 改了什么：把"定位"和"身份"拆成两个计数
+
+不再要求删掉底图（第七节 7.4 证明那样会削掉层内召回），而是让底图继续提供特征量、**只把
+"哪个楼层"这件事交给落在本层自绘美术上的匹配**。
+
+| 层 | 改动 |
+| --- | --- |
+| 索引 | `floor-index.json` 每层新增 `ownMask`（每个描述子一位的十六进制串）+ `ownMaskKeypoints`（位数，用于校验） |
+| 构建 | `scripts/LayeredOwnArtMask.ps1`（共享实现）、`New-LayeredFloorIndex.ps1` 构建时直接产出、`scripts/Set-LayeredOwnArtMask.ps1` 回填已有包 |
+| 运行时 | `FloorEntry::ownArt` / `sampleOwnArt`；`FloorVote::ownMatches`；`Classification::ownFloorId / winnerOwnMatches / runnerUpOwnMatches / ownIdentified / ownVotes` |
+| 决策 | `LayeredMapState::ObserveMinimap` 的采纳改用 `ownFloorId` + `ownIdentified`；近似平票兜底的门槛也从总票改成自绘票（`kNearTieOwnMatches`） |
+| 诊断 | `layered-floor` 加 `ownIdentified / ownFloor / ownWinner / ownRunnerUp / ownVotes=[]` |
+| 工具 | 探针加 `--min-own-matches`，票表改成 `总票 / 自绘票` 两列 |
+
+三条兼容性规则，都有单测：
+
+1. **旧包（没有 mask）** → 每个描述子都算"自绘"，两个计数相等、排名相同，行为与今天**逐位一致**。
+2. **mask 位数与 `.imf` 关键点数对不上** → **整块丢弃**。宁可退回旧行为，也不能让错位一位的 mask
+   把一半描述子标反、静默污染每一帧投票。
+3. **冷启动 scope 路径仍用总票**：那里只影响"第一次往哪搜"，错了只浪费一次有界搜索、不会改变
+   `current`、藏不了任何标记；改用它反而会因为样本集薄而在洞里放弃这个提示（代码里写明了原因）。
+
+## 8.2 覆盖率（`Set-LayeredOwnArtMask.ps1` 实测）
+
+10 个包 / 90 层 / **275006** 个描述子 → 落在本层自绘美术上的 **110395（40.1%）**。
+与独立写的 Python 审计（`out/audit-all-floors.py`）**逐层完全一致**，两套实现互为校验。
+
+## 8.3 A/B：修好了什么，没修好什么
+
+用真探针跑 `k035 + ownMask`（第 7.3 节那批查询）：
+
+| 查询 | 窗口 | 总票 | 自绘票 | 判定 |
+| --- | ---: | --- | --- | --- |
+| 地表 @ 玩家位置 | 128 | 18 vs 4 | **5 vs 2** | **unknown ✓ 修好了** |
+| 地表 @ 玩家位置 | 184 | 34 vs 7 | **13 vs 3** | identified ✗ 仍然误报 |
+| 地表 @ 玩家位置 | 234 | 50 vs 7 | **17 vs 3** | identified ✗ |
+| 地表 @ 玩家位置 | 320 | 124 vs 18 | **56 vs 3** | identified ✗ |
+| 层内 @ 足迹中心 | 128 | 24 vs 1 | 10 vs 1 | identified ✓ |
+| 层内 @ 足迹中心 | 184 | 70 vs 9 | 34 vs 2 | identified ✓ |
+| 层内 @ 足迹中心 | 234 | 140 vs 18 | 71 vs 7 | identified ✓ |
+| 层内 @ 足迹中心 | 320 | 210 vs 28 | 107 vs 13 | identified ✓ |
+
+层内召回**一点没掉**（自绘票 10~107，模型上还比 "black" 变体更强，因为底图仍在提供特征量）。
+两帧已发布真实地表参考仍全部 `unknown`，无回归。
+
+**但玩家位置那一格在大窗口下依然误报**，而且自绘票不是 0 而是 13~56。
+
+## 8.4 为什么这里修不掉——本次最重要的发现
+
+不是 mask 不够准，而是**这个位置上地表地图和层地图画的就是同一个地方**。证据：
+
+```
+surface/player/234 → 对 -1/7 匹配 50 个，RANSAC 内点 44，scale=1.00046（期望 1.0543）
+```
+
+50 个匹配里有 44 个落在同一个相似变换上、尺度 1.0——这是一次**几何完全自洽**的匹配，不是噪声。
+原因很直白：**寒雾深坑是露天的坑**，地表地图上它本来就是可见的地形；玩家站在坑沿，小地图里
+确实能看到那个坑。所以地表帧**真的含有该层自绘美术的影像**。
+
+`LayeredFloorIndex.h:132-135` 早就写过"containment 永远不能判定'我在不在层里'，只能判定是哪一层"；
+这次发现**影像同样不能**——对它来说地表和这一层是同一个地方。
+
+位置信号也救不了：`InsideWithMargin` 在坑沿是 `solid=no`，但在**洞窟内部的房间**同样是 `no`
+（美术上的房间是透明的洞——`LayeredFloorIndex.h` 那句话的原文），两者区分不开。
+
+## 8.5 剩下两条路（需要产品判断，我没有替你选）
+
+**A. 把"地表定位是否可信"接进分层状态。** 地表包刚刚以几何支持匹配上，就说明玩家看得见地表
+→ 不采纳分层楼层。这是最有原则的一条（`App.cpp` 里 `coordinateRecovery.CanUseTrustedPosition`
+现成），也正好覆盖"坑沿"与"坑内"两种情况：坑内如果地表也匹配得上，就不该只显示层标记。
+风险：坑内如果地表也匹配，层标记也不显示。
+
+**B. 相邻地表的楼层（`SharesSurfaceGround`）一律走"两边都显示"。** 代码里已经有这个机制和
+"影像无法判断玩家指的是哪一层，藏掉任何一边都是猜"的既定理由。风险：相邻洞窟的房间里也会
+放出地表标记——而星炬学院被显式排除在外，说明"该藏就得藏"是有产品预期的。
+
+两条都不大，但都需要你先定"站在相邻层（level=-1）的房间里时，地表标记该不该出来"。
+在定下来之前，本分支的改动是**净收益**：它消掉了 60% 底图泄漏这一类系统性误报（全游戏
+20 个"独占 tile"的楼层都受益），且层内召回零损失。
+
