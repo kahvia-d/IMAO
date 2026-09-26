@@ -20,9 +20,14 @@ internal static class KuroAutoSyncTests
             LocalSettingsFile = "auto-sync-settings.json"
         });
         var settings = new LocalSettingsService(new FileService(), options);
+        // The synchronization target is the current ledger, so the test needs a real list:
+        // the seeded default ledger is unbound, then bound to the test account.
+        var accounts = new LocalAccountCatalog(Path.Combine(root, "auto-sync-accounts", "accounts.json"),
+            Path.Combine(root, "auto-sync-accounts", "profiles"));
         var core = new CoreHostService(Path.Combine(root, "auto-sync-core"),
             new RuntimeConfigurationStore(Path.Combine(root, "auto-sync-runtime.json")),
-            new LocalItemFilter(Path.Combine(root, "auto-sync-filters.json"), Path.Combine(root, "auto-sync-legacy.json")));
+            new LocalItemFilter(Path.Combine(root, "auto-sync-filters.json"), Path.Combine(root, "auto-sync-legacy.json")),
+            accounts);
 
         var sync = new KuroProgressSyncService(core);
         using (var auto = new KuroAutoSyncService(sync, settings, core))
@@ -34,12 +39,12 @@ internal static class KuroAutoSyncTests
             check(auto.IsEnabled && await settings.ReadSettingAsync<bool?>(KuroSyncSettings.Automatic) == true,
                 "turning automatic sync on is persisted for the next start");
 
-            check(await auto.RunOnceAsync() is null && auto.Status.Contains("档案 ID"),
-                "an automatic pass without a sync profile pauses instead of failing");
+            check(await auto.RunOnceAsync() is null && auto.Status.Contains("绑定"),
+                "an automatic pass over a ledger with no Kuro binding pauses instead of failing");
 
-            await settings.SaveSettingAsync(KuroSyncSettings.Profile, "kuro_424242");
+            check(accounts.TryBind(accounts.ActiveId, "424242", out _), "the current ledger can be bound to a Kuro account");
             check(await auto.RunOnceAsync() is null && auto.Status.Contains("凭据"),
-                "a profile without a local credential pauses the automatic pass");
+                "a bound ledger without a local credential pauses the automatic pass");
 
             // The timer calls this from a thread-pool thread, so the pass must not
             // assume it runs on the UI thread.

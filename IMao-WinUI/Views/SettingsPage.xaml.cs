@@ -27,7 +27,6 @@ public sealed partial class SettingsPage : Page
     private KuroSyncComparison? kuroSyncComparison;
     private bool restoringKuroSync = true;
     private bool restoringKuroAutoSync = true;
-    private const string KuroSyncProfileKey = KuroSyncSettings.Profile;
     private const string KuroSyncStateKey = KuroSyncSettings.State;
     private const string KuroSyncShowSyncedKey = KuroSyncSettings.ShowSynced;
     private const string KuroSyncShowAllKey = KuroSyncSettings.ShowAllRegions;
@@ -68,6 +67,8 @@ public sealed partial class SettingsPage : Page
             // Probe once per session the first time the page is shown; after that the refresh button is the
             // only thing that spends requests, so opening settings twice is not two rounds of network calls.
             if (updates.ConnectivityCheckedAt is null) _ = updates.RefreshConnectivityAsync();
+            RenderLocalAccounts();
+            RenderSyncLedger();
             _ = RestoreKuroSyncAsync();
         };
         Unloaded += (_, _) =>
@@ -798,10 +799,181 @@ public sealed partial class SettingsPage : Page
     private async void ToggleSwitch_StatusBall_Toggled(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(statusBallEnabled: ToggleSwitch_StatusBall.IsOn));
     private async void AutomaticReplan_Toggled(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(autoReplanEnabled: AutomaticReplan.IsOn));
     private void OpenPoints_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.SavedPoints);
+
+    // ---- 本地点位账本 ----------------------------------------------------------------
+
+    /// <summary>The ledger synchronization writes to: the one the map shows, when it is bound.</summary>
+    private string CurrentSyncLedger() => coreHost.ActiveLocalAccount is { IsBound: true } active ? active.Id : "";
+
+    private void ShowLocalAccount(InfoBarSeverity severity, string message)
+    {
+        LocalAccountMessage.Severity = severity;
+        LocalAccountMessage.Message = message;
+        LocalAccountMessage.IsOpen = true;
+    }
+
+    private void RefreshLedgerSurfaces()
+    {
+        RenderLocalAccounts();
+        RenderSyncLedger();
+    }
+
+    private void RenderLocalAccounts()
+    {
+        LocalAccountRows.Children.Clear();
+        var catalog = coreHost.LedgerCatalog;
+        if (catalog is null)
+        {
+            LocalAccountRows.Children.Add(new TextBlock { Text = "账本列表不可用。" });
+            return;
+        }
+        var active = catalog.Active;
+        LocalAccountName.Text = active.Name;
+        LocalAccountKuro.Text = active.KuroAccountId;
+        LocalAccountImportButton.Visibility = File.Exists(Path.Combine(UserDataPaths.SavedPoints, "account_1.json"))
+            ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var account in catalog.Accounts)
+        {
+            var (completed, total, writtenAt) = catalog.Describe(account.Id);
+            var text = new TextBlock
+            {
+                Text = $"{account.Name}{(account.Id == active.Id ? "（当前）" : "")} · " +
+                    (account.IsBound ? $"绑定库街区 {account.KuroAccountId}" : "未绑定库街区") +
+                    $" · 已完成 {completed}/{total}" +
+                    (writtenAt is { } stamp ? $" · 最后使用 {stamp.ToLocalTime():yyyy-MM-dd HH:mm}" : " · 还没有记录"),
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            row.Children.Add(text);
+            if (account.Id != active.Id)
+            {
+                var select = new Button { Content = "设为当前账本", Tag = account.Id };
+                select.Click += LocalAccountSelect_Click;
+                row.Children.Add(select);
+            }
+            LocalAccountRows.Children.Add(row);
+        }
+    }
+
+    private void RenderSyncLedger()
+    {
+        var active = coreHost.ActiveLocalAccount;
+        if (active is null)
+        {
+            KuroSyncLedger.Text = "没有可用的本地点位账本。";
+            KuroSyncPreviewButton.IsEnabled = false;
+            return;
+        }
+        KuroSyncLedger.Text = $"当前账本：{active.Name}（{active.Id}）。" + (active.IsBound
+            ? $"已绑定库街区账号 {active.KuroAccountId}；预览与应用只作用于这一本账本。"
+            : "还没有绑定库街区账号，无法同步；在上面绑定后再回来。");
+        KuroSyncPreviewButton.IsEnabled = active.IsBound;
+    }
+
+    private async void LocalAccountSelect_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string id } || id.Length == 0) return;
+        try
+        {
+            await coreHost.ExecuteMarkerAsync("markerSelectProfile", new { profileId = id });
+            kuroSyncComparison = null;
+            KuroSyncApplyButton.IsEnabled = false;
+            KuroSyncPlanPanel.Visibility = Visibility.Collapsed;
+            RefreshLedgerSurfaces();
+            ShowLocalAccount(InfoBarSeverity.Success, $"已切换到账本“{coreHost.ActiveLocalAccount?.Name}”，地图从现在起显示它的记录。");
+        }
+        catch (Exception error) { ShowLocalAccount(InfoBarSeverity.Error, error.Message); }
+    }
+
+    private async void LocalAccountCreate_Click(object sender, RoutedEventArgs e)
+    {
+        var catalog = coreHost.LedgerCatalog;
+        if (catalog is null) return;
+        if (!catalog.TryCreate(LocalAccountName.Text, LocalAccountKuro.Text.Trim(), out var created, out string error) || created is null)
+        {
+            ShowLocalAccount(InfoBarSeverity.Warning, error);
+            return;
+        }
+        try { await coreHost.ExecuteMarkerAsync("markerSelectProfile", new { profileId = created.Id }); }
+        catch (Exception failure) { ShowLocalAccount(InfoBarSeverity.Error, failure.Message); }
+        RefreshLedgerSurfaces();
+        ShowLocalAccount(InfoBarSeverity.Success, $"已新建账本“{created.Name}”并切换过去；它现在是空的，可以直接开始标记，或导入旧格式记录。");
+    }
+
+    private void LocalAccountRename_Click(object sender, RoutedEventArgs e)
+    {
+        var catalog = coreHost.LedgerCatalog;
+        var active = catalog?.Active;
+        if (catalog is null || active is null) return;
+        if (!catalog.TryRename(active.Id, LocalAccountName.Text, out string error)) { ShowLocalAccount(InfoBarSeverity.Warning, error); return; }
+        RefreshLedgerSurfaces();
+        ShowLocalAccount(InfoBarSeverity.Success, $"账本已改名为“{LocalAccountName.Text.Trim()}”；文件名不变，点位记录、路线和凭据都不受影响。");
+    }
+
+    private void LocalAccountBind_Click(object sender, RoutedEventArgs e)
+    {
+        var catalog = coreHost.LedgerCatalog;
+        var active = catalog?.Active;
+        if (catalog is null || active is null) return;
+        string binding = LocalAccountKuro.Text.Trim();
+        if (!catalog.TryBind(active.Id, binding, out string error)) { ShowLocalAccount(InfoBarSeverity.Warning, error); return; }
+        RefreshLedgerSurfaces();
+        ShowLocalAccount(InfoBarSeverity.Success, binding.Length == 0
+            ? $"账本“{active.Name}”已解绑库街区账号；本地点位记录不受影响。"
+            : $"账本“{active.Name}”已绑定库街区账号 {binding}；同步只作用于这一本账本。");
+    }
+
+    private async void LocalAccountDelete_Click(object sender, RoutedEventArgs e)
+    {
+        var catalog = coreHost.LedgerCatalog;
+        var active = catalog?.Active;
+        if (catalog is null || active is null) return;
+        var dialog = new ContentDialog
+        {
+            Title = "删除当前账本",
+            Content = $"账本“{active.Name}”的点位记录、路线和本机库街区凭据会移到 SavedPoints\\deleted 下保留，随时可以手动找回。" +
+                "地图随后切到另一本账本。",
+            PrimaryButtonText = "删除",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        if (!catalog.TryDelete(active.Id, out string error)) { ShowLocalAccount(InfoBarSeverity.Warning, error); return; }
+        var next = catalog.Active;
+        try { await coreHost.ExecuteMarkerAsync("markerSelectProfile", new { profileId = next.Id }); }
+        catch (Exception failure) { ShowLocalAccount(InfoBarSeverity.Error, failure.Message); }
+        RefreshLedgerSurfaces();
+        ShowLocalAccount(InfoBarSeverity.Success, $"账本“{active.Name}”已移入 SavedPoints\\deleted；当前账本是“{next.Name}”。");
+    }
+
+    private async void LocalAccountImport_Click(object sender, RoutedEventArgs e)
+    {
+        var active = coreHost.ActiveLocalAccount;
+        LocalAccountImportButton.IsEnabled = false;
+        try
+        {
+            var data = await coreHost.ImportLegacyPointsAsync();
+            int Count(string name) => data.TryGetProperty(name, out var value) && value.TryGetInt32(out int count) ? count : 0;
+            int imported = Count("imported"), already = Count("alreadyCompleted"), skipped = Count("skipped");
+            RefreshLedgerSurfaces();
+            string detail = $"已导入 {imported} 个旧点位到账本“{active?.Name}”（{already} 个本来就有" +
+                (skipped > 0 ? $"，{skipped} 个没有可用身份被跳过" : "") + "）。";
+            ShowLocalAccount(InfoBarSeverity.Success, imported > 0
+                ? detail + (active is { IsBound: true } ? "下次同步会把它们写回库街区。" : "绑定库街区账号后，同步会把它们写回库街区。")
+                : detail);
+        }
+        catch (Exception error) { ShowLocalAccount(InfoBarSeverity.Error, error.Message); }
+        finally { LocalAccountImportButton.IsEnabled = true; }
+    }
+
+    // ---- 库街区点位进度同步 ----------------------------------------------------------
+
     private async void KuroSyncPreview_Click(object sender, RoutedEventArgs e)
     {
-        string profile = KuroSyncProfile.Text.Trim();
-        if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "请先填写同步档案 ID（扩展连接成功后显示的那个）。"); return; }
+        string profile = CurrentSyncLedger();
+        if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "请先把当前账本绑定到库街区账号；同步只作用于当前账本。"); return; }
         int stateId = SelectedKuroSyncStateId();
         KuroSyncPreviewButton.IsEnabled = false;
         try
@@ -809,7 +981,7 @@ public sealed partial class SettingsPage : Page
             var plan = await kuroSync.PreviewAsync(profile, stateId == 0 ? null : stateId);
             kuroSyncComparison = plan;
             KuroSyncApplyButton.IsEnabled = plan.NeedsApply;
-            await SaveKuroSyncStateAsync(profile, stateId);
+            await SaveKuroSyncStateAsync(stateId);
             RenderKuroSyncComparison(plan);
             string counts = $"预览完成：本地 {plan.LocalCompleted} 个已完成、库街区 {plan.CloudCompleted} 个已完成；待拉取 {plan.ToFetch} 个、待推送 {plan.ToUpload} 个。";
             if (plan.ToCancel > 0)
@@ -824,16 +996,18 @@ public sealed partial class SettingsPage : Page
             KuroSyncApplyButton.IsEnabled = false;
             ShowKuroSync(InfoBarSeverity.Error, error.Message);
         }
-        finally { KuroSyncPreviewButton.IsEnabled = true; }
+        finally { KuroSyncPreviewButton.IsEnabled = CurrentSyncLedger().Length > 0; }
     }
 
     private async void KuroSyncApply_Click(object sender, RoutedEventArgs e)
     {
         if (kuroSyncComparison is not { } comparison) { ShowKuroSync(InfoBarSeverity.Warning, "请先预览同步，确认后再应用。"); return; }
+        string profile = CurrentSyncLedger();
+        if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "请先把当前账本绑定到库街区账号；同步只作用于当前账本。"); return; }
         KuroSyncApplyButton.IsEnabled = false;
         try
         {
-            var result = await kuroSync.ApplyAsync(KuroSyncProfile.Text.Trim(), comparison);
+            var result = await kuroSync.ApplyAsync(profile, comparison);
             kuroSyncComparison = null;
             KuroSyncPlanPanel.Visibility = Visibility.Collapsed;
             string pushed = result.Pushed > 0 ? $"已推送 {result.Pushed} 个本地标记到库街区、" : "无需推送本地标记、";
@@ -873,12 +1047,12 @@ public sealed partial class SettingsPage : Page
 
     private async void KuroSyncDisconnect_Click(object sender, RoutedEventArgs e)
     {
-        string profile = KuroSyncProfile.Text.Trim();
-        if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "请先填写同步档案 ID。"); return; }
+        string profile = CurrentSyncLedger();
+        if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "当前账本还没有绑定库街区账号。"); return; }
         var dialog = new ContentDialog
         {
             Title = "断开库街区连接",
-            Content = $"将删除本机保存的库街区凭据（档案 {profile}）。本地点位进度、路线和设置都不受影响。",
+            Content = $"将删除本机保存的库街区凭据（账本 {profile}）。本地点位进度、路线和设置都不受影响。",
             PrimaryButtonText = "断开",
             CloseButtonText = "取消",
             DefaultButton = ContentDialogButton.Close,
@@ -886,7 +1060,7 @@ public sealed partial class SettingsPage : Page
         };
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
         kuroSync.Disconnect(profile);
-        ShowKuroSync(InfoBarSeverity.Success, $"已删除档案 {profile} 的本机凭据；本地进度未改动。");
+        ShowKuroSync(InfoBarSeverity.Success, $"已删除账本 {profile} 的本机凭据；本地进度未改动。");
         RenderKuroBridgeStatus();
     }
 
@@ -897,7 +1071,6 @@ public sealed partial class SettingsPage : Page
     }
 
     private void RenderKuroBridgeStatus() => KuroBridgeStatus.Text = KuroBridgeRegistration.Inspect().Detail;
-    private void KuroSyncProfile_TextChanged(object sender, TextChangedEventArgs e) => InvalidateKuroSyncPlan();
     private void KuroSyncState_SelectionChanged(object sender, SelectionChangedEventArgs e) => InvalidateKuroSyncPlan();
     private async void KuroSyncShowSynced_Toggled(object sender, RoutedEventArgs e)
     {
@@ -935,7 +1108,7 @@ public sealed partial class SettingsPage : Page
         restoringKuroSync = true;
         try
         {
-            KuroSyncProfile.Text = await kuroSettings.ReadSettingAsync<string>(KuroSyncProfileKey) ?? "";
+            RenderSyncLedger();
             KuroSyncShowSynced.IsOn = await kuroSettings.ReadSettingAsync<bool?>(KuroSyncShowSyncedKey) ?? false;
             KuroSyncShowAll.IsOn = await kuroSettings.ReadSettingAsync<bool?>(KuroSyncShowAllKey) ?? false;
             int saved = await kuroSettings.ReadSettingAsync<int?>(KuroSyncStateKey) ?? 0;
@@ -947,9 +1120,9 @@ public sealed partial class SettingsPage : Page
         finally { restoringKuroSync = false; }
     }
 
-    private async Task SaveKuroSyncStateAsync(string profile, int stateId)
+    /// <summary>The synchronization target is the current ledger, so only the view state is saved.</summary>
+    private async Task SaveKuroSyncStateAsync(int stateId)
     {
-        await kuroSettings.SaveSettingAsync(KuroSyncProfileKey, profile);
         await kuroSettings.SaveSettingAsync(KuroSyncStateKey, stateId);
         await kuroSettings.SaveSettingAsync(KuroSyncShowSyncedKey, KuroSyncShowSynced.IsOn);
         await kuroSettings.SaveSettingAsync(KuroSyncShowAllKey, KuroSyncShowAll.IsOn);
@@ -1036,7 +1209,7 @@ public sealed partial class SettingsPage : Page
         if (comparison.Unmapped > 0)
         {
             // Keep the identities on disk so the count can be checked afterwards.
-            string report = kuroSync.WriteUnmappedReport(KuroSyncProfile.Text.Trim(), comparison);
+            string report = kuroSync.WriteUnmappedReport(CurrentSyncLedger(), comparison);
             footer.Add($"另有 {comparison.Unmapped} 个库街区完成点在本地没有对应点位目录，未计入上表；明细见 {report}");
         }
         KuroSyncPlanFooter.Text = string.Join(" ", footer);

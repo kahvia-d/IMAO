@@ -36,18 +36,21 @@ public sealed class LocalAccountCatalog
 
     private readonly string legacySelectionPath;
     private readonly string credentialsDirectory;
+    private readonly string routesDirectory;
     private List<LocalAccount> accounts = [];
     private bool persistable;
     private string activeId = DefaultId;
 
     public string Warning { get; private set; } = "";
 
-    public LocalAccountCatalog(string path, string profilesDirectory, string legacySelectionPath = "", string credentialsDirectory = "")
+    public LocalAccountCatalog(string path, string profilesDirectory, string legacySelectionPath = "",
+        string credentialsDirectory = "", string routesDirectory = "")
     {
         Path = path ?? throw new ArgumentNullException(nameof(path));
         ProfilesDirectory = profilesDirectory ?? throw new ArgumentNullException(nameof(profilesDirectory));
         this.legacySelectionPath = legacySelectionPath;
         this.credentialsDirectory = credentialsDirectory;
+        this.routesDirectory = routesDirectory;
         if (!TryLoad())
         {
             Seed();
@@ -182,6 +185,48 @@ public sealed class LocalAccountCatalog
     }
 
     private string NewId() => "acc_" + Guid.NewGuid().ToString("N")[..8];
+
+    /// <summary>
+    /// Removes a ledger from the list without deleting anything: its progress document, its
+    /// stored credential and its routes move into a timestamped folder under deleted/. The
+    /// last ledger cannot be removed, and the active one is replaced by the first remaining.
+    /// </summary>
+    public bool TryDelete(string id, out string error)
+    {
+        error = "";
+        if (!persistable) { error = ReadWarning; return false; }
+        int index = accounts.FindIndex(account => account.Id == id);
+        if (index < 0) { error = $"没有名为 {id} 的账本。"; return false; }
+        if (accounts.Count <= 1) { error = "至少要保留一个账本。"; return false; }
+        string target = System.IO.Path.Combine(DeletedDirectory, DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + id);
+        try
+        {
+            Directory.CreateDirectory(target);
+            MoveIfPresent(ProgressPath(id), System.IO.Path.Combine(target, id + ".json"));
+            if (!string.IsNullOrEmpty(credentialsDirectory))
+                MoveIfPresent(System.IO.Path.Combine(credentialsDirectory, id + ".json"), System.IO.Path.Combine(target, "credential.json"));
+            if (!string.IsNullOrEmpty(routesDirectory)) MoveIfPresent(System.IO.Path.Combine(routesDirectory, id), System.IO.Path.Combine(target, "routes"));
+        }
+        catch (Exception moveError) when (moveError is IOException or UnauthorizedAccessException)
+        {
+            error = "无法移动账本文件：" + moveError.Message;
+            return false;
+        }
+        accounts.RemoveAt(index);
+        if (activeId == id) activeId = accounts[0].Id;
+        Save();
+        return true;
+    }
+
+    /// <summary>Where a removed ledger is parked so the player can still find it.</summary>
+    public string DeletedDirectory => System.IO.Path.Combine(
+        System.IO.Path.GetDirectoryName(Path) ?? ".", "deleted");
+
+    private static void MoveIfPresent(string source, string destination)
+    {
+        if (Directory.Exists(source)) Directory.Move(source, destination);
+        else if (File.Exists(source)) File.Move(source, destination);
+    }
 
     private bool TryLoad()
     {

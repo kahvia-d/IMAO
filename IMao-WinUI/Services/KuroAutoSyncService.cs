@@ -12,6 +12,7 @@ namespace IMao_WinUI.Services;
 /// Keeps both sides equal without the user pressing anything: it runs the same
 /// union sync the manual button does (push local completions, pull cloud ones)
 /// on a timer, backs off after failures, and reports the last result in settings.
+/// It always writes to the ledger the map is showing and never selects one itself.
 /// </summary>
 public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
 {
@@ -73,6 +74,13 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// The ledger the synchronization writes to: whatever the map is showing. Nothing here
+    /// selects one — the player does that in the ledger list — and a pass that cannot name
+    /// one pauses instead of guessing.
+    /// </summary>
+    private string ActiveLedger() => core.ActiveLocalAccount?.Id ?? "";
+
     /// <summary>A manual preview or apply also restarts the normal interval.</summary>
     public void NotifyManualSync()
     {
@@ -92,19 +100,25 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
         if (!entered) return null;
         try
         {
-            string profile = (await settings.ReadSettingAsync<string>(KuroSyncSettings.Profile) ?? "").Trim();
+            string profile = ActiveLedger();
             if (profile.Length == 0)
             {
                 schedule.RecordSuccess();
-                Status = "自动同步已暂停：设置页还没有填写同步档案 ID";
+                Status = "自动同步已暂停：还没有选择本地点位账本";
                 return null;
             }
-            // A profile without a stored credential cannot be synced at all; pause
+            if ((core.ActiveLocalAccount?.KuroAccountId ?? "").Length == 0)
+            {
+                schedule.RecordSuccess();
+                Status = $"自动同步已暂停：账本“{core.ActiveLocalAccount?.Name}”还没有绑定库街区账号";
+                return null;
+            }
+            // A ledger without a stored credential cannot be synced at all; pause
             // at the normal interval instead of backing off on a doomed request.
             if (!sync.IsConnected(profile))
             {
                 schedule.RecordSuccess();
-                Status = $"自动同步已暂停：档案 {profile} 在本机没有库街区凭据，请在设置页重新连接";
+                Status = $"自动同步已暂停：账本 {profile} 在本机没有库街区凭据，请在设置页重新连接";
                 return null;
             }
             int state = await settings.ReadSettingAsync<int?>(KuroSyncSettings.State) ?? 0;
@@ -138,12 +152,12 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
     /// the core reports it. Cloud applies are ignored here: they are already the
     /// other side's state and pushing them back would echo every download.
     /// </summary>
-    private async void OnMarkerEvent(object? sender, JsonElement value)
+    private void OnMarkerEvent(object? sender, JsonElement value)
     {
         if (disposed || !IsEnabled) return;
         try
         {
-            string profile = (await settings.ReadSettingAsync<string>(KuroSyncSettings.Profile) ?? "").Trim();
+            string profile = ActiveLedger();
             if (!KuroLocalChange.TryRead(value, profile, out var change) || !sync.IsConnected(profile)) return;
             instant[change.Key] = change;
             StartInstantPush();
@@ -166,7 +180,7 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
                 var batch = instant.ToArray();
                 if (batch.Length == 0) break;
                 foreach (var entry in batch) instant.TryRemove(entry.Key, out _);
-                string profile = (await settings.ReadSettingAsync<string>(KuroSyncSettings.Profile) ?? "").Trim();
+                string profile = ActiveLedger();
                 if (profile.Length == 0 || !sync.IsConnected(profile)) break;
                 int pushed = 0, failed = 0;
                 foreach (var entry in batch)

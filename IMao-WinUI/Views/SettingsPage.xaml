@@ -164,10 +164,28 @@
                 <TextBlock Text="范围内有两个以上点位、且它们的图标在小地图上互相压住时，会先列出这些点让你选一个；图标没有压在一起时直接用最近的那个，不再多问一步。查看攻略只是打开窗口，不会改动任何进度。" Style="{StaticResource IMaoSecondaryTextStyle}" />
             </StackPanel>
         </Border>
+        <Expander Header="本地点位账本" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+            <StackPanel Spacing="12">
+                <TextBlock Text="账本就是你本地点位完成记录的一份存档。地图只显示当前账本，换账本永远由你自己点；库街区账号最多绑定一个账本，绑定只写在账本封面上，不影响任何点位记录。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <StackPanel x:Name="LocalAccountRows" Spacing="8" />
+                <InfoBar x:Name="LocalAccountMessage" IsOpen="False" IsClosable="True" />
+                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                    <TextBox x:Name="LocalAccountName" Header="账本名字" PlaceholderText="例如 小号" MaxWidth="200" />
+                    <TextBox x:Name="LocalAccountKuro" Header="绑定库街区账号（可留空）" PlaceholderText="例如 10383865" MaxWidth="200" />
+                    <Button Content="新建账本" Click="LocalAccountCreate_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+                    <Button Content="改名" Click="LocalAccountRename_Click" />
+                    <Button Content="绑定 / 解绑" Click="LocalAccountBind_Click" />
+                    <Button Content="删除当前账本" Click="LocalAccountDelete_Click" />
+                    <Button x:Name="LocalAccountImportButton" Content="导入旧格式记录" Click="LocalAccountImport_Click" Visibility="Collapsed" />
+                    <Button Content="打开账本目录" Click="OpenPoints_Click" />
+                </controls:WrapPanel>
+                <TextBlock Text="新建、改名、绑定只改账本目录，不动任何点位记录；账本的文件名（id）永远不变，因为路线和库街区凭据也按它命名。删除会把这一份存档、它的路线和本机凭据移到 SavedPoints\deleted 下保留，不会真的删掉。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+            </StackPanel>
+        </Expander>
         <Expander Header="库街区点位进度同步" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="12">
                 <TextBlock Text="先在已登录的库街区鸣潮大地图页通过 IMao 浏览器扩展连接桌面端。凭据只加密保存在当前 Windows 用户下。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBox x:Name="KuroSyncProfile" Header="同步档案 ID" PlaceholderText="例如 kuro_123456；以扩展连接成功提示为准" MaxWidth="450" TextChanged="KuroSyncProfile_TextChanged" />
+                <TextBlock x:Name="KuroSyncLedger" TextWrapping="Wrap" />
                 <ComboBox x:Name="KuroSyncState" Header="地图区域" MaxWidth="450" SelectionChanged="KuroSyncState_SelectionChanged" />
                 <ToggleSwitch x:Name="KuroSyncShowSynced" Header="显示两边都已同步的点位数" OnContent="显示" OffContent="不显示" Toggled="KuroSyncShowSynced_Toggled" />
                 <ToggleSwitch x:Name="KuroSyncShowAll" Header="显示没有差异的区域" OnContent="显示" OffContent="不显示" Toggled="KuroSyncShowAll_Toggled" />

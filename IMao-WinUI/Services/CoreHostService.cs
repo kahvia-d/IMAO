@@ -42,7 +42,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         new RuntimeConfigurationStore(Path.Combine(UserDataPaths.Root, "runtime-preferences.json")), new LocalItemFilter(),
         new LocalAccountCatalog(Path.Combine(UserDataPaths.SavedPoints, "accounts.json"),
             Path.Combine(UserDataPaths.SavedPoints, "profiles"), Path.Combine(UserDataPaths.Root, "kuromap-accounts.json"),
-            Path.Combine(UserDataPaths.KuroSync, "credentials")), ResourceSessionPaths.Snapshots) { }
+            Path.Combine(UserDataPaths.KuroSync, "credentials"), Path.Combine(UserDataPaths.Root, "SavedRoutes", "Auto")),
+        ResourceSessionPaths.Snapshots) { }
     internal CoreHostService(string hostDirectory, RuntimeConfigurationStore configuration, LocalItemFilter filters,
         LocalAccountCatalog? accountCatalog = null, ResourceSnapshotService? resourceSnapshots = null)
     {
@@ -62,6 +63,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public IReadOnlyList<LocalAccount> LocalAccounts => accountLedgers?.Accounts ?? [];
     /// <summary>The ledger the map is showing.</summary>
     public LocalAccount? ActiveLocalAccount => accountLedgers?.Active;
+    /// <summary>The ledger list itself, for the settings page that edits it.</summary>
+    public LocalAccountCatalog? LedgerCatalog => accountLedgers;
 
     // A reader belongs to one process and never reads fields of its successor.
     private sealed class Session
