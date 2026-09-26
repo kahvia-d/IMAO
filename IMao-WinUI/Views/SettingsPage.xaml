@@ -177,6 +177,7 @@
                     <Button Content="绑定 / 解绑" Click="LocalAccountBind_Click" />
                     <Button Content="删除当前账本" Click="LocalAccountDelete_Click" />
                     <Button x:Name="LocalAccountImportButton" Content="导入旧格式记录" Click="LocalAccountImport_Click" Visibility="Collapsed" />
+                    <Button Content="导出账本体检" Click="LocalAccountDiagnostics_Click" />
                     <Button Content="打开账本目录" Click="OpenPoints_Click" />
                 </controls:WrapPanel>
                 <TextBlock Text="新建、改名、绑定只改账本目录，不动任何点位记录；账本的文件名（id）永远不变，因为路线和库街区凭据也按它命名。删除会把这一份存档、它的路线和本机凭据移到 SavedPoints\deleted 下保留，不会真的删掉。" Style="{StaticResource IMaoSecondaryTextStyle}" />

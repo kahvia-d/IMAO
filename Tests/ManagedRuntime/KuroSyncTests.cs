@@ -1,4 +1,5 @@
 using IMao_WinUI.Core.KuroSync;
+using IMao_WinUI.Services;
 using System.Text.Json;
 
 internal static class KuroSyncTests
@@ -7,10 +8,25 @@ internal static class KuroSyncTests
     {
         string vaultRoot = Path.Combine(root, "kuro-sync");
         var vault = new KuroTokenVault(vaultRoot);
-        vault.Save("kuro_12345", "secret-token");
-        check(vault.TryRead("kuro_12345", out var credential) && credential.Token == "secret-token", "sync credential round trip is scoped to the profile");
+        vault.Save("kuro_12345", "secret-token", "10383865");
+        check(vault.TryRead("kuro_12345", out var credential) && credential.Token == "secret-token" &&
+            credential.AccountId == "10383865", "sync credential round trip keeps the Kuro account it belongs to");
         check(!File.ReadAllText(Path.Combine(vaultRoot, "credentials", "kuro_12345.json")).Contains("secret-token"), "sync credential token is never stored as plaintext");
         check(!vault.TryRead("kuro_99999", out _), "sync credential cannot cross account profiles");
+        vault.Save("kuro_12345", "secret-token");
+        check(vault.TryRead("kuro_12345", out var unknownAccount) && unknownAccount.AccountId.Length == 0,
+            "a credential stored without an account is reported as unknown instead of rejected");
+        bool rejectedAccount = false;
+        try { vault.Save("kuro_12345", "secret-token", "abc"); } catch (ArgumentException) { rejectedAccount = true; }
+        check(rejectedAccount, "a credential cannot be stored under an account id that is not digits");
+        // The binding a ledger carries and the account a credential belongs to only have to
+        // agree when both are known: an old credential has no account, and binding a ledger
+        // is metadata a player may fix later.
+        check(KuroProgressSyncService.BindingMismatch("10383865", "10436687") &&
+            !KuroProgressSyncService.BindingMismatch("10383865", "10383865") &&
+            !KuroProgressSyncService.BindingMismatch("", "10436687") &&
+            !KuroProgressSyncService.BindingMismatch("10383865", ""),
+            "a ledger binding and a stored credential only conflict when both are known and different");
 
         var baseline = new Dictionary<string, bool> { ["a"] = true, ["b"] = false, ["c"] = false };
         var local = new Dictionary<string, bool> { ["a"] = false, ["b"] = false, ["c"] = true };
@@ -55,6 +71,13 @@ internal static class KuroSyncTests
 
         check(KuroNativeBridgeProtocol.TryValidate(new KuroNativeBridgeRequest(1, "storeCredential", "kuro_12345", "secret-token"), out _),
             "native bridge accepts a bounded credential transfer");
+        check(KuroNativeBridgeProtocol.TryValidate(new KuroNativeBridgeRequest(1, "storeCredential", "kuro_12345", "secret-token", "10383865"), out _) &&
+            !KuroNativeBridgeProtocol.TryValidate(new KuroNativeBridgeRequest(1, "storeCredential", "kuro_12345", "secret-token", "abc"), out var accountError) &&
+            accountError == "invalid-account",
+            "native bridge accepts an account id and rejects one that is not digits");
+        check(KuroNativeBridgeProtocol.TryValidate(KuroNativeBridgeProtocol.Parse(
+                "{\"version\":1,\"type\":\"storeCredential\",\"profileId\":\"kuro_12345\",\"token\":\"secret-token\",\"accountId\":\"10383865\"}"), out _),
+            "native bridge accepts the extension wire format with an account id");
         check(!KuroNativeBridgeProtocol.TryValidate(new KuroNativeBridgeRequest(2, "storeCredential", "kuro_12345", "secret-token"), out _),
             "native bridge rejects unknown protocol versions");
         check(!KuroNativeBridgeProtocol.TryValidate(new KuroNativeBridgeRequest(1, "runCommand", "kuro_12345", "secret-token"), out _),

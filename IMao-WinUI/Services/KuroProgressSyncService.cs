@@ -29,7 +29,27 @@ public sealed class KuroProgressSyncService
         if (!File.Exists(path)) File.WriteAllText(path, deviceId);
     }
 
-    public bool IsConnected(string profileId) => vault.TryRead(profileId, out _);
+    public bool IsConnected(string profileId) => vault.TryRead(profileId, out var credential) &&
+        !BindingMismatch(BoundAccount(), credential.AccountId);
+
+    /// <summary>
+    /// True when a stored credential belongs to a different Kuro account than the ledger is
+    /// bound to. An empty account on either side means "unknown" — a credential written
+    /// before the ledger list existed — and is never treated as a mismatch.
+    /// </summary>
+    public static bool BindingMismatch(string boundAccount, string credentialAccount) =>
+        boundAccount.Length > 0 && credentialAccount.Length > 0 && boundAccount != credentialAccount;
+
+    private string BoundAccount() => core.ActiveLocalAccount?.KuroAccountId ?? "";
+
+    private void EnsureCredentialMatchesBinding(KuroCredential credential, string profileId)
+    {
+        string bound = BoundAccount();
+        if (!BindingMismatch(bound, credential.AccountId)) return;
+        throw new InvalidOperationException(
+            $"账本 {profileId} 绑定的是库街区账号 {bound}，但本机凭据属于账号 {credential.AccountId}。" +
+            "请在设置页把绑定改成这个账号，或重新连接一次库街区。");
+    }
 
     public async Task<IReadOnlyList<KuroMapState>> GetStatesAsync(CancellationToken cancellationToken = default)
     {
@@ -52,6 +72,7 @@ public sealed class KuroProgressSyncService
     private async Task<KuroSyncComparison> PreviewCoreAsync(string profileId, int? stateId, CancellationToken cancellationToken)
     {
         if (!vault.TryRead(profileId, out var credential)) throw new InvalidOperationException("此同步档案尚未连接库街区。请在浏览器扩展中重新连接。");
+        EnsureCredentialMatchesBinding(credential, profileId);
         await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
         var published = await client.GetStatesAsync(cancellationToken);
@@ -113,6 +134,7 @@ public sealed class KuroProgressSyncService
     private async Task<KuroSyncApplyResult> ApplyCoreAsync(string profileId, KuroSyncComparison comparison, CancellationToken cancellationToken)
     {
         if (!vault.TryRead(profileId, out var credential)) throw new InvalidOperationException("此同步档案尚未连接库街区。请在浏览器扩展中重新连接。");
+        EnsureCredentialMatchesBinding(credential, profileId);
         await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
         var current = await client.GetCompletedIdsAsync(credential.Token, deviceId, cancellationToken);
@@ -195,7 +217,7 @@ public sealed class KuroProgressSyncService
     /// </summary>
     public async Task<bool> PushLocalChangeAsync(string profileId, KuroLocalChange change, CancellationToken cancellationToken = default)
     {
-        if (!vault.TryRead(profileId, out var credential)) return false;
+        if (!IsConnected(profileId) || !vault.TryRead(profileId, out var credential)) return false;
         await gate.WaitAsync(cancellationToken);
         try
         {

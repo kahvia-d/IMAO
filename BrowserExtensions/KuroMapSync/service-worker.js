@@ -31,7 +31,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const seen = cached ? `已收到页面会话但不可用（${cached.diagnostic || "无诊断信息"}）` : "页面脚本未上报会话";
       throw new Error(`未找到可用登录会话：${seen}。请确认已登录，并在刷新地图页后重试。`);
     }
-    const response = await chrome.runtime.sendNativeMessage(host, { version: 1, type: "storeCredential", profileId: profile, token: session.token });
+    const response = await chrome.runtime.sendNativeMessage(host, { version: 1, type: "storeCredential", profileId: profile, token: session.token, accountId: String(session.accountId || "") });
     if (!response?.accepted) throw new Error("桌面端拒绝保存凭据：" + (response?.error || "unknown"));
     await chrome.storage.session.remove(storageKey(tab.id));
     return { profileId: response.profileId };

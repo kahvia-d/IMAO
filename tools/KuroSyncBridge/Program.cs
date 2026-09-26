@@ -24,8 +24,10 @@ while (true)
             continue;
         }
         var vault = new KuroTokenVault(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IMao-WinUI", "KuroSync"));
-        vault.Save(request!.ProfileId, request.Token);
-        await KuroNativeMessageFraming.WriteAsync(output, new { accepted = true, profileId = request.ProfileId });
+        // The account id travels with the credential so a later synchronization can tell
+        // whether the ledger's binding still names the account this token belongs to.
+        vault.Save(request!.ProfileId, request.Token, request.AccountId ?? "");
+        await KuroNativeMessageFraming.WriteAsync(output, new { accepted = true, profileId = request.ProfileId, accountId = request.AccountId ?? "" });
     }
     catch
     {

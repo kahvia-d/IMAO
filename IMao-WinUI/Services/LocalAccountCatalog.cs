@@ -222,6 +222,39 @@ public sealed class LocalAccountCatalog
     public string DeletedDirectory => System.IO.Path.Combine(
         System.IO.Path.GetDirectoryName(Path) ?? ".", "deleted");
 
+    /// <summary>
+    /// Writes a small report of every ledger: its name, its binding, its progress and whether
+    /// a local credential exists. This is the file to ask a player for when progress looks
+    /// wrong — it answers "which ledger holds the data and what is it bound to" without
+    /// guessing, and it never contains a token.
+    /// </summary>
+    public string WriteDiagnostics()
+    {
+        string directory = System.IO.Path.GetDirectoryName(Path) ?? ".";
+        var ledgers = new List<object>();
+        foreach (var account in accounts)
+        {
+            var (completed, total, writtenAt) = Describe(account.Id);
+            bool hasCredential = !string.IsNullOrEmpty(credentialsDirectory) &&
+                File.Exists(System.IO.Path.Combine(credentialsDirectory, account.Id + ".json"));
+            ledgers.Add(new
+            {
+                id = account.Id, name = account.Name, kuroAccountId = account.KuroAccountId, isActive = account.Id == activeId,
+                completed, total, lastWrittenUtc = writtenAt, hasCredential
+            });
+        }
+        string path = System.IO.Path.Combine(directory, "ledger-report.json");
+        File.WriteAllText(path, JsonSerializer.Serialize(new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            activeAccountId = activeId,
+            warning = Warning,
+            legacyRecordPresent = File.Exists(System.IO.Path.Combine(directory, "account_1.json")),
+            accounts = ledgers
+        }, new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+        return path;
+    }
+
     private static void MoveIfPresent(string source, string destination)
     {
         if (Directory.Exists(source)) Directory.Move(source, destination);
@@ -342,10 +375,51 @@ public sealed class LocalAccountCatalog
                 account.Id, account.Name, account.KuroAccountId, account.CreatedAtUtc, account.LastUsedAtUtc)).ToList());
             File.WriteAllText(temporary, JsonSerializer.Serialize(stored, Options), new UTF8Encoding(false));
             File.Move(temporary, Path, overwrite: true);
+            WriteLegacySelection();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             Warning = Append(Warning, WriteWarning);
+        }
+    }
+
+    /// <summary>
+    /// Older versions read the selected progress file from the old account metadata. Writing
+    /// that single field keeps a rolled-back installation on the same ledger; every other
+    /// field is preserved and a file that does not exist is never created.
+    /// </summary>
+    private void WriteLegacySelection()
+    {
+        if (string.IsNullOrEmpty(legacySelectionPath) || !File.Exists(legacySelectionPath)) return;
+        try
+        {
+            var info = new FileInfo(legacySelectionPath);
+            if (info.Length is 0 or > MaximumBytes) return;
+            using var document = JsonDocument.Parse(File.ReadAllBytes(legacySelectionPath));
+            if (document.RootElement.ValueKind != JsonValueKind.Object) return;
+            var preserved = new List<KeyValuePair<string, JsonElement>>();
+            foreach (var property in document.RootElement.EnumerateObject())
+                if (property.Name != "ActiveProfile") preserved.Add(new(property.Name, property.Value.Clone()));
+            using var buffer = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions { Indented = true }))
+            {
+                writer.WriteStartObject();
+                writer.WriteString("ActiveProfile", activeId);
+                foreach (var property in preserved)
+                {
+                    writer.WritePropertyName(property.Key);
+                    property.Value.WriteTo(writer);
+                }
+                writer.WriteEndObject();
+            }
+            string temporary = legacySelectionPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            File.WriteAllBytes(temporary, buffer.ToArray());
+            File.Move(temporary, legacySelectionPath, overwrite: true);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or
+            ArgumentException or NotSupportedException)
+        {
+            // The old file is advisory metadata: failing to update it must never fail a save.
         }
     }
 

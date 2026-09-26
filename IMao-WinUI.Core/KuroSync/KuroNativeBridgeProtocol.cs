@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace IMao_WinUI.Core.KuroSync;
 
-public sealed record KuroNativeBridgeRequest(int Version, string Type, string ProfileId, string Token);
+public sealed record KuroNativeBridgeRequest(int Version, string Type, string ProfileId, string Token, string? AccountId = null);
 
 public static class KuroNativeBridgeProtocol
 {
@@ -23,6 +23,9 @@ public static class KuroNativeBridgeProtocol
         if (string.IsNullOrWhiteSpace(request.ProfileId) || request.ProfileId.Length > 96 ||
             request.ProfileId.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '-' and not '_')) { error = "invalid-profile"; return false; }
         if (string.IsNullOrWhiteSpace(request.Token) || request.Token.Length > 16 * 1024) { error = "invalid-token"; return false; }
+        // The account is optional: an older extension does not send it, and then the stored
+        // credential simply carries no account until the player connects again.
+        if (request.AccountId is { Length: > 0 } account && !KuroTokenVault.IsAccountId(account)) { error = "invalid-account"; return false; }
         return true;
     }
 }

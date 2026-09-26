@@ -44,6 +44,13 @@ internal static class LocalAccountCatalogTests
         check(describing.Describe("local").Total == 0,
             "a damaged progress document is reported as empty instead of failing the settings page");
 
+        // The report a player can send answers "which ledger holds the data" without guessing.
+        string report = describing.WriteDiagnostics();
+        string reportText = File.ReadAllText(report);
+        check(File.Exists(report) && reportText.Contains("\"activeAccountId\"") && reportText.Contains("\"completed\"") &&
+            reportText.Contains("\"hasCredential\"") && !reportText.Contains("secret"),
+            "the ledger report lists every ledger and carries no credential");
+
         // The upgrade path: progress files plus the historical account metadata.
         string upgrade = Path.Combine(directory, "upgrade");
         string profiles = Path.Combine(upgrade, "profiles");
@@ -74,6 +81,14 @@ internal static class LocalAccountCatalogTests
             "selecting a ledger that was not listed yet adopts it instead of hiding it");
         check(!upgraded.TrySetActive("../escape", out _) && upgraded.ActiveId == "kuro_777",
             "an id that cannot be a file name is refused");
+        check(File.ReadAllText(legacyPath).Contains("\"kuro_777\""),
+            "the old account metadata keeps naming the ledger the player selected, so a rolled-back version shows it too");
+        File.WriteAllText(legacyPath, "{\"ActiveProfile\":\"kuro_10383865\",\"AutomaticSync\":true,\"Accounts\":[{\"UserId\":\"1\"}]}");
+        var rewritten = new LocalAccountCatalog(catalogPath, profiles, legacyPath);
+        rewritten.TrySetActive("local", out _);
+        string afterLegacy = File.ReadAllText(legacyPath);
+        check(afterLegacy.Contains("\"AutomaticSync\"") && afterLegacy.Contains("\"Accounts\"") && afterLegacy.Contains("\"local\""),
+            "updating the old selection preserves every other field in that file");
 
         // Managing ledgers.
         var managed = new LocalAccountCatalog(Path.Combine(directory, "manage", "accounts.json"),

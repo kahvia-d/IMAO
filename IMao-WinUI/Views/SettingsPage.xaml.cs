@@ -968,6 +968,20 @@ public sealed partial class SettingsPage : Page
         finally { LocalAccountImportButton.IsEnabled = true; }
     }
 
+    private void LocalAccountDiagnostics_Click(object sender, RoutedEventArgs e)
+    {
+        var catalog = coreHost.LedgerCatalog;
+        if (catalog is null) return;
+        try
+        {
+            string path = catalog.WriteDiagnostics();
+            ShowLocalAccount(InfoBarSeverity.Success,
+                $"已导出账本体检：{path}。它列出每本账本的点位数、绑定和凭据状态，不含任何凭据本身；" +
+                "遇到“点位好像丢了”这类问题时可以直接发这个文件。");
+        }
+        catch (Exception error) { ShowLocalAccount(InfoBarSeverity.Error, error.Message); }
+    }
+
     // ---- 库街区点位进度同步 ----------------------------------------------------------
 
     private async void KuroSyncPreview_Click(object sender, RoutedEventArgs e)
