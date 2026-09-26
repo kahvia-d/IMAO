@@ -30,9 +30,22 @@ internal static class KuroSyncTests
         var uploadOnly = new KuroSyncComparison([new KuroSyncRegionComparison(8, "大世界", ["a"], true, 3, 1, 1, 2)], ["a"], []);
         check(uploadOnly.ToFetch == 0 && uploadOnly.ToUpload == 2 && uploadOnly.NeedsApply,
             "an upload-only preview still reports work to apply");
-        var fetchOnly = new KuroSyncComparison([new KuroSyncRegionComparison(8, "大世界", ["a", "b"], true, 1, 3, 1, 0)], ["a", "b"], []);
+        var fetchOnly = new KuroSyncComparison([new KuroSyncRegionComparison(8, "大世界", ["a", "b"], true, 1, 3, 1, 0, WillAdd: 2)], ["a", "b"], []);
         check(fetchOnly.ToUpload == 0 && fetchOnly.ToFetch == 2 && fetchOnly.NeedsApply,
             "a download-only preview reports work to apply");
+        // The defect a player reported: an account-era profile already carried a
+        // baseline, the local completions the cloud had never seen were cancelled, and
+        // the table still called them "待推送". The exact numbers now come from the
+        // native preview, and a cancellation has its own column.
+        var localOnlyAndWithdrawn = new KuroSyncComparison(
+            [new KuroSyncRegionComparison(8, "大世界", ["a"], true, 5, 1, 1, 0, 0, 1, 4)], ["a"], []);
+        check(localOnlyAndWithdrawn.ToUpload == 4 && localOnlyAndWithdrawn.ToCancel == 1 &&
+            localOnlyAndWithdrawn.ToFetch == 0 && localOnlyAndWithdrawn.NeedsApply,
+            "local-only completions queue for upload while a cloud withdrawal is reported as a cancellation");
+        var cancelOnly = new KuroSyncComparison(
+            [new KuroSyncRegionComparison(8, "大世界", ["a"], true, 1, 1, 1, 0, 0, 3, 0)], ["a"], []);
+        check(cancelOnly.ToCancel == 3 && cancelOnly.ToUpload == 0 && cancelOnly.NeedsApply,
+            "a cancellation-only preview is still work the player has to confirm");
         var settled = new KuroSyncComparison([new KuroSyncRegionComparison(8, "大世界", ["a"], true, 2, 2, 2, 0)], ["a"], []);
         check(!settled.NeedsApply, "an initialized comparison that already agrees has nothing to apply");
         var noBaseline = new KuroSyncComparison([new KuroSyncRegionComparison(905, "隐海试验场", ["a"], false, 0, 1, 0, 0)], ["a"], []);

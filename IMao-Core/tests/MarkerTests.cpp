@@ -132,6 +132,46 @@ int main() {
             Require(steady.at("localCompleted").get<int>() == 1 && steady.at("remoteCompleted").get<int>() == 2,
                 "preview must report both side totals for the comparison header");
         }
+        {
+            // Docs/LocalAccounts_20260926.md §6.3: an account-era profile can already
+            // carry a baseline for a region while a point completed locally was never
+            // uploaded. The union flow must keep that point and queue it, not cancel
+            // it; only a completion the cloud actually withdrew — the baseline says it
+            // had the point — is applied. An explicit import stays cloud-authoritative.
+            const auto mergeRoot = root / "merge-baseline";
+            std::filesystem::create_directories(mergeRoot / "profiles");
+            const auto oldProfile = [](const std::string& profile) {
+                return Json{
+                    {"schemaVersion", 2}, {"profileId", profile}, {"revision", 4},
+                    {"points", {{"8:never-uploaded", {{"sceneName", "World"}, {"nameId", "test"}, {"stateId", 8},
+                                    {"pointId", "never-uploaded"}, {"completed", true}, {"pending", false}, {"remoteCompleted", nullptr}}},
+                                {"8:withdrawn", {{"sceneName", "World"}, {"nameId", "test"}, {"stateId", 8},
+                                    {"pointId", "withdrawn"}, {"completed", true}, {"pending", false}, {"remoteCompleted", true}}}}},
+                    {"syncStates", Json::array({{{"stateId", 8}, {"initialized", true}, {"enabled", true},
+                        {"initialMode", "merge"}, {"remoteIds", Json::array()}}})}};
+            };
+            WriteTextAtomically(mergeRoot / "profiles" / "legacy_merge.json", oldProfile("legacy_merge").dump(2));
+            WriteTextAtomically(mergeRoot / "profiles" / "legacy_import.json", oldProfile("legacy_import").dump(2));
+            MarkerCompletionStore legacy(mergeRoot);
+            Send(legacy, "markerSelectProfile", {{"profileId", "legacy_merge"}});
+            const auto plan = Send(legacy, "markerPreviewSync", {{"stateId", 8}, {"mode", "merge"}, {"remoteIds", Json::array()}});
+            const auto& row = plan.at("regions").at(0);
+            Require(row.at("willQueue").get<int>() == 1 && row.at("willRemove").get<int>() == 1,
+                "a merge preview must separate a queued local completion from a withdrawn one");
+            auto appliedMerge = Send(legacy, "markerApplyRemote", {{"stateId", 8}, {"mode", "merge"}, {"remoteIds", Json::array()}});
+            Require(appliedMerge.at("conflicts").empty(), "a merge over an old baseline must not report a conflict");
+            Require(legacy.Completed("World", "test", "never-uploaded"), "merge cancelled a completion the cloud never had");
+            Require(Send(legacy, "markerGetSnapshot", {{"stateId", 8}, {"pointId", "never-uploaded"}}).at("points").at(0).at("pending").get<bool>(),
+                "a kept local completion must be queued for upload");
+            Require(!legacy.Completed("World", "test", "withdrawn"), "merge ignored a withdrawal the baseline recorded");
+            const auto settledRevision = Send(legacy, "markerGetSnapshot").at("revision");
+            Send(legacy, "markerApplyRemote", {{"stateId", 8}, {"mode", "merge"}, {"remoteIds", Json::array()}});
+            Require(Send(legacy, "markerGetSnapshot").at("revision") == settledRevision,
+                "a settled region must not be rewritten by a repeated merge");
+            Send(legacy, "markerSelectProfile", {{"profileId", "legacy_import"}});
+            Send(legacy, "markerApplyRemote", {{"stateId", 8}, {"mode", "import"}, {"remoteIds", Json::array()}});
+            Require(!legacy.Completed("World", "test", "never-uploaded"), "an explicit import must still follow the cloud");
+        }
         std::vector<MarkerLayoutPoint> points = {{"a", 5, 5, 0}, {"b", 6, 6, 1}, {"c", 150, 150, 2}};
         auto groups = BuildMarkerLayout(points, 30);
         Require(groups.size() == 2 && groups[0].members.size() == 2, "screen overlap grouping failed");

@@ -811,7 +811,12 @@ public sealed partial class SettingsPage : Page
             KuroSyncApplyButton.IsEnabled = plan.NeedsApply;
             await SaveKuroSyncStateAsync(profile, stateId);
             RenderKuroSyncComparison(plan);
-            ShowKuroSync(InfoBarSeverity.Success, $"预览完成：本地 {plan.LocalCompleted} 个已完成、库街区 {plan.CloudCompleted} 个已完成；待拉取 {plan.ToFetch} 个、待推送 {plan.ToUpload} 个。");
+            string counts = $"预览完成：本地 {plan.LocalCompleted} 个已完成、库街区 {plan.CloudCompleted} 个已完成；待拉取 {plan.ToFetch} 个、待推送 {plan.ToUpload} 个。";
+            if (plan.ToCancel > 0)
+                ShowKuroSync(InfoBarSeverity.Warning, counts +
+                    $"其中 {plan.ToCancel} 个本地完成点在库街区已经取消，点“应用同步”会跟着取消；不想取消就先别应用。");
+            else
+                ShowKuroSync(InfoBarSeverity.Success, counts);
         }
         catch (Exception error)
         {
@@ -967,15 +972,17 @@ public sealed partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Renders both sides as plain counts: 本地点位数 / 待推送 / 云端点位数 /
-    /// 待拉取, with the shared count as an optional column.
+    /// Renders both sides as plain counts: 本地点位数 / 待推送 / 将被取消 / 云端点位数 /
+    /// 待拉取, with the shared count as an optional column. 待推送 counts only work that
+    /// really goes to the outbox, and 将被取消 is the number the player used to be told
+    /// nothing about while the apply silently deleted those marks.
     /// </summary>
     private void RenderKuroSyncComparison(KuroSyncComparison comparison)
     {
         KuroSyncPlanGrid.Children.Clear();
         KuroSyncPlanGrid.ColumnDefinitions.Clear();
         KuroSyncPlanGrid.RowDefinitions.Clear();
-        var headers = new List<string> { "范围", "本地点位数", "待推送", "云端点位数", "待拉取" };
+        var headers = new List<string> { "范围", "本地点位数", "待推送", "将被取消", "云端点位数", "待拉取" };
         if (KuroSyncShowSynced.IsOn) headers.Add("已同步点位数");
         for (int column = 0; column < headers.Count; ++column)
             KuroSyncPlanGrid.ColumnDefinitions.Add(new ColumnDefinition
@@ -988,19 +995,20 @@ public sealed partial class SettingsPage : Page
             // below it. With "show regions without differences" off, regions that
             // only contain already-synced points are neither listed nor counted.
             var all = comparison.Regions.OrderBy(region => region.StateId).ToList();
-            var differing = all.Where(region => region.ToFetch + region.ToUpload > 0).ToList();
+            var differing = all.Where(region => region.HasDifference).ToList();
             bool accountWide = KuroSyncShowAll.IsOn || differing.Count == 0;
             var shown = accountWide ? all : differing;
             string label = accountWide ? "全部区域" : $"有差异的区域（{differing.Count}）";
             AddKuroSyncRow(Cells(label,
                     shown.Sum(region => region.LocalCompleted), shown.Sum(region => region.ToUpload),
-                    shown.Sum(region => region.CloudCompleted), shown.Sum(region => region.ToFetch),
-                    shown.Sum(region => region.BothCompleted)),
+                    shown.Sum(region => region.ToCancel), shown.Sum(region => region.CloudCompleted),
+                    shown.Sum(region => region.ToFetch), shown.Sum(region => region.BothCompleted)),
                 numeric: true, header: false, em: true);
             foreach (var region in shown)
             {
                 var parts = RegionParts(region);
-                AddKuroSyncRow(Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.CloudCompleted, region.ToFetch, region.BothCompleted),
+                AddKuroSyncRow(Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.ToCancel,
+                        region.CloudCompleted, region.ToFetch, region.BothCompleted),
                     numeric: true, header: false,
                     scope: BuildKuroSyncScope(comparison, region, parts),
                     detail: parts.Length > 1 && kuroSyncWorldExpanded ? "包含：" + string.Join("、", parts) : null);
@@ -1009,18 +1017,21 @@ public sealed partial class SettingsPage : Page
         else
         {
             foreach (var region in comparison.Regions)
-                AddKuroSyncRow(Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.CloudCompleted, region.ToFetch, region.BothCompleted),
+                AddKuroSyncRow(Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.ToCancel,
+                        region.CloudCompleted, region.ToFetch, region.BothCompleted),
                     numeric: true, header: false);
         }
-        int regionsWithDifferences = comparison.Regions.Count(region => region.ToFetch + region.ToUpload > 0);
+        int regionsWithDifferences = comparison.Regions.Count(region => region.HasDifference);
         KuroSyncPlanSummary.Text = $"整个账号：本地 {comparison.LocalCompleted} 个已完成 · 库街区 {comparison.CloudCompleted} 个已完成" +
             (comparison.BothCompleted > 0 ? $"，其中 {comparison.BothCompleted} 个两边一致" : "") +
             (regionsWithDifferences > 0 ? $"；差异分布在 {regionsWithDifferences} 个区域。" : "；两边完全一致。");
         var footer = new List<string>
         {
-            "待推送＝本地已标记完成、库街区未标记，点“应用同步”会写回库街区。",
-            "待拉取＝库街区已标记完成、本地未标记，点“应用同步”会拉进本地。"
+            "待推送＝本地已标记完成、库街区未标记，点“应用同步”会写回库街区（含本次新排队的）。",
+            "待拉取＝库街区已标记完成、本地尚未反映，点“应用同步”会拉进本地。"
         };
+        if (comparison.ToCancel > 0)
+            footer.Add($"将被取消＝库街区明确取消过、本地还留着的 {comparison.ToCancel} 个点，点“应用同步”会跟着取消。");
         if (comparison.PendingLocal > 0) footer.Add($"本地有 {comparison.PendingLocal} 个完成标记正在等待上传确认。");
         if (comparison.Unmapped > 0)
         {
@@ -1032,9 +1043,9 @@ public sealed partial class SettingsPage : Page
         KuroSyncPlanFooter.Visibility = Visibility.Visible;
         KuroSyncPlanPanel.Visibility = Visibility.Visible;
 
-        string[] Cells(string scope, int local, int toUpload, int cloud, int toFetch, int both)
+        string[] Cells(string scope, int local, int toUpload, int toCancel, int cloud, int toFetch, int both)
         {
-            var cells = new List<string> { scope, local.ToString(), toUpload.ToString(), cloud.ToString(), toFetch.ToString() };
+            var cells = new List<string> { scope, local.ToString(), toUpload.ToString(), toCancel.ToString(), cloud.ToString(), toFetch.ToString() };
             if (KuroSyncShowSynced.IsOn) cells.Add(both.ToString());
             return cells.ToArray();
         }

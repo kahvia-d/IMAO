@@ -176,7 +176,7 @@ public:
                     for (const auto& [state, ids] : supplied) states.insert(state);
                 }
                 Json regions = Json::array();
-                std::int64_t willAddTotal = 0, willRemoveTotal = 0, unchangedTotal = 0, localTotal = 0, mappedRemote = 0;
+                std::int64_t willAddTotal = 0, willRemoveTotal = 0, willQueueTotal = 0, unchangedTotal = 0, localTotal = 0, mappedRemote = 0;
                 std::int64_t bothTotal = 0, pendingTotal = 0;
                 for (const auto state : states) {
                     if (state <= 0) continue;
@@ -184,17 +184,20 @@ public:
                     const std::set<std::string>& regionRemote = scoped.count(state) ? scoped.at(state) : noRemote;
                     const bool initialized = SyncInitialized(source, state);
                     std::set<std::string> visited;
-                    std::int64_t localCompleted = 0, bothCompleted = 0, pendingLocal = 0, willAdd = 0, willRemove = 0, unchanged = 0, pendingHeld = 0, conflicts = 0;
+                    std::int64_t localCompleted = 0, bothCompleted = 0, pendingLocal = 0, pendingHeld = 0, conflicts = 0;
+                    std::int64_t willAdd = 0, willRemove = 0, willQueue = 0, unchanged = 0;
                     const auto inspect = [&](const std::string& id, const Json* record) {
                         if (!visited.insert(id).second) return;
                         const bool remote = regionRemote.contains(id);
                         const bool local = record && record->value("completed", false);
+                        const bool queued = record && record->value("pending", false);
                         if (local) ++localCompleted;
                         if (local && remote) ++bothCompleted;
-                        if (record && record->value("pending", false)) ++pendingLocal;
-                        if (record && initialized && record->value("pending", false)) {
+                        if (queued) ++pendingLocal;
+                        if (record && initialized && queued) {
                             ++pendingHeld;
-                            if (!record->at("remoteCompleted").is_null() && record->at("remoteCompleted").get<bool>() != remote && local != remote)
+                            const bool hadBaseline = record->contains("remoteCompleted") && !record->at("remoteCompleted").is_null();
+                            if (hadBaseline && record->at("remoteCompleted").get<bool>() != remote && local != remote)
                                 ++conflicts;
                             return;
                         }
@@ -202,11 +205,12 @@ public:
                         // absent record means "not completed"; afterwards remote-only ids
                         // already read as completed through the baseline fallback.
                         const bool current = record ? local : (initialized && remote);
-                        const bool desired = !initialized
-                            ? (mode == "import" ? remote : (mode == "merge" ? (local || remote)
-                                : ((record && record->value("localTouched", false)) ? local : remote)))
-                            : remote;
+                        const bool desired = DesiredCompletion(record, local, remote, !initialized, mode);
                         if (desired == current) ++unchanged; else if (desired) ++willAdd; else ++willRemove;
+                        // A local-only completion this apply will put into the outbox: a
+                        // state change the player has to see as "will be uploaded", not as
+                        // "nothing to do".
+                        if (record && desired != remote && !queued) ++willQueue;
                     };
                     for (const auto& [identity, point] : source.at("points").items()) {
                         if (point.value("stateId", 0) != state) continue;
@@ -224,11 +228,12 @@ public:
                     }
                     regions.push_back({{"stateId", state}, {"initialized", initialized}, {"localCompleted", localCompleted},
                         {"remoteCompleted", static_cast<std::int64_t>(regionRemote.size())}, {"bothCompleted", bothCompleted},
-                        {"pendingLocal", pendingLocal}, {"willAdd", willAdd},
+                        {"pendingLocal", pendingLocal}, {"willAdd", willAdd}, {"willQueue", willQueue},
                         {"willRemove", willRemove}, {"unchanged", unchanged}, {"pendingHeld", pendingHeld},
                         {"conflicts", conflicts}, {"remoteIds", regionRemote}});
                     willAddTotal += willAdd;
                     willRemoveTotal += willRemove;
+                    willQueueTotal += willQueue;
                     unchangedTotal += unchanged;
                     localTotal += localCompleted;
                     bothTotal += bothCompleted;
@@ -239,7 +244,7 @@ public:
                     {"remoteCompleted", static_cast<std::int64_t>(remoteIds.size())}, {"mappedRemote", mappedRemote},
                     {"unmappedRemote", static_cast<std::int64_t>(unmappedIds.size())}, {"unmappedIds", unmappedIds},
                     {"localCompleted", localTotal}, {"bothCompleted", bothTotal}, {"pendingLocal", pendingTotal}, {"willAdd", willAddTotal},
-                    {"willRemove", willRemoveTotal}, {"unchanged", unchangedTotal}});
+                    {"willQueue", willQueueTotal}, {"willRemove", willRemoveTotal}, {"unchanged", unchangedTotal}});
             }
             if (type == "markerApplyRemote" || type == "markerInitializeSync") {
                 const int state = command.at("stateId").get<int>();
@@ -264,25 +269,25 @@ public:
                     if (point.value("stateId", 0) != state) continue;
                     const bool remote = remoteIds.contains(point.at("pointId").get<std::string>());
                     const bool local = point.value("completed", false);
-                    if (initialize) {
-                        const bool desired = mode == "import" ? remote : (mode == "merge" ? local || remote :
-                            (point.value("localTouched", false) ? local : remote));
-                        point["completed"] = desired;
-                        point["remoteCompleted"] = remote;
-                        point["revision"] = revision;
-                        point["pending"] = desired != remote;
-                        point["acknowledgedRevision"] = desired == remote ? revision : 0;
-                    } else if (point.value("pending", false)) {
-                        if (!point.at("remoteCompleted").is_null() && point.at("remoteCompleted").get<bool>() != remote && local != remote)
+                    if (!initialize && point.value("pending", false)) {
+                        const bool baseline = point.contains("remoteCompleted") && !point.at("remoteCompleted").is_null();
+                        if (baseline && point.at("remoteCompleted").get<bool>() != remote && local != remote)
                             conflicts.push_back(point);
                         // Preserve the old baseline while a local operation is pending.
-                    } else if (point.value("completed", false) != remote || point.at("remoteCompleted").is_null() ||
-                        point.at("remoteCompleted").get<bool>() != remote) {
-                        point["completed"] = remote;
-                        point["remoteCompleted"] = remote;
-                        point["revision"] = revision;
-                        point["acknowledgedRevision"] = revision;
+                        continue;
                     }
+                    const bool desired = DesiredCompletion(point, local, remote, initialize, mode);
+                    const bool pending = desired != remote;
+                    const bool baseline = point.contains("remoteCompleted") && !point.at("remoteCompleted").is_null();
+                    // A point whose baseline already agrees is left untouched, so a
+                    // settled region writes nothing and never inflates its revision.
+                    if (local == desired && point.value("pending", false) == pending && baseline &&
+                        point.at("remoteCompleted").get<bool>() == remote) continue;
+                    point["completed"] = desired;
+                    point["remoteCompleted"] = remote;
+                    point["revision"] = revision;
+                    point["pending"] = pending;
+                    point["acknowledgedRevision"] = pending ? std::uint64_t{} : revision;
                 }
                 auto& sync = SyncState(next, state);
                 sync["remoteIds"] = remoteIds;
@@ -384,6 +389,25 @@ private:
     static bool RemoteCompleted(const Json& doc, int state, const std::string& id) {
         const auto& ids = RemoteIds(doc, state);
         return std::find(ids.begin(), ids.end(), id) != ids.end();
+    }
+    // The completion a synchronization pass must end up with. "import" stays
+    // cloud-authoritative; "merge" is the union the interface promises, so a local
+    // completion the cloud never had is kept and queued for upload instead of being
+    // cancelled, while a completion the cloud withdrew — its recorded baseline says
+    // it had the point — is applied. "upload" prefers locally touched points. Both
+    // the preview and the apply read this one rule, so a plan and its result cannot
+    // drift apart. See Docs/LocalAccounts_20260926.md §6.3.
+    static bool DesiredCompletion(const Json& point, bool local, bool remote, bool establishing, const std::string& mode) {
+        if (mode == "upload") return point.value("localTouched", false) ? local : remote;
+        if (mode != "merge") return remote;
+        if (establishing) return local || remote;
+        if (remote) return true;
+        const bool hadBaseline = point.contains("remoteCompleted") && !point.at("remoteCompleted").is_null();
+        return hadBaseline && point.at("remoteCompleted").get<bool>() ? false : local;
+    }
+    static bool DesiredCompletion(const Json* record, bool local, bool remote, bool establishing, const std::string& mode) {
+        static const Json absent = Json::object();
+        return DesiredCompletion(record ? *record : absent, local, remote, establishing, mode);
     }
     static Json Snapshot(const Json& doc, const Json& options = Json::object()) {
         Json points = Json::array();

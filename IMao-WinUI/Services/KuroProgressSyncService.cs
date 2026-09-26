@@ -5,9 +5,11 @@ using IMao_WinUI.Helpers;
 namespace IMao_WinUI.Services;
 
 /// <summary>
-/// Compares the two sides of the Kuro progress and applies the union. Merging
-/// only ever adds: a local mark is never cancelled because the cloud lacks it,
-/// it simply waits for the upload direction.
+/// Compares the two sides of the Kuro progress and applies the union. A local mark is
+/// never cancelled because the cloud lacks it: it is queued for upload instead. Only a
+/// completion the cloud explicitly withdrew — this machine recorded that the cloud had
+/// the point before — is cancelled, and the preview reports those separately so the
+/// player sees them before pressing apply. See Docs/LocalAccounts_20260926.md §6.3.
 /// </summary>
 public sealed class KuroProgressSyncService
 {
@@ -50,12 +52,12 @@ public sealed class KuroProgressSyncService
     private async Task<KuroSyncComparison> PreviewCoreAsync(string profileId, int? stateId, CancellationToken cancellationToken)
     {
         if (!vault.TryRead(profileId, out var credential)) throw new InvalidOperationException("此同步档案尚未连接库街区。请在浏览器扩展中重新连接。");
+        await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
         var published = await client.GetStatesAsync(cancellationToken);
         var completed = await client.GetCompletedIdsAsync(credential.Token, deviceId, cancellationToken);
         var cloudIds = completed.OrderBy(id => id, StringComparer.Ordinal).ToArray();
         if (cloudIds.Length == 0) throw new InvalidOperationException("库街区没有返回任何已完成点位；请确认账号进度是否为空。");
-        await core.ExecuteMarkerAsync("markerSelectProfile", new { profileId }, cancellationToken);
         var data = await core.ExecuteMarkerAsync("markerPreviewSync", new
         {
             profileId,
@@ -73,9 +75,27 @@ public sealed class KuroProgressSyncService
                 names.TryGetValue(id, out var name) ? name : $"区域 {id}",
                 ReadIds(row, "remoteIds"),
                 row.TryGetProperty("initialized", out var initialized) && initialized.GetBoolean(),
-                Read(row, "localCompleted"), Read(row, "remoteCompleted"), Read(row, "bothCompleted"), Read(row, "pendingLocal")));
+                Read(row, "localCompleted"), Read(row, "remoteCompleted"), Read(row, "bothCompleted"), Read(row, "pendingLocal"),
+                Read(row, "willAdd"), Read(row, "willRemove"), Read(row, "willQueue")));
         }
         return new KuroSyncComparison(rows, cloudIds, ReadIds(data, "unmappedIds"));
+    }
+
+    /// <summary>
+    /// The map shows exactly one ledger, and synchronization must never change which
+    /// one: either the player is looking at the ledger being synced, or the pass fails
+    /// with something the interface can explain. Switching the ledger here is what
+    /// used to hide a player's local progress behind an empty account ledger.
+    /// See Docs/LocalAccounts_20260926.md §6.2.
+    /// </summary>
+    private async Task EnsureActiveProfileAsync(string profileId, CancellationToken cancellationToken)
+    {
+        var snapshot = await core.ExecuteMarkerAsync("markerGetSnapshot", new { profileId, limit = 1 }, cancellationToken);
+        string active = snapshot.TryGetProperty("activeProfileId", out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString() ?? "" : "";
+        if (active != profileId)
+            throw new InvalidOperationException(
+                $"当前地图显示的点位档案是 {active}，不是要同步的 {profileId}。请先在设置页把 {profileId} 切换为当前档案，同步不会替你切换。");
     }
 
     /// <summary>
@@ -93,10 +113,10 @@ public sealed class KuroProgressSyncService
     private async Task<KuroSyncApplyResult> ApplyCoreAsync(string profileId, KuroSyncComparison comparison, CancellationToken cancellationToken)
     {
         if (!vault.TryRead(profileId, out var credential)) throw new InvalidOperationException("此同步档案尚未连接库街区。请在浏览器扩展中重新连接。");
+        await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
         var current = await client.GetCompletedIdsAsync(credential.Token, deviceId, cancellationToken);
         if (!current.SetEquals(comparison.CloudIds)) throw new InvalidOperationException("库街区进度在预览之后已变化，请重新预览再应用。");
-        await core.ExecuteMarkerAsync("markerSelectProfile", new { profileId }, cancellationToken);
         // Upload first, so the cloud read below already contains the pushed points
         // and the local baseline ends up consistent with both sides.
         var pushedByState = await PushPendingAsync(profileId, credential.Token, comparison.Regions, cancellationToken);
@@ -119,7 +139,17 @@ public sealed class KuroProgressSyncService
             }, cancellationToken);
             ++regions;
         }
-        return new KuroSyncApplyResult(regions, comparison.ToFetch, Math.Max(0, comparison.PendingLocal - pushed), pushed);
+        // Applying the union can queue completions the cloud has never seen (an old
+        // local mark, or one imported from the pre-rewrite record). Push those in the
+        // same pass so the player does not have to synchronize twice to see them land.
+        var queued = await PushPendingAsync(profileId, credential.Token, comparison.Regions, cancellationToken);
+        pushed += queued.Sum(pair => pair.Value.Count);
+        // Report the queue as it stands now instead of doing arithmetic on the preview,
+        // because this pass may have added to it.
+        var outbox = await core.ExecuteMarkerAsync("markerGetOutbox", new { profileId, limit = 1 }, cancellationToken);
+        int pending = outbox.TryGetProperty("total", out var pendingTotal) && pendingTotal.TryGetInt32(out int remaining)
+            ? remaining : Math.Max(0, comparison.PendingLocal - pushed);
+        return new KuroSyncApplyResult(regions, comparison.ToFetch, pending, pushed);
     }
 
     /// <summary>
