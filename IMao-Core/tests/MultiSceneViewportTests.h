@@ -15,6 +15,11 @@ inline int RunMultiSceneViewportTests() {
     Scene::EnsureExternalConfigLoaded();
     const auto savedMinimapScales = Scene::minimapScales;
     Scene::minimapScales.clear(); // Synthetic fixtures have their own scale.
+    // A scene the runtime does not approve: its features may exist in the index but must stay
+    // unreachable. Asked of the runtime rather than hardcoded, because packs do get approved over
+    // time - this fixture used to name scene 6, and LowerVault has been approved since 2026-09-19.
+    int unapprovedScene = 9;
+    while (Scene::IsRuntimeApproved(unapprovedScene)) ++unapprovedScene;
     int failures = 0;
     auto expect = [&](bool passed, const char* name) {
         std::cout << (passed ? "PASS " : "FAIL ") << name << '\n';
@@ -55,13 +60,13 @@ inline int RunMultiSceneViewportTests() {
     cv::RNG gatedRng(19009);
     gatedRng.fill(gatedImage, cv::RNG::UNIFORM, 0, 256);
     cv::GaussianBlur(gatedImage, gatedImage, {5, 5}, 1.0);
-    add(6, gatedImage);
+    add(unapprovedScene, gatedImage);
     for (int scene = 1; scene <= 5; ++scene) {
         const auto nearby = SceneMapFeaturesNear(*resources, scene, Coordinate(300, 300), 300);
         expect(nearby.imgKeypoints.size() == resources->visualIndex.tiles[scene - 1].featureRowCount,
             "OCR and map-open feature windows exclude overlapping scenes");
     }
-    expect(SceneMapFeaturesNear(*resources, 6, Coordinate(300, 300), 300).imgDescriptors.empty(),
+    expect(SceneMapFeaturesNear(*resources, unapprovedScene, Coordinate(300, 300), 300).imgDescriptors.empty(),
         "OCR cannot use an unapproved scene");
     std::string error;
     expect(MapViewportLocalizer::Initialize(resources, error), "worker initializes");
