@@ -43,6 +43,24 @@ $sharedPacksRoot = Join-Path $SourceRoot 'Assets/FeaturesDatas/KuroTilePacks'
 if (-not (Test-Path -LiteralPath $RunRoot)) { throw "run root does not exist: $RunRoot" }
 if (-not (Test-Path -LiteralPath $binaryRoot)) { throw "build output does not exist: $binaryRoot" }
 
+# A framework-dependent build must never reach this tree. `IMao-WinUI.csproj` sets neither
+# <SelfContained> nor <RuntimeIdentifier>, so a plain `dotnet build -r win-x64` - the command you reach
+# for just to check that a change compiles - writes a runtimeconfig.json whose only framework entry is
+# Microsoft.NETCore.App. Copying it (plus the trimmed deps.json) over the run root replaces the
+# self-contained pair and the client dies at startup with "You must install or update .NET". That has
+# happened four times, each time because a throwaway compile-check build landed in x64/Release - the
+# fourth on 2026-09-26 came from a build run only to verify a one-line change, which then got copied
+# into the run root by this very script. So refuse the source outright instead of trusting the copies.
+$runtimeConfigPath = Join-Path $binaryRoot 'IMao-WinUI.runtimeconfig.json'
+if (-not (Test-Path -LiteralPath $runtimeConfigPath)) { throw "no runtimeconfig.json in $binaryRoot; build IMao-WinUI first" }
+$runtimeOptions = (Get-Content -LiteralPath $runtimeConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json).runtimeOptions
+if (-not ($runtimeOptions.PSObject.Properties.Name -contains 'includedFrameworks')) {
+    throw ("$runtimeConfigPath is framework-dependent (it names the Microsoft.NETCore.App framework and not " +
+        "includedFrameworks), so the build output cannot start on a machine without .NET installed - and copying it " +
+        "here would break the run root. Rebuild the shell self-contained first: " +
+        "dotnet build IMao-WinUI\IMao-WinUI.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -t:Rebuild")
+}
+
 $running = @(Get-Process -Name 'IMao-CoreHost', 'IMao-WinUI' -ErrorAction SilentlyContinue)
 if ($running.Count -gt 0 -and -not $DryRun) {
     throw ("the test tree is running (pid {0}); close it first, its binaries are locked" -f ($running.Id -join ', '))
@@ -158,4 +176,20 @@ if ($totalFramed -ne $totalIndexes) {
     Write-Warning 'a layered-floor index is in the wrong coordinate frame; no player position can ever be inside its footprint.'
 }
 Write-Host ''
+# The pair that decides whether the tree starts at all: the run root must hold a self-contained
+# runtimeconfig plus the managed runtime it names. Checked here so a bad refresh is reported by this
+# script instead of by the Windows event log after somebody double-clicks the client.
+$runConfigPath = Join-Path $RunRoot 'IMao-WinUI.runtimeconfig.json'
+$runOptions = (Get-Content -LiteralPath $runConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json).runtimeOptions
+$runSelfContained = $runOptions.PSObject.Properties.Name -contains 'includedFrameworks'
+$runtimeFiles = @('hostpolicy.dll', 'coreclr.dll', 'System.Private.CoreLib.dll')
+$missingRuntime = @($runtimeFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $RunRoot $_)) })
+if (-not $runSelfContained -or $missingRuntime.Count -gt 0) {
+    Write-Warning ('the run root will not start: self-contained={0}, missing runtime files: {1}' -f `
+            $runSelfContained, $(if ($missingRuntime.Count -gt 0) { $missingRuntime -join ', ' } else { 'none' }))
+}
+else {
+    Write-Host ('run root runtime: self-contained ({0} frameworks), hostpolicy/coreclr/CoreLib present' -f `
+            $runOptions.includedFrameworks.Count)
+}
 Write-Host 'Launch with: out\map-test\IMao-WinUI.exe   (administrator, game running; any client aspect ratio)'
