@@ -71,8 +71,8 @@ public sealed class UpdateUiController : INotifyPropertyChanged
             var release = updater.LastCheckResult?.AppUpdate;
             var plan = release is null ? null : await updater.ResolveMirrorChyanPackageAsync(release, ct);
             if (plan is not null && plan.IsWholePackage && confirmWholePackage is not null &&
-                !await confirmWholePackage("Mirror酱 目前提供的是完整程序包（约 " + PackageSize(plan) + "），而不是增量包。"
-                    + "这会下载接近 1 GB 的流量。要继续吗？"))
+                !await OnUiThreadAsync(() => confirmWholePackage("Mirror酱 目前提供的是完整程序包（约 " + PackageSize(plan) + "），而不是增量包。"
+                    + "这会下载接近 1 GB 的流量。要继续吗？")))
             {
                 Message = "已取消下载。当前程序与地图资源未改变。";
                 return;
@@ -100,7 +100,7 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     {
         if (programs is null || restartProgram is null) return;
         await programs.RequestRestartAsync(ct);
-        await restartProgram();
+        await OnUiThreadAsync(restartProgram);
     });
     public bool HasUpdate => ResourceAvailable || AppUpdateAvailable || HasPending;
     public double ProgressPercent { get; private set; }
@@ -301,7 +301,34 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         catch (Exception error) { ShowError(error); }
     }
 
-    private IProgress<UpdateProgress> Progress() => new Progress<UpdateProgress>(progress =>
+    /// <summary>
+    /// Hands the page at most one progress update every 100 ms.
+    ///
+    /// A shard download reports every 128 KB and an install reports per file, so a 650 MB transfer produces
+    /// thousands of reports - and every one of them repainted the whole update card through the dispatcher.
+    /// Dropping the rest here, on the reporting thread and before anything is queued, is what keeps the
+    /// window responsive while a large file is moving. A stage change and a finished report are always kept,
+    /// so what the player reads never loses a step.
+    /// </summary>
+    private sealed class ThrottledProgress(Action<UpdateProgress> deliver) : IProgress<UpdateProgress>
+    {
+        private const long IntervalMs = 100;
+        private long lastDelivered;
+        private string lastStage = "";
+
+        public void Report(UpdateProgress value)
+        {
+            var now = Environment.TickCount64;
+            var stageChanged = !string.Equals(value.Stage, lastStage, StringComparison.Ordinal);
+            var finished = value.Total > 0 && value.Completed >= value.Total;
+            if (!stageChanged && !finished && now - lastDelivered < IntervalMs) return;
+            lastDelivered = now;
+            lastStage = value.Stage;
+            deliver(value);
+        }
+    }
+
+    private IProgress<UpdateProgress> Progress() => new ThrottledProgress(progress =>
     {
         ProgressPercent = progress.Total > 0 ? Math.Clamp(100.0 * progress.Completed / progress.Total, 0, 100) : 0;
         ProgressText = progress.Total > 0 ? $"{progress.Stage} · {progress.Completed / 1048576.0:F1} / {progress.Total / 1048576.0:F1} MB" : progress.Stage;
@@ -314,8 +341,13 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         Busy = true; Failed = false; ProgressPercent = 0; ProgressText = "";
         idle = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         operation = new CancellationTokenSource(); Changed();
-        try { await action(operation.Token); }
-        catch (OperationCanceledException) when (operation.IsCancellationRequested) { Message = "操作已取消，当前使用的程序与地图资源未改变。"; }
+        // The update itself runs on the thread pool. Its heavy stretches - unpacking a shard, hashing 1.4 GB of
+        // program files, walking a thousand entries - are synchronous between awaits, and on the dispatcher
+        // thread they are exactly what made a long download look like a hung window. Anything belonging to the
+        // page is handed back explicitly through OnUiThreadAsync.
+        var token = operation.Token;
+        try { await Task.Run(() => action(token), token); }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { Message = "操作已取消，当前使用的程序与地图资源未改变。"; }
         catch (Exception error)
         {
             Failed = true;
@@ -332,6 +364,25 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         if (dispatcher is null || dispatcher.HasThreadAccess) action();
         else dispatcher.TryEnqueue(() => action());
     }
+
+    /// <summary>
+    /// Runs a step that owns something the page holds - a ContentDialog, closing the window - back on the
+    /// dispatcher thread, because the update it belongs to is running on the thread pool.
+    /// </summary>
+    private Task<T> OnUiThreadAsync<T>(Func<Task<T>> action)
+    {
+        if (dispatcher is null || dispatcher.HasThreadAccess) return action();
+        var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!dispatcher.TryEnqueue(async () =>
+            {
+                try { completion.TrySetResult(await action()); }
+                catch (Exception error) { completion.TrySetException(error); }
+            }))
+            completion.TrySetException(new InvalidOperationException("界面线程不可用，更新操作未开始。"));
+        return completion.Task;
+    }
+
+    private async Task OnUiThreadAsync(Func<Task> action) => await OnUiThreadAsync(async () => { await action(); return true; });
 
     /// <summary>Appends one line to the update log; logging never hides the original outcome.</summary>
     private static void Audit(string line)
