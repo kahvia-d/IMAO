@@ -2,6 +2,7 @@
 
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/ThreadPriority.h"
+#include "CoordinateReadoutRoi.h"
 #include <include/ocr_rec.h>
 
 #include <algorithm>
@@ -26,25 +27,11 @@ double MillisecondsSince(std::chrono::steady_clock::time_point start) {
     return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
 }
 
-bool GetCoordinateRegion(const cv::Mat& snapshot, cv::Rect& region) {
-    if (snapshot.empty()) return false;
-    const bool supported = (snapshot.cols == 1600 && snapshot.rows == 900) ||
-        (snapshot.cols == 1920 && snapshot.rows == 1080) ||
-        (snapshot.cols == 2560 && snapshot.rows == 1440);
-    if (!supported) return false;
-
-    const double scaleX = static_cast<double>(snapshot.cols) / 1600.0;
-    const double scaleY = static_cast<double>(snapshot.rows) / 900.0;
-    const int left = std::clamp(static_cast<int>(std::lround(20.0 * scaleX)), 0, snapshot.cols);
-    const int top = std::clamp(static_cast<int>(std::lround(865.0 * scaleY)), 0, snapshot.rows);
-    // The gameplay timestamp begins immediately after the coordinate readout
-    // on current clients.  Including it makes the recognizer return one long
-    // mixed string which the strict coordinate parser must reject.  Keep the
-    // crop inside the coordinate widget (the historical 160 px right edge),
-    // with the left padding retained for the leading minus sign.
-    const int right = std::clamp(static_cast<int>(std::lround(160.0 * scaleX)), left, snapshot.cols);
-    const int bottom = std::clamp(static_cast<int>(std::lround(900.0 * scaleY)), top, snapshot.rows);
-    region = cv::Rect(left, top, right - left, bottom - top);
+// The readout is placed by the same HUD layout every other crop uses (HudLayout.h); the box and the
+// sanity floor live in CoordinateReadoutRoi.h so the recognizer and its tests share one definition.
+bool GetCoordinateRegion(const cv::Mat& snapshot, cv::Rect& region, std::string& rejection) {
+    if (snapshot.empty()) { rejection = "empty-frame"; return false; }
+    region = CoordinateReadoutRoi(snapshot.size(), rejection);
     return region.width > 0 && region.height > 0;
 }
 
@@ -144,10 +131,11 @@ public:
         result.requestId = request.requestId;
 
         cv::Rect region;
-        if (!GetCoordinateRegion(request.snapshot, region)) {
+        std::string rejection;
+        if (!GetCoordinateRegion(request.snapshot, region, rejection)) {
             result.status = CoordinateRecognitionStatus::UnsupportedResolution;
             Diagnostics::Record("ocr-unsupported", "frame=" + std::to_string(request.snapshot.cols) + "x" +
-                std::to_string(request.snapshot.rows));
+                std::to_string(request.snapshot.rows) + " reason=" + rejection);
             return result;
         }
 

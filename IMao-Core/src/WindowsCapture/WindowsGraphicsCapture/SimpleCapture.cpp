@@ -1,4 +1,5 @@
 #include "..\..\pch.h"
+#include "..\..\Coordinate\HudLayout.h"
 #include "SimpleCapture.h"
 #include "..\..\Runtime\StructuredLogger.h"
 #include "..\..\Runtime\OverlayPacing.h"
@@ -499,9 +500,8 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
 }
 
 namespace {
-// The regions ordinary exploration actually samples, in the 1600x900 reference frame the rest of the HUD
-// geometry is expressed in. Each one is read by a named consumer, and this list is the contract the ROI
-// readback rests on:
+// The regions ordinary exploration actually samples, as reference boxes from HudLayout.h. Each one is
+// read by a named consumer, and this list is the contract the ROI readback rests on:
 //   minimap        CropToMinMapAreaImg (localization), frame.motionImage (motion anchoring), terrain mask
 //   task icon      IsExistMinMap (SURF) and MinimapHudEvidence::Observe
 //   compass        MapUiVisualDetector::DetectBigMapCompass
@@ -509,13 +509,12 @@ namespace {
 //   coordinate     GetCoordinateRegion (the OCR readout)
 // Everything else - the map canvas, the wave-plate glyph, the viewport - is only used while the big map
 // is open, and the caller keeps those frames on the full readback.
-struct ReferenceBox { double left, top, right, bottom; };
-constexpr ReferenceBox kRoiReferenceBoxes[] = {
-    {  30.0,  23.0, 184.0, 177.0 },  // minimap
-    {  12.0, 183.0,  39.0, 207.0 },  // task icon
-    {  10.0,  52.0,  82.0, 116.0 },  // compass
-    {1480.0, 235.0,1540.0, 645.0 },  // zoom strip
-    {  20.0, 865.0, 160.0, 900.0 },  // coordinate readout
+constexpr hud::Box kRoiReferenceBoxes[] = {
+    hud::kMinimap,
+    hud::kTaskIcon,
+    hud::kBigMapCompass,
+    hud::kBigMapZoomStrip,
+    hud::kCoordinateReadout,
 };
 }
 
@@ -526,16 +525,28 @@ bool SimpleCapture::EnsureRoiStaging(ID3D11Texture2D* source)
     source->GetDesc(&desc);
     if (desc.Width == 0 || desc.Height == 0) return false;
 
+    // The consumer crops the client area out of this texture, so a box is the client-relative
+    // rectangle plus that crop's origin. Sizing the boxes from the texture instead moved every
+    // top-anchored box on a windowed client - a 2564x1487 texture for a 2560x1440 client is 3% off by
+    // the bottom of the minimap - and left the tail of each crop unread.
+    const int clientWidth = m_roiClientWidth.load();
+    const int clientHeight = m_roiClientHeight.load();
+    const bool haveClientGeometry = clientWidth > 0 && clientHeight > 0;
+    const hud::Layout layout = haveClientGeometry
+        ? hud::Layout::For(clientWidth, clientHeight)
+        : hud::Layout::For(static_cast<double>(desc.Width), static_cast<double>(desc.Height));
+    const LONG originX = haveClientGeometry ? std::max<LONG>(0, m_roiClientOriginX.load()) : 0;
+    const LONG originY = haveClientGeometry ? std::max<LONG>(0, m_roiClientOriginY.load()) : 0;
+
     std::vector<RoiSlot> slots;
-    const double scaleX = static_cast<double>(desc.Width) / 1600.0;
-    const double scaleY = static_cast<double>(desc.Height) / 900.0;
     UINT widest = 0, totalRows = 0;
-    for (const auto& box : kRoiReferenceBoxes)
+    for (const auto& reference : kRoiReferenceBoxes)
     {
-        const LONG left = static_cast<LONG>(box.left * scaleX);
-        const LONG top = static_cast<LONG>(box.top * scaleY);
-        const LONG right = static_cast<LONG>(box.right * scaleX);
-        const LONG bottom = static_cast<LONG>(box.bottom * scaleY);
+        const cv::Rect box = hud::MapBox(layout, reference);
+        const LONG left = originX + box.x;
+        const LONG top = originY + box.y;
+        const LONG right = left + box.width;
+        const LONG bottom = top + box.height;
         const LONG clampedLeft = std::max<LONG>(0, std::min<LONG>(left, static_cast<LONG>(desc.Width)));
         const LONG clampedTop = std::max<LONG>(0, std::min<LONG>(top, static_cast<LONG>(desc.Height)));
         const LONG clampedRight = std::max<LONG>(clampedLeft, std::min<LONG>(right, static_cast<LONG>(desc.Width)));
@@ -554,7 +565,9 @@ bool SimpleCapture::EnsureRoiStaging(ID3D11Texture2D* source)
     if (slots.empty() || widest == 0 || totalRows == 0) return false;
 
     if (m_roiStaging && m_roiStagingWidth == widest && m_roiStagingHeight == totalRows &&
-        m_roiStagingFormat == desc.Format && m_roiSlots.size() == slots.size()) return true;
+        m_roiStagingFormat == desc.Format && m_roiSlots.size() == slots.size() &&
+        m_roiSlotsClientWidth == clientWidth && m_roiSlotsClientHeight == clientHeight &&
+        m_roiSlotsOriginX == static_cast<int>(originX) && m_roiSlotsOriginY == static_cast<int>(originY)) return true;
 
     m_roiStaging = nullptr;
     m_roiStagingWidth = 0; m_roiStagingHeight = 0; m_roiStagingFormat = DXGI_FORMAT_UNKNOWN;
@@ -574,6 +587,8 @@ bool SimpleCapture::EnsureRoiStaging(ID3D11Texture2D* source)
     }
     m_roiStagingWidth = widest; m_roiStagingHeight = totalRows; m_roiStagingFormat = desc.Format;
     m_roiSlots = std::move(slots);
+    m_roiSlotsClientWidth = clientWidth; m_roiSlotsClientHeight = clientHeight;
+    m_roiSlotsOriginX = static_cast<int>(originX); m_roiSlotsOriginY = static_cast<int>(originY);
 
     // Everything the boxes do not cover is cleared on every probed frame. The alternative - leaving the
     // previous frame there - would let a reader the box list forgot keep working on stale pixels that

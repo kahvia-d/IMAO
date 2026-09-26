@@ -43,7 +43,7 @@ Go to **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** and downl
 | Item | Requirement |
 | :--- | :--- |
 | OS | Windows 10 1809 (17763) or newer, **x64 only** |
-| Game display | Must be **16:9**; coordinate OCR supports 1600×900 / 1920×1080 / 2560×1440 |
+| Game display | Any client aspect ratio (16:9 / 16:10 / 21:9); coordinate OCR is placed by the game's own HUD scale instead of a resolution list |
 | Runtime | **No .NET installation needed** (the launcher is self-contained); the VC++ runtime ships with the package |
 | Disk | About **1.5 GB** after extracting the full package (all map regions included) |
 
@@ -117,8 +117,9 @@ Go to **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** and downl
 ### Quick start
 
 1. Unzip the downloaded package and run `IMao-Launcher.exe`.
-2. Launch Wuthering Waves, set the game to **16:9**, and make sure the **coordinate readout in the
-   lower-left corner is clearly visible** — it is one of the tool's positioning sources.
+2. Launch Wuthering Waves (any client aspect ratio: 16:9, 16:10 or 21:9), and make sure the
+   **coordinate readout in the lower-left corner is clearly visible** — it is one of the tool's
+   positioning sources.
 3. Click **Start exploring** and wait for the status message in the lower-right corner to disappear;
    that means positioning succeeded.
 4. **On a cold start, open the in-game big map once** so the tool can determine which region you are in.
@@ -219,8 +220,11 @@ ship with the program cost no extra download.
   **Opening the big map once solves it** — big-map rendering matches the tiles the tool uses, so it
   localises very reliably.
 - **Does the game have to be 16:9?**
-  Yes. Coordinate OCR currently covers 1600×900 / 1920×1080 / 2560×1440 only. Other ratios or
-  resolutions safely refuse coordinate recognition and fall back to visual matching alone.
+  No. The game scales its HUD by `min(width/1600, height/900)` and anchors each widget to the screen
+  edge it hugs; the tool now places every crop by the same rule, so 2560×1600, 3840×2160 and 21:9
+  clients all work and coordinate OCR is no longer limited to three 16:9 tiers.
+  (Before 2026-09-26 a client that was not 1600×900 / 1920×1080 / 2560×1440 refused coordinate
+  recognition, and on 16:10 the minimap crop sat too low while the task-icon box missed by 36px.)
 - **What if two floors look almost identical?**
   The program treats them all as the current location instead of guessing one and mislabelling it as
   upstairs or downstairs.

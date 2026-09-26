@@ -601,6 +601,12 @@ winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result, uint64_t
 		}
 		NonClientRegion nonClientRegion;
 		CalculateNonClientAreaSize(hwnd, nonClientRegion);
+		// The ROI readback builds its boxes from the client geometry, so it needs the same crop origin
+		// the consumer applies just below.
+		if (auto capture = graphicsCapture->Getcapture()) {
+			capture->SetClientGeometry(nonClientRegion.non_client_width_total,
+				nonClientRegion.non_client_height_total, captureRect.right, captureRect.bottom);
+		}
 		const cv::Rect clientRoi(nonClientRegion.non_client_width_total,
 			nonClientRegion.non_client_height_total, captureRect.right, captureRect.bottom);
 		if (clientRoi.width <= 0 || clientRoi.height <= 0 || clientRoi.x < 0 || clientRoi.y < 0 ||
@@ -726,7 +732,7 @@ void App::Thread_DetectGameState() {
 			rawControllerTriggerAnchors = controls.controllerTriggerAnchors;
 			rawControllerSlider = controls.controllerSlider;
 			rawMinimapEvidence = minimapVisible; rawCompassEvidence = compassVisible; rawControlEvidence = mapControlsVisible;
-			const auto taskArea = ScreenCoordinate::SpecifyScreenCoordinate(stateRect, GameWindowsScreenData::IconTask_ScreenData);
+			const auto taskArea = ScreenCoordinate::SpecifyScreenCoordinate(stateRect, hud::kTaskIcon);
 			const cv::Rect taskRegion(static_cast<int>(taskArea.leftPoint.x), static_cast<int>(taskArea.topPoint.y),
 				static_cast<int>(taskArea.rightPoint.x - taskArea.leftPoint.x), static_cast<int>(taskArea.bottomPoint.y - taskArea.topPoint.y));
 			const auto hud = minimapHudEvidence.Observe(stateSnapshot, taskRegion, minimapVisible, focused, mapControlsVisible);
@@ -932,8 +938,7 @@ bool App::IsExistMinMap(const Mat& snapshot, const RECT& captureRect, int* goodM
 	// WGC can briefly return a frame whose client crop has not caught up with
 	// the window resize/map transition.  Validate the task-icon ROI against the
 	// actual Mat before using OpenCV's unchecked ROI constructor.
-	const auto iconArea = ScreenCoordinate::SpecifyScreenCoordinate(captureRect,
-		GameWindowsScreenData::IconTask_ScreenData);
+	const auto iconArea = ScreenCoordinate::SpecifyScreenCoordinate(captureRect, hud::kTaskIcon);
 	const cv::Rect iconRoi(iconArea.leftPoint.x, iconArea.topPoint.y,
 		iconArea.rightPoint.x - iconArea.leftPoint.x,
 		iconArea.bottomPoint.y - iconArea.topPoint.y);
@@ -2217,24 +2222,36 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
 	observedMapViewportRevision = result.viewportRevision;
     // Extract from the exact current crop whose pose was bridged above. A
     // panned viewport centre is not a player position.
+    // The arrow probe works in reference units: the client is divided by its own HUD scale, which
+    // leaves a canvas 1600 wide and at least 900 tall, and the map rectangle is placed on it by the
+    // same anchors as everywhere else. On a 2560x1600 client that rectangle starts at y=185 instead
+    // of 135, so a hardcoded 1600x900 resize and a hardcoded (160,100,1280,720) probe would both have
+    // measured the wrong pixels.
+    const hud::Layout mapLayout = hud::Layout::For(mapSnapshot.cols, mapSnapshot.rows);
+    const hud::Layout nominalLayout = hud::NormalizedCanvas(mapLayout);
     cv::Mat nominalSnapshot;
-    cv::resize(mapSnapshot, nominalSnapshot, cv::Size(1600, 900), 0, 0, cv::INTER_AREA);
-    const cv::Mat nominalCrop = nominalSnapshot(cv::Rect(160,100,1280,720));
+    cv::resize(mapSnapshot, nominalSnapshot,
+        cv::Size(cvRound(nominalLayout.width), cvRound(nominalLayout.height)), 0, 0, cv::INTER_AREA);
+    const cv::Rect nominalArea = hud::MapBox(nominalLayout, hud::kMapCenterArea);
+    // The probe keeps the 45px of margin above and below the rectangle the arrow detector was tuned on.
+    const cv::Rect nominalProbe(nominalArea.x, nominalArea.y - 35, nominalArea.width, nominalArea.height + 90);
+    const cv::Mat nominalCrop = nominalSnapshot(nominalProbe);
     cv::Point2f arrow;
     viewportResumeHint.reset();
     viewportMinimapReference.release();
     viewportTerrainTrackingGeneration = 0;
     if (MinimapTerrainEvidence::PlayerArrow(nominalCrop, arrow)) {
         const auto player = result.captureCorners[0] +
-            (result.captureCorners[1] - result.captureCorners[0]) * (arrow.x / nominalCrop.cols) +
-            (result.captureCorners[3] - result.captureCorners[0]) * ((arrow.y - 35.0f) / 630.0f);
+            (result.captureCorners[1] - result.captureCorners[0]) * (arrow.x / nominalArea.width) +
+            (result.captureCorners[3] - result.captureCorners[0]) * ((arrow.y - 35.0f) / nominalArea.height);
         viewportResumeHint = MinimapResumeHint{ MinimapResumeSource::MapViewport,
             { sceneId, player.x, player.y }, anchoredAt, result.viewportGeneration, result.viewportRevision };
         // The big map hides the minimap, so no classification runs while it is open: the player's
         // position is the only thing that can say the known floor was left behind.
         LayeredMap::ObservePosition(sceneId, player.x, player.y);
         viewportMinimapReference = MinimapTerrainEvidence::ViewportReference(nominalSnapshot,
-            arrow + cv::Point2f(160,100), CaptureWidth(result.captureCorners) / 1280.0, Scene::MinimapScale(sceneId));
+            arrow + cv::Point2f(static_cast<float>(nominalProbe.x), static_cast<float>(nominalProbe.y)),
+            CaptureWidth(result.captureCorners) / 1280.0, Scene::MinimapScale(sceneId));
         Diagnostics::Record("map-viewport-resume-hint", "source=player-arrow scene=" + std::to_string(sceneId) +
             " map=" + std::to_string(player.x) + "," + std::to_string(player.y));
     } else Diagnostics::Record("map-viewport-resume-hint", "available=false reason=no-unique-player-arrow");
@@ -2543,7 +2560,7 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
     frame.viewportScene = viewport.sceneId; frame.viewportCenter = viewport.centerMapCoordinate;
     frame.viewportCorners = viewport.captureCorners;
     const auto mapArea = ScreenCoordinate::SpecifyScreenCoordinate(captured.clientRect,
-        GameWindowsScreenData::mapCenterAreaSrceenData);
+        hud::kMapCenterArea);
     const double mapWidth = viewport.captureCorners.size() == 4
         ? viewport.captureCorners[2].x - viewport.captureCorners[0].x : 0.0;
     frame.mapMotion = {viewport.centerMapCoordinate,
@@ -2571,7 +2588,7 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
     }
     if (frame.mapVisible || frame.minimapVisible) {
         const auto area = frame.mapVisible ? mapArea : ScreenCoordinate::SpecifyScreenCoordinate(
-            captured.clientRect, GameWindowsScreenData::MinMapScreenData);
+            captured.clientRect, hud::kMinimap);
         const cv::Rect region(static_cast<int>(area.leftPoint.x), static_cast<int>(area.topPoint.y),
             static_cast<int>(area.rightPoint.x - area.leftPoint.x), static_cast<int>(area.bottomPoint.y - area.topPoint.y));
         if (region.width > 0 && region.height > 0 && (region & cv::Rect(0, 0, captured.image.cols, captured.image.rows)) == region) {

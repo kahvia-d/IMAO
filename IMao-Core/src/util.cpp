@@ -1,4 +1,4 @@
-﻿#include "util.h"
+#include "util.h"
 #include "Coordinate/CoordinateStruct.h"
 #include <tlhelp32.h>
 
@@ -38,32 +38,6 @@ bool CalculateNonClientAreaSize(const HWND& hwnd, NonClientRegion& nonClientRegi
         return true;
     }
      return false;
-}
-
-bool CalculateWindowScalingFactors(const HWND& hwnd, double& HorizontalFactor,double& VerticaFactor) {
-    RECT w_Rect;
-    if (!GetClientRect(hwnd, &w_Rect))
-        return false;
-
-    double w_width = w_Rect.right;
-    double w_height = w_Rect.bottom;
-
-    HorizontalFactor = w_width / GameWindowsScreenData::w_width;//水平缩放因子
-    VerticaFactor = w_height / GameWindowsScreenData::w_height;//垂直缩放因子
-
-
-    return true;
-}
-
-bool CalculateWindowScalingFactors(const RECT& w_Rect, double& HorizontalFactor, double& VerticaFactor) {
-
-    double w_width = w_Rect.right;
-    double w_height = w_Rect.bottom;
-
-    HorizontalFactor = w_width / GameWindowsScreenData::w_width;//水平缩放因子
-    VerticaFactor = w_height / GameWindowsScreenData::w_height;//垂直缩放因子
-
-    return true;
 }
 
 // 判断指定窗口是否聚焦

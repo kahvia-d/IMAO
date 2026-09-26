@@ -13,6 +13,7 @@
 #include "MinimapTrackingGeometryTests.h"
 #include "ImageAnchoredOverlayTests.h"
 #include "MinimapHudEvidenceTests.h"
+#include "HudLayoutTests.h"
 #include "DenseMapConfirmerTests.h"
 #include "OcrCoordinateGateTests.h"
 #include "CoordinateTrustTests.h"
@@ -981,6 +982,7 @@ int main(int argc, char** argv) {
     TestMinimapTrackingGeometry(Expect);
     TestImageAnchoredOverlay(Expect);
     TestMinimapHudEvidence(Expect);
+    TestHudLayout(Expect);
     TestDenseMapConfirmer(Expect);
     TestOcrCoordinateGate(Expect);
     TestCoordinateTrust(Expect);

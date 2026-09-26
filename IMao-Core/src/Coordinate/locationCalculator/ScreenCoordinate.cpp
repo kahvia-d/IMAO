@@ -1,4 +1,4 @@
-﻿#include "ScreenCoordinate.h"
+#include "ScreenCoordinate.h"
 #include "../../util.h"
 
 using namespace cv;
@@ -7,59 +7,28 @@ Coordinate ScreenCoordinate::MinMapCircleCenterScreenCoordinate(const RECT &w_Re
     return GetMinimapProjectionGeometry(w_Rect).center;
 }
 
-//水平缩放因子*x，垂直缩放因子*y
-RectangularAreaScreenLocation ScreenCoordinate::MinMapScreenCoordinate(HWND& w_hwnd) {
-    double HorizontalFactor = 0;//水平缩放因子
-    double VerticaFactor = 0;//垂直缩放因子
+// GetClientRect leaves left/top at zero, so right/bottom are the client size. The anchors inside the
+// box decide where it lands; HudLayout.h records why each widget hugs the edge it does. ScreenRect
+// itself is inline in the header so the geometry tests can pin the boxes without this translation unit.
 
-    CalculateWindowScalingFactors(w_hwnd, HorizontalFactor, VerticaFactor);
+RectangularAreaScreenLocation ScreenCoordinate::SpecifyScreenCoordinate(const RECT& w_Rect, const hud::Box& box) {
+    const Rect area = ScreenRect(w_Rect, box);
 
-    Coordinate topPoint(GameWindowsScreenData::MinMapTop.x * HorizontalFactor,
-        GameWindowsScreenData::MinMapTop.y * VerticaFactor);
+    Coordinate topPoint(area.x + area.width / 2.0, area.y);
+    Coordinate bottomPoint(area.x + area.width / 2.0, area.y + area.height);
+    Coordinate leftPoint(area.x, area.y + area.height / 2.0);
+    Coordinate rightPoint(area.x + area.width, area.y + area.height / 2.0);
 
-    Coordinate bottomPoint(GameWindowsScreenData::MinMapBottom.x * HorizontalFactor,
-        GameWindowsScreenData::MinMapBottom.y * VerticaFactor);
+    RectangularAreaScreenLocation areaLocation(leftPoint, rightPoint, topPoint, bottomPoint);
 
-    Coordinate leftPoint(GameWindowsScreenData::MinMapLeft.x * HorizontalFactor,
-        GameWindowsScreenData::MinMapLeft.y * VerticaFactor);
-
-    Coordinate rightPoint(GameWindowsScreenData::MinMapRight.x * HorizontalFactor,
-        GameWindowsScreenData::MinMapRight.y * VerticaFactor);
-
-    RectangularAreaScreenLocation MPCSC(leftPoint, rightPoint, topPoint, bottomPoint);
-
-    return MPCSC;
+    return areaLocation;
 }
 
-
-RectangularAreaScreenLocation ScreenCoordinate::SpecifyScreenCoordinate(const RECT& w_Rect, std::vector<Coordinate> specifyAreaScreenData) {
-    double HorizontalFactor = 0;//水平缩放因子
-    double VerticaFactor = 0;//垂直缩放因子
-
-    CalculateWindowScalingFactors(w_Rect, HorizontalFactor, VerticaFactor);
-
-    Coordinate topPoint(specifyAreaScreenData[0].x * HorizontalFactor,
-        specifyAreaScreenData[0].y * VerticaFactor);
-
-    Coordinate bottomPoint(specifyAreaScreenData[1].x * HorizontalFactor,
-        specifyAreaScreenData[1].y * VerticaFactor);
-
-    Coordinate leftPoint(specifyAreaScreenData[2].x * HorizontalFactor,
-        specifyAreaScreenData[2].y * VerticaFactor);
-
-    Coordinate rightPoint(specifyAreaScreenData[3].x * HorizontalFactor,
-        specifyAreaScreenData[3].y * VerticaFactor);
-
-    RectangularAreaScreenLocation SCSC(leftPoint, rightPoint, topPoint, bottomPoint);
-
-    return SCSC;
-}
-
-RectangularAreaScreenLocation ScreenCoordinate::SpecifyScreenCoordinate(const HWND& hwnd, std::vector<Coordinate> specifyAreaScreenData) {
+RectangularAreaScreenLocation ScreenCoordinate::SpecifyScreenCoordinate(const HWND& hwnd, const hud::Box& box) {
     RECT rect;
     GetClientRect(hwnd, &rect);
 
-    return ScreenCoordinate::SpecifyScreenCoordinate(rect, specifyAreaScreenData);
+    return ScreenCoordinate::SpecifyScreenCoordinate(rect, box);
 }
 
 //已知item相对世界原点的坐标  玩家相对世界原点的坐标 小地图中心点在屏幕的坐标，那么item的屏幕坐标为
@@ -87,12 +56,12 @@ Coordinate ScreenCoordinate::ItemScreenCoordinateOnMap(const Coordinate &gameMap
         return Coordinate(-1, -1);
     }
 
-    auto MapCenterAreaData = ScreenCoordinate::SpecifyScreenCoordinate(w_rect, GameWindowsScreenData::mapCenterAreaSrceenData);
+    const Rect mapCenterArea = ScreenRect(w_rect, hud::kMapCenterArea);
 
-    float scalingFactor =  (MapCenterAreaData.rightPoint.x - MapCenterAreaData.leftPoint.x)/ (captureCorners[2].x - captureCorners[0].x);
+    float scalingFactor =  static_cast<float>(mapCenterArea.width / (captureCorners[2].x - captureCorners[0].x));
 
    // Coordinate gameMapCenterPointRWOC = RelativeCoordinates::ImgMapCoordToRWOC(gameMapCenter);
-    Coordinate ScreenCenter(w_rect.right / 2, w_rect.bottom / 2);
+   Coordinate ScreenCenter(w_rect.right / 2, w_rect.bottom / 2);
 
    float itemScreenCoordinateOnMap_x = ScreenCenter.x + (itemROC.x - gameMapCenterPointImgMapROC.x) * scalingFactor;
    float itemScreenCoordinateOnMap_y = ScreenCenter.y - (itemROC.y - gameMapCenterPointImgMapROC.y) * scalingFactor;

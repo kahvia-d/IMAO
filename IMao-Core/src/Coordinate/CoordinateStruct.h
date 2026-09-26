@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <iostream>
 #include <vector>
 #include <string>
@@ -17,6 +17,7 @@
 #undef NOMINMAX
 #undef IMAO_COORDINATESTRUCT_UNDEF_NOMINMAX
 #endif
+#include "HudLayout.h"
 #include <nlohmann/json.hpp>
 #include "../Runtime/ResourceSnapshotContext.h"
 struct Coordinate {
@@ -203,43 +204,43 @@ struct Scene {
 };
 
 struct GameWindowsScreenData {
-    //TODO:目前仅支持16:9的分辨率,需要适配更多
-    inline static double w_width = 1600;
-    inline static double w_height = 900;
+    // The reference layout the boxes in HudLayout.h are measured in. A client is not scaled by its own
+    // width and height separately: see HudLayout.h for the measured rule and the per-widget anchors.
+    inline static double w_width = hud::kReferenceWidth;
+    inline static double w_height = hud::kReferenceHeight;
     inline static double ScaleFactorFromMinMapToMap = 1.25;
     inline static double minMapOnMap_width = 194;
     inline static double minMapOnMap_height = 194;
+
+    // The reference rectangles below are documentation of the layout, not a second source of geometry:
+    // every crop goes through hud::k* (HudLayout.h), which carries the edge each widget hugs as well.
+    // The two entries something still reads in reference units are marked.
 
     inline static Coordinate MinMapCenter = { 108,100 };
     inline static Coordinate MinMapTop = { 110,23 };
     inline static Coordinate MinMapBottom = { 108,177 };
     inline static Coordinate MinMapLeft = { 30,100 };
     inline static Coordinate MinMapRight = { 184,100 };
-    inline static std::vector<Coordinate> MinMapScreenData = { MinMapTop ,MinMapBottom,MinMapLeft ,MinMapRight };
 
     inline static Coordinate ShowWorldCoordinateAreaTop = {90,865};
     inline static Coordinate ShowWorldCoordinateAreaBottom = { 90,898 };
     inline static Coordinate ShowWorldCoordinateAreaLeft = {27,888};
     inline static Coordinate ShowWorldCoordinateAreaRight = {160,888};
-    inline static std::vector<Coordinate> ShowWorldAreaScreenData = { ShowWorldCoordinateAreaTop ,ShowWorldCoordinateAreaBottom,ShowWorldCoordinateAreaLeft ,ShowWorldCoordinateAreaRight };
 
     inline static Coordinate IconTask_Top = { 25,183 };
     inline static Coordinate IconTask_Bottom = { 25,207 };
     inline static Coordinate IconTask_Left = { 12,195 };
     inline static Coordinate IconTask_Right = { 39,195 };
-    inline static std::vector<Coordinate> IconTask_ScreenData = {IconTask_Top ,IconTask_Bottom ,IconTask_Left ,IconTask_Right };
 
     inline static Coordinate IconWavePlateCrystal_Top = { 978,37};
     inline static Coordinate IconWavePlateCrystal_Bottom = { 989,66 };
     inline static Coordinate IconWavePlateCrystal_Left = { 969,52 };
     inline static Coordinate IconWavePlateCrystal_Right= { 999,52 };
-    inline static std::vector<Coordinate> IconWavePlateCrystal_ScreenData = { IconWavePlateCrystal_Top ,IconWavePlateCrystal_Bottom ,IconWavePlateCrystal_Left ,IconWavePlateCrystal_Right };
 
-    // Include coastlines around an empty center; exclude edge UI. All viewport
-    // matching, motion bridging and projection share this centered rectangle.
+    // Include coastlines around an empty center; exclude edge UI. Read by the inertia calibration,
+    // which is calibrated in these reference units.
     inline static Coordinate mapCenterArea_Top = {800,135};
     inline static Coordinate mapCenterArea_Bottom = {800,765};
     inline static Coordinate mapCenterArea_Left = {160,450};
     inline static Coordinate mapCenterArea_Right = {1440,450};
-    inline static std::vector<Coordinate> mapCenterAreaSrceenData = { mapCenterArea_Top ,mapCenterArea_Bottom ,mapCenterArea_Left ,mapCenterArea_Right };
 };

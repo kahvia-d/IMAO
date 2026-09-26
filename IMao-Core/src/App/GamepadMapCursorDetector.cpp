@@ -1,4 +1,5 @@
 #include "GamepadMapCursorDetector.h"
+#include "../Coordinate/HudLayout.h"
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <array>
@@ -70,9 +71,13 @@ GamepadMapCursorDetection GamepadMapCursorDetector::Detect(const cv::Mat& snapsh
     // controller zoom strip, while leaving map-state gating to its caller.
     if (controls.mouse || controls.controllerTriggerAnchors != 2 || !controls.controllerSlider) return result;
 
-    const double scale = 900.0 / snapshot.rows;
+    // Normalise by the client's own HUD scale so the body rectangle below stays in reference units:
+    // a 16:9 client becomes 1600x900 and a 2560x1600 client 1600x1000 (HudLayout.h). Scaling the
+    // height to 900 instead would have squeezed a 16:10 client into a 1440x900 canvas and moved every
+    // absolute coordinate in this detector.
+    const double scale = 1.0 / hud::Layout::For(snapshot.cols, snapshot.rows).scale;
     cv::Mat normalized, bgr;
-    cv::resize(snapshot, normalized, {cvRound(snapshot.cols * scale), 900}, 0, 0, cv::INTER_AREA);
+    cv::resize(snapshot, normalized, {}, scale, scale, cv::INTER_AREA);
     if (normalized.channels() == 4) cv::cvtColor(normalized, bgr, cv::COLOR_BGRA2BGR); else bgr = normalized;
     // Exclude the fixed command bars and zoom strip, not an assumed cursor
     // center. The complete remaining map body is searched for visual evidence.

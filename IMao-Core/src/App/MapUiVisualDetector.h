@@ -21,8 +21,10 @@ struct MapControlDetection {
 };
 
 // The upper-left world-map compass is gold on the current game UI.  This
-// detector uses its fixed 16:9 layout and colour signature, captured from the
-// Black Shores map reference, rather than relying on a keyboard transition.
+// detector uses the reference HUD layout and colour signature, captured from the
+// Black Shores map reference, rather than relying on a keyboard transition. The
+// boxes are placed through HudLayout.h, so a non-16:9 client keeps them on the
+// pixels the game actually draws them at.
 class MapUiVisualDetector {
 public:
     static MapCompassDetection DetectBigMapCompass(const cv::Mat& snapshot, const RECT& clientRect);

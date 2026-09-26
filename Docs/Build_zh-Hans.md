@@ -117,8 +117,9 @@ cmake --build --preset windows-x64-release-visual-regression
 完全命中率和单路推理 P50/P95 写入 `coordinate-regression.json`；综合性能报告默认写入
 `x64/Performance/optimization-report.json`。若启动提示 IMF 魔数、
 版本、长度、描述子形状或 SHA-256 错误，不要放宽校验；重新拉取 Git LFS 资源或运行
-`Build-FeatureBinary.ps1`。非 1600×900、1920×1080、2560×1440 的画面会安全拒绝
-坐标 OCR，并在诊断日志中记录 `ocr-unsupported`。
+`Build-FeatureBinary.ps1`。客户区任意比例都可用：坐标 ROI 由 `HudLayout.h` 的
+`scale = min(宽/1600, 高/900)` 加每控件锚定推出；只有推出结果过小（宽 <60 或高 <24）或帧比客户区还小时
+才安全拒绝，并在诊断日志中记录 `ocr-unsupported`（带 `reason=`）。
 
 Release 必须同时含 `Map_features.imf`、基础 `Map_visual_index.imx` 与已有可选特征包的
 `visual-index.imx` 分片，且不得含基础 `Map_features.yml`。IMX 缺失、IMF/词表哈希不一致、

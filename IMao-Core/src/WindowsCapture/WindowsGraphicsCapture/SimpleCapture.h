@@ -55,6 +55,17 @@ public:
     void SetRoiReadback(bool enabled) { m_roiReadback.store(enabled); }
     bool RoiReadback() const { return m_roiReadback.load(); }
 
+    /// The consumer crops the client area out of the capture frame, so each ROI box has to be the
+    /// client-relative rectangle plus that crop's origin. Only the caller can query the window, so it
+    /// hands the geometry over whenever it changes. Until it does, the boxes are sized from the
+    /// frame itself, which is what a borderless client reports anyway.
+    void SetClientGeometry(int originX, int originY, int clientWidth, int clientHeight) {
+        m_roiClientOriginX.store(originX);
+        m_roiClientOriginY.store(originY);
+        m_roiClientWidth.store(clientWidth);
+        m_roiClientHeight.store(clientHeight);
+    }
+
     /// Takes the frame the consumer has not read yet. `outputFrame` is reused when it already has the
     /// right shape, so a caller that keeps its Mat across calls never allocates a full-screen image
     /// again; it only has to have finished with the previous contents. Unlike GetLatestFrame_Mat this
@@ -157,6 +168,12 @@ private:
     struct RowGap { UINT row = 0, x = 0, width = 0; };
     std::vector<RoiSlot> m_roiSlots;
     std::vector<RowGap> m_roiGaps;
+    /// Client geometry the current slot list was built from. Kept next to the list so a client resize
+    /// rebuilds it even when the staging texture happens to keep its size.
+    int m_roiSlotsClientWidth = 0, m_roiSlotsClientHeight = 0;
+    int m_roiSlotsOriginX = 0, m_roiSlotsOriginY = 0;
+    std::atomic<int> m_roiClientOriginX{ -1 }, m_roiClientOriginY{ -1 };
+    std::atomic<int> m_roiClientWidth{ 0 }, m_roiClientHeight{ 0 };
     winrt::com_ptr<ID3D11Texture2D> m_roiStaging{ nullptr };
     UINT m_roiStagingWidth = 0, m_roiStagingHeight = 0;
     DXGI_FORMAT m_roiStagingFormat = DXGI_FORMAT_UNKNOWN;

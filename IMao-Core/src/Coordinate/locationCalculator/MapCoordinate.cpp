@@ -1,4 +1,4 @@
-﻿#include "MapCoordinate.h"
+#include "MapCoordinate.h"
 #include "Windows.h"
 #include "../locationCalculator/ScreenCoordinate.h"
 
@@ -169,12 +169,14 @@ Coordinate MapCoordinate::CalculateMouseClickPositionMapCoordinate(const HWND ga
         return Coordinate(0, 0);
     }
 
-    double HorizontalFactor = 0;//水平缩放因子
-    double VerticaFactor = 0;//垂直缩放因子
+    // One client rect, one HUD scale and one anchor rule: the central map rectangle's on-screen width
+    // comes from the same box every other crop uses (HudLayout.h).
+    RECT clientRect{};
+    if (!GetClientRect(gameHwnd, &clientRect)) return Coordinate(0, 0);
+    const double mapCenterAreaWidth =
+        ScreenCoordinate::ScreenRect(clientRect, hud::kMapCenterArea).width;
 
-    CalculateWindowScalingFactors(gameHwnd, HorizontalFactor, VerticaFactor);
-
-    float scalingFactor = (captureCorners[2].x - captureCorners[0].x) / (HorizontalFactor*(GameWindowsScreenData::mapCenterArea_Right.x - GameWindowsScreenData::mapCenterArea_Left.x));
+    float scalingFactor = static_cast<float>((captureCorners[2].x - captureCorners[0].x) / mapCenterAreaWidth);
 
     double clickPosScreenCoor_x = centerMapScreenCoordinate.x + scalingFactor * (clickPosScreenPoint.x - gameWindowCenterPos.x);
     double clickPosScreenCoor_y = centerMapScreenCoordinate.y + scalingFactor * (clickPosScreenPoint.y - gameWindowCenterPos.y);
@@ -205,7 +207,7 @@ Coordinate MapCoordinate::CalculateGameMapCenterCoordinateByMouseLocation(const 
         clickPosScreenPoint_temp = { clickPosScreenPoint.x,gameWindowCorners.bottomRight.y };
     }
 
-    auto MapCenterAreaData = ScreenCoordinate::SpecifyScreenCoordinate(gameHwnd, GameWindowsScreenData::mapCenterAreaSrceenData);
+    auto MapCenterAreaData = ScreenCoordinate::SpecifyScreenCoordinate(gameHwnd, hud::kMapCenterArea);
     float scalingFactor = (captureCorners[2].x - captureCorners[0].x) / (MapCenterAreaData.rightPoint.x - MapCenterAreaData.leftPoint.x);
 
     Coordinate centerGameMapPosCoordinate(clickScreenPointMapCoordinate.x - scalingFactor * (clickPosScreenPoint_temp.x - gameWindowCenterPos.x), clickScreenPointMapCoordinate.y - scalingFactor * (clickPosScreenPoint_temp.y - gameWindowCenterPos.y));
@@ -215,10 +217,6 @@ Coordinate MapCoordinate::CalculateGameMapCenterCoordinateByMouseLocation(const 
 
 
 float CalculateInertiaStep(const HWND& gameHwnd,const vector<Point2f> captureCorners) {
-    double HorizontalFactor = 0;//水平缩放因子
-    double VerticaFactor = 0;//垂直缩放因子
-
-    CalculateWindowScalingFactors(gameHwnd, HorizontalFactor, VerticaFactor);
     // Preserve the legacy inertia calibration in its original 350-unit frame.
     const double sampleWidth = GameWindowsScreenData::mapCenterArea_Right.x - GameWindowsScreenData::mapCenterArea_Left.x;
     return static_cast<float>(((captureCorners[2].x - captureCorners[0].x) * 350.0 / sampleWidth - 350.0) / 16.75 + 18.78);

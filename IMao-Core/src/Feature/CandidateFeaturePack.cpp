@@ -120,17 +120,11 @@ cv::Mat MakeStableTerrainMask(const cv::Size& imageSize, int innerRadius, int ou
 }
 
 cv::Mat CropMinimapFromFullSnapshot(const cv::Mat& snapshot) {
-    // Keep field-reference packs aligned with the same 1600x900 HUD geometry
-    // used by ImageProcessing::CropToMinMapAreaImg. The source file remains
+    // Keep field-reference packs aligned with the same HUD geometry the runtime uses
+    // (ImageProcessing::CropToMinMapAreaImg through HudLayout.h). The source file remains
     // hash-verified before this transformation, so an attached full screenshot
     // is as auditable as the existing 184px reference fixtures.
-    const double horizontalFactor = static_cast<double>(snapshot.cols) / 1600.0;
-    const double verticalFactor = static_cast<double>(snapshot.rows) / 900.0;
-    const int left = cvRound(30.0 * horizontalFactor);
-    const int top = cvRound(23.0 * verticalFactor);
-    const int right = cvRound(184.0 * horizontalFactor);
-    const int bottom = cvRound(177.0 * verticalFactor);
-    const cv::Rect minimapRoi(left, top, right - left, bottom - top);
+    const cv::Rect minimapRoi = hud::MapBox(hud::Layout::For(snapshot.cols, snapshot.rows), hud::kMinimap);
     if (minimapRoi.width <= 0 || minimapRoi.height <= 0 || minimapRoi.x < 0 || minimapRoi.y < 0 ||
         minimapRoi.x + minimapRoi.width > snapshot.cols || minimapRoi.y + minimapRoi.height > snapshot.rows) {
         return {};

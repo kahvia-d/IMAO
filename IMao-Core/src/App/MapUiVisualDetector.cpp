@@ -1,34 +1,27 @@
 #include "MapUiVisualDetector.h"
 
+#include "../Coordinate/HudLayout.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <opencv2/imgproc.hpp>
 
 namespace {
-constexpr double kReferenceWidth = 1600.0;
-constexpr double kReferenceHeight = 900.0;
-
-cv::Rect ScaleCrop(const cv::Mat& snapshot, const RECT& clientRect) {
-    const double width = clientRect.right - clientRect.left;
-    const double height = clientRect.bottom - clientRect.top;
-    if (snapshot.empty() || width <= 0.0 || height <= 0.0) return {};
-
-    // 10, 52 to 82, 116 on the 1600x900 reference UI.  The slightly larger
-    // box admits the complete compass but excludes the gameplay player's
-    // yellow minimap arrow at the right edge.
-    const int left = static_cast<int>(10.0 * width / kReferenceWidth);
-    const int top = static_cast<int>(52.0 * height / kReferenceHeight);
-    const int right = static_cast<int>(82.0 * width / kReferenceWidth);
-    const int bottom = static_cast<int>(116.0 * height / kReferenceHeight);
-    const cv::Rect requested(left, top, std::max(0, right - left), std::max(0, bottom - top));
+// The box decides where the widget is; the frame's own size decides the scale. A frame that lags a
+// window resize is mapped with its own dimensions, which is what its pixels were drawn for.
+cv::Rect ScaleCrop(const cv::Mat& snapshot, const hud::Box& box) {
+    if (snapshot.empty()) return {};
+    const cv::Rect requested = hud::MapBox(hud::Layout::For(snapshot.cols, snapshot.rows), box);
     return requested & cv::Rect(0, 0, snapshot.cols, snapshot.rows);
 }
 }
 
 MapCompassDetection MapUiVisualDetector::DetectBigMapCompass(const cv::Mat& snapshot, const RECT& clientRect) {
     MapCompassDetection result;
-    const cv::Rect crop = ScaleCrop(snapshot, clientRect);
+    // The crop admits the complete compass but excludes the gameplay player's yellow minimap arrow at
+    // the right edge.
+    const cv::Rect crop = ScaleCrop(snapshot, hud::kBigMapCompass);
     if (crop.empty() || snapshot.channels() < 3) return result;
 
     cv::Mat bgr;
@@ -65,11 +58,12 @@ MapControlDetection MapUiVisualDetector::DetectBigMapControlLayout(const cv::Mat
     // Normalize only the narrow zoom-control strip, keeping this probe cheap
     // enough to run on the state thread. Mouse +/- and controller RT/LT use
     // the same zoom track, but have different glyphs and additional anchors.
-    const cv::Rect strip(cvRound(snapshot.cols * 1480.0 / kReferenceWidth),
-        cvRound(snapshot.rows * 235.0 / kReferenceHeight),
-        cvRound(snapshot.cols * 60.0 / kReferenceWidth),
-        cvRound(snapshot.rows * 410.0 / kReferenceHeight));
-    if ((strip & cv::Rect(0, 0, snapshot.cols, snapshot.rows)) != strip) return result;
+    // The strip is the reference box scaled by the client's HUD scale, so the
+    // 60x410 normalization below stays isotropic at every client size - the
+    // glyph shape tests were measured on that normalization.
+    const cv::Rect strip = ScaleCrop(snapshot, hud::kBigMapZoomStrip);
+    if (strip.width <= 0 || strip.height <= 0 ||
+        (strip & cv::Rect(0, 0, snapshot.cols, snapshot.rows)) != strip) return result;
     cv::Mat normalized;
     cv::resize(snapshot(strip), normalized, {60, 410}, 0, 0, cv::INTER_AREA);
     cv::Mat bgr;

@@ -1,4 +1,4 @@
-﻿#include "ImageProcessing.h"
+#include "ImageProcessing.h"
 #include "../Coordinate/locationCalculator/ScreenCoordinate.h"
 #include "../util.h"
 using namespace cv;
@@ -21,6 +21,11 @@ Mat ImageProcessing::imgToGray(Mat img) {
 }
 
 Mat ImageProcessing::cropImageWithRect(Mat img, Rect roi) {
+	// A capture can briefly lag the client rect while the game window resizes, and the callers treat
+	// an empty result as "no pixels this frame". Throwing out of the unchecked ROI constructor used to
+	// take the whole worker thread with it.
+	const Rect bounds(0, 0, img.cols, img.rows);
+	if (roi.width <= 0 || roi.height <= 0 || (roi & bounds) != roi) return {};
 	Mat croppedImage = img(roi);
 	return croppedImage;
 }
@@ -73,11 +78,7 @@ Mat ImageProcessing::centerAndScaleImage(Mat img, double scaleFactor) {
 Mat ImageProcessing::CropToShowWorldCoordinateAreaImg(const Mat& snapshot, const RECT& w_Rect) {
     Mat showWorldCoordinateAreaImg;
 
-	auto showWorldCoordinateAreaLocationData = ScreenCoordinate::SpecifyScreenCoordinate(w_Rect, GameWindowsScreenData::ShowWorldAreaScreenData);
-
-	Rect roi(showWorldCoordinateAreaLocationData.leftPoint.x,
-		 showWorldCoordinateAreaLocationData.topPoint.y, showWorldCoordinateAreaLocationData.rightPoint.x - showWorldCoordinateAreaLocationData.leftPoint.x,
-		showWorldCoordinateAreaLocationData.bottomPoint.y - showWorldCoordinateAreaLocationData.topPoint.y);
+	const Rect roi = ScreenCoordinate::ScreenRect(w_Rect, hud::kCoordinateReadout);
 
 	showWorldCoordinateAreaImg = ImageProcessing::cropImageWithRect(snapshot, roi);
 
@@ -99,17 +100,18 @@ Mat ImageProcessing::CropToShowWorldCoordinateAreaImg(const Mat& snapshot, const
 Mat ImageProcessing::CropToMinMapAreaImg(const Mat& snapshot, const RECT& w_Rect, Coordinate& minMapBottomPoint) {
 	Mat circularRegionImg;
 
-	auto minMapLocationData = ScreenCoordinate::SpecifyScreenCoordinate(w_Rect, GameWindowsScreenData::MinMapScreenData);
-
-	Rect roi(minMapLocationData.leftPoint.x,
-		 minMapLocationData.topPoint.y,
-		minMapLocationData.rightPoint.x - minMapLocationData.leftPoint.x,
-		minMapLocationData.bottomPoint.y - minMapLocationData.topPoint.y);
+	const Rect roi = ScreenCoordinate::ScreenRect(w_Rect, hud::kMinimap);
 	Mat croppedImage = ImageProcessing::cropImageWithRect(snapshot, roi);
-	Point center(croppedImage.rows / 2, croppedImage.cols / 2); int radius = croppedImage.cols / 2 - 3;
+	if (croppedImage.empty()) return circularRegionImg;
+	// The circle has to be described in the crop's own terms: centre = (columns/2, rows/2) and a
+	// radius the shorter side can hold. Swapping the two and taking the radius from the columns alone
+	// is invisible on a square crop and erases the bottom of the minimap on any other one (a
+	// 2560x1600 client crops 246x246 now, but a stale client rect or a future layout is not square).
+	Point center(croppedImage.cols / 2, croppedImage.rows / 2);
+	int radius = (std::min)(croppedImage.cols, croppedImage.rows) / 2 - 3;
 	circularRegionImg = ImageProcessing::extractCircularRegionFromImage(croppedImage, center, radius);
 
-	minMapBottomPoint = minMapLocationData.bottomPoint;
+	minMapBottomPoint = Coordinate(roi.x + roi.width / 2, roi.y + roi.height);
 	return circularRegionImg;
 }
 
@@ -126,12 +128,7 @@ Mat ImageProcessing::CropToMinMapAreaImg(const Mat& snapshot, const RECT& w_Rect
 
 Mat ImageProcessing::CropToRegion_IconTask(const Mat& snapshot,const RECT& w_Rect) {
 
-	auto IconTask_SpecifyScreenData = ScreenCoordinate::SpecifyScreenCoordinate(w_Rect, GameWindowsScreenData::IconTask_ScreenData);
-
-	Rect roi(IconTask_SpecifyScreenData.leftPoint.x,
-		IconTask_SpecifyScreenData.topPoint.y,
-		IconTask_SpecifyScreenData.rightPoint.x - IconTask_SpecifyScreenData.leftPoint.x,
-		IconTask_SpecifyScreenData.bottomPoint.y - IconTask_SpecifyScreenData.topPoint.y);
+	const Rect roi = ScreenCoordinate::ScreenRect(w_Rect, hud::kTaskIcon);
 	Mat croppedImage = ImageProcessing::cropImageWithRect(snapshot, roi);
 
 	return croppedImage;
@@ -139,12 +136,7 @@ Mat ImageProcessing::CropToRegion_IconTask(const Mat& snapshot,const RECT& w_Rec
 
 Mat ImageProcessing::CropToRegion_IconWavePlateCrystal(const Mat& snapshot, const RECT& w_Rect) {
 
-	auto IconWavePlateCrystal_SpecifyScreenData = ScreenCoordinate::SpecifyScreenCoordinate(w_Rect, GameWindowsScreenData::IconWavePlateCrystal_ScreenData);
-
-	Rect roi(IconWavePlateCrystal_SpecifyScreenData.leftPoint.x,
-		IconWavePlateCrystal_SpecifyScreenData.topPoint.y,
-		IconWavePlateCrystal_SpecifyScreenData.rightPoint.x - IconWavePlateCrystal_SpecifyScreenData.leftPoint.x,
-		IconWavePlateCrystal_SpecifyScreenData.bottomPoint.y - IconWavePlateCrystal_SpecifyScreenData.topPoint.y);
+	const Rect roi = ScreenCoordinate::ScreenRect(w_Rect, hud::kWavePlateCrystal);
 	Mat croppedImage = ImageProcessing::cropImageWithRect(snapshot, roi);
 	
 	return croppedImage;
@@ -152,12 +144,7 @@ Mat ImageProcessing::CropToRegion_IconWavePlateCrystal(const Mat& snapshot, cons
 
 Mat ImageProcessing::CropToMapCenterArea(const Mat& snapshot, const RECT& w_Rect) {
 	
-	auto MapCenterAreaData = ScreenCoordinate::SpecifyScreenCoordinate(w_Rect, GameWindowsScreenData::mapCenterAreaSrceenData);
-
-	Rect roi(MapCenterAreaData.leftPoint.x,
-		MapCenterAreaData.topPoint.y,
-		MapCenterAreaData.rightPoint.x - MapCenterAreaData.leftPoint.x,
-		MapCenterAreaData.bottomPoint.y - MapCenterAreaData.topPoint.y);
+	const Rect roi = ScreenCoordinate::ScreenRect(w_Rect, hud::kMapCenterArea);
 	Mat croppedImage = ImageProcessing::cropImageWithRect(snapshot, roi);
 
 	return croppedImage;

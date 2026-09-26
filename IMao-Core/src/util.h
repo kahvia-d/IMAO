@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <opencv2/opencv.hpp>
 #include "pch.h"
 #include <vector>
@@ -43,8 +43,6 @@ HWND GetWindowHandleByTitle(const wchar_t* lpClassName, const wchar_t* windowTit
 
 bool CalculateNonClientAreaSize(const HWND& hwnd, NonClientRegion& nonClientRegion);
 
-bool CalculateWindowScalingFactors(const HWND& hwnd,double& HorizontalFactor,double& VerticaFactor);
-bool CalculateWindowScalingFactors(const RECT& w_Rect, double& HorizontalFactor, double& VerticaFactor);
 bool IsWindowFocused(HWND windowHwnd);
 
 WindowCorners GetWindowClientCorners(HWND hwnd);

@@ -104,7 +104,7 @@ std::string DescribeRect(const RECT& rect) {
 // one: the window then holds everything that is drawn, and the minimal style keeps the window at the
 // minimap alone with the state shown as a ball instead.
 RECT MiniOverlayClientRect(const RECT& gameClient, bool withStatusBar) {
-    const auto area = ScreenCoordinate::SpecifyScreenCoordinate(gameClient, GameWindowsScreenData::MinMapScreenData);
+    const auto area = ScreenCoordinate::SpecifyScreenCoordinate(gameClient, hud::kMinimap);
     const double padding = std::clamp(gameClient.right * 0.025, 30.0, 60.0);
     double left = std::min(area.leftPoint.x, area.rightPoint.x) - padding;
     double top = std::min(area.topPoint.y, area.bottomPoint.y) - padding;
@@ -897,7 +897,7 @@ int ImGuiOverWindows::start()
                 // radius follows the client width like the marker radius does, so it stays proportionate
                 // at every resolution and DPI, and the corner it sits in is inside the padding the window
                 // already has.
-                const auto minimap = ScreenCoordinate::SpecifyScreenCoordinate(GameRect, GameWindowsScreenData::MinMapScreenData);
+                const auto minimap = ScreenCoordinate::SpecifyScreenCoordinate(GameRect, hud::kMinimap);
                 const float ball = std::max(8.0f, static_cast<float>(GameRect.right) * 0.011f / 2.0f);
                 RuntimeStatusBar::DrawCompact(
                     static_cast<float>(std::max(minimap.leftPoint.x, minimap.rightPoint.x)) - ball,
