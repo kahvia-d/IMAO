@@ -528,9 +528,10 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
     auto result = markerStore->Execute(normalized);
     if (result.value("accepted", false)) {
         if (type == "markerSetCompletion" || type == "markerApplyRemote" || type == "markerInitializeSync" ||
-            type == "markerResolveConflict" || type == "markerCopyLocalProgress") {
+            type == "markerResolveConflict" || type == "markerCopyLocalProgress" || type == "markerImportLegacyProgress") {
             json event = {{"type", "markerCompletionChanged"}, {"profileId", markerStore->Profile()},
-                {"source", type == "markerSetCompletion" || type == "markerCopyLocalProgress" ? "local" : "cloud"},
+                {"source", type == "markerSetCompletion" || type == "markerCopyLocalProgress" ||
+                    type == "markerImportLegacyProgress" ? "local" : "cloud"},
                 {"revision", result.at("data").value("revision", std::uint64_t{})}};
             if (result.at("data").contains("point")) event["point"] = result.at("data").at("point");
             for (const auto& [name, value] : guideContext.items()) event[name] = value;

@@ -26,6 +26,24 @@ internal static class LocalAccountCatalogTests
         check(freshReload.Accounts.Count == 1 && freshReload.ActiveId == "local" && freshReload.Warning.Length == 0,
             "the seeded list round trips without a warning");
 
+        // The settings list needs per-ledger counts, and describing one must never throw.
+        string describedProfiles = Path.Combine(directory, "describe", "profiles");
+        Directory.CreateDirectory(describedProfiles);
+        File.WriteAllText(Path.Combine(describedProfiles, "local.json"),
+            "{\"schemaVersion\":2,\"profileId\":\"local\",\"points\":{\"8:a\":{\"completed\":true}," +
+            "\"8:b\":{\"completed\":false},\"8:c\":{\"completed\":true}}}");
+        var describing = new LocalAccountCatalog(Path.Combine(directory, "describe", "accounts.json"), describedProfiles);
+        var summary = describing.Describe("local");
+        check(summary.Completed == 2 && summary.Total == 3 && summary.WrittenAt is not null,
+            "a ledger reports how much progress it holds");
+        var missingSummary = describing.Describe("missing-ledger");
+        check(missingSummary.Completed == 0 && missingSummary.Total == 0 && missingSummary.WrittenAt is null &&
+            describing.Describe("../escape").Total == 0,
+            "describing an unknown or invalid ledger reports empty instead of failing");
+        File.WriteAllText(Path.Combine(describedProfiles, "local.json"), "not json at all");
+        check(describing.Describe("local").Total == 0,
+            "a damaged progress document is reported as empty instead of failing the settings page");
+
         // The upgrade path: progress files plus the historical account metadata.
         string upgrade = Path.Combine(directory, "upgrade");
         string profiles = Path.Combine(upgrade, "profiles");

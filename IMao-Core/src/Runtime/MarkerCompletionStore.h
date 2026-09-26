@@ -82,6 +82,49 @@ public:
                 Commit(next);
                 return Result(Snapshot(next));
             }
+            // The pre-rewrite record (next to the program, copied into the user directory
+            // on start-up) is only ever imported into the "local" ledger while loading.
+            // This is the explicit version: the player picked a ledger and asked to bring
+            // those old completions into it. They are queued for upload, because that is
+            // what keeps them out of the "the cloud never had this" case, and importing
+            // twice imports nothing the second time. The original file is never modified.
+            // See Docs/LocalAccounts_20260926.md section 5.4.
+            if (type == "markerImportLegacyProgress") {
+                const auto legacy = root / "account_1.json";
+                if (!std::filesystem::exists(legacy)) return Failure("no-legacy-record");
+                std::ifstream input(legacy);
+                auto old = Json::parse(input);
+                if (!old.is_object()) return Failure("invalid-legacy-points");
+                const auto revision = Advance(next);
+                std::int64_t imported = 0, alreadyCompleted = 0, skipped = 0;
+                for (const auto& [scene, groups] : old.items()) {
+                    const int state = SceneState(scene);
+                    if (!groups.is_object() || state == 0) continue;
+                    for (const auto& [name, points] : groups.items()) {
+                        if (!points.is_array() || name.empty()) continue;
+                        for (const auto& entry : points) {
+                            if (!entry.contains("id") || !entry.at("id").is_string()) continue;
+                            const auto id = entry.at("id").get<std::string>();
+                            if (id.empty() || id.size() > 128) { ++skipped; continue; }
+                            Json key = {{"sceneName", scene}, {"nameId", name}, {"stateId", state}, {"pointId", id}};
+                            auto* existing = Find(next, key);
+                            if (existing && existing->value("completed", false)) { ++alreadyCompleted; continue; }
+                            auto& record = FindOrCreate(next, key);
+                            record["completed"] = true;
+                            record["localTouched"] = true;
+                            record["pending"] = true;
+                            record["revision"] = revision;
+                            record["acknowledgedRevision"] = std::uint64_t{};
+                            ++imported;
+                        }
+                    }
+                }
+                if (imported == 0) return Result({{"profileId", profile}, {"revision", document.value("revision", std::uint64_t{})},
+                    {"imported", imported}, {"alreadyCompleted", alreadyCompleted}, {"skipped", skipped}});
+                Commit(next);
+                return Result({{"profileId", profile}, {"revision", next.at("revision")},
+                    {"imported", imported}, {"alreadyCompleted", alreadyCompleted}, {"skipped", skipped}});
+            }
             if (type == "markerResolveConflict") {
                 Json key = command;
                 ValidatePoint(key, false);

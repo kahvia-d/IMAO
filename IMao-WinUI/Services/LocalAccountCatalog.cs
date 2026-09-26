@@ -24,6 +24,7 @@ public sealed record LocalAccount(string Id, string Name, string KuroAccountId, 
 public sealed class LocalAccountCatalog
 {
     internal const int MaximumBytes = 64 * 1024;
+    internal const int MaximumProgressBytes = 8 * 1024 * 1024;
     internal const int MaximumAccounts = 32;
     internal const int MaximumNameLength = 40;
     internal const int MaximumKuroAccountLength = 24;
@@ -66,6 +67,39 @@ public sealed class LocalAccountCatalog
 
     /// <summary>The progress document this ledger reads and writes.</summary>
     public string ProgressPath(string id) => System.IO.Path.Combine(ProfilesDirectory, id + ".json");
+
+    /// <summary>
+    /// How much progress a ledger holds, for the settings list: a ledger that has no document
+    /// yet is empty, and one whose document cannot be read is reported as empty instead of
+    /// failing the page. Nothing here writes.
+    /// </summary>
+    public (int Completed, int Total, DateTimeOffset? WrittenAt) Describe(string id)
+    {
+        if (!IsValidId(id)) return (0, 0, null);
+        string progressPath = ProgressPath(id);
+        try
+        {
+            var info = new FileInfo(progressPath);
+            if (!info.Exists || info.Length > MaximumProgressBytes) return (0, 0, info.Exists ? info.LastWriteTimeUtc : null);
+            using var stream = new FileStream(progressPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var document = JsonDocument.Parse(stream);
+            if (!document.RootElement.TryGetProperty("points", out var points) || points.ValueKind != JsonValueKind.Object)
+                return (0, 0, info.LastWriteTimeUtc);
+            int total = 0, completed = 0;
+            foreach (var point in points.EnumerateObject())
+            {
+                ++total;
+                if (point.Value.ValueKind == JsonValueKind.Object &&
+                    point.Value.TryGetProperty("completed", out var flag) && flag.ValueKind == JsonValueKind.True) ++completed;
+            }
+            return (completed, total, info.LastWriteTimeUtc);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or
+            ArgumentException or NotSupportedException)
+        {
+            return (0, 0, null);
+        }
+    }
 
     public static bool IsValidId(string? id) => !string.IsNullOrEmpty(id) && id.Length <= MaximumIdLength &&
         id.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_');

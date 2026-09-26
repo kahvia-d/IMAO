@@ -223,8 +223,17 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         finally { lifecycleLock.Release(); }
     }
 
-    private async Task<JsonElement> SendMarkerLockedAsync(Session session, string operation, object arguments, CancellationToken cancellationToken)
-    {
+    /// <summary>
+    /// Brings the pre-rewrite record (SavedPoints/account_1.json) into the ledger the map is
+    /// showing, queueing those completions for upload. Loading only ever imports that file
+    /// into the "local" ledger, so this is the only route an account ledger has to it. The
+    /// old file is read and never modified; importing twice imports nothing.
+    /// See Docs/LocalAccounts_20260926.md section 5.4.
+    /// </summary>
+    public Task<JsonElement> ImportLegacyPointsAsync(CancellationToken cancellationToken = default) =>
+        ExecuteMarkerAsync("markerImportLegacyProgress", new { profileId = desiredMarkerProfile }, cancellationToken);
+
+    private async Task<JsonElement> SendMarkerLockedAsync(Session session, string operation, object arguments, CancellationToken cancellationToken)    {
         string id = Guid.NewGuid().ToString("N");
         var command = JsonSerializer.Deserialize<Dictionary<string, object?>>(JsonSerializer.Serialize(arguments)) ?? new();
         command["type"] = operation;

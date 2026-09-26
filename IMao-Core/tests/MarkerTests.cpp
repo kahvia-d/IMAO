@@ -1,6 +1,7 @@
 #include "Runtime/MarkerCompletionStore.h"
 #include "Runtime/MarkerLayout.h"
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 #include <chrono>
 
@@ -14,6 +15,10 @@ static Json Send(MarkerCompletionStore& store, std::string type, Json fields = J
     const auto result = store.Execute(fields);
     Require(result.value("accepted", false), result.value("message", "failed").c_str());
     return result.at("data");
+}
+static std::string ReadText(const std::filesystem::path& path) {
+    std::ifstream input(path, std::ios::binary);
+    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 }
 
 int main() {
@@ -171,6 +176,43 @@ int main() {
             Send(legacy, "markerSelectProfile", {{"profileId", "legacy_import"}});
             Send(legacy, "markerApplyRemote", {{"stateId", 8}, {"mode", "import"}, {"remoteIds", Json::array()}});
             Require(!legacy.Completed("World", "test", "never-uploaded"), "an explicit import must still follow the cloud");
+        }
+        {
+            // Docs/LocalAccounts_20260926.md section 5.4: the explicit import brings the
+            // pre-rewrite record into the ledger the player chose and queues those
+            // completions for upload. It is the only route an account ledger has to that
+            // file, because loading imports it into "local" alone. Importing twice imports
+            // nothing, and the original file is never modified.
+            const auto importRoot = root / "legacy-import";
+            std::filesystem::create_directories(importRoot);
+            const std::string legacyText =
+                R"({"World":{"cx_03":[{"id":"1523072790818045952"},{"id":"1523072790818045953"}]},"Tethys":{"cx_03":[{"id":"9001"}]},"NotAScene":{"cx_03":[{"id":"5"}]}})";
+            WriteTextAtomically(importRoot / "account_1.json", legacyText);
+            MarkerCompletionStore imported(importRoot);
+            Send(imported, "markerSelectProfile", {{"profileId", "kuro_910000000001"}});
+            Require(!imported.Completed("World", "cx_03", "1523072790818045952"),
+                "an account ledger never inherits the old record while loading");
+            const auto first = Send(imported, "markerImportLegacyProgress");
+            Require(first.at("imported").get<int>() == 3 && first.at("alreadyCompleted").get<int>() == 0 &&
+                first.at("skipped").get<int>() == 0,
+                "the explicit import brings every known-scene completion into the chosen ledger");
+            Require(imported.Completed("World", "cx_03", "1523072790818045952") && imported.Completed("Tethys", "cx_03", "9001") &&
+                !imported.Completed("NotAScene", "cx_03", "5"), "an unknown scene stays out of the import");
+            Require(Send(imported, "markerGetOutbox").at("operations").size() == 3,
+                "imported completions are queued for upload instead of waiting around to be cancelled");
+            const auto importedPoint = Send(imported, "markerGetSnapshot", {{"stateId", 8}, {"pointId", "1523072790818045952"}})
+                .at("points").at(0);
+            Require(importedPoint.at("pending").get<bool>() && importedPoint.at("localTouched").get<bool>(),
+                "an imported point carries the upload identity the synchronization needs");
+            const auto second = Send(imported, "markerImportLegacyProgress");
+            Require(second.at("imported").get<int>() == 0 && second.at("alreadyCompleted").get<int>() == 3,
+                "importing the same record twice imports nothing");
+            Require(ReadText(importRoot / "account_1.json") == legacyText, "the old record file is never modified");
+            MarkerCompletionStore withoutRecord(root / "no-legacy-record");
+            Require(withoutRecord.Execute({{"type", "markerImportLegacyProgress"}}).value("message", "") == "no-legacy-record",
+                "importing without an old record is refused with a reason");
+            Require(imported.Execute({{"type", "markerImportLegacyProgress"}, {"profileId", "kuro_910000000004"}}).value("message", "") == "profile-mismatch",
+                "only the ledger the map shows can import into itself");
         }
         std::vector<MarkerLayoutPoint> points = {{"a", 5, 5, 0}, {"b", 6, 6, 1}, {"c", 150, 150, 2}};
         auto groups = BuildMarkerLayout(points, 30);

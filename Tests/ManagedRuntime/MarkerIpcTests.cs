@@ -112,6 +112,24 @@ internal static class MarkerIpcTests
                 local = await Call(core, "markerGetSnapshot", new { profileId = "local" });
                 check(Point(local, FirstPoint).GetProperty("completed").GetBoolean() && local.GetProperty("total").GetInt32() == 1,
                     "edits to another profile leave migrated local progress unchanged");
+                // The pre-rewrite record reaches an account ledger only through the explicit
+                // import, which is exactly what a player who never used the local ledger needs.
+                // The imported completion is queued for upload, and the old file is untouched.
+                const string importProfile = "kuro_910000000009";
+                await Call(core, "markerSelectProfile", new { profileId = importProfile });
+                var beforeImport = await Call(core, "markerGetSnapshot", new { profileId = importProfile, stateId = 8, pointId = FirstPoint });
+                var imported = await Call(core, "markerImportLegacyProgress", new { profileId = importProfile });
+                var afterImport = await Call(core, "markerGetSnapshot", new { profileId = importProfile, stateId = 8, pointId = FirstPoint });
+                check(beforeImport.GetProperty("points").GetArrayLength() == 0 && imported.GetProperty("imported").GetInt32() == 1 &&
+                    Point(afterImport, FirstPoint).GetProperty("completed").GetBoolean() &&
+                    Point(afterImport, FirstPoint).GetProperty("pending").GetBoolean() && File.ReadAllText(legacyPath) == legacyBytes,
+                    "the explicit import brings the pre-rewrite record into an account ledger and queues it for upload");
+                var importOutbox = await Call(core, "markerGetOutbox", new { profileId = importProfile });
+                check(importOutbox.GetProperty("total").GetInt32() == 1,
+                    "an imported completion waits in the outbox for the next synchronization");
+                var repeatedImport = await Call(core, "markerImportLegacyProgress", new { profileId = importProfile });
+                check(repeatedImport.GetProperty("imported").GetInt32() == 0 && repeatedImport.GetProperty("alreadyCompleted").GetInt32() == 1,
+                    "importing the same old record twice imports nothing through the real host");
                 await Call(core, "markerSelectProfile", new { profileId = Profile });
                 var beforeRestart = await Call(core, "markerGetSnapshot", new { profileId = Profile });
                 string profilePath = Path.Combine(savedPoints, "profiles", Profile + ".json");
