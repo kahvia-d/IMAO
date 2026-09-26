@@ -2,7 +2,7 @@
 
 - 日期：2026-09-26
 - 分支：`feat/local-accounts`（起点 `main` = `28e6065`）
-- 状态：**待确认，未开始实现**。本文件只写设计与判据，不含代码改动。
+- 状态：**已实现（阶段 A–E，见文末「实现状态」）**；本文档保留为设计与判据记录。
 - 相关历史文档：`Docs/KuroProgressSyncPlan_20260916.md`（已归档于 `Docs/archive/`）、`Docs/archive/MarkerFeatures_20260908.md`
 
 ---
@@ -155,7 +155,7 @@ if (profile == "local" && std::filesystem::exists(legacy)) { ...导入... }
 |---|---|---|
 | `id` | `[A-Za-z0-9_-]{1,96}`，**不可修改** | 直接当文件名用；与现有原生 `ValidateProfile`、`KuroTokenVault.ValidateProfile` 规则一致 |
 | `name` | 去空白后 1~40 字符，允许中文/emoji，允许重名（UI 提示） | 玩家自己的叫法；不进文件名，所以不限制字符集 |
-| `kuroAccountId` | 空（未绑定）或 6~29 位数字；**全局唯一** | 与现有 `LocalMarkerProfileSelection` 认可的长度范围一致 |
+| `kuroAccountId` | 空（未绑定）或 1~24 位数字；**全局唯一** | 与现有 `LocalMarkerProfileSelection` 认可的长度范围一致 |
 | 数量 | ≤ 32 本 | 有界，避免异常目录拖慢启动 |
 | 文件 | ≤ 64 KiB，原子替换写入 | 与项目其它用户数据一致 |
 
@@ -372,3 +372,46 @@ if (profile == "local" && std::filesystem::exists(legacy)) { ...导入... }
 1. **已经被 ② 擦掉的记录**：本设计能防止将来再发生，但擦掉的勾需要另外的手段找回（`account_1.json` 与各 `profiles\*.json` 都还在盘上，"从旧文件重新导入 + 重新上传"是可行路径，需要单独设计一次"进度修复"流程）。
 2. **`markerResolveConflict` / `markerSetSyncState` 没有生产调用者**：冲突在当前流程里永远不会被玩家决策，预览里也不显示。属于后续清理项。
 3. **`markerCopyLocalProgress` 同样没有调用者**：本设计的"旧记录导入"会替换它的用途，实现时应该明确取舍（接上界面或删除）。
+
+---
+
+## 实现状态（2026-09-26 完成，分支 `feat/local-accounts`）
+
+| 提交 | 阶段 | 内容 |
+|---|---|---|
+| `04bfd3f` | A（§6.2/6.3/6.4） | `DesiredCompletion()` 成为预览与应用的唯一判据；预览新增 `willQueue`；托管精确计数 + "将被取消"列；同步不再调用 `markerSelectProfile` |
+| `a3bd2b5` | B（§4.1/5/8） | `IMao-WinUI/Services/LocalAccountCatalog.cs` + 启动按账本目录选当前账本 |
+| `407a34c` | C（§5.4） | 原生 `markerImportLegacyProgress` + `Describe()` 计数 |
+| `9e9618d` | D（§5/6.2/7） | 设置页"本地点位账本"区（列表/切换/新建/改名/绑定/删除/导入/体检）+ 同步目标改成当前账本 |
+| `b3eefbf` | E（§4.3/7/8） | 凭据记录 `accountId` 并校验；旧元数据写回 `ActiveProfile`；账本体检导出 |
+
+### 与本文档的差异（实现时的决定，评审时请看这里）
+
+1. **"账本整理"不是启动弹窗，而是"自动无损播种 + 设置页内的账本区"**（§5.3 原写一屏对话框）。
+   理由：启动弹窗需要动 WinUI 启动流程且难以自动化验证；播种本身不合并、不改名、不删除，与弹窗等价，
+   而改名/绑定/导入/删除都在设置页里可反复操作。**功能上没有缺口，交互形式与文档不同。**
+2. **同步目标不再是手填的"同步档案 ID"**：它是当前账本，凭据同样按账本 id 存放；`kuroSyncProfileId`
+   这个设置项已删除（旧值不再使用）。历史玩家的账本 id 恰好就是 `kuro_<账号>`，因此旧凭据文件仍然对得上。
+3. **`accountId` 只有在新版扩展连接时才会写入**；旧扩展不发送它时按"未知"处理，不视为冲突（§4.3 的兼容规则）。
+4. **删除账本会把进度、凭据、路线一起移到 `SavedPoints\deleted\<时间>-<id>\`**，不是只移进度文件。
+5. **默认账本的显示名是"默认"**（id 仍是 `local`）。
+
+### 尚未做（有意留下）
+
+- **未实机验收**：16:10/4K 那类真机检查这里同样适用——本功能需要在真实账号上跑一次"切换账本 → 预览 → 应用 → 断网 → 重启"的完整路径，本分支只做了仓库内测试。
+- **§8 的"批量上传未实测"仍然成立**：旧记录导入可能一次产生几百个 `pending`，写接口的限流仍需实测账号验证。
+- **死命令未清理**：`markerCopyLocalProgress`、`markerResolveConflict`、`markerSetSyncState` 仍无生产调用者（附录 B）。
+- **§9 里没写测试的部分**：两本账本"路线/攻略窗口互不串"只有既有回归覆盖，没有针对新账本列表的新增用例；
+  "同步过程中玩家切换账本"只有 `EnsureActiveProfileAsync` 的前置校验，没有并发用例。
+
+### 验证证据
+
+| 项 | 结果 |
+|---|---|
+| 原生 `IMaoMarkerTests`（含 §6.3 基线回归与 §5.4 导入） | 通过 |
+| 原生 `IMaoOptimizationTests` | 通过 |
+| 托管 `Tests/ManagedRuntime`（含账本目录 19 条、凭据 6 条、真实 CoreHost 导入 4 条） | 全部通过 |
+| 全量 `scripts/Test-Runtime.ps1` | 通过（证据 `out\phase-final-runtime`） |
+| `IMao-WinUI.exe`（XAML + code-behind）Release 构建（`-p:Platform=x64`） | 通过，无新增警告 |
+| `tools/KuroSyncBridge` 构建 | 通过 |
+| 探针 `out/analysis/marker-legacy-probe.cpp` | [A]~[E] 五景复核通过 |
