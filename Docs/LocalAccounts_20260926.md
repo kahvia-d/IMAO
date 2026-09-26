@@ -412,6 +412,7 @@ if (profile == "local" && std::filesystem::exists(legacy)) { ...导入... }
 | 原生 `IMaoOptimizationTests` | 通过 |
 | 托管 `Tests/ManagedRuntime`（含账本目录 19 条、凭据 6 条、真实 CoreHost 导入 4 条） | 全部通过 |
 | 全量 `scripts/Test-Runtime.ps1` | 通过（证据 `out\phase-final-runtime`） |
-| `IMao-WinUI.exe`（XAML + code-behind）Release 构建（`-p:Platform=x64`） | 通过，无新增警告 |
+| `IMao-WinUI.exe`（XAML + code-behind）构建 | 通过，无新增警告。⚠️ **要双击启动必须用自包含构建**（`-r win-x64 --self-contained true`）；不带 RID 的 `dotnet build -p:Platform=x64` 产出的是框架依赖版，会被 `.NET Runtime` 拒绝启动 |
+| 实机首次启动（`out\map-test`，2026-09-26 17:13） | 通过：`accounts.json` 按设计播种（`kuro_10383865` 为当前账本 + `local`），`kuromap-accounts.json` 只被写回 `ActiveProfile` 且其余字段保留，app 与 CoreHost 均正常运行 |
 | `tools/KuroSyncBridge` 构建 | 通过 |
 | 探针 `out/analysis/marker-legacy-probe.cpp` | [A]~[E] 五景复核通过 |
