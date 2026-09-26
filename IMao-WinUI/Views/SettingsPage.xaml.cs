@@ -844,9 +844,9 @@ public sealed partial class SettingsPage : Page
             }
             LocalAccountImportButton.Visibility = File.Exists(Path.Combine(UserDataPaths.SavedPoints, "account_1.json"))
                 ? Visibility.Visible : Visibility.Collapsed;
-            foreach (var width in new[] { GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto, GridLength.Auto })
+            foreach (var width in new[] { GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto })
                 LocalAccountGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
-            var headers = new[] { "", "名称", "绑定库街区账号", "已完成", "最后使用" };
+            var headers = new[] { "", "名称", "Kuro ID", "已完成" };
             AddLocalAccountRow(headers
                 .Select(text => (FrameworkElement)new TextBlock
                 {
@@ -855,7 +855,7 @@ public sealed partial class SettingsPage : Page
             string activeId = catalog.ActiveId;
             foreach (var account in catalog.Accounts)
             {
-                var (completed, total, writtenAt) = catalog.Describe(account.Id);
+                var (completed, _, _) = catalog.Describe(account.Id);
                 var pick = new RadioButton
                 {
                     GroupName = "LocalRecordBook", Tag = account.Id, IsChecked = account.Id == activeId,
@@ -864,9 +864,8 @@ public sealed partial class SettingsPage : Page
                 pick.Checked += LocalAccountPick_Checked;
                 AddLocalAccountRow(pick,
                     LocalAccountCell(account.Name, wrap: true),
-                    LocalAccountCell(account.IsBound ? account.KuroAccountId : "未绑定"),
-                    LocalAccountCell($"{completed}/{total}"),
-                    LocalAccountCell(writtenAt is { } stamp ? stamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "—"));
+                    LocalAccountCell(account.IsBound ? account.KuroAccountId : "—"),
+                    LocalAccountCell(completed.ToString()));
             }
         }
         finally { renderingLocalAccounts = false; }
