@@ -235,17 +235,26 @@ foreach ($group in $groups | Sort-Object Name) {
     # descriptor position, so it has to be built from the same file, in the same order, that the
     # runtime loads. (The two agree today - verified element-wise for jinzhou on 2026-09-26 - but that
     # is the converter's behaviour to keep, not something this script should depend on.)
+    # The occupancy and shared grids are computed here rather than further down because the own-art
+    # mask needs `shared`: ground the layer copied from the surface is not art the layer drew, and
+    # counting it as such put the whole-game false-positive rate at 68% for 下层金库 and 19% for
+    # 拉海洛 (measured 2026-09-26, out/sweep-report.txt).
     $tileOverlays = @{}
+    $tileOccupancy = @{}
+    $tileShared = @{}
     foreach ($tile in $group.Group) {
+        $key = "$([int]$tile.x),$([int]$tile.y)"
         $overlayPath = Join-Path $LayerArchiveRoot "$tileVersion/$state/$($tile.overlay)"
-        if (Test-Path -LiteralPath $overlayPath) {
-            $tileOverlays["$([int]$tile.x),$([int]$tile.y)"] = $overlayPath
-        }
+        if (-not (Test-Path -LiteralPath $overlayPath)) { continue }
+        $surfacePath = Join-Path $tileRoot "$state/${state}_$([int]$tile.x)_$([int]$tile.y).png"
+        $tileOverlays[$key] = $overlayPath
+        $tileOccupancy[$key] = Get-OccupancyHex $overlayPath
+        $tileShared[$key] = Get-SharedHex $overlayPath $surfacePath
     }
     $ownMask = $null
     if ($tileOverlays.Count -gt 0) {
         $ownMask = Get-OwnArtMask -Points (Read-ImfKeypoints -Path $imf) -Transform $transform `
-            -TileOverlays $tileOverlays -AlphaCache $alphaCache
+            -TileOverlays $tileOverlays -AlphaCache $alphaCache -TileSharedGrids $tileShared -GridSize $gridSize
     }
     [void]$entries.Add([ordered]@{
         layerId = $layerId; floorId = $floorId
@@ -254,16 +263,16 @@ foreach ($group in $groups | Sort-Object Name) {
         ownMask = $(if ($null -ne $ownMask) { $ownMask.Hex } else { '' })
         ownMaskKeypoints = $(if ($null -ne $ownMask) { $ownMask.Total } else { 0 })
         tiles = @($group.Group | ForEach-Object {
-            $overlayPath = Join-Path $LayerArchiveRoot "$tileVersion/$state/$($_.overlay)"
-            $surfacePath = Join-Path $tileRoot "$state/${state}_$([int]$_.x)_$([int]$_.y).png"
-            $occupancy = if (Test-Path -LiteralPath $overlayPath) { Get-OccupancyHex $overlayPath } else { '' }
-            $shared = if (Test-Path -LiteralPath $overlayPath) { Get-SharedHex $overlayPath $surfacePath } else { '' }
-            [ordered]@{ x = [int]$_.x; y = [int]$_.y; occupancy = $occupancy; shared = $shared }
+            $key = "$([int]$_.x),$([int]$_.y)"
+            [ordered]@{ x = [int]$_.x; y = [int]$_.y
+                occupancy = $(if ($tileOccupancy.ContainsKey($key)) { $tileOccupancy[$key] } else { '' })
+                shared = $(if ($tileShared.ContainsKey($key)) { $tileShared[$key] } else { '' }) }
         })
     })
     $ownShare = if ($null -ne $ownMask -and $ownMask.Total -gt 0) { 100.0 * $ownMask.Own / $ownMask.Total } else { 0 }
-    Write-Host ("  {0,-16} {1,-22} keypoints={2,6}  ownArt={3,6} ({4,5:N1}%)  tiles={5}" -f `
-            $tag, $first.floorName, $keypoints, $(if ($null -ne $ownMask) { $ownMask.Own } else { 0 }), $ownShare, $group.Count)
+    Write-Host ("  {0,-16} {1,-22} keypoints={2,6}  ownArt={3,6} ({4,5:N1}%)  copiedDropped={5,5}  tiles={6}" -f `
+            $tag, $first.floorName, $keypoints, $(if ($null -ne $ownMask) { $ownMask.Own } else { 0 }), $ownShare,
+        $(if ($null -ne $ownMask) { $ownMask.Copied } else { 0 }), $group.Count)
 }
 
 $index = [ordered]@{

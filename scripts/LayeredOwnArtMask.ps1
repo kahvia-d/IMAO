@@ -106,9 +106,15 @@ function Get-OverlayPixel {
     return [pscustomobject]@{ TileX = [int]$tileX; TileY = [int]$tileY; PixelX = $pixelX; PixelY = $pixelY }
 }
 
-# The heart of it: one bit per keypoint, set where the floor's own overlay draws. Packed four bits to
-# a hex nibble, first keypoint in the lowest bit - the same packing as the occupancy grid, and the
-# same one DecodeOwnMask reads.
+# The heart of it: one bit per keypoint, set where the floor's own overlay draws AND the spot is not
+# ground the layer copied from the surface. Packed four bits to a hex nibble, first keypoint in the
+# lowest bit - the same packing as the occupancy grid, and the same one DecodeOwnMask reads.
+#
+# The `shared` veto is not an optimisation. 下层金库's 1楼 is 27-32% a copy of the surface and 拉海洛's
+# 星炬学院 floors are 58-84%, so for those floors most of what the overlay draws IS the surface's own
+# picture; counting it as "the layer's own" put the whole-game scan's false-positive rate at 68% for
+# 下层金库 and 19% for 拉海洛 (measured 2026-09-26, out/sweep-report.txt). What the identity vote has
+# to be built on is the art the layer DREW.
 function Get-OwnArtMask {
     [CmdletBinding()]
     param(
@@ -117,12 +123,17 @@ function Get-OwnArtMask {
         # "x,y" -> overlay path, exactly the tiles the floor's features were built from.
         [Parameter(Mandatory = $true)][hashtable]$TileOverlays,
         [Parameter(Mandatory = $true)][hashtable]$AlphaCache,
+        # "x,y" -> that tile's `shared` grid, the cells the layer copied from the surface.
+        [hashtable]$TileSharedGrids = @{},
+        [int]$GridSize = 64,
         [int]$AlphaThreshold = 8)
 
     $count = $Points.Count
     $bits = New-Object byte[] $count
     $own = 0
+    $copied = 0
     $outside = 0
+    $cellSize = $Transform.tileSize / $GridSize
     for ($i = 0; $i -lt $count; ++$i) {
         $point = $Points[$i]
         $at = Get-OverlayPixel -MapX $point[0] -MapY $point[1] -Transform $Transform
@@ -136,7 +147,25 @@ function Get-OwnArtMask {
         $tile = $AlphaCache[$path]
         if ($y -ge $tile.Height -or $x -ge $tile.Width) { ++$outside; continue }
         # 32bppArgb: BGRA in memory, alpha is the fourth byte.
-        if ($tile.Alpha[$y * $tile.Stride + $x * 4 + 3] -gt $AlphaThreshold) { $bits[$i] = 1; ++$own }
+        if ($tile.Alpha[$y * $tile.Stride + $x * 4 + 3] -le $AlphaThreshold) { continue }
+        if ($TileSharedGrids.ContainsKey($key)) {
+            $sharedHex = [string]$TileSharedGrids[$key]
+            if ($sharedHex.Length * 4 -eq $GridSize * $GridSize) {
+                $cellX = [int][Math]::Floor($x / $cellSize)
+                $cellY = [int][Math]::Floor($y / $cellSize)
+                if ($cellX -ge 0 -and $cellY -ge 0 -and $cellX -lt $GridSize -and $cellY -lt $GridSize) {
+                    $bit = $cellY * $GridSize + $cellX
+                    # [Math]::Floor, not `$bit / 4`: PowerShell's division gives a Double and the
+                    # string indexer then ROUNDS it, so the last nibble of a 64x64 grid reads index
+                    # 1024 of a 1024-character string and throws.
+                    $nibbleIndex = [int][Math]::Floor($bit / 4)
+                    $nibble = [Convert]::ToInt32([string]$sharedHex[$nibbleIndex], 16)
+                    if ((($nibble -shr ($bit % 4)) -band 1) -eq 1) { ++$copied; continue }
+                }
+            }
+        }
+        $bits[$i] = 1
+        ++$own
     }
 
     # [int] is load-bearing: New-Object picks the StringBuilder(String) overload for a non-integral
@@ -151,7 +180,7 @@ function Get-OwnArtMask {
         }
         [void]$hex.Append('0123456789abcdef'[$nibble])
     }
-    return [pscustomobject]@{ Hex = $hex.ToString(); Own = $own; Total = $count; Outside = $outside }
+    return [pscustomobject]@{ Hex = $hex.ToString(); Own = $own; Total = $count; Outside = $outside; Copied = $copied }
 }
 
 # The per-tile overlay paths a floor's index names, keyed the way Get-OverlayPixel returns a tile.

@@ -72,7 +72,15 @@ foreach ($regionDirectory in $regions) {
             continue
         }
         $points = Read-ImfKeypoints -Path $imfPath
-        $mask = Get-OwnArtMask -Points $points -Transform $transform -TileOverlays $overlays -AlphaCache $alphaCache
+        # The `shared` grid travels with the same tile list; the mask needs it so that ground the
+        # layer copied from the surface is not counted as art the layer drew.
+        $sharedGrids = @{}
+        foreach ($tile in $floor.tiles) {
+            $shared = [string]$tile.shared
+            if ($shared) { $sharedGrids["$([int]$tile.x),$([int]$tile.y)"] = $shared }
+        }
+        $mask = Get-OwnArtMask -Points $points -Transform $transform -TileOverlays $overlays `
+            -AlphaCache $alphaCache -TileSharedGrids $sharedGrids -GridSize ([int]$index.gridSize)
 
         $floor | Add-Member -NotePropertyName ownMask -NotePropertyValue $mask.Hex -Force
         $floor | Add-Member -NotePropertyName ownMaskKeypoints -NotePropertyValue $mask.Total -Force
