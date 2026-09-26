@@ -47,7 +47,7 @@ public sealed class KuroProgressSyncService
         string bound = BoundAccount();
         if (!BindingMismatch(bound, credential.AccountId)) return;
         throw new InvalidOperationException(
-            $"账本 {profileId} 绑定的是库街区账号 {bound}，但本机凭据属于账号 {credential.AccountId}。" +
+            $"记录本 {profileId} 绑定的是库街区账号 {bound}，但本机凭据属于账号 {credential.AccountId}。" +
             "请在设置页把绑定改成这个账号，或重新连接一次库街区。");
     }
 

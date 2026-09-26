@@ -395,6 +395,14 @@ if (profile == "local" && std::filesystem::exists(legacy)) { ...导入... }
 3. **`accountId` 只有在新版扩展连接时才会写入**；旧扩展不发送它时按"未知"处理，不视为冲突（§4.3 的兼容规则）。
 4. **删除账本会把进度、凭据、路线一起移到 `SavedPoints\deleted\<时间>-<id>\`**，不是只移进度文件。
 5. **默认账本的显示名是"默认"**（id 仍是 `local`）。
+6. **界面用词是「本地点位记录本」**（用户 2026-09-26 评审时定的）：玩家看到的所有文案（设置页、同步区、
+   警告与报错）都叫"记录本"，不再叫"账本"；代码里的类型、文件与字段仍叫 ledger / `LocalAccountCatalog` /
+   `accounts.json`，**只有文案改名，标识符不动**（改名会牵动文件名与测试，收益为零）。
+7. **记录本区是一张表，不是一叠文本 + 一排按钮**（同一轮评审定的）：
+   表头 `选择 / 名称 / 绑定库街区账号 / 已完成 / 最后使用`；
+   **首列是单选按钮，勾选哪一行就把哪一本设为当前记录本**（这是唯一的切换入口，同步仍然不许切换）；
+   下面只有 **新增 / 修改 / 删除** 三个主按钮，加 `导入旧记录 / 导出体检 / 打开目录` 三个次要按钮。
+   新增与修改共用同一个对话框（名称 + 绑定账号），修改时先改绑定再改名，改名失败会把绑定回滚。
 
 ### 尚未做（有意留下）
 
@@ -414,5 +422,6 @@ if (profile == "local" && std::filesystem::exists(legacy)) { ...导入... }
 | 全量 `scripts/Test-Runtime.ps1` | 通过（证据 `out\phase-final-runtime`） |
 | `IMao-WinUI.exe`（XAML + code-behind）构建 | 通过，无新增警告。⚠️ **要双击启动必须用自包含构建**（`-r win-x64 --self-contained true`）；不带 RID 的 `dotnet build -p:Platform=x64` 产出的是框架依赖版，会被 `.NET Runtime` 拒绝启动 |
 | 实机首次启动（`out\map-test`，2026-09-26 17:13） | 通过：`accounts.json` 按设计播种（`kuro_10383865` 为当前账本 + `local`），`kuromap-accounts.json` 只被写回 `ActiveProfile` 且其余字段保留，app 与 CoreHost 均正常运行 |
+| 记录本表格版实机启动（`out\map-test`，2026-09-26 17:37） | 通过：自包含重建 + 同步交付树后，app（187 MB）与 CoreHost（1.5 GB）正常运行，`startup.log` 记 `root=out\map-test`，无错误 |
 | `tools/KuroSyncBridge` 构建 | 通过 |
 | 探针 `out/analysis/marker-legacy-probe.cpp` | [A]~[E] 五景复核通过 |

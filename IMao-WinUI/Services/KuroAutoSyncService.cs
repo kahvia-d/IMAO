@@ -104,13 +104,13 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
             if (profile.Length == 0)
             {
                 schedule.RecordSuccess();
-                Status = "自动同步已暂停：还没有选择本地点位账本";
+                Status = "自动同步已暂停：还没有选择本地点位记录本";
                 return null;
             }
             if ((core.ActiveLocalAccount?.KuroAccountId ?? "").Length == 0)
             {
                 schedule.RecordSuccess();
-                Status = $"自动同步已暂停：账本“{core.ActiveLocalAccount?.Name}”还没有绑定库街区账号";
+                Status = $"自动同步已暂停：记录本“{core.ActiveLocalAccount?.Name}”还没有绑定库街区账号";
                 return null;
             }
             // A ledger without a stored credential cannot be synced at all; pause
@@ -118,7 +118,7 @@ public sealed partial class KuroAutoSyncService : ObservableObject, IDisposable
             if (!sync.IsConnected(profile))
             {
                 schedule.RecordSuccess();
-                Status = $"自动同步已暂停：账本 {profile} 在本机没有库街区凭据，请在设置页重新连接";
+                Status = $"自动同步已暂停：记录本 {profile} 在本机没有库街区凭据，请在设置页重新连接";
                 return null;
             }
             int state = await settings.ReadSettingAsync<int?>(KuroSyncSettings.State) ?? 0;

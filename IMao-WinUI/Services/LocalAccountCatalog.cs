@@ -31,8 +31,8 @@ public sealed class LocalAccountCatalog
     internal const int MaximumIdLength = 96;
     /// <summary>The id the application starts on when nothing else is recorded.</summary>
     public const string DefaultId = "local";
-    private const string ReadWarning = "账本目录无法读取，当前使用默认账本；原文件已保留，未做任何改动。";
-    private const string WriteWarning = "账本目录无法保存，本次选择只在这次运行内有效。";
+    private const string ReadWarning = "记录本目录无法读取，当前使用默认记录本；原文件已保留，未做任何改动。";
+    private const string WriteWarning = "记录本目录无法保存，本次选择只在这次运行内有效。";
 
     private readonly string legacySelectionPath;
     private readonly string credentialsDirectory;
@@ -122,7 +122,7 @@ public sealed class LocalAccountCatalog
     public bool TrySetActive(string id, out string error)
     {
         error = "";
-        if (!IsValidId(id)) { error = "账本 id 不合法。"; return false; }
+        if (!IsValidId(id)) { error = "记录本 id 不合法。"; return false; }
         int index = accounts.FindIndex(account => account.Id == id);
         if (index < 0)
         {
@@ -144,11 +144,11 @@ public sealed class LocalAccountCatalog
     {
         created = null;
         error = "";
-        if (!IsValidName(name)) { error = $"账本名字需要 1~{MaximumNameLength} 个字符，且不能包含控制字符。"; return false; }
+        if (!IsValidName(name)) { error = $"记录本名字需要 1~{MaximumNameLength} 个字符，且不能包含控制字符。"; return false; }
         if (kuroAccountId.Length > 0 && !IsValidKuroAccount(kuroAccountId)) { error = "库街区账号只能填数字，或留空表示不绑定。"; return false; }
-        if (accounts.Count >= MaximumAccounts) { error = $"最多只能有 {MaximumAccounts} 个账本。"; return false; }
+        if (accounts.Count >= MaximumAccounts) { error = $"最多只能有 {MaximumAccounts} 个记录本。"; return false; }
         if (kuroAccountId.Length > 0 && accounts.Any(account => account.KuroAccountId == kuroAccountId))
-        { error = $"库街区账号 {kuroAccountId} 已经绑定在另一个账本上；一个账号只能绑定一个账本。"; return false; }
+        { error = $"库街区账号 {kuroAccountId} 已经绑定在另一个记录本上；一个账号只能绑定一个记录本。"; return false; }
         string id = NewId();
         created = new LocalAccount(id, name.Trim(), kuroAccountId, DateTimeOffset.UtcNow, null);
         accounts.Add(created);
@@ -159,9 +159,9 @@ public sealed class LocalAccountCatalog
     public bool TryRename(string id, string name, out string error)
     {
         error = "";
-        if (!IsValidName(name)) { error = $"账本名字需要 1~{MaximumNameLength} 个字符，且不能包含控制字符。"; return false; }
+        if (!IsValidName(name)) { error = $"记录本名字需要 1~{MaximumNameLength} 个字符，且不能包含控制字符。"; return false; }
         int index = accounts.FindIndex(account => account.Id == id);
-        if (index < 0) { error = $"没有名为 {id} 的账本。"; return false; }
+        if (index < 0) { error = $"没有名为 {id} 的记录本。"; return false; }
         accounts[index] = accounts[index] with { Name = name.Trim() };
         Save();
         return true;
@@ -176,9 +176,9 @@ public sealed class LocalAccountCatalog
         error = "";
         if (kuroAccountId.Length > 0 && !IsValidKuroAccount(kuroAccountId)) { error = "库街区账号只能填数字，或留空表示不绑定。"; return false; }
         int index = accounts.FindIndex(account => account.Id == id);
-        if (index < 0) { error = $"没有名为 {id} 的账本。"; return false; }
+        if (index < 0) { error = $"没有名为 {id} 的记录本。"; return false; }
         if (kuroAccountId.Length > 0 && accounts.Any(account => account.Id != id && account.KuroAccountId == kuroAccountId))
-        { error = $"库街区账号 {kuroAccountId} 已经绑定在另一个账本上；一个账号只能绑定一个账本。"; return false; }
+        { error = $"库街区账号 {kuroAccountId} 已经绑定在另一个记录本上；一个账号只能绑定一个记录本。"; return false; }
         accounts[index] = accounts[index] with { KuroAccountId = kuroAccountId };
         Save();
         return true;
@@ -196,8 +196,8 @@ public sealed class LocalAccountCatalog
         error = "";
         if (!persistable) { error = ReadWarning; return false; }
         int index = accounts.FindIndex(account => account.Id == id);
-        if (index < 0) { error = $"没有名为 {id} 的账本。"; return false; }
-        if (accounts.Count <= 1) { error = "至少要保留一个账本。"; return false; }
+        if (index < 0) { error = $"没有名为 {id} 的记录本。"; return false; }
+        if (accounts.Count <= 1) { error = "至少要保留一个记录本。"; return false; }
         string target = System.IO.Path.Combine(DeletedDirectory, DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + id);
         try
         {
@@ -209,7 +209,7 @@ public sealed class LocalAccountCatalog
         }
         catch (Exception moveError) when (moveError is IOException or UnauthorizedAccessException)
         {
-            error = "无法移动账本文件：" + moveError.Message;
+            error = "无法移动记录本文件：" + moveError.Message;
             return false;
         }
         accounts.RemoveAt(index);
@@ -334,7 +334,7 @@ public sealed class LocalAccountCatalog
                     string id = System.IO.Path.GetFileNameWithoutExtension(file);
                     if (!IsValidId(id))
                     {
-                        Warning = Append(Warning, $"忽略了一个名字不能作为账本的文件：{System.IO.Path.GetFileName(file)}");
+                        Warning = Append(Warning, $"忽略了一个名字不能作为记录本的文件：{System.IO.Path.GetFileName(file)}");
                         continue;
                     }
                     Consider(id);
