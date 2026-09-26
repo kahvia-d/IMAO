@@ -533,6 +533,27 @@ await Test("a MirrorChyan package is abandoned whole when its bytes fail the sig
     var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
     Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch.Id), good.Replace('/', Path.DirectorySeparatorChar))).AsSpan().SequenceEqual(tree[good]));
 });
+await Test("a bag that covers a shard only in part does not break the shard that completes it", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var requested = new List<string>();
+    // An incremental package carries the files that changed, and a set of changed files is not a set of
+    // whole shards: the shard it partly covers is still fetched, and the extractor then lands on paths the
+    // bag already wrote. The same signed bytes are not a second write, so the preparation must finish;
+    // refusing the colliding path instead aborts an update that had every byte it needed.
+    var ui = tree.Where(kv => ShardOf(kv.Key) == "ui").ToList();
+    Assert(ui.Count >= 2, "the fixture's ui shard needs at least two files for a partial bag to be possible");
+    var bag = MirrorZip("partial-shard", [ui[0]]);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Serve(served, requested),
+        supplier: Mirror(bag, "incremental", "2026.9.10.1"));
+    Assert(requested.Any(url => url.Contains("-ui.zip", StringComparison.Ordinal)),
+        "a shard the bag only partly covered is still fetched: " + string.Join(",", requested));
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    foreach (var file in tree)
+        Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch.Id), file.Key.Replace('/', Path.DirectorySeparatorChar))).AsSpan().SequenceEqual(file.Value),
+            "the assembled tree carries the signed bytes: " + file.Key);
+});
 await Test("a whole-package claim that is not whole, and a hazardous entry, both fall back to the shards", async () =>
 {
     var tree = ShardTree(shardBuild1, "v1");

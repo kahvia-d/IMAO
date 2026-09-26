@@ -172,6 +172,12 @@ public static class ProgramPackageValidation
     /// <summary>
     /// Writes <paramref name="files"/> into <paramref name="destination"/>, checking each one against its
     /// own signed record as it lands. Callers that supply only part of a tree pass only those files.
+    ///
+    /// A path another source already wrote is kept when it already carries the signed bytes. The MirrorChyan
+    /// bag runs before the shards and an incremental bag covers a shard only in part, so the shard that
+    /// completes it arrives holding paths the bag already wrote; refusing those aborted a preparation whose
+    /// every byte was correct. Identical bytes are not the second write this refuses to do - a *different*
+    /// file under a signed path is still refused by the record check instead of being overwritten.
     /// </summary>
     internal static async Task ExtractEntriesAsync(string destination, IReadOnlyList<ResourceFile> files, Dictionary<string, ZipArchiveEntry> entries, CancellationToken ct)
     {
@@ -181,6 +187,11 @@ public static class ProgramPackageValidation
             var target = UpdateStorage.SafeChild(destination, file.Path);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             UpdateStorage.RejectLink(target);
+            if (File.Exists(target))
+            {
+                await UpdateStorage.VerifyFileAsync(target, file, ct);
+                continue;
+            }
             await using (var input = entries[file.Path].Open())
             await using (var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.Asynchronous))
             {
