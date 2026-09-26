@@ -89,19 +89,41 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
         finally { TryDelete(archive); }
     }
 
+    /// <summary>
+    /// How long the body may go without delivering a byte before the mirror is given up on. The HTTP timeout
+    /// only covers reaching the first byte, so a CDN that stalls half way through a gigabyte would otherwise
+    /// leave the update sitting at "从 Mirror酱下载新版程序" until the player cancels it.
+    /// </summary>
+    private static readonly TimeSpan StallTimeout = TimeSpan.FromSeconds(45);
+
     private static async Task CopyAsync(Stream input, Stream output, long ceiling, CancellationToken ct)
     {
         var buffer = new byte[131072];
         long copied = 0;
+        using var watchdog = CancellationTokenSource.CreateLinkedTokenSource(ct);
         while (true)
         {
-            var count = await input.ReadAsync(buffer, ct).ConfigureAwait(false);
+            var count = await ReadAsync(input, buffer, watchdog, ct).ConfigureAwait(false);
             if (count == 0) break;
             copied = checked(copied + count);
             if (copied > ceiling) throw new InvalidDataException("Mirror酱 的包超过了它可能的大小上限。");
             await output.WriteAsync(buffer.AsMemory(0, count), ct).ConfigureAwait(false);
         }
         if (copied == 0) throw new InvalidDataException("Mirror酱 返回了空包。");
+    }
+
+    /// <summary>
+    /// One read that has to deliver within <see cref="StallTimeout"/>. The clock is re-armed before every read,
+    /// so it measures silence rather than total duration and a slow but working download is never cut short.
+    /// A stall surfaces as a <see cref="TimeoutException"/>, which the caller treats like any other refusal:
+    /// what the bag wrote is rolled back and the signed shards carry the update.
+    /// </summary>
+    private static async Task<int> ReadAsync(Stream input, byte[] buffer, CancellationTokenSource watchdog, CancellationToken ct)
+    {
+        watchdog.CancelAfter(StallTimeout);
+        try { return await input.ReadAsync(buffer, watchdog.Token).ConfigureAwait(false); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        { throw new TimeoutException("Mirror酱 的下载停住不动了。"); }
     }
 
     /// <summary>

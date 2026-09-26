@@ -134,6 +134,10 @@ public sealed class UpdateService : IDisposable
         AcceptCatalog(catalog, envelope);
         if (UpdateSignature.RequireVersion(catalog.App.Version) <= UpdateSignature.RequireVersion(_build.AppVersion))
             throw new InvalidOperationException("没有比当前程序更新的版本。");
+        // A preparation that is killed - the player closes the window mid-download - never reaches the supplier's
+        // own cleanup, and one of its archives is close to a gigabyte. The install root is locked above, so
+        // nothing else can be using this directory right now.
+        if (mirror is not null) PurgeMirrorScratch(Path.Combine(programs.Root, "staging", "mirror"));
         var mirrorSource = mirror is null ? null : new MirrorChyanProgramSource(mirror, FetchMirrorAsync,
             Path.Combine(programs.Root, "staging", "mirror"), progress);
         await programs.PrepareAsync(envelope, async (target, output, token) =>
@@ -160,6 +164,27 @@ public sealed class UpdateService : IDisposable
     /// Empty before any program has been prepared.
     /// </summary>
     public string LastProgramSource { get; private set; } = "";
+
+    /// <summary>
+    /// Deletes archives a previous mirror download left behind. The supplier removes its own copy on the way
+    /// out, but a run that was killed never gets there, and a leftover is up to a gigabyte of the player's
+    /// disk with nothing left to name it.
+    /// </summary>
+    private static void PurgeMirrorScratch(string directory)
+    {
+        try
+        {
+            if (!Directory.Exists(directory)) return;
+            foreach (var file in Directory.EnumerateFiles(directory, "mirrorchyan-*.zip"))
+            {
+                try { File.Delete(file); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
 
     /// <summary>
     /// How long to wait before asking MirrorChyan a second time for a version whose incremental package it

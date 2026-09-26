@@ -74,8 +74,12 @@ public sealed class UpdateUiController : INotifyPropertyChanged
                 !await OnUiThreadAsync(() => confirmWholePackage("Mirror酱 目前提供的是完整程序包（约 " + PackageSize(plan) + "），而不是增量包。"
                     + "这会下载接近 1 GB 的流量。要继续吗？")))
             {
-                Message = "已取消下载。当前程序与地图资源未改变。";
-                return;
+                // The question is about the mirror's whole package, not about updating at all. Declining it used
+                // to end the operation, which left a player with nothing even when the signed shards were far
+                // smaller - a version whose only change is the interface is one 59 MB shard. Dropping the mirror
+                // lets the shards carry the update, and the message below names whatever actually did.
+                plan = null;
+                Message = "已取消从 Mirror酱 下载完整程序包，改用 GitHub 分片。";
             }
             await updater.PrepareProgramAsync(programs!, progress, ct, plan);
             programState = programs!.ReadState();
