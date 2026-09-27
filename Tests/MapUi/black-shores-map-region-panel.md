@@ -23,12 +23,17 @@ emblem alone is not evidence for the state machine.
 
 No non-16:9 big-map capture is checked in - the working tree, `out/`, the local diagnostic sessions and
 the pre-rewrite history only hold 2560x1440 and 1920x1080 map frames - so the client shapes the game can
-produce are covered synthetically instead. The compass probe reads nothing but its layout box, so the
-test pastes this capture's box at the size and position `hud::Layout` gives each client shape and checks
-the template still verifies: 1280x800 (16:10) 0.86, 1600x1200 (4:3) 0.87, 1920x1200 (16:10) 0.89,
-1920x1440 (4:3) 0.89, 2560x1600 (16:10) 1.00, 3440x1440 (21:9) 1.00, 3840x2160 0.90. On the shapes
-taller than 16:9 it also asserts the opposite: a widget placed where the old per-axis scaling put the
-box (5-21px away) must *not* verify, which is the placement error that made the map unusable there.
+produce are covered synthetically instead, along with the one real 16:10 capture that
+`black-shores-map-1920x1200.md` documents. The compass probe reads nothing but its layout box, so the test
+pastes this capture's box at the size and position `hud::Layout` gives each client shape and checks the
+template still verifies: 1280x800 (16:10) 0.86, 1600x1200 (4:3) 0.89, 1920x1200 (16:10) 0.90,
+1920x1440 (4:3) 0.90, 2560x1600 (16:10) 1.00, 3440x1440 (21:9) 1.00, 3840x2160 0.92. On the shapes
+taller than 16:9 it also asserts the opposite: a widget placed where the old per-axis scaling put the box
+(5-21px away, i.e. past the +/-2 the probe searches) must *not* verify, which is the placement error that
+made the map unusable there.
+
+The worst frame without the widget scores 0.03 (the hand-holding panel over the compass); ordinary
+gameplay and the marker dialog score 0.
 
 The player's own logs back the placement rule on real clients, but only coarsely: the 2026-09-26 size
 sweep ran 1600x1200 (4:3), 1920x1200 (16:10), 1920x1440 (4:3), 1920x1080 and 2560x1440, and the gold

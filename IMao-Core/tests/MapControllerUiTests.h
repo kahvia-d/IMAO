@@ -194,10 +194,10 @@ inline void TestControllerMapUi(void (*check)(bool, const std::string&)) {
             // The widget has to be *there*: on clients taller than 16:9 the old per-axis model put this
             // box 9px lower (2560x1600) up to 21px (1920x1440), which is the placement error that made
             // the map unusable there. On 16:9-shaped clients the two models only differ by integer
-            // truncation, which the +/-1 search is meant to absorb, so those are not anti-cases.
+            // truncation, which the search radius is meant to absorb, so those are not anti-cases.
             const auto stale = oldModelBox(client, hud::kBigMapCompass);
             const int displacement = (std::max)(std::abs(stale.x - box.x), std::abs(stale.y - box.y));
-            if (displacement > 1) {
+            if (displacement > 2) {  // the detector's own search radius; anything it can absorb is not a case
                 cv::Mat displaced(client.height, client.width, CV_8UC3, cv::Scalar(24, 24, 24));
                 drawWidget(displaced, stale);
                 check(!MapUiVisualDetector::DetectBigMapCompass(displaced, rect).templateVerified,
@@ -211,12 +211,11 @@ inline void TestControllerMapUi(void (*check)(bool, const std::string&)) {
     // where hud::Layout puts the box on a real 16:10 client (8.08% of that box is gold, against 8.1% on
     // the 2560x1440 captures) and the mouse zoom controls are detected there.
     //
-    // It is also the map's open animation, which is worth pinning down: measured on this frame the
-    // template's best agreement is 0.95 five template pixels above the box's own alignment, and 0.46 at
-    // offset zero. The same session's settled frames scored 0.91 through the live +/-1 search, so the
-    // widget simply has not arrived yet in the first second or two - the zoom controls carry those frames
-    // (this very frame entered BigMap on rawControls=1, compassVerified=0). Do not lower the threshold to
-    // catch the animation; wait for it.
+    // The frame also caught the map's open animation: the widget sits about 5 template pixels away from
+    // its settled place while the map opens, so the peak agreement is 0.95 at that displacement and 0.46
+    // at the box's own alignment. The +/-2 search lands between the two and scores 0.676, i.e. the frame
+    // verifies - but that is close enough to the 0.65 threshold that this test asserts the box position
+    // rather than the verdict, so a rounding change cannot turn it red.
     {
         const auto wide = cv::imread((directory / "black-shores-map-1920x1200.png").string());
         check(!wide.empty() && wide.cols == 1920 && wide.rows == 1200,

@@ -815,11 +815,16 @@ void App::Thread_DetectGameState() {
 					mapStructureRequiresControls = structuralMapEvidence && mapControlsVisible;
 				}
 				if (!structuralMapEvidence && consecutiveBigMapCompassFrames >= 3) {
-					Diagnostics::Record("map-ui-candidate-rejected", "reason=" +
+					// Two different events, and only one of them is a rejection.  A comparison that ran and
+					// said no overrides the confirmation; one that had no inputs - entering the map clears
+					// the player's scene id - leaves the confirmation standing, so reporting it as a
+					// rejection made the 2026-09-26 failure look like a normal canvas mismatch.
+					const std::string payload = "reason=" +
 						std::string(structureComparable ? "canvas-verification-failed" : "canvas-verification-unavailable") +
 						" compassFrames=" + std::to_string(consecutiveBigMapCompassFrames) +
 						" goldPixels=" + std::to_string(compassPixels) +
-						" templateVerified=" + std::to_string(compassTemplateVerified ? 1 : 0));
+						" templateVerified=" + std::to_string(compassTemplateVerified ? 1 : 0);
+					Diagnostics::Record(structureComparable ? "map-ui-candidate-rejected" : "map-verification-skipped", payload);
 				}
 			}
 		}
