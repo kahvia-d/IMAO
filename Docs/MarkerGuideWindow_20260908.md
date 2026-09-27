@@ -97,9 +97,34 @@
 > **这条没有自动化用例**：本套件共享真实桌面前台，"把前台切给攻略窗口"在本会话里稳定失败
 > （`guide-focus-toggle` 一次都不出现，模式停在 GuidePassive），硬写会假红；
 > 手工复现步骤：手柄呼出攻略 → LS 把聚焦切到攻略窗口 → 长按 A 完成 → 立刻按 LS / B，看是否还能切换。
+>
+> **2026-09-27 补：这条现在有自动化用例了**（`--test-route-controller` 的
+> 「holding A closes the guide on every completion, not just the first one」，见本节末尾那条），
+> 而且它抓到的正是"第二次"才失效的那个根因。
 
 纯规则由 `Tests/ManagedRuntime/GuideFocusHandoffTests.cs` 钉住（按住 A/Y/X/B/LB+X、摇杆偏出、
 扳机按下都要等；松开的立刻交还；死区内的小抖动不算按住；到上限必须放弃等待；取消后不再触发）。
+
+> **2026-09-27 实机反馈：长按 A 完成之后攻略窗口不关，手柄随后整段失效。**
+> 现象：窗口留在屏幕上（而且**还占着前台**），输入服务却已经按"这份攻略收起来了"处理，
+> 于是按什么键都没反应——连 LB+X 都不再被认作和弦，只能去点鼠标把焦点弄回游戏。
+> **根因：这条等待的轮询只能用一次。** `DispatcherTimer.Stop()` 不会丢掉对象，而"已经在跑"
+> 是拿 `focusHandoffTimer is not null` 判断的：第二次进入等待时它直接 `return true`，
+> 被停着的计时器再也没有人 `Start()`——记下的收尾动作（藏窗口 + 交还前台）**永远不会执行**。
+> 硬证据（`%LOCALAPPDATA%\IMao-WinUI\Logs\gamepad-20260927.jsonl`）：10:53:54 那天第一次
+> 长按 A 是 `handoff-deferred` → `handoff-now` → `handoff-now foreground-return`，之后输入状态
+> 立刻回到 `gameplay-ready/ready`（前台 = 游戏 263760）；而 10:56:29 / 10:57:46 / 10:58:51 /
+> 11:07:35 / 11:20:00 / 11:22:41 / 11:24:37 全都**只有** `handoff-deferred`、再没有 `handoff-now`，
+> 输入状态一直停在 `not-map`、`foreground=789470`（就是攻略窗口本身），最后都是玩家用鼠标点了
+> 游戏才恢复。9/25 的日志里也留着同样两笔（21:27:56、21:29:40）。
+> **修法**：计时器仍然只创建一次（`Tick` 只在创建时挂一次），但**每一次等待都重新 `Start()`**；
+> 轮询体抽成 `OnFocusHandoffTick`。
+> **回归用例**：`Tests/GuideWindowRuntime` 的 `--test-route-controller`
+> 「holding A closes the guide on every completion, not just the first one」——**连续长按 A 两次**，
+> 第二次才是回归点。它在修好之前是**红的**（round 1 通过、round 2 收窗口超时），修好后整组全绿；
+> 两份日志：`out/guide-window-runtime/route-controller-tests.log`（绿）与
+> `route-controller-tests.before-fix.log`（红，留作对照）。
+> ⚠️ 仍然没有真机复测：需要一个能跟着走的路线目标 + 一次真实长按 A（手工步骤同上）。
 
 **真实手柄上的手感**：长按 A 收集完不再闪避（2026-09-25 实机确认现象）、长按 Y 跳过完不再触发
 游戏动作（本次修正的目标）。

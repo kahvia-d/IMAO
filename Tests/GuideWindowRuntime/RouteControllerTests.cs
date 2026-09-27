@@ -585,13 +585,74 @@ internal static class RouteControllerTests
             Check(GetForegroundWindow() == fixture.GameHandle, "closing the handed-off guide stays on the game");
         }, log);
 
-        // 实机反馈（2026-09-25）：手柄在攻略界面长按 A 完成之后，手柄焦点跑到既不是攻略窗口、
-        // 也不是游戏的地方，于是 LS 切不了聚焦、B 也退不出攻略。
+        // 实机反馈（2026-09-27）：手柄在攻略界面长按 A 完成之后，攻略窗口不关、前台也不回游戏，
+        // 而输入服务已经按"这份攻略收起来了"处理，于是玩家按什么键都没反应（LB+X 也不再被认作
+        // 和弦，只能去点鼠标）。根因是"等手柄回中位"的那条轮询**只能用一次**：
+        // `DispatcherTimer.Stop()` 不会丢掉对象，第二次进入等待时
+        // `if (focusHandoffTimer is not null) return true;` 直接返回，而被停着的计时器再也没有人
+        // 调用 Start —— `closeNow`（收窗口 + 交还前台）永远不执行。
         //
-        // **这条暂时没有自动化用例**：它要在"按住 A 不放"的那几百毫秒里观察前台，而本套件共享
-        // 真实桌面前台——"把前台切给攻略窗口"这一步在本会话里稳定失败（`guide-focus-toggle`
-        // 一次都不出现，模式一直停在 GuidePassive），硬写会假红。
-        // 修法与手工复现步骤见 Docs/MarkerGuideWindow_20260908.md 的 2026-09-25 小节。
+        // 所以这条用例必须**连续长按 A 两次**：第一次证明这条路能走通（它一直是好的），
+        // 第二次才是回归点。实机日志的对照：2026-09-27 10:53:54 第一次有 `handoff-now`，
+        // 之后的 10:56:29 / 11:20:00 / 11:22:41 / 11:24:37 全都只有 `handoff-deferred`。
+        await CaseAsync("holding A closes the guide on every completion, not just the first one", async fixture =>
+        {
+            fixture.Core.GamepadContext = fixture.GameplayContext;
+            var sample = new GamepadSample(true, 0, GamepadButtons.None);
+            using var service = new GamepadInputService(fixture.Core, fixture.Coordinator,
+                slot => slot == 0 ? sample : new(false, slot, GamepadButtons.None));
+            await UntilAsync(() => fixture.Core.GamepadDiagnostics.Any(value => value.Contains("state=gameplay-ready/ready")),
+                "service observes the controlled gameplay context");
+            int Deferrals() => fixture.Core.GamepadDiagnostics.Count(value => value.Contains("handoff-deferred"));
+            int PassiveSamples() => fixture.Core.GamepadDiagnostics.Count(value => value.Contains("/guide-passive"));
+            int DetailReady() => fixture.Core.GamepadDiagnostics.Count(value => value.Contains("state=assistant-Detail/ready"));
+
+            // 一次完整的"长按 A 收集"：呼出路线目标攻略 → LS 把聚焦切到攻略窗口 →
+            // 按住 A 到 600 毫秒提交完成（手指还按着，所以收窗口要先等手柄回中位）→ 松开。
+            async Task CompleteByHoldingAAsync(int round)
+            {
+                int deferrals = Deferrals(), passiveSamples = PassiveSamples(), readySamples = DetailReady();
+                fixture.Core.Emit(new
+                {
+                    type = "markerGuideShortcut", gamepad = true, gameHwnd = fixture.GameHandle.ToInt64(),
+                    contextGeneration = 17UL, profileId = "local", routeId = fixture.Core.ActiveRouteId,
+                    key = "8:" + Target.PointId, screenX = 40, screenY = 100
+                });
+                await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive,
+                    $"round {round}: the route target guide opens passively with the game still in front");
+                var guide = fixture.Guide!;
+                // 等输入服务**自己**报出一次被动采样再按 LS：聚焦闩锁在"攻略刚打开"那一帧取基线，
+                // 那一刻要是 LS 已经按着，这一次切换会被当成上一次按住的尾巴吃掉
+                // （这条等待等价于别的用例里按 LS 之前那段固定延时，只是不赌时间）。
+                await UntilAsync(() => PassiveSamples() > passiveSamples,
+                    $"round {round}: the input service samples the passive guide before LS");
+                sample = sample with { Buttons = GamepadButtons.L3 };
+                await Task.Delay(70);
+                sample = sample with { Buttons = GamepadButtons.None };
+                await UntilAsync(() => fixture.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail,
+                    $"round {round}: LS hands the pad to the guide window");
+                // 等它报出 Detail/ready：解释器只在真的处理过一个**中性**采样之后才会这么写。
+                // 长按 A 必须先度过"请先松开"那一段——否则按住的 A 自己就是那个没松开的输入，
+                // 永远进不了长按判定（这里不能只靠"模式已经是 Detail"就按键）。
+                await UntilAsync(() => DetailReady() > readySamples,
+                    $"round {round}: the interpreter is ready for a fresh hold after the focus switch");
+                sample = sample with { Buttons = GamepadButtons.A };
+                await UntilAsync(() => Deferrals() > deferrals,
+                    $"round {round}: completing while A is still held defers the handoff until the pad is neutral");
+                Check(guide.IsGuideVisible && GetForegroundWindow() == Handle(guide) &&
+                    fixture.Core.Commands.Count(value => value.Operation == "markerSetCompletion") == round,
+                    $"round {round}: the deferred handoff leaves the completed guide on screen for that moment");
+                // 松开 A：这一次等待必须自己醒过来，收窗口并把前台还给游戏。
+                sample = sample with { Buttons = GamepadButtons.None };
+                await UntilAsync(() => !guide.IsGuideVisible && !fixture.Coordinator.IsStandaloneGamepadGuideOpen &&
+                    GetForegroundWindow() == fixture.GameHandle,
+                    $"round {round}: releasing A closes the guide and hands the foreground back to the game");
+            }
+
+            await CompleteByHoldingAAsync(1);
+            await CompleteByHoldingAAsync(2);
+            Check(Deferrals() == 2, "both long presses really went through the pad-neutral wait");
+        }, log);
 
         // 全部用例跑完才汇报：一条失败不能把后面的证据一起吞掉。
         if (failures.Count > 0)

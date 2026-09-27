@@ -1602,6 +1602,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
     /// **每一个"攻略收起后前台回到游戏"的路径都要走这里**，不只是长按 A 完成那条：
     /// 长按 Y 跳过、长按 A/B/X 完成、LB+X 收起攻略都一样——玩家按着手柄键的那一刻把前台还给游戏，
     /// 游戏就会把随后的松开当成一次完整的按键（A = 闪避、Y = 跳跃……）。
+    ///
+    /// 轮询计时器只创建一次，但**每一次等待都会重新 `Start()`**：`Stop()` 不会销毁对象，
+    /// 拿 `is not null` 当"已经在跑"会让第二次以后的等待永远等不到收尾动作（见方法体注释）。
     /// </summary>
     private bool DeferCloseUntilPadNeutral(IntPtr game, Action close)
     {
@@ -1613,28 +1616,42 @@ public sealed class MarkerGuideCoordinator : IDisposable
         pendingFocusHandoff.Begin(Environment.TickCount64);
         core.ReportGamepadDiagnostic("guide-focus",
             $"handoff-deferred buttons={sample.Buttons} lt={sample.LeftTrigger} rt={sample.RightTrigger}");
-        if (focusHandoffTimer is not null) return true;
-        focusHandoffTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
-        focusHandoffTimer.Tick += (_, _) =>
+        if (focusHandoffTimer is null)
         {
-            if (!pendingFocusHandoff.IsWaiting) { focusHandoffTimer?.Stop(); return; }
-            var current = ReadGamepadSample?.Invoke(focusHandoffDevice) ?? default;
-            if (!pendingFocusHandoff.ShouldFinish(current, Environment.TickCount64)) return;
-            focusHandoffTimer?.Stop();
-            var target = focusHandoffGame;
-            focusHandoffGame = IntPtr.Zero;
-            var closeNow = pendingFocusHandoffClose;
-            pendingFocusHandoffClose = null;
-            core.ReportGamepadDiagnostic("guide-focus",
-                $"handoff-now buttons={current.Buttons} neutral={current.Neutral} gameAlive={IsWindow(target)}");
-            // 这一次会话可能已经被别的操作收掉了：那时 closeNow 里的判断会自己什么都不做。
-            closeNow?.Invoke();
-            // 收窗口之后前台必须有归宿：等手松开的这段窗口期里前台可能已经飘到别处，
-            // 所以这里**无条件**把它交还游戏（`ReturnForegroundToGame` 自己会在已经在游戏上时跳过）。
-            ReturnForegroundToGame(target, "handoff-now");
-        };
+            focusHandoffTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+            focusHandoffTimer.Tick += OnFocusHandoffTick;
+        }
+        // **每一次等待都必须把轮询拉起来**。`DispatcherTimer.Stop()` 不会丢掉对象，旧写法
+        // `if (focusHandoffTimer is not null) return true;` 于是在第一次等待结束之后就再也不
+        // 调用 `Start()`：第二次长按 A 完成时 `closeNow` 永不执行——攻略窗口不收、前台不还，
+        // 而输入服务已经按"这份攻略收起来了"处理，玩家按什么键都没反应（实机 2026-09-27：
+        // 10:53:54 那次有 `handoff-now`，之后 10:56:29 / 11:20:00 / 11:22:41 / 11:24:37 全都没有）。
+        // 回归用例：Tests/GuideWindowRuntime 的 `--test-route-controller`
+        // 「holding A closes the guide on every completion, not just the first one」。
         focusHandoffTimer.Start();
         return true;
+    }
+
+    /// <summary>
+    /// 「等手柄回中位」的轮询：回中位（或到上限）就执行那一刻记下的收尾动作，并且只执行一次。
+    /// </summary>
+    private void OnFocusHandoffTick(object? sender, object e)
+    {
+        if (!pendingFocusHandoff.IsWaiting) { focusHandoffTimer?.Stop(); return; }
+        var current = ReadGamepadSample?.Invoke(focusHandoffDevice) ?? default;
+        if (!pendingFocusHandoff.ShouldFinish(current, Environment.TickCount64)) return;
+        focusHandoffTimer?.Stop();
+        var target = focusHandoffGame;
+        focusHandoffGame = IntPtr.Zero;
+        var closeNow = pendingFocusHandoffClose;
+        pendingFocusHandoffClose = null;
+        core.ReportGamepadDiagnostic("guide-focus",
+            $"handoff-now buttons={current.Buttons} neutral={current.Neutral} gameAlive={IsWindow(target)}");
+        // 这一次会话可能已经被别的操作收掉了：那时 closeNow 里的判断会自己什么都不做。
+        closeNow?.Invoke();
+        // 收窗口之后前台必须有归宿：等手松开的这段窗口期里前台可能已经飘到别处，
+        // 所以这里**无条件**把它交还游戏（`ReturnForegroundToGame` 自己会在已经在游戏上时跳过）。
+        ReturnForegroundToGame(target, "handoff-now");
     }
 
     private void ApplyCompletionEvent(JsonElement value, int stateId, string pointId, bool completed)
