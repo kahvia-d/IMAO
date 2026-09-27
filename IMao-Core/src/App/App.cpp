@@ -2570,6 +2570,11 @@ void App::Thread_KeyMonitoring_SavePlayerNearItemPoint() {
 
 
 void App::PublishPresentedOverlay(PresentedOverlayFrame frame) {
+    // The farming ledger's 04:00 reset is discovered on a read, and this runs once per presented
+    // overlay frame whether or not a route is active — so the day boundary is noticed and
+    // reported even when the player is just standing there with the map open. The route's own
+    // completion snapshot has to be told: otherwise it keeps skipping yesterday's targets.
+    if (DrawItemBase::ReportFarmLedgerExpiry()) RoutePlanningService::OnMarkerChanged();
     const auto route=RoutePlanningService::View();
     if(route.active&&route.currentTargetIndex>=0&&route.currentTargetIndex<static_cast<int>(route.active->stops.size())){
         AutoRoute::ProximityObservation observation;
@@ -2587,6 +2592,19 @@ void App::PublishPresentedOverlay(PresentedOverlayFrame frame) {
             observation.distancePixels=AutoRoute::TargetDistancePixels(target.itemMapROC,
                 RelativeCoordinates::ImgMapCoordToROC(source.playerCoordinate,source.playerScene),
                 source.minimapMotion.screenCenter,source.minimapMotion.pixelsPerUnit,frame.motion);
+            // The farming mode needs the whole cluster the player is standing in, not only the
+            // head of the route: every later target of this route is measured from the same
+            // position and the same instant, so "in range" means one thing for all of them.
+            // Nothing else reads this list, and it is only built while the mode is on.
+            if(route.farmMode){
+                const auto playerROC=RelativeCoordinates::ImgMapCoordToROC(source.playerCoordinate,source.playerScene);
+                for(std::size_t index=static_cast<std::size_t>(route.currentTargetIndex);index<route.active->stops.size();++index){
+                    const auto& item=route.active->stops[index];const auto key=AutoRoute::Key(item);
+                    if(route.completed.contains(key)||route.active->skipped.contains(key))continue;
+                    observation.nearby.push_back({key,AutoRoute::TargetDistancePixels(item.itemMapROC,playerROC,
+                        source.minimapMotion.screenCenter,source.minimapMotion.pixelsPerUnit,frame.motion)});
+                }
+            }
         }
         RoutePlanningService::ObserveProximity(observation);
     }

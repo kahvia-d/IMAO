@@ -1,9 +1,12 @@
 #include "Runtime/MarkerCompletionStore.h"
+#include "Runtime/FarmCompletionStore.h"
+#include "Runtime/RefreshableCategories.h"
 #include "Runtime/MarkerLayout.h"
 #include <iostream>
 #include <iterator>
 #include <stdexcept>
 #include <chrono>
+#include <cstdint>
 
 using Json = nlohmann::json;
 static void Require(bool result, const char* reason) { if (!result) throw std::runtime_error(reason); }
@@ -213,6 +216,108 @@ int main() {
                 "importing without an old record is refused with a reason");
             Require(imported.Execute({{"type", "markerImportLegacyProgress"}, {"profileId", "kuro_910000000004"}}).value("message", "") == "profile-mismatch",
                 "only the ledger the map shows can import into itself");
+        }
+        // Docs/FarmMode_20260927.md: moving a whole class of records out of the synchronized
+        // document is what keeps the daily-refresh categories out of the upload outbox —
+        // including the ones an earlier version already wrote there.
+        {
+            const auto moveRoot = root / "move-class";
+            std::filesystem::create_directories(moveRoot);
+            MarkerCompletionStore store(moveRoot);
+            Send(store, "markerSetCompletion", Point("monster-a"));
+            Send(store, "markerSetCompletion", Point("chest-a"));
+            Send(store, "markerSetCompletion", Point("monster-b"));
+            Require(Send(store, "markerGetOutbox").at("operations").size() == 3, "fixture must queue three completions");
+            const auto isMonster = [](const Json& point) {
+                return point.at("pointId").get<std::string>().rfind("monster-", 0) == 0; };
+            const auto removed = store.ExtractPoints(isMonster);
+            Require(removed.at("points").size() == 2, "the move must take exactly the selected records");
+            Require(Send(store, "markerGetOutbox").at("operations").size() == 1, "moved records must leave the upload queue");
+            Require(store.Completed("World", "test", "chest-a") && !store.Completed("World", "test", "monster-a"),
+                "the move must not touch any other category");
+            Require(store.ExtractPoints(isMonster).at("points").empty(), "moving the same class twice must move nothing");
+            // A moved record stays completed for the rest of the current game day.
+            FarmCompletionStore farm(moveRoot, [] { return std::int64_t{20000}; });
+            Require(farm.Absorb(removed.at("points")) == 2 && farm.Completed(8, "monster-a") && farm.Size() == 2,
+                "an absorbed completion must stay completed");
+        }
+        // The whole farming ledger belongs to one game day, because the game refills every
+        // 采集物 and 敌人 at once. A monster killed at 03:50 has already come back when the
+        // player returns at 04:10, which a calendar-date comparison would miss.
+        {
+            const auto farmRoot = root / "farm";
+            std::filesystem::create_directories(farmRoot);
+            std::int64_t today = 20000;
+            const auto clock = [&today] { return today; };
+            FarmCompletionStore farm(farmRoot, clock);
+            Require(farm.Size() == 0 && farm.Epoch() == 20000, "a fresh farming ledger starts empty on today's epoch");
+            farm.Set(8, "monster-a", true);
+            farm.Set(8, "mob-b", true);
+            farm.Set(900, "plant-a", true);
+            Require(farm.Completed(8, "monster-a") && farm.Completed(900, "plant-a"), "a farm completion was not recorded");
+            Require(farm.CompletedIds(8).size() == 2 && farm.CompletedIds(900).size() == 1,
+                "farm completions must be scoped by region");
+            farm.Set(8, "monster-a", false);
+            Require(!farm.Completed(8, "monster-a") && farm.Size() == 2, "a farm completion could not be undone");
+            FarmCompletionStore restored(farmRoot, clock);
+            Require(restored.Completed(8, "mob-b"), "a restart inside the same game day lost the farming ledger");
+            today = 20001;
+            Require(!restored.Completed(8, "mob-b") && !restored.Completed(900, "plant-a") && restored.Size() == 0,
+                "the daily boundary must clear the whole farming ledger, not only the point that was read");
+            Require(restored.Epoch() == 20001, "the epoch did not follow the clock");
+            // The boundary is discovered on a read, so the caller has to be able to tell that it
+            // just happened — exactly once — in order to refresh whatever cached the old state
+            // (the route service does exactly this, see App::PublishPresentedOverlay).
+            Require(restored.TakeExpired(), "the daily reset must be reported to the caller");
+            Require(!restored.TakeExpired(), "the daily reset must be reported only once per boundary");
+            restored.Set(8, "mob-b", true);
+            MarkerCompletionStore untouched(farmRoot);
+            Require(untouched.Completed("World", "test", "mob-b") == false,
+                "the farming ledger is a separate document from the synchronized one");
+            // The boundary is 04:00 local time, not midnight and not the calendar date.
+            const auto at = [](int hour, int minute) {
+                std::tm value{};
+                value.tm_year = 126; value.tm_mon = 0; value.tm_mday = 15;
+                value.tm_hour = hour; value.tm_min = minute; value.tm_isdst = -1;
+                return std::chrono::system_clock::from_time_t(std::mktime(&value));
+            };
+            Require(FarmCompletionStore::CurrentEpoch(at(3, 59)) != FarmCompletionStore::CurrentEpoch(at(4, 1)),
+                "03:59 and 04:01 must fall on different game days");
+            Require(FarmCompletionStore::CurrentEpoch(at(4, 1)) == FarmCompletionStore::CurrentEpoch(at(23, 59)),
+                "04:01 and 23:59 must fall on the same game day");
+            Require(FarmCompletionStore::CurrentEpoch(at(0, 30)) == FarmCompletionStore::CurrentEpoch(at(3, 59)),
+                "after midnight and before 04:00 still belong to the previous game day");
+            Require(FarmCompletionStore::CurrentEpoch(at(0, 30)) != FarmCompletionStore::CurrentEpoch(at(4, 1)),
+                "the boundary is 04:00 local time, not midnight");
+        }
+        // The category table is read from the same catalogs the filter page groups by. A
+        // missing or unreadable catalog must leave the table empty, which makes the farming
+        // mode inert instead of guessing — guessing is what would tick off a one-off
+        // collectible the player can never get back.
+        {
+            const auto catalogRoot = root / "category-table";
+            std::filesystem::create_directories(catalogRoot / "catalogs");
+            const Json catalog = Json::array({
+                {{"name", "收集物"}, {"children", Json::array({{{"id", "chest"}, {"name", "宝箱"}}})}},
+                {{"name", "采集物"}, {"children", Json::array({{{"id", "herb"}}, {{"id", "sx\xC2\xB7qq"}}})}},
+                {{"name", "敌人"}, {"children", Json::array({{{"id", "wolf"}}})}},
+                {{"name", "BOSS"}, {"children", Json::array({{{"id", "boss"}}})}}});
+            WriteTextAtomically(catalogRoot / "catalogs" / "catalog-8.json", catalog.dump());
+            const auto table = RefreshableCategories::Load(catalogRoot);
+            Require(table.Empty() == false && table.Size() == 3, "the table must hold exactly the refresh categories' leaves");
+            Require(table.Contains("herb") && table.Contains("wolf"), "a refresh category leaf was lost");
+            Require(table.Contains("sx_qq"), "the middle-dot spelling must fold to the point-data spelling");
+            Require(!table.Contains("chest") && !table.Contains("boss"),
+                "a one-off collectible or a boss must never be classified as refreshable");
+            Require(RefreshableCategories::Normalize("sx\xC2\xB7lgn") == "sx_lgn" && RefreshableCategories::Normalize("herb") == "herb",
+                "id normalization must rewrite only the middle-dot spelling");
+            const auto missing = RefreshableCategories::Load(catalogRoot / "nowhere");
+            Require(missing.Empty() && missing.Diagnostic() == "no-category-catalog",
+                "a missing catalog must leave the table empty rather than defaulting to anything");
+            WriteTextAtomically(catalogRoot / "catalogs" / "catalog-9.json", "not json at all");
+            const auto damaged = RefreshableCategories::Load(catalogRoot);
+            Require(damaged.Size() == 3 && damaged.UnreadableFiles() == 1,
+                "one unreadable catalog must not discard the categories the others supplied");
         }
         std::vector<MarkerLayoutPoint> points = {{"a", 5, 5, 0}, {"b", 6, 6, 1}, {"c", 150, 150, 2}};
         auto groups = BuildMarkerLayout(points, 30);

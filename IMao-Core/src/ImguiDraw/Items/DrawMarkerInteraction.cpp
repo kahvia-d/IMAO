@@ -118,6 +118,10 @@ std::optional<PlanningGesture> pendingGesture;
 std::string planningNotice;
 std::optional<bool> autoReplanPending;
 Clock::time_point autoReplanRequestedAt{};
+// The last farming batch this toolbar has shown. A farming completion is the one change
+// the player did not ask for, so its sentence has to be shown even when a leftover notice is
+// already occupying the line.
+std::uint64_t observedFarmNoticeSerial = 0;
 std::uint64_t routeGamepadSession = 0;
 RouteGamepadControls routeGamepadControls;
 bool routeGamepadCursorMode = false;
@@ -594,6 +598,12 @@ struct ToolbarUi {
     std::vector<ToolbarButton> buttons;
     std::string caption, hint, notice;
 };
+// ⚠️ 这个函数目前**没有调用点**（`DrawPlanningToolbar` / `PlanningPanel` 全项目都没有调用者）：
+// 路线工具栏已经搬进 WinUI 工具窗（`IMao-WinUI/Views/MapToolsWindow.cs` 的 `RenderRoute`，
+// 见 `DrawMapToolsLauncher` 那句 "The WinUI window is the only expanded UI."）。
+// 在这里保留按钮只是为了让这套工具栏万一被重新启用时不会缺功能——**改按钮要改的是
+// `MapToolsWindow.RenderRoute` 和 `FunctionPage`，不是这里。**（2026-09-27 我为刷怪采集模式
+// 只改了这里，于是按钮在实机上根本看不见。）
 ToolbarUi BuildPlanningToolbar(const RoutePlanningView& view, const RECT& rect) {
     ToolbarUi ui;
     const float scale = RuntimeStatusBar::Scale();
@@ -624,13 +634,18 @@ ToolbarUi BuildPlanningToolbar(const RoutePlanningView& view, const RECT& rect) 
         add("跳过目标", "route:skip", false, view.currentTargetIndex >= 0);
         add("撤销跳过", "route:undoSkip", false, !view.active->skipped.empty());
         realtime(0);
+        add(view.farmMode ? "刷怪采集：开" : "刷怪采集：关",
+            view.farmMode ? "route:farm:off" : "route:farm:on", view.farmMode);
         add("重新规划", "route:replan", false, !view.computing, 1);
         add("编辑选点", "route:tool:pan", false, true, 1);
         add("新建路线", "route:new", false, true, 1);
         add("退出导航", "route:stop", false, true, 1);
         ui.notice = !planningNotice.empty() ? planningNotice : view.message;
         if (view.autoReplanComputing) ui.notice = "正在根据当前位置调整路线…";
-        if (ui.notice.empty()) ui.notice = view.autoReplanEnabled ? "实时规划已开启 · 接近目标不会自动标记完成" : "LB 聚焦工具栏 · 左摇杆选择 · A 确认 · B 返回游戏";
+        if (ui.notice.empty()) ui.notice = view.farmMode
+            ? "走到路线目标附近会自动标记采集物和敌人 · 收集物仍需手动标记 · 已记在这条路线上"
+            : view.autoReplanEnabled ? "实时规划已开启 · 接近目标不会自动标记完成"
+            : "LB 聚焦工具栏 · 左摇杆选择 · A 确认 · B 返回游戏";
     } else {
         ui.caption = "路线规划  ·  已选 " + std::to_string(view.selected.size()) + " / " + std::to_string(AutoRoute::MaxTargets);
         if (view.hiddenCount) ui.caption += "  ·  " + std::to_string(view.hiddenCount) + " 个在视野外";
@@ -1294,6 +1309,10 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             autoReplanPending.reset(); planningNotice = "实时规划设置未生效，请重试";
         }
     }
+    if (previousPlanning.farmNoticeSerial != observedFarmNoticeSerial) {
+        observedFarmNoticeSerial = previousPlanning.farmNoticeSerial;
+        if (!previousPlanning.farmNotice.empty()) planningNotice = previousPlanning.farmNotice;
+    }
     const auto mapTools = MapToolsBridge::Shared().Read(frame.profileId);
     const auto observedPanel = ToolsPanel(mapTools, origin);
     AutoRoute::ViewportCandidates eligible;
@@ -1583,7 +1602,14 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         if (click.target.starts_with("route:")) {
             if (click.right || click.target == "route:panel" || click.target == "route:disabled") continue;
             CancelGesture();
-            if (click.target.starts_with("route:autoReplan:")) {
+            if (click.target.starts_with("route:farm:")) {
+                // Farming mode is a property of the navigation session, not a saved setting,
+                // so it is applied here and now instead of round-tripping through the shell.
+                auto command = PlanningContext(click);
+                command["action"] = "farm";
+                command["enabled"] = click.target == "route:farm:on";
+                PlanningResult(RoutePlanningService::Command(command));
+            } else if (click.target.starts_with("route:autoReplan:")) {
                 const bool enabled = click.target == "route:autoReplan:on";
                 if (autoReplanPending) continue;
                 autoReplanPending = enabled; autoReplanRequestedAt = Clock::now();

@@ -1,5 +1,6 @@
 #include "RoutePlanningService.h"
 #include "RoutePlanStore.h"
+#include "FarmMode.h"
 #ifdef IMAO_ROUTE_SERVICE_TEST
 #include "../../tests/RoutePlanningServiceTestHost.h"
 #else
@@ -32,6 +33,10 @@ struct Job {
     int scene=0;
     AutoRoute::Start start;
     std::vector<ItemDatas> selected;
+    // A replan of the active route is still the same route, so the preview it produces has to
+    // carry that route's farming setting. Without this, 重新规划 followed by 开始指引 would
+    // quietly switch the mode off while the player is standing on a farming route.
+    bool farmMode=false;
 };
 struct Runtime {
     std::mutex mutex,eventMutex;
@@ -59,6 +64,12 @@ struct Runtime {
     bool visibilityEventPending=false;
     bool autoEnabled=false, autoComputing=false, autoDirty=true;
     std::string autoStatus="disabled", candidateTarget;
+    // Farming mode is a property of the navigation session, not a saved setting: it exists
+    // only while an active route is being followed, and stopping the navigation ends it.
+    bool farmMode=false;
+    std::string farmNotice;
+    std::uint64_t farmNoticeSerial=0;
+    FarmMode::Confirmation farmConfirmation;
     std::atomic_uint64_t autoEpoch{1};
     std::uint64_t orderRevision=0;
     AutoRoute::StablePlayer stablePlayer;
@@ -91,6 +102,9 @@ void InvalidateLocked(){auto& r=R();++r.epoch;r.pending.reset();r.computing=fals
 void StopNavigationLocked(){
     auto& r=R();InvalidateLocked();r.active.reset();r.skipHistory.clear();r.runRequested=false;
     InvalidateAutoLocked(true);
+    // Farming mode belongs to the navigation it was switched on for. Leaving the navigation
+    // turns it off rather than letting it wait for a route the player has put away.
+    r.farmMode=false;r.farmConfirmation.Reset();r.farmNotice.clear();
     r.enabled=false;r.pendingNew=false;r.tool="pan";
     for(auto& [scene,draft]:r.drafts)draft.preview.reset();
 }
@@ -152,6 +166,7 @@ Json SnapshotLocked(){
         {"active",r.active?PlanJsonLocked(*r.active):Json(nullptr)},{"navigationStatus",NavigationLocked()},
         {"currentTarget",target>=0?StopJsonLocked(r.active->stops[target],target+1):Json(nullptr)},
         {"autoReplanEnabled",r.autoEnabled},{"autoReplanComputing",r.autoComputing},{"autoReplanStatus",r.autoStatus},
+        {"farmMode",r.farmMode},{"farmNotice",r.farmNotice},{"farmNoticeSerial",r.farmNoticeSerial},
         {"orderRevision",r.orderRevision},{"previousTarget",r.previousTarget?StopJsonLocked(*r.previousTarget):Json(nullptr)},
         {"savedRoutes",r.saved}};
 }
@@ -166,10 +181,15 @@ void SyncProfileLocked(){
     auto& r=R();const auto profile=DrawItemBase::MarkerProfile();if(profile==r.profile)return;
     InvalidateLocked();r.profile=profile;r.enabled=false;r.pendingNew=false;r.drafts.clear();r.active.reset();r.skipHistory.clear();
     InvalidateAutoLocked(true);r.stablePlayer.Reset();r.hasAutoPosition=false;
+    r.farmMode=false;r.farmConfirmation.Reset();r.farmNotice.clear();
     r.runRequested=false;r.completed.clear();r.message.clear();r.tool="pan";
     try {r.saved=r.store->List(profile);r.active=r.store->LoadActive(profile,ResolveLocked);
-        if(r.active){r.skipHistory=r.active->skipHistory;r.message="已恢复自动路线，点击继续导航";}}
+        if(r.active){r.skipHistory=r.active->skipHistory;r.message="已恢复自动路线，点击继续导航";
+            // A restored route carries its own farming setting; it stays off until the player
+            // resumes, because the mode itself only acts while the navigation is running.
+            r.farmMode=r.active->farmMode;}}
     catch(const std::exception& e){r.message=std::string("自动路线暂停：")+e.what();r.active.reset();}
+    r.farmConfirmation.Reset();r.farmNotice.clear();
     RefreshCompletedLocked();
 }
 void RememberSelectionLocked(Draft& draft){
@@ -204,7 +224,8 @@ void QueueSolveLocked(bool replan){
     if(targets.empty())throw std::runtime_error("请先选择至少一个未完成目标");
     if(targets.size()>AutoRoute::MaxTargets)throw std::runtime_error("单条路线最多 500 点");
     InvalidateLocked();draft.preview.reset();r.enabled=true;r.computing=true;r.message="正在优化访问顺序";
-    r.pending=Job{r.epoch.load(),r.profile,r.scene,draft.start,std::move(targets)};r.wake.notify_one();
+    r.pending=Job{r.epoch.load(),r.profile,r.scene,draft.start,std::move(targets),
+        replan&&r.active?r.active->farmMode:false};r.wake.notify_one();
 }
 void Worker(){
     auto& r=R();for(;;){
@@ -219,7 +240,7 @@ void Worker(){
                 if(std::any_of(result.stops.begin(),result.stops.end(),[&](const ItemDatas& p){return CompletedNow(job.scene,p);}))
                     r.message="目标完成状态已变化，请重新生成路线";
                 else {AutoRoute::Plan plan;plan.id=NewId();plan.name="自动路线";plan.profileId=job.profile;plan.sceneId=job.scene;
-                    plan.start=job.start;plan.stops=result.stops;r.drafts[job.scene].preview=std::move(plan);r.message="路线预览已生成，点击开始导航";}
+                    plan.start=job.start;plan.stops=result.stops;plan.farmMode=job.farmMode;r.drafts[job.scene].preview=std::move(plan);r.message="路线预览已生成，点击开始导航";}
                 ++r.revision;}
             StructuredLogger::Record("info","routes","auto-route-solved","targets="+std::to_string(job.selected.size())+
                 " elapsedMs="+std::to_string(std::chrono::duration<double,std::milli>(Clock::now()-begin).count())+
@@ -402,6 +423,7 @@ RoutePlanningView RoutePlanningService::View(){
     v.revision=r.revision;v.generation=r.epoch.load();v.hiddenCount=HiddenLocked();v.active=r.active;v.completed=r.completed;
     v.mapStart=r.mapStart;
     v.autoReplanEnabled=r.autoEnabled;v.autoReplanComputing=r.autoComputing;v.autoReplanStatus=r.autoStatus;
+    v.farmMode=r.farmMode;v.farmNotice=r.farmNotice;v.farmNoticeSerial=r.farmNoticeSerial;
     v.orderRevision=r.orderRevision;v.previousTarget=r.previousTarget;
     v.currentTargetIndex=TargetIndexLocked();v.navigationStatus=NavigationLocked();v.navigating=v.navigationStatus=="navigating";
     const auto it=r.drafts.find(r.scene);if(it!=r.drafts.end()){v.selected=it->second.selected;v.start=it->second.start;v.preview=it->second.preview;}return v;
@@ -482,7 +504,10 @@ void RoutePlanningService::ObservePlayer(const AutoRoute::PlayerObservation& obs
     }
 }
 void RoutePlanningService::ObserveProximity(const AutoRoute::ProximityObservation& observation){
-    auto& r=R();bool changed=false;{std::scoped_lock lock(r.mutex);if(!r.ready)return;
+    auto& r=R();bool changed=false;
+    std::vector<ItemDatas> reached;std::string reachedProfile;
+    {
+        std::unique_lock lock(r.mutex);if(!r.ready)return;
         // An observation for a superseded target cannot erase or replace its successor's evidence.
         const int target=TargetIndexLocked();
         if(!r.active||target<0||observation.profileId!=r.profile||observation.routeId!=r.active->id||
@@ -492,7 +517,51 @@ void RoutePlanningService::ObserveProximity(const AutoRoute::ProximityObservatio
         if(r.nearConfirmation.Observe(r.proximity,now)&&r.previousTarget){
             r.previousTarget.reset();++r.orderRevision;++r.revision;r.proximity={};r.nearConfirmation.Reset();changed=true;
         }
-    }if(changed)Emit();
+        // Farming mode marks the targets the player has actually reached: the current one and
+        // any later target of this route that lies in the same cluster. Only the daily-refresh
+        // categories take part — a one-off collectible marked here would be consumed without
+        // the player ever picking it up, and no reset can give it back.
+        if(r.farmMode&&r.runRequested&&r.proximity.valid){
+            std::vector<std::string> inRange;
+            for(const auto& entry:observation.nearby){
+                if(!std::isfinite(entry.distancePixels)||entry.distancePixels>=FarmMode::Range::Pixels())continue;
+                const auto found=std::find_if(r.active->stops.begin(),r.active->stops.end(),
+                    [&](const ItemDatas& item){return AutoRoute::Key(item)==entry.key;});
+                if(found==r.active->stops.end())continue;
+                if(!DrawItemBase::IsRefreshablePoint(found->nameId)&&!DrawItemBase::IsRefreshablePointId(found->itemId))continue;
+                if(r.completed.contains(entry.key)||r.active->skipped.contains(entry.key))continue;
+                inRange.push_back(entry.key);
+            }
+            for(const auto& key:r.farmConfirmation.Observe(inRange,now)){
+                const auto found=std::find_if(r.active->stops.begin(),r.active->stops.end(),
+                    [&](const ItemDatas& item){return AutoRoute::Key(item)==key;});
+                if(found!=r.active->stops.end())reached.push_back(*found);
+            }
+            if(!reached.empty())reachedProfile=r.profile;
+        }else r.farmConfirmation.Reset();
+    }
+    if(!reached.empty()){
+        // The store takes its own lock and publishing a completion re-enters this service,
+        // so the write happens with our lock released — the same shape "complete current
+        // target" already uses.
+        Json points=Json::array();
+        for(const auto& item:reached)points.push_back({{"stateId",item.layer.stateId},{"pointId",item.itemId},{"nameId",item.nameId}});
+        const auto result=DrawItemBase::HandleMarkerCommand({{"type","markerFarmComplete"},
+            {"profileId",reachedProfile},{"points",std::move(points)}});
+        const auto count=result.value("accepted",false)?result.at("data").value("changed",std::size_t{}):std::size_t{};
+        {
+            std::scoped_lock lock(r.mutex);
+            // The route has already refreshed itself through OnMarkerChanged; this only
+            // carries the sentence back to the toolbar.
+            if(r.farmMode&&count){
+                r.farmNotice="刷怪采集模式自动标记 "+std::to_string(count)+" 个";
+                ++r.farmNoticeSerial;++r.revision;
+            }
+        }
+        Emit();
+        return;
+    }
+    if(changed)Emit();
 }
 void RoutePlanningService::OnMarkerChanged(){
     auto& r=R();{std::scoped_lock lock(r.mutex);if(!r.ready)return;const auto old=TargetIndexLocked();
@@ -558,6 +627,9 @@ Json RoutePlanningService::Command(const Json& command){
             auto& draft=DraftLocked();if(!draft.preview)throw std::runtime_error("请先生成路线预览");
             InvalidateLocked();
             RefreshCompletedLocked();r.store->Save(*draft.preview,true);r.active=*draft.preview;r.skipHistory.clear();r.runRequested=true;r.enabled=false;r.tool="pan";
+            // The route brings its own farming setting: a route built to sweep monsters and
+            // herbs switches the mode on by itself every time it is started again.
+            r.farmMode=r.active->farmMode;r.farmConfirmation.Reset();r.farmNotice.clear();
             InvalidateAutoLocked(true);r.hasAutoPosition=false;
             draft.preview.reset();
             r.saved=r.store->List(r.profile);r.message="自动路线已保存并开始导航";
@@ -590,6 +662,20 @@ Json RoutePlanningService::Command(const Json& command){
             InvalidateAutoLocked(true);
             if(action=="skip")r.skipHistory.push_back(key);else r.skipHistory.pop_back();
             r.message=action=="skip"?"已跳过当前目标，完成记录未修改":"已撤销跳过，按原顺序继续";
+        }else if(action=="farm"){
+            if(!r.active)throw std::runtime_error("请先开始一条自动路线");
+            const bool enabled=command.value("enabled",!r.farmMode);
+            if(r.farmMode!=enabled){
+                // "刷怪采集" is a property of the route, so the toggle is written to the route
+                // file before the runtime state moves: a failed save leaves both the file and
+                // the switch as they were, instead of promising a memory that was not kept.
+                auto next=*r.active;next.farmMode=enabled;
+                r.store->Save(next,false);
+                r.active=std::move(next);
+                r.farmMode=enabled;r.farmConfirmation.Reset();r.farmNotice.clear();
+            }
+            r.message=enabled?"刷怪采集模式已开启：走到路线目标附近会自动标记采集物和敌人（已记在这条路线上）":
+                "刷怪采集模式已关闭：路线目标仍需手动标记完成";
         }else if(action=="guide"){
             const int target=TargetIndexLocked();if(target<0||!r.active)throw std::runtime_error("当前没有可查看攻略的导航目标");
             const auto item=r.active->stops[target];const auto profile=r.profile;const auto routeId=r.active->id;
@@ -615,6 +701,7 @@ Json RoutePlanningService::Command(const Json& command){
         }else if(action=="load"){
             const auto next=r.store->Load(r.profile,command.at("routeId").get<std::string>(),ResolveLocked);
             r.store->Save(next,true);InvalidateLocked();r.active=next;r.runRequested=false;r.skipHistory=next.skipHistory;r.enabled=false;r.tool="pan";
+            r.farmMode=r.active->farmMode;r.farmConfirmation.Reset();r.farmNotice.clear();
             InvalidateAutoLocked(true);r.hasAutoPosition=false;
             for(auto& [scene,draft]:r.drafts)if(draft.preview&&draft.preview->id==next.id)draft.preview.reset();
             RefreshCompletedLocked();r.message="路线已加载，点击继续导航";

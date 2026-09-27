@@ -20,6 +20,13 @@ struct RoutePlanningView {
     std::size_t hiddenCount = 0;
     bool autoReplanEnabled = false, autoReplanComputing = false;
     std::string autoReplanStatus = "disabled";
+    // Farming mode ("刷怪采集"): while it is on, reaching a route target marks it complete
+    // by itself. `farmNotice` carries the sentence the toolbar shows and `farmNoticeSerial`
+    // changes with every batch, so the interface can tell a new one from the one it is
+    // already showing.
+    bool farmMode = false;
+    std::string farmNotice;
+    std::uint64_t farmNoticeSerial = 0;
     std::uint64_t orderRevision = 0;
     std::optional<ItemDatas> previousTarget;
 };

@@ -28,6 +28,11 @@ struct Plan {
     std::vector<ItemDatas> stops;
     std::unordered_set<std::string> skipped;
     std::vector<std::string> skipHistory;
+    // Whether this route was saved as a farming route: "刷怪采集" belongs to the route, not to
+    // the session and not to a global setting, because a route built to sweep monsters and
+    // herbs is a farming route every time it is loaded. The runtime mode still ends with the
+    // navigation — this only decides what it is when the route starts again.
+    bool farmMode = false;
 };
 struct SolveResult {
     std::vector<ItemDatas> stops;

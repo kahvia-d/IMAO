@@ -204,6 +204,10 @@ internal sealed class MapToolsWindow : Window
             Add("skip", "跳过目标", next.CurrentTarget is not null); Add("undoSkip", "撤销跳过", next.Active.Stops.Any(s => s.Skipped));
             Add("replan", "重新规划", !next.Computing); Add("stop", "退出导航");
         }
+        // 刷怪采集 is a property of the route being followed, so it can only be switched while
+        // there is one. It stays visible without a route (greyed out) so the player can see the
+        // control exists before starting one.
+        Add("farm", next.FarmMode ? "刷怪采集：开" : "刷怪采集：关", next.Active is not null, next.FarmMode);
         Add("autoReplan", next.AutoReplanEnabled ? "实时规划：开" : "实时规划：关", true, next.AutoReplanEnabled);
         string signature = string.Join('|', entries.Select(e => e.Key));
         if (signature != buttonSignature)

@@ -24,6 +24,14 @@ inline std::string CheckTargetSwitch(const std::string& next, bool proximityVali
     return now-since<ReplanPeriod ? "confirmingTarget" : "";
 }
 
+// One route target and how far its direction indicator sits from the player arrow, in
+// minimap screen pixels. Two targets measured from the same frame are comparable; two
+// measured from different frames are not.
+struct TargetDistance {
+    std::string key;
+    double distancePixels = std::numeric_limits<double>::infinity();
+};
+
 struct PlayerObservation {
     std::string profileId;
     std::uint64_t sessionId = 0, continuityGeneration = 0, fixSequence = 0;
@@ -44,6 +52,17 @@ struct ProximityObservation {
     ReplanClock::time_point capturedAt{}, presentedAt{};
     double distancePixels = std::numeric_limits<double>::infinity();
     bool valid = false;
+    // The current target and every later target of the same route, each with its own
+    // distance, measured from the one position the frame was based on. The farming mode
+    // needs the whole cluster the player is standing in, not only the head of the route,
+    // and measuring them together is what makes "in range" mean the same instant for all
+    // of them. `targetKey` above stays the single current target: the target-switch and
+    // near-target rules keep reading exactly what they read before.
+    std::vector<TargetDistance> nearby;
+    const TargetDistance* Find(const std::string& key) const {
+        for (const auto& entry : nearby) if (entry.key == key) return &entry;
+        return nullptr;
+    }
 };
 struct StablePlayer {
     PlayerObservation last;

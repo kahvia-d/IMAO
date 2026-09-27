@@ -324,6 +324,163 @@ void VerifyToolbarLayoutNavigation(){
     Check(RouteToolbarNextKey(regions,regions[0].key,2)==regions[5].key,
         "a real packed layout moves down into the next row");
 }
+// The farming mode end to end through the real service: the toolbar command arms it, the
+// proximity observation drives the dwell, and the write lands in the ledger. What has to
+// hold is as much about what it does NOT mark — a mode that is off, a target out of range,
+// and a target that is not a daily-refresh point whose completion can never be given back.
+void VerifyFarmMode(){
+    RoutePlanningService::Shutdown();
+    const auto* scene=Scene::Find(1);
+    const auto state=std::to_string(scene->kuroStateId);
+    Json points=Json::array();
+    for(const auto& pair:std::vector<std::pair<std::string,double>>{{"near-a",100},{"near-b",110},{"chest",120},{"far",500}})
+        points.push_back({{"id",pair.first},{"x",pair.second/scene->scale*100},{"y",0},{"stateId",scene->kuroStateId}});
+    DrawItemBase::itemsJsonData_World=Json::array({{{"id","mob"},{"name","test"},{"location",points}}});
+    DrawItemBase::completed.clear();
+    DrawItemBase::refreshablePointIds.clear();
+    DrawItemBase::refreshablePointIds.insert("near-a");
+    DrawItemBase::refreshablePointIds.insert("near-b");
+    RoutePlanningService::Initialize();
+    Command({{"action","new"},{"sceneId",1}});
+    Command({{"action","setStart"},{"sceneId",1},{"x",100},{"y",0}});
+    std::vector<std::string> keys;for(const auto* id:{"near-a","near-b","chest","far"})keys.push_back(state+":"+id);
+    Command({{"action","add"},{"keys",keys}});Command({{"action","generate"}});
+    const auto deadline=Clock::now()+3s;
+    while(!RoutePlanningService::View().preview&&Clock::now()<deadline)std::this_thread::sleep_for(10ms);
+    Command({{"action","activate"}});Command({{"action","resume"}});
+    const auto plan=*RoutePlanningService::View().active;
+    const auto keyOf=[&](const std::string& id){for(const auto& stop:plan.stops)if(stop.itemId==id)return AutoRoute::Key(stop);return std::string{};};
+    Check(keyOf("near-a").empty()==false&&keyOf("near-b").empty()==false&&keyOf("chest").empty()==false,
+        "the farming fixture must hold every target it plans to check");
+
+    // One observation of the whole cluster from one player position, exactly as the overlay
+    // builds it: the current target plus every later target of the same route.
+    const auto observe=[&](double x){
+        const auto now=Clock::now();const auto seq=++sequence;
+        RoutePlanningService::UpdatePlayer({1,{x,0},"playerSnapshot",0,1,true});
+        RoutePlanningService::SetPlayerAvailable(true);
+        RoutePlanningService::ObservePlayer({"local",1,1,seq,1,{x,0},now,now,true,true});
+        const auto view=RoutePlanningService::View();
+        if(!view.active||view.currentTargetIndex<0)return;
+        AutoRoute::ProximityObservation value;
+        value.profileId="local";value.routeId=view.active->id;
+        value.targetKey=AutoRoute::Key(view.active->stops[view.currentTargetIndex]);
+        value.sessionId=1;value.orderRevision=view.orderRevision;value.sourceFrameId=seq;
+        value.sceneId=1;value.capturedAt=now;value.presentedAt=now;value.valid=true;
+        value.distancePixels=AutoRoute::TargetDistancePixels(view.active->stops[view.currentTargetIndex].itemMapROC,
+            {x,0},{100,100},1,{});
+        for(std::size_t index=static_cast<std::size_t>(view.currentTargetIndex);index<view.active->stops.size();++index){
+            const auto& stop=view.active->stops[index];
+            if(view.completed.contains(AutoRoute::Key(stop))||view.active->skipped.contains(AutoRoute::Key(stop)))continue;
+            value.nearby.push_back({AutoRoute::Key(stop),AutoRoute::TargetDistancePixels(stop.itemMapROC,{x,0},{100,100},1,{})});
+        }
+        RoutePlanningService::ObserveProximity(value);
+    };
+    const auto dwell=[&](double x,std::chrono::milliseconds total){
+        const auto until=Clock::now()+total;
+        do{observe(x);std::this_thread::sleep_for(60ms);}while(Clock::now()<until);
+    };
+
+    // Mode off: a full dwell sitting on a refreshable target still marks nothing. This is the
+    // promise the toolbar keeps printing whenever the mode is off.
+    const auto baseline=RoutePlanningService::View().completed;
+    dwell(100,700ms);
+    Check(RoutePlanningService::View().completed==baseline,
+        "a full dwell with the farming mode off must mark nothing at all");
+
+    Command({{"action","farm"},{"enabled",true}});
+    Check(RoutePlanningService::View().farmMode,"the toolbar command arms the farming mode");
+    Check(RoutePlanningService::View().completed==baseline,"arming the mode must not mark anything by itself");
+    const auto serialBefore=RoutePlanningService::View().farmNoticeSerial;
+
+    // One frame in range is not a decision: the player may be running past the point.
+    observe(100);
+    Check(!RoutePlanningService::View().completed.contains(keyOf("near-a")),
+        "one frame in range must not mark a target");
+
+    // A sustained dwell marks the refreshable targets of the cluster, and only those.
+    dwell(100,700ms);
+    const auto after=RoutePlanningService::View();
+    Check(after.completed.contains(keyOf("near-a"))&&after.completed.contains(keyOf("near-b")),
+        "a dwell in range must mark every daily-refresh target of the cluster in one batch");
+    Check(!after.completed.contains(keyOf("chest")),
+        "a target that is not a daily-refresh point must never be auto-marked");
+    Check(!after.completed.contains(keyOf("far")),"a target out of range must not be marked");
+    Check(after.farmNotice=="刷怪采集模式自动标记 2 个","the toolbar must report the batch it just marked");
+    Check(after.farmNoticeSerial!=serialBefore,"a new batch must be distinguishable from the last one shown");
+
+    // The remaining target is the one-off collectible, so nothing further happens even though
+    // the player is standing inside its range.
+    dwell(120,700ms);
+    Check(!RoutePlanningService::View().completed.contains(keyOf("chest")),
+        "a route that ends on a collectible must not be advanced by the farming mode");
+
+    // "退出导航" is navigation stopping, not "any toolbar action that leaves the navigation
+    // buttons". Opening the point editor keeps the route active, so the mode has to survive it.
+    Command({{"action","new"},{"sceneId",1}});
+    Check(RoutePlanningService::View().active.has_value()&&RoutePlanningService::View().farmMode,
+        "entering the point editor must not end the navigation or the farming mode");
+    Command({{"action","end"}});
+    Check(RoutePlanningService::View().farmMode,"leaving the point editor must not end the farming mode either");
+
+    // Leaving the navigation turns the mode off, so a later route cannot inherit it.
+    Command({{"action","stop"}});
+    Check(!RoutePlanningService::View().farmMode,"leaving the navigation must turn the farming mode off");
+
+    // But the setting itself lives on the route: the player built this route to farm, so
+    // starting it again arms the mode again without touching the toolbar button.
+    Command({{"action","load"},{"routeId",plan.id}});
+    Check(RoutePlanningService::View().farmMode,"loading a farming route must arm the mode again");
+    Command({{"action","resume"}});Command({{"action","stop"}});
+    Check(!RoutePlanningService::View().farmMode,"resuming and stopping again still ends the runtime mode");
+
+    // Switching it off is remembered just as well, including on disk.
+    Command({{"action","load"},{"routeId",plan.id}});
+    Check(RoutePlanningService::View().farmMode,"fixture must load the route armed");
+    Command({{"action","farm"},{"enabled",false}});
+    Check(!RoutePlanningService::View().farmMode,"the toolbar toggle must also write the setting off");
+    Command({{"action","stop"}});
+    Command({{"action","load"},{"routeId",plan.id}});
+    Check(!RoutePlanningService::View().farmMode,"a route switched back off must stay off when it is loaded again");
+    const auto routePath=StructuredLogger::root/"SavedRoutes"/"Auto"/"local"/(plan.id+".json");
+    {std::ifstream input(routePath);const auto document=Json::parse(input);
+        Check(document.contains("farmMode")&&!document.at("farmMode").get<bool>(),
+            "the route file is what remembers the setting, and it now records it as off");}
+
+    // A replan of the active route is still the same route: 重新规划 followed by 开始指引 must
+    // not quietly switch the farming mode off while the player is standing on a farming route.
+    Command({{"action","farm"},{"enabled",true}});
+    // 重新规划 is only reachable from the big map, so the test enters it the way the overlay
+    // does: a captured map start plus an observed scene. Without that the replan has no start
+    // to solve from, which is what the real service reports as "无法取得当前位置".
+    RoutePlanningService::CaptureMapStart({1,{100,0},"manual",0,1,true});
+    RoutePlanningService::ObserveMap(1,{});
+    Command({{"action","replan"}});
+    {
+        const auto until=Clock::now()+3s;
+        while(!RoutePlanningService::View().preview&&Clock::now()<until)std::this_thread::sleep_for(10ms);
+        Check(RoutePlanningService::View().preview.has_value(),"fixture must produce a replanned preview");
+    }
+    Command({{"action","activate"}});
+    Check(RoutePlanningService::View().farmMode,
+        "starting the route a replan produced must keep the farming setting of the route it replaced");
+    Command({{"action","stop"}});
+
+    // A second route that never asked to farm must turn the mode back off rather than inherit
+    // the setting of whichever route was loaded before it.
+    Command({{"action","load"},{"routeId",plan.id}});
+    Command({{"action","farm"},{"enabled",true}});
+    Check(RoutePlanningService::View().farmMode,"fixture must leave the first route armed");
+    {
+        AutoRoute::RoutePlanStore otherStore(StructuredLogger::root/"SavedRoutes"/"Auto");
+        auto plain=*RoutePlanningService::View().active;
+        plain.id="plain-route";plain.name="plain";plain.farmMode=false;
+        otherStore.Save(plain,false);
+        Command({{"action","load"},{"routeId","plain-route"}});
+        Check(!RoutePlanningService::View().farmMode,
+            "a route saved without the farming setting must not inherit the previous route's mode");
+    }
+}
 }
 int main(int argc,char** argv){
     StructuredLogger::root=std::filesystem::absolute(argc>1?argv[1]:"out/auto-replan-native/service-data");
@@ -375,6 +532,7 @@ int main(int argc,char** argv){
         VerifyGuideSkipGuard(original);
         VerifyRouteToolbarNavigation();
         VerifyToolbarLayoutNavigation();
+        VerifyFarmMode();
     }catch(const std::exception& e){++failures;std::cerr<<"UNEXPECTED: "<<e.what()<<'\n';}
     RoutePlanningService::Shutdown();
     std::cout<<"RoutePlanningService harness failures="<<failures<<'\n';return failures?1:0;

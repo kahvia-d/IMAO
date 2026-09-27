@@ -15,6 +15,12 @@ public sealed record RoutePlanningState
     public bool AutoReplanEnabled { get; init; }
     public bool AutoReplanComputing { get; init; }
     public string AutoReplanStatus { get; init; } = "disabled";
+    /// <summary>
+    /// 刷怪采集模式当前是否开着。它是**路线自己的设置**（随路线文件保存，见
+    /// <c>AutoRoute::Plan::farmMode</c>），运行状态随导航结束而关：所以载入一条刷怪路线
+    /// 会自动把它打开，而它不会跨导航留到别的路线上。
+    /// </summary>
+    public bool FarmMode { get; init; }
     public ulong OrderRevision { get; init; }
     public RouteStop? PreviousTarget { get; init; }
     public ulong Revision { get; init; }

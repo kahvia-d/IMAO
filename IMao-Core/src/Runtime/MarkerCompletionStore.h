@@ -3,7 +3,9 @@
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <fstream>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <set>
@@ -365,6 +367,27 @@ public:
         return {completed.begin(), completed.end()};
     }
     std::string Profile() const { std::scoped_lock lock(mutex); return document.at("profileId").get<std::string>(); }
+
+    // Removes the active profile's points that `select` accepts and returns them, so a
+    // caller can move a whole class of completions into a ledger of its own. Used to take
+    // the daily-refresh categories (采集物 ∪ 敌人) out of this document: while they are in
+    // here they are queued for upload and compared against the cloud, and this feature
+    // promises they are neither. The revision advances only when something was removed,
+    // and a failed write leaves both memory and disk as they were.
+    Json ExtractPoints(const std::function<bool(const Json&)>& select) {
+        std::scoped_lock lock(mutex);
+        Json removed = Json::array();
+        std::vector<std::string> identities;
+        for (const auto& [identity, point] : document.at("points").items())
+            if (select(point)) { removed.push_back(point); identities.push_back(identity); }
+        if (removed.empty())
+            return {{"points", Json::array()}, {"revision", document.value("revision", std::uint64_t{})}};
+        Json next = document;
+        for (const auto& identity : identities) next["points"].erase(identity);
+        const auto revision = Advance(next);
+        Commit(next);
+        return {{"points", std::move(removed)}, {"revision", revision}};
+    }
 
 private:
     std::filesystem::path root;

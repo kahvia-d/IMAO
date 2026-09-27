@@ -757,6 +757,7 @@ public sealed partial class SettingsPage : Page
         AutomaticReplan.IsOn = value.AutoReplanEnabled;
         CompletionRangePixels.Value = value.CompletionRangePixels;
         GuideRangePixels.Value = value.GuideRangePixels;
+        FarmRangePixels.Value = value.FarmRangePixels;
         restoringRuntime = false;
     }
     private async Task SaveRuntimeAsync(Func<Task<bool>> update)
@@ -785,6 +786,8 @@ public sealed partial class SettingsPage : Page
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 5 and <= 120) await SaveRangeAsync(() => coreHost.ConfigureAsync(completionRangePixels: (int)e.NewValue)); }
     private async void GuideRange_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 5 and <= 120) await SaveRangeAsync(() => coreHost.ConfigureAsync(guideRangePixels: (int)e.NewValue)); }
+    private async void FarmRange_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
+    { if (double.IsFinite(e.NewValue) && e.NewValue is >= 5 and <= 120) await SaveRangeAsync(() => coreHost.ConfigureAsync(farmRangePixels: (int)e.NewValue)); }
 
     /// <summary>
     /// Saves one trigger range and reports the result in the 操作优化 card. The range is
@@ -794,7 +797,8 @@ public sealed partial class SettingsPage : Page
     private async Task SaveRangeAsync(Func<Task<bool>> update)
     {
         if (restoringRuntime || savingRange || !IsLoaded) return;
-        savingRange = true; CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = false;
+        savingRange = true;
+        CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = FarmRangePixels.IsEnabled = false;
         try
         {
             bool applied = await update();
@@ -803,7 +807,12 @@ public sealed partial class SettingsPage : Page
             RangeMessage.IsOpen = !applied;
         }
         catch (Exception error) { RangeMessage.Severity = InfoBarSeverity.Error; RangeMessage.Message = error.Message; RangeMessage.IsOpen = true; }
-        finally { savingRange = false; CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = true; RestoreRuntime(); }
+        finally
+        {
+            savingRange = false;
+            CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = FarmRangePixels.IsEnabled = true;
+            RestoreRuntime();
+        }
     }
     private async void ToggleSwitch_MinMapShowItem(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(minMapEnabled: Setting_MinMapShowItem.IsOn));
     private async void ToggleSwitch_MapShowItem(object sender, RoutedEventArgs e) => await SaveRuntimeAsync(() => coreHost.ConfigureAsync(mapEnabled: Setting_MapShowItem.IsOn));

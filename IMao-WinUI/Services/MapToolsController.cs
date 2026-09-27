@@ -350,6 +350,14 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
             var state = core.RoutePlanning;
             var payload = new Dictionary<string, object?> { ["profileId"] = profile };
             string routeAction = action;
+            // 刷怪采集 是路线自己的设置（随路线文件保存），不是当前地图视口的设置，所以它跟
+            // 「退出导航」一样不绑 expectedSceneId/expectedGeneration：玩家在大地图上换了区域
+            // 不该让这次开关失效。
+            if (action == "farm")
+            {
+                if (state.Active is null) return;
+                payload["enabled"] = !state.FarmMode;
+            }
             if (action.StartsWith("tool:", StringComparison.Ordinal))
             {
                 routeAction = "tool";
@@ -362,7 +370,7 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
                 if (action == "skip") payload["key"] = state.CurrentTarget?.Key;
             }
             // addVisible/generate bind to the exact selection/scene the user saw.
-            if (state.SceneId > 0 && action is not ("new" or "resume" or "pause" or "stop" or "undoSkip"))
+            if (state.SceneId > 0 && action is not ("new" or "resume" or "pause" or "stop" or "undoSkip" or "farm"))
             { payload["expectedSceneId"] = state.SceneId; payload["expectedGeneration"] = state.Generation; }
             await core.ExecuteRoutePlanningAsync(routeAction, payload, sessionCancellation?.Token ?? default);
             if (operation != generation || window is null) return;

@@ -39,6 +39,16 @@ public:
 	static std::string GetExternalIconPath(const std::string& itemNameId);
 	static std::vector<std::string> GetFilteredPoints(std::string scene, std::string nameId);
     static bool IsPointCompleted(const std::string& scene, const ItemDatas& item);
+    // Whether a point belongs to a category the game refills every day (采集物 ∪ 敌人).
+    // Only these are auto-marked by the farming mode, excluded from synchronization and
+    // cleared by the 04:00 reset; everything else keeps needing a deliberate mark.
+    static bool IsRefreshablePoint(const std::string& nameId);
+    static bool IsRefreshablePointId(const std::string& pointId);
+    // Reports the daily 04:00 reset of the farming ledger exactly once per boundary, and says
+    // whether it just happened so the caller can refresh whatever cached the old completions.
+    // Called from the overlay's per-frame path; after the first call of each day it is one flag
+    // check.
+    static bool ReportFarmLedgerExpiry();
     static json HandleMarkerCommand(const json& command);
     static void SetMarkerEventCallback(std::function<void(const json&)> callback);
     static void PublishMarkerEvent(json event);
@@ -80,6 +90,11 @@ private:
 	static void LoadItemsjson();
 	static void Thread_ReadSavedPointsJson();
 	static bool FindItemJsonData(int sceneId, json*& itemJsonData);
+	// The farming ledger's write paths: one point (a mark the player made, redirected here
+	// because the category never belongs in the synchronized document) and one batch (the
+	// targets the farming mode reached together).
+	static json HandleFarmSetCompletion(const json& command);
+	static json HandleFarmBatchCompletion(const json& command);
 	//static json savedItemPoints;
 	static std::thread thread_ReadSavedPointsJson;
 	static std::atomic_bool savedPointsThreadStop;

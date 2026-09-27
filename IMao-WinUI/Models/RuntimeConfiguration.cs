@@ -54,6 +54,11 @@ public sealed record RuntimeConfiguration
     // used; the two keys are measured separately because they do different things.
     public int CompletionRangePixels { get; init; } = 15;
     public int GuideRangePixels { get; init; } = 15;
+    // How far from the player arrow a route target counts as reached by the farming mode
+    // ("刷怪采集"). Deliberately wider than the two ranges above: a monster camp or a herb
+    // cluster is several icons wide, and the mode is meant to mark the whole cluster as the
+    // player arrives. Same unit, so the player tunes it the same way.
+    public int FarmRangePixels { get; init; } = 30;
 
     /// <summary>
     /// 参与冲突校验的全部快捷键。校验、界面保存与"新增绑定"的迁移都读这一份列表，
@@ -73,7 +78,7 @@ public sealed record RuntimeConfiguration
             throw new ArgumentException("刷新间隔必须在 16–1000 毫秒之间");
         if (GamepadControllerIndex is < -1 or > 3)
             throw new ArgumentException("手柄编号必须为自动选择或 1–4");
-        if (CompletionRangePixels is < 5 or > 120 || GuideRangePixels is < 5 or > 120)
+        if (CompletionRangePixels is < 5 or > 120 || GuideRangePixels is < 5 or > 120 || FarmRangePixels is < 5 or > 120)
             throw new ArgumentException("触发范围必须在 5–120 像素之间");
         if (GamepadEntryButton is not (GamepadButtons.LB or GamepadButtons.RB))
             throw new ArgumentException("手柄助手入口仅支持 LB 或 RB");
@@ -112,6 +117,7 @@ public sealed record RuntimeConfiguration
         ["guideSkipKey"] = GuideSkipKey,
         ["guidePreviousImageKey"] = GuidePreviousImageKey, ["guideNextImageKey"] = GuideNextImageKey,
         ["toggleEnabledKey"] = ToggleEnabledKey,
-        ["completionRangePixels"] = CompletionRangePixels, ["guideRangePixels"] = GuideRangePixels
+        ["completionRangePixels"] = CompletionRangePixels, ["guideRangePixels"] = GuideRangePixels,
+        ["farmRangePixels"] = FarmRangePixels
     };
 }

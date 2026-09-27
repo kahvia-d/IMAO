@@ -36,7 +36,11 @@ public:
             {"nameId",p.nameId},{"x",p.itemMapROC.x},{"y",p.itemMapROC.y},{"countryId",p.layer.countryId},
             {"floorId",p.layer.floorId},{"level",p.layer.level},{"skipped",plan.skipped.contains(Key(p))}});
         const Json doc={{"formatVersion",1},{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},
-            {"sceneId",plan.sceneId},{"start",StartJson(plan.start)},{"stops",std::move(stops)},{"skipHistory",plan.skipHistory}};
+            {"sceneId",plan.sceneId},{"start",StartJson(plan.start)},{"stops",std::move(stops)},{"skipHistory",plan.skipHistory},
+            // A missing field on an older file means "not a farming route", which is the only
+            // safe reading: turning the mode on by default would auto-mark points on routes the
+            // player never asked to farm.
+            {"farmMode",plan.farmMode}};
         WriteTextAtomically(Path(plan.profileId,plan.id),doc.dump(2));
         if(makeActive)WriteTextAtomically(Folder(plan.profileId)/"active.json",
             Json({{"formatVersion",1},{"routeId",plan.id}}).dump(2));
@@ -65,6 +69,7 @@ public:
         }
         if(doc.contains("skipHistory"))plan.skipHistory=doc.at("skipHistory").get<std::vector<std::string>>();
         else for(const auto& item:plan.stops)if(plan.skipped.contains(Key(item)))plan.skipHistory.push_back(Key(item));
+        plan.farmMode=doc.value("farmMode",false);
         Validate(plan);return plan;
     }
     std::optional<Plan> LoadActive(const std::string& profile,const Resolver& resolve) const {

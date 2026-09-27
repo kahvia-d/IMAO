@@ -9,6 +9,7 @@
 #include "../ImguiDraw/Items/DrawItemBase.h"
 #include "../ImguiDraw/Items/DrawItemOnMinMap.h"
 #include "../Runtime/RoutePlanningService.h"
+#include "../Runtime/FarmMode.h"
 #include "../Runtime/RuntimeHotkeys.h"
 #include "../Runtime/MarkerGuideProtocol.h"
 #include "../Runtime/GamepadContext.h"
@@ -465,6 +466,7 @@ bool ApplyConfigure(const json& command) {
     const auto autoReplan = boolean("autoReplanEnabled");
     const auto completionRange = integer("completionRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
     const auto guideRange = integer("guideRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
+    const auto farmRange = integer("farmRangePixels", FarmMode::MinimumRangePixels, FarmMode::MaximumRangePixels);
     const auto hotkeys = RuntimeHotkeys::ValidateConfiguration(command);
     if (capture) SetCaptureWay(*capture);
     if (present) SetOverlayPresentMode(*present);
@@ -480,6 +482,7 @@ bool ApplyConfigure(const json& command) {
     if (completionRange || guideRange)
         NearbySelection::Ranges::Apply(completionRange.value_or(NearbySelection::Ranges::Completion()),
             guideRange.value_or(NearbySelection::Ranges::Guide()));
+    if (farmRange) FarmMode::Range::Apply(*farmRange);
     RuntimeHotkeys::Apply(hotkeys);
     return true;
 }

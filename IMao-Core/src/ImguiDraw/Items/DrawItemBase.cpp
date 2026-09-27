@@ -13,6 +13,8 @@
 #include "../../Runtime/SceneItemStore.h"
 #include "../../Runtime/AtomicFile.h"
 #include "../../Runtime/MarkerCompletionStore.h"
+#include "../../Runtime/FarmCompletionStore.h"
+#include "../../Runtime/RefreshableCategories.h"
 #include "../../Runtime/RoutePlanningService.h"
 #include "../../Runtime/MarkerGuideProtocol.h"
 #include <functional>
@@ -42,6 +44,14 @@ std::atomic_bool DrawItemBase::savedPointsThreadStop = false;
 std::filesystem::path DrawItemBase::savedJsonPath;
 
 static std::unique_ptr<MarkerCompletionStore> markerStore;
+// The daily-refresh ledger and the category table that decides what belongs in it. Both
+// exist so the farming mode's completions can never enter the synchronized document.
+static std::unique_ptr<FarmCompletionStore> farmStore;
+static RefreshableCategories refreshableCategories;
+// Every point id whose category is a daily-refresh one. Point ids are unique across all
+// scenes and categories in the shipped data, so one flat set answers the question for a
+// cloud identity that arrives with no category attached. A script asserts that uniqueness.
+static std::unordered_set<std::string> refreshablePointIds;
 static std::mutex markerEventMutex;
 static std::function<void(const json&)> markerEventCallback;
 static std::mutex markerGuideMutex;
@@ -65,6 +75,26 @@ Coordinate KuroLocationToIdentifyCoordinate(const json& location) {
     return KuroPositionToGameCoordinates(location.at("x").get<double>(), location.at("y").get<double>());
 }
 
+// Moves completions of the daily-refresh categories (采集物 ∪ 敌人) out of the synchronized
+// document and into the farming ledger. Their absence from the synchronized document is
+// what keeps them out of the upload outbox and off the cloud comparison, so it has to hold
+// for records that predate this feature as well as for the ones an import can still create.
+std::size_t MoveRefreshableToFarmLedger() {
+    if (!markerStore || !farmStore || refreshablePointIds.empty()) return 0;
+    const auto extracted = markerStore->ExtractPoints([](const json& point) {
+        return point.contains("pointId") && point.at("pointId").is_string() &&
+            refreshablePointIds.contains(point.at("pointId").get<std::string>());
+    });
+    const auto& moved = extracted.at("points");
+    if (moved.empty()) return 0;
+    const auto absorbed = farmStore->Absorb(moved);
+    StructuredLogger::Record("info", "farm", "moved-out-of-sync-ledger",
+        "moved=" + std::to_string(moved.size()) + " completed=" + std::to_string(absorbed));
+    DrawItemBase::PublishMarkerEvent({{"type", "markerFarmLedgerMoved"}, {"profileId", markerStore->Profile()},
+        {"moved", static_cast<std::uint64_t>(moved.size())}});
+    return moved.size();
+}
+
 json& DrawItemBase::GetSavedItemPoints() {
     static json j;
     return j;
@@ -76,22 +106,37 @@ void DrawItemBase::Initi() {
     fs::create_directories(directory);
     const auto legacy = fs::path(GetCurrentPath()) / "SavedPoints" / "account_1.json";
     if (!fs::exists(directory / "account_1.json") && fs::exists(legacy)) fs::copy_file(legacy, directory / "account_1.json");
+    refreshableCategories = RefreshableCategories::Load(ResourceSnapshotContext::MapDataRoot());
     markerStore = std::make_unique<MarkerCompletionStore>(directory);
+    farmStore = std::make_unique<FarmCompletionStore>(directory);
     markerIdentities.clear();
+    refreshablePointIds.clear();
     for (const auto sceneId : Scene::sceneIds) {
         json* source = nullptr;
         if (!FindItemJsonData(sceneId, source) || !source || !source->is_array()) continue;
         const auto scene = Scene::SceneIdToName(sceneId);
         for (const auto& category : *source) {
+            const auto categoryId = category.value("id", "");
+            const bool refreshable = refreshableCategories.Contains(categoryId);
             for (const auto& location : category.value("location", json::array())) {
                 if (!location.contains("id") || !location.at("id").is_string()) continue;
                 const auto id = location.at("id").get<std::string>();
                 const int state = location.value("stateId", MarkerCompletionStore::SceneState(scene));
                 markerIdentities[std::to_string(state) + ":" + id] = {{"sceneName", scene},
-                    {"nameId", category.value("id", "")}, {"stateId", state}, {"pointId", id}};
+                    {"nameId", categoryId}, {"stateId", state}, {"pointId", id}};
+                // Point ids are unique across all scenes and categories, so one flat set can
+                // answer for a cloud identity that arrives with no category attached.
+                if (refreshable) refreshablePointIds.insert(id);
             }
         }
     }
+    if (refreshableCategories.Empty())
+        StructuredLogger::Record("warn", "farm", "refresh-categories-unavailable", refreshableCategories.Diagnostic());
+    else
+        StructuredLogger::Record("info", "farm", "refresh-categories",
+            "categories=" + std::to_string(refreshableCategories.Size()) + " points=" + std::to_string(refreshablePointIds.size()) +
+            (refreshableCategories.UnreadableFiles() ? " unreadable=" + std::to_string(refreshableCategories.UnreadableFiles()) : ""));
+    MoveRefreshableToFarmLedger();
     RoutePlanningService::Initialize();
 }
 
@@ -100,6 +145,9 @@ void DrawItemBase::Shutdown() {
     SetMarkerEventCallback({});
     SetGuideWindow(nullptr);
     markerStore.reset();
+    farmStore.reset();
+    refreshablePointIds.clear();
+    refreshableCategories = RefreshableCategories{};
 }
 
 bool LoadJson(json& JsonData, const wchar_t* resourceName) {
@@ -320,11 +368,23 @@ void DrawItemBase::RemoveSavedItemPoint(string scene, ItemDatas itemDatas) {
 }
 
 vector<string> DrawItemBase::GetFilteredPoints(string scene, string nameId) {
-    return markerStore ? markerStore->CompletedIds(scene, nameId) : vector<string>{};
+    if (!markerStore) return vector<string>{};
+    // The daily-refresh categories are answered from their own ledger. Going through the
+    // synchronized one would show a completion the 04:00 reset already cleared.
+    if (IsRefreshablePoint(nameId))
+        return farmStore ? farmStore->CompletedIds(MarkerCompletionStore::SceneState(scene)) : vector<string>{};
+    return markerStore->CompletedIds(scene, nameId);
 }
 
 bool DrawItemBase::IsPointCompleted(const string& scene, const ItemDatas& item) {
-    return markerStore && markerStore->Completed(scene, item.nameId, item.itemId);
+    if (!markerStore) return false;
+    const int state = item.layer.stateId > 0 ? item.layer.stateId : MarkerCompletionStore::SceneState(scene);
+    // A daily-refresh point reads its own ledger and nothing else: a leftover record in the
+    // synchronized document, or a cloud completion the baseline still carries, must never
+    // make the daily reset look like it did not happen.
+    if (IsRefreshablePoint(item.nameId) || IsRefreshablePointId(item.itemId))
+        return farmStore && farmStore->Completed(state, item.itemId);
+    return markerStore->Completed(scene, item.nameId, item.itemId);
 }
 
 std::string DrawItemBase::MarkerProfile() { return markerStore ? markerStore->Profile() : "local"; }
@@ -513,7 +573,15 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
         const auto identity = markerIdentities.find(key);
         if (identity == markerIdentities.end()) return {{"accepted", false}, {"message", "unknown-public-point"}, {"data", json::object()}};
         for (const auto& [name, value] : identity->second.items()) normalized[name] = value;
+        // The daily-refresh categories are kept out of the synchronized document entirely:
+        // a completion for one of them is written to the farming ledger instead, which is
+        // also what keeps it out of the upload outbox and off the cloud comparison. Reads
+        // are redirected the same way (IsPointCompleted), so a record left in the old
+        // document by an earlier version can never resurface as a completion either.
+        if (IsRefreshablePointId(normalized.at("pointId").get<std::string>()))
+            return HandleFarmSetCompletion(normalized);
     }
+    if (type == "markerFarmComplete") return HandleFarmBatchCompletion(normalized);
     // An empty list means the caller supplied no identities (the desktop never
     // has the catalog), so it must be treated the same as an absent field.
     const bool suppliedIdentities = normalized.contains("points") && normalized.at("points").is_array() && !normalized.at("points").empty();
@@ -524,6 +592,17 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
         normalized["points"] = json::array();
         for (const auto& [key, identity] : markerIdentities)
             if (state <= 0 || identity.at("stateId") == state) normalized["points"].push_back(identity);
+    }
+    // A cloud completion for a daily-refresh point must not be applied: it would resurrect
+    // the point the 04:00 reset just cleared, and its identity must not be reported as
+    // "unmapped" either. These categories take no part in synchronization in either
+    // direction, so the cloud set enters the store already without them.
+    if ((type == "markerPreviewSync" || type == "markerApplyRemote" || type == "markerInitializeSync") &&
+        !refreshablePointIds.empty() && normalized.contains("remoteIds") && normalized.at("remoteIds").is_array()) {
+        json kept = json::array();
+        for (const auto& id : normalized.at("remoteIds"))
+            if (!id.is_string() || !refreshablePointIds.contains(id.get<std::string>())) kept.push_back(id);
+        normalized["remoteIds"] = std::move(kept);
     }
     auto result = markerStore->Execute(normalized);
     if (result.value("accepted", false)) {
@@ -537,13 +616,96 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
             for (const auto& [name, value] : guideContext.items()) event[name] = value;
             PublishMarkerEvent(std::move(event));
         } else if (type == "markerSelectProfile") {
+            // The farming ledger follows the record book the map is showing.
+            farmStore->SelectProfile(markerStore->Profile());
+            MoveRefreshableToFarmLedger();
             ClearMarkerCandidates(true);
             PublishMarkerEvent({{"type", "markerSelectionCleared"}});
             PublishMarkerEvent({{"type", "markerProfileChanged"}, {"profileId", markerStore->Profile()}});
         }
+        // An import can still create daily-refresh records (the pre-rewrite file and the
+        // explicit copy carry whatever the old record held), so the move has to run again
+        // after every command that can add them.
+        if (type == "markerApplyRemote" || type == "markerInitializeSync" ||
+            type == "markerCopyLocalProgress" || type == "markerImportLegacyProgress") MoveRefreshableToFarmLedger();
     }
     return result;
 }
+
+bool DrawItemBase::IsRefreshablePoint(const std::string& nameId) {
+    return !nameId.empty() && refreshableCategories.Contains(nameId);
+}
+
+bool DrawItemBase::IsRefreshablePointId(const std::string& pointId) {
+    return !pointId.empty() && refreshablePointIds.contains(pointId);
+}
+
+// A completion of a daily-refresh point, written to its own ledger. The request is answered
+// in the same shape MarkerCompletionStore uses so every existing caller keeps working.
+json DrawItemBase::HandleFarmSetCompletion(const json& command) {
+    if (!farmStore) return {{"accepted", false}, {"message", "farm-store-unavailable"}, {"data", json::object()}};
+    const int state = command.value("stateId", 0);
+    const auto pointId = command.at("pointId").get<std::string>();
+    const auto profile = MarkerProfile();
+    const auto requested = command.value("profileId", profile);
+    if (!requested.empty() && requested != profile)
+        return {{"accepted", false}, {"message", "profile-mismatch"}, {"data", json::object()}};
+    const bool completed = command.value("completed", false);
+    farmStore->Set(state, pointId, completed);
+    json point = {{"sceneName", command.value("sceneName", "")}, {"nameId", command.value("nameId", "")},
+        {"stateId", state}, {"pointId", pointId}, {"completed", completed},
+        {"remoteCompleted", nullptr}, {"pending", false}, {"dailyRefresh", true}};
+    PublishMarkerEvent({{"type", "markerFarmCompletionChanged"}, {"profileId", profile}, {"source", "local"},
+        {"count", std::size_t{1}}, {"point", point}});
+    return {{"accepted", true}, {"message", ""}, {"data", {{"point", point}, {"points", json::array({point})}}}};
+}
+
+// One write for a batch of targets the farming mode reached at once. Kept separate from the
+// per-point command so a cluster of three monsters produces one revision and one notice
+// instead of three.
+json DrawItemBase::HandleFarmBatchCompletion(const json& command) {
+    if (!farmStore) return {{"accepted", false}, {"message", "farm-store-unavailable"}, {"data", json::object()}};
+    const auto profile = MarkerProfile();
+    const auto requested = command.value("profileId", profile);
+    if (!requested.empty() && requested != profile)
+        return {{"accepted", false}, {"message", "profile-mismatch"}, {"data", json::object()}};
+    std::vector<FarmCompletionStore::Entry> entries;
+    json keys = json::array();
+    for (const auto& supplied : command.value("points", json::array())) {
+        const int state = supplied.value("stateId", 0);
+        const auto pointId = supplied.value("pointId", std::string{});
+        if (state <= 0 || pointId.empty() || !IsRefreshablePointId(pointId)) continue;
+        // A caller that does state its category has to agree with the table.
+        const auto nameId = supplied.value("nameId", std::string{});
+        if (!nameId.empty() && !refreshableCategories.Contains(nameId)) continue;
+        entries.push_back({state, pointId, true});
+        keys.push_back(std::to_string(state) + ":" + pointId);
+    }
+    if (entries.empty()) return {{"accepted", false}, {"message", "no-refreshable-target"}, {"data", json::object()}};
+    const auto changed = farmStore->SetMany(entries);
+    if (changed) {
+        // The one write the player did not ask for, so it is also the one that has to leave a
+        // trace: the ledger file says which points, this says when and against which game day.
+        StructuredLogger::Record("info", "farm", "auto-complete",
+            "count=" + std::to_string(changed) + " epoch=" + std::to_string(farmStore->Epoch()) + " points=" + keys.dump());
+        PublishMarkerEvent({{"type", "markerFarmCompletionChanged"}, {"profileId", profile}, {"source", "local"},
+            {"count", changed}, {"keys", keys}});
+    }
+    return {{"accepted", true}, {"message", ""}, {"data", {{"completed", keys}, {"changed", changed}}}};
+}
+
+// The 04:00 reset happens on a read, so without this the day boundary would pass unnoticed:
+// nothing else in the log would explain why the monsters the player marked are on the map
+// again. Returns true exactly once per boundary, and only then is it worth telling the route
+// service — its own `completed` set is a snapshot that would otherwise stay stale until the
+// next marker event, leaving the route pointing at yesterday's "next target".
+bool DrawItemBase::ReportFarmLedgerExpiry() {
+    if (!farmStore || !farmStore->TakeExpired()) return false;
+    StructuredLogger::Record("info", "farm", "ledger-expired",
+        "epoch=" + std::to_string(farmStore->Epoch()) + " (the game refilled every 采集物 and 敌人; this ledger was cleared)");
+    return true;
+}
+
 
 void DrawItemBase::SetMarkerEventCallback(std::function<void(const json&)> callback) {
     std::scoped_lock lock(markerEventMutex);
@@ -552,7 +714,11 @@ void DrawItemBase::SetMarkerEventCallback(std::function<void(const json&)> callb
 
 void DrawItemBase::PublishMarkerEvent(json event) {
     const auto type = event.value("type", "");
-    if (type == "markerCompletionChanged" || type == "markerProfileChanged") RoutePlanningService::OnMarkerChanged();
+    // A farming completion changes which route targets are left just like an ordinary one,
+    // and the move that takes a whole class of records out of the synchronized document can
+    // change the visible state too, so both have to refresh the route.
+    if (type == "markerCompletionChanged" || type == "markerFarmCompletionChanged" ||
+        type == "markerFarmLedgerMoved" || type == "markerProfileChanged") RoutePlanningService::OnMarkerChanged();
     std::function<void(const json&)> callback;
     { std::scoped_lock lock(markerEventMutex); callback = markerEventCallback; }
     if (callback) callback(event);

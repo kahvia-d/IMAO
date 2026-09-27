@@ -1,5 +1,6 @@
 #include "Runtime/RoutePlanningModel.h"
 #include "Runtime/AutoReplanPolicy.h"
+#include "Runtime/FarmMode.h"
 #include "Runtime/RouteGeometry.h"
 #include "Runtime/RoutePlanStore.h"
 #include "Runtime/PlanningEscapeKey.h"
@@ -173,6 +174,8 @@ void StoreTests() {
     plan.stops.front().isSaved = true;
     plan.skipped.insert(AutoRoute::Key(plan.stops.back()));
     plan.skipHistory.push_back(AutoRoute::Key(plan.stops.back()));
+    // "刷怪采集" belongs to the route, so it has to survive the same roundtrip as the skips.
+    plan.farmMode = true;
     const auto resolver = [&](int sceneId, const std::string& key) -> std::optional<ItemDatas> {
         if (sceneId != plan.sceneId) return {};
         for (const auto& item : plan.stops) if (AutoRoute::Key(item) == key) return item;
@@ -182,17 +185,26 @@ void StoreTests() {
     store.Save(plan, true);
     const auto restored = store.Load("local", "route-1", resolver);
     Expect(restored.id == plan.id && restored.profileId == plan.profileId && restored.sceneId == plan.sceneId && restored.name == plan.name &&
-        Keys(restored.stops) == Keys(plan.stops) && restored.skipped == plan.skipped && restored.skipHistory == plan.skipHistory,
-        "store roundtrip preserves plan identity, order, skips and undo history");
+        Keys(restored.stops) == Keys(plan.stops) && restored.skipped == plan.skipped && restored.skipHistory == plan.skipHistory &&
+        restored.farmMode,
+        "store roundtrip preserves plan identity, order, skips, undo history and the farming setting");
     Expect(restored.start.confirmedUnixMs == plan.start.confirmedUnixMs && restored.start.generation == 42 && restored.start.source == "playerSnapshot" &&
         restored.stops[0].layer.floorId == "floor-a" && Near(restored.stops[0].itemMapROC, {1, 2}), "store roundtrip preserves start and target metadata");
     const auto planPath = folder / "SavedRoutes" / "Auto" / "local" / "route-1.json";
     const auto document = Json::parse(read(planPath));
     Expect(!document.contains("completed") && !document.at("stops")[0].contains("completed") && !document.at("stops")[0].contains("isSaved") &&
         document.at("stops")[1].at("skipped").get<bool>(), "stored skips are independent of authoritative marker completion");
+    Expect(document.at("farmMode").get<bool>(), "the farming setting is written to the route file, not to a global setting");
     auto priorVersion = document; priorVersion.erase("skipHistory");
     WriteTextAtomically(planPath, priorVersion.dump());
     Expect(store.Load("local", "route-1", resolver).skipHistory == plan.skipHistory, "existing v1 skips regain undo history in route order");
+    // Every route file written before this feature exists, so the only safe reading of a
+    // missing field is "not a farming route": defaulting it on would start auto-marking points
+    // on routes the player never asked to farm.
+    auto beforeFarmMode = document; beforeFarmMode.erase("farmMode");
+    WriteTextAtomically(planPath, beforeFarmMode.dump());
+    Expect(!store.Load("local", "route-1", resolver).farmMode,
+        "a route file written before farming mode existed is not a farming route");
     store.Save(plan, false);
     auto invalidHistory = plan; invalidHistory.skipHistory.push_back(plan.skipHistory.front());
     RejectsAny([&] { store.Save(invalidHistory); }, "duplicate skip undo history rejected");
@@ -869,9 +881,77 @@ void Benchmark() {
     std::cout << "routePlanner targets=500 trials=20 p95Ms=" << p95 << " maxMs=" << elapsed.back() << '\n';
     Expect(p95 <= 1000, "500-target solve P95 is at most 1 second");
 }
+// The farming mode's one decision: has this target been reached, or did the player merely
+// walk past it? Everything else about the mode (which categories, which ledger) is tested
+// where it lives; this pins the dwell rule that decides whether a point gets marked at all.
+void FarmModeTests() {
+    const FarmMode::Clock::time_point t0{};
+    using std::chrono::milliseconds;
+    {
+        FarmMode::Confirmation confirmation;
+        Expect(confirmation.Observe({"8:a"}, t0).empty(), "a single frame in range must not mark anything");
+        Expect(confirmation.Observe({"8:a"}, t0 + milliseconds(200)).empty(),
+            "part of the dwell must not mark anything");
+        const auto due = confirmation.Observe({"8:a"}, t0 + FarmMode::Dwell);
+        Expect(due.size() == 1 && due.front() == "8:a", "a full dwell in range must mark the target");
+        // Marked once and then forgotten: the caller's completion state decides what happens
+        // next, and a repeated observation must not write the same point twice.
+        Expect(confirmation.Observe({"8:a"}, t0 + FarmMode::Dwell + milliseconds(100)).empty(),
+            "the same approach must not mark the target a second time");
+    }
+    {
+        FarmMode::Confirmation confirmation;
+        confirmation.Observe({"8:a"}, t0);
+        Expect(confirmation.Observe({"8:a"}, t0 + milliseconds(400)).empty(), "fixture must still be dwelling");
+        // Leaving the range starts the dwell over: evidence from an earlier pass must never
+        // accumulate into a mark.
+        Expect(confirmation.Observe({}, t0 + milliseconds(500)).empty(), "leaving the range must mark nothing");
+        Expect(confirmation.Tracked() == 0, "leaving the range must forget the dwell");
+        Expect(confirmation.Observe({"8:a"}, t0 + milliseconds(600)).empty(), "a re-entry must start a new dwell");
+        Expect(confirmation.Observe({"8:a"}, t0 + milliseconds(900)).empty(), "300 ms after re-entry is short of the dwell");
+        Expect(confirmation.Observe({"8:a"}, t0 + milliseconds(1100)).size() == 1,
+            "a continuous dwell after re-entry must mark the target");
+    }
+    {
+        // A cluster keeps one dwell per target, and one target leaving does not reset another.
+        FarmMode::Confirmation confirmation;
+        confirmation.Observe({"8:a", "8:b"}, t0);
+        Expect(confirmation.Observe({"8:b"}, t0 + milliseconds(400)).empty(), "fixture must keep one key dwelling");
+        const auto due = confirmation.Observe({"8:b"}, t0 + FarmMode::Dwell);
+        Expect(due.size() == 1 && due.front() == "8:b", "only the target that stayed in range may be marked");
+    }
+    {
+        // A clock that goes backwards must restart the dwell rather than produce an instant mark.
+        FarmMode::Confirmation confirmation;
+        confirmation.Observe({"8:a"}, t0 + milliseconds(1000));
+        Expect(confirmation.Observe({"8:a"}, t0).empty(), "a backwards clock must not mark anything");
+        Expect(confirmation.Observe({"8:a"}, t0 + FarmMode::Dwell).size() == 1,
+            "the dwell restarted at the earlier instant and must now be due");
+    }
+    {
+        FarmMode::Range::Apply(30);
+        Expect(FarmMode::Range::Pixels() == 30, "the farming range must be settable");
+        bool lowRejected = false, highRejected = false;
+        try { FarmMode::Range::Apply(FarmMode::MinimumRangePixels - 1); } catch (const std::invalid_argument&) { lowRejected = true; }
+        try { FarmMode::Range::Apply(FarmMode::MaximumRangePixels + 1); } catch (const std::invalid_argument&) { highRejected = true; }
+        Expect(lowRejected && highRejected, "a value outside the supported range must be refused");
+        Expect(FarmMode::Range::Pixels() == 30, "a refused value must not change the range");
+        FarmMode::Range::Apply(FarmMode::DefaultRangePixels);
+    }
+    {
+        // The observation carries one distance per target, all measured from the same frame,
+        // so "in range" means the same instant for every target of the cluster.
+        AutoRoute::ProximityObservation observation;
+        observation.nearby.push_back({"8:a", 3.0});
+        observation.nearby.push_back({"8:b", 40.0});
+        Expect(observation.Find("8:a") != nullptr && observation.Find("8:a")->distancePixels == 3.0,
+            "the observation must report each target's own distance");
+        Expect(observation.Find("8:c") == nullptr, "a target that was not observed has no distance");
+    }
+}
 }
 int main() {
-    try { SolverTests(); GeometryTests(); StoreTests(); EscapeOwnershipTests(); DrawingVisibilityTests(); AutoReplanTests(); HotkeyPressOwnershipTests(); GuideHotkeyRoutingTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
+    try { SolverTests(); GeometryTests(); StoreTests(); EscapeOwnershipTests(); DrawingVisibilityTests(); AutoReplanTests(); FarmModeTests(); HotkeyPressOwnershipTests(); GuideHotkeyRoutingTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
     catch (const std::exception& error) { ++failures; std::cerr << "UNEXPECTED: " << error.what() << '\n'; }
     if (failures) { std::cerr << failures << " route planning test(s) failed\n"; return 1; }
     std::cout << "Route planning tests passed\n";
