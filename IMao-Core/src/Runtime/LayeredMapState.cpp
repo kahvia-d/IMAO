@@ -453,6 +453,9 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             current.layerId = entry == nullptr ? LayeredFloors::FloorLayerId(classification.floorId) : entry->floor.layerId;
             current.heightDirection = entry == nullptr ? 1 : entry->floor.heightDirection;
             current.heightRank = entry == nullptr ? 0 : entry->floor.heightRank;
+            // Whether this floor's map is open to the surface decides what RoleFor suppresses for
+            // as long as the floor is held; it travels with the floor, not with the scene.
+            current.openToSurface = entry != nullptr && entry->floor.openToSurface;
             current.equivalentFloorIds = equivalent;
             ++current.revision;
             pendingFloorId.clear();
@@ -467,6 +470,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
                 " ownRunnerUp=" + std::to_string(classification.runnerUpOwnMatches) +
                 " heightDirection=" + std::to_string(current.heightDirection) +
                 " heightRank=" + std::to_string(current.heightRank) +
+                " open=" + std::to_string(current.openToSurface) +
                 " equivalent=[" + JoinFloors(equivalent) + "]");
         }
     }
@@ -505,6 +509,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         lastReportAt = now;
         Diagnostics::Record("layered-floor", "scene=" + std::to_string(sceneId) +
             " active=" + std::to_string(current.active) + " floor=" + (current.floorId.empty() ? "-" : current.floorId) +
+            " open=" + std::to_string(current.openToSurface) +
             " restricted=" + std::to_string(restricted) + " containing=[" + containing + "]" +
             " identified=" + std::to_string(classification.identified) +
             " ownDominant=" + std::to_string(classification.ownDominant) +
@@ -577,10 +582,13 @@ Snapshot Read() {
 namespace {
 
 // A surface marker - one with no floor, or the entrance marker that stands on the surface above a
-// layered map - while a floor is known. It normally hides, but on ground the layer copied from the
-// surface it belongs there as much as the layer's own markers do, and the two are drawn together.
+// layered map - while a floor is known. It normally hides, but it belongs on screen wherever the
+// two maps are really the same place: ground the layer copied from the surface (see
+// LayeredFloors::SharedFraction), or a whole map that is open to the surface, where the floor the
+// player stands on IS the surface seen from higher up (星炬学院 - see
+// LayeredFloors::FloorEntry::openToSurface).
 MarkerRole SurfaceRole(const Snapshot& state) {
-    return state.sharedGround ? MarkerRole::Normal : MarkerRole::Hidden;
+    return state.sharedGround || state.openToSurface ? MarkerRole::Normal : MarkerRole::Hidden;
 }
 
 } // namespace
@@ -608,21 +616,37 @@ MarkerRole RoleFor(const ItemDatas& item) {
     // another candidate for where the player is standing, so it draws as the current floor.
     if (std::find(state.equivalentFloorIds.begin(), state.equivalentFloorIds.end(), floorId) !=
         state.equivalentFloorIds.end()) return MarkerRole::Current;
-    if (LayeredFloors::FloorLayerId(floorId) != state.layerId) return MarkerRole::Hidden; // another layered map
-    // Which way the level runs is a property of the layered map, not of the code: 叩天关's
-    // 上层(-1) sits above 下层(-3), while 下层金库's 1楼(-1) sits below 4楼(-4). Assuming the
-    // first convention marked the floors above a player standing on 1楼 as below them.
+
+    // What the index knows about the marker's own floor: where it sits (for above/below) and
+    // whether its map is open to the surface. One locked lookup for both, and a pointer into
+    // `entries` is safe for the same reason the classifier uses one - it is written once by
+    // Install and never mutated afterwards.
+    const LayeredFloors::FloorEntry* markerFloor = nullptr;
+    {
+        std::lock_guard lock(stateMutex);
+        for (const auto& entry : entries) {
+            if (entry.floor.floorId == floorId) { markerFloor = &entry.floor; break; }
+        }
+    }
+    // A point of an OPEN map is a surface point: it is drawn on the surface map, so an enclosed
+    // floor hides it exactly as it hides the surface's own markers.
+    const bool markerOnOpenMap = markerFloor != nullptr && markerFloor->openToSurface;
+
+    if (LayeredFloors::FloorLayerId(floorId) != state.layerId) {
+        // Another layered map. On open ground nothing is suppressed, so its points stay on screen
+        // too - the player is standing on the surface, just higher up.
+        if (markerOnOpenMap) return SurfaceRole(state);
+        return state.openToSurface ? MarkerRole::Normal : MarkerRole::Hidden;
+    }
+    // Same map, another floor. Which way the level runs is a property of the layered map, not of
+    // the code: 叩天关's 上层(-1) sits above 下层(-3), while 下层金库's 1楼(-1) sits below 4楼(-4).
+    // Assuming the first convention marked the floors above a player standing on 1楼 as below them.
     //
     // The rank, where the floor's name states one, is preferred to the level: a level does not
     // always follow the height (黯原's 虚妄摇篮 is 二层 at the bottom, 入口 in the middle, 一层 on
-    // top), and a single direction can never express that.
-    const int markerRank = [&] {
-        std::lock_guard lock(stateMutex);
-        for (const auto& entry : entries) {
-            if (entry.floor.floorId == floorId) return entry.floor.heightRank;
-        }
-        return 0;
-    }();
+    // top), and a single direction can never express that. Openness does not change this: the
+    // floors of an open map are still different heights, so they keep their direction.
+    const int markerRank = markerFloor == nullptr ? 0 : markerFloor->heightRank;
     const int comparison = LayeredFloors::HeightComparison(state.heightRank, state.level, markerRank, level,
         state.heightDirection);
     return comparison < 0 ? MarkerRole::Below : MarkerRole::Above;

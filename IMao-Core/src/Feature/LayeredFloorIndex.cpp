@@ -145,6 +145,17 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
         entry.layerName = ReadString(node, "layerName");
         entry.floorName = ReadString(node, "floorName");
         entry.level = FloorLevel(entry.floorId);
+        // Whether this floor's map is open to the surface. Absent (an index built before the field
+        // existed) means enclosed, which is what every map used to be assumed to be; a value the
+        // builder does not know is refused rather than read as "enclosed", because silently
+        // treating a typo as enclosed is the failure mode that hides markers (see
+        // scripts/LayeredSurfaceAccess.ps1).
+        const std::string surfaceAccess = ReadString(node, "surfaceAccess");
+        if (!surfaceAccess.empty() && surfaceAccess != "open" && surfaceAccess != "enclosed") {
+            error = "layered floor " + entry.floorId + " has an unknown surfaceAccess '" + surfaceAccess + "'";
+            return false;
+        }
+        entry.openToSurface = surfaceAccess == "open";
         const auto file = ReadString(node, "file");
         if (entry.floorId.empty() || file.empty()) {
             error = "layered floor index entry is missing floorId or file";

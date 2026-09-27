@@ -268,6 +268,30 @@ foreach ($group in $groups | Sort-Object Name) {
         $(if ($null -ne $ownMask) { $ownMask.Copied } else { 0 }), $group.Count)
 }
 
+# Whether each floor's map is open to the surface ("开放分层地图": 星炬学院 - the player walks in from
+# the surface and the ground floor IS that surface) or enclosed (a cave / underground ruin / building
+# interior). It is what decides whether the runtime hides the surface's collectibles while the player
+# stands on the floor, so it is written here, at build time, next to the footprint grids it is derived
+# from. See scripts/LayeredSurfaceAccess.ps1 for the rule and the evidence.
+. (Join-Path $PSScriptRoot 'LayeredSurfaceAccess.ps1')
+$entranceLayers = @(Get-LayeredMapEntranceLayers -SourceRoot $SourceRoot -Frame $state)
+$groundCopied = @{}
+foreach ($entry in $entries) {
+    if ([int]("$($entry.floorId)".Split('/')[0]) -ne -1) { continue }
+    $groundCopied[[int]$entry.layerId] = Get-LayeredFloorCopiedFraction -Floor $entry -GridSize $gridSize
+}
+foreach ($entry in $entries) {
+    $layerId = [int]$entry.layerId
+    $ground = if ($groundCopied.ContainsKey($layerId)) { [double]$groundCopied[$layerId] } else { 0.0 }
+    $resolved = Resolve-LayeredSurfaceAccess -Region $RegionId -LayerId $layerId -FloorId ([string]$entry.floorId) `
+        -LayerGroundCopiedFraction $ground -HasEntrance ($entranceLayers -contains $layerId)
+    $entry.surfaceAccess = $resolved.Access
+    $entry.surfaceAccessReason = $resolved.Reason
+    if ($resolved.Access -eq 'open') {
+        Write-Host ("  open to the surface: {0} {1} ({2})" -f $entry.floorId, $entry.floorName, $resolved.Reason)
+    }
+}
+
 $index = [ordered]@{
     formatVersion = 1
     regionId = $RegionId

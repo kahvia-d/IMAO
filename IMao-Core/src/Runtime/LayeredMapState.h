@@ -21,7 +21,8 @@ enum class MarkerRole {
     /// No floor known: everything draws as before, layered markers keep the layered badge.
     Normal,
     /// A floor is known and this marker is not part of it: do not draw it at all. Surface
-    /// markers also come back as Normal while the player stands on shared ground.
+    /// markers also come back as Normal while the player stands on shared ground, or on a floor
+    /// whose map is open to the surface (Snapshot::openToSurface).
     Hidden,
     /// The floor the player is standing on: normal icon, no layered badge.
     Current,
@@ -49,6 +50,10 @@ struct Snapshot {
     int heightDirection = 1;
     /// Where this floor sits inside its layered map, ascending with height; 0 when unknown.
     int heightRank = 0;
+    /// The floor the player is standing on is open to the surface ("开放分层地图"): above ground, no
+    /// defined entrance, and its ground floor IS the surface - 星炬学院 today, everything else in the
+    /// game is enclosed. See LayeredFloors::FloorEntry::openToSurface.
+    bool openToSurface = false;
     std::uint64_t revision = 0;
     /// Floors the imagery cannot tell apart from `floorId`.
     ///
@@ -119,6 +124,14 @@ Snapshot Read();
 
 /// The role of one marker under the current state. Used by both maps: they share the icon
 /// drawing entry point.
+///
+/// Two kinds of layered map exist, and they differ in what "inside" suppresses. An ENCLOSED map
+/// (cave, underground ruin, building interior - everything except 星炬学院 today) hides every point
+/// that is not part of the floor the player stands on, and hides that floor's own points from the
+/// surface in turn. An OPEN map (above ground, no defined entrance, its ground floor IS the surface)
+/// suppresses nothing: the player is on the surface map, just higher up, so surface points and other
+/// maps' points both stay on screen - only the same map's other floors keep their above/below
+/// direction. See LayeredFloors::FloorEntry::openToSurface.
 MarkerRole RoleFor(const ItemDatas& item);
 
 /// For tests and for tearing the app down.

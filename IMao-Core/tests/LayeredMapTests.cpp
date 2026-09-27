@@ -67,6 +67,22 @@ LayeredFloors::FloorEntry SharedGroundFloor() {
     return floor;
 }
 
+// One floor of an open layered map ("开放分层地图"): above ground, no defined entrance, its ground
+// floor IS the surface. 星炬学院 is the only one in the game today, and it is what makes standing
+// there stop hiding the collectibles that carry no floor of their own (2026-09-27). See
+// Docs/LayeredMapOpenness_20260927.md.
+LayeredFloors::FloorEntry OpenFloor(const std::string& floorId, int layerId,
+    const std::string& floorName, int level, int heightRank) {
+    LayeredFloors::FloorEntry floor;
+    floor.layerId = layerId;
+    floor.floorId = floorId;
+    floor.floorName = floorName;
+    floor.level = level;
+    floor.heightRank = heightRank;
+    floor.openToSurface = true;
+    return floor;
+}
+
 LayeredMap::Snapshot State(int layerId, const std::string& floorId, int level) {
     LayeredMap::Snapshot snapshot;
     snapshot.active = true;
@@ -453,6 +469,64 @@ int main() {
             LayeredMap::SetForTest(State(15, "-1/15", -1));
             Require(LayeredMap::RoleFor(Marker(8, "", "")) == MarkerRole::Hidden,
                 "surface markers must hide again off the shared ground");
+        }
+
+        // An OPEN layered map: 星炬学院. Its ground floor IS the surface (an above-ground building
+        // with no defined entrance), so standing on any of its floors must hide nothing - this is
+        // the field case of 2026-09-27, where 拉海洛's 终声残卷 never appeared while the player was
+        // inside the academy, and the reason the class exists at all.
+        {
+            LayeredFloors::Transform transform;
+            auto plaza = OpenFloor("-1/30", 30, "星炬学院·广场区", -1, 1);
+            auto teaching = OpenFloor("-2/30", 30, "星炬学院·教学区", -2, 2);
+            auto tunnel = SharedGroundFloor();   // an enclosed map: layer 15, one tile
+            tunnel.copiedFraction = 0.0;
+            LayeredMap::SetEntriesForTest(1, { plaza, teaching, tunnel }, transform);
+
+            auto inAcademy = State(30, "-1/30", -1);
+            inAcademy.kuroStateId = 906;      // 拉海洛
+            inAcademy.heightRank = 1;
+            inAcademy.heightDirection = -1;   // 广场区(1) < 教学区(2), so -2 sits above -1
+            inAcademy.openToSurface = true;
+            LayeredMap::SetForTest(inAcademy);
+
+            // The reported point: a collectible with no floor of its own.
+            Require(LayeredMap::RoleFor(Marker(906, "", "0")) == MarkerRole::Normal,
+                "an open floor must not hide a collectible that carries no floor");
+            Require(LayeredMap::RoleFor(Marker(906, "", "")) == MarkerRole::Normal,
+                "an open floor must not hide a plain surface collectible");
+            Require(LayeredMap::RoleFor(Marker(906, "30", "-1/30")) == MarkerRole::Current,
+                "the floor the player stands on is still the current one");
+            Require(LayeredMap::RoleFor(Marker(906, "30", "-2/30")) == MarkerRole::Above,
+                "another floor of an open map keeps its direction");
+            Require(LayeredMap::RoleFor(Marker(906, "15", "-1/15")) == MarkerRole::Normal,
+                "an open floor suppresses nothing, including another layered map's points");
+            Require(LayeredMap::RoleFor(Marker(906, "15", "-1000000/15")) == MarkerRole::Normal,
+                "the entrance marker of another map stands on the surface, so it stays");
+
+            // The mirror case: an enclosed floor still hides everything that is not part of it, and
+            // a point of an OPEN map is a surface point, so it hides with the rest.
+            auto inTunnel = State(15, "-1/15", -1);
+            inTunnel.kuroStateId = 906;
+            LayeredMap::SetForTest(inTunnel);
+            Require(LayeredMap::RoleFor(Marker(906, "", "0")) == MarkerRole::Hidden,
+                "an enclosed floor still hides the surface's collectibles");
+            Require(LayeredMap::RoleFor(Marker(906, "30", "-1/30")) == MarkerRole::Hidden,
+                "an enclosed floor hides an open map's points (they are surface points)");
+            Require(LayeredMap::RoleFor(Marker(906, "30", "-2/30")) == MarkerRole::Hidden,
+                "...and the rest of that map's floors");
+
+            // An index that never heard of the field reads as enclosed, so a pack built before it
+            // existed keeps exactly the behaviour it had.
+            auto legacy = SharedGroundFloor();
+            legacy.copiedFraction = 0.0;
+            LayeredMap::SetEntriesForTest(1, { legacy }, transform);
+            LayeredMap::SetForTest(State(15, "-1/15", -1));
+            Require(LayeredMap::RoleFor(Marker(8, "", "")) == MarkerRole::Hidden,
+                "a floor with no surfaceAccess field must stay enclosed");
+
+            LayeredMap::SetEntriesForTest(1, {}, transform);
+            LayeredMap::SetForTest({});
         }
 
         // A surface frame must not adopt the cave under it. The floor the TOTAL vote names also

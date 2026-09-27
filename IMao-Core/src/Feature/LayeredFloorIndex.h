@@ -65,6 +65,20 @@ struct FloorEntry {
     /// bottom, 入口 (-1) in the middle and 一层 (-2) on top. Floors whose names state nothing keep
     /// the level comparison, which is what the whole game used before the names were read.
     int heightRank = 0;
+    /// True when this floor is open to the surface ("开放分层地图"): no wall, no defined entrance, and
+    /// the ground floor IS the surface, so the surface map and this floor are one place seen at
+    /// different heights. 星炬学院 is the only map in the game that answers yes today; a cave, an
+    /// underground ruin or a building interior answers no.
+    ///
+    /// It changes what the runtime hides: on an OPEN floor nothing is suppressed (surface markers
+    /// and the points of other layered maps draw as they do out in the open), while an enclosed
+    /// floor hides everything that is not part of it. The class is decided at build time - two
+    /// measurements plus recorded game facts - and shipped per floor by
+    /// scripts/LayeredSurfaceAccess.ps1; see Docs/LayeredMapOpenness_20260927.md.
+    ///
+    /// Absent in the index means enclosed, so a pack built before this field existed behaves
+    /// exactly as it did.
+    bool openToSurface = false;
     ImageFeatureData features;
     /// A capped copy of `features`, used only when every floor in the game is a candidate.
     ///

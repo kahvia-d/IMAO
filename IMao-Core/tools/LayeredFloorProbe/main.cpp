@@ -278,7 +278,11 @@ int main(int argc, char** argv) {
                         if (member.layerId != floor.layerId) continue;
                         std::cout << "    " << member.floorId << "  " << member.floorName
                             << "  heightRank=" << member.heightRank
-                            << (LayeredFloors::AdjacentToSurface(member) ? "  adjacent=yes" : "") << '\n';
+                            << (LayeredFloors::AdjacentToSurface(member) ? "  adjacent=yes" : "")
+                            // Open to the surface ("开放分层地图"): standing on this floor hides
+                            // nothing, so its surface collectibles are on screen. 星炬学院 only.
+                            << (member.openToSurface ? "  open=yes" : "")
+                            << '\n';
                     }
                 }
             }

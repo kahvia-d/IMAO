@@ -115,5 +115,32 @@ if (Test-Path -LiteralPath $layeredIndexPath) {
     }
     $layeredFloorCount = @($layeredIndex.floors).Count
     if ($layeredFloorCount -lt 1) { throw 'Layered floor index lists no floors.' }
+
+    # Every floor states whether its map is open to the surface ("开放分层地图": an above-ground map
+    # whose ground floor IS the surface, so standing on it suppresses nothing) or enclosed (a cave /
+    # underground ruin / building interior, which hides everything that is not part of it). The
+    # runtime reads an absent field as enclosed, which is exactly what used to hide 星炬学院's
+    # collectibles - so a shipped index must state it, and a rebuilt one that dropped it is a failure
+    # here rather than a player report. A value this checker does not know is refused for the same
+    # reason. See Docs/LayeredMapOpenness_20260927.md.
+    . (Join-Path $PSScriptRoot 'LayeredSurfaceAccess.ps1')
+    foreach ($floor in @($layeredIndex.floors)) {
+        $access = if ($null -ne $floor.PSObject.Properties['surfaceAccess']) { [string]$floor.surfaceAccess } else { '' }
+        if ($access -ne $script:SurfaceAccessOpen -and $access -ne $script:SurfaceAccessEnclosed) {
+            throw "Layered floor $($floor.floorId) has no valid surfaceAccess (got '$access'); run scripts/Set-LayeredSurfaceAccess.ps1."
+        }
+        # Open is a reviewed game fact, never something a rebuild should acquire on its own: an index
+        # that starts calling a new map open would silently stop hiding its surface markers.
+        if ($access -eq $script:SurfaceAccessOpen) {
+            $region = Split-Path -Leaf $PackRoot
+            if ($script:LayeredSurfaceAccessExpectedOpen -notcontains "$region/$($floor.floorId)") {
+                throw "Layered floor $region/$($floor.floorId) is marked open but is not a recorded open map; review scripts/LayeredSurfaceAccess.ps1."
+            }
+        }
+    }
+    $openFloors = @($layeredIndex.floors | Where-Object { [string]$_.surfaceAccess -eq $script:SurfaceAccessOpen } |
+        ForEach-Object { [string]$_.floorId })
+    Write-Host ("  layered floors: {0} (open to the surface: {1})" -f $layeredFloorCount,
+        $(if ($openFloors.Count -eq 0) { 'none' } else { $openFloors -join ', ' }))
 }
 Write-Host "Kuro tile feature pack valid: pack=$($manifest.packId) coordinates=$($appearances.Count) tileEntries=$(@($manifest.tiles).Count) layered=$layeredCount keypoints=$xmlCount resource=$($manifest.resourceVersion) featureSource=$featureSourceVerified layeredFloors=$layeredFloorCount" -ForegroundColor Green
