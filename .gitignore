@@ -12,6 +12,9 @@ bin/
 # because the project overrides OutDir for the self-contained publish.
 /Release/
 .vs/
+# The resource editor's binary cache is a side-effect of the .rc file that Visual Studio
+# rebuilds whenever it opens the resource view; it is 32 MB and no build reads it back.
+*.aps
 IMao-WinUI/obj
 IMao-WinUI.Core/obj
 Tests/ProgramUpdates/obj/
