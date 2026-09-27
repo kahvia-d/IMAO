@@ -22,6 +22,7 @@ public sealed record LegacyPointSource(
     string Path,
     string LedgerId,
     string LedgerName,
+    string LedgerBinding,
     string DisplayName,
     int Points,
     int Skipped,
@@ -144,7 +145,7 @@ public sealed class LegacyPointRecovery
         foreach (var source in sources.Where(source => source.Kind == LegacyKind.UnlistedProfile))
         {
             if (!source.Recoverable || source.AlreadyRecovered) { skipped.Add(source); continue; }
-            if (!catalog.TryAdopt(source.LedgerId, source.LedgerName, out _, out string error))
+            if (!catalog.TryAdopt(source.LedgerId, source.LedgerName, source.LedgerBinding, out _, out string error))
             {
                 notes.Add($"记录本 {source.LedgerId} 无法登记：{error}");
                 skipped.Add(source);
@@ -172,7 +173,7 @@ public sealed class LegacyPointRecovery
                 continue;
             }
             string name = id == source.LedgerId ? source.LedgerName : $"{CombinedLedgerName}（{source.LedgerId}）";
-            if (!catalog.TryAdopt(id, name, out _, out string error))
+            if (!catalog.TryAdopt(id, name, source.LedgerBinding, out _, out string error))
             {
                 notes.Add($"已复制 {Path.GetFileName(source.Path)}，但记录本 {id} 无法登记：{error}");
                 skipped.Add(source);
@@ -277,7 +278,7 @@ public sealed class LegacyPointRecovery
         if (found.Count >= MaximumSources || !File.Exists(path)) return;
         if (!TryReadSingleFile(path, out var points, out string problem))
         {
-            found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", CombinedLedgerName, CombinedLedgerName,
+            found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", CombinedLedgerName, "", CombinedLedgerName,
                 0, 0, [], false, false, problem));
             return;
         }
@@ -285,7 +286,7 @@ public sealed class LegacyPointRecovery
             entry.Hash == Hash(path));
         if (points.Count == 0 && problem.Length == 0)
             problem = "这个文件里没有能识别的点位：区域名不在已知列表里，或者每条记录都缺少 id。";
-        found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", CombinedLedgerName, CombinedLedgerName,
+        found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", CombinedLedgerName, "", CombinedLedgerName,
             points.Count, 0, Summarize(points), already, points.Count > 0, problem));
     }
 
@@ -304,11 +305,11 @@ public sealed class LegacyPointRecovery
             string name = FriendlierName(id);
             if (!TryReadProfileDocument(file, out var points, out string problem))
             {
-                found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, name, Display(id, name, legacyNames),
+                found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, name, "", Display(id, name, legacyNames),
                     0, 0, [], false, false, problem));
                 continue;
             }
-            found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, name, Display(id, name, legacyNames),
+            found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, name, "", Display(id, name, legacyNames),
                 points.Count, 0, Summarize(points), false, true, problem));
         }
     }
@@ -323,25 +324,34 @@ public sealed class LegacyPointRecovery
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return; }
         foreach (string folder in folders.Take(MaximumSources))
         {
-            string name = Path.GetFileName(folder);
-            // 删除 names the folder "<yyyyMMdd-HHmmss>-<ledger id>"; the id may itself contain '-'.
-            string id = name.Length > 16 && name[8] == '-' && name[15] == '-' ? name[16..] : name;
-            foreach (string file in SafeFiles(folder, "*.json"))
+            string folderName = Path.GetFileName(folder);
+            // The manifest 删除 leaves beside the data says which record book this was, name and
+            // binding included — the only place those survive, because they lived in the list entry.
+            // Its id is authoritative; the folder name is only the fallback for a copy that predates
+            // the manifest (and it is "<yyyyMMdd-HHmmss>-<ledger id>", whose id may itself contain '-').
+            var archived = LocalAccountCatalog.ReadArchiveManifest(folder);
+            string id = archived is { Id.Length: > 0 } ? archived.Id :
+                folderName.Length > 16 && folderName[8] == '-' && folderName[15] == '-' ? folderName[16..] : folderName;
+            string? archivedName = archived is { Name.Length: > 0 } ? archived.Name : null;
+            string archivedBinding = archived?.KuroAccountId ?? "";
+            foreach (string file in SafeFiles(folder, "*.json")
+                .Where(file => !string.Equals(Path.GetFileName(file), LocalAccountCatalog.ArchiveManifestName, StringComparison.OrdinalIgnoreCase)))
             {
                 // The id is still taken by a live record book (or by a document of its own), so the
                 // recovered copy has to be adopted under a different name — said here, once, so the
                 // list the player reads is the same thing the recovery goes on to do.
                 bool taken = known.Contains(id) || File.Exists(Path.Combine(savedPointsDirectory, "profiles", id + ".json"));
-                string ledgerName = taken ? $"{CombinedLedgerName}（{id}）" : FriendlierName(id);
+                string ledgerName = taken ? $"{CombinedLedgerName}（{id}）" : archivedName ?? FriendlierName(id);
+                string binding = taken ? "" : archivedBinding;
                 if (!TryReadProfileDocument(file, out var points, out string problem))
                 {
-                    found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id, ledgerName,
+                    found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id, ledgerName, binding,
                         Display(id, ledgerName, legacyNames), 0, 0, [], false, false, problem));
                     continue;
                 }
                 bool already = journal.Any(entry => entry.Kind == LegacyKind.DeletedDocument && SamePath(entry.Source, file) &&
                     entry.Hash == Hash(file));
-                found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id, ledgerName,
+                found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id, ledgerName, binding,
                     Display(id, ledgerName, legacyNames), points.Count, 0, Summarize(points), already, points.Count > 0, problem));
             }
         }

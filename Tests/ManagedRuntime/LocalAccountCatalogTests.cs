@@ -79,6 +79,57 @@ internal static class LocalAccountCatalogTests
         check(bound.TryDelete(second.Id, out _) && File.Exists(Path.Combine(credentialStore, "kuro_10146974.json")),
             "deleting a record book leaves credentials alone, because they belong to the account");
 
+        // 删除 → 恢复 → 删除 would otherwise park one identical folder per round, and the folder name
+        // is a timestamp, so nothing would ever collapse them again. Identical means the same id,
+        // name and binding, the same progress bytes and the same routes.
+        string archiveRoot = Path.Combine(directory, "archive");
+        string archiveProfiles = Path.Combine(archiveRoot, "profiles");
+        string archiveRoutes = Path.Combine(archiveRoot, "SavedRoutes", "Auto");
+        Directory.CreateDirectory(archiveProfiles);
+        string parkedProgressPath = Path.Combine(archiveProfiles, "local.json");
+        File.WriteAllText(parkedProgressPath, "{\"schemaVersion\":2,\"profileId\":\"local\",\"revision\":1,\"points\":{},\"syncStates\":[]}");
+        Directory.CreateDirectory(Path.Combine(archiveRoutes, "local"));
+        File.WriteAllText(Path.Combine(archiveRoutes, "local", "active.json"), "{\"formatVersion\":1,\"routeId\":null}");
+        var archive = new LocalAccountCatalog(Path.Combine(archiveRoot, "accounts.json"), archiveProfiles,
+            routesDirectory: archiveRoutes);
+        check(archive.TryRename("local", "主号", out _) && archive.TryBind("local", "10383865", out _) &&
+            archive.TryCreate("备用", "", out _, out _),
+            "the record book that gets deleted twice is named and bound first");
+        byte[] parkedProgress = File.ReadAllBytes(parkedProgressPath);
+
+        check(archive.TryDelete("local", out _, out string firstNote) && firstNote.Length == 0 &&
+            Directory.GetDirectories(archive.DeletedDirectory).Length == 1 &&
+            File.Exists(Path.Combine(Directory.GetDirectories(archive.DeletedDirectory)[0], "ledger.json")),
+            "deleting a record book parks it once, with a manifest that names it");
+
+        void Restore(string restoredName, string restoredBinding, byte[] bytes)
+        {
+            File.WriteAllBytes(parkedProgressPath, bytes);
+            Directory.CreateDirectory(Path.Combine(archiveRoutes, "local"));
+            File.WriteAllText(Path.Combine(archiveRoutes, "local", "active.json"), "{\"formatVersion\":1,\"routeId\":null}");
+            archive.TryAdopt("local", restoredName, restoredBinding, out _, out _);
+        }
+
+        Restore("主号", "10383865", parkedProgress);
+        check(archive.TryDelete("local", out _, out string secondNote) && secondNote.Length > 0 &&
+            Directory.GetDirectories(archive.DeletedDirectory).Length == 1,
+            "deleting the very same record book again keeps the one copy and says so instead of parking a twin");
+
+        Restore("改了个名", "10383865", parkedProgress);
+        check(archive.TryDelete("local", out _, out _) && Directory.GetDirectories(archive.DeletedDirectory).Length == 2,
+            "a record book whose name changed is a different record book, so its copy is kept as well");
+
+        Restore("改了个名", "10383865", Encoding.UTF8.GetBytes(
+            "{\"schemaVersion\":2,\"profileId\":\"local\",\"revision\":9,\"points\":{\"8:new\":{\"completed\":true}},\"syncStates\":[]}"));
+        check(archive.TryDelete("local", out _, out _) && Directory.GetDirectories(archive.DeletedDirectory).Length == 3,
+            "a record book whose progress changed is a different state, so its copy is kept as well");
+
+        int beforeEmpty = Directory.GetDirectories(archive.DeletedDirectory).Length;
+        check(archive.TryCreate("空本", "", out var neverWritten, out _) && neverWritten is not null &&
+            archive.TryDelete(neverWritten.Id, out _, out string nothingNote) && nothingNote.Length > 0 &&
+            Directory.GetDirectories(archive.DeletedDirectory).Length == beforeEmpty,
+            "deleting a record book that never wrote a document creates no folder at all");
+
         // The regions a rebind has to drop come from the record book's own document.
         string baselineProfiles = Path.Combine(directory, "baseline", "profiles");
         Directory.CreateDirectory(baselineProfiles);

@@ -1092,12 +1092,14 @@ public sealed partial class SettingsPage : Page
             XamlRoot = XamlRoot
         };
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
-        if (!catalog.TryDelete(active.Id, out string error)) { ShowLocalAccount(InfoBarSeverity.Warning, error); return; }
+        if (!catalog.TryDelete(active.Id, out string error, out string archive))
+        { ShowLocalAccount(InfoBarSeverity.Warning, error); return; }
         var next = catalog.Active;
         try { await coreHost.ExecuteMarkerAsync("markerSelectProfile", new { profileId = next.Id }); }
         catch (Exception failure) { ShowLocalAccount(InfoBarSeverity.Error, failure.Message); }
         RefreshLedgerSurfaces();
-        ShowLocalAccount(InfoBarSeverity.Success, $"记录本“{active.Name}”已移入 SavedPoints\\deleted；当前记录本是“{next.Name}”。");
+        string parked = archive.Length > 0 ? archive : "点位记录和路线已移入 SavedPoints\\deleted 保留，随时可以手动找回";
+        ShowLocalAccount(InfoBarSeverity.Success, $"记录本“{active.Name}”已删除：{parked}。当前记录本是“{next.Name}”。");
     }
 
     private async void LocalAccountImport_Click(object sender, RoutedEventArgs e)

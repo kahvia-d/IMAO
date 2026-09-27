@@ -194,5 +194,27 @@ internal static class LegacyRecoveryTests
         check(choiceRecovery.Recover(choiceCatalog, remaining).Recovered.Count == 1 &&
             choiceCatalog.Accounts.Any(account => account.Id == "kuro_666"),
             "the remaining finding is recovered once it is ticked");
+
+        // A parked record book carries a manifest with the name and binding it had — the only place
+        // those survive, because they lived in the list entry 删除 removed. Restoring it brings the
+        // record book back as it was, and the manifest is never offered as point data.
+        string parked = Path.Combine(choicePoints, "deleted", "20260927-120000-acc_abc12345");
+        Directory.CreateDirectory(parked);
+        File.WriteAllText(Path.Combine(parked, "ledger.json"),
+            "{\"version\":1,\"id\":\"acc_abc12345\",\"name\":\"我的小号\",\"kuroAccountId\":\"10383865\"," +
+            "\"deletedAtUtc\":\"2026-09-27T04:00:00+00:00\",\"routes\":false}");
+        File.WriteAllText(Path.Combine(parked, "acc_abc12345.json"),
+            "{\"schemaVersion\":2,\"profileId\":\"acc_abc12345\",\"revision\":4,\"syncStates\":[],\"points\":{" +
+            "\"8:r\":{\"sceneName\":\"World\",\"nameId\":\"cx_01\",\"stateId\":8,\"pointId\":\"r\",\"completed\":true," +
+            "\"remoteCompleted\":null,\"pending\":false}}}");
+        var parkedScan = choiceRecovery.Scan(choiceCatalog.Accounts.Select(account => account.Id).ToArray());
+        var parkedRow = parkedScan.Single(source => source.Kind == "deleted-document");
+        check(parkedScan.Count(source => source.Kind == "deleted-document") == 1 && parkedRow.Points == 1 &&
+            parkedRow.LedgerName == "我的小号" && parkedRow.LedgerBinding == "10383865",
+            "a parked record book is listed under the name it had, and the manifest beside it is not offered as data");
+        check(choiceRecovery.Recover(choiceCatalog, [parkedRow]).Recovered.Count == 1 &&
+            choiceCatalog.Accounts.Any(account => account.Id == "acc_abc12345" &&
+                account.Name == "我的小号" && account.KuroAccountId == "10383865"),
+            "restoring a parked record book brings back the name and the account it was bound to");
     }
 }

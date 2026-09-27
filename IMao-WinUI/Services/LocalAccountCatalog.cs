@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using IMao_WinUI.Core.KuroSync;
@@ -209,9 +210,12 @@ public sealed class LocalAccountCatalog
     /// not exist yet, so a document that appears afterwards — copied in, restored from
     /// <c>deleted\</c>, or written by a version that ran before the list existed — stays invisible
     /// in the interface even though the file is perfectly readable. 旧版本地数据修复 adopts those.
+    /// <paramref name="kuroAccountId"/> is the binding the record book is known to have had (a
+    /// parked ledger's manifest records it); it is ignored when it cannot be an account, and
+    /// dropped when another record book already holds it — one account, one record book.
     /// Unlike <see cref="TrySetActive"/> this never moves the map to the new record book.
     /// </summary>
-    public bool TryAdopt(string id, string name, out LocalAccount? adopted, out string error)
+    public bool TryAdopt(string id, string name, string kuroAccountId, out LocalAccount? adopted, out string error)
     {
         adopted = null;
         error = "";
@@ -220,7 +224,7 @@ public sealed class LocalAccountCatalog
         if (accounts.Any(account => account.Id == id)) { error = $"记录本 {id} 已经在列表里。"; return false; }
         if (accounts.Count >= MaximumAccounts) { error = $"最多只能有 {MaximumAccounts} 个记录本。"; return false; }
         // An id that names its own account keeps that binding, exactly as seeding would have set it.
-        string binding = SeedBinding(id);
+        string binding = IsValidKuroAccount(kuroAccountId) ? kuroAccountId : SeedBinding(id);
         if (binding.Length > 0 && accounts.Any(account => account.KuroAccountId == binding)) binding = "";
         adopted = new LocalAccount(id, IsValidName(name) ? name.Trim() : SeedName(id), binding, DateTimeOffset.UtcNow, null);
         accounts.Add(adopted);
@@ -275,25 +279,66 @@ public sealed class LocalAccountCatalog
     private string NewId() => "acc_" + Guid.NewGuid().ToString("N")[..8];
 
     /// <summary>
-    /// Removes a ledger from the list without deleting anything: its progress document and its
-    /// routes move into a timestamped folder under deleted/. The last ledger cannot be removed,
-    /// and the active one is replaced by the first remaining. A stored credential is deliberately
-    /// left where it is: it belongs to the Kuro account, not to this ledger, so removing the
-    /// ledger only ends the binding. "断开库街区连接" is the one action that forgets a credential.
+    /// Removes a ledger from the list: its progress document and its routes are parked in a
+    /// timestamped folder under deleted/. The last ledger cannot be removed, and the active one is
+    /// replaced by the first remaining. A stored credential is deliberately left where it is: it
+    /// belongs to the Kuro account, not to this ledger, so removing the ledger only ends the
+    /// binding. "断开库街区连接" is the one action that forgets a credential.
+    /// <para>
+    /// Parking the same state twice is refused. 删除 → 恢复 → 删除 would otherwise leave one
+    /// identical folder per round, and since the folder name is a timestamp nothing would ever
+    /// collapse them again. "Identical" is the ledger id, the name and binding it had (when the
+    /// parked copy recorded them), its progress bytes and its routes; anything else is a different
+    /// state and still gets a copy of its own.
+    /// </para>
     /// </summary>
-    public bool TryDelete(string id, out string error)
+    public bool TryDelete(string id, out string error) => TryDelete(id, out error, out _);
+
+    /// <summary>
+    /// Same, reporting what happened to the archive in <paramref name="note"/>: empty when a new
+    /// copy was parked, and a sentence when nothing had to be parked (or an identical copy was
+    /// already there) so the interface can say so instead of claiming it moved something.
+    /// </summary>
+    public bool TryDelete(string id, out string error, out string note)
     {
         error = "";
+        note = "";
         if (!persistable) { error = ReadWarning; return false; }
         int index = accounts.FindIndex(account => account.Id == id);
         if (index < 0) { error = $"没有名为 {id} 的记录本。"; return false; }
         if (accounts.Count <= 1) { error = "至少要保留一个记录本。"; return false; }
-        string target = System.IO.Path.Combine(DeletedDirectory, DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + id);
+        var account = accounts[index];
+        string progress = ProgressPath(id);
+        string? routes = RoutesPath(id);
+        ParkedState live = StateOf(progress, routes);
         try
         {
-            Directory.CreateDirectory(target);
-            MoveIfPresent(ProgressPath(id), System.IO.Path.Combine(target, id + ".json"));
-            if (!string.IsNullOrEmpty(routesDirectory)) MoveIfPresent(System.IO.Path.Combine(routesDirectory, id), System.IO.Path.Combine(target, "routes"));
+            if (live.IsEmpty)
+            {
+                note = "这本记录本还没有进度文件，没有需要归档的内容。";
+            }
+            else if (FindIdenticalArchive(account, live) is { } duplicate)
+            {
+                // The same state is already parked, so the live copy is removed rather than parked a
+                // second time — the bytes that stay are the bytes it had.
+                DeleteIfPresent(progress, directory: false);
+                if (routes is not null) DeleteIfPresent(routes, directory: true);
+                note = $"deleted 里已经有一份完全相同的副本（{System.IO.Path.GetFileName(duplicate)}），没有重复归档。";
+            }
+            else
+            {
+                // The name is a timestamp, so two parks of different states inside one second would
+                // collide; a counter keeps them apart, and the manifest (not the folder name) is what
+                // says which record book the copy holds.
+                string stem = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + id;
+                string target = System.IO.Path.Combine(DeletedDirectory, stem);
+                for (int nth = 2; Directory.Exists(target); ++nth)
+                    target = System.IO.Path.Combine(DeletedDirectory, stem + "-" + nth);
+                Directory.CreateDirectory(target);
+                MoveIfPresent(progress, System.IO.Path.Combine(target, id + ".json"));
+                if (routes is not null) MoveIfPresent(routes, System.IO.Path.Combine(target, "routes"));
+                WriteArchiveManifest(target, account, routes is not null && Directory.Exists(System.IO.Path.Combine(target, "routes")));
+            }
         }
         catch (Exception moveError) when (moveError is IOException or UnauthorizedAccessException)
         {
@@ -309,6 +354,130 @@ public sealed class LocalAccountCatalog
     /// <summary>Where a removed ledger is parked so the player can still find it.</summary>
     public string DeletedDirectory => System.IO.Path.Combine(
         System.IO.Path.GetDirectoryName(Path) ?? ".", "deleted");
+
+    /// <summary>
+    /// The manifest a parked ledger carries. Without it a folder is just a timestamp and an id;
+    /// with it, "which record book is this" can be answered from deleted/ itself — and the
+    /// duplicate check has a name to compare. 旧版本地数据修复 reads it too, so a restored record
+    /// book keeps the name (and the binding) it had.
+    /// </summary>
+    internal const string ArchiveManifestName = "ledger.json";
+
+    /// <summary>What a parked ledger's manifest records about it.</summary>
+    internal sealed record ArchivedLedger(string Id, string Name, string KuroAccountId);
+
+    /// <summary>The manifest in one parked folder, or null when it has none (or cannot be read).</summary>
+    internal static ArchivedLedger? ReadArchiveManifest(string folder)
+    {
+        try
+        {
+            string path = System.IO.Path.Combine(folder, ArchiveManifestName);
+            if (!File.Exists(path)) return null;
+            using var document = JsonDocument.Parse(File.ReadAllBytes(path));
+            var root = document.RootElement;
+            string Text(string name) => root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+                ? value.GetString() ?? "" : "";
+            string id = Text("id");
+            return id.Length == 0 ? null : new ArchivedLedger(id, Text("name"), Text("kuroAccountId"));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Where this ledger's routes live, or null when the catalog was not told about them.</summary>
+    private string? RoutesPath(string id) =>
+        string.IsNullOrEmpty(routesDirectory) ? null : System.IO.Path.Combine(routesDirectory, id);
+
+    /// <summary>Everything that decides whether a parked copy is the same thing as the live one.</summary>
+    private sealed record ParkedState(bool HasProgress, string ProgressHash, string RoutesDigest)
+    {
+        public bool IsEmpty => !HasProgress && RoutesDigest.Length == 0;
+    }
+
+    private static ParkedState StateOf(string progressPath, string? routesPath) =>
+        new(File.Exists(progressPath), Hash(progressPath),
+            routesPath is not null && Directory.Exists(routesPath) ? DirectoryDigest(routesPath) : "");
+
+    /// <summary>The parked folder that already holds exactly this ledger, or null.</summary>
+    private string? FindIdenticalArchive(LocalAccount account, ParkedState live)
+    {
+        if (!Directory.Exists(DeletedDirectory)) return null;
+        IEnumerable<string> folders;
+        try { folders = Directory.EnumerateDirectories(DeletedDirectory).ToList(); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return null; }
+        foreach (string folder in folders)
+        {
+            // A folder without a manifest predates it (and the name it recorded), so it is compared
+            // on the data alone — which is what a player means by "the same record book".
+            if (ReadArchiveManifest(folder) is { } manifest &&
+                (manifest.Id != account.Id || manifest.Name != account.Name || manifest.KuroAccountId != account.KuroAccountId))
+                continue;
+            if (StateOf(System.IO.Path.Combine(folder, account.Id + ".json"), System.IO.Path.Combine(folder, "routes")) != live)
+                continue;
+            return folder;
+        }
+        return null;
+    }
+
+    private void WriteArchiveManifest(string folder, LocalAccount account, bool hasRoutes)
+    {
+        try
+        {
+            File.WriteAllText(System.IO.Path.Combine(folder, ArchiveManifestName), JsonSerializer.Serialize(new
+            {
+                version = 1,
+                id = account.Id,
+                name = account.Name,
+                kuroAccountId = account.KuroAccountId,
+                deletedAtUtc = DateTimeOffset.UtcNow,
+                routes = hasRoutes
+            }, new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+    }
+
+    private static void DeleteIfPresent(string source, bool directory)
+    {
+        if (directory) { if (Directory.Exists(source)) Directory.Delete(source, recursive: true); }
+        else if (File.Exists(source)) File.Delete(source);
+    }
+
+    /// <summary>Content hash used to tell one parked state from another; empty for anything unreadable.</summary>
+    private static string Hash(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return "";
+            using var stream = File.OpenRead(path);
+            return Convert.ToHexString(SHA256.HashData(stream))[..16];
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return "";
+        }
+    }
+
+    /// <summary>A digest over a directory's files and their relative paths, so two route folders compare as one value.</summary>
+    private static string DirectoryDigest(string directory)
+    {
+        try
+        {
+            var files = Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+                .Select(file => (Relative: System.IO.Path.GetRelativePath(directory, file), Hash: Hash(file)))
+                .OrderBy(entry => entry.Relative, StringComparer.Ordinal)
+                .ToList();
+            if (files.Count == 0) return "empty";
+            var text = new StringBuilder();
+            foreach (var file in files) text.Append(file.Relative).Append(':').Append(file.Hash).Append(';');
+            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())))[..16];
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return "";
+        }
+    }
 
     /// <summary>
     /// Writes a small report of every ledger: its name, its binding, its progress and whether
