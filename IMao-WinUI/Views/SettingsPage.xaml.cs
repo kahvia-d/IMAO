@@ -420,9 +420,13 @@ public sealed partial class SettingsPage : Page
     private void RenderRegionProgress()
     {
         RegionProgress.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
+        // Same two rules as the card above, so both bars behave the same way: a stage without a measurable unit
+        // shows the bar as working rather than at zero, and the stage line carries the same wording.
+        RegionProgress.IsIndeterminate = updates.ProgressIndeterminate;
         RegionProgress.Value = updates.ProgressPercent;
-        RegionProgressText.Text = updates.ProgressText;
-        RegionProgressText.Visibility = string.IsNullOrEmpty(updates.ProgressText) ? Visibility.Collapsed : Visibility.Visible;
+        var stageLine = updates.ProgressText.Length > 0 ? "正在进行：" + updates.ProgressText : "";
+        RegionProgressText.Text = stageLine;
+        RegionProgressText.Visibility = stageLine.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         RegionMessage.IsOpen = updates.Failed;
         RegionMessage.Severity = InfoBarSeverity.Warning;
         RegionMessage.Message = updates.Failed ? updates.Message : "";
