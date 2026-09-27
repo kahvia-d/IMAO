@@ -398,8 +398,9 @@ private:
 	winrt::IAsyncAction Start();
 	void Thread_DetectGameState();
 	bool Init();
-	bool IsOpenMap(const cv::Mat& snapshot, const RECT& captureRect, int* goodMatchSize, bool useMapFeatureFallback);
-	bool IsBigMapCompass(const cv::Mat& snapshot, const RECT& captureRect, int* goodMatchSize);
+	bool IsOpenMap(const cv::Mat& snapshot, const RECT& captureRect, int* goodMatchSize, bool useMapFeatureFallback,
+		bool* comparable = nullptr);
+	MapCompassDetection IsBigMapCompass(const cv::Mat& snapshot, const RECT& captureRect);
 	int ValidateCoordinateCandidate(const Coordinate& identifyCoordinate, const Mat& minMapImg,
 		const ImageFeatureData& minMapFeatureData, int preferredSceneId, bool searchAllScenes,
 		bool commitPosition, std::size_t* outSupportingMatchCount = nullptr);

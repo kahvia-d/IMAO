@@ -13,16 +13,24 @@ inline void TestControllerMapUi(void (*check)(bool, const std::string&)) {
     const auto mouse = cv::imread((directory / "keyboard-map-current.png").string());
     const auto dialog = cv::imread((directory / "controller-marker-dialog.png").string());
     const auto gameplay = cv::imread((directory / "black-shores-gameplay.png").string());
-    check(!controller.empty() && !mouse.empty() && !dialog.empty() && !gameplay.empty(),
+    // The hand-holding panel covers the compass while the zoom control stays intact, and the region
+    // progress panel leaves the compass alone: together they are why neither probe may veto the other.
+    const auto assistant = cv::imread((directory / "controller-cursor-assistant.png").string());
+    const auto regionPanel = cv::imread((directory / "black-shores-map-region-panel.png").string());
+    check(!controller.empty() && !mouse.empty() && !dialog.empty() && !gameplay.empty() &&
+        !assistant.empty() && !regionPanel.empty(),
         "controller, keyboard and non-navigable map fixtures must load");
-    if (controller.empty() || mouse.empty() || dialog.empty() || gameplay.empty()) return;
+    if (controller.empty() || mouse.empty() || dialog.empty() || gameplay.empty() ||
+        assistant.empty() || regionPanel.empty()) return;
     for (const cv::Size size : {cv::Size(1280, 720), cv::Size(1600, 900), cv::Size(1920, 1080), cv::Size(2560, 1440)}) {
         const auto label = std::to_string(size.width);
-        cv::Mat pad, keyboard, popup, world;
+        cv::Mat pad, keyboard, popup, world, overlay, region;
         cv::resize(controller, pad, size, 0, 0, cv::INTER_AREA);
         cv::resize(mouse, keyboard, size, 0, 0, cv::INTER_AREA);
         cv::resize(dialog, popup, size, 0, 0, cv::INTER_AREA);
         cv::resize(gameplay, world, size, 0, 0, cv::INTER_AREA);
+        cv::resize(assistant, overlay, size, 0, 0, cv::INTER_AREA);
+        cv::resize(regionPanel, region, size, 0, 0, cv::INTER_AREA);
         RECT rect{0, 0, size.width, size.height};
         auto evidence = MapUiVisualDetector::DetectBigMapControlLayout(pad, rect);
         check(evidence.visible && evidence.controller && !evidence.mouse,
@@ -32,6 +40,32 @@ inline void TestControllerMapUi(void (*check)(bool, const std::string&)) {
             << " triggers=" << evidence.controllerTriggerAnchors << " slider=" << evidence.controllerSlider
             << " mouse=" << keyboardEvidence.mouse << " dialog="
             << MapUiVisualDetector::DetectBigMapControls(popup, rect) << '\n';
+
+        // The compass is the widget itself or it is nothing: the colour count only says that something
+        // gold is in the box.
+        const auto mapCompass = MapUiVisualDetector::DetectBigMapCompass(pad, rect);
+        const auto keyboardCompass = MapUiVisualDetector::DetectBigMapCompass(keyboard, rect);
+        const auto regionCompass = MapUiVisualDetector::DetectBigMapCompass(region, rect);
+        std::cout << "Compass width=" << size.width
+            << " controller=" << mapCompass.templateVerified << "@" << mapCompass.templateAgreement
+            << " keyboard=" << keyboardCompass.templateVerified << "@" << keyboardCompass.templateAgreement
+            << " regionPanel=" << regionCompass.templateVerified << "@" << regionCompass.templateAgreement
+            << " overlay=" << MapUiVisualDetector::DetectBigMapCompass(overlay, rect).templateAgreement
+            << " gameplay=" << MapUiVisualDetector::DetectBigMapCompass(world, rect).templateAgreement
+            << " dialog=" << MapUiVisualDetector::DetectBigMapCompass(popup, rect).templateAgreement << '\n';
+        check(mapCompass.visible && mapCompass.templateVerified,
+            "controller map compass is verified against the template at " + label);
+        check(keyboardCompass.visible && keyboardCompass.templateVerified,
+            "mouse map compass is verified against the template at " + label);
+        check(regionCompass.visible && regionCompass.templateVerified,
+            "the compass survives the region progress panel at " + label);
+        check(!MapUiVisualDetector::DetectBigMapCompass(world, rect).visible,
+            "ordinary gameplay has no compass at " + label);
+        check(!MapUiVisualDetector::DetectBigMapCompass(popup, rect).visible,
+            "the custom marker dialog has no compass at " + label);
+        check(!MapUiVisualDetector::DetectBigMapCompass(overlay, rect).visible,
+            "the hand-holding panel over the compass is not a compass at " + label);
+
         check(keyboardEvidence.visible && keyboardEvidence.mouse && !keyboardEvidence.controller,
             "current mouse map keeps its own controls at " + label);
         check(!MapUiVisualDetector::DetectBigMapControls(popup, rect),
@@ -50,9 +84,15 @@ inline void TestControllerMapUi(void (*check)(bool, const std::string&)) {
             check(!MapUiVisualDetector::DetectBigMapControls(missingAnchor, rect),
                 "one missing controller zoom anchor cannot authorize entry at " + label + ":" + std::to_string(y));
         }
+        // The compass used to be a veto on the controller layout. It cannot be: the shipped
+        // controller-cursor-assistant capture is an open map whose panel covers the compass while the
+        // zoom control is intact, so the strip has to stand on its own.
         auto missingCompass = pad.clone(); erase(missingCompass, 0, 40, 90, 80);
-        check(!MapUiVisualDetector::DetectBigMapControls(missingCompass, rect),
-            "controller zoom strip without independent map compass is insufficient at " + label);
+        check(MapUiVisualDetector::DetectBigMapControls(missingCompass, rect),
+            "controller zoom strip stands without the compass at " + label);
+        auto missingSlider = pad.clone(); erase(missingSlider, 1480, 370, 60, 70);
+        check(!MapUiVisualDetector::DetectBigMapControls(missingSlider, rect),
+            "controller zoom strip without its slider is insufficient at " + label);
         auto terrainOnly = pad.clone(); erase(terrainOnly, 1480, 230, 60, 420);
         check(!MapUiVisualDetector::DetectBigMapControls(terrainOnly, rect),
             "map terrain and controller footer without zoom UI are insufficient at " + label);
@@ -98,4 +138,70 @@ inline void TestControllerMapUi(void (*check)(bool, const std::string&)) {
     check(!MapUiVisualDetector::DetectBigMapControls(gray, rect) &&
         !MapUiVisualDetector::DetectBigMapControls(deep, rect) &&
         !MapUiVisualDetector::DetectBigMapControls({}, rect), "invalid capture formats are rejected");
+    const auto templateInfo = MapUiVisualDetector::CompassTemplateInfo();
+    std::cout << "Compass template available=" << templateInfo.available << " reason=" << templateInfo.reason
+        << " " << templateInfo.width << "x" << templateInfo.height
+        << " mask=" << templateInfo.maskPixels << " decodedBytes=" << templateInfo.decodedBytes << '\n';
+    check(templateInfo.available, "the compiled-in compass reference decodes (reason=" +
+        std::string(templateInfo.reason) + ")");
+    check(templateInfo.maskPixels == 961 + 844, "the compass reference keeps its measured mask");
+    check(!MapUiVisualDetector::DetectBigMapCompass(gray, rect).visible &&
+        !MapUiVisualDetector::DetectBigMapCompass(deep, rect).visible &&
+        !MapUiVisualDetector::DetectBigMapCompass({}, rect).visible,
+        "invalid compass capture formats are rejected");
+
+    // The rule the state machine follows, without a live game. A verified compass has to carry the map
+    // on its own: on 2026-09-26 and 2026-09-27 the zoom strip was absent while the compass sat at its
+    // full strength, the canvas re-verification could not run (entering the map clears the player's
+    // scene id), and the state collapsed to Unknown with the markers cleared.
+    {
+        MapFrameEvidence verified;
+        verified.compassVisible = true;
+        verified.compassVerified = true;
+        verified.minimapAbsentLongEnough = true;
+        check(BigMapEvidence(verified) && BigMapMarkersVisible(verified),
+            "a template-verified compass is big-map evidence on its own");
+        check(BigMapEvidence(verified) && !verified.controlsVisible && !verified.structureConfirmed,
+            "the verified compass needs neither the zoom strip nor a canvas confirmation");
+
+        MapUiStateController state;
+        state.Update({BigMapEvidence(verified), false});
+        check(state.Update({BigMapEvidence(verified), false}).current == MapUiState::BigMap,
+            "a verified compass alone reaches the stable big-map state");
+
+        using namespace std::chrono_literals;
+        GamepadContextSnapshot context;
+        const auto now = GamepadContextSnapshot::Clock::time_point{20s};
+        context.Begin(2, 321, 654);
+        context.ObserveUi(2, "local", true, BigMapEvidence(verified), false, true, now, 500ms, now);
+        check(context.Read("local", now).bigMap,
+            "a verified compass keeps the gamepad map gate open");
+
+        // The colour-only probe must not: that is what a panel emblem or the minimap underneath the same
+        // box looks like.
+        MapFrameEvidence colourOnly;
+        colourOnly.compassVisible = true;
+        colourOnly.minimapAbsentLongEnough = true;
+        check(!BigMapEvidence(colourOnly) && !BigMapMarkersVisible(colourOnly),
+            "an unverified colour hit is not evidence on its own");
+        MapFrameEvidence confirmed;
+        confirmed.compassVisible = true;
+        confirmed.structureConfirmed = true;
+        confirmed.minimapAbsentLongEnough = true;
+        check(BigMapEvidence(confirmed),
+            "the legacy colour path still needs and accepts the canvas confirmation");
+        MapFrameEvidence confirmedByControls;
+        confirmedByControls.compassVisible = true;
+        confirmedByControls.structureConfirmed = true;
+        confirmedByControls.structureRequiresControls = true;
+        confirmedByControls.minimapAbsentLongEnough = true;
+        check(!BigMapEvidence(confirmedByControls),
+            "a map confirmed with the zoom controls up does not fall back to colour alone");
+
+        // And the frame the capture proves: the strip is gone and the panel covers the compass, so only
+        // the shared evidence inputs can describe it.
+        MapFrameEvidence occluded;
+        occluded.minimapAbsentLongEnough = true;
+        check(!BigMapEvidence(occluded), "no probe and no confirmation is not a map");
+    }
 }

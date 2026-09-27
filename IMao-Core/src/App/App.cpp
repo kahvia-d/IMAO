@@ -642,6 +642,10 @@ void App::Thread_DetectGameState() {
     OverlayVisibilityPolicy visibilityPolicy;
     MinimapHudEvidence minimapHudEvidence;
     bool rawCompassEvidence = false, rawControlEvidence = false, rawMinimapEvidence = false, templateHudEvidence = false;
+    // The compass verdict the marker policy reports; both live with the other per-frame evidence because
+    // the visibility lambda above is defined once, outside the loop.
+    bool compassTemplateVerified = false;
+    double compassAgreement = 0.0;
     std::string rawControlLayout = "none";
     int rawControllerTriggerAnchors = 0;
     bool rawControllerSlider = false;
@@ -659,6 +663,8 @@ void App::Thread_DetectGameState() {
                 " map=" + std::to_string(visible.mapVisible) +
                 " minimap=" + std::to_string(visible.minimapVisible) +
                 " rawCompass=" + std::to_string(rawCompassEvidence) + " rawControls=" + std::to_string(rawControlEvidence) +
+                " compassVerified=" + std::to_string(compassTemplateVerified) +
+                " compassAgreement=" + std::to_string(compassAgreement) +
                 " controlLayout=" + rawControlLayout + " controllerTriggerAnchors=" + std::to_string(rawControllerTriggerAnchors) +
                 " controllerSlider=" + std::to_string(rawControllerSlider) +
                 " rawMinimap=" + std::to_string(rawMinimapEvidence) + " templateHud=" + std::to_string(templateHudEvidence) +
@@ -717,6 +723,25 @@ void App::Thread_DetectGameState() {
 		bool mapControlsVisible = false;
 		bool structuralMapEvidence = false;
 		bool minimapHudAbsentLongEnough = false;
+		// Cleared with the other per-frame inputs: a frame whose probes were skipped must not keep the
+		// previous verdict alive.
+		compassTemplateVerified = false;
+		compassAgreement = 0.0;
+		// One frame's map inputs, read the same way by the marker policy below and by the state machine
+		// after the (slower) canvas verification. A template-verified compass is the widget itself, so it
+		// stands on its own; that is what keeps an open map alive when the zoom strip is hidden and the
+		// canvas verification has no scene to work with.
+		const auto frameEvidence = [&] {
+			MapFrameEvidence evidence;
+			evidence.controlsVisible = mapControlsVisible;
+			evidence.compassVisible = compassVisible;
+			evidence.compassVerified = compassTemplateVerified;
+			evidence.structureConfirmed = bigMapStructureConfirmed;
+			evidence.structureRequiresControls = mapStructureRequiresControls;
+			evidence.minimapAbsentLongEnough = minimapHudAbsentLongEnough;
+			evidence.minimapVisible = minimapVisible;
+			return evidence;
+		};
 		if (Isolation::Enabled(Isolation::kGameStateDetection)) {
 			GoodMatchSize_IconTask = 0;
 			GoodMatchSize_IconWavePlateCrystal = 0;
@@ -724,7 +749,11 @@ void App::Thread_DetectGameState() {
 		else {
 		if (!stateSnapshot.empty()) {
 			minimapVisible = IsExistMinMap(stateSnapshot, stateRect, &minimapMatchCount);
-			compassVisible = IsBigMapCompass(stateSnapshot, stateRect, &compassPixels);
+			const auto compass = IsBigMapCompass(stateSnapshot, stateRect);
+			compassPixels = compass.goldPixels;
+			compassVisible = compass.visible;
+			compassTemplateVerified = compass.templateVerified;
+			compassAgreement = compass.templateAgreement;
 			// Both mouse and controller layouts need their complete zoom controls.
 			const auto controls = MapUiVisualDetector::DetectBigMapControlLayout(stateSnapshot, stateRect);
 			mapControlsVisible = controls.visible;
@@ -746,10 +775,7 @@ void App::Thread_DetectGameState() {
             // Revoke already-published marker frames before any slower map
             // verification. The stable UI state remains available to preserve
             // location hints, but must not keep an absent map on the screen.
-            publishVisibility(*captured,
-                !minimapVisible && (mapControlsVisible ||
-                    (compassVisible && bigMapStructureConfirmed && !mapStructureRequiresControls)),
-                minimapVisible, focused);
+            publishVisibility(*captured, BigMapMarkersVisible(frameEvidence()), minimapVisible, focused);
 
 			// The colour-only "compass" probe intentionally has a broad crop, and
 			// therefore can also see yellow gameplay UI. A live minimap is stronger
@@ -779,12 +805,21 @@ void App::Thread_DetectGameState() {
 					evidenceNow - lastBigMapStructureVerification >= std::chrono::seconds(1));
 			if (shouldVerifyStructure) {
 				lastBigMapStructureVerification = evidenceNow;
-				structuralMapEvidence = IsOpenMap(stateSnapshot, stateRect, &mapMatchCount, true);
-				bigMapStructureConfirmed = structuralMapEvidence;
-                mapStructureRequiresControls = structuralMapEvidence && mapControlsVisible;
+				// A comparison that could not run - entering the map clears the player's scene id - is not
+				// a rejection, so it must leave the last confirmation alone.  Letting it clear the flag is
+				// what dropped an open map a second after it was recognised.
+				bool structureComparable = false;
+				structuralMapEvidence = IsOpenMap(stateSnapshot, stateRect, &mapMatchCount, true, &structureComparable);
+				if (structureComparable) {
+					bigMapStructureConfirmed = structuralMapEvidence;
+					mapStructureRequiresControls = structuralMapEvidence && mapControlsVisible;
+				}
 				if (!structuralMapEvidence && consecutiveBigMapCompassFrames >= 3) {
-					Diagnostics::Record("map-ui-candidate-rejected", "reason=canvas-verification-failed compassFrames=" +
-						std::to_string(consecutiveBigMapCompassFrames) + " goldPixels=" + std::to_string(compassPixels));
+					Diagnostics::Record("map-ui-candidate-rejected", "reason=" +
+						std::string(structureComparable ? "canvas-verification-failed" : "canvas-verification-unavailable") +
+						" compassFrames=" + std::to_string(consecutiveBigMapCompassFrames) +
+						" goldPixels=" + std::to_string(compassPixels) +
+						" templateVerified=" + std::to_string(compassTemplateVerified ? 1 : 0));
 				}
 			}
 		}
@@ -792,7 +827,7 @@ void App::Thread_DetectGameState() {
 
 		GoodMatchSize_IconTask = minimapMatchCount;
         GoodMatchSize_IconWavePlateCrystal = mapMatchCount;
-		const auto update = mapUiState.Update({ (mapControlsVisible || (compassVisible && bigMapStructureConfirmed)) && minimapHudAbsentLongEnough, minimapVisible });
+		const auto update = mapUiState.Update({ BigMapEvidence(frameEvidence()), minimapVisible });
 		isOpenMap = MapUiStateController::IsStableBigMap(update.current);
 		isExistMinMap = MapUiStateController::IsStableGameplay(update.current);
 		// The capture reads back only the regions ordinary exploration samples. Anything the big map needs
@@ -806,10 +841,7 @@ void App::Thread_DetectGameState() {
 					!mapControlsVisible && !compassVisible && isExistMinMap);
 			}
 		}
-        publishVisibility(*captured,
-            !minimapVisible && (mapControlsVisible ||
-                (compassVisible && bigMapStructureConfirmed && !mapStructureRequiresControls)),
-            minimapVisible, focused);
+        publishVisibility(*captured, BigMapMarkersVisible(frameEvidence()), minimapVisible, focused);
 		std::string statusGameState = "unknown";
 		switch (update.current) {
 		case MapUiState::Gameplay: statusGameState = "gameplay"; break;
@@ -826,6 +858,8 @@ void App::Thread_DetectGameState() {
 				" observed=" + MapUiStateController::StateName(update.observed) +
 				" minimapMatches=" + std::to_string(GoodMatchSize_IconTask.load()) +
 				" compassGoldPixels=" + std::to_string(compassPixels) +
+				" compassVerified=" + std::to_string(compassTemplateVerified) +
+				" compassAgreement=" + std::to_string(compassAgreement) +
 				" mapControlsVisible=" + std::to_string(mapControlsVisible) +
 				" controlLayout=" + rawControlLayout + " controllerTriggerAnchors=" + std::to_string(rawControllerTriggerAnchors) +
 				" controllerSlider=" + std::to_string(rawControllerSlider) +
@@ -965,16 +999,17 @@ bool App::IsExistMinMap(const Mat& snapshot, const RECT& captureRect, int* goodM
 	return false;
 }
 
-bool App::IsBigMapCompass(const Mat& snapshot, const RECT& captureRect, int* goodMatchSize) {
-	const auto detection = MapUiVisualDetector::DetectBigMapCompass(snapshot, captureRect);
-	*goodMatchSize = detection.goldPixels;
-	return detection.visible;
+MapCompassDetection App::IsBigMapCompass(const Mat& snapshot, const RECT& captureRect) {
+	return MapUiVisualDetector::DetectBigMapCompass(snapshot, captureRect);
 }
 
-bool App::IsOpenMap(const Mat& snapshot, const RECT& captureRect, int* goodMatchSize, bool useMapFeatureFallback) {
+bool App::IsOpenMap(const Mat& snapshot, const RECT& captureRect, int* goodMatchSize, bool useMapFeatureFallback,
+	bool* comparable) {
+	if (comparable != nullptr) *comparable = false;
 	const auto controls = MapUiVisualDetector::DetectBigMapControlLayout(snapshot, captureRect);
 	if (controls.visible) {
 		*goodMatchSize = 2;
+		if (comparable != nullptr) *comparable = true;
 		Diagnostics::Record("map-open-detection", std::string("source=zoom-controls confirmed=1 layout=") +
 			(controls.mouse ? "mouse" : "controller") + " controllerTriggerAnchors=" +
 			std::to_string(controls.controllerTriggerAnchors) + " controllerSlider=" + std::to_string(controls.controllerSlider));
@@ -996,7 +1031,12 @@ bool App::IsOpenMap(const Mat& snapshot, const RECT& captureRect, int* goodMatch
 	}
 
 	*goodMatchSize = legacyIconMatchSize;
+	// The legacy icon comparison above has run, so a rejection here is real.  The fallback below needs
+	// the player's scene id, which entering the map clears - so when it cannot run at all, the caller
+	// must not read "no inputs" as "checked and rejected".
+	if (comparable != nullptr) *comparable = true;
 	if (!useMapFeatureFallback || playerCurrentSceneId == 0) {
+		if (comparable != nullptr) *comparable = false;
 		return false;
 	}
 
