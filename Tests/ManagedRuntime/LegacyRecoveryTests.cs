@@ -26,6 +26,10 @@ internal static class LegacyRecoveryTests
         string savedPoints = Path.Combine(directory, "SavedPoints");
         Directory.CreateDirectory(savedPoints);
         File.WriteAllText(Path.Combine(savedPoints, "account_1.json"), "{\"World\":{\"cx_01\":[{\"id\":\"333\"},{\"id\":\"\"}]}}");
+        // The pre-rewrite version kept the player's own account names here; a record book deleted from
+        // the list has lost the name it was given, so this is the only place an old name survives.
+        File.WriteAllText(Path.Combine(directory, "kuromap-accounts.json"),
+            "{\"ActiveProfile\":\"kuro_777\",\"Accounts\":[{\"UserId\":\"777\",\"DisplayName\":\"Theyun\"}]}");
 
         // The record-book list is seeded BEFORE the extra documents appear, which is exactly how a
         // document ends up on disk without ever being listed.
@@ -67,6 +71,16 @@ internal static class LegacyRecoveryTests
         check(scan.Single(source => source.Kind == "deleted-document").LedgerId == "local" &&
             scan.Single(source => source.Kind == "deleted-document").Points == 1,
             "a document 删除 moved aside is found under its own id");
+
+        // The row has to say which record book it is, and for an old account the name the player
+        // chose back then is the most recognisable thing about it.
+        check(singles.All(source => source.LedgerName == "旧数据恢复" && source.DisplayName == "旧数据恢复"),
+            "a pre-rewrite file reports the name of the record book it will become");
+        check(scan.Single(source => source.Kind == "deleted-document").LedgerName == "默认",
+            "a deleted 默认 document reports the name it will get back");
+        check(scan.Single(source => source.LedgerId == "kuro_777").LedgerName == "库街区 777" &&
+            scan.Single(source => source.LedgerId == "kuro_777").DisplayName == "库街区 777（旧版叫 Theyun）",
+            "an unlisted document shows its record-book name plus the old name the legacy metadata still holds");
 
         var report = recovery.Recover(catalog);
         check(report.Recovered.Count == 3 && report.Notes.Count == 0,
@@ -151,5 +165,34 @@ internal static class LegacyRecoveryTests
             emptyRecovery.Scan(emptyCatalog.Accounts.Select(account => account.Id).ToArray())
                 .Count(source => !source.Recoverable && source.Problem.Length > 0) == 1,
             "a file whose scenes are all unknown is reported with a reason instead of becoming an empty record book");
+
+        // 8. The player chooses. A machine can hold a record book from an account they no longer want
+        //    on it, which is exactly why the list is tickable instead of "recover everything found".
+        string choicePoints = Path.Combine(directory, "choice", "SavedPoints");
+        string choiceProgram = Path.Combine(directory, "choice", "prog", "IMao");
+        Directory.CreateDirectory(choicePoints);
+        Directory.CreateDirectory(choiceProgram);
+        var choiceCatalog = new LocalAccountCatalog(Path.Combine(choicePoints, "accounts.json"), Path.Combine(choicePoints, "profiles"));
+        Directory.CreateDirectory(Path.Combine(choicePoints, "profiles"));
+        foreach (string account in new[] { "kuro_555", "kuro_666" })
+            File.WriteAllText(Path.Combine(choicePoints, "profiles", account + ".json"),
+                "{\"schemaVersion\":2,\"profileId\":\"" + account + "\",\"revision\":1,\"syncStates\":[],\"points\":{" +
+                "\"8:p\":{\"sceneName\":\"World\",\"nameId\":\"cx_01\",\"stateId\":8,\"pointId\":\"p\",\"completed\":true," +
+                "\"remoteCompleted\":null,\"pending\":false}}}");
+        var choiceRecovery = new LegacyPointRecovery(choicePoints, choiceProgram);
+        byte[] untickedBytes = File.ReadAllBytes(Path.Combine(choicePoints, "profiles", "kuro_666.json"));
+        var choiceScan = choiceRecovery.Scan(choiceCatalog.Accounts.Select(account => account.Id).ToArray());
+        check(choiceScan.Count == 2, "the scan offers both unlisted documents as separate rows");
+        var chosen = choiceRecovery.Recover(choiceCatalog, [choiceScan.Single(source => source.LedgerId == "kuro_555")]);
+        check(chosen.Recovered.Count == 1 && choiceCatalog.Accounts.Any(account => account.Id == "kuro_555") &&
+            !choiceCatalog.Accounts.Any(account => account.Id == "kuro_666") &&
+            File.ReadAllBytes(Path.Combine(choicePoints, "profiles", "kuro_666.json")).SequenceEqual(untickedBytes),
+            "only the ticked finding is recovered; the one left unticked is neither listed nor altered");
+        var remaining = choiceRecovery.Scan(choiceCatalog.Accounts.Select(account => account.Id).ToArray());
+        check(remaining.Count == 1 && remaining[0].LedgerId == "kuro_666" && remaining[0].Recoverable,
+            "a finding the player left unticked is offered again next time");
+        check(choiceRecovery.Recover(choiceCatalog, remaining).Recovered.Count == 1 &&
+            choiceCatalog.Accounts.Any(account => account.Id == "kuro_666"),
+            "the remaining finding is recovered once it is ticked");
     }
 }

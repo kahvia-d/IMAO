@@ -10,12 +10,19 @@ public sealed record LegacyRegion(string SceneName, int StateId, int Count);
 /// <summary>
 /// One place old point data was found. Nothing in a finding is ever modified or deleted —
 /// <see cref="Path"/> is only read, and the recovery writes somewhere else.
+/// <para>
+/// <see cref="LedgerName"/> is the name the record book will carry; <see cref="DisplayName"/> is
+/// what the list shows, which adds whatever clue the old account metadata still holds about who
+/// this record book belonged to. A record book from before the list existed has no stored name
+/// left — its progress document never carried one, and the list entry that did was removed with it.
+/// </para>
 /// </summary>
 public sealed record LegacyPointSource(
     string Kind,
     string Path,
     string LedgerId,
     string LedgerName,
+    string DisplayName,
     int Points,
     int Skipped,
     IReadOnlyList<LegacyRegion> Regions,
@@ -101,26 +108,33 @@ public sealed class LegacyPointRecovery
     {
         var known = new HashSet<string>(knownLedgerIds, StringComparer.Ordinal);
         var journal = ReadJournal();
+        var legacyNames = LegacyAccountNames();
         var found = new List<LegacyPointSource>();
         foreach (string path in SingleFileCandidates()) AddSingleFile(found, path, journal);
-        AddUnlistedProfiles(found, known);
-        AddDeletedDocuments(found, known, journal);
+        AddUnlistedProfiles(found, known, legacyNames);
+        AddDeletedDocuments(found, known, journal, legacyNames);
         found.Sort((left, right) => string.CompareOrdinal(left.Path, right.Path));
         return found;
     }
 
+    /// <summary>Recovers everything the scan found.</summary>
+    public LegacyRecoveryReport Recover(LocalAccountCatalog catalog) =>
+        Recover(catalog, Scan(catalog.Accounts.Select(account => account.Id).ToArray()));
+
     /// <summary>
-    /// Brings everything the scan found into the record-book list. Never modifies or deletes a
-    /// source: pre-rewrite files are copied into a new record book, unlisted documents are adopted
-    /// where they are, and documents moved aside by 删除 are copied back under a free id.
+    /// Recovers the findings the player ticked, and only those — which is why the list is the
+    /// interface for this: a machine can hold a record book from an account the player no longer
+    /// wants on it, and "recover everything you found" would put it back anyway. Never modifies or
+    /// deletes a source: pre-rewrite files are copied into a new record book, unlisted documents are
+    /// adopted where they are, and documents moved aside by 删除 are copied back under a free id.
     /// Recovered record books are deliberately left unbound — which Kuro account those old points
     /// belong to is the player's to say, and guessing it would upload them to the wrong one.
     /// </summary>
-    public LegacyRecoveryReport Recover(LocalAccountCatalog catalog)
+    public LegacyRecoveryReport Recover(LocalAccountCatalog catalog, IReadOnlyList<LegacyPointSource> selected)
     {
         var notes = new List<string>();
         if (catalog.Warning.Length > 0) notes.Add(catalog.Warning);
-        var sources = Scan(catalog.Accounts.Select(account => account.Id).ToArray());
+        var sources = selected;
         var recovered = new List<LegacyRecoveryOutcome>();
         var skipped = new List<LegacyPointSource>();
         var journal = ReadJournal();
@@ -263,18 +277,20 @@ public sealed class LegacyPointRecovery
         if (found.Count >= MaximumSources || !File.Exists(path)) return;
         if (!TryReadSingleFile(path, out var points, out string problem))
         {
-            found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", "", 0, 0, [], false, false, problem));
+            found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", CombinedLedgerName, CombinedLedgerName,
+                0, 0, [], false, false, problem));
             return;
         }
         bool already = journal.Any(entry => entry.Kind == LegacyKind.SingleFile && SamePath(entry.Source, path) &&
             entry.Hash == Hash(path));
         if (points.Count == 0 && problem.Length == 0)
             problem = "这个文件里没有能识别的点位：区域名不在已知列表里，或者每条记录都缺少 id。";
-        found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", CombinedLedgerName, points.Count, 0,
-            Summarize(points), already, points.Count > 0, problem));
+        found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", CombinedLedgerName, CombinedLedgerName,
+            points.Count, 0, Summarize(points), already, points.Count > 0, problem));
     }
 
-    private void AddUnlistedProfiles(List<LegacyPointSource> found, HashSet<string> known)
+    private void AddUnlistedProfiles(List<LegacyPointSource> found, HashSet<string> known,
+        IReadOnlyDictionary<string, string> legacyNames)
     {
         string directory = Path.Combine(savedPointsDirectory, "profiles");
         if (!Directory.Exists(directory) || found.Count >= MaximumSources) return;
@@ -285,17 +301,20 @@ public sealed class LegacyPointRecovery
         {
             string id = Path.GetFileNameWithoutExtension(file);
             if (!LocalAccountCatalog.IsValidId(id) || known.Contains(id)) continue;
+            string name = FriendlierName(id);
             if (!TryReadProfileDocument(file, out var points, out string problem))
             {
-                found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, id, 0, 0, [], false, false, problem));
+                found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, name, Display(id, name, legacyNames),
+                    0, 0, [], false, false, problem));
                 continue;
             }
-            found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, FriendlierName(id), points.Count, 0,
-                Summarize(points), false, true, problem));
+            found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, name, Display(id, name, legacyNames),
+                points.Count, 0, Summarize(points), false, true, problem));
         }
     }
 
-    private void AddDeletedDocuments(List<LegacyPointSource> found, HashSet<string> known, IReadOnlyList<JournalEntry> journal)
+    private void AddDeletedDocuments(List<LegacyPointSource> found, HashSet<string> known,
+        IReadOnlyList<JournalEntry> journal, IReadOnlyDictionary<string, string> legacyNames)
     {
         string directory = Path.Combine(savedPointsDirectory, "deleted");
         if (!Directory.Exists(directory)) return;
@@ -309,17 +328,21 @@ public sealed class LegacyPointRecovery
             string id = name.Length > 16 && name[8] == '-' && name[15] == '-' ? name[16..] : name;
             foreach (string file in SafeFiles(folder, "*.json"))
             {
+                // The id is still taken by a live record book (or by a document of its own), so the
+                // recovered copy has to be adopted under a different name — said here, once, so the
+                // list the player reads is the same thing the recovery goes on to do.
+                bool taken = known.Contains(id) || File.Exists(Path.Combine(savedPointsDirectory, "profiles", id + ".json"));
+                string ledgerName = taken ? $"{CombinedLedgerName}（{id}）" : FriendlierName(id);
                 if (!TryReadProfileDocument(file, out var points, out string problem))
                 {
-                    found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id, FriendlierName(id), 0, 0, [], false, false, problem));
+                    found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id, ledgerName,
+                        Display(id, ledgerName, legacyNames), 0, 0, [], false, false, problem));
                     continue;
                 }
                 bool already = journal.Any(entry => entry.Kind == LegacyKind.DeletedDocument && SamePath(entry.Source, file) &&
                     entry.Hash == Hash(file));
-                bool taken = known.Contains(id) || File.Exists(Path.Combine(savedPointsDirectory, "profiles", id + ".json"));
-                found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id,
-                    taken ? $"{CombinedLedgerName}（{id}）" : FriendlierName(id), points.Count, 0, Summarize(points),
-                    already, points.Count > 0, problem));
+                found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id, ledgerName,
+                    Display(id, ledgerName, legacyNames), points.Count, 0, Summarize(points), already, points.Count > 0, problem));
             }
         }
     }
@@ -334,6 +357,44 @@ public sealed class LegacyPointRecovery
     private static string FriendlierName(string id) =>
         id == LocalAccountCatalog.DefaultId ? "默认" :
         id.StartsWith("kuro_", StringComparison.Ordinal) && id[5..].All(char.IsAsciiDigit) ? "库街区 " + id[5..] : id;
+
+    /// <summary>
+    /// The account names the pre-rewrite version kept in <c>kuromap-accounts.json</c> beside
+    /// <c>SavedPoints</c>, keyed by user id. A record book deleted from the list has lost the name
+    /// the player gave it, so this is the only place an old name can still come from.
+    /// </summary>
+    private IReadOnlyDictionary<string, string> LegacyAccountNames()
+    {
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+        string parent = Path.GetDirectoryName(savedPointsDirectory) ?? savedPointsDirectory;
+        string path = Path.Combine(parent, "kuromap-accounts.json");
+        try
+        {
+            if (!File.Exists(path) || new FileInfo(path).Length > 1024 * 1024) return names;
+            using var document = JsonDocument.Parse(File.ReadAllBytes(path));
+            if (!document.RootElement.TryGetProperty("Accounts", out var accounts) || accounts.ValueKind != JsonValueKind.Array)
+                return names;
+            foreach (var account in accounts.EnumerateArray())
+            {
+                if (account.ValueKind != JsonValueKind.Object) continue;
+                string user = account.TryGetProperty("UserId", out var id) && id.ValueKind == JsonValueKind.String
+                    ? id.GetString() ?? "" : "";
+                string name = account.TryGetProperty("DisplayName", out var display) && display.ValueKind == JsonValueKind.String
+                    ? display.GetString() ?? "" : "";
+                if (user.Length > 0 && name.Length > 0) names[user] = name;
+            }
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException) { }
+        return names;
+    }
+
+    /// <summary>What the list calls this finding: the name the record book will carry, plus any old name.</summary>
+    private string Display(string id, string ledgerName, IReadOnlyDictionary<string, string> legacyNames)
+    {
+        if (!id.StartsWith("kuro_", StringComparison.Ordinal) || !id[5..].All(char.IsAsciiDigit)) return ledgerName;
+        return legacyNames.TryGetValue(id[5..], out string? old) && old.Length > 0 && old != ledgerName
+            ? $"{ledgerName}（旧版叫 {old}）" : ledgerName;
+    }
 
     // ---- reading ---------------------------------------------------------------------------
 

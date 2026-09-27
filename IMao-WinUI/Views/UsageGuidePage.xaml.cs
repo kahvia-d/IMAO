@@ -40,6 +40,9 @@ public sealed partial class UsageGuidePage : Page
 
     private LegacyPointRecovery Recovery => recovery ??= new LegacyPointRecovery(UserDataPaths.SavedPoints, AppContext.BaseDirectory);
 
+    /// <summary>The scan result, with the checkbox that decides whether that row is recovered.</summary>
+    private readonly List<(CheckBox Box, LegacyPointSource Source)> legacyRows = [];
+
     private IReadOnlyList<string> KnownLedgerIds() =>
         coreHost.LedgerCatalog?.Accounts.Select(account => account.Id).ToArray() ?? [];
 
@@ -48,6 +51,7 @@ public sealed partial class UsageGuidePage : Page
     private void ShowLegacyScan(IReadOnlyList<LegacyPointSource> sources)
     {
         LegacyScanList.Children.Clear();
+        legacyRows.Clear();
         int usable = sources.Count(source => source.Recoverable && !source.AlreadyRecovered);
         LegacyRecoverButton.IsEnabled = usable > 0;
         if (sources.Count == 0)
@@ -55,28 +59,46 @@ public sealed partial class UsageGuidePage : Page
             LegacyScanSummary.Text = "没有找到旧版本地数据，当前记录本不需要修复。";
             return;
         }
-        LegacyScanSummary.Text = $"找到 {sources.Count} 处：{usable} 处可以恢复，" +
-            $"{sources.Count - usable} 处已经恢复过或无法识别。恢复只会新增记录本，不会改动这些文件。";
+        LegacyScanSummary.Text = $"找到 {sources.Count} 处，其中 {usable} 处可以恢复。" +
+            "勾选要恢复的条目，再点「数据恢复」。恢复只会新增记录本，不会改动这些文件。";
         foreach (var source in sources) LegacyScanList.Children.Add(LegacyRow(source));
     }
 
-    private static FrameworkElement LegacyRow(LegacyPointSource source)
+    private FrameworkElement LegacyRow(LegacyPointSource source)
     {
-        string kind = source.Kind switch
-        {
-            LegacyKind.SingleFile => "旧版单文件",
-            LegacyKind.UnlistedProfile => "没有登记进记录本的进度文档",
-            _ => "被「删除」移走的记录本"
-        };
-        string state = !source.Recoverable ? "无法识别" : source.AlreadyRecovered ? "已经恢复过" : "可以恢复";
-        string regions = source.Regions.Count == 0 ? "" :
-            "（" + string.Join(" · ", source.Regions.Select(region => $"{region.SceneName} {region.Count}")) + "）";
-        var panel = new StackPanel { Spacing = 2 };
-        panel.Children.Add(LegacyText($"{kind} · {source.Points} 个点{regions} — {state}", "IMaoBodyTextStyle"));
-        panel.Children.Add(LegacyText(source.Path, "IMaoSecondaryTextStyle"));
-        if (source.Problem.Length > 0) panel.Children.Add(LegacyText(source.Problem, "IMaoSecondaryTextStyle"));
-        return panel;
+        bool selectable = source.Recoverable && !source.AlreadyRecovered;
+        var box = new CheckBox { IsChecked = selectable, IsEnabled = selectable, MinWidth = 0, VerticalAlignment = VerticalAlignment.Top };
+        var details = new StackPanel { Spacing = 2 };
+        details.Children.Add(LegacyText($"{source.DisplayName} · {LegacyKindLabel(source.Kind)} · " +
+            $"{source.Points} 个点{LegacyRegions(source)} — {LegacyState(source)}", "IMaoBodyTextStyle"));
+        // The name is what the player recognises; the id and the file are the evidence for it, so
+        // they sit underneath rather than in the headline.
+        details.Children.Add(LegacyText(
+            (source.LedgerId.Length > 0 ? $"记录本 id：{source.LedgerId}　" : "") + source.Path, "IMaoSecondaryTextStyle"));
+        if (source.Problem.Length > 0) details.Children.Add(LegacyText(source.Problem, "IMaoSecondaryTextStyle"));
+        var row = new Grid { ColumnSpacing = 8 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetColumn(box, 0);
+        Grid.SetColumn(details, 1);
+        row.Children.Add(box);
+        row.Children.Add(details);
+        legacyRows.Add((box, source));
+        return row;
     }
+
+    private static string LegacyKindLabel(string kind) => kind switch
+    {
+        LegacyKind.SingleFile => "旧版单文件",
+        LegacyKind.UnlistedProfile => "没有登记进记录本的进度文档",
+        _ => "被「删除」移走的记录本"
+    };
+
+    private static string LegacyState(LegacyPointSource source) =>
+        !source.Recoverable ? "无法识别" : source.AlreadyRecovered ? "已经恢复过" : "可以恢复";
+
+    private static string LegacyRegions(LegacyPointSource source) => source.Regions.Count == 0 ? "" :
+        "（" + string.Join(" · ", source.Regions.Select(region => $"{region.SceneName} {region.Count}")) + "）";
 
     private static TextBlock LegacyText(string text, string styleKey)
     {
@@ -89,9 +111,15 @@ public sealed partial class UsageGuidePage : Page
     {
         var catalog = coreHost.LedgerCatalog;
         if (catalog is null) { ShowLegacy(InfoBarSeverity.Warning, "记录本目录还没有就绪，请稍后再试。"); return; }
+        var chosen = legacyRows.Where(row => row.Box.IsChecked == true).Select(row => row.Source).ToList();
+        if (chosen.Count == 0)
+        {
+            ShowLegacy(InfoBarSeverity.Warning, "先点「扫描旧数据」，并勾选至少一处要恢复的条目。");
+            return;
+        }
         try
         {
-            var report = Recovery.Recover(catalog);
+            var report = Recovery.Recover(catalog, chosen);
             ShowLegacyScan(Recovery.Scan(KnownLedgerIds()));
             string created = report.Recovered.Count == 0
                 ? "没有可恢复的数据。"
