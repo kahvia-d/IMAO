@@ -79,8 +79,15 @@ public sealed class ProgramUpdateStore
     public int LastCatalogDownloadCount { get; private set; }
     private Task SaveAsync(ProgramUpdateState state, CancellationToken ct) => UpdateStorage.WriteAsync(StatePath, state, ct);
 
+    /// <param name="fallbackSupplier">
+    /// Consulted only after a download from the addresses the signed catalog names has already failed, and never
+    /// before: it is the answer for a player who cannot reach those addresses at all - the mirror's whole program
+    /// archive - and it costs about a gigabyte. Paying that to avoid a shard the difference package could not have
+    /// served either would be a worse trade than the shards, so nothing asks for it speculatively.
+    /// </param>
     public async Task PrepareAsync(byte[] envelope, Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download,
-        IProgress<UpdateProgress>? progress = null, CancellationToken ct = default, IProgramFileSupplier? supplier = null)
+        IProgress<UpdateProgress>? progress = null, CancellationToken ct = default, IProgramFileSupplier? supplier = null,
+        Func<CancellationToken, Task<IProgramFileSupplier?>>? fallbackSupplier = null)
     {
         LastCatalogDownloadCount = 0;
         var catalog = UpdateSignature.Verify(envelope, keys, testKeys);
@@ -122,7 +129,7 @@ public sealed class ProgramUpdateStore
             try
             {
             var app = Path.Combine(transaction, "app");
-            await AssembleAsync(package, app, transaction, reuseRoot, installed, download, progress, ct, supplier);
+            await AssembleAsync(package, app, transaction, reuseRoot, installed, download, progress, ct, supplier, fallbackSupplier);
             // Every file in the tree is hashed here, so this stage reports its own bytes rather than a static line.
             await ProgramPackageValidation.VerifyDirectoryAsync(app, catalog.App, ct, progress);
             progress?.Report(new UpdateProgress("检查新版程序的地图资源", 0, 0));
@@ -207,16 +214,20 @@ public sealed class ProgramUpdateStore
     /// only for a shard release: the whole-archive shape belongs to releases from before shards existed, and
     /// every release since then is partitioned, so a second path through here would be state to maintain
     /// for a case that no longer ships.
+    ///
+    /// The fallback is the mirror's whole archive, and it exists for one situation: the shards cannot be reached.
+    /// It is asked for only after a download has actually failed, and what it provides is held to the same signed
+    /// per-file records as everything else, so it can never be a weaker path than the shards - only a larger one.
     /// </summary>
     private async Task AssembleAsync(ProgramPackage package, string app, string transaction, string reuseRoot, List<ResourceFile>? prior,
         Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download, IProgress<UpdateProgress>? progress, CancellationToken ct,
-        IProgramFileSupplier? supplier = null)
+        IProgramFileSupplier? supplier = null, Func<CancellationToken, Task<IProgramFileSupplier?>>? fallbackSupplier = null)
     {
         if (package.Shards.Count == 0)
         {
             var archive = Path.Combine(transaction, "program.zip");
-            LastCatalogDownloadCount++;
             await DownloadAsync(download, new ProgramDownloadTarget("完整程序包", package.Url, package.Size, package.Sha256, CatalogSource), archive, ct);
+            LastCatalogDownloadCount++;
             progress?.Report(new UpdateProgress("校验并解压新版程序", 0, 0, CatalogSource));
             await ProgramPackageValidation.ExtractAsync(archive, app, package, ct);
             TryDelete(archive);
@@ -228,24 +239,60 @@ public sealed class ProgramUpdateStore
         // incremental package carries the files that *changed*, and a set of changed files is not a set of whole
         // shards: without the second rule a package covering nine files of a twenty-four-file shard saved
         // nothing, was paid for in quota, and left the shard to be downloaded in full anyway.
-        var supplied = supplier is null ? null : await supplier.SupplyAsync(package, app, ct).ConfigureAwait(false);
+        var supplied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (supplier is not null) supplied.UnionWith(await supplier.SupplyAsync(package, app, ct).ConfigureAwait(false));
         var known = prior?.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
         var index = 0;
-        foreach (var shard in package.Shards)
+        for (var pass = 0; ; pass++)
         {
-            index++;
-            if (supplied is not null && shard.Files.All(supplied.Contains)) continue;
-            if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, supplied, progress, ct)) continue;
-            var archive = Path.Combine(transaction, "shards", shard.Id + ".zip");
-            Directory.CreateDirectory(Path.GetDirectoryName(archive)!);
-            LastCatalogDownloadCount++;
-            await DownloadAsync(download, new ProgramDownloadTarget($"{shard.Id} 分片 ({index}/{package.Shards.Count})",
-                shard.Url, shard.Size, shard.Sha256, CatalogSource), archive, ct);
-            progress?.Report(new UpdateProgress($"校验并解压新版程序（{index}/{package.Shards.Count}）", 0, 0, CatalogSource));
-            await ProgramPackageValidation.ExtractShardAsync(archive, app, package, shard.Id, ct);
-            TryDelete(archive);
+            var restarted = false;
+            foreach (var shard in package.Shards)
+            {
+                index++;
+                if (shard.Files.All(supplied.Contains)) continue;
+                if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, supplied, progress, ct)) continue;
+                var archive = Path.Combine(transaction, "shards", shard.Id + ".zip");
+                Directory.CreateDirectory(Path.GetDirectoryName(archive)!);
+                var target = new ProgramDownloadTarget($"{shard.Id} 分片 ({index}/{package.Shards.Count})",
+                    shard.Url, shard.Size, shard.Sha256, CatalogSource);
+                try
+                {
+                    await DownloadAsync(download, target, archive, ct);
+                    LastCatalogDownloadCount++;
+                }
+                catch (Exception failure) when (pass == 0 && fallbackSupplier is not null && IsTransportFailure(failure))
+                {
+                    TryDelete(archive);
+                    progress?.Report(new UpdateProgress("分片地址无法下载，改用 Mirror酱 完整程序包", 0, 0, MirrorWholeSource));
+                    var alternative = await fallbackSupplier(ct).ConfigureAwait(false);
+                    if (alternative is null) throw;
+                    supplied.UnionWith(await alternative.SupplyAsync(package, app, ct).ConfigureAwait(false));
+                    // Nothing usable came back, so the original failure is still the honest answer.
+                    if (supplied.Count == 0) throw;
+                    // Every shard is re-decided from scratch with the archive's files in hand: the ones it covers
+                    // stop being downloads, and the ones it does not are tried against the shards once more.
+                    restarted = true;
+                    index = 0;
+                    break;
+                }
+                progress?.Report(new UpdateProgress($"校验并解压新版程序（{index}/{package.Shards.Count}）", 0, 0, CatalogSource));
+                await ProgramPackageValidation.ExtractShardAsync(archive, app, package, shard.Id, ct);
+                TryDelete(archive);
+            }
+            if (!restarted) return;
         }
     }
+
+    /// <summary>
+    /// Whether a failed download is one the mirror's whole archive could stand in for. A cancellation is not a
+    /// failure to route around - the player asked for it - and it must never turn into a gigabyte of mirror
+    /// traffic, which is why the caller's token is deliberately not part of this.
+    /// </summary>
+    private static bool IsTransportFailure(Exception error) =>
+        error is HttpRequestException or TimeoutException or IOException or InvalidDataException;
+
+    /// <summary>What the progress display attributes the mirror's whole program archive to.</summary>
+    private const string MirrorWholeSource = "Mirror酱（完整程序包）";
 
     /// <summary>What the progress display attributes an archive fetched from the addresses the catalog names to.</summary>
     private const string CatalogSource = "GitHub 分片";

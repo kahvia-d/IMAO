@@ -193,6 +193,8 @@ var passed = new List<string>();
 async Task Test(string name, Func<Task> action) { await action(); passed.Add(name); Console.WriteLine("PASS " + name); }
 void Assert(bool value, string reason = "assertion") { if (!value) throw new Exception(reason); }
 async Task Reject(Func<Task> action) { try { await action(); } catch (Exception e) when (e is IOException or InvalidDataException or InvalidOperationException or OperationCanceledException) { return; } throw new Exception("Expected rejection"); }
+/// <summary>The exception an action threw, for the cases where <see cref="Reject"/> is too narrow to be useful.</summary>
+async Task<Exception?> Capture(Func<Task> action) { try { await action(); } catch (Exception e) { return e; } return null; }
 using var signing = ECDsa.Create(ECCurve.NamedCurves.nistP256);
 var key = new TrustedUpdateKey { KeyId = "isolated-test", TestOnly = true, PublicKey = Convert.ToBase64String(signing.ExportSubjectPublicKeyInfo()) };
 byte[] Sign(UpdateCatalog catalog)
@@ -581,6 +583,64 @@ await Test("a shard the bag and the running program cover between them is never 
         Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch.Id), file.Key.Replace('/', Path.DirectorySeparatorChar))).AsSpan().SequenceEqual(file.Value),
             "the assembled tree still carries the signed bytes: " + file.Key);
 });
+await Test("a shard address that cannot be reached falls back to the mirror's whole archive", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var requested = new List<string>();
+    // The signed address for one shard is unreachable, which is the situation a player in a network that cannot
+    // reach GitHub is in, while the mirror is reachable and has the whole archive.
+    async Task Unreachable(ProgramDownloadTarget item, Stream output, CancellationToken token)
+    {
+        requested.Add(item.Url);
+        if (item.Name.StartsWith("ui ", StringComparison.Ordinal)) throw new HttpRequestException("injected: shard address unreachable");
+        await using var input = File.OpenRead(served[item.Url]);
+        await input.CopyToAsync(output, token);
+    }
+    var whole = MirrorZip("whole-fallback", tree);
+    var asked = 0;
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Unreachable,
+        fallbackSupplier: _ => { asked++; return Task.FromResult<IProgramFileSupplier?>(Mirror(whole, "full", shardBuild1.AppVersion)); });
+    Assert(asked == 1, "the whole archive is asked for once, and only after the failure");
+    Assert(requested.Count == 1, "no further shard is attempted once the whole archive can cover them: " + string.Join(",", requested));
+    Assert(store.LastCatalogDownloadCount == 0, "a download that failed is not counted as one that happened");
+    Assert(store.ReadState().Pending is not null, "the preparation still completes");
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    foreach (var file in tree)
+        Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch.Id), file.Key.Replace('/', Path.DirectorySeparatorChar))).AsSpan().SequenceEqual(file.Value),
+            "the tree assembled from the whole archive is the tree that ships: " + file.Key);
+});
+await Test("a whole-archive fallback that supplies nothing leaves the original failure in place", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, _, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    Task Unreachable(ProgramDownloadTarget item, Stream output, CancellationToken token) =>
+        Task.FromException(new HttpRequestException("injected: shard address unreachable"));
+    // A package that claims to be the whole archive and is not gets no benefit of the doubt, so this fallback
+    // contributes nothing and what the player sees has to stay the real reason.
+    var partial = MirrorZip("whole-fallback-partial", [tree.First(kv => ShardOf(kv.Key) == "core")]);
+    var failure = await Capture(() => store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Unreachable,
+        fallbackSupplier: _ => Task.FromResult<IProgramFileSupplier?>(Mirror(partial, "full", shardBuild1.AppVersion))));
+    Assert(failure is HttpRequestException, "the injected transport failure is what surfaces, not a fallback artefact: " + failure);
+    Assert(store.ReadState().Pending is null, "an update that could not be assembled stays unassembled");
+});
+await Test("a cancelled preparation never asks the mirror for its whole archive", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, _, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    using var stop = new CancellationTokenSource();
+    var asked = 0;
+    async Task Cancel(ProgramDownloadTarget item, Stream output, CancellationToken token)
+    {
+        stop.Cancel();
+        await Task.Yield();
+        token.ThrowIfCancellationRequested();
+    }
+    await Reject(() => store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10)), Cancel, ct: stop.Token,
+        fallbackSupplier: _ => { asked++; return Task.FromResult<IProgramFileSupplier?>(null); }));
+    Assert(asked == 0, "the player's cancellation is not a transport failure to route around");
+    Assert(store.ReadState().Pending is null, "nothing is published by a cancelled preparation");
+});
 await Test("a whole-package claim that is not whole, and a hazardous entry, both fall back to the shards", async () =>
 {
     var tree = ShardTree(shardBuild1, "v1");
@@ -785,6 +845,40 @@ await Test("a mirror that saved the transfer is not credited with a download it 
         mirror: new MirrorChyanPackage(mirrorUrl, shardBuild2.AppVersion, "incremental", new FileInfo(bag).Length, null));
     Assert(updates.LastProgramSource == "Mirror酱 + 本机已有文件", "the label names what actually carried the bytes: " + updates.LastProgramSource);
     Assert(updates.LastProgramMirrorRefusal.Length == 0, "a package that supplied files has no refusal to report: " + updates.LastProgramMirrorRefusal);
+});
+await Test("the whole archive is asked for by naming no version, and an incremental answer is not one", async () =>
+{
+    // MirrorChyan answers a whole archive only to a client that does not say which version it runs, so the request
+    // must not carry one - and an incremental answer, however good a difference package it is, cannot stand in
+    // for a shard.
+    var store = Store();
+    var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, _, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var signed = Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10));
+    var asked = new List<string>();
+    using var network = new FixtureNetwork(request =>
+    {
+        var url = request.RequestUri!.AbsoluteUri;
+        if (IsManifestUrl(url)) return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(signed) };
+        asked.Add(url);
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(Encoding.UTF8.GetBytes(
+                """{"code":0,"msg":"success","data":{"version_name":"v2026.9.10.1","update_type":"incremental","url":"https://mirrorchyan.com/api/resources/download/fixture","filesize":10}}"""))
+        };
+    });
+    using var http = new HttpClient(network);
+    var snapshots = new ResourceSnapshotService(Path.Combine(store.InstallRoot, "resource-state"),
+        new ResourceSnapshot { SnapshotId = "bundled", Bundled = true, BaselineId = shardBuild1.BaselineId, BaselineRoot = fixture, MapDataRoot = fixture },
+        shardBuild1.AppVersion, (_, _) => Task.CompletedTask);
+    await snapshots.InitializeAsync();
+    using var updates = new UpdateService(shardBuild1 with { AppVersion = "2026.9.10.0" }, [key], snapshots, http, true, cdkProvider: () => "fixture-cdk");
+    await updates.CheckAsync();
+    var whole = await updates.ResolveMirrorChyanWholePackageAsync(updates.LastCheckResult!.AppUpdate!);
+    Assert(whole is null, "an incremental answer is refused as a whole archive");
+    Assert(asked.Count == 1 && !asked[0].Contains("current_version", StringComparison.Ordinal),
+        "the whole archive is asked for by naming no version: " + string.Join(",", asked));
+    Assert(updates.LastWholePackageRefusal.Length > 0, "and why it was refused is written down: " + updates.LastWholePackageRefusal);
 });
 await Test("the GitHub connectivity probe follows the archive address the catalog names", async () =>
 {

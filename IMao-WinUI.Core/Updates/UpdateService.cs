@@ -137,9 +137,22 @@ public sealed class UpdateService : IDisposable
         // A preparation that is killed - the player closes the window mid-download - never reaches the supplier's
         // own cleanup, and one of its archives is close to a gigabyte. The install root is locked above, so
         // nothing else can be using this directory right now.
-        if (mirror is not null) PurgeMirrorScratch(Path.Combine(programs.Root, "staging", "mirror"));
-        var mirrorSource = mirror is null ? null : new MirrorChyanProgramSource(mirror, FetchMirrorAsync,
-            Path.Combine(programs.Root, "staging", "mirror"), progress);
+        var scratch = Path.Combine(programs.Root, "staging", "mirror");
+        if (mirror is not null) PurgeMirrorScratch(scratch);
+        var mirrorSource = mirror is null ? null : new MirrorChyanProgramSource(mirror, FetchMirrorAsync, scratch, progress);
+        // The whole archive answers exactly one situation: the signed addresses cannot be reached at all. It is
+        // therefore only ever asked for after a download has already failed, and asking is a network call that
+        // costs nothing when it is never made - which is the normal update.
+        LastWholePackageRefusal = "";
+        MirrorChyanProgramSource? wholeSource = null;
+        async Task<IProgramFileSupplier?> WholeArchiveAsync(CancellationToken token)
+        {
+            var whole = await ResolveMirrorChyanWholePackageAsync(catalog.App, token).ConfigureAwait(false);
+            if (whole is null) return null;
+            PurgeMirrorScratch(scratch);
+            wholeSource = new MirrorChyanProgramSource(whole, FetchMirrorAsync, scratch, progress);
+            return wholeSource;
+        }
         await programs.PrepareAsync(envelope, async (target, output, token) =>
         {
             using var response = await GetResponseAsync(new Uri(target.Url), token).ConfigureAwait(false);
@@ -147,20 +160,34 @@ public sealed class UpdateService : IDisposable
             await using var input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
             await CopyVerifiedAsync(input, output, target.Size, target.Sha256,
                 n => progress?.Report(new UpdateProgress("从 GitHub 下载 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size, target.Source)), token).ConfigureAwait(false);
-        }, progress, ct, mirrorSource).ConfigureAwait(false);
-        // What the transport actually was, rather than what it was asked to be. Two things are counted, because
-        // either one alone lies: how many files the mirror handed over, and how many archives still had to come
-        // from the addresses the signed catalog names. The previous build counted only the first, so a mirror
-        // whose package covered part of a shard read as "Mirror酱" while every byte was in fact fetched from
-        // GitHub - and the reason a mirror delivered nothing at all was never written down anywhere.
+        }, progress, ct, mirrorSource, WholeArchiveAsync).ConfigureAwait(false);
+        // What the transport actually was, rather than what it was asked to be. Three things are counted, because
+        // any one of them alone lies: how many files the mirror handed over (difference package plus whole archive,
+        // when a shard download failed and the whole one was fetched instead), and how many archives still had to
+        // come from the addresses the signed catalog names.
         var fetched = programs.LastCatalogDownloadCount;
-        LastProgramSource = mirrorSource switch
-        {
-            null or { SuppliedCount: 0 } => fetched > 0 ? "GitHub 分片" : "本机已有文件",
-            { } source when catalog.App.Package is { } package && source.SuppliedCount == package.Files.Count => "Mirror酱",
-            _ => fetched > 0 ? "Mirror酱 + GitHub 分片" : "Mirror酱 + 本机已有文件",
-        };
-        LastProgramMirrorRefusal = mirrorSource?.LastRefusal ?? "";
+        var fromMirror = (mirrorSource?.SuppliedCount ?? 0) + (wholeSource?.SuppliedCount ?? 0);
+        var declared = catalog.App.Package?.Files.Count ?? 0;
+        LastProgramSource = fromMirror == 0
+            ? fetched > 0 ? "GitHub 分片" : "本机已有文件"
+            : declared > 0 && fromMirror >= declared
+                ? "Mirror酱"
+                : fetched > 0 ? "Mirror酱 + GitHub 分片" : "Mirror酱 + 本机已有文件";
+        LastProgramMirrorRefusal = Refusals(mirrorSource, wholeSource);
+    }
+
+    /// <summary>
+    /// One line naming everything the mirror refused to do, in the order it was asked. Empty when it delivered.
+    /// The update log records it: whether the mirror carried the update or was merely asked is the whole point of
+    /// having it, and a mirror that fails silently leaves nothing to explain a fallback with.
+    /// </summary>
+    private string Refusals(MirrorChyanProgramSource? difference, MirrorChyanProgramSource? whole)
+    {
+        var parts = new List<string>(3);
+        if (difference?.LastRefusal is { Length: > 0 } first) parts.Add(first);
+        if (LastWholePackageRefusal.Length > 0) parts.Add("完整程序包：" + LastWholePackageRefusal);
+        if (whole?.LastRefusal is { Length: > 0 } second) parts.Add("完整程序包：" + second);
+        return string.Join("；", parts);
     }
 
     /// <summary>
@@ -183,6 +210,13 @@ public sealed class UpdateService : IDisposable
     /// interrupted", not "nobody can ever find out why the mirror did nothing". The update log records this.
     /// </summary>
     public string LastProgramMirrorRefusal { get; private set; } = "";
+
+    /// <summary>
+    /// Why the last request for the mirror's whole program archive produced nothing, in one line. Empty until
+    /// something has actually been forced to ask - which only happens after a download from the signed addresses
+    /// has already failed, and is therefore exactly the moment a player needs an explanation for.
+    /// </summary>
+    public string LastWholePackageRefusal { get; private set; } = "";
 
     /// <summary>
     /// Deletes archives a previous mirror download left behind. The supplier removes its own copy on the way
@@ -245,6 +279,39 @@ public sealed class UpdateService : IDisposable
                 string.Equals(retried.Version, release.Version, StringComparison.Ordinal)) result = retried;
             else if (result.DownloadUrl is null) return null;
         }
+        return new MirrorChyanPackage(result.DownloadUrl!, result.Version, result.UpdateType, result.Size, result.Sha256);
+    }
+
+    /// <summary>
+    /// Asks MirrorChyan for this release's **whole** program archive instead of the difference.
+    ///
+    /// Omitting <c>current_version</c> is the whole trick: the client presents itself as a fresh installation,
+    /// which is the one question that can only be answered with the complete archive. This exists for a single
+    /// situation - a player whose machine cannot reach the signed addresses at all - so it is never asked for on
+    /// the normal path, where the difference package is what an update should cost. The archive is about a
+    /// gigabyte and is held to the same signed per-file records as everything else, so it can only ever be a
+    /// larger path, never a weaker one.
+    /// </summary>
+    public async Task<MirrorChyanPackage?> ResolveMirrorChyanWholePackageAsync(ProgramRelease release, CancellationToken ct = default)
+    {
+        var cdk = _cdkProvider?.Invoke();
+        if (string.IsNullOrWhiteSpace(cdk)) { LastWholePackageRefusal = "没有配置 Mirror酱 CDK。"; return null; }
+        var result = await QueryMirrorChyanAsync(MirrorChyanChannel.BuildRequestUri(cdk, null), ct).ConfigureAwait(false);
+        if (result.Error != MirrorChyanError.None) { LastWholePackageRefusal = result.Message; return null; }
+        if (string.IsNullOrEmpty(result.DownloadUrl)) { LastWholePackageRefusal = "Mirror酱 没有给出下载地址。"; return null; }
+        if (!string.Equals(result.Version, release.Version, StringComparison.Ordinal))
+        {
+            LastWholePackageRefusal = $"Mirror酱 提供的是 {result.Version}，与清单版本 {release.Version} 不一致。";
+            return null;
+        }
+        // Only a whole archive can stand in for a shard. An incremental answer is still a perfectly good
+        // difference package, but it is not what was asked for here.
+        if (result.UpdateType != MirrorChyanChannel.FullPackage)
+        {
+            LastWholePackageRefusal = $"Mirror酱 只提供了{result.UpdateType}包，不能用它补齐整个程序。";
+            return null;
+        }
+        LastWholePackageRefusal = "";
         return new MirrorChyanPackage(result.DownloadUrl!, result.Version, result.UpdateType, result.Size, result.Sha256);
     }
 
