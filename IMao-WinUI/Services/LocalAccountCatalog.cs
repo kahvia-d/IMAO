@@ -160,6 +160,19 @@ public sealed class LocalAccountCatalog
     public static bool IsValidKuroAccount(string? value) => !string.IsNullOrEmpty(value) &&
         value.Length <= MaximumKuroAccountLength && value.All(char.IsAsciiDigit);
 
+    /// <summary>
+    /// Accepts a Kuro account the way our own interface shows it. The extension popup prints
+    /// "kuro_&lt;id&gt;" — and every build published before 2026-09-27 prints nothing else — so a player
+    /// copying that string into the binding box must not be told their account is invalid. What is
+    /// stored is still the digits alone: this only strips the prefix our own display adds.
+    /// </summary>
+    public static string NormalizeKuroAccount(string? value)
+    {
+        string trimmed = (value ?? "").Trim();
+        if (!trimmed.StartsWith("kuro_", StringComparison.OrdinalIgnoreCase)) return trimmed;
+        return trimmed[5..].Trim();
+    }
+
     public static bool IsValidName(string? value) => !string.IsNullOrWhiteSpace(value) &&
         value.Trim().Length <= MaximumNameLength && !value.Any(char.IsControl);
 

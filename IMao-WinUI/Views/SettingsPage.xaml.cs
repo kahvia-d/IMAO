@@ -928,11 +928,13 @@ public sealed partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Explains what rebinding costs before it happens. The cloud baseline this record book
-    /// carries belongs to the account it was read from, so pointing the book at another account
-    /// leaves a baseline that would read "the cloud withdrew this" into every point the new
-    /// account does not have — the player's own marks would be cancelled by the next sync.
-    /// Rebinding is allowed (an account id is typed by hand and typos happen), but never silent.
+    /// Explains what rebinding costs before it happens. A record book also carries a
+    /// <c>syncStates</c> cloud baseline — "which points the cloud had the last time this book
+    /// synchronized" — and that baseline was read from the account being replaced. Pointing the
+    /// book at another account while keeping it would read "the cloud withdrew this" into every
+    /// point the new account does not have, and the next apply would cancel the player's own
+    /// marks. Rebinding is allowed (an account id is typed by hand and typos happen), but never
+    /// silent.
     /// </summary>
     private async Task<bool> ConfirmRebindAsync(string ledgerName, string from, string to)
     {
@@ -940,9 +942,12 @@ public sealed partial class SettingsPage : Page
         {
             Title = "换一个库街区账号",
             Content = $"记录本“{ledgerName}”现在绑定的是账号 {from}，将要改成 {to}。\n\n" +
-                "这本记录本的云端同步基线是账号 " + from + " 的，换账号后会先清掉再按新账号重新建立：" +
-                "本地点位一个都不会少，已经上传过的点位会再上传一次（写入接口是幂等的）。" +
-                (from == to ? "" : $"\n\n如果 {to} 是手滑填错的，选“取消”就不会有任何改动。"),
+                $"这本记录本还记着一份「云同步基线」——上次同步时库街区 {from} 有哪些点位是已完成的。" +
+                "它是旧账号的，换账号后会先清掉这份基线（就是记录本文件里的 syncStates），" +
+                $"下次同步再按 {to} 重新建立。\n\n" +
+                "清掉的只是这份基线：本地已完成的点位一个都不会少，路线和设置也不动；" +
+                "已经上传过的点位会按新账号再上传一次（写入接口是幂等的）。\n\n" +
+                $"如果 {to} 是手滑填错的，选“取消”就不会有任何改动。",
             PrimaryButtonText = "改绑并重置基线",
             CloseButtonText = "取消",
             DefaultButton = ContentDialogButton.Close,
@@ -1023,7 +1028,12 @@ public sealed partial class SettingsPage : Page
         if (await AskLocalAccountAsync("修改记录本", active.Name, active.KuroAccountId, "保存") is not { } answer) return;
         string previousBinding = active.KuroAccountId;
         string nextBinding = answer.Binding;
-        bool rebinding = nextBinding.Length > 0 && previousBinding.Length > 0 && nextBinding != previousBinding;
+        // Only a value that can actually be an account is worth confirming: an unusable one is
+        // refused by TryBind below with its own message, and asking first would describe a change
+        // that then never happens (a player who copied "kuro_10383865" out of the popup saw exactly
+        // that).
+        bool rebinding = previousBinding.Length > 0 && nextBinding != previousBinding &&
+            LocalAccountCatalog.IsValidKuroAccount(nextBinding);
         if (rebinding && !await ConfirmRebindAsync(active.Name, previousBinding, nextBinding)) return;
         if (!catalog.TryBind(active.Id, nextBinding, out string error)) { ShowLocalAccount(InfoBarSeverity.Warning, error); return; }
         if (!catalog.TryRename(active.Id, answer.Name, out error))
@@ -1049,7 +1059,11 @@ public sealed partial class SettingsPage : Page
         var content = new StackPanel { Spacing = 12 };
         content.Children.Add(nameBox);
         content.Children.Add(bindingBox);
-        content.Children.Add(new TextBlock { Text = "一个库街区账号最多绑定一个记录本。", TextWrapping = TextWrapping.Wrap });
+        content.Children.Add(new TextBlock
+        {
+            Text = "填扩展里显示的账号 ID（纯数字）。一个库街区账号最多绑定一个记录本。",
+            TextWrapping = TextWrapping.Wrap
+        });
         var dialog = new ContentDialog
         {
             Title = title,
@@ -1060,7 +1074,7 @@ public sealed partial class SettingsPage : Page
             XamlRoot = XamlRoot
         };
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
-        return (nameBox.Text, bindingBox.Text.Trim());
+        return (nameBox.Text, LocalAccountCatalog.NormalizeKuroAccount(bindingBox.Text));
     }
 
     private async void LocalAccountDelete_Click(object sender, RoutedEventArgs e)

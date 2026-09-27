@@ -145,6 +145,18 @@ internal static class LocalAccountCatalogTests
             "a ledger can be bound, rebound and unbound");
         check(!managed.TryBind("local", "abc", out _) && !managed.TryBind("local", new string('9', 25), out _),
             "a binding must be digits within the documented length or empty");
+        // The extension popup prints "kuro_<id>" (every build published before 2026-09-27 prints
+        // nothing else), so pasting it back has to mean the same account instead of being refused.
+        check(LocalAccountCatalog.NormalizeKuroAccount("kuro_10383865") == "10383865" &&
+            LocalAccountCatalog.NormalizeKuroAccount("  KURO_10383865 ") == "10383865" &&
+            LocalAccountCatalog.NormalizeKuroAccount("10383865") == "10383865" &&
+            LocalAccountCatalog.NormalizeKuroAccount("kuro_") == "" &&
+            LocalAccountCatalog.NormalizeKuroAccount("") == "" && LocalAccountCatalog.NormalizeKuroAccount(null) == "",
+            "an account id copied out of the extension popup is accepted with or without its prefix");
+        check(managed.TryBind("local", LocalAccountCatalog.NormalizeKuroAccount("kuro_10383865"), out _) &&
+            managed.Accounts.Single(account => account.Id == "local").KuroAccountId == "10383865" &&
+            managed.TryBind("local", "", out _),
+            "the binding stores the digits alone, never the displayed form");
         check(!managed.TryRename(created!.Id, "  ", out _) && managed.TryRename(created.Id, "备用号", out _) &&
             managed.Accounts.Single(account => account.Id == created.Id).Name == "备用号" &&
             managed.TryCreate("重复绑定", "10436687", out _, out _) == false,
