@@ -211,7 +211,13 @@ $release = (Invoke-Gh @('api',"repos/$repo/releases/$($release.id)")) | ConvertF
 $missing = @($assets | Where-Object { $name = $_.name; -not ($release.assets | Where-Object name -EQ $name) })
 if ($missing.Count) { throw ('Upload did not produce every expected asset: ' + (($missing | ForEach-Object name) -join ', ')) }
 foreach ($asset in $assets) { Assert-RemoteAssetBytes $asset $release.assets }
-if ($release.draft) { Invoke-Gh @('release','edit',$tag,'--repo',$repo,'--draft=false','--latest=false') | Out-Null }
+# This release is the one a new player should land on, so it claims the Latest badge. It used to pass
+# --latest=false, which left /releases/latest pointing at an older version until someone edited it by
+# hand; the badge was on v2026.9.25.1 while 9.26.1 through 9.26.3 shipped. The release always carries a
+# first-install archive (-ManualInstallZip is mandatory for a shard release), so pointing new players here
+# is safe. The browser-extension releases keep their own --latest=false in Publish-BrowserExtension.ps1,
+# which is a different reason: an ext-* release must never be what releases/latest opens.
+if ($release.draft) { Invoke-Gh @('release','edit',$tag,'--repo',$repo,'--draft=false','--latest=true') | Out-Null }
 $publishedCommit = [string](Invoke-Gh @('api',"repos/$repo/commits/$tag",'--jq','.sha'))
 if ($publishedCommit.Trim() -ne $report.sourceCommit) { throw 'Published tag does not match the reviewed source commit. Stable channel remains unchanged.' }
 # Ask each published URL for its headers instead of its body. The bytes were already confirmed against
