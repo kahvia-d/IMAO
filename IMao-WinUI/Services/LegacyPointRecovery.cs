@@ -16,6 +16,11 @@ public sealed record LegacyRegion(string SceneName, int StateId, int Count);
 /// this record book belonged to. A record book from before the list existed has no stored name
 /// left — its progress document never carried one, and the list entry that did was removed with it.
 /// </para>
+/// <para>
+/// There is deliberately no "already recovered" flag: whether a source is worth bringing in is the
+/// player's call, not the program's. A source that was recovered before is offered again exactly
+/// like any other, and recovering it again is a choice the player is allowed to make.
+/// </para>
 /// </summary>
 public sealed record LegacyPointSource(
     string Kind,
@@ -27,10 +32,8 @@ public sealed record LegacyPointSource(
     int Points,
     int Skipped,
     IReadOnlyList<LegacyRegion> Regions,
-    bool AlreadyRecovered,
     bool Recoverable,
-    string Problem,
-    string RecoveredInto = "");
+    string Problem);
 
 /// <summary>What one recovery actually created.</summary>
 public sealed record LegacyRecoveryOutcome(string LedgerId, string LedgerName, int Points, string Action);
@@ -63,8 +66,9 @@ public sealed record LegacyRecoveryReport(
 /// player can get it back.</item>
 /// </list>
 ///
-/// Every run appends to <c>SavedPoints\legacy-recovery.json</c>, so a source that has already been
-/// brought back is reported as such instead of being imported a second time.
+/// The scan result is a list the player ticks; whether a source is worth bringing in is their call,
+/// so nothing here refuses a source because it was recovered once before. Every run appends what it
+/// did to <c>SavedPoints\legacy-recovery.json</c> — an audit trail for support, never a gate.
 /// See Docs/LegacyDataRecovery_20260927.md.
 /// </summary>
 public sealed class LegacyPointRecovery
@@ -92,7 +96,7 @@ public sealed class LegacyPointRecovery
         this.programDirectory = programDirectory;
     }
 
-    /// <summary>Where a recovery parks the record of what it already did.</summary>
+    /// <summary>Where a recovery keeps the record of what it has done; an audit trail, not a gate.</summary>
     public string JournalPath => Path.Combine(savedPointsDirectory, JournalFileName);
 
     private static int StateOf(string scene)
@@ -104,41 +108,21 @@ public sealed class LegacyPointRecovery
     /// <summary>
     /// Finds every leftover this machine has, without writing anything.
     /// <paramref name="knownLedgers"/> is the record-book list: a document it already names is not
-    /// reported as stranded, and a finding whose data is already in one of them is reported as such
-    /// (with the name of that record book) instead of being offered again.
+    /// reported as stranded, and a parked copy whose id is still taken is offered under the name it
+    /// would actually be adopted with. Everything readable is offered for recovery — including a
+    /// source that was recovered before, because that decision belongs to the player.
     /// </summary>
     public IReadOnlyList<LegacyPointSource> Scan(IReadOnlyList<LocalAccount> knownLedgers)
     {
         var known = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var ledger in knownLedgers) known[ledger.Id] = ledger.Name;
-        var journal = ReadJournal();
         var legacyNames = LegacyAccountNames();
         var found = new List<LegacyPointSource>();
-        foreach (string path in SingleFileCandidates()) AddSingleFile(found, path, journal, known);
+        foreach (string path in SingleFileCandidates()) AddSingleFile(found, path);
         AddUnlistedProfiles(found, known, legacyNames);
-        AddDeletedDocuments(found, known, journal, legacyNames);
+        AddDeletedDocuments(found, known, legacyNames);
         found.Sort((left, right) => string.CompareOrdinal(left.Path, right.Path));
         return found;
-    }
-
-    /// <summary>
-    /// Whether this source has already been brought back, and into which record book. The journal
-    /// alone cannot answer that: a record book the player deleted afterwards is gone from the list,
-    /// and then the data really is stranded again — so "already recovered" means the record book it
-    /// became is <em>still there</em>, not merely that a recovery once happened.
-    /// </summary>
-    private static bool AlreadyRecovered(IReadOnlyList<JournalEntry> journal, string kind, string path, string hash,
-        IReadOnlyDictionary<string, string> known, out string into)
-    {
-        into = "";
-        foreach (var entry in journal)
-        {
-            if (entry.Kind != kind || entry.Hash != hash || !SamePath(entry.Source, path)) continue;
-            if (!known.TryGetValue(entry.LedgerId, out string? name)) continue;
-            into = name.Length > 0 ? name : entry.LedgerId;
-            return true;
-        }
-        return false;
     }
 
     /// <summary>Recovers everything the scan found.</summary>
@@ -166,7 +150,7 @@ public sealed class LegacyPointRecovery
         //    so the only thing missing is the list entry. Nothing is copied.
         foreach (var source in sources.Where(source => source.Kind == LegacyKind.UnlistedProfile))
         {
-            if (!source.Recoverable || source.AlreadyRecovered) { skipped.Add(source); continue; }
+            if (!source.Recoverable) { skipped.Add(source); continue; }
             if (!catalog.TryAdopt(source.LedgerId, source.LedgerName, source.LedgerBinding, out _, out string error))
             {
                 notes.Add($"记录本 {source.LedgerId} 无法登记：{error}");
@@ -180,7 +164,7 @@ public sealed class LegacyPointRecovery
         // 2. Documents 删除 moved aside: put the bytes back where the program reads them.
         foreach (var source in sources.Where(source => source.Kind == LegacyKind.DeletedDocument))
         {
-            if (!source.Recoverable || source.AlreadyRecovered) { skipped.Add(source); continue; }
+            if (!source.Recoverable) { skipped.Add(source); continue; }
             string id = FreeId(catalog, source.LedgerId);
             string destination = catalog.ProgressPath(id);
             try
@@ -206,7 +190,7 @@ public sealed class LegacyPointRecovery
         }
 
         // 3. Pre-rewrite records: everything a single file holds becomes one new record book.
-        var legacy = sources.Where(source => source.Kind == LegacyKind.SingleFile && source.Recoverable && !source.AlreadyRecovered).ToList();
+        var legacy = sources.Where(source => source.Kind == LegacyKind.SingleFile && source.Recoverable).ToList();
         if (legacy.Count > 0)
         {
             var points = new List<LegacyPoint>();
@@ -255,7 +239,7 @@ public sealed class LegacyPointRecovery
 
         foreach (var source in sources)
             if (!recovered.Any(entry => entry.LedgerId == source.LedgerId) && !skipped.Contains(source) &&
-                (source.AlreadyRecovered || !source.Recoverable)) skipped.Add(source);
+                !source.Recoverable) skipped.Add(source);
         WriteJournal(journal);
         return new LegacyRecoveryReport(recovered, skipped, notes);
     }
@@ -303,22 +287,19 @@ public sealed class LegacyPointRecovery
         return found;
     }
 
-    private void AddSingleFile(List<LegacyPointSource> found, string path, IReadOnlyList<JournalEntry> journal,
-        IReadOnlyDictionary<string, string> known)
+    private void AddSingleFile(List<LegacyPointSource> found, string path)
     {
         if (found.Count >= MaximumSources || !File.Exists(path)) return;
         if (!TryReadSingleFile(path, out var points, out string problem))
         {
             found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", CombinedLedgerName, "", CombinedLedgerName,
-                0, 0, [], false, false, problem));
+                0, 0, [], false, problem));
             return;
         }
-        string hash = Hash(path);
-        bool already = AlreadyRecovered(journal, LegacyKind.SingleFile, path, hash, known, out string into);
         if (points.Count == 0 && problem.Length == 0)
             problem = "这个文件里没有能识别的点位：区域名不在已知列表里，或者每条记录都缺少 id。";
         found.Add(new LegacyPointSource(LegacyKind.SingleFile, path, "", CombinedLedgerName, "", CombinedLedgerName,
-            points.Count, 0, Summarize(points), already, points.Count > 0, problem, into));
+            points.Count, 0, Summarize(points), points.Count > 0, problem));
     }
 
     private void AddUnlistedProfiles(List<LegacyPointSource> found, IReadOnlyDictionary<string, string> known,
@@ -337,16 +318,16 @@ public sealed class LegacyPointRecovery
             if (!TryReadProfileDocument(file, out var points, out string problem))
             {
                 found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, name, "", Display(id, name, legacyNames),
-                    0, 0, [], false, false, problem));
+                    0, 0, [], false, problem));
                 continue;
             }
             found.Add(new LegacyPointSource(LegacyKind.UnlistedProfile, file, id, name, "", Display(id, name, legacyNames),
-                points.Count, 0, Summarize(points), false, true, problem));
+                points.Count, 0, Summarize(points), true, problem));
         }
     }
 
     private void AddDeletedDocuments(List<LegacyPointSource> found, IReadOnlyDictionary<string, string> known,
-        IReadOnlyList<JournalEntry> journal, IReadOnlyDictionary<string, string> legacyNames)
+        IReadOnlyDictionary<string, string> legacyNames)
     {
         string directory = Path.Combine(savedPointsDirectory, "deleted");
         if (!Directory.Exists(directory)) return;
@@ -377,13 +358,11 @@ public sealed class LegacyPointRecovery
                 if (!TryReadProfileDocument(file, out var points, out string problem))
                 {
                     found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id, ledgerName, binding,
-                        Display(id, ledgerName, legacyNames), 0, 0, [], false, false, problem));
+                        Display(id, ledgerName, legacyNames), 0, 0, [], false, problem));
                     continue;
                 }
-                string hash = Hash(file);
-                bool already = AlreadyRecovered(journal, LegacyKind.DeletedDocument, file, hash, known, out string into);
                 found.Add(new LegacyPointSource(LegacyKind.DeletedDocument, file, id, ledgerName, binding,
-                    Display(id, ledgerName, legacyNames), points.Count, 0, Summarize(points), already, points.Count > 0, problem, into));
+                    Display(id, ledgerName, legacyNames), points.Count, 0, Summarize(points), points.Count > 0, problem));
             }
         }
     }
@@ -653,10 +632,7 @@ public sealed class LegacyPointRecovery
     private static string Text(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
 
-    private static bool SamePath(string left, string right) =>
-        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>Content hash, so a source edited since the last recovery is offered again.</summary>
+    /// <summary>Content hash, recorded in the journal so support can tell two states apart.</summary>
     private static string Hash(string path)
     {
         try

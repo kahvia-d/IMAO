@@ -51,28 +51,30 @@ public sealed partial class UsageGuidePage : Page
     {
         LegacyScanList.Children.Clear();
         legacyRows.Clear();
-        int usable = sources.Count(source => source.Recoverable && !source.AlreadyRecovered);
-        int already = sources.Count(source => source.AlreadyRecovered);
-        int unusable = sources.Count - usable - already;
+        int usable = sources.Count(source => source.Recoverable);
+        int unusable = sources.Count - usable;
         LegacyRecoverButton.IsEnabled = usable > 0;
         if (sources.Count == 0)
         {
             LegacyScanSummary.Text = "没有找到旧版本地数据，当前记录本不需要修复。";
             return;
         }
-        string states = $"{usable} 处可以恢复";
-        if (already > 0) states += $"，{already} 处的数据已经在你的记录本里";
-        if (unusable > 0) states += $"，{unusable} 处无法识别";
+        string states = unusable > 0 ? $"{usable} 处可以恢复，{unusable} 处无法识别" : $"{usable} 处全部可以恢复";
         LegacyScanSummary.Text = usable == 0
-            ? $"找到 {sources.Count} 处旧数据：{states}，没有需要恢复的内容。"
+            ? $"找到 {sources.Count} 处旧数据，但都无法识别：{states}。"
             : $"找到 {sources.Count} 处旧数据：{states}。勾选要恢复的条目，再点「数据恢复」；恢复只会新增记录本，不会改动这些文件。";
         foreach (var source in sources) LegacyScanList.Children.Add(LegacyRow(source));
     }
 
     private FrameworkElement LegacyRow(LegacyPointSource source)
     {
-        bool selectable = source.Recoverable && !source.AlreadyRecovered;
-        var box = new CheckBox { IsChecked = selectable, IsEnabled = selectable, MinWidth = 0, VerticalAlignment = VerticalAlignment.Top };
+        var box = new CheckBox
+        {
+            IsChecked = source.Recoverable,
+            IsEnabled = source.Recoverable,
+            MinWidth = 0,
+            VerticalAlignment = VerticalAlignment.Top
+        };
         var details = new StackPanel { Spacing = 2 };
         details.Children.Add(LegacyText($"{source.DisplayName} · {LegacyKindLabel(source.Kind)} · " +
             $"{source.Points} 个点{LegacyRegions(source)} — {LegacyState(source)}", "IMaoBodyTextStyle"));
@@ -99,16 +101,7 @@ public sealed partial class UsageGuidePage : Page
         _ => "被「删除」移走的记录本"
     };
 
-    private static string LegacyState(LegacyPointSource source)
-    {
-        if (!source.Recoverable) return "无法识别";
-        if (!source.AlreadyRecovered) return "可以恢复";
-        // Point at the record book, not at "a recovery happened once": the journal remembers a
-        // recovery even after the player deleted what it produced, and that is a different state.
-        return source.RecoveredInto.Length > 0
-            ? $"数据已经在记录本「{source.RecoveredInto}」里，不必再恢复"
-            : "数据已经在你的记录本里，不必再恢复";
-    }
+    private static string LegacyState(LegacyPointSource source) => source.Recoverable ? "可以恢复" : "无法识别";
 
     private static string LegacyRegions(LegacyPointSource source) => source.Regions.Count == 0 ? "" :
         "（" + string.Join(" · ", source.Regions.Select(region => $"{region.SceneName} {region.Count}")) + "）";

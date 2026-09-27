@@ -59,7 +59,7 @@ internal static class LegacyRecoveryTests
         var singles = scan.Where(source => source.Kind == "pre-rewrite-record").ToList();
         check(singles.Count == 2, "both the program's own and a neighbouring installation's pre-rewrite file are found");
         var oldSource = singles.Single(source => source.Path == legacyPath);
-        check(oldSource.Points == 4 && oldSource.Recoverable && !oldSource.AlreadyRecovered,
+        check(oldSource.Points == 4 && oldSource.Recoverable,
             "a pre-rewrite file reports its points, ignores unknown scenes and refuses an empty point id");
         check(oldSource.Regions.Count == 2 && oldSource.Regions.Sum(region => region.Count) == 4,
             "a pre-rewrite file is summarised by the scene it was keyed by");
@@ -136,14 +136,17 @@ internal static class LegacyRecoveryTests
         check(File.ReadAllBytes(legacyPath).SequenceEqual(legacyBytes),
             "recovering a pre-rewrite file leaves that file exactly as it was");
 
-        // 5. Running it again does not duplicate anything.
-        int before = catalog.Accounts.Count;
-        var second = recovery.Recover(catalog);
-        check(catalog.Accounts.Count == before && second.Recovered.Count == 0,
-            "a second recovery creates no second record book for the same source");
-        check(recovery.Scan(catalog.Accounts)
-                .All(source => source.AlreadyRecovered || !source.Recoverable),
-            "after recovering, every remaining source is reported as already recovered or unusable");
+        // 5. Nothing is withheld as "already recovered": the player decides what is worth bringing in,
+        //    so the same file is offered again and can be brought in again.
+        var rescan = recovery.Scan(catalog.Accounts);
+        check(rescan.Count > 0 && rescan.All(source => source.Recoverable || source.Problem.Length > 0),
+            "after recovering, the remaining findings are still offered instead of being withheld");
+        check(rescan.All(source => source.Kind != "unlisted-document" || !source.Recoverable),
+            "the document that was adopted is in the list now; only the unreadable ones are still reported as unlisted");
+        int ledgersBefore = catalog.Accounts.Count;
+        var again = recovery.Recover(catalog, rescan.Where(source => source.Kind == "pre-rewrite-record").ToList());
+        check(again.Recovered.Count == 1 && catalog.Accounts.Count == ledgersBefore + 1,
+            "bringing the same old file in again is allowed and makes another record book, because the player decided to");
 
         // 6. The journal is plain JSON the support workflow can read.
         check(File.Exists(recovery.JournalPath) && File.ReadAllText(recovery.JournalPath).Contains("account_1.json"),
@@ -217,10 +220,9 @@ internal static class LegacyRecoveryTests
                 account.Name == "我的小号" && account.KuroAccountId == "10383865"),
             "restoring a parked record book brings back the name and the account it was bound to");
 
-        // The row a player actually saw: a pre-rewrite file, already brought in, unselectable. It has
-        // to say WHICH record book holds the points — and it must become selectable again once that
-        // record book is gone, because then the data really is stranded again. A journal entry alone
-        // is not "already recovered"; the record book still being there is.
+        // The row a player saw: a pre-rewrite file that had already been brought in once, shown as
+        // 已经恢复过 and impossible to tick. Nothing is withheld now — every readable finding is offered,
+        // and whether it is worth bringing in again is the player's call.
         string replayPoints = Path.Combine(directory, "replay", "SavedPoints");
         string replayProgram = Path.Combine(directory, "replay", "prog", "IMao");
         Directory.CreateDirectory(replayPoints);
@@ -229,21 +231,23 @@ internal static class LegacyRecoveryTests
         var replayCatalog = new LocalAccountCatalog(Path.Combine(replayPoints, "accounts.json"), Path.Combine(replayPoints, "profiles"));
         var replay = new LegacyPointRecovery(replayPoints, replayProgram);
         var firstReplayScan = replay.Scan(replayCatalog.Accounts);
-        check(firstReplayScan.Count == 1 && !firstReplayScan[0].AlreadyRecovered && firstReplayScan[0].Recoverable,
-            "a pre-rewrite file that has never been brought in is offered for recovery");
+        check(firstReplayScan.Count == 1 && firstReplayScan[0].Recoverable,
+            "a pre-rewrite file is offered for recovery");
         var replayReport = replay.Recover(replayCatalog, firstReplayScan);
         var secondReplayScan = replay.Scan(replayCatalog.Accounts);
-        check(replayReport.Recovered.Count == 1 && secondReplayScan.Count == 1 &&
-            secondReplayScan[0].AlreadyRecovered && secondReplayScan[0].RecoveredInto == replayReport.Recovered[0].LedgerName,
-            "once its points are in a record book, the same file says which record book holds them");
-        check(replayCatalog.TryDelete(replayReport.Recovered[0].LedgerId, out _), "the record book that holds them can be deleted");
-        // Deleting the record book parks its document, so the data is now reachable two ways: from the
-        // pre-rewrite file it came from, and from the copy under deleted/. Both must be offered.
+        check(replayReport.Recovered.Count == 1 && secondReplayScan.Count == 1 && secondReplayScan[0].Recoverable,
+            "after being brought in once, the same file is still offered and still selectable");
+        int replayLedgers = replayCatalog.Accounts.Count;
+        var replayAgain = replay.Recover(replayCatalog, secondReplayScan);
+        check(replayAgain.Recovered.Count == 1 && replayCatalog.Accounts.Count == replayLedgers + 1,
+            "bringing it in again is allowed and makes another record book, because the player said so");
+        check(replayCatalog.TryDelete(replayAgain.Recovered[0].LedgerId, out _), "the record book that holds them can be deleted");
+        // Deleting the record book parks its document, so the data is reachable two ways: from the
+        // pre-rewrite file it came from, and from the copy under deleted/. Both are offered.
         var thirdReplayScan = replay.Scan(replayCatalog.Accounts);
         check(thirdReplayScan.Count(source => source.Kind == "pre-rewrite-record") == 1 &&
-            thirdReplayScan.Single(source => source.Kind == "pre-rewrite-record") is { AlreadyRecovered: false, Recoverable: true } &&
             thirdReplayScan.Count(source => source.Kind == "deleted-document") == 1,
-            "after that record book is deleted the same file is offered again, and so is the copy 删除 parked");
+            "deleting a recovered record book parks its document, so the same points are offered from two places");
 
         // A recovery that cannot write its document must leave no half-done record book behind: the
         // record book it had already added to the list is taken back out.
