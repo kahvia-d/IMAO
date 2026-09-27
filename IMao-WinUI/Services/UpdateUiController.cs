@@ -87,6 +87,11 @@ public sealed class UpdateUiController : INotifyPropertyChanged
             // whose package turned out unusable leaves the signed shards doing the work.
             var origin = updater.LastProgramSource.Length > 0 ? updater.LastProgramSource : "GitHub 分片";
             Message = $"新版程序已准备完成（来自 {origin}）。可以继续使用，或点击“退出并更新”。";
+            // One line per preparation. Whether the mirror carried the update or was merely asked is the whole
+            // point of having it, and a mirror that refuses is silent by design, so this is the only place the
+            // answer survives the session.
+            Audit("program-prepared source=" + origin
+                + (updater.LastProgramMirrorRefusal.Length > 0 ? " mirror-refused=" + updater.LastProgramMirrorRefusal : ""));
         });
     }
 

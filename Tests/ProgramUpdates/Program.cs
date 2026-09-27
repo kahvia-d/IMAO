@@ -554,6 +554,33 @@ await Test("a bag that covers a shard only in part does not break the shard that
         Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch.Id), file.Key.Replace('/', Path.DirectorySeparatorChar))).AsSpan().SequenceEqual(file.Value),
             "the assembled tree carries the signed bytes: " + file.Key);
 });
+await Test("a shard the bag and the running program cover between them is never fetched", async () =>
+{
+    var store = Store(); var treeA = ShardTree(shardBuild1, "v1");
+    // The program this installation is running, as the original manual copy: no signed manifest is stored with
+    // it, so reuse is proved file by file while it copies rather than planned from prior records.
+    foreach (var file in treeA)
+    {
+        var path = Path.Combine(store.InstallRoot, file.Key.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!); File.WriteAllBytes(path, file.Value);
+    }
+    // Version two changes only build-info.json, which lives in the ui shard. An incremental bag carrying the one
+    // changed file therefore leaves that shard partly covered by the bag and partly covered by this machine. A
+    // change set is never a set of whole shards, so fetching the shard here would download bytes that are already
+    // sitting on disk - which is the only thing an incremental package exists to avoid.
+    var treeB = ShardTree(shardBuild2, "v1");
+    var (pkgB, servedB, _) = ShardPackage(shardBuild2, "v1.0.2", treeB);
+    var requested = new List<string>();
+    var bag = MirrorZip("combined", [new KeyValuePair<string, byte[]>("build-info.json", treeB["build-info.json"])]);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild2, "v1.0.2", pkgB, 11)), Serve(servedB, requested),
+        supplier: Mirror(bag, "incremental", "2026.9.10.1"));
+    Assert(requested.Count == 0, "nothing is fetched when the bag and this machine cover every shard: " + string.Join(",", requested));
+    Assert(store.LastCatalogDownloadCount == 0, "the label has to see that GitHub served no archive at all");
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    foreach (var file in treeB)
+        Assert(File.ReadAllBytes(Path.Combine(store.AppDirectory(launch.Id), file.Key.Replace('/', Path.DirectorySeparatorChar))).AsSpan().SequenceEqual(file.Value),
+            "the assembled tree still carries the signed bytes: " + file.Key);
+});
 await Test("a whole-package claim that is not whole, and a hazardous entry, both fall back to the shards", async () =>
 {
     var tree = ShardTree(shardBuild1, "v1");
@@ -718,6 +745,46 @@ await Test("the program source label names what actually carried the bytes", asy
     }
     Assert(await LabelAsync(mirrorUrl) == "Mirror酱", "a whole tree from the mirror is credited to it");
     Assert(await LabelAsync(null) == "GitHub 分片", "without a mirror the shards carry the release");
+});
+await Test("a mirror that saved the transfer is not credited with a download it did not cause", async () =>
+{
+    // The mirror's package covers the changed files and this machine covers the rest, so nothing at all is
+    // fetched. Saying "Mirror酱 + GitHub 分片" here would name a download that never happened - the same error in
+    // the other direction as crediting the mirror for bytes the shards delivered.
+    var store = Store();
+    var treeA = ShardTree(shardBuild1, "v1");
+    foreach (var file in treeA)
+    {
+        var path = Path.Combine(store.InstallRoot, file.Key.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!); File.WriteAllBytes(path, file.Value);
+    }
+    var treeB = ShardTree(shardBuild2, "v1");
+    var (pkgB, servedB, _) = ShardPackage(shardBuild2, "v1.0.2", treeB);
+    var signedB = Sign(ShardCatalog(shardBuild2, "v1.0.2", pkgB, 11));
+    var bag = MirrorZip("labelled-part", [new KeyValuePair<string, byte[]>("build-info.json", treeB["build-info.json"])]);
+    const string mirrorUrl = "https://mirrorchyan.com/api/resources/download/labelled-part";
+    var snapshots = new ResourceSnapshotService(Path.Combine(store.InstallRoot, "resource-state"),
+        new ResourceSnapshot { SnapshotId = "bundled", Bundled = true, BaselineId = shardBuild1.BaselineId, BaselineRoot = fixture, MapDataRoot = fixture },
+        shardBuild1.AppVersion, (_, _) => Task.CompletedTask);
+    await snapshots.InitializeAsync();
+    using var network = new FixtureNetwork(request => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new ByteArrayContent(request.RequestUri!.AbsoluteUri switch
+        {
+            var url when IsManifestUrl(url) => signedB,
+            var url when url == mirrorUrl => File.ReadAllBytes(bag),
+            // Every shard is still routable, so a regression here shows up as the wrong label rather than as a
+            // fixture that cannot answer.
+            var url => File.ReadAllBytes(servedB[url]),
+        })
+    });
+    using var http = new HttpClient(network);
+    using var updates = new UpdateService(shardBuild1, [key], snapshots, http, true);
+    await updates.CheckAsync();
+    await updates.PrepareProgramAsync(store, ct: default,
+        mirror: new MirrorChyanPackage(mirrorUrl, shardBuild2.AppVersion, "incremental", new FileInfo(bag).Length, null));
+    Assert(updates.LastProgramSource == "Mirror酱 + 本机已有文件", "the label names what actually carried the bytes: " + updates.LastProgramSource);
+    Assert(updates.LastProgramMirrorRefusal.Length == 0, "a package that supplied files has no refusal to report: " + updates.LastProgramMirrorRefusal);
 });
 await Test("the GitHub connectivity probe follows the archive address the catalog names", async () =>
 {

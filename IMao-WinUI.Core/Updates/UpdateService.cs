@@ -148,15 +148,19 @@ public sealed class UpdateService : IDisposable
             await CopyVerifiedAsync(input, output, target.Size, target.Sha256,
                 n => progress?.Report(new UpdateProgress("从 GitHub 下载 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size)), token).ConfigureAwait(false);
         }, progress, ct, mirrorSource).ConfigureAwait(false);
-        // What the transport actually was, rather than what it was asked to be: a mirror that handed over
-        // nothing leaves the signed shards doing all the work, and claiming otherwise would be a lie the
-        // player could price in gigabytes.
+        // What the transport actually was, rather than what it was asked to be. Two things are counted, because
+        // either one alone lies: how many files the mirror handed over, and how many archives still had to come
+        // from the addresses the signed catalog names. The previous build counted only the first, so a mirror
+        // whose package covered part of a shard read as "Mirror酱" while every byte was in fact fetched from
+        // GitHub - and the reason a mirror delivered nothing at all was never written down anywhere.
+        var fetched = programs.LastCatalogDownloadCount;
         LastProgramSource = mirrorSource switch
         {
-            null or { SuppliedCount: 0 } => "GitHub 分片",
+            null or { SuppliedCount: 0 } => fetched > 0 ? "GitHub 分片" : "本机已有文件",
             { } source when catalog.App.Package is { } package && source.SuppliedCount == package.Files.Count => "Mirror酱",
-            _ => "Mirror酱 + GitHub 分片",
+            _ => fetched > 0 ? "Mirror酱 + GitHub 分片" : "Mirror酱 + 本机已有文件",
         };
+        LastProgramMirrorRefusal = mirrorSource?.LastRefusal ?? "";
     }
 
     /// <summary>
@@ -164,6 +168,14 @@ public sealed class UpdateService : IDisposable
     /// Empty before any program has been prepared.
     /// </summary>
     public string LastProgramSource { get; private set; } = "";
+
+    /// <summary>
+    /// Why the MirrorChyan transport handed nothing over during the last preparation, or empty when it delivered
+    /// files, was never resolved, or no preparation has run. Every refusal inside that transport is silent by
+    /// design - the signed shards carry the update either way - but silent has to mean "the player is not
+    /// interrupted", not "nobody can ever find out why the mirror did nothing". The update log records this.
+    /// </summary>
+    public string LastProgramMirrorRefusal { get; private set; } = "";
 
     /// <summary>
     /// Deletes archives a previous mirror download left behind. The supplier removes its own copy on the way

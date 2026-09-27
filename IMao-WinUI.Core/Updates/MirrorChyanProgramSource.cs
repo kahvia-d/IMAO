@@ -42,15 +42,31 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
     /// </summary>
     public int SuppliedCount { get; private set; }
 
+    /// <summary>
+    /// Why the last <see cref="SupplyAsync"/> handed nothing over, in one line, or empty when it delivered files
+    /// or was never run.
+    ///
+    /// Every refusal here is silent on purpose: MirrorChyan is an alternative to the signed download and never a
+    /// requirement for it, so the player must not be interrupted by a second channel failing. But silent may only
+    /// mean "nothing is asked of the player" - not "the reason is unrecoverable". Without this, an update that
+    /// fell back to the shards could only be explained by inference from a scratch directory's timestamp.
+    /// </summary>
+    public string LastRefusal { get; private set; } = "";
+
     public async Task<IReadOnlySet<string>> SupplyAsync(ProgramPackage package, string app, CancellationToken ct)
     {
         SuppliedCount = 0;
+        LastRefusal = "";
         var supplied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var candidates = new List<string>();
         var archive = Path.Combine(_scratchDirectory, "mirrorchyan-" + Guid.NewGuid().ToString("N") + ".zip");
         try
         {
-            if (!Uri.TryCreate(_package.Url, UriKind.Absolute, out var uri)) return supplied;
+            if (!Uri.TryCreate(_package.Url, UriKind.Absolute, out var uri))
+            {
+                LastRefusal = "镜像给出的下载地址无法解析。";
+                return supplied;
+            }
             var expected = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
             // The archive's own length is not signed, so the ceiling that means anything is the tree it
             // could possibly produce: a zip cannot be meaningfully larger than what is inside it.
@@ -67,9 +83,17 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
             var entries = ProgramPackageValidation.ReadArchiveEntries(zip, expected, ProgramPackageValidation.ArchiveScope.Partial);
             // A package that said it was the whole archive and turns out not to be gets no benefit of the
             // doubt; the signed shards are the better answer.
-            if (_package.IsWholePackage && entries.Count != expected.Count) return supplied;
+            if (_package.IsWholePackage && entries.Count != expected.Count)
+            {
+                LastRefusal = $"镜像自称提供完整包，但压缩包只有 {entries.Count}/{expected.Count} 个清单文件。";
+                return supplied;
+            }
             var provided = package.Files.Where(f => entries.ContainsKey(f.Path)).ToList();
-            if (provided.Count == 0) return supplied;
+            if (provided.Count == 0)
+            {
+                LastRefusal = "镜像的压缩包里没有签名清单中的任何文件。";
+                return supplied;
+            }
             // Recorded before extracting, so a failure part-way through can undo everything this source may
             // have touched. The fallback writes into the same directory with CreateNew, which a leftover file
             // would break.
@@ -83,6 +107,7 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
         catch (Exception ex) when (ex is IOException or InvalidDataException or HttpRequestException or TimeoutException or UnauthorizedAccessException
             || (ex is OperationCanceledException && !ct.IsCancellationRequested))
         {
+            LastRefusal = ex.GetType().Name + "：" + ex.Message;
             RollBack(app, candidates);
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }

@@ -69,11 +69,20 @@ public sealed class ProgramUpdateStore
     }
     private string VersionRoot(string id) { ValidateVersionId(id); return UpdateStorage.SafeChild(Root, "versions/" + id); }
     public string AppDirectory(string id) => id.Length == 0 ? InstallRoot : Path.Combine(VersionRoot(id), "app");
+
+    /// <summary>
+    /// How many archives the last preparation downloaded from the addresses the signed catalog names - the whole
+    /// program archive, or one per shard. Zero means every byte it staged came from the mirror or from this
+    /// machine, which is what the caller's source label has to say: crediting GitHub for a transfer it never
+    /// served is a claim the player can price in gigabytes.
+    /// </summary>
+    public int LastCatalogDownloadCount { get; private set; }
     private Task SaveAsync(ProgramUpdateState state, CancellationToken ct) => UpdateStorage.WriteAsync(StatePath, state, ct);
 
     public async Task PrepareAsync(byte[] envelope, Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download,
         IProgress<UpdateProgress>? progress = null, CancellationToken ct = default, IProgramFileSupplier? supplier = null)
     {
+        LastCatalogDownloadCount = 0;
         var catalog = UpdateSignature.Verify(envelope, keys, testKeys);
         var package = catalog.App.Package ?? throw new InvalidOperationException("此版本需要从发行页手动安装完整程序包。");
         if (package.LauncherProtocol != ProgramPackageValidation.LauncherProtocol) throw new InvalidOperationException("新版程序需要升级启动器，请手动安装完整程序包。");
@@ -206,14 +215,19 @@ public sealed class ProgramUpdateStore
         if (package.Shards.Count == 0)
         {
             var archive = Path.Combine(transaction, "program.zip");
+            LastCatalogDownloadCount++;
             await DownloadAsync(download, new ProgramDownloadTarget("program.zip", package.Url, package.Size, package.Sha256), archive, ct);
             progress?.Report(new UpdateProgress("校验并解压新版程序", 0, 0));
             await ProgramPackageValidation.ExtractAsync(archive, app, package, ct);
             TryDelete(archive);
             return;
         }
-        // Anything the supplier verified is a file that needs no shard, and a shard every one of whose files
-        // arrived that way is skipped entirely.
+        // What the supplier verified is a file no shard has to account for. A shard every one of whose files
+        // arrived that way is skipped entirely, and - just as important - the files it did write stop being an
+        // obstacle to reusing the rest of that shard from the program this installation is running. MirrorChyan's
+        // incremental package carries the files that *changed*, and a set of changed files is not a set of whole
+        // shards: without the second rule a package covering nine files of a twenty-four-file shard saved
+        // nothing, was paid for in quota, and left the shard to be downloaded in full anyway.
         var supplied = supplier is null ? null : await supplier.SupplyAsync(package, app, ct).ConfigureAwait(false);
         progress?.Report(new UpdateProgress("检查可复用的本机文件", 0, 0));
         var known = prior?.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
@@ -222,9 +236,10 @@ public sealed class ProgramUpdateStore
         {
             index++;
             if (supplied is not null && shard.Files.All(supplied.Contains)) continue;
-            if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, ct)) continue;
+            if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, supplied, ct)) continue;
             var archive = Path.Combine(transaction, "shards", shard.Id + ".zip");
             Directory.CreateDirectory(Path.GetDirectoryName(archive)!);
+            LastCatalogDownloadCount++;
             await DownloadAsync(download, new ProgramDownloadTarget(shard.Id + ".zip", shard.Url, shard.Size, shard.Sha256), archive, ct);
             progress?.Report(new UpdateProgress($"校验并解压新版程序（{index}/{package.Shards.Count}）", 0, 0));
             await ProgramPackageValidation.ExtractShardAsync(archive, app, package, shard.Id, ct);
@@ -239,23 +254,28 @@ public sealed class ProgramUpdateStore
     }
 
     /// <summary>
-    /// Copies one shard's files from the program this installation is running. Returns false - after
-    /// removing whatever it already wrote - so the caller downloads that shard instead.
+    /// Copies one shard's files from the program this installation is running. A file the supplier already
+    /// wrote is not this shard's business at all - it was checked against its own signed record as it landed -
+    /// so only the remaining files are asked for, and a shard the supplier and this machine cover between them
+    /// is never fetched. Returns false - after removing whatever it already wrote - so the caller downloads
+    /// that shard instead.
     /// </summary>
     private static async Task<bool> TryReuseShardAsync(ProgramPackage package, ProgramShard shard, string reuseRoot,
-        Dictionary<string, ResourceFile>? known, string app, CancellationToken ct)
+        Dictionary<string, ResourceFile>? known, string app, IReadOnlySet<string>? supplied, CancellationToken ct)
     {
         var declared = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        List<string> wanted = supplied is null ? shard.Files : shard.Files.Where(path => !supplied.Contains(path)).ToList();
+        if (wanted.Count == 0) return true;
         if (known is not null)
         {
-            foreach (var path in shard.Files)
+            foreach (var path in wanted)
             {
                 if (!declared.TryGetValue(path, out var file) || !known.TryGetValue(path, out var was) ||
                     was.Size != file.Size || !was.Sha256.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase)) return false;
             }
         }
-        var copied = new List<string>(shard.Files.Count);
-        foreach (var path in shard.Files)
+        var copied = new List<string>(wanted.Count);
+        foreach (var path in wanted)
         {
             ct.ThrowIfCancellationRequested();
             if (await TryCopyVerifiedAsync(UpdateStorage.SafeChild(reuseRoot, path), UpdateStorage.SafeChild(app, path), declared[path], ct))
