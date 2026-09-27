@@ -90,6 +90,16 @@ internal static class KuroSyncTests
         var untouched = new KuroSyncComparison([new KuroSyncRegionComparison(905, "隐海试验场", [], true, 0, 0, 0, 0)], [], []);
         check(!untouched.NeedsApply, "a region with nothing on either side has nothing to apply");
 
+        // The progress bar under the sync buttons: a stage with nothing to count animates, a stage
+        // that counts points shows a bounded fraction.
+        check(new KuroSyncProgress("正在读取库街区已完成的点位…", 0, 0).IsIndeterminate &&
+            new KuroSyncProgress("正在读取…", 5, 0).Percent == 0 &&
+            !new KuroSyncProgress("正在把本地点位上传到库街区", 3, 12).IsIndeterminate &&
+            new KuroSyncProgress("正在把本地点位上传到库街区", 3, 12).Percent == 25 &&
+            new KuroSyncProgress("正在把本地点位上传到库街区", 0, 12).Percent == 0 &&
+            new KuroSyncProgress("正在把本地点位上传到库街区", 20, 12).Percent == 100,
+            "sync progress animates while the total is unknown and stays bounded when it is known");
+
         check(KuroNativeBridgeProtocol.TryValidate(new KuroNativeBridgeRequest(1, "storeCredential", "kuro_12345", "secret-token"), out _),
             "native bridge accepts a bounded credential transfer");
         check(KuroNativeBridgeProtocol.TryValidate(new KuroNativeBridgeRequest(1, "storeCredential", "kuro_12345", "secret-token", "10383865"), out _) &&

@@ -5,6 +5,7 @@ using IMao_WinUI.Services;
 using IMao_WinUI.Core.KuroSync;
 using IMao_WinUI.Core.Updates;
 using IMao_WinUI.ViewModels;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -928,27 +929,25 @@ public sealed partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Explains what rebinding costs before it happens. A record book also carries a
-    /// <c>syncStates</c> cloud baseline — "which points the cloud had the last time this book
-    /// synchronized" — and that baseline was read from the account being replaced. Pointing the
-    /// book at another account while keeping it would read "the cloud withdrew this" into every
-    /// point the new account does not have, and the next apply would cancel the player's own
-    /// marks. Rebinding is allowed (an account id is typed by hand and typos happen), but never
-    /// silent.
+    /// Asks before pointing a record book at another account. Rebinding is allowed — an account id
+    /// is typed by hand and typos happen — but it also drops this record book's cloud baseline, and
+    /// that must not happen by accident.
+    /// <para>
+    /// The wording deliberately stops there. Naming the baseline ("this book remembers which points
+    /// the cloud had") reads, to a player, like a warning that their KuroBbs progress — or, if the
+    /// old id belongs to somebody else, <em>that</em> account's progress — is about to be deleted. It is
+    /// not: only a local comparison baseline is dropped, no cloud data is touched, and every local
+    /// completion survives. Nothing a player has to act on depends on knowing that, so the dialog
+    /// says what the player needs and no more. See Docs/LocalAccounts_20260926.md section 8.1.
+    /// </para>
     /// </summary>
-    private async Task<bool> ConfirmRebindAsync(string ledgerName, string from, string to)
+    private async Task<bool> ConfirmRebindAsync()
     {
         var dialog = new ContentDialog
         {
-            Title = "换一个库街区账号",
-            Content = $"记录本“{ledgerName}”现在绑定的是账号 {from}，将要改成 {to}。\n\n" +
-                $"这本记录本还记着一份「云同步基线」——上次同步时库街区 {from} 有哪些点位是已完成的。" +
-                "它是旧账号的，换账号后会先清掉这份基线（就是记录本文件里的 syncStates），" +
-                $"下次同步再按 {to} 重新建立。\n\n" +
-                "清掉的只是这份基线：本地已完成的点位一个都不会少，路线和设置也不动；" +
-                "已经上传过的点位会按新账号再上传一次（写入接口是幂等的）。\n\n" +
-                $"如果 {to} 是手滑填错的，选“取消”就不会有任何改动。",
-            PrimaryButtonText = "改绑并重置基线",
+            Title = "更换库街区账号",
+            Content = "确定要更换该记录本绑定的库街区账号吗？记录本已有的点位数据不会受到影响。",
+            PrimaryButtonText = "更换",
             CloseButtonText = "取消",
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot
@@ -1034,7 +1033,7 @@ public sealed partial class SettingsPage : Page
         // that).
         bool rebinding = previousBinding.Length > 0 && nextBinding != previousBinding &&
             LocalAccountCatalog.IsValidKuroAccount(nextBinding);
-        if (rebinding && !await ConfirmRebindAsync(active.Name, previousBinding, nextBinding)) return;
+        if (rebinding && !await ConfirmRebindAsync()) return;
         if (!catalog.TryBind(active.Id, nextBinding, out string error)) { ShowLocalAccount(InfoBarSeverity.Warning, error); return; }
         if (!catalog.TryRename(active.Id, answer.Name, out error))
         {
@@ -1143,9 +1142,10 @@ public sealed partial class SettingsPage : Page
         if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "请先把当前记录本绑定到库街区账号；同步只作用于当前记录本。"); return; }
         int stateId = SelectedKuroSyncStateId();
         KuroSyncPreviewButton.IsEnabled = false;
+        var progress = CreateSyncProgress();
         try
         {
-            var plan = await kuroSync.PreviewAsync(profile, stateId == 0 ? null : stateId);
+            var plan = await kuroSync.PreviewAsync(profile, stateId == 0 ? null : stateId, progress);
             kuroSyncComparison = plan;
             KuroSyncApplyButton.IsEnabled = plan.NeedsApply;
             await SaveKuroSyncStateAsync(stateId);
@@ -1163,7 +1163,7 @@ public sealed partial class SettingsPage : Page
             KuroSyncApplyButton.IsEnabled = false;
             ShowKuroSync(InfoBarSeverity.Error, error.Message);
         }
-        finally { KuroSyncPreviewButton.IsEnabled = CurrentSyncLedger().Length > 0; }
+        finally { KuroSyncPreviewButton.IsEnabled = CurrentSyncLedger().Length > 0; HideSyncProgress(); }
     }
 
     private async void KuroSyncApply_Click(object sender, RoutedEventArgs e)
@@ -1172,9 +1172,10 @@ public sealed partial class SettingsPage : Page
         string profile = CurrentSyncLedger();
         if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "请先把当前记录本绑定到库街区账号；同步只作用于当前记录本。"); return; }
         KuroSyncApplyButton.IsEnabled = false;
+        var progress = CreateSyncProgress();
         try
         {
-            var result = await kuroSync.ApplyAsync(profile, comparison);
+            var result = await kuroSync.ApplyAsync(profile, comparison, progress);
             kuroSyncComparison = null;
             KuroSyncPlanPanel.Visibility = Visibility.Collapsed;
             string pushed = result.Pushed > 0 ? $"已推送 {result.Pushed} 个本地标记到库街区、" : "无需推送本地标记、";
@@ -1184,6 +1185,53 @@ public sealed partial class SettingsPage : Page
         {
             ShowKuroSync(InfoBarSeverity.Error, error.Message);
             KuroSyncApplyButton.IsEnabled = true;
+        }
+        finally { HideSyncProgress(); }
+    }
+
+    /// <summary>
+    /// The progress bar for a manual pass. This is the one place a player waits a long time — a
+    /// record book that has never synchronized writes every pending completion to Kuro one request
+    /// at a time — so the bar counts points there and animates while a single cloud read is in
+    /// flight. The automatic pass reports through its own status line instead, because it runs
+    /// while the player is looking at the map rather than at this page.
+    /// </summary>
+    private IProgress<KuroSyncProgress> CreateSyncProgress() => new SyncProgressReporter(DispatcherQueue, ApplySyncProgress);
+
+    private void ApplySyncProgress(KuroSyncProgress progress)
+    {
+        KuroSyncProgressPanel.Visibility = Visibility.Visible;
+        KuroSyncProgressBar.IsIndeterminate = progress.IsIndeterminate;
+        if (progress.IsIndeterminate)
+        {
+            KuroSyncProgressText.Text = progress.Stage;
+            return;
+        }
+        KuroSyncProgressBar.Minimum = 0;
+        KuroSyncProgressBar.Maximum = progress.Total;
+        KuroSyncProgressBar.Value = progress.Done;
+        KuroSyncProgressText.Text = $"{progress.Stage}（{progress.Done}/{progress.Total}）";
+    }
+
+    private void HideSyncProgress()
+    {
+        KuroSyncProgressPanel.Visibility = Visibility.Collapsed;
+        KuroSyncProgressBar.IsIndeterminate = false;
+        KuroSyncProgressBar.Value = 0;
+        KuroSyncProgressText.Text = "";
+    }
+
+    /// <summary>
+    /// Marshals a pass's progress onto the interface thread. A <see cref="Progress{T}"/> would rely
+    /// on a captured synchronization context, which is not guaranteed on this thread; the page's
+    /// dispatcher is, and the pass reports from whatever thread the store answered on.
+    /// </summary>
+    private sealed class SyncProgressReporter(DispatcherQueue? queue, Action<KuroSyncProgress> apply) : IProgress<KuroSyncProgress>
+    {
+        public void Report(KuroSyncProgress value)
+        {
+            if (queue is null || queue.HasThreadAccess) apply(value);
+            else queue.TryEnqueue(() => apply(value));
         }
     }
 

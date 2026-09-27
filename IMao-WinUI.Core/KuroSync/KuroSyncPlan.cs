@@ -76,3 +76,17 @@ public sealed record KuroSyncApplyResult(int Regions, int Fetched, int PendingLo
 /// already connected. <see cref="Account"/> is the ledger's binding (empty when unbound).
 /// </summary>
 public sealed record KuroCredentialStatus(string Account, bool HasCredential, bool Usable, string Message);
+
+/// <summary>
+/// How far a manual synchronization has come, for the progress bar under the buttons.
+/// <see cref="Total"/> is 0 while the work left is not known yet — reading the cloud, comparing the
+/// two sides — and the number of units otherwise (points to upload, regions to write).
+/// </summary>
+public sealed record KuroSyncProgress(string Stage, int Done, int Total)
+{
+    /// <summary>True while the bar should move on its own instead of showing a fraction.</summary>
+    public bool IsIndeterminate => Total <= 0;
+
+    /// <summary>The percentage for a determinate bar; 0 when the total is not known yet.</summary>
+    public double Percent => Total <= 0 ? 0 : Math.Clamp((double)Done / Total * 100, 0, 100);
+}

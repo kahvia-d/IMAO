@@ -125,23 +125,37 @@ public sealed class KuroProgressSyncService
     /// The cloud set is account-wide, so it is grouped by the region each identity
     /// belongs to locally.
     /// </summary>
-    public async Task<KuroSyncComparison> PreviewAsync(string profileId, int? stateId, CancellationToken cancellationToken = default)
+    public Task<KuroSyncComparison> PreviewAsync(string profileId, int? stateId, CancellationToken cancellationToken = default) =>
+        PreviewAsync(profileId, stateId, null, cancellationToken);
+
+    /// <summary>
+    /// Same pass, reporting how far it has come. The cloud reads and the comparison are single
+    /// waits with no count to show, so those stages report an unknown total and the interface
+    /// animates instead of showing a fraction.
+    /// </summary>
+    public async Task<KuroSyncComparison> PreviewAsync(string profileId, int? stateId, IProgress<KuroSyncProgress>? progress,
+        CancellationToken cancellationToken = default)
     {
         await gate.WaitAsync(cancellationToken);
-        try { return await PreviewCoreAsync(profileId, stateId, cancellationToken); }
+        try { return await PreviewCoreAsync(profileId, stateId, progress, cancellationToken); }
         finally { gate.Release(); }
     }
 
-    private async Task<KuroSyncComparison> PreviewCoreAsync(string profileId, int? stateId, CancellationToken cancellationToken)
+    private async Task<KuroSyncComparison> PreviewCoreAsync(string profileId, int? stateId, IProgress<KuroSyncProgress>? progress,
+        CancellationToken cancellationToken)
     {
         if (!TryReadCredential(profileId, out var credential)) throw new InvalidOperationException(DescribeCredential(profileId).Message);
         EnsureCredentialMatchesBinding(credential, profileId);
+        progress?.Report(new("正在准备…", 0, 0));
         await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
+        progress?.Report(new("正在读取库街区的区域列表…", 0, 0));
         var published = await client.GetStatesAsync(cancellationToken);
+        progress?.Report(new("正在读取库街区已完成的点位…", 0, 0));
         var completed = await client.GetCompletedIdsAsync(credential.Token, deviceId, cancellationToken);
         var cloudIds = completed.OrderBy(id => id, StringComparer.Ordinal).ToArray();
         if (cloudIds.Length == 0) throw new InvalidOperationException("库街区没有返回任何已完成点位；请确认账号进度是否为空。");
+        progress?.Report(new($"正在比对两边的点位（库街区 {cloudIds.Length} 个）…", 0, 0));
         var data = await core.ExecuteMarkerAsync("markerPreviewSync", new
         {
             profileId,
@@ -187,34 +201,52 @@ public sealed class KuroProgressSyncService
     /// local-only completions are kept and stay marked as waiting for upload. The
     /// cloud set is read again first, so a stale comparison is refused.
     /// </summary>
-    public async Task<KuroSyncApplyResult> ApplyAsync(string profileId, KuroSyncComparison comparison, CancellationToken cancellationToken = default)
+    public Task<KuroSyncApplyResult> ApplyAsync(string profileId, KuroSyncComparison comparison, CancellationToken cancellationToken = default) =>
+        ApplyAsync(profileId, comparison, null, cancellationToken);
+
+    /// <summary>
+    /// Same pass, reporting how far it has come. This is the long one when a record book has never
+    /// synchronized: every pending completion is written to Kuro one request at a time, so the bar
+    /// counts points here rather than animating.
+    /// </summary>
+    public async Task<KuroSyncApplyResult> ApplyAsync(string profileId, KuroSyncComparison comparison,
+        IProgress<KuroSyncProgress>? progress, CancellationToken cancellationToken = default)
     {
         await gate.WaitAsync(cancellationToken);
-        try { return await ApplyCoreAsync(profileId, comparison, cancellationToken); }
+        try { return await ApplyCoreAsync(profileId, comparison, progress, cancellationToken); }
         finally { gate.Release(); }
     }
 
-    private async Task<KuroSyncApplyResult> ApplyCoreAsync(string profileId, KuroSyncComparison comparison, CancellationToken cancellationToken)
+    private async Task<KuroSyncApplyResult> ApplyCoreAsync(string profileId, KuroSyncComparison comparison,
+        IProgress<KuroSyncProgress>? progress, CancellationToken cancellationToken)
     {
         if (!TryReadCredential(profileId, out var credential)) throw new InvalidOperationException(DescribeCredential(profileId).Message);
         EnsureCredentialMatchesBinding(credential, profileId);
+        progress?.Report(new("正在准备…", 0, 0));
         await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
+        progress?.Report(new("正在核对库街区进度是否变化…", 0, 0));
         var current = await client.GetCompletedIdsAsync(credential.Token, deviceId, cancellationToken);
         if (!current.SetEquals(comparison.CloudIds)) throw new InvalidOperationException("库街区进度在预览之后已变化，请重新预览再应用。");
         // Upload first, so the cloud read below already contains the pushed points
         // and the local baseline ends up consistent with both sides.
-        var pushedByState = await PushPendingAsync(profileId, credential.Token, comparison.Regions, cancellationToken);
+        var pushedByState = await PushPendingAsync(profileId, credential.Token, comparison.Regions,
+            "正在把本地点位上传到库街区", progress, cancellationToken);
         int pushed = pushedByState.Sum(pair => pair.Value.Count);
         int regions = 0;
         // Regions with nothing on either side have nothing to merge; the others
         // also need their baseline established.
-        foreach (var region in comparison.Regions.Where(region => region.CloudIds.Count > 0 || region.LocalCompleted > 0))
+        var targets = comparison.Regions
+            .Where(region => region.CloudIds.Count > 0 || region.LocalCompleted > 0)
+            .Where(region => region.CloudIds.Concat(pushedByState.GetValueOrDefault(region.StateId, [])).Distinct().Any() ||
+                region.LocalCompleted > 0)
+            .ToList();
+        foreach (var region in targets)
         {
             // Pushed identities are part of the cloud baseline now; the store
             // already acknowledged them, so only the rest has to be applied.
             var regionCloud = region.CloudIds.Concat(pushedByState.GetValueOrDefault(region.StateId, [])).Distinct().ToList();
-            if (regionCloud.Count == 0 && region.LocalCompleted == 0) continue;
+            progress?.Report(new($"正在把库街区的点位写进本地（区域 {region.StateId}）…", regions, targets.Count));
             await core.ExecuteMarkerAsync(region.Initialized ? "markerApplyRemote" : "markerInitializeSync", new
             {
                 profileId,
@@ -223,14 +255,17 @@ public sealed class KuroProgressSyncService
                 remoteIds = regionCloud
             }, cancellationToken);
             ++regions;
+            progress?.Report(new("正在把库街区的点位写进本地…", regions, targets.Count));
         }
         // Applying the union can queue completions the cloud has never seen (an old
         // local mark, or one imported from the pre-rewrite record). Push those in the
         // same pass so the player does not have to synchronize twice to see them land.
-        var queued = await PushPendingAsync(profileId, credential.Token, comparison.Regions, cancellationToken);
+        var queued = await PushPendingAsync(profileId, credential.Token, comparison.Regions,
+            "正在上传刚排队的点位", progress, cancellationToken);
         pushed += queued.Sum(pair => pair.Value.Count);
         // Report the queue as it stands now instead of doing arithmetic on the preview,
         // because this pass may have added to it.
+        progress?.Report(new("正在整理同步结果…", 0, 0));
         var outbox = await core.ExecuteMarkerAsync("markerGetOutbox", new { profileId, limit = 1 }, cancellationToken);
         int pending = outbox.TryGetProperty("total", out var pendingTotal) && pendingTotal.TryGetInt32(out int remaining)
             ? remaining : Math.Max(0, comparison.PendingLocal - pushed);
@@ -240,24 +275,39 @@ public sealed class KuroProgressSyncService
     /// <summary>
     /// Pushes the store's pending local completions to Kuro. The verified
     /// contract is idempotent, so a point whose write outcome is unknown is simply
-    /// retried on the next sync instead of being lost.
+    /// retried on the next sync instead of being lost. The outbox is read once and
+    /// filtered up front so the progress bar can report a total instead of counting up
+    /// towards an unknown end.
     /// </summary>
     private async Task<Dictionary<int, List<string>>> PushPendingAsync(string profileId, string token,
-        IReadOnlyList<KuroSyncRegionComparison> regions, CancellationToken cancellationToken)
+        IReadOnlyList<KuroSyncRegionComparison> regions, string stage, IProgress<KuroSyncProgress>? progress,
+        CancellationToken cancellationToken)
     {
-        var outbox = await core.ExecuteMarkerAsync("markerGetOutbox", new { profileId }, cancellationToken);
         var pushedByState = new Dictionary<int, List<string>>();
+        var outbox = await core.ExecuteMarkerAsync("markerGetOutbox", new { profileId }, cancellationToken);
         if (!outbox.TryGetProperty("operations", out var operations) || operations.ValueKind != JsonValueKind.Array) return pushedByState;
         var stateIds = regions.Select(region => region.StateId).ToHashSet();
-        using var client = new KuroMapProgressClient();
+        var pending = new List<System.Text.Json.JsonElement>();
         foreach (var operation in operations.EnumerateArray())
         {
             int stateId = operation.GetProperty("stateId").GetInt32();
             if (!stateIds.Contains(stateId)) continue;
             string pointId = operation.GetProperty("pointId").GetString() ?? "";
             string positionType = operation.TryGetProperty("nameId", out var name) ? name.GetString() ?? "" : "";
-            bool completed = operation.GetProperty("completed").GetBoolean();
             if (pointId.Length == 0 || positionType.Length == 0) continue;
+            // The document this element came from is not kept alive by the caller.
+            pending.Add(operation.Clone());
+        }
+        if (pending.Count == 0) return pushedByState;
+        progress?.Report(new(stage, 0, pending.Count));
+        int done = 0;
+        using var client = new KuroMapProgressClient();
+        foreach (var operation in pending)
+        {
+            int stateId = operation.GetProperty("stateId").GetInt32();
+            string pointId = operation.GetProperty("pointId").GetString() ?? "";
+            string positionType = operation.TryGetProperty("nameId", out var name) ? name.GetString() ?? "" : "";
+            bool completed = operation.GetProperty("completed").GetBoolean();
             await client.SetCompletionAsync(token, deviceId, stateId, pointId, positionType, completed, cancellationToken);
             await core.ExecuteMarkerAsync("markerAcknowledgeSync", new
             {
@@ -268,6 +318,7 @@ public sealed class KuroProgressSyncService
             }, cancellationToken);
             if (!pushedByState.TryGetValue(stateId, out var ids)) pushedByState[stateId] = ids = new List<string>();
             ids.Add(pointId);
+            progress?.Report(new(stage, ++done, pending.Count));
         }
         return pushedByState;
     }

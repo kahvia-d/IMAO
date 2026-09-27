@@ -194,6 +194,10 @@
                 <ToggleSwitch x:Name="KuroSyncShowAll" Header="显示没有差异的区域" OnContent="显示" OffContent="不显示" Toggled="KuroSyncShowAll_Toggled" />
                 <ToggleSwitch x:Name="KuroSyncAutoSync" Header="自动同步" OnContent="标记后立即推送，并每 10 分钟补齐" OffContent="仅手动同步" Toggled="KuroSyncAutoSync_Toggled" />
                 <TextBlock x:Name="KuroAutoSyncStatus" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                <StackPanel x:Name="KuroSyncProgressPanel" Spacing="4" Visibility="Collapsed">
+                    <TextBlock x:Name="KuroSyncProgressText" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <ProgressBar x:Name="KuroSyncProgressBar" />
+                </StackPanel>
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                     <Button x:Name="KuroSyncPreviewButton" Content="预览同步" Click="KuroSyncPreview_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
                     <Button x:Name="KuroSyncApplyButton" Content="应用同步" Click="KuroSyncApply_Click" IsEnabled="False" />
