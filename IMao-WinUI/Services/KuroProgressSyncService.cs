@@ -14,23 +14,31 @@ namespace IMao_WinUI.Services;
 public sealed class KuroProgressSyncService
 {
     private readonly CoreHostService core;
-    private readonly KuroTokenVault vault = new(UserDataPaths.KuroSync);
+    private readonly KuroTokenVault vault;
     private readonly string deviceId;
     // Manual and automatic sync share one gate so a timed pass can never write
     // while the user is applying a preview.
     private readonly SemaphoreSlim gate = new(1, 1);
 
-    public KuroProgressSyncService(CoreHostService core)
+    public KuroProgressSyncService(CoreHostService core) : this(core, UserDataPaths.KuroSync) { }
+
+    /// <summary>
+    /// The credential store and the device id live under <paramref name="kuroSyncRoot"/>. The tests
+    /// pass a scratch directory: the real one holds the player's own credential, and a test that
+    /// wrote there would replace it.
+    /// </summary>
+    internal KuroProgressSyncService(CoreHostService core, string kuroSyncRoot)
     {
         this.core = core;
-        string path = Path.Combine(UserDataPaths.KuroSync, "device-id.txt");
-        Directory.CreateDirectory(UserDataPaths.KuroSync);
+        vault = new KuroTokenVault(kuroSyncRoot);
+        string path = Path.Combine(kuroSyncRoot, "device-id.txt");
+        Directory.CreateDirectory(kuroSyncRoot);
         deviceId = File.Exists(path) ? File.ReadAllText(path).Trim() : Guid.NewGuid().ToString("N");
         if (!File.Exists(path)) File.WriteAllText(path, deviceId);
     }
 
-    public bool IsConnected(string profileId) => vault.TryRead(profileId, out var credential) &&
-        !BindingMismatch(BoundAccount(), credential.AccountId);
+    public bool IsConnected(string profileId) => TryReadCredential(profileId, out var credential) &&
+        !BindingMismatch(LedgerAccount(profileId), credential.AccountId);
 
     /// <summary>
     /// True when a stored credential belongs to a different Kuro account than the ledger is
@@ -40,11 +48,66 @@ public sealed class KuroProgressSyncService
     public static bool BindingMismatch(string boundAccount, string credentialAccount) =>
         boundAccount.Length > 0 && credentialAccount.Length > 0 && boundAccount != credentialAccount;
 
-    private string BoundAccount() => core.ActiveLocalAccount?.KuroAccountId ?? "";
+    /// <summary>The Kuro account a ledger is bound to; empty when it is not bound to anything.</summary>
+    private string LedgerAccount(string profileId)
+    {
+        // A ledger list that exists and does not name this id means there is no such ledger — it
+        // must not inherit the binding of whichever ledger happens to be selected.
+        if (core.LedgerCatalog is { } catalog)
+        {
+            foreach (var account in catalog.Accounts)
+                if (account.Id == profileId) return account.KuroAccountId;
+            return "";
+        }
+        return core.ActiveLocalAccount?.KuroAccountId ?? "";
+    }
+
+    /// <summary>
+    /// Reads the credential of the ledger being synchronized. A credential belongs to a Kuro
+    /// account, not to a local ledger, so the ledger's binding decides which files are tried —
+    /// see <see cref="KuroTokenVault.CredentialIds"/>. Nothing else is ever considered: a ledger
+    /// bound to an account this machine has no credential for is "not connected", not "use
+    /// whichever token happens to be lying around".
+    /// </summary>
+    private bool TryReadCredential(string profileId, out KuroCredential credential)
+    {
+        foreach (string id in KuroTokenVault.CredentialIds(profileId, LedgerAccount(profileId)))
+            if (vault.TryRead(id, out credential)) return true;
+        credential = default!;
+        return false;
+    }
+
+    /// <summary>
+    /// Whether this machine can synchronize that ledger right now, and the sentence the
+    /// interface shows. Typing an account id in by hand is the only way a ledger gets bound,
+    /// so a mistyped digit has to be answered on the spot rather than by a failed preview.
+    /// </summary>
+    public KuroCredentialStatus DescribeCredential(string profileId)
+    {
+        string account = LedgerAccount(profileId);
+        if (account.Length == 0)
+            return new KuroCredentialStatus(account, false, false,
+                $"记录本 {profileId} 还没有绑定库街区账号；绑定之后才能同步。");
+        bool stored = TryReadCredential(profileId, out var credential);
+        if (!stored)
+        {
+            var known = vault.StoredAccounts();
+            string hint = known.Count == 0
+                ? "本机还没有任何库街区凭据。"
+                : $"本机已有凭据的账号：{string.Join("、", known)}。";
+            return new KuroCredentialStatus(account, false, false,
+                $"{hint}没有账号 {account} 的凭据；请打开已登录的库街区大地图，点扩展图标 →「连接桌面端」。");
+        }
+        if (BindingMismatch(account, credential.AccountId))
+            return new KuroCredentialStatus(account, true, false,
+                $"本机账号 {account} 的凭据属于账号 {credential.AccountId}；请重新连接一次库街区。");
+        return new KuroCredentialStatus(account, true, true,
+            "本机已有这个账号的凭据，可以「预览同步」了。");
+    }
 
     private void EnsureCredentialMatchesBinding(KuroCredential credential, string profileId)
     {
-        string bound = BoundAccount();
+        string bound = LedgerAccount(profileId);
         if (!BindingMismatch(bound, credential.AccountId)) return;
         throw new InvalidOperationException(
             $"记录本 {profileId} 绑定的是库街区账号 {bound}，但本机凭据属于账号 {credential.AccountId}。" +
@@ -71,7 +134,7 @@ public sealed class KuroProgressSyncService
 
     private async Task<KuroSyncComparison> PreviewCoreAsync(string profileId, int? stateId, CancellationToken cancellationToken)
     {
-        if (!vault.TryRead(profileId, out var credential)) throw new InvalidOperationException("此同步档案尚未连接库街区。请在浏览器扩展中重新连接。");
+        if (!TryReadCredential(profileId, out var credential)) throw new InvalidOperationException(DescribeCredential(profileId).Message);
         EnsureCredentialMatchesBinding(credential, profileId);
         await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
@@ -133,7 +196,7 @@ public sealed class KuroProgressSyncService
 
     private async Task<KuroSyncApplyResult> ApplyCoreAsync(string profileId, KuroSyncComparison comparison, CancellationToken cancellationToken)
     {
-        if (!vault.TryRead(profileId, out var credential)) throw new InvalidOperationException("此同步档案尚未连接库街区。请在浏览器扩展中重新连接。");
+        if (!TryReadCredential(profileId, out var credential)) throw new InvalidOperationException(DescribeCredential(profileId).Message);
         EnsureCredentialMatchesBinding(credential, profileId);
         await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
@@ -217,7 +280,7 @@ public sealed class KuroProgressSyncService
     /// </summary>
     public async Task<bool> PushLocalChangeAsync(string profileId, KuroLocalChange change, CancellationToken cancellationToken = default)
     {
-        if (!IsConnected(profileId) || !vault.TryRead(profileId, out var credential)) return false;
+        if (!IsConnected(profileId) || !TryReadCredential(profileId, out var credential)) return false;
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -261,7 +324,17 @@ public sealed class KuroProgressSyncService
         return path;
     }
 
-    public void Disconnect(string profileId) => vault.Delete(profileId);
+    /// <summary>
+    /// Forgets the credential of the ledger's Kuro account on this machine. Both names are
+    /// removed: the account-named file the extension writes, and a file named after the ledger
+    /// id — which is the same file for every ledger that predates the ledger list, and the one
+    /// an old extension would have left behind for any other ledger.
+    /// </summary>
+    public void Disconnect(string profileId)
+    {
+        vault.Delete(profileId);
+        if (LedgerAccount(profileId) is { Length: > 0 } account) vault.Delete(KuroTokenVault.AccountCredentialId(account));
+    }
 
     private static int Read(JsonElement data, string name) =>
         data.TryGetProperty(name, out var value) && value.TryGetInt32(out int count) ? count : 0;

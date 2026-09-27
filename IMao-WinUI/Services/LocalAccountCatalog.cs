@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using IMao_WinUI.Core.KuroSync;
 
 namespace IMao_WinUI.Services;
 
@@ -107,6 +108,55 @@ public sealed class LocalAccountCatalog
     public static bool IsValidId(string? id) => !string.IsNullOrEmpty(id) && id.Length <= MaximumIdLength &&
         id.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_');
 
+    /// <summary>
+    /// The credential file this ledger actually has on this machine, or "" when it has none.
+    /// The names are the ones the synchronization looks up (<see cref="KuroTokenVault.CredentialIds"/>):
+    /// a credential belongs to the account the ledger is bound to, so for any ledger that is not
+    /// itself named after its account the second name is the one that exists. The report goes to
+    /// whoever is diagnosing a player's problem, so it has to answer "the token is right there,
+    /// why can't this ledger see it?" the same way the synchronization does.
+    /// </summary>
+    public string CredentialFile(string id)
+    {
+        if (string.IsNullOrEmpty(credentialsDirectory)) return "";
+        var account = accounts.Find(entry => entry.Id == id);
+        if (account is null) return "";
+        foreach (string candidate in KuroTokenVault.CredentialIds(account.Id, account.KuroAccountId))
+        {
+            string name = candidate + ".json";
+            if (File.Exists(System.IO.Path.Combine(credentialsDirectory, name))) return name;
+        }
+        return "";
+    }
+
+    /// <summary>
+    /// The regions whose cloud baseline this ledger holds. Rebinding to a different account is
+    /// the one action that invalidates those baselines — they were read from the old account —
+    /// so the settings page reads them here before asking the store to drop them.
+    /// </summary>
+    public IReadOnlyList<int> SyncStateIds(string id)
+    {
+        if (!IsValidId(id)) return [];
+        try
+        {
+            var info = new FileInfo(ProgressPath(id));
+            if (!info.Exists || info.Length > MaximumProgressBytes) return [];
+            using var stream = new FileStream(ProgressPath(id), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var document = JsonDocument.Parse(stream);
+            if (!document.RootElement.TryGetProperty("syncStates", out var states) || states.ValueKind != JsonValueKind.Array) return [];
+            var ids = new List<int>();
+            foreach (var state in states.EnumerateArray())
+                if (state.ValueKind == JsonValueKind.Object && state.TryGetProperty("stateId", out var value) &&
+                    value.TryGetInt32(out int stateId) && stateId > 0) ids.Add(stateId);
+            return ids;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or
+            ArgumentException or NotSupportedException)
+        {
+            return [];
+        }
+    }
+
     public static bool IsValidKuroAccount(string? value) => !string.IsNullOrEmpty(value) &&
         value.Length <= MaximumKuroAccountLength && value.All(char.IsAsciiDigit);
 
@@ -187,9 +237,11 @@ public sealed class LocalAccountCatalog
     private string NewId() => "acc_" + Guid.NewGuid().ToString("N")[..8];
 
     /// <summary>
-    /// Removes a ledger from the list without deleting anything: its progress document, its
-    /// stored credential and its routes move into a timestamped folder under deleted/. The
-    /// last ledger cannot be removed, and the active one is replaced by the first remaining.
+    /// Removes a ledger from the list without deleting anything: its progress document and its
+    /// routes move into a timestamped folder under deleted/. The last ledger cannot be removed,
+    /// and the active one is replaced by the first remaining. A stored credential is deliberately
+    /// left where it is: it belongs to the Kuro account, not to this ledger, so removing the
+    /// ledger only ends the binding. "断开库街区连接" is the one action that forgets a credential.
     /// </summary>
     public bool TryDelete(string id, out string error)
     {
@@ -203,8 +255,6 @@ public sealed class LocalAccountCatalog
         {
             Directory.CreateDirectory(target);
             MoveIfPresent(ProgressPath(id), System.IO.Path.Combine(target, id + ".json"));
-            if (!string.IsNullOrEmpty(credentialsDirectory))
-                MoveIfPresent(System.IO.Path.Combine(credentialsDirectory, id + ".json"), System.IO.Path.Combine(target, "credential.json"));
             if (!string.IsNullOrEmpty(routesDirectory)) MoveIfPresent(System.IO.Path.Combine(routesDirectory, id), System.IO.Path.Combine(target, "routes"));
         }
         catch (Exception moveError) when (moveError is IOException or UnauthorizedAccessException)
@@ -235,12 +285,12 @@ public sealed class LocalAccountCatalog
         foreach (var account in accounts)
         {
             var (completed, total, writtenAt) = Describe(account.Id);
-            bool hasCredential = !string.IsNullOrEmpty(credentialsDirectory) &&
-                File.Exists(System.IO.Path.Combine(credentialsDirectory, account.Id + ".json"));
+            string credentialFile = CredentialFile(account.Id);
+            bool hasCredential = credentialFile.Length > 0;
             ledgers.Add(new
             {
                 id = account.Id, name = account.Name, kuroAccountId = account.KuroAccountId, isActive = account.Id == activeId,
-                completed, total, lastWrittenUtc = writtenAt, hasCredential
+                completed, total, lastWrittenUtc = writtenAt, hasCredential, credentialFile
             });
         }
         string path = System.IO.Path.Combine(directory, "ledger-report.json");
@@ -250,6 +300,10 @@ public sealed class LocalAccountCatalog
             activeAccountId = activeId,
             warning = Warning,
             legacyRecordPresent = File.Exists(System.IO.Path.Combine(directory, "account_1.json")),
+            // There is no password in a credential file, only a DPAPI blob, so naming the
+            // accounts this machine holds one for is safe — and it is the fastest way to see
+            // that the token the player connected is not the account a ledger is bound to.
+            storedCredentialAccounts = KuroTokenVault.AccountsIn(credentialsDirectory),
             accounts = ledgers
         }, new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
         return path;

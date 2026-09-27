@@ -9,16 +9,18 @@
 **Edge 加载项商店（推荐）**：https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg
 
 1. IMao → 设置 → 库街区点位进度同步 → 「注册/修复浏览器桥接」。
-2. 打开并登录库街区大地图 → 点扩展图标 → 「连接桌面端」。
-3. 回到 IMao → 「预览同步」→「应用同步」。
+2. 打开并登录库街区大地图 → 点扩展图标 → 「连接桌面端」，**记下它显示的账号 ID**。
+3. 回到 IMao → 设置 → 本地点位记录本 → 点「修改」，把那个账号 ID 填进「绑定库街区账号」（想同步到哪一本记录本，就填在哪一本上）。
+4. 回到 IMao → 「预览同步」→「应用同步」。
 
 Chrome（Windows）没有对应的商店条目，需要手动加载，完整步骤见仓库的 [Docs/KuroMapSyncInstall.md](../../Docs/KuroMapSyncInstall.md)，摘要：
 
 1. IMao → 设置 → 库街区点位进度同步 → 「注册/修复浏览器桥接」。
 2. 下载本扩展的 zip（发行版 `ext-v*`）并解压到固定目录，例如 `%LOCALAPPDATA%\IMao-WinUI\KuroMapSync\`。
 3. `chrome://extensions` → 开发人员模式 → 「加载解压缩的扩展」→ 选中该目录。
-4. 打开并登录库街区大地图 → 点扩展图标 → 「连接桌面端」。
-5. 回到 IMao → 「预览同步」→「应用同步」。
+4. 打开并登录库街区大地图 → 点扩展图标 → 「连接桌面端」，记下账号 ID。
+5. 回到 IMao → 设置 → 本地点位记录本 → 「修改」→ 填入账号 ID。
+6. 回到 IMao → 「预览同步」→「应用同步」。
 
 `manifest.json` 里的 `key` 固定了发布公钥，所以手动加载得到的扩展 ID 与商店版一致（`ohmikfaeobbffhlhoocklplniobcfdbg`），桌面端注册的桥接白名单无需改动，两种装法可以互换。
 

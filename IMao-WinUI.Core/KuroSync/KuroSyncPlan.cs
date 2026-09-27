@@ -68,3 +68,11 @@ public sealed record KuroSyncComparison(
 }
 
 public sealed record KuroSyncApplyResult(int Regions, int Fetched, int PendingLocal, int Pushed);
+
+/// <summary>
+/// What a ledger's synchronization would use right now. The interface says this out loud
+/// as soon as a binding is saved, so a mistyped account id is answered immediately instead
+/// of by a failed preview that sends the player back to reconnect an extension that is
+/// already connected. <see cref="Account"/> is the ledger's binding (empty when unbound).
+/// </summary>
+public sealed record KuroCredentialStatus(string Account, bool HasCredential, bool Usable, string Message);

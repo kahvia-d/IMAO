@@ -51,6 +51,44 @@ internal static class LocalAccountCatalogTests
             reportText.Contains("\"hasCredential\"") && !reportText.Contains("secret"),
             "the ledger report lists every ledger and carries no credential");
 
+        // A credential belongs to the Kuro account, so "does this record book have one" is
+        // answered by its binding, not by its id. The report a player sends has to say the same
+        // thing the synchronization does, or support chases a file that was never going to be read.
+        string credentialRoot = Path.Combine(directory, "credential", "SavedPoints");
+        string credentialStore = Path.Combine(directory, "credential", "KuroSync", "credentials");
+        Directory.CreateDirectory(credentialStore);
+        var bound = new LocalAccountCatalog(Path.Combine(credentialRoot, "accounts.json"),
+            Path.Combine(credentialRoot, "profiles"), credentialsDirectory: credentialStore);
+        check(bound.CredentialFile("local").Length == 0, "an unbound record book has no credential to find");
+        check(bound.TryBind("local", "10146974", out _), "the default record book can be bound to an account");
+        check(bound.CredentialFile("local").Length == 0,
+            "binding an account does not invent a credential that was never connected");
+        File.WriteAllText(Path.Combine(credentialStore, "kuro_10146974.json"), "{\"Ciphertext\":\"x\"}");
+        check(bound.CredentialFile("local") == "kuro_10146974.json",
+            "a record book bound to an account finds the credential stored under that account");
+        string credentialReport = File.ReadAllText(bound.WriteDiagnostics());
+        check(credentialReport.Contains("\"hasCredential\": true") &&
+            credentialReport.Contains("kuro_10146974.json") && credentialReport.Contains("\"storedCredentialAccounts\""),
+            "the ledger report names the credential file it found and the accounts this machine holds");
+        check(bound.TryCreate("第二本", "10436687", out var second, out _) && second is not null,
+            "a second record book for another account can be created");
+        check(!bound.SyncStateIds(second!.Id).Any() && !bound.SyncStateIds("../escape").Any(),
+            "reading the baseline regions of an empty or invalid record book reports none");
+        check(bound.TrySetActive(second.Id, out _),
+            "the second record book becomes the current one");
+        check(bound.TryDelete(second.Id, out _) && File.Exists(Path.Combine(credentialStore, "kuro_10146974.json")),
+            "deleting a record book leaves credentials alone, because they belong to the account");
+
+        // The regions a rebind has to drop come from the record book's own document.
+        string baselineProfiles = Path.Combine(directory, "baseline", "profiles");
+        Directory.CreateDirectory(baselineProfiles);
+        File.WriteAllText(Path.Combine(baselineProfiles, "local.json"),
+            "{\"schemaVersion\":2,\"profileId\":\"local\",\"points\":{},\"syncStates\":[" +
+            "{\"stateId\":8,\"initialized\":true},{\"stateId\":903,\"initialized\":false},{\"stateId\":0}]}");
+        var baseline = new LocalAccountCatalog(Path.Combine(directory, "baseline", "accounts.json"), baselineProfiles);
+        check(baseline.SyncStateIds("local").SequenceEqual(new[] { 8, 903 }),
+            "the regions a record book holds a cloud baseline for are read from its own document");
+
         // The upgrade path: progress files plus the historical account metadata.
         string upgrade = Path.Combine(directory, "upgrade");
         string profiles = Path.Combine(upgrade, "profiles");

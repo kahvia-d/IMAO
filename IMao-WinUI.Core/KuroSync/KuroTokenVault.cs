@@ -21,6 +21,57 @@ public sealed class KuroTokenVault
     /// <summary>How long an account id may be; the same bound the ledger binding uses.</summary>
     internal const int MaximumAccountIdLength = 24;
 
+    /// <summary>
+    /// The file name the credential of one Kuro account is stored under. A credential belongs
+    /// to a Kuro account, not to a local ledger, so the name is derived from the account alone.
+    /// The browser extension builds exactly this name from the account it read off the page
+    /// (see <c>BrowserExtensions/KuroMapSync/service-worker.js</c>), so the two sides have to
+    /// agree letter for letter — this function is the desktop's copy of that one rule.
+    /// </summary>
+    public static string AccountCredentialId(string accountId) => "kuro_" + accountId;
+
+    /// <summary>
+    /// The profile ids a ledger's credential can be stored under, in lookup order: the ledger id
+    /// first (a ledger literally named <c>kuro_&lt;account&gt;</c> — which is what every install that
+    /// predates the ledger list has), then the account the ledger is bound to, which is what the
+    /// extension has always written. One rule, shared by the synchronization and the ledger report,
+    /// so "connected" cannot come to mean two different things in two places.
+    /// </summary>
+    public static IReadOnlyList<string> CredentialIds(string ledgerId, string kuroAccountId)
+    {
+        if (kuroAccountId.Length == 0) return [ledgerId];
+        string accountId = AccountCredentialId(kuroAccountId);
+        return accountId == ledgerId ? [ledgerId] : [ledgerId, accountId];
+    }
+
+    /// <summary>
+    /// The Kuro accounts a credentials directory holds a file for. The settings page uses it to
+    /// answer "did I connect this account on this machine at all?" after the player typed an id in
+    /// by hand, so a mistyped digit is answered on the spot instead of by a failed preview.
+    /// </summary>
+    public static IReadOnlyList<string> AccountsIn(string credentialsDirectory)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(credentialsDirectory) || !Directory.Exists(credentialsDirectory)) return [];
+            var accounts = new List<string>();
+            foreach (string file in Directory.EnumerateFiles(credentialsDirectory, "*.json"))
+            {
+                string name = Path.GetFileNameWithoutExtension(file);
+                if (name.StartsWith("kuro_", StringComparison.Ordinal) && IsAccountId(name[5..])) accounts.Add(name[5..]);
+            }
+            accounts.Sort(StringComparer.Ordinal);
+            return accounts;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>The Kuro accounts this vault holds a credential for.</summary>
+    public IReadOnlyList<string> StoredAccounts() => AccountsIn(credentialsDirectory);
+
     public void Save(string profileId, string token, string accountId = "")
     {
         ValidateProfile(profileId);

@@ -19,6 +19,27 @@ internal static class KuroSyncTests
         bool rejectedAccount = false;
         try { vault.Save("kuro_12345", "secret-token", "abc"); } catch (ArgumentException) { rejectedAccount = true; }
         check(rejectedAccount, "a credential cannot be stored under an account id that is not digits");
+        // The defect a player reported on 2026-09-27: a credential belongs to a Kuro account, not
+        // to a record book, but the desktop looked it up by the record book's id. Every ledger a
+        // player creates (and the seeded default `local`) missed the file the extension wrote.
+        // See Docs/KuroSyncCredentialNaming_20260927.md.
+        check(KuroTokenVault.AccountCredentialId("10146974") == "kuro_10146974" &&
+            KuroTokenVault.CredentialIds("local", "10146974").SequenceEqual(new[] { "local", "kuro_10146974" }) &&
+            KuroTokenVault.CredentialIds("kuro_10146974", "10146974").SequenceEqual(new[] { "kuro_10146974" }) &&
+            KuroTokenVault.CredentialIds("local", "").SequenceEqual(new[] { "local" }),
+            "a credential is looked up by the ledger's bound account, and a ledger named after its account is the same file");
+
+        string accountsRoot = Path.Combine(root, "kuro-accounts");
+        var accountsVault = new KuroTokenVault(accountsRoot);
+        accountsVault.Save(KuroTokenVault.AccountCredentialId("10146974"), "token-a", "10146974");
+        accountsVault.Save(KuroTokenVault.AccountCredentialId("10436687"), "token-b");
+        accountsVault.Save("local", "token-c", "10436687");
+        check(accountsVault.StoredAccounts().SequenceEqual(new[] { "10146974", "10436687" }),
+            "the vault names every Kuro account this machine holds a credential for, and ignores a file named after a ledger");
+        accountsVault.Delete(KuroTokenVault.AccountCredentialId("10146974"));
+        check(accountsVault.StoredAccounts().SequenceEqual(new[] { "10436687" }) &&
+            !File.Exists(Path.Combine(accountsRoot, "credentials", "kuro_10146974.json")),
+            "disconnecting removes the account's credential file");
         // The binding a ledger carries and the account a credential belongs to only have to
         // agree when both are known: an old credential has no account, and binding a ledger
         // is metadata a player may fix later.

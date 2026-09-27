@@ -182,12 +182,12 @@
                     <Button Content="导出体检" Click="LocalAccountDiagnostics_Click" />
                     <Button Content="打开目录" Click="OpenPoints_Click" />
                 </controls:WrapPanel>
-                <TextBlock Text="删除只会把这一份记录、它的路线和本机库街区凭据移到 SavedPoints\deleted 下保留，不会真的删掉。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock Text="删除只会把这一份记录本的点位记录和路线移到 SavedPoints\deleted 下保留，不会真的删掉；库街区凭据属于账号，不跟着记录本走，要删除请用下面同步区的「断开库街区连接」。" Style="{StaticResource IMaoSecondaryTextStyle}" />
             </StackPanel>
         </Expander>
         <Expander Header="库街区点位进度同步" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="12">
-                <TextBlock Text="先在已登录的库街区鸣潮大地图页通过 IMao 浏览器扩展连接桌面端。凭据只加密保存在当前 Windows 用户下。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock Text="先在已登录的库街区鸣潮大地图页用扩展连接桌面端，扩展会显示账号 ID；再到上面的记录本表点「修改」，把那个账号填进要同步的那一本。凭据只加密保存在当前 Windows 用户下。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <TextBlock x:Name="KuroSyncLedger" TextWrapping="Wrap" />
                 <ComboBox x:Name="KuroSyncState" Header="地图区域" MaxWidth="450" SelectionChanged="KuroSyncState_SelectionChanged" />
                 <ToggleSwitch x:Name="KuroSyncShowSynced" Header="显示两边都已同步的点位数" OnContent="显示" OffContent="不显示" Toggled="KuroSyncShowSynced_Toggled" />

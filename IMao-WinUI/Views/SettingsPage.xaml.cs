@@ -911,10 +911,72 @@ public sealed partial class SettingsPage : Page
             KuroSyncPreviewButton.IsEnabled = false;
             return;
         }
-        KuroSyncLedger.Text = $"当前记录本：{active.Name}。" + (active.IsBound
-            ? $"已绑定库街区账号 {active.KuroAccountId}；预览与应用只作用于这一本记录本。"
-            : "还没有绑定库街区账号，无法同步；在上面的表格里点“修改”填上账号后再回来。");
-        KuroSyncPreviewButton.IsEnabled = active.IsBound;
+        if (!active.IsBound)
+        {
+            KuroSyncLedger.Text = $"当前记录本：{active.Name}。还没有绑定库街区账号，无法同步；" +
+                "在上面那张表里点“修改”，把浏览器扩展显示的账号填进「绑定库街区账号」。";
+            KuroSyncPreviewButton.IsEnabled = false;
+            return;
+        }
+        // Typing the account in by hand is the only way a record book gets bound, so whether
+        // this machine actually holds that account's credential is said here rather than left
+        // to a failed preview that would send the player back to reconnect a working extension.
+        var status = kuroSync.DescribeCredential(active.Id);
+        KuroSyncLedger.Text = $"当前记录本：{active.Name}。已绑定库街区账号 {active.KuroAccountId}；" +
+            "预览与应用只作用于这一本记录本。" + status.Message;
+        KuroSyncPreviewButton.IsEnabled = true;
+    }
+
+    /// <summary>
+    /// Explains what rebinding costs before it happens. The cloud baseline this record book
+    /// carries belongs to the account it was read from, so pointing the book at another account
+    /// leaves a baseline that would read "the cloud withdrew this" into every point the new
+    /// account does not have — the player's own marks would be cancelled by the next sync.
+    /// Rebinding is allowed (an account id is typed by hand and typos happen), but never silent.
+    /// </summary>
+    private async Task<bool> ConfirmRebindAsync(string ledgerName, string from, string to)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "换一个库街区账号",
+            Content = $"记录本“{ledgerName}”现在绑定的是账号 {from}，将要改成 {to}。\n\n" +
+                "这本记录本的云端同步基线是账号 " + from + " 的，换账号后会先清掉再按新账号重新建立：" +
+                "本地点位一个都不会少，已经上传过的点位会再上传一次（写入接口是幂等的）。" +
+                (from == to ? "" : $"\n\n如果 {to} 是手滑填错的，选“取消”就不会有任何改动。"),
+            PrimaryButtonText = "改绑并重置基线",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    /// <summary>
+    /// Drops the cloud baseline of a record book, one region at a time. With no baseline every
+    /// region takes the "establishing" path on the next sync, which keeps every local completion
+    /// and simply queues it for the new account instead of reading its absence as a withdrawal.
+    /// </summary>
+    private async Task<string> ResetSyncBaselineAsync(string id)
+    {
+        var catalog = coreHost.LedgerCatalog;
+        if (catalog is null) return "";
+        var states = catalog.SyncStateIds(id);
+        if (states.Count == 0) return "";
+        int reset = 0;
+        try
+        {
+            foreach (int stateId in states)
+            {
+                await coreHost.ExecuteMarkerAsync("markerSetSyncState",
+                    new { profileId = id, stateId, initialized = false, enabled = false });
+                ++reset;
+            }
+        }
+        catch (Exception error)
+        {
+            return $"云端基线只重置了 {reset}/{states.Count} 个区域（{error.Message}）；重新点一次“修改”保存即可继续。";
+        }
+        return $"已重置 {reset} 个区域的云端基线，下次同步会按新账号重新建立。";
     }
 
     /// <summary>Picking a row switches the record book the map shows. Nothing else ever does.</summary>
@@ -947,7 +1009,10 @@ public sealed partial class SettingsPage : Page
         try { await coreHost.ExecuteMarkerAsync("markerSelectProfile", new { profileId = created.Id }); }
         catch (Exception failure) { ShowLocalAccount(InfoBarSeverity.Error, failure.Message); }
         RefreshLedgerSurfaces();
-        ShowLocalAccount(InfoBarSeverity.Success, $"已新增记录本“{created.Name}”并切换过去；它现在是空的，可以直接开始标记，或导入旧记录。");
+        var createdStatus = created.IsBound ? kuroSync.DescribeCredential(created.Id) : null;
+        ShowLocalAccount(createdStatus is { Usable: false } ? InfoBarSeverity.Warning : InfoBarSeverity.Success,
+            $"已新增记录本“{created.Name}”并切换过去；它现在是空的，可以直接开始标记，或导入旧记录。" +
+            (createdStatus?.Message ?? ""));
     }
 
     private async void LocalAccountEdit_Click(object sender, RoutedEventArgs e)
@@ -957,16 +1022,23 @@ public sealed partial class SettingsPage : Page
         if (catalog is null || active is null) return;
         if (await AskLocalAccountAsync("修改记录本", active.Name, active.KuroAccountId, "保存") is not { } answer) return;
         string previousBinding = active.KuroAccountId;
-        if (!catalog.TryBind(active.Id, answer.Binding, out string error)) { ShowLocalAccount(InfoBarSeverity.Warning, error); return; }
+        string nextBinding = answer.Binding;
+        bool rebinding = nextBinding.Length > 0 && previousBinding.Length > 0 && nextBinding != previousBinding;
+        if (rebinding && !await ConfirmRebindAsync(active.Name, previousBinding, nextBinding)) return;
+        if (!catalog.TryBind(active.Id, nextBinding, out string error)) { ShowLocalAccount(InfoBarSeverity.Warning, error); return; }
         if (!catalog.TryRename(active.Id, answer.Name, out error))
         {
             catalog.TryBind(active.Id, previousBinding, out _);
             ShowLocalAccount(InfoBarSeverity.Warning, error);
             return;
         }
+        // Only after the binding actually changed: resetting the baseline of a record book the
+        // player renamed (or whose second edit failed) would throw away a baseline for nothing.
+        string reset = rebinding ? await ResetSyncBaselineAsync(active.Id) : "";
         RefreshLedgerSurfaces();
-        ShowLocalAccount(InfoBarSeverity.Success,
-            $"记录本“{answer.Name}”已保存；文件名不变，点位记录、路线和库街区凭据都不受影响。");
+        var status = kuroSync.DescribeCredential(active.Id);
+        ShowLocalAccount(status.Usable ? InfoBarSeverity.Success : InfoBarSeverity.Warning,
+            $"记录本“{answer.Name}”已保存；文件名不变，点位记录和路线都不受影响。" + reset);
     }
 
     /// <summary>One dialog for adding and editing, so the two cannot drift apart.</summary>
@@ -999,8 +1071,8 @@ public sealed partial class SettingsPage : Page
         var dialog = new ContentDialog
         {
             Title = "删除记录本",
-            Content = $"记录本“{active.Name}”的点位记录、路线和本机库街区凭据会移到 SavedPoints\\deleted 下保留，随时可以手动找回。" +
-                "地图随后切到另一本记录本。",
+            Content = $"记录本“{active.Name}”的点位记录和路线会移到 SavedPoints\\deleted 下保留，随时可以手动找回。" +
+                "库街区凭据属于账号、不跟着记录本走（要删除请用「断开库街区连接」）。地图随后切到另一本记录本。",
             PrimaryButtonText = "删除",
             CloseButtonText = "取消",
             DefaultButton = ContentDialogButton.Close,
@@ -1133,7 +1205,8 @@ public sealed partial class SettingsPage : Page
         var dialog = new ContentDialog
         {
             Title = "断开库街区连接",
-            Content = $"将删除本机保存的库街区凭据（记录本 {profile}）。本地点位进度、路线和设置都不受影响。",
+            Content = $"将删除本机保存的库街区凭据（账号 {coreHost.ActiveLocalAccount?.KuroAccountId}）。" +
+                "本地点位进度、路线和设置都不受影响；断开后要再同步，需要在浏览器扩展里重新连接一次。",
             PrimaryButtonText = "断开",
             CloseButtonText = "取消",
             DefaultButton = ContentDialogButton.Close,
@@ -1141,8 +1214,9 @@ public sealed partial class SettingsPage : Page
         };
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
         kuroSync.Disconnect(profile);
-        ShowKuroSync(InfoBarSeverity.Success, $"已删除记录本 {profile} 的本机凭据；本地进度未改动。");
+        ShowKuroSync(InfoBarSeverity.Success, $"已删除记录本 {profile} 的本机库街区凭据；本地进度未改动。");
         RenderKuroBridgeStatus();
+        RefreshLedgerSurfaces();
     }
 
     private void KuroBridgeRegister_Click(object sender, RoutedEventArgs e)

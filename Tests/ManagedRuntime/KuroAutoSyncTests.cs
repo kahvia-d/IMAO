@@ -29,7 +29,7 @@ internal static class KuroAutoSyncTests
             new LocalItemFilter(Path.Combine(root, "auto-sync-filters.json"), Path.Combine(root, "auto-sync-legacy.json")),
             accounts);
 
-        var sync = new KuroProgressSyncService(core);
+        var sync = new KuroProgressSyncService(core, Path.Combine(root, "auto-sync-kuro"));
         using (var auto = new KuroAutoSyncService(sync, settings, core))
         {
             await auto.InitializeAsync();
@@ -90,5 +90,28 @@ internal static class KuroAutoSyncTests
         var pushed = await sync.PushLocalChangeAsync("kuro_424242", new KuroLocalChange(8, "1", "cx_01", true, 1));
         check(!pushed && core.LastFault.Length == 0,
             "an immediate push without a local credential stays off the wire and does not fault the core");
+
+        // The defect a player reported on 2026-09-27: the record book was bound correctly and the
+        // extension had stored a credential, but under the account's name — and the desktop looked
+        // it up by the record book's id, so a connected account read as "not connected" and
+        // reconnecting could never help. See Docs/KuroSyncCredentialNaming_20260927.md.
+        var vault = new KuroTokenVault(Path.Combine(root, "auto-sync-kuro"));
+        check(accounts.TryBind(accounts.ActiveId, "515151", out _),
+            "the current record book is bound to the account being tested");
+        check(!sync.IsConnected(accounts.ActiveId) && !sync.DescribeCredential(accounts.ActiveId).Usable,
+            "a bound record book with no credential on this machine is not connected");
+        vault.Save(KuroTokenVault.AccountCredentialId("515151"), "token-515151", "515151");
+        check(sync.IsConnected(accounts.ActiveId),
+            "a credential stored under the bound account is found even though the record book is not named after it");
+        check(sync.DescribeCredential(accounts.ActiveId) is { HasCredential: true, Usable: true },
+            "the interface can say the record book is ready to sync");
+        check(accounts.TryCreate("别的账号", "616161", out var otherLedger, out _) && otherLedger is not null,
+            "a second record book bound to another account can exist");
+        check(!sync.IsConnected(otherLedger!.Id) &&
+            sync.DescribeCredential(otherLedger.Id).Message.Contains("616161") &&
+            sync.DescribeCredential(otherLedger.Id).Message.Contains("515151"),
+            "another account's credential is never borrowed, and the message names the accounts this machine does have");
+        check(accounts.TryBind(otherLedger.Id, "", out _) && !sync.DescribeCredential(otherLedger.Id).Usable,
+            "an unbound record book reports that it cannot sync yet");
     }
 }
