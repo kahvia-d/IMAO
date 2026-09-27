@@ -206,6 +206,35 @@ inline void TestControllerMapUi(void (*check)(bool, const std::string&)) {
         }
     }
 
+    // A real 16:10 client capture: 1920x1200, 2026-09-27 13:59:04 session, the diagnostics frame saved at
+    // the Gameplay->BigMap transition. It settles what the synthetic sweep can only model - the widget is
+    // where hud::Layout puts the box on a real 16:10 client (8.08% of that box is gold, against 8.1% on
+    // the 2560x1440 captures) and the mouse zoom controls are detected there.
+    //
+    // It is also the map's open animation, which is worth pinning down: measured on this frame the
+    // template's best agreement is 0.95 five template pixels above the box's own alignment, and 0.46 at
+    // offset zero. The same session's settled frames scored 0.91 through the live +/-1 search, so the
+    // widget simply has not arrived yet in the first second or two - the zoom controls carry those frames
+    // (this very frame entered BigMap on rawControls=1, compassVerified=0). Do not lower the threshold to
+    // catch the animation; wait for it.
+    {
+        const auto wide = cv::imread((directory / "black-shores-map-1920x1200.png").string());
+        check(!wide.empty() && wide.cols == 1920 && wide.rows == 1200,
+            "the real 16:10 capture loads at its own size");
+        if (!wide.empty()) {
+            RECT wideRect{0, 0, wide.cols, wide.rows};
+            const auto wideCompass = MapUiVisualDetector::DetectBigMapCompass(wide, wideRect);
+            const auto wideControls = MapUiVisualDetector::DetectBigMapControlLayout(wide, wideRect);
+            std::cout << "Compass real 1920x1200 gold=" << wideCompass.goldPixels << "/" << wideCompass.cropPixels
+                << " agreement=" << wideCompass.templateAgreement << " verified=" << wideCompass.templateVerified
+                << " mouseControls=" << wideControls.mouse << '\n';
+            check(wideCompass.goldPixels * 100 >= wideCompass.cropPixels * 6,
+                "a real 1920x1200 client draws the widget inside the layout box");
+            check(wideControls.visible && wideControls.mouse,
+                "a real 1920x1200 client keeps its mouse zoom controls where the layout puts them");
+        }
+    }
+
     // The rule the state machine follows, without a live game. A verified compass has to carry the map
     // on its own: on 2026-09-26 and 2026-09-27 the zoom strip was absent while the compass sat at its
     // full strength, the canvas re-verification could not run (entering the map clears the player's
