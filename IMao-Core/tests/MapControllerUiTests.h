@@ -2,6 +2,8 @@
 #include "App/MapUiVisualDetector.h"
 #include "App/MapUiStateController.h"
 #include "Runtime/GamepadContext.h"
+#include "Coordinate/HudLayout.h"
+#include "Coordinate/locationCalculator/ScreenCoordinate.h"
 #include <filesystem>
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
@@ -149,6 +151,60 @@ inline void TestControllerMapUi(void (*check)(bool, const std::string&)) {
         !MapUiVisualDetector::DetectBigMapCompass(deep, rect).visible &&
         !MapUiVisualDetector::DetectBigMapCompass({}, rect).visible,
         "invalid compass capture formats are rejected");
+
+    // The client's shape decides where the box lands, and no non-16:9 big-map capture is checked in
+    // (Tests, Docs, out/ and the pre-rewrite history only hold 2560x1440 and 1920x1080 map frames). The
+    // compass probe reads nothing but that box, so pasting the widget at the layout's own position and
+    // size is exactly what a client of that shape hands the detector. Every shape the app supports puts
+    // the box at a different size, from 58x51 on a small window to 173x154 at 4K.
+    {
+        const auto source = regionPanel;
+        const cv::Rect sourceBox = hud::MapBox(cv::Size(source.cols, source.rows), hud::kBigMapCompass);
+        check(!source.empty() && sourceBox.x + sourceBox.width <= source.cols &&
+            sourceBox.y + sourceBox.height <= source.rows, "the template reference box is inside its capture");
+        const auto oldModelBox = [](const cv::Size client, const hud::Box& box) {
+            // HudLayout.h's "measured, not assumed" note: the old model scaled each axis by its own ratio.
+            const double scaleX = client.width / 1600.0;
+            const double scaleY = client.height / 900.0;
+            const int left = static_cast<int>(box.left * scaleX), top = static_cast<int>(box.top * scaleY);
+            const int right = static_cast<int>(box.right * scaleX), bottom = static_cast<int>(box.bottom * scaleY);
+            return cv::Rect(left, top, right - left, bottom - top);
+        };
+        // The widget is pasted at whatever size the target rectangle has, which is what makes the
+        // detector's own box the only thing that decides the verdict.
+        const auto drawWidget = [&](cv::Mat& canvas, const cv::Rect& target) {
+            cv::Mat scaled;
+            cv::resize(source(sourceBox), scaled, target.size(), 0, 0, cv::INTER_AREA);
+            scaled.copyTo(canvas(target));
+        };
+        for (const cv::Size client : {cv::Size(1280, 800), cv::Size(1600, 1200), cv::Size(1920, 1200),
+                cv::Size(1920, 1440), cv::Size(2560, 1600), cv::Size(3440, 1440), cv::Size(3840, 2160)}) {
+            const auto label = std::to_string(client.width) + "x" + std::to_string(client.height);
+            RECT rect{0, 0, client.width, client.height};
+            const auto box = hud::MapBox(client, hud::kBigMapCompass);
+
+            cv::Mat placed(client.height, client.width, CV_8UC3, cv::Scalar(24, 24, 24));
+            drawWidget(placed, box);
+            const auto detection = MapUiVisualDetector::DetectBigMapCompass(placed, rect);
+            std::cout << "Compass client " << label << " box=" << box.width << "x" << box.height
+                << " placed=" << detection.templateVerified << "@" << detection.templateAgreement << '\n';
+            check(detection.visible && detection.templateVerified,
+                "the compass template holds on a " + label + " client");
+
+            // The widget has to be *there*: on clients taller than 16:9 the old per-axis model put this
+            // box 9px lower (2560x1600) up to 21px (1920x1440), which is the placement error that made
+            // the map unusable there. On 16:9-shaped clients the two models only differ by integer
+            // truncation, which the +/-1 search is meant to absorb, so those are not anti-cases.
+            const auto stale = oldModelBox(client, hud::kBigMapCompass);
+            const int displacement = (std::max)(std::abs(stale.x - box.x), std::abs(stale.y - box.y));
+            if (displacement > 1) {
+                cv::Mat displaced(client.height, client.width, CV_8UC3, cv::Scalar(24, 24, 24));
+                drawWidget(displaced, stale);
+                check(!MapUiVisualDetector::DetectBigMapCompass(displaced, rect).templateVerified,
+                    "a compass " + std::to_string(displacement) + "px off the layout box is not the widget on " + label);
+            }
+        }
+    }
 
     // The rule the state machine follows, without a live game. A verified compass has to carry the map
     // on its own: on 2026-09-26 and 2026-09-27 the zoom strip was absent while the compass sat at its

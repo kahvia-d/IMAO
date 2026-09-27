@@ -20,3 +20,21 @@ the template does.
 fixture, `controller-map.png` and `keyboard-map-current.png`; it is rejected on `black-shores-gameplay.png`,
 `controller-marker-dialog.png` and `controller-cursor-assistant.png`; and the region panel's gold
 emblem alone is not evidence for the state machine.
+
+No non-16:9 big-map capture is checked in - the working tree, `out/`, the local diagnostic sessions and
+the pre-rewrite history only hold 2560x1440 and 1920x1080 map frames - so the client shapes the game can
+produce are covered synthetically instead. The compass probe reads nothing but its layout box, so the
+test pastes this capture's box at the size and position `hud::Layout` gives each client shape and checks
+the template still verifies: 1280x800 (16:10) 0.86, 1600x1200 (4:3) 0.87, 1920x1200 (16:10) 0.89,
+1920x1440 (4:3) 0.89, 2560x1600 (16:10) 1.00, 3440x1440 (21:9) 1.00, 3840x2160 0.90. On the shapes
+taller than 16:9 it also asserts the opposite: a widget placed where the old per-axis scaling put the
+box (5-21px away) must *not* verify, which is the placement error that made the map unusable there.
+
+The player's own logs back the placement rule on real clients, but only coarsely: the 2026-09-26 size
+sweep ran 1600x1200 (4:3), 1920x1200 (16:10), 1920x1440 (4:3), 1920x1080 and 2560x1440, and the gold
+count inside the layout box was 8.16% / 8.25% / 8.52% / 7.41% / 7.46% of that box - the same signature
+the map fixtures show, so the widget is inside the box at every one of those shapes. It does *not* pin the
+placement to the pixel: measured on this capture, shifting the box by the old model's error (9px at
+2560x1600, 7px at 1920x1200, 17px at 1600x1200, 21px at 1920x1440) still leaves 7.33% / 4.87% / 2.94% /
+3.33% gold, and only the 4:3 shapes drop near the 3% trigger. The strict position check is the template's
++/-1px tolerance, which is what the synthetic sweep above exercises.
