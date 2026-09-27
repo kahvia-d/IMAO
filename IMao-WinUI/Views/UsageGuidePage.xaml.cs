@@ -53,10 +53,10 @@ public sealed partial class UsageGuidePage : Page
         legacyRows.Clear();
         int usable = sources.Count(source => source.Recoverable);
         int unusable = sources.Count - usable;
-        LegacyRecoverButton.IsEnabled = usable > 0;
         if (sources.Count == 0)
         {
             LegacyScanSummary.Text = "没有找到旧版本地数据，当前记录本不需要修复。";
+            UpdateLegacyRecoverButton();
             return;
         }
         string states = unusable > 0 ? $"{usable} 处可以恢复，{unusable} 处无法识别" : $"{usable} 处全部可以恢复";
@@ -64,13 +64,23 @@ public sealed partial class UsageGuidePage : Page
             ? $"找到 {sources.Count} 处旧数据，但都无法识别：{states}。"
             : $"找到 {sources.Count} 处旧数据：{states}。勾选要恢复的条目，再点「数据恢复」；恢复只会新增记录本，不会改动这些文件。";
         foreach (var source in sources) LegacyScanList.Children.Add(LegacyRow(source));
+        UpdateLegacyRecoverButton();
     }
+
+    /// <summary>
+    /// The button is live only once the player has ticked something: nothing is ticked for them, so
+    /// a button that looks ready would invite a click that then does nothing.
+    /// </summary>
+    private void UpdateLegacyRecoverButton() =>
+        LegacyRecoverButton.IsEnabled = legacyRows.Any(row => row.Box.IsChecked == true);
 
     private FrameworkElement LegacyRow(LegacyPointSource source)
     {
         var box = new CheckBox
         {
-            IsChecked = source.Recoverable,
+            // Nothing is ticked for the player: a scan is not consent, and "恢复" has to be something
+            // they chose row by row rather than something they forgot to untick.
+            IsChecked = false,
             IsEnabled = source.Recoverable,
             MinWidth = 0,
             VerticalAlignment = VerticalAlignment.Top
@@ -91,6 +101,7 @@ public sealed partial class UsageGuidePage : Page
         row.Children.Add(box);
         row.Children.Add(details);
         legacyRows.Add((box, source));
+        box.Click += (_, _) => UpdateLegacyRecoverButton();
         return row;
     }
 
