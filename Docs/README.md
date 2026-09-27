@@ -60,6 +60,12 @@
 | [`CandidatePackRedundancy.md`](CandidatePackRedundancy.md) | 候选包是否已被梦州区域包取代 · 实测 |
 | [`DreamzhouCandidateFeaturePack.md`](DreamzhouCandidateFeaturePack.md) | Dreamzhou curated-location candidates（已退役） |
 | [`ResourcePackagePickerFix-20260909.md`](ResourcePackagePickerFix-20260909.md) | 离线导入入口修复记录（2026-09-09） |
+| [`LayeredMapFeaturePackPlan.md`](LayeredMapFeaturePackPlan.md) | 分层地图特征包落地方案（现行）：分层归属、共用地表、上下方向、开放/封闭分类 |
+| [`LayeredMapOpenness_20260927.md`](LayeredMapOpenness_20260927.md) | **开放/封闭/混合三种分层地图的定义与运行时规则**（用户 2026-09-27 拍板） |
+| [`ZscjLayerAttribute_20260927.md`](ZscjLayerAttribute_20260927.md) | 终声残卷在星炬学院不显示的核实（数据缺层级 + 隐藏机制） |
+| [`LayeredMapFeatureMeasurement_20260922.md`](LayeredMapFeatureMeasurement_20260922.md) | 分层瓦片的实机测量（合成模型：地表底片 × 0.20 + 当前层） |
+| [`LayeredFloorIndexFrame_20260926.md`](LayeredFloorIndexFrame_20260926.md) | 隐海试验场分层索引建错坐标系的根因与重建 |
+| [`LayeredMapFalsePositive_Hukou_20260926.md`](LayeredMapFalsePositive_Hukou_20260926.md) | 虎口山脉"地表帧被当成层内"的根因与判定修正 |
 
 ## 界面、手柄与覆盖层
 
