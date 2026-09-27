@@ -22,6 +22,7 @@ try
     MapFilterCatalogTests.Run(root, Check);
     LocalMarkerProfileTests.Run(root, Check);
     LocalAccountCatalogTests.Run(root, Check);
+    LegacyRecoveryTests.Run(root, Check);
     KuroSyncTests.Run(root, Check);
     RoutePlanningTests.Run(Check);
     GamepadInputTests.Run(root, Check);

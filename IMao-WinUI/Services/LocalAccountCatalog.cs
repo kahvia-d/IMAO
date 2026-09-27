@@ -203,6 +203,31 @@ public sealed class LocalAccountCatalog
         return true;
     }
 
+    /// <summary>
+    /// Adds a record book for a progress document that is already on disk, without selecting it.
+    /// The list is seeded from the progress directory exactly once, when <c>accounts.json</c> does
+    /// not exist yet, so a document that appears afterwards — copied in, restored from
+    /// <c>deleted\</c>, or written by a version that ran before the list existed — stays invisible
+    /// in the interface even though the file is perfectly readable. 旧版本地数据修复 adopts those.
+    /// Unlike <see cref="TrySetActive"/> this never moves the map to the new record book.
+    /// </summary>
+    public bool TryAdopt(string id, string name, out LocalAccount? adopted, out string error)
+    {
+        adopted = null;
+        error = "";
+        if (!persistable) { error = ReadWarning; return false; }
+        if (!IsValidId(id)) { error = "记录本 id 不合法。"; return false; }
+        if (accounts.Any(account => account.Id == id)) { error = $"记录本 {id} 已经在列表里。"; return false; }
+        if (accounts.Count >= MaximumAccounts) { error = $"最多只能有 {MaximumAccounts} 个记录本。"; return false; }
+        // An id that names its own account keeps that binding, exactly as seeding would have set it.
+        string binding = SeedBinding(id);
+        if (binding.Length > 0 && accounts.Any(account => account.KuroAccountId == binding)) binding = "";
+        adopted = new LocalAccount(id, IsValidName(name) ? name.Trim() : SeedName(id), binding, DateTimeOffset.UtcNow, null);
+        accounts.Add(adopted);
+        Save();
+        return true;
+    }
+
     public bool TryCreate(string name, string kuroAccountId, out LocalAccount? created, out string error)
     {
         created = null;

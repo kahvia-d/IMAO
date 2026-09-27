@@ -34,6 +34,18 @@
   <Expander Header="鼠标与取消操作" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12">
    <TextBlock Text="Shift＋左键拖拽：临时矩形框选，可从标记上开始。&#x0a;Esc：先取消未完成选区，没有选区时返回移动地图。&#x0a;滚轮：交给游戏缩放地图。失焦或地图变换会取消未提交选区，已选目标保留。" Style="{StaticResource IMaoBodyTextStyle}" />
   </StackPanel></Expander>
+  <Expander Header="旧版本地数据修复" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12">
+   <TextBlock Text="如果你在很早的版本里标记过很多点位，升级后地图上却看不到，问题多半在这里：那些数据写在「还没有记录本这个概念」的旧位置上，新版本不会主动去找它。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="什么算旧数据&#x0a;· 旧版单文件 SavedPoints\account_1.json：本工具还没有记录本、也没有库街区同步时，所有已完成点位都写在程序目录下的这一个文件里。只有当它就放在当前程序目录、而且「默认」记录本还没有进度文件时，程序才会自动读它——换过安装目录就永远读不到。&#x0a;· 没有登记进记录本的进度文档：记录本列表只在第一次运行时从 SavedPoints\profiles 播种一次，之后放进去的进度文件（拷贝进来的、从 deleted 恢复的）在界面上看不见。&#x0a;· 被「删除」移走的记录本：删除只是把进度和路线移进 SavedPoints\deleted\&lt;时间&gt;-&lt;id&gt;\，不会真的抹掉。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="恢复不会修改或删除任何原始文件：旧版单文件被复制进一本新记录本；没登记的进度文档直接登记在它原来的位置；deleted 里的副本复制回来。恢复出来的记录本不会自动绑定库街区账号——这些点位属于哪个账号由你决定，猜错会把点位写到别人的账号上。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+   <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+    <Button x:Name="LegacyScanButton" Content="扫描旧数据" Click="LegacyScan_Click" />
+    <Button x:Name="LegacyRecoverButton" Content="数据恢复" Click="LegacyRecover_Click" IsEnabled="False" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+   </controls:WrapPanel>
+   <TextBlock x:Name="LegacyScanSummary" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+   <StackPanel x:Name="LegacyScanList" Spacing="6" />
+   <InfoBar x:Name="LegacyMessage" IsOpen="False" IsClosable="True" />
+  </StackPanel></Expander>
   <Border Style="{StaticResource IMaoCardStyle}"><StackPanel Spacing="12">
    <TextBlock Text="关于 IMao" Style="{StaticResource IMaoSectionTitleStyle}" /><TextBlock x:Name="VersionLabel" Style="{StaticResource IMaoSecondaryTextStyle}" />
    <TextBlock Text="鸣潮地图探索辅助工具。地图、路线和完成进度在清晰的操作下协作，最终行动由你决定。" Style="{StaticResource IMaoBodyTextStyle}" />

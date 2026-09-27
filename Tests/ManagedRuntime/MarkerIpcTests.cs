@@ -169,6 +169,41 @@ internal static class MarkerIpcTests
                     "a fresh local-only client restores the previously selected historical profile and its durable progress");
                 await reopened.ShutdownAsync();
             }
+
+            // A document written by 旧版本地数据修复 has to be one the store accepts — and specifically
+            // one it accepts while it is being CONSTRUCTED, because that path loads "local" before the
+            // host can answer anything, and a document it refuses takes the whole host down
+            // (Docs/KuroSyncCredentialNaming_20260927.md §3.1). So the recovered document is written as
+            // "local" into application data that holds nothing else, and a host is started on it.
+            string recoveryData = Path.Combine(directory, "recovery-app-data");
+            string recoveryPoints = Path.Combine(recoveryData, "IMao-WinUI", "SavedPoints");
+            Directory.CreateDirectory(Path.Combine(recoveryPoints, "profiles"));
+            List<LegacyPointRecovery.LegacyPoint> recovered =
+            [
+                new(8, FirstPoint, "World", "sx_qq", true),
+                new(903, SecondPoint, "Avinoleum", "jx", true)
+            ];
+            File.WriteAllBytes(Path.Combine(recoveryPoints, "profiles", "local.json"),
+                LegacyPointRecovery.BuildDocument("local", recovered));
+            Environment.SetEnvironmentVariable("LOCALAPPDATA", recoveryData);
+            await using (var recoveredHost = NewCore())
+            {
+                await recoveredHost.EnsureStartedAsync();
+                check(recoveredHost.IsConnected,
+                    "a host starts on a recovered document instead of refusing the profile it names");
+                var recoveredSnapshot = await Call(recoveredHost, "markerGetSnapshot", new { profileId = "local" });
+                check(recoveredSnapshot.GetProperty("total").GetInt32() == 2 &&
+                    Point(recoveredSnapshot, FirstPoint).GetProperty("completed").GetBoolean() &&
+                    Point(recoveredSnapshot, SecondPoint).GetProperty("stateId").GetInt32() == 903,
+                    "recovered points read back completed, identified by stateId:pointId and grouped by their own scene");
+                var recoveredOutbox = await Call(recoveredHost, "markerGetOutbox", new { profileId = "local" });
+                check(recoveredOutbox.GetProperty("total").GetInt32() == 2 &&
+                    recoveredOutbox.GetProperty("operations").EnumerateArray().All(operation =>
+                        Text(operation, "nameId").Length > 0 && Text(operation, "pointId").Length > 0),
+                    "every recovered point is queued for upload carrying the identity the write endpoint needs");
+                await recoveredHost.ShutdownAsync();
+            }
+            Environment.SetEnvironmentVariable("LOCALAPPDATA", appData);
         }
         finally { Environment.SetEnvironmentVariable("LOCALAPPDATA", previousAppData); }
 
