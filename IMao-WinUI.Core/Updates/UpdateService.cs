@@ -146,7 +146,7 @@ public sealed class UpdateService : IDisposable
             if (response.Content.Headers.ContentLength is long size && size != target.Size) throw new InvalidDataException("程序包下载大小与签名清单不符。");
             await using var input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
             await CopyVerifiedAsync(input, output, target.Size, target.Sha256,
-                n => progress?.Report(new UpdateProgress("从 GitHub 下载 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size)), token).ConfigureAwait(false);
+                n => progress?.Report(new UpdateProgress("从 GitHub 下载 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size, target.Source)), token).ConfigureAwait(false);
         }, progress, ct, mirrorSource).ConfigureAwait(false);
         // What the transport actually was, rather than what it was asked to be. Two things are counted, because
         // either one alone lies: how many files the mirror handed over, and how many archives still had to come
@@ -162,6 +162,13 @@ public sealed class UpdateService : IDisposable
         };
         LastProgramMirrorRefusal = mirrorSource?.LastRefusal ?? "";
     }
+
+    /// <summary>
+    /// Which transport this installation would try first for a program package, for the progress display. It is
+    /// not a promise: the mirror stays a candidate until it answers, and the label after a preparation is always
+    /// taken from what actually happened rather than from this.
+    /// </summary>
+    public string PreferredProgramSource => string.IsNullOrWhiteSpace(_cdkProvider?.Invoke()) ? "GitHub 分片" : "Mirror酱";
 
     /// <summary>
     /// Which transport the last successful program preparation actually used, for the interface to show.

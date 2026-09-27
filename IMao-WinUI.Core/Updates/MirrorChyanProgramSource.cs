@@ -71,13 +71,19 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
             // The archive's own length is not signed, so the ceiling that means anything is the tree it
             // could possibly produce: a zip cannot be meaningfully larger than what is inside it.
             var ceiling = package.Files.Sum(f => f.Size) + 16L * 1024 * 1024;
-            _progress?.Report(new UpdateProgress("从 Mirror酱下载新版程序", 0, 0));
+            // The advertised size is not signed either, so it is only ever used to draw a bar: the ceiling above
+            // and the per-file records are what decide safety.
+            var advertised = _package.Size is long size and > 0 ? size : 0;
+            _progress?.Report(new UpdateProgress(DownloadStage, 0, advertised, SourceName));
             Directory.CreateDirectory(_scratchDirectory);
             using (var response = await _fetch(uri, ct).ConfigureAwait(false))
             {
+                // The body is streamed rather than buffered, so its length is known from the headers before the
+                // first byte lands - which is what turns this stage from "downloading" into "37 of 86 MB".
+                var total = response.Content.Headers.ContentLength is long length and > 0 ? length : advertised;
                 await using var input = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
                 await using var output = new FileStream(archive, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.Asynchronous);
-                await CopyAsync(input, output, ceiling, ct).ConfigureAwait(false);
+                await CopyAsync(input, output, ceiling, total, ct).ConfigureAwait(false);
             }
             using var zip = ZipFile.OpenRead(archive);
             var entries = ProgramPackageValidation.ReadArchiveEntries(zip, expected, ProgramPackageValidation.ArchiveScope.Partial);
@@ -98,8 +104,9 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
             // have touched. The fallback writes into the same directory with CreateNew, which a leftover file
             // would break.
             candidates.AddRange(provided.Select(f => f.Path));
-            _progress?.Report(new UpdateProgress("校验 Mirror酱提供的文件", 0, 0));
+            _progress?.Report(new UpdateProgress("校验 Mirror酱提供的文件", 0, provided.Count, SourceName));
             await ProgramPackageValidation.ExtractEntriesAsync(app, provided, entries, ct).ConfigureAwait(false);
+            _progress?.Report(new UpdateProgress("校验 Mirror酱提供的文件", provided.Count, provided.Count, SourceName));
             foreach (var path in candidates) supplied.Add(path);
             SuppliedCount = supplied.Count;
             return supplied;
@@ -121,7 +128,16 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
     /// </summary>
     private static readonly TimeSpan StallTimeout = TimeSpan.FromSeconds(45);
 
-    private static async Task CopyAsync(Stream input, Stream output, long ceiling, CancellationToken ct)
+    /// <summary>What the progress display attributes everything this source does to.</summary>
+    private const string SourceName = "Mirror酱";
+
+    /// <summary>
+    /// Says which kind of package is moving: the difference is the normal case, and a whole archive only arrives
+    /// while MirrorChyan is still assembling an incremental one for this version pair.
+    /// </summary>
+    private string DownloadStage => _package.IsWholePackage ? "从 Mirror酱下载完整程序包" : "从 Mirror酱下载增量包";
+
+    private async Task CopyAsync(Stream input, Stream output, long ceiling, long total, CancellationToken ct)
     {
         var buffer = new byte[131072];
         long copied = 0;
@@ -133,6 +149,9 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
             copied = checked(copied + count);
             if (copied > ceiling) throw new InvalidDataException("Mirror酱 的包超过了它可能的大小上限。");
             await output.WriteAsync(buffer.AsMemory(0, count), ct).ConfigureAwait(false);
+            // Reported per read, exactly like the signed transport: the page throttles what it repaints, and a
+            // stage that reports nothing is a stage the player cannot tell apart from a hang.
+            _progress?.Report(new UpdateProgress(DownloadStage, copied, total, SourceName));
         }
         if (copied == 0) throw new InvalidDataException("Mirror酱 返回了空包。");
     }

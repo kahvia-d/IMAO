@@ -110,9 +110,17 @@ public sealed partial class SettingsPage : Page
             RollbackProgramButton.IsEnabled = !updates.Busy;
             CancelUpdateButton.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
             ResourceUpdateProgress.Visibility = updates.Busy ? Visibility.Visible : Visibility.Collapsed;
+            ResourceUpdateProgress.IsIndeterminate = updates.ProgressIndeterminate;
             ResourceUpdateProgress.Value = updates.ProgressPercent;
-            ResourceUpdateProgressText.Text = updates.ProgressText;
-            ResourceUpdateProgressText.Visibility = string.IsNullOrEmpty(updates.ProgressText) ? Visibility.Collapsed : Visibility.Visible;
+            // "下载来源" and "正在进行" are written here rather than in the view model so both cards that draw a
+            // bar keep the same wording, and the source row collapses entirely when the operation has no
+            // transport to name (installing map resources, for instance).
+            var sourceLine = updates.Busy && updates.ProgressSource.Length > 0 ? "下载来源：" + updates.ProgressSource : "";
+            ResourceUpdateSource.Text = sourceLine;
+            ResourceUpdateSource.Visibility = sourceLine.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+            var stageLine = updates.ProgressText.Length > 0 ? "正在进行：" + updates.ProgressText : "";
+            ResourceUpdateProgressText.Text = stageLine;
+            ResourceUpdateProgressText.Visibility = stageLine.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
             ResourceUpdateNotes.Text = updates.Notes;
             ResourceUpdateNotes.Visibility = string.IsNullOrEmpty(updates.Notes) ? Visibility.Collapsed : Visibility.Visible;
             ResourceUpdateMessage.Severity = updates.Failed ? InfoBarSeverity.Warning : updates.HasPending ? InfoBarSeverity.Success : InfoBarSeverity.Informational;

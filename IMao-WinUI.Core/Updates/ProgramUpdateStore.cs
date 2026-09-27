@@ -123,8 +123,8 @@ public sealed class ProgramUpdateStore
             {
             var app = Path.Combine(transaction, "app");
             await AssembleAsync(package, app, transaction, reuseRoot, installed, download, progress, ct, supplier);
-            progress?.Report(new UpdateProgress("校验新版程序", 0, 0));
-            await ProgramPackageValidation.VerifyDirectoryAsync(app, catalog.App, ct);
+            // Every file in the tree is hashed here, so this stage reports its own bytes rather than a static line.
+            await ProgramPackageValidation.VerifyDirectoryAsync(app, catalog.App, ct, progress);
             progress?.Report(new UpdateProgress("检查新版程序的地图资源", 0, 0));
             await preflight(app, ct);
             await File.WriteAllBytesAsync(Path.Combine(transaction, "update.json"), envelope, ct);
@@ -216,8 +216,8 @@ public sealed class ProgramUpdateStore
         {
             var archive = Path.Combine(transaction, "program.zip");
             LastCatalogDownloadCount++;
-            await DownloadAsync(download, new ProgramDownloadTarget("program.zip", package.Url, package.Size, package.Sha256), archive, ct);
-            progress?.Report(new UpdateProgress("校验并解压新版程序", 0, 0));
+            await DownloadAsync(download, new ProgramDownloadTarget("完整程序包", package.Url, package.Size, package.Sha256, CatalogSource), archive, ct);
+            progress?.Report(new UpdateProgress("校验并解压新版程序", 0, 0, CatalogSource));
             await ProgramPackageValidation.ExtractAsync(archive, app, package, ct);
             TryDelete(archive);
             return;
@@ -229,23 +229,29 @@ public sealed class ProgramUpdateStore
         // shards: without the second rule a package covering nine files of a twenty-four-file shard saved
         // nothing, was paid for in quota, and left the shard to be downloaded in full anyway.
         var supplied = supplier is null ? null : await supplier.SupplyAsync(package, app, ct).ConfigureAwait(false);
-        progress?.Report(new UpdateProgress("检查可复用的本机文件", 0, 0));
         var known = prior?.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
         var index = 0;
         foreach (var shard in package.Shards)
         {
             index++;
             if (supplied is not null && shard.Files.All(supplied.Contains)) continue;
-            if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, supplied, ct)) continue;
+            if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, supplied, progress, ct)) continue;
             var archive = Path.Combine(transaction, "shards", shard.Id + ".zip");
             Directory.CreateDirectory(Path.GetDirectoryName(archive)!);
             LastCatalogDownloadCount++;
-            await DownloadAsync(download, new ProgramDownloadTarget(shard.Id + ".zip", shard.Url, shard.Size, shard.Sha256), archive, ct);
-            progress?.Report(new UpdateProgress($"校验并解压新版程序（{index}/{package.Shards.Count}）", 0, 0));
+            await DownloadAsync(download, new ProgramDownloadTarget($"{shard.Id} 分片 ({index}/{package.Shards.Count})",
+                shard.Url, shard.Size, shard.Sha256, CatalogSource), archive, ct);
+            progress?.Report(new UpdateProgress($"校验并解压新版程序（{index}/{package.Shards.Count}）", 0, 0, CatalogSource));
             await ProgramPackageValidation.ExtractShardAsync(archive, app, package, shard.Id, ct);
             TryDelete(archive);
         }
     }
+
+    /// <summary>What the progress display attributes an archive fetched from the addresses the catalog names to.</summary>
+    private const string CatalogSource = "GitHub 分片";
+
+    /// <summary>What the progress display attributes a file copied from this installation to.</summary>
+    private const string LocalSource = "本机已有文件";
 
     private static async Task DownloadAsync(Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download, ProgramDownloadTarget target, string path, CancellationToken ct)
     {
@@ -259,9 +265,14 @@ public sealed class ProgramUpdateStore
     /// so only the remaining files are asked for, and a shard the supplier and this machine cover between them
     /// is never fetched. Returns false - after removing whatever it already wrote - so the caller downloads
     /// that shard instead.
+    ///
+    /// The bytes are known before the first file is opened, so this stage reports real progress: with a mirror
+    /// supplying the files that changed it is now the stage that does the bulk of the work, and a static line
+    /// there is indistinguishable from a hang.
     /// </summary>
     private static async Task<bool> TryReuseShardAsync(ProgramPackage package, ProgramShard shard, string reuseRoot,
-        Dictionary<string, ResourceFile>? known, string app, IReadOnlySet<string>? supplied, CancellationToken ct)
+        Dictionary<string, ResourceFile>? known, string app, IReadOnlySet<string>? supplied,
+        IProgress<UpdateProgress>? progress, CancellationToken ct)
     {
         var declared = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
         List<string> wanted = supplied is null ? shard.Files : shard.Files.Where(path => !supplied.Contains(path)).ToList();
@@ -274,16 +285,22 @@ public sealed class ProgramUpdateStore
                     was.Size != file.Size || !was.Sha256.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase)) return false;
             }
         }
-        var copied = new List<string>(wanted.Count);
+        var stage = "复用本机文件 " + shard.Id;
+        var total = wanted.Sum(path => declared[path].Size);
+        progress?.Report(new UpdateProgress(stage, 0, total, LocalSource));
+        long copied = 0;
+        var written = new List<string>(wanted.Count);
         foreach (var path in wanted)
         {
             ct.ThrowIfCancellationRequested();
             if (await TryCopyVerifiedAsync(UpdateStorage.SafeChild(reuseRoot, path), UpdateStorage.SafeChild(app, path), declared[path], ct))
             {
-                copied.Add(path);
+                written.Add(path);
+                copied += declared[path].Size;
+                progress?.Report(new UpdateProgress(stage, copied, total, LocalSource));
                 continue;
             }
-            foreach (var written in copied) TryDelete(UpdateStorage.SafeChild(app, written));
+            foreach (var done in written) TryDelete(UpdateStorage.SafeChild(app, done));
             return false;
         }
         return true;

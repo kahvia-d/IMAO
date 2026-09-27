@@ -209,7 +209,12 @@ public static class ProgramPackageValidation
         }
     }
 
-    public static async Task VerifyDirectoryAsync(string directory, ProgramRelease release, CancellationToken ct = default)
+    /// <param name="progress">
+    /// Optional. Hashing an unpacked program tree is the longest stretch of a preparation with nothing else to
+    /// report, so the caller can show it moving; reporting changes nothing about what is verified.
+    /// </param>
+    public static async Task VerifyDirectoryAsync(string directory, ProgramRelease release, CancellationToken ct = default,
+        IProgress<UpdateProgress>? progress = null)
     {
         var package = release.Package ?? throw new InvalidDataException("程序更新缺少签名包信息。");
         Validate(package);
@@ -228,7 +233,15 @@ public static class ProgramPackageValidation
             }
         }
         if (seen != paths.Count) throw new InvalidDataException("程序目录缺少文件。");
-        foreach (var file in package.Files) await UpdateStorage.VerifyFileAsync(UpdateStorage.SafeChild(directory, file.Path), file, ct);
+        var total = package.Files.Sum(f => f.Size);
+        long verified = 0;
+        progress?.Report(new UpdateProgress("校验新版程序文件", 0, total));
+        foreach (var file in package.Files)
+        {
+            await UpdateStorage.VerifyFileAsync(UpdateStorage.SafeChild(directory, file.Path), file, ct);
+            verified += file.Size;
+            progress?.Report(new UpdateProgress("校验新版程序文件", verified, total));
+        }
         var build = JsonSerializer.Deserialize<BuildInfo>(await File.ReadAllBytesAsync(Path.Combine(directory, "build-info.json"), ct), UpdateJson.Options);
         if (build is null || build.AppVersion != release.Version || build.BaselineId != package.BaselineId || build.SourceCommit != package.SourceCommit)
             throw new InvalidDataException("程序构建信息与签名清单不一致。");

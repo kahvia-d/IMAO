@@ -139,14 +139,28 @@ public sealed record ResourceSnapshot
     public List<SnapshotPackage> Packages { get; init; } = new();
 }
 
-public sealed record UpdateProgress(string Stage, long Completed, long Total);
+/// <summary>
+/// One progress report. <see cref="Stage"/> says what is happening right now and <see cref="Source"/> names the
+/// transport carrying it - "Mirror酱", "GitHub 分片" or "本机已有文件" - which is empty while that is still being
+/// decided, so the interface can show "where from" and "what now" as two lines instead of guessing.
+///
+/// <c>Total == 0</c> means this stage has no measurable unit yet. The interface renders that as a bar that is
+/// visibly working rather than one frozen at zero, which is what a mirror transfer used to look like while it
+/// moved eighty megabytes behind a 0% bar.
+/// </summary>
+public sealed record UpdateProgress(string Stage, long Completed, long Total, string Source = "");
 
 /// <summary>
 /// One program archive a client has to fetch: the whole package for a release that predates shards, or a
 /// single shard for a shard release. The store decides which ones are still needed and the caller only
 /// moves the bytes, so the download path does not have to know how a release is partitioned.
 /// </summary>
-public sealed record ProgramDownloadTarget(string Name, string Url, long Size, string Sha256);
+/// <param name="Name">
+/// Only ever shown to the player - the store decides the destination path - so it may name the step it belongs
+/// to ("ui 分片 (2/7)") rather than the bytes.
+/// </param>
+/// <param name="Source">What the progress display attributes this transfer to.</param>
+public sealed record ProgramDownloadTarget(string Name, string Url, long Size, string Sha256, string Source = "");
 
 /// <summary>
 /// Somewhere a program's files can come from other than the signed shards. The store asks a supplier to

@@ -63,7 +63,13 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         return RunAsync(async ct =>
         {
             var progress = Progress();
-            progress.Report(new UpdateProgress("正在准备更新来源", 0, 0));
+            // Two lines from the first second: which transport this is likely to be, and what is happening now.
+            // The mirror has to answer its own question before a byte can move, and that answer takes about ten
+            // seconds while MirrorChyan assembles the difference - a wait the player should be able to read
+            // instead of guessing at a bar that has not started moving yet.
+            var preferred = updater.PreferredProgramSource;
+            progress.Report(new UpdateProgress(
+                preferred == "Mirror酱" ? "正在向 Mirror酱 确认增量包（首次请求约 10 秒）" : "正在读取更新清单", 0, 0, preferred));
             // Resolve the source before downloading anything. A CDK that cannot serve this release - expired,
             // wrong, out of quota, or simply a different version - must cost the player nothing but the
             // question, and the signed shards then do the work exactly as they always have. The resolver also
@@ -81,11 +87,16 @@ public sealed class UpdateUiController : INotifyPropertyChanged
                 plan = null;
                 Message = "已取消从 Mirror酱 下载完整程序包，改用 GitHub 分片。";
             }
+            progress.Report(plan is null
+                ? new UpdateProgress(preferred == "Mirror酱" ? "Mirror酱 未能提供文件，改用 GitHub 分片" : "准备从 GitHub 分片下载", 0, 0, "GitHub 分片")
+                : new UpdateProgress(plan.IsWholePackage ? "Mirror酱 提供的是完整程序包" : "Mirror酱 已备好增量包", 0, 0,
+                    plan.IsWholePackage ? "Mirror酱（完整程序包）" : "Mirror酱（增量包）"));
             await updater.PrepareProgramAsync(programs!, progress, ct, plan);
             programState = programs!.ReadState();
             // Named from what the transport actually was, not from whether a MirrorChyan plan existed: a plan
             // whose package turned out unusable leaves the signed shards doing the work.
             var origin = updater.LastProgramSource.Length > 0 ? updater.LastProgramSource : "GitHub 分片";
+            progress.Report(new UpdateProgress("新版程序文件已全部就绪", 0, 0, origin));
             Message = $"新版程序已准备完成（来自 {origin}）。可以继续使用，或点击“退出并更新”。";
             // One line per preparation. Whether the mirror carried the update or was merely asked is the whole
             // point of having it, and a mirror that refuses is silent by design, so this is the only place the
@@ -114,6 +125,20 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     public bool HasUpdate => ResourceAvailable || AppUpdateAvailable || HasPending;
     public double ProgressPercent { get; private set; }
     public string ProgressText { get; private set; } = "";
+
+    /// <summary>
+    /// What the current operation is taking its bytes from, for the line above the progress bar: "Mirror酱（增量
+    /// 包）", "GitHub 分片", "本机已有文件". Empty while nothing is being transferred - a region install names no
+    /// transport, and neither does a check - which the page renders as no line at all rather than an empty label.
+    /// </summary>
+    public string ProgressSource { get; private set; } = "";
+
+    /// <summary>
+    /// True while the current stage has no measurable unit. The page shows that as a bar that visibly works
+    /// instead of one sitting at zero, which is what a mirror transfer used to look like while it moved eighty
+    /// megabytes behind a 0% bar.
+    /// </summary>
+    public bool ProgressIndeterminate { get; private set; }
 
     public async Task CheckAsync(bool automatic = false)
     {
@@ -340,6 +365,10 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     private IProgress<UpdateProgress> Progress() => new ThrottledProgress(progress =>
     {
         ProgressPercent = progress.Total > 0 ? Math.Clamp(100.0 * progress.Completed / progress.Total, 0, 100) : 0;
+        ProgressIndeterminate = progress.Total <= 0;
+        // A stage that names no transport keeps the one already on screen: verifying and unpacking belong to the
+        // same operation, and blanking the source line half way through would read as a change of plan.
+        if (progress.Source.Length > 0) ProgressSource = progress.Source;
         ProgressText = progress.Total > 0 ? $"{progress.Stage} · {progress.Completed / 1048576.0:F1} / {progress.Total / 1048576.0:F1} MB" : progress.Stage;
         Changed();
     });
@@ -347,7 +376,7 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     private async Task RunAsync(Func<CancellationToken, Task> action, bool automatic = false)
     {
         if (Busy) return;
-        Busy = true; Failed = false; ProgressPercent = 0; ProgressText = "";
+        Busy = true; Failed = false; ProgressPercent = 0; ProgressText = ""; ProgressSource = ""; ProgressIndeterminate = true;
         idle = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         operation = new CancellationTokenSource(); Changed();
         // The update itself runs on the thread pool. Its heavy stretches - unpacking a shard, hashing 1.4 GB of
