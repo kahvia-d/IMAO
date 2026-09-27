@@ -43,24 +43,29 @@ public sealed partial class UsageGuidePage : Page
     /// <summary>The scan result, with the checkbox that decides whether that row is recovered.</summary>
     private readonly List<(CheckBox Box, LegacyPointSource Source)> legacyRows = [];
 
-    private IReadOnlyList<string> KnownLedgerIds() =>
-        coreHost.LedgerCatalog?.Accounts.Select(account => account.Id).ToArray() ?? [];
+    private IReadOnlyList<LocalAccount> KnownLedgers() => coreHost.LedgerCatalog?.Accounts ?? [];
 
-    private void LegacyScan_Click(object sender, RoutedEventArgs e) => ShowLegacyScan(Recovery.Scan(KnownLedgerIds()));
+    private void LegacyScan_Click(object sender, RoutedEventArgs e) => ShowLegacyScan(Recovery.Scan(KnownLedgers()));
 
     private void ShowLegacyScan(IReadOnlyList<LegacyPointSource> sources)
     {
         LegacyScanList.Children.Clear();
         legacyRows.Clear();
         int usable = sources.Count(source => source.Recoverable && !source.AlreadyRecovered);
+        int already = sources.Count(source => source.AlreadyRecovered);
+        int unusable = sources.Count - usable - already;
         LegacyRecoverButton.IsEnabled = usable > 0;
         if (sources.Count == 0)
         {
             LegacyScanSummary.Text = "没有找到旧版本地数据，当前记录本不需要修复。";
             return;
         }
-        LegacyScanSummary.Text = $"找到 {sources.Count} 处，其中 {usable} 处可以恢复。" +
-            "勾选要恢复的条目，再点「数据恢复」。恢复只会新增记录本，不会改动这些文件。";
+        string states = $"{usable} 处可以恢复";
+        if (already > 0) states += $"，{already} 处的数据已经在你的记录本里";
+        if (unusable > 0) states += $"，{unusable} 处无法识别";
+        LegacyScanSummary.Text = usable == 0
+            ? $"找到 {sources.Count} 处旧数据：{states}，没有需要恢复的内容。"
+            : $"找到 {sources.Count} 处旧数据：{states}。勾选要恢复的条目，再点「数据恢复」；恢复只会新增记录本，不会改动这些文件。";
         foreach (var source in sources) LegacyScanList.Children.Add(LegacyRow(source));
     }
 
@@ -94,8 +99,16 @@ public sealed partial class UsageGuidePage : Page
         _ => "被「删除」移走的记录本"
     };
 
-    private static string LegacyState(LegacyPointSource source) =>
-        !source.Recoverable ? "无法识别" : source.AlreadyRecovered ? "已经恢复过" : "可以恢复";
+    private static string LegacyState(LegacyPointSource source)
+    {
+        if (!source.Recoverable) return "无法识别";
+        if (!source.AlreadyRecovered) return "可以恢复";
+        // Point at the record book, not at "a recovery happened once": the journal remembers a
+        // recovery even after the player deleted what it produced, and that is a different state.
+        return source.RecoveredInto.Length > 0
+            ? $"数据已经在记录本「{source.RecoveredInto}」里，不必再恢复"
+            : "数据已经在你的记录本里，不必再恢复";
+    }
 
     private static string LegacyRegions(LegacyPointSource source) => source.Regions.Count == 0 ? "" :
         "（" + string.Join(" · ", source.Regions.Select(region => $"{region.SceneName} {region.Count}")) + "）";
@@ -120,7 +133,7 @@ public sealed partial class UsageGuidePage : Page
         try
         {
             var report = Recovery.Recover(catalog, chosen);
-            ShowLegacyScan(Recovery.Scan(KnownLedgerIds()));
+            ShowLegacyScan(Recovery.Scan(KnownLedgers()));
             string created = report.Recovered.Count == 0
                 ? "没有可恢复的数据。"
                 : "已恢复：" + string.Join("；", report.Recovered.Select(entry =>

@@ -55,7 +55,7 @@ internal static class LegacyRecoveryTests
         byte[] deletedBytes = File.ReadAllBytes(Path.Combine(deletedFolder, "local.json"));
 
         var recovery = new LegacyPointRecovery(savedPoints, program);
-        var scan = recovery.Scan(catalog.Accounts.Select(account => account.Id).ToArray());
+        var scan = recovery.Scan(catalog.Accounts);
         var singles = scan.Where(source => source.Kind == "pre-rewrite-record").ToList();
         check(singles.Count == 2, "both the program's own and a neighbouring installation's pre-rewrite file are found");
         var oldSource = singles.Single(source => source.Path == legacyPath);
@@ -141,7 +141,7 @@ internal static class LegacyRecoveryTests
         var second = recovery.Recover(catalog);
         check(catalog.Accounts.Count == before && second.Recovered.Count == 0,
             "a second recovery creates no second record book for the same source");
-        check(recovery.Scan(catalog.Accounts.Select(account => account.Id).ToArray())
+        check(recovery.Scan(catalog.Accounts)
                 .All(source => source.AlreadyRecovered || !source.Recoverable),
             "after recovering, every remaining source is reported as already recovered or unusable");
 
@@ -162,7 +162,7 @@ internal static class LegacyRecoveryTests
         var emptyRecovery = new LegacyPointRecovery(Path.Combine(emptyRoot, "SavedPoints"), emptyProgram);
         var emptyReport = emptyRecovery.Recover(emptyCatalog);
         check(emptyReport.Recovered.Count == 0 && emptyCatalog.Accounts.Count == 1 &&
-            emptyRecovery.Scan(emptyCatalog.Accounts.Select(account => account.Id).ToArray())
+            emptyRecovery.Scan(emptyCatalog.Accounts)
                 .Count(source => !source.Recoverable && source.Problem.Length > 0) == 1,
             "a file whose scenes are all unknown is reported with a reason instead of becoming an empty record book");
 
@@ -181,14 +181,14 @@ internal static class LegacyRecoveryTests
                 "\"remoteCompleted\":null,\"pending\":false}}}");
         var choiceRecovery = new LegacyPointRecovery(choicePoints, choiceProgram);
         byte[] untickedBytes = File.ReadAllBytes(Path.Combine(choicePoints, "profiles", "kuro_666.json"));
-        var choiceScan = choiceRecovery.Scan(choiceCatalog.Accounts.Select(account => account.Id).ToArray());
+        var choiceScan = choiceRecovery.Scan(choiceCatalog.Accounts);
         check(choiceScan.Count == 2, "the scan offers both unlisted documents as separate rows");
         var chosen = choiceRecovery.Recover(choiceCatalog, [choiceScan.Single(source => source.LedgerId == "kuro_555")]);
         check(chosen.Recovered.Count == 1 && choiceCatalog.Accounts.Any(account => account.Id == "kuro_555") &&
             !choiceCatalog.Accounts.Any(account => account.Id == "kuro_666") &&
             File.ReadAllBytes(Path.Combine(choicePoints, "profiles", "kuro_666.json")).SequenceEqual(untickedBytes),
             "only the ticked finding is recovered; the one left unticked is neither listed nor altered");
-        var remaining = choiceRecovery.Scan(choiceCatalog.Accounts.Select(account => account.Id).ToArray());
+        var remaining = choiceRecovery.Scan(choiceCatalog.Accounts);
         check(remaining.Count == 1 && remaining[0].LedgerId == "kuro_666" && remaining[0].Recoverable,
             "a finding the player left unticked is offered again next time");
         check(choiceRecovery.Recover(choiceCatalog, remaining).Recovered.Count == 1 &&
@@ -207,7 +207,7 @@ internal static class LegacyRecoveryTests
             "{\"schemaVersion\":2,\"profileId\":\"acc_abc12345\",\"revision\":4,\"syncStates\":[],\"points\":{" +
             "\"8:r\":{\"sceneName\":\"World\",\"nameId\":\"cx_01\",\"stateId\":8,\"pointId\":\"r\",\"completed\":true," +
             "\"remoteCompleted\":null,\"pending\":false}}}");
-        var parkedScan = choiceRecovery.Scan(choiceCatalog.Accounts.Select(account => account.Id).ToArray());
+        var parkedScan = choiceRecovery.Scan(choiceCatalog.Accounts);
         var parkedRow = parkedScan.Single(source => source.Kind == "deleted-document");
         check(parkedScan.Count(source => source.Kind == "deleted-document") == 1 && parkedRow.Points == 1 &&
             parkedRow.LedgerName == "我的小号" && parkedRow.LedgerBinding == "10383865",
@@ -216,5 +216,46 @@ internal static class LegacyRecoveryTests
             choiceCatalog.Accounts.Any(account => account.Id == "acc_abc12345" &&
                 account.Name == "我的小号" && account.KuroAccountId == "10383865"),
             "restoring a parked record book brings back the name and the account it was bound to");
+
+        // The row a player actually saw: a pre-rewrite file, already brought in, unselectable. It has
+        // to say WHICH record book holds the points — and it must become selectable again once that
+        // record book is gone, because then the data really is stranded again. A journal entry alone
+        // is not "already recovered"; the record book still being there is.
+        string replayPoints = Path.Combine(directory, "replay", "SavedPoints");
+        string replayProgram = Path.Combine(directory, "replay", "prog", "IMao");
+        Directory.CreateDirectory(replayPoints);
+        Directory.CreateDirectory(replayProgram);
+        File.WriteAllText(Path.Combine(replayPoints, "account_1.json"), "{\"World\":{\"cx_01\":[{\"id\":\"777777\"}]}}");
+        var replayCatalog = new LocalAccountCatalog(Path.Combine(replayPoints, "accounts.json"), Path.Combine(replayPoints, "profiles"));
+        var replay = new LegacyPointRecovery(replayPoints, replayProgram);
+        var firstReplayScan = replay.Scan(replayCatalog.Accounts);
+        check(firstReplayScan.Count == 1 && !firstReplayScan[0].AlreadyRecovered && firstReplayScan[0].Recoverable,
+            "a pre-rewrite file that has never been brought in is offered for recovery");
+        var replayReport = replay.Recover(replayCatalog, firstReplayScan);
+        var secondReplayScan = replay.Scan(replayCatalog.Accounts);
+        check(replayReport.Recovered.Count == 1 && secondReplayScan.Count == 1 &&
+            secondReplayScan[0].AlreadyRecovered && secondReplayScan[0].RecoveredInto == replayReport.Recovered[0].LedgerName,
+            "once its points are in a record book, the same file says which record book holds them");
+        check(replayCatalog.TryDelete(replayReport.Recovered[0].LedgerId, out _), "the record book that holds them can be deleted");
+        // Deleting the record book parks its document, so the data is now reachable two ways: from the
+        // pre-rewrite file it came from, and from the copy under deleted/. Both must be offered.
+        var thirdReplayScan = replay.Scan(replayCatalog.Accounts);
+        check(thirdReplayScan.Count(source => source.Kind == "pre-rewrite-record") == 1 &&
+            thirdReplayScan.Single(source => source.Kind == "pre-rewrite-record") is { AlreadyRecovered: false, Recoverable: true } &&
+            thirdReplayScan.Count(source => source.Kind == "deleted-document") == 1,
+            "after that record book is deleted the same file is offered again, and so is the copy 删除 parked");
+
+        // A recovery that cannot write its document must leave no half-done record book behind: the
+        // record book it had already added to the list is taken back out.
+        string stuckPoints = Path.Combine(directory, "stuck", "SavedPoints");
+        Directory.CreateDirectory(stuckPoints);
+        File.WriteAllText(Path.Combine(stuckPoints, "account_1.json"), "{\"World\":{\"cx_01\":[{\"id\":\"888888\"}]}}");
+        File.WriteAllText(Path.Combine(stuckPoints, "profiles"), "not a directory");
+        var stuckCatalog = new LocalAccountCatalog(Path.Combine(stuckPoints, "accounts.json"), Path.Combine(stuckPoints, "profiles"));
+        var stuck = new LegacyPointRecovery(stuckPoints, Path.Combine(directory, "stuck", "prog", "IMao"));
+        var stuckReport = stuck.Recover(stuckCatalog);
+        check(stuckReport.Recovered.Count == 0 && stuckCatalog.Accounts.Count == 1 && stuckReport.Notes.Count > 0 &&
+            stuck.Scan(stuckCatalog.Accounts).Single().Recoverable,
+            "a recovery that cannot write its document takes the new record book back out and says why");
     }
 }
