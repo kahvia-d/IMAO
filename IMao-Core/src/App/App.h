@@ -379,6 +379,10 @@ private:
 
 	std::mutex mapViewportMutex;
 	MapViewportPredictor mapViewportPredictor;
+	// When the last independently confirmed absolute map fix was accepted, as steady-clock
+	// milliseconds. The state probes read a widget and can go blind for seconds while the map canvas
+	// keeps matching; the canvas match itself cannot, so it sustains the map state in that window.
+	std::atomic<std::int64_t> lastMapViewportFixMilliseconds{ 0 };
 	Coordinate gameMapCenterCoordinateByMouseMonitoring;
 	std::atomic<float> inertiaStep = 1;
 	std::atomic<float> scaleFactor = 1;
@@ -395,6 +399,9 @@ private:
         const RECT* captureRect = nullptr, std::chrono::steady_clock::time_point* capturedAt = nullptr);
     void Thread_Capture();
     void PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPrediction& viewport);
+	// True while the big map has a recently confirmed absolute fix behind it. See
+	// MapFrameEvidence::anchorFresh for why this outranks the HUD probes.
+	bool MapViewportAnchorFresh() const;
 	winrt::IAsyncAction Start();
 	void Thread_DetectGameState();
 	bool Init();

@@ -33,13 +33,23 @@ struct MapFrameEvidence {
     bool structureRequiresControls = false;   // that verification happened with the zoom controls up
     bool minimapAbsentLongEnough = false;
     bool minimapVisible = false;
+    // An independently confirmed big-map viewport fix arrived seconds ago. Matching the central canvas
+    // against the map's own features is the strongest evidence that the surface in front of the player
+    // *is* the map, and unlike the HUD probes it does not blink: the probes read a widget, so a hidden
+    // zoom strip, a covered compass or a hue that drifts with the terrain behind a translucent ring all
+    // look like "no map". The 2026-09-28 player log is that failure mode at full strength - the probes
+    // went blind for one to two seconds at a time while the canvas kept matching at 74-100 inliers and
+    // the player never left the map.
+    bool anchorFresh = false;
 
     // A template-verified compass is the widget, and the widget only exists on the full-screen map, so
     // it authorises on its own - that is what keeps the map alive while the zoom strip is hidden and the
     // canvas verification cannot run.  The colour-only probe still needs the structural confirmation,
-    // and loses its vote once the map was confirmed with the zoom controls visible.
+    // and loses its vote once the map was confirmed with the zoom controls visible.  A live viewport
+    // anchor stands with the verified compass: the entry probes say the map was opened, the anchor says
+    // it is still there.
     bool Probed() const {
-        return controlsVisible || compassVerified ||
+        return controlsVisible || compassVerified || anchorFresh ||
             (compassVisible && structureConfirmed && !structureRequiresControls);
     }
 };
@@ -56,8 +66,9 @@ inline bool BigMapMarkersVisible(const MapFrameEvidence& evidence) {
 // Keeps UI transitions separate from raw per-frame feature checks. A stable
 // state requires two confirmed observations. Missing HUD evidence keeps the
 // localization session for ten observations, so an animation does not destroy
-// useful position hints. OverlayVisibilityPolicy independently hides markers
-// on the first missing observation instead of waiting for this debounce.
+// useful position hints. OverlayVisibilityPolicy answers the frame in front of
+// it - it holds a published surface only for the short evidence grace below and
+// revokes it as soon as the capture carries evidence for the other surface.
 class MapUiStateController {
 public:
     MapUiStateUpdate Update(const MapUiEvidence& evidence);

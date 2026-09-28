@@ -287,5 +287,26 @@ inline void TestControllerMapUi(void (*check)(bool, const std::string&)) {
         MapFrameEvidence occluded;
         occluded.minimapAbsentLongEnough = true;
         check(!BigMapEvidence(occluded), "no probe and no confirmation is not a map");
+
+        // The canvas itself is the other way to know: while the map is open its features keep matching,
+        // and the HUD probes are free to blink without taking the map state - and with it the markers,
+        // the viewport session and the full-client overlay window - down with them. This is the
+        // 2026-09-28 player log, where the probes went blind for one to two seconds at a time.
+        MapFrameEvidence anchored;
+        anchored.anchorFresh = true;
+        anchored.minimapAbsentLongEnough = true;
+        check(BigMapEvidence(anchored) && BigMapMarkersVisible(anchored),
+            "a live viewport anchor is big-map evidence on its own");
+        check(BigMapEvidence(anchored) && !anchored.controlsVisible && !anchored.compassVisible &&
+            !anchored.structureConfirmed && !anchored.compassVerified,
+            "the live viewport anchor needs none of the HUD probes");
+        MapFrameEvidence anchoredWithMinimap = anchored;
+        anchoredWithMinimap.minimapVisible = true;
+        check(BigMapEvidence(anchoredWithMinimap) && !BigMapMarkersVisible(anchoredWithMinimap),
+            "a visible minimap HUD still stops the map markers from being drawn");
+        MapFrameEvidence staleAnchor = anchored;
+        staleAnchor.anchorFresh = false;
+        check(!BigMapEvidence(staleAnchor),
+            "the anchor only counts while the fix behind it is still fresh");
     }
 }

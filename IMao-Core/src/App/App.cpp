@@ -43,6 +43,11 @@ std::atomic_bool App::enabledMinMapShowItem = false;
 namespace {
 constexpr double kViewportPredictionCenterTolerance = 36.0;
 constexpr double kViewportPredictionScaleRatioTolerance = 0.15;
+// How long an accepted absolute map fix keeps counting as evidence that the big map is still on
+// screen. While the map is open the localizer is re-submitted about every 250 ms and an accepted
+// result arrives roughly 350 ms after its request, so this tolerates two missed rounds. It also
+// bounds how long a stale fix can outlive the map the player has already closed.
+constexpr std::int64_t kMapViewportFixFreshnessMs = 1200;
 
 AutoRoute::Start PlanningStart(int sceneId, const Coordinate& mapCoordinate,
     std::chrono::steady_clock::time_point confirmed, std::uint64_t generation, bool valid) {
@@ -740,6 +745,9 @@ void App::Thread_DetectGameState() {
 			evidence.structureRequiresControls = mapStructureRequiresControls;
 			evidence.minimapAbsentLongEnough = minimapHudAbsentLongEnough;
 			evidence.minimapVisible = minimapVisible;
+			// A recently confirmed canvas match outlives the HUD probes, which read widgets and go
+			// blind the moment one is hidden, covered, or drawn a shade off the reference.
+			evidence.anchorFresh = MapViewportAnchorFresh();
 			return evidence;
 		};
 		if (Isolation::Enabled(Isolation::kGameStateDetection)) {
@@ -893,8 +901,16 @@ void App::Thread_DetectGameState() {
 				coordinateSuspendRequested = true;
 				Diagnostics::Record("map-ui-transition", "player location suspended; transition is not a teleport");
 			}
+			// A transient Unknown is not the map closing. It is the same recognition loss the state
+			// machine absorbs for ten observations, and resetting here threw away a live viewport anchor
+			// and demanded a fresh absolute fix on every one of them (2026-09-28 player log: 13:08:46,
+			// 13:08:56, 13:09:01 and 13:09:15 each reset the session while the canvas kept matching at
+			// 74-100 inliers). Only a confirmed return to gameplay retires the session, and the next
+			// BigMap entry starts a fresh one through BeginMapViewportSession - so a session that
+			// outlives a blip can never be reused at a different map position.
 			if (MapUiStateController::IsStableBigMap(update.previous) &&
-				!MapUiStateController::IsStableBigMap(update.current)) {
+				!MapUiStateController::IsStableBigMap(update.current) &&
+				MapUiStateController::IsStableGameplay(update.current)) {
 				mapViewportResetRequested = true;
 				Diagnostics::Record("map-ui-transition", "viewport markers cleared; player hint preserved");
 			}
@@ -2170,6 +2186,9 @@ void App::BeginMinimapReacquisition() {
 void App::BeginMapViewportSession() {
 	bigMapSolvePending = true;   // the player just opened the big map
 	ResetMapViewport();
+	// A new session starts with no evidence behind it: the previous session's fix must not keep a map
+	// state alive across the gap the player spent in gameplay.
+	lastMapViewportFixMilliseconds = 0;
 	++mapViewportGeneration;
 	observedMapViewportRevision = 0;
 	viewportResumeHint.reset();
@@ -2264,6 +2283,10 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
 		mapViewportPredictor.Confirm(sceneId, result.centerMapCoordinate, result.captureCorners);
 		++mapViewportAbsoluteRevision;
 	}
+	// Only an accepted absolute fix counts: the frame-to-frame predictor can coast for a moment, and
+	// this timestamp is what lets the map state outlive a HUD probe that went blind.
+	lastMapViewportFixMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now().time_since_epoch()).count();
 	observedMapViewportRevision = result.viewportRevision;
     // Extract from the exact current crop whose pose was bridged above. A
     // panned viewport centre is not a player position.
@@ -2611,13 +2634,29 @@ void App::PublishPresentedOverlay(PresentedOverlayFrame frame) {
     presentedOverlay.Publish(std::move(frame));
 }
 
+bool App::MapViewportAnchorFresh() const {
+	const auto lastFix = lastMapViewportFixMilliseconds.load();
+	if (lastFix <= 0) return false;
+	const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now().time_since_epoch()).count();
+	return now >= lastFix && now - lastFix <= kMapViewportFixFreshnessMs;
+}
+
 void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPrediction& viewport) {
     OverlayFrame frame;
     frame.frameId = captured.frameId; frame.clientRect = captured.clientRect; frame.capturedAt = captured.capturedAt;
     frame.maximumAge = std::chrono::milliseconds(std::max(500, 2 * std::max(
         updateMapDataCycleTime.load(), updateMinMapDataCycleTime.load())));
     frame.focused = isWindowFocused.load();
-    frame.mapVisible = isOpenMap.load() && enabledMapShowItem.load() && viewport.confidence >= 2 && !captured.image.empty();
+    // "The big map is up" is the debounced UI state's answer, exactly as it is for the minimap below.
+    // Whether this frame can be *placed* is a separate question, and the renderer already asks it:
+    // ImageAnchoredOverlay::Update refuses an unreliable pose. Gating this flag on the instantaneous
+    // predictor confidence as well made a momentary tracking miss publish a frame that says "no map",
+    // which both dropped the markers until the next publication and - through
+    // ImGuiOverWindows' minimapWindowRequested - collapsed the full-screen map overlay into the small
+    // minimap panel. The 2026-09-28 player log holds a 16-second window (16:51:59-16:52:15) where the
+    // state was BigMap, the probes saw the map, and no marker was drawn for any of it.
+    frame.mapVisible = isOpenMap.load() && enabledMapShowItem.load() && !captured.image.empty();
     frame.minimapVisible = isExistMinMap.load() && !isOpenMap.load() && enabledMinMapShowItem.load() && !captured.image.empty();
     frame.playerScene = playerCurrentSceneId; frame.playerCoordinate = lastPlayerImgMapCoordinate;
     frame.viewportScene = viewport.sceneId; frame.viewportCenter = viewport.centerMapCoordinate;
