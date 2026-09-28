@@ -5,6 +5,9 @@ using IMao_WinUI.Views.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
+using System.IO;
+using Windows.Storage.Streams;
 using System.Runtime.InteropServices;
 using Windows.Graphics;
 using Windows.System;
@@ -25,9 +28,24 @@ internal sealed class MapToolsWindow : Window
     private readonly WrapPanel routeButtons = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
     private readonly WrapPanel home = new() { HorizontalSpacing = 12, VerticalSpacing = 12 };
     private readonly StackPanel route = new() { Spacing = 12 };
+    private readonly StackPanel routes = new() { Spacing = 10 };
+    private readonly TextBlock routesCurrent = new() { FontSize = 18, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock routesCurrentKinds = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
+    private readonly StackPanel routesCurrentKindsIcons = new() { Orientation = Orientation.Horizontal, Spacing = 10 };
+    private readonly WrapPanel routesHeader = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
+    private readonly TextBlock routesEmpty = new() { FontSize = 15, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock routesFilter = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBox routesName = new() { PlaceholderText = "手绘路线名称", MaxWidth = 360, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly TextBlock routesHand = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
+    private readonly WrapPanel routesHandButtons = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
+    private readonly List<(Button Row, SavedAutomaticRoute Route)> savedRows = [];
+    private IReadOnlyList<Button> SavedRowButtons => savedRows.Select(entry => entry.Row).ToArray();
     private readonly ScrollViewer homeScroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     private readonly ScrollViewer routeScroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    private readonly ScrollViewer routesScroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     private readonly FilterControl filter;
+    private readonly FilterSelectionService filters;
+    private readonly CoreHostService core;
     private readonly Func<string, Task> command;
     private readonly GamepadNavigationList navigation = new();
     private readonly Button back, close;
@@ -48,8 +66,11 @@ internal sealed class MapToolsWindow : Window
     /// <summary>诊断出口：记录方向选择实际看到的几何候选（由控制器写进 gamepad 日志）。</summary>
     internal Action<string>? DirectionDiagnostic { get; set; }
 
-    public MapToolsWindow(FilterSelectionService filters, Func<string, Task> command)
+    public MapToolsWindow(FilterSelectionService filters, CoreHostService core, Func<string, Task> command,
+        string initialPage = "home")
     {
+        this.filters = filters;
+        this.core = core;
         this.command = command;
         Title = "地图工具 · IMao";
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -79,7 +100,7 @@ internal sealed class MapToolsWindow : Window
         notice.Foreground = GamepadWindowChrome.Brush("IMaoMutedBrush", 0xA4B8C8);
         filter = new FilterControl(filters) { CompactMode = true };
         route.Children.Add(summary); route.Children.Add(routeStatus); route.Children.Add(routeButtons);
-        homeScroll.Content = home; routeScroll.Content = route;
+        homeScroll.Content = home; routeScroll.Content = route; routesScroll.Content = routes;
         var routeCard = MakeButton("路径自动规划", "page:route");
         var filterCard = MakeButton("点位筛选", "page:filter");
         foreach (var card in new[] { routeCard, filterCard })
@@ -101,12 +122,12 @@ internal sealed class MapToolsWindow : Window
             if (!closed && (args.DidPositionChange || args.DidSizeChange)) GeometryChanged?.Invoke();
         };
         Closed += (_, _) => { closed = true; ++animationGeneration; chrome.Dispose(); };
-        ShowPage("home");
+        ShowPage(initialPage);
     }
 
-    private Button MakeButton(string label, string key, string? accessible = null)
+    private Button MakeButton(string label, string key, string? accessible = null, bool enabled = true)
     {
-        var button = new Button { Content = label, Tag = key, MinHeight = 40, FontSize = 18,
+        var button = new Button { Content = label, Tag = key, MinHeight = 40, FontSize = 18, IsEnabled = enabled,
             Padding = new Thickness(14, 6, 14, 6), CornerRadius = new CornerRadius(9) };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, accessible ?? label);
         button.Click += async (_, _) => { if (CanInteract || failedReturn) await command(key); };
@@ -127,15 +148,20 @@ internal sealed class MapToolsWindow : Window
 
     public void ShowPage(string page)
     {
-        Page = page is "route" or "filter" ? page : "home";
+        Page = page is "route" or "filter" or "routes" ? page : "home";
         CanvasTool = "pan"; buttonSignature = ""; navigation.Reset();
         body.Children.Clear();
-        title.Text = Page switch { "route" => "路径自动规划", "filter" => "点位筛选", _ => "地图工具" };
-        notice.Text = Page == "filter" ? "勾选后即时保存 · 左摇杆选择 · A 确认 · B 返回" :
-            "选择一个工具 · 左摇杆选择 · A 确认 · B 返回游戏";
+        title.Text = Page switch { "route" => "路径自动规划", "filter" => "点位筛选", "routes" => "路线列表", _ => "地图工具" };
+        notice.Text = Page switch
+        {
+            "filter" => "勾选后即时保存 · 左摇杆选择 · A 确认 · B 返回",
+            "routes" => "选择一条路线应用 · A 确认 · B 返回",
+            _ => "选择一个工具 · 左摇杆选择 · A 确认 · B 返回游戏"
+        };
         if (Page == "filter") body.Children.Add(filter);
-        else body.Children.Add(Page == "home" ? homeScroll : routeScroll);
+        else body.Children.Add(Page switch { "home" => homeScroll, "routes" => routesScroll, _ => routeScroll });
         RenderRoute(state);
+        if (Page == "routes") RenderRoutes(state);
         LayoutForGame();
         DispatcherQueue.TryEnqueue(FocusCurrent);
     }
@@ -173,8 +199,7 @@ internal sealed class MapToolsWindow : Window
     public void RenderRoute(RoutePlanningState next)
     {
         state = next;
-        if (Page != "route" || CanvasTool != "pan") return;
-        summary.Text = next.Enabled ? $"已选 {next.SelectedCount} 个点 · 视野外 {next.HiddenCount} 个" :
+        if (Page != "route" || CanvasTool != "pan") return;        summary.Text = next.Enabled ? $"已选 {next.SelectedCount} 个点 · 视野外 {next.HiddenCount} 个" :
             next.Active is { } active ? $"{active.Name} · {next.NavigationLabel}" : "选择点位，规划你的探索路线";
         routeStatus.Text = next.Enabled
             ? next.Start.Valid ? "起点已确认 · 可框选或套索追加点位" : "起点尚未确认，请指定起点或返回游戏定位"
@@ -209,6 +234,7 @@ internal sealed class MapToolsWindow : Window
         // control exists before starting one.
         Add("farm", next.FarmMode ? "刷怪采集：开" : "刷怪采集：关", next.Active is not null, next.FarmMode);
         Add("autoReplan", next.AutoReplanEnabled ? "实时规划：开" : "实时规划：关", true, next.AutoReplanEnabled);
+        Add("routes", "路线列表", true, false);
         string signature = string.Join('|', entries.Select(e => e.Key));
         if (signature != buttonSignature)
         {
@@ -228,8 +254,186 @@ internal sealed class MapToolsWindow : Window
         RebuildNavigation();
     }
 
-    public bool TryBackWithinControl() => Page == "filter" && filter.HandleGamepad(GamepadAction.Back);
+    /// <summary>
+    /// The route list: the current route at the top (with the actions that make sense for it) and
+    /// every saved route below, each row showing what the route is made of.
+    /// </summary>
+    public void RenderRoutes(RoutePlanningState next, bool routeFilterActive = false,
+        string filteredRouteName = "", int filteredKindCount = 0)
+    {
+        state = next;
+        if (Page != "routes" || CanvasTool != "pan") return;
+        routesHeader.Children.Clear();
+        routesCurrentKindsIcons.Children.Clear();
+        routes.Children.Clear();
+        savedRows.Clear();
 
+        var current = next.CurrentRoute;
+        routesCurrent.Text = current is { } route
+            ? $"当前路线：{(string.IsNullOrWhiteSpace(route.Name) ? route.Id : route.Name)}" +
+              (next.CurrentRouteIsPreview ? "（尚未开始的预览）" : "")
+            : "当前路线：还没有路线。可以先生成预览，或在大地图上手绘一条。";
+        if (current is not null)
+        {
+            // A route that is already saved carries type descriptors resolved by the core, so the
+            // row for the current route is the same row the list shows. A preview has never been
+            // written to disk and a drawing is not finished, so both fall back to the bare
+            // identifiers they hold.
+            var kinds = next.SavedRoutes.FirstOrDefault(saved => saved.Id == current.Id)?.Kinds ?? [];
+            routesCurrentKinds.Text = current.Stops.Length == 0 ? "" :
+                $"{current.Stops.Length} 个点 · {DescribeKinds(kinds)}";
+            foreach (var kind in kinds) AddKindBadge(routesCurrentKindsIcons, kind);
+            if (next.CurrentRouteIsPreview) routesHeader.Children.Add(MakeButton("保存这条路线", "saveCurrent"));
+            else routesHeader.Children.Add(MakeButton("删除这条路线", "deleteCurrent"));
+        }
+        routesHeader.Children.Add(MakeButton("刷新列表", "list"));
+        routesHeader.Children.Add(MakeButton("返回路线规划", "page:route"));
+
+        routes.Children.Add(routesCurrent);
+        if (routeFilterActive)
+        {
+            routesFilter.Text = $"导航中只显示“{(filteredRouteName.Length > 0 ? filteredRouteName : "这条路线")}”用到的 " +
+                $"{filteredKindCount} 种点位；退出导航后会自动恢复到你自己原来的筛选。" +
+                "自由点没有图标，会一直显示成带编号的小圈。";
+            routes.Children.Add(routesFilter);
+        }
+        if (current is not null)
+        {
+            routes.Children.Add(routesCurrentKinds);
+            routes.Children.Add(routesCurrentKindsIcons);
+            routes.Children.Add(routesHeader);
+        }
+        else routes.Children.Add(routesHeader);
+
+        var separator = new TextBlock { Text = "已保存的路线", FontSize = 16, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+        routes.Children.Add(separator);
+        if (next.SavedRoutes.Length == 0)
+        {
+            routesEmpty.Text = "还没有保存的路线。生成预览后可以「保存这条路线」，或在大地图上手绘一条。";
+            routes.Children.Add(routesEmpty);
+        }
+        foreach (var saved in next.SavedRoutes)
+        {
+            var row = BuildSavedRow(saved, current?.Id == saved.Id);
+            savedRows.Add((row, saved));
+            routes.Children.Add(row);
+        }
+
+        // Drawing by hand starts here and continues on the big map: click a spot, or press the key,
+        // to record a point.
+        routes.Children.Add(new TextBlock { Text = "手绘路线", FontSize = 16, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+        routesHand.Text = next.HandDrawnActive
+            ? $"正在手绘：已记 {next.HandDrawnCount} 个点。回到大地图后点击要标记的位置（或按一次 {HotkeyLabel}）继续加点；" +
+              "Ctrl+Z 撤销上一个点，Esc 结束手绘（已画的点会保留，可以回来保存）。"
+            : next.HandDrawnPending
+                ? $"手绘已结束，画好的 {next.HandDrawnCount} 个点还留着，尚未保存：可以「继续绘制」接着画、" +
+                  "「保存手绘路线」存下来，或者「放弃这次手绘」。"
+                : $"点「开始手绘」后回到大地图：点击要标记的位置就会加点（也可以按一次 {HotkeyLabel} 进入绘制并加点）。" +
+                  "第一个点是起点、最后一个是终点；点在点位上就连接到那个点位，点在空地上生成带编号的标记。";
+        routes.Children.Add(routesHand);
+        routes.Children.Add(routesName);
+        routesHandButtons.Children.Clear();
+        if (next.HandDrawnActive)
+        {
+            routesHandButtons.Children.Add(MakeButton("撤销上一个点", "handUndo", null, next.HandDrawnCount > 0));
+            routesHandButtons.Children.Add(MakeButton("结束手绘", "handFinish"));
+        }
+        else if (next.HandDrawnPending)
+        {
+            routesHandButtons.Children.Add(MakeButton("继续绘制", "handStart"));
+            routesHandButtons.Children.Add(MakeButton("保存手绘路线", "handCommit", null, next.HandDrawnCount >= 2));
+            routesHandButtons.Children.Add(MakeButton("放弃这次手绘", "handDiscard"));
+        }
+        else
+        {
+            routesHandButtons.Children.Add(MakeButton("开始手绘", "handStart"));
+        }
+        routes.Children.Add(routesHandButtons);
+        RebuildNavigation();
+    }
+
+    /// <summary>The key the player presses to record a point, as the settings show it.</summary>
+    private string HotkeyLabel => RuntimeConfiguration.HotkeyName(core.Configuration.ManualRouteKey);
+
+    /// <summary>The hand-drawn route's name as typed in the list page.</summary>
+    public string HandRouteName => routesName.Text ?? "";
+
+    private Button BuildSavedRow(SavedAutomaticRoute saved, bool current)
+    {
+        var stack = new StackPanel { Spacing = 4 };
+        stack.Children.Add(new TextBlock
+        {
+            Text = (current ? "● " : "") + (string.IsNullOrWhiteSpace(saved.Name) ? saved.Id : saved.Name),
+            FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap
+        });
+        stack.Children.Add(new TextBlock { Text = saved.DetailLabel, FontSize = 13, TextWrapping = TextWrapping.Wrap });
+        var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        foreach (var kind in saved.Kinds) AddKindBadge(badges, kind);
+        if (saved.Kinds.Length == 0)
+            badges.Children.Add(new TextBlock { Text = saved.HandDrawn ? "自由点（无类型）" : "无点位类型", FontSize = 13 });
+        stack.Children.Add(badges);
+        var row = new Button
+        {
+            Content = stack, Tag = "switch:" + saved.Id, HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left, MinHeight = 40, Padding = new Thickness(14, 8, 14, 8),
+            CornerRadius = new CornerRadius(9), IsEnabled = !saved.Corrupt
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(row, saved.Label + " " + saved.DetailLabel);
+        row.Click += async (_, _) => { if (CanInteract || failedReturn) await command("switch:" + saved.Id); };
+        return row;
+    }
+
+    /// <summary>
+    /// A point type as the route list shows it: the icon the map filter uses for the same
+    /// identifier, plus its display name. A type with no icon (or an identifier the catalogue does
+    /// not know) still shows its name, so a row never looks empty.
+    /// </summary>
+    private void AddKindBadge(Panel host, RouteKindSummary kind)
+    {
+        var badge = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5, VerticalAlignment = VerticalAlignment.Center };
+        if (kind.HasIcon)
+        {
+            var icon = LoadIcon(kind.IconPath!);
+            if (icon is not null) badge.Children.Add(new Image { Source = icon, Width = 22, Height = 22, Stretch = Stretch.Uniform });
+            else KindDiagnostic?.Invoke($"icon-load-failed nameId={kind.NameId} path={kind.IconPath}");
+        }
+        else if (kind.NameId.Length > 0) KindDiagnostic?.Invoke($"no-icon nameId={kind.NameId} name={kind.Name}");
+        badge.Children.Add(new TextBlock { Text = kind.Label, FontSize = 14, VerticalAlignment = VerticalAlignment.Center });
+        host.Children.Add(badge);
+    }
+
+    /// <summary>
+    /// Reads an icon file into an image. The bytes are read here rather than handing the image a
+    /// file URI: the shell runs without a package identity, where the image loader has no
+    /// filesystem access to grant, and a failed load is silent — the badge would just show text.
+    /// </summary>
+    private static BitmapImage? LoadIcon(string path)
+    {
+        if (iconCache.TryGetValue(path, out var cached)) return cached;
+        BitmapImage? image = null;
+        try
+        {
+            using var stream = File.OpenRead(path);
+            image = new BitmapImage();
+            image.SetSource(stream.AsRandomAccessStream());
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            image = null;
+        }
+        iconCache[path] = image;
+        return image;
+    }
+
+    private static readonly Dictionary<string, BitmapImage?> iconCache = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Where a badge reports why it showed text instead of an icon.</summary>
+    internal Action<string>? KindDiagnostic { get; set; }
+
+    /// <summary>Resolves point-type identifiers to the names and icons the filter uses.</summary>
+    private static string DescribeKinds(IReadOnlyList<RouteKindSummary> kinds) =>
+        kinds.Count == 0 ? "没有可筛选的点位类型" : string.Join("、", kinds.Select(kind => kind.Label));
+
+    public bool TryBackWithinControl() => Page == "filter" && filter.HandleGamepad(GamepadAction.Back);
     public async Task HandleGamepadAsync(GamepadAction action)
     {
         if (!CanInteract) return;
@@ -276,9 +480,20 @@ internal sealed class MapToolsWindow : Window
     private void RebuildNavigation()
     {
         var entries = new List<GamepadNavigationList.Entry>();
-        var children = Page == "home" ? home.Children : routeButtons.Children;
+        // The route list is vertical, so only the container's own buttons take part in the
+        // navigation ring; the rows are reached with up/down, which is what the scroll viewer
+        // already does when a row button holds focus.
+        var children = Page switch
+        {
+            "home" => home.Children,
+            "routes" => routesHeader.Children,
+            _ => routeButtons.Children
+        };
         foreach (var button in children.OfType<Button>().Where(b => b.IsEnabled && b.Visibility == Visibility.Visible))
             entries.Add(new(button, (string)button.Tag));
+        if (Page == "routes")
+            foreach (var button in SavedRowButtons.Where(b => b.IsEnabled && b.Visibility == Visibility.Visible))
+                entries.Add(new(button, (string)button.Tag));
         entries.Add(new(back, "back")); entries.Add(new(close, "close"));
         navigation.Rebuild(entries);
     }
@@ -309,7 +524,15 @@ internal sealed class MapToolsWindow : Window
         double scale = Math.Max(1, GetDpiForWindow(game) / 96.0);
         double availableWidth = Math.Max(160, rect.Right / scale - 32);
         double width = Math.Min(Page == "home" ? 600 : 1000, availableWidth);
-        double wantedHeight = CanvasTool != "pan" ? 190 : Page == "home" ? (width < 560 ? 320 : 225) : Page == "filter" ? 520 : 370;
+        double wantedHeight = CanvasTool != "pan" ? 190 : Page switch
+        {
+            "home" => width < 560 ? 320 : 225,
+            "filter" => 520,
+            // The list is the one page that is meant to be big: it holds the current route, every
+            // saved route and the controls that act on them.
+            "routes" => 640,
+            _ => 370
+        };
         double height = Math.Min(wantedHeight, Math.Max(180, rect.Bottom / scale - 96));
         int w = (int)Math.Round(width * scale), h = (int)Math.Round(height * scale);
         var next = new RectInt32(origin.X + (rect.Right - w) / 2, origin.Y + rect.Bottom - (int)Math.Round(24 * scale) - h, w, h);

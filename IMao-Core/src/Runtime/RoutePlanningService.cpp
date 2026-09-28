@@ -1,5 +1,7 @@
 #include "RoutePlanningService.h"
 #include "RoutePlanStore.h"
+#include "LegacyHandRouteImportFile.h"
+#include "HandDrawnRoute.h"
 #include "FarmMode.h"
 #ifdef IMAO_ROUTE_SERVICE_TEST
 #include "../../tests/RoutePlanningServiceTestHost.h"
@@ -14,6 +16,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -81,8 +84,14 @@ struct Runtime {
     bool hasAutoPosition=false;
     std::unordered_set<std::string> spacingKeys;
     double spacing=0;
+    // The route being drawn by hand. It lives here rather than in a class of its own so the
+    // drawing is cancelled and reported by exactly the same events as everything else.
+    AutoRoute::HandDrawnDraft handDraft;
 };
 Runtime& R(){static Runtime state;return state;}
+// The identity a drawing in progress borrows while it is still being drawn. It never reaches
+// disk: it exists so the renderer can treat the unfinished line as an ordinary preview.
+constexpr char HandDraftId[]="hand-draft";
 bool Finite(const Coordinate& p){return std::isfinite(p.x)&&std::isfinite(p.y);}
 std::string NewId(){
     std::array<unsigned char,16> bytes{};
@@ -114,6 +123,142 @@ std::optional<ItemDatas> ResolveLocked(int scene,const std::string& key){
     const auto it=sceneIt->second.find(key);return it==sceneIt->second.end()?std::optional<ItemDatas>{}:it->second;
 }
 bool CompletedNow(int scene,const ItemDatas& item){return DrawItemBase::IsPointCompleted(Scene::SceneIdToName(scene),item);}
+// A point type as the interface needs to show it: the name the game uses and the icon the map
+// draws. The icon manifest knows far more types than the filter catalogue does, so resolving both
+// here is what lets a route row show "叮咚咚 + its icon" for a type that has no filter row at all.
+Json KindJsonLocked(const std::string& nameId){
+    const auto& names=R().names;const auto found=names.find(nameId);
+    const auto name=found==names.end()||found->second.empty()?nameId:found->second;
+    const auto icon=DrawItemBase::GetExternalIconPath(nameId);
+    return {{"nameId",nameId},{"name",name},{"icon",icon}};
+}
+// The saved-route rows the list shows. Each row describes what it is made of, and the type
+// descriptors are resolved here rather than left for the interface to look up.
+Json SavedRoutesJsonLocked(){
+    const auto& r=R();Json rows=Json::array();
+    for(const auto& row:r.saved){
+        Json kinds=Json::array();
+        if(row.contains("kinds")&&row.at("kinds").is_array())
+            for(const auto& kind:row.at("kinds"))
+                kinds.push_back(KindJsonLocked(kind.value("nameId",std::string{})));
+        Json next=row;next["kinds"]=std::move(kinds);rows.push_back(std::move(next));
+    }
+    return rows;
+}
+// Drawing a route by hand, one press per point. The point is recorded from the cursor, so "did the
+// player mean an existing point or an empty spot?" is answered here, in ROC space, with a radius
+// small enough that it only catches a deliberate hit: 1 ROC unit is about 1.2 map pixels, and the
+// drawn marker radius is around 10 pixels, so this is roughly a third of the icon.
+constexpr double HandDrawSnapRoc=3.0;
+std::optional<ItemDatas> NearestCatalogPointLocked(int scene,const Coordinate& position,double tolerance){
+    const auto sceneIt=R().catalog.find(scene);
+    if(sceneIt==R().catalog.end())return {};
+    const ItemDatas* best=nullptr;double bestDistance=0;
+    for(const auto& [key,item]:sceneIt->second){
+        const double distance=std::hypot(item.itemMapROC.x-position.x,item.itemMapROC.y-position.y);
+        if(!best||distance<bestDistance){best=&item;bestDistance=distance;}
+    }
+    if(!best||bestDistance>tolerance)return {};
+    return *best;
+}
+// Drawing a route by hand, one press per point. Every action is refused with a message rather than
+// silently doing nothing, because the player is pressing a key on the game and has no other
+// feedback channel.
+void HandleHandDrawnLocked(const std::string& action,const Json& command){
+    auto& r=R();
+    if(!Scene::IsKnown(r.scene)||!r.observedScene)throw std::runtime_error("请先在游戏大地图上打开要绘制的区域");
+    const auto* scene=Scene::Find(r.scene);
+    if(!scene||scene->kuroStateId<=0)throw std::runtime_error("当前地图没有点位数据，无法手绘");
+    if(action=="handStart"){
+        // Resuming is deliberate: with a finished drawing still unsaved, starting again continues it
+        // rather than silently discarding the points the player came back for.
+        const bool resuming=r.handDraft.Pending();
+        r.handDraft.Start(r.scene,scene->kuroStateId);
+        r.message=resuming ? "已继续手绘：接着画下去，画完按 Esc 结束"
+                           : "手绘已开始：点击大地图上的位置记下一个点，按 Esc 结束手绘（已画的点会保留）";
+        StructuredLogger::Record("info","routes","hand-drawn-start",
+            "scene="+std::to_string(r.scene)+" resuming="+std::to_string(resuming?1:0)+
+            " points="+std::to_string(r.handDraft.Size()));
+        return;
+    }
+    if(action=="handFinish"){
+        // Leaving the drawing keeps it. The player cannot reach the toolbar while the drawing still
+        // owns the map, so throwing the points away here would destroy work they never got to save.
+        if(!r.handDraft.Active())throw std::runtime_error("当前没有正在绘制的手绘路线");
+        const auto kept=r.handDraft.Finish();
+        r.message=kept ? "已结束手绘，画好的 "+std::to_string(r.handDraft.Size())+" 个点已保留，可在路线列表里保存或放弃"
+                       : "已结束手绘（还没有记下任何点）";
+        StructuredLogger::Record("info","routes","hand-drawn-finished",
+            "kept="+std::to_string(kept?1:0)+" points="+std::to_string(r.handDraft.Size()));
+        return;
+    }
+    if(action=="handDiscard"){
+        if(!r.handDraft.Size())throw std::runtime_error("当前没有待保存的手绘路线");
+        r.handDraft.Cancel();r.message="已放弃本次手绘";return;
+    }
+    if(action=="handCancel"){
+        r.handDraft.Cancel();r.message="已放弃本次手绘";return;
+    }
+    if(action=="handUndo"){
+        if(!r.handDraft.Size())throw std::runtime_error("当前没有正在绘制的手绘路线");
+        if(!r.handDraft.Undo())throw std::runtime_error("已经没有可以撤销的点");
+        r.message="已撤销上一个点，还有 "+std::to_string(r.handDraft.Size())+" 个";
+        return;
+    }
+    if(action=="handPoint"){
+        if(!r.handDraft.Active())throw std::runtime_error("请先开始手绘路线");
+        const auto x=command.value("x",std::numeric_limits<double>::quiet_NaN());
+        const auto y=command.value("y",std::numeric_limits<double>::quiet_NaN());
+        if(!std::isfinite(x)||!std::isfinite(y))throw std::invalid_argument("手绘点位坐标无效");
+        ItemDatas point;
+        const auto key=command.value("key",std::string{});
+        if(!key.empty()){
+            // The click landed on a point the map already knows, so the route connects to that
+            // point instead of dropping a mark beside it.
+            const auto item=ResolveLocked(r.scene,key);
+            if(!item)throw std::invalid_argument("该点位不属于当前地图："+key);
+            point=*item;
+        }else if(const auto nearby=NearestCatalogPointLocked(r.scene,Coordinate(x,y),HandDrawSnapRoc)){
+            // The picker only reports where the cursor was, so a press that lands on an official
+            // point has to be recognised from the position — that is what makes "click a point and
+            // the route connects to it" true without a second hit-test path.
+            point=*nearby;
+        }else{
+            point.itemMapROC=Coordinate(x,y);
+            point.layer.stateId=scene->kuroStateId;
+            point.layer.stopKind=StopKind::Free;
+        }
+        const auto stored=r.handDraft.Add(point);
+        r.message=AutoRoute::IsFreeStop(stored)
+            ? "已记下第 "+std::to_string(r.handDraft.Size())+" 个点（空地标记）"
+            : "已连到点位："+stored.itemId;
+        // The one line that answers "why did my click become a mark instead of connecting to that
+        // icon?" — it carries the decision, not just the position.
+        StructuredLogger::Record("info","routes","hand-drawn-point",
+            "scene="+std::to_string(r.scene)+" x="+std::to_string(stored.itemMapROC.x)+" y="+std::to_string(stored.itemMapROC.y)+
+            " kind="+std::string(AutoRoute::IsFreeStop(stored)?"free":"catalog")+
+            " pointId="+stored.itemId+" count="+std::to_string(r.handDraft.Size()));
+        return;
+    }
+    if(action=="handCommit"){
+        if(!r.handDraft.Size())throw std::runtime_error("当前没有正在绘制的手绘路线");
+        const auto name=command.value("name",std::string{"我的路线"});
+        auto plan=r.handDraft.Commit(NewId(),name.empty()?std::string{"我的路线"}:name,r.profile);
+        r.store->Save(plan,false);
+        r.handDraft.Cancel();
+        // The drawing is saved, not started: the player asked to keep it, and quietly switching
+        // what they are following would be a different decision than the one they made.
+        r.saved=r.store->List(r.profile);
+        r.message="手绘路线已保存（"+std::to_string(plan.stops.size())+" 个点），可在路线列表里应用";
+        StructuredLogger::Record("info","routes","hand-drawn-committed",
+            "routeId="+plan.id+" scene="+std::to_string(plan.sceneId)+" stops="+std::to_string(plan.stops.size())+
+            " freeStops="+std::to_string(std::count_if(plan.stops.begin(),plan.stops.end(),
+                [](const ItemDatas& item){return AutoRoute::IsFreeStop(item);}))+
+            " kinds="+std::to_string(AutoRoute::Kinds(plan.stops).size()));
+        return;
+    }
+    throw std::invalid_argument("未知的手绘操作");
+}
 void RefreshCompletedLocked(){
     auto& r=R();r.completed.clear();
     const auto add=[&](int scene,const std::vector<ItemDatas>& items){for(const auto& item:items)if(CompletedNow(scene,item))r.completed.insert(AutoRoute::Key(item));};
@@ -124,8 +269,7 @@ int TargetIndexLocked(){
     const auto& r=R();if(!r.active)return -1;
     for(std::size_t i=0;i<r.active->stops.size();++i){const auto key=AutoRoute::Key(r.active->stops[i]);
         if(!r.completed.contains(key)&&!r.active->skipped.contains(key))return static_cast<int>(i);}
-    return -1;
-}
+    return -1;}
 std::string NavigationLocked(){
     const auto& r=R();if(!r.active)return "paused";
     if(TargetIndexLocked()<0)return "finished";
@@ -147,7 +291,42 @@ Json PlanJsonLocked(const AutoRoute::Plan& plan){
             length+=std::hypot(item.itemMapROC.x-previous.x,item.itemMapROC.y-previous.y);previous=item.itemMapROC;}}
     return {{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},{"sceneId",plan.sceneId},
         {"sceneName",Scene::SceneIdToName(plan.sceneId)},{"start",AutoRoute::StartJson(plan.start)},
-        {"stops",std::move(stops)},{"planarLength",length}};
+        {"stops",std::move(stops)},{"planarLength",length},{"handDrawn",plan.handDrawn},
+        {"filterByRoute",plan.filterByRoute}};
+}
+// The route the interface shows at the top of the list: the one being followed, or — while nothing
+// is being followed — the preview the player generated or the drawing they are making. Saving and
+// deleting act on this one object, so the "current route" has to be a single answer, not two.
+// It is emitted as the plan itself (or null) so both sides agree on the shape; whether it is a
+// preview rides in its own field of the snapshot.
+Json CurrentRouteLocked(const std::string& previewId){
+    const auto& r=R();
+    if(r.active)return PlanJsonLocked(*r.active);
+    const auto it=r.drafts.find(r.scene);
+    if(previewId.empty()||it==r.drafts.end()||!it->second.preview)return nullptr;
+    return PlanJsonLocked(*it->second.preview);
+}
+bool CurrentRouteIsPreviewLocked(){
+    const auto& r=R();
+    if(r.active)return false;
+    // A drawing that was finished but not saved is not a "preview" either: the interface labels it
+    // as an unsaved drawing and offers to save or discard it.
+    const auto it=r.drafts.find(r.scene);
+    return it!=r.drafts.end()&&it->second.preview.has_value()&&!r.handDraft.Pending();
+}
+// A drawing in progress is handed to the renderer as a plan so it is drawn by the exact same code
+// as every other route: same colour, same width, same numbered stop badges, same start marker.
+AutoRoute::Plan HandDraftPlanLocked(){
+    const auto& r=R();
+    AutoRoute::Plan plan;
+    plan.id=HandDraftId;plan.name="手绘路线";plan.profileId=r.profile;plan.sceneId=r.handDraft.SceneId();
+    plan.handDrawn=true;
+    // A finished-but-unsaved drawing is a draft too: it is still the thing being edited, drawn as the
+    // solid arrowed path rather than as a planned route waiting for confirmation.
+    plan.handDraft=true;
+    if(r.handDraft.Size())plan.start={plan.sceneId,r.handDraft.Points().front().itemMapROC,"manual",0,0,true};
+    plan.stops=r.handDraft.Points();
+    return plan;
 }
 std::size_t HiddenLocked(){
     const auto& r=R();const auto it=r.drafts.find(r.scene);if(it==r.drafts.end())return 0;
@@ -168,7 +347,11 @@ Json SnapshotLocked(){
         {"autoReplanEnabled",r.autoEnabled},{"autoReplanComputing",r.autoComputing},{"autoReplanStatus",r.autoStatus},
         {"farmMode",r.farmMode},{"farmNotice",r.farmNotice},{"farmNoticeSerial",r.farmNoticeSerial},
         {"orderRevision",r.orderRevision},{"previousTarget",r.previousTarget?StopJsonLocked(*r.previousTarget):Json(nullptr)},
-        {"savedRoutes",r.saved}};
+        {"currentRoute",CurrentRouteLocked(HandDraftId)},
+        {"currentRouteIsPreview",CurrentRouteIsPreviewLocked()},
+        {"handDrawnActive",r.handDraft.Active()},{"handDrawnPending",r.handDraft.Pending()},
+        {"handDrawnCount",r.handDraft.Size()},
+        {"savedRoutes",SavedRoutesJsonLocked()}};
 }
 void Emit(){
     auto& r=R();std::function<void(const Json&)> callback;
@@ -182,6 +365,7 @@ void SyncProfileLocked(){
     InvalidateLocked();r.profile=profile;r.enabled=false;r.pendingNew=false;r.drafts.clear();r.active.reset();r.skipHistory.clear();
     InvalidateAutoLocked(true);r.stablePlayer.Reset();r.hasAutoPosition=false;
     r.farmMode=false;r.farmConfirmation.Reset();r.farmNotice.clear();
+    r.handDraft.Cancel();
     r.runRequested=false;r.completed.clear();r.message.clear();r.tool="pan";
     try {r.saved=r.store->List(profile);r.active=r.store->LoadActive(profile,ResolveLocked);
         if(r.active){r.skipHistory=r.active->skipHistory;r.message="已恢复自动路线，点击继续导航";
@@ -379,8 +563,79 @@ void BuildCatalogLocked(){
 
 void RoutePlanningService::Initialize(){
     auto& r=R();{std::scoped_lock lock(r.mutex);if(r.ready)return;
-        r.store=std::make_unique<AutoRoute::RoutePlanStore>(StructuredLogger::ApplicationDataDirectory()/"SavedRoutes"/"Auto");
-        BuildCatalogLocked();r.stopping=false;r.ready=true;SyncProfileLocked();}
+        r.store=std::make_unique<AutoRoute::RoutePlanStore>(StructuredLogger::ApplicationDataDirectory()/"SavedRoutes");
+        BuildCatalogLocked();r.stopping=false;r.ready=true;}
+    // Routes drawn by the old hand tool are imported once, before anything reads the store. The
+    // catalogue is already built, so an endpoint that lands on a known point keeps its type.
+    {
+        const auto root=StructuredLogger::ApplicationDataDirectory()/"SavedRoutes";
+        // A portable install keeps its routes beside the program. The retired hand-drawing class
+        // used to copy them in as a side effect of preparing its storage; the copy has to survive
+        // that removal, otherwise those players' routes are never seen by the import below.
+        try{
+            std::error_code error;
+            // The program's own folder, not the process working directory: a portable install keeps
+            // its SavedRoutes next to the exe.
+            char programPath[MAX_PATH]{};
+            const auto programLength=GetModuleFileNameA(nullptr,programPath,MAX_PATH);
+            const auto portable=programLength?std::filesystem::path(std::string(programPath,programLength)).parent_path()/"SavedRoutes"
+                :std::filesystem::path{};
+            if(!portable.empty()&&std::filesystem::exists(portable,error))
+                for(const auto& entry:std::filesystem::directory_iterator(portable,error)){
+                    if(error)break;
+                    if(!entry.is_regular_file()||entry.path().extension()!=".json")continue;
+                    const auto destination=root/entry.path().filename();
+                    if(std::filesystem::exists(destination))continue;
+                    std::filesystem::create_directories(root,error);
+                    std::filesystem::copy_file(entry.path(),destination,
+                        std::filesystem::copy_options::skip_existing,error);
+                }
+        }catch(const std::exception& error){
+            StructuredLogger::Record("warn","routes","portable-route-copy-failed",error.what());
+        }
+        const auto profile=DrawItemBase::MarkerProfile();
+        const auto lookupScene=[](const std::string& name){return Scene::SceneNameToId(name.c_str());};
+        const auto lookupPoint=[](int scene,const Coordinate& position)->std::optional<ItemDatas>{
+            auto& runtime=R();const auto sceneIt=runtime.catalog.find(scene);
+            if(sceneIt==runtime.catalog.end())return {};
+            const ItemDatas* best=nullptr;double bestDistance=0;
+            for(const auto& [key,item]:sceneIt->second){
+                const double distance=std::hypot(item.itemMapROC.x-position.x,item.itemMapROC.y-position.y);
+                if(!best||distance<bestDistance){best=&item;bestDistance=distance;}
+            }
+            // The caller applies the tolerance; this only answers "which point is closest".
+            return best?*best:std::optional<ItemDatas>{};
+        };
+        // The import has to land in the profile the player will actually be using, and that is not
+        // knowable here: the marker profile at startup can differ from the one selected later, and
+        // a route saved under a profile nobody opens is a route the player has lost. So import into
+        // every profile that already has routes (those are proven-in-use), plus the one in hand and
+        // the default. The source file is archived only once all of them succeeded.
+        std::vector<std::string> profiles;
+        const auto addProfile=[&](const std::string& value){
+            if(!value.empty()&&std::find(profiles.begin(),profiles.end(),value)==profiles.end())profiles.push_back(value);};
+        try{
+            std::error_code error;
+            const auto autoRoot=root/"Auto";
+            if(std::filesystem::exists(autoRoot,error))
+                for(const auto& entry:std::filesystem::directory_iterator(autoRoot,error)){
+                    if(error)break;
+                    if(entry.is_directory())addProfile(entry.path().filename().string());
+                }
+        }catch(const std::exception& error){
+            StructuredLogger::Record("warn","routes","legacy-route-profile-scan-failed",error.what());
+        }
+        addProfile(profile);addProfile("local");
+        try{
+            for(const auto& target:profiles){
+                AutoRoute::LegacyHandRouteFiles::Import(root,target,lookupScene,lookupPoint,
+                    [&](const std::string& line){StructuredLogger::Record("info","routes",line+" profile="+target,"");});
+            }
+        }catch(const std::exception& error){
+            StructuredLogger::Record("warn","routes","legacy-route-import-failed",error.what());
+        }
+    }
+    {std::scoped_lock lock(r.mutex);SyncProfileLocked();}
     r.worker=std::thread(Worker);
     r.autoWorker=std::thread(AutoWorker);
 }
@@ -426,7 +681,11 @@ RoutePlanningView RoutePlanningService::View(){
     v.farmMode=r.farmMode;v.farmNotice=r.farmNotice;v.farmNoticeSerial=r.farmNoticeSerial;
     v.orderRevision=r.orderRevision;v.previousTarget=r.previousTarget;
     v.currentTargetIndex=TargetIndexLocked();v.navigationStatus=NavigationLocked();v.navigating=v.navigationStatus=="navigating";
-    const auto it=r.drafts.find(r.scene);if(it!=r.drafts.end()){v.selected=it->second.selected;v.start=it->second.start;v.preview=it->second.preview;}return v;
+    const auto it=r.drafts.find(r.scene);if(it!=r.drafts.end()){v.selected=it->second.selected;v.start=it->second.start;v.preview=it->second.preview;}
+    if(r.handDraft.Size()){v.handDraftPreview=HandDraftPlanLocked();v.handDraft=v.handDraftPreview;}
+    v.handDrawnActive=r.handDraft.Active();v.handDrawnPending=r.handDraft.Pending();
+    v.handDrawnCount=r.handDraft.Size();
+    return v;
 }
 AutoRoute::DrawVisibility RoutePlanningService::DrawingVisibility(){
     auto& r=R();std::scoped_lock lock(r.mutex);
@@ -437,9 +696,14 @@ AutoRoute::DrawVisibility RoutePlanningService::DrawingVisibility(){
         (r.observedScene? r.mapStart.valid&&r.active&&r.mapStart.sceneId==r.active->sceneId : r.stablePlayer.last.Fresh(Clock::now()));
     const auto draft=r.drafts.find(r.scene);
     if(r.enabled&&draft!=r.drafts.end()&&draft->second.preview)result.previewId=draft->second.preview->id;
+    // A drawing in progress is shown by the preview rules so it is drawn like every other route; it
+    // is not gated on the selection mode, because drawing by hand never enters that mode. A drawing
+    // that was finished but not yet saved stays on the map for the same reason: the player is about
+    // to decide whether to keep it, and it has to still be there while they decide.
+    if(r.handDraft.Size()>0)result.previewId=HandDraftId;
     result.navigating=NavigationLocked()=="navigating";return result;
 }
-bool RoutePlanningService::PlanningMode(){std::scoped_lock lock(R().mutex);return R().enabled;}
+bool RoutePlanningService::PlanningMode(){std::scoped_lock lock(R().mutex);return R().enabled||R().handDraft.Active();}
 void RoutePlanningService::ObserveMap(int scene,const std::vector<ItemDatas>& visible){
     auto& r=R();bool changed=false;
     {std::scoped_lock lock(r.mutex);if(!r.ready||!Scene::IsKnown(scene))return;
@@ -463,11 +727,16 @@ void RoutePlanningService::SessionStopped(){
         InvalidateAutoLocked(true);r.stablePlayer.Reset();r.hasAutoPosition=false;
         InvalidateLocked();r.playerAvailable=false;r.player={};r.mapStart={};r.observedScene=0;r.visible.clear();r.visibleKeys.clear();
         for(auto& [scene,draft]:r.drafts)if(draft.start.source!="manual"&&!draft.preview)draft.start={};
+        r.handDraft.Cancel();
         r.message="游戏定位已停止，路线保留";}Emit();
 }
 void RoutePlanningService::MapUnavailable(){
     auto& r=R();bool changed=false;{std::scoped_lock lock(r.mutex);if(r.observedScene){r.observedScene=0;r.visible.clear();r.visibleKeys.clear();
-        if(r.computing)InvalidateLocked();++r.revision;changed=true;}}if(changed)Emit();
+        if(r.computing)InvalidateLocked();
+        // Drawing needs the map it is drawn on. Keeping half a drawing alive while the player is
+        // back in the world would let the next key press land on a map that is no longer shown.
+        if(r.handDraft.Active()){r.handDraft.Cancel();r.message="已离开大地图，本次手绘已取消";}
+        ++r.revision;changed=true;}}if(changed)Emit();
 }
 void RoutePlanningService::CaptureMapStart(const AutoRoute::Start& start){
     auto& r=R();{std::scoped_lock lock(r.mutex);r.mapStart=start;r.playerAvailable=false;
@@ -589,7 +858,10 @@ Json RoutePlanningService::Command(const Json& command){
         if(command.contains("expectedSceneId")&&command.at("expectedSceneId")!=r.scene)throw std::runtime_error("选点地图已变化，本次操作未生效");
         if(command.contains("expectedGeneration")&&command.at("expectedGeneration")!=r.epoch.load())throw std::runtime_error("选点草稿已变化，本次操作未生效");
         const auto action=command.value("action","state");
-        if(command.contains("routeId")&&action!="load"&&action!="delete"&&(!r.active||command.at("routeId")!=r.active->id))
+        // `switch` names a route the player picked from the list, which by definition is usually not
+        // the one being followed; it belongs with `load` and `delete` on the exempt side of the
+        // fence, or choosing a route while another one is active would always be refused.
+        if(command.contains("routeId")&&action!="load"&&action!="delete"&&action!="switch"&&(!r.active||command.at("routeId")!=r.active->id))
             throw std::runtime_error("活动路线已变化，请刷新后重试");
         if((action=="complete"||action=="skip"||action=="guide")&&command.contains("key")){
             const auto target=TargetIndexLocked();if(target<0||command.at("key")!=AutoRoute::Key(r.active->stops[target]))
@@ -705,9 +977,32 @@ Json RoutePlanningService::Command(const Json& command){
             InvalidateAutoLocked(true);r.hasAutoPosition=false;
             for(auto& [scene,draft]:r.drafts)if(draft.preview&&draft.preview->id==next.id)draft.preview.reset();
             RefreshCompletedLocked();r.message="路线已加载，点击继续导航";
+        }else if(action=="switch"){
+            // Choosing a route out of the list means "follow this one now", which is what separates
+            // it from `load`: the caller may still want the load-and-wait behaviour.
+            auto next=r.store->Load(r.profile,command.at("routeId").get<std::string>(),ResolveLocked);
+            const bool start=command.value("start",true);
+            r.store->Save(next,true);InvalidateLocked();
+            r.active=next;r.runRequested=start;r.skipHistory=next.skipHistory;r.enabled=false;r.tool="pan";
+            r.farmMode=r.active->farmMode;r.farmConfirmation.Reset();r.farmNotice.clear();
+            InvalidateAutoLocked(true);r.hasAutoPosition=false;
+            for(auto& [scene,draft]:r.drafts)if(draft.preview&&draft.preview->id==next.id)draft.preview.reset();
+            RefreshCompletedLocked();
+            r.message=start?"已应用该路线并开始指引":"已应用该路线，点击继续导航";
+        }else if(action=="current"){
+            // Reading only: the list page asks what the top row should say.
+        }else if(action=="handStart"||action=="handPoint"||action=="handUndo"||action=="handCancel"||action=="handCommit"||action=="handFinish"||action=="handDiscard"){
+            HandleHandDrawnLocked(command.value("action",std::string{}),command);
         }else if(action=="list"){r.saved=r.store->List(r.profile);}
         else if(action!="state")throw std::invalid_argument("未知的自动路线操作");
         ++r.revision;result={{"accepted",true},{"message",r.message},{"data",SnapshotLocked()}};
-    }catch(const std::exception& e){std::scoped_lock lock(r.mutex);r.message=e.what();++r.revision;result={{"accepted",false},{"message",r.message},{"data",SnapshotLocked()}};}
+    }catch(const std::exception& e){
+        std::scoped_lock lock(r.mutex);r.message=e.what();++r.revision;
+        // A refusal is the answer the player sees on the toolbar, and the only trace of it
+        // afterwards: nothing else records that a command was turned down.
+        StructuredLogger::Record("warn","routes","route-command-refused",
+            "action="+command.value("action",std::string{"state"})+" reason="+std::string(e.what()));
+        result={{"accepted",false},{"message",r.message},{"data",SnapshotLocked()}};
+    }
     Emit();return result;
 }

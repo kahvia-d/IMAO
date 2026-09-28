@@ -55,6 +55,9 @@ struct PlanningEscapeRequest {
     std::uint64_t generation = 0;
 };
 std::optional<PlanningEscapeRequest> planningEscapeRequested;
+// Escape was pressed while a route was being drawn by hand. Handled on the render frame so the
+// command goes through the same path as every other route action.
+bool handEscapeRequested = false;
 bool dismissRequested = false;
 Clock::time_point regionsAt{};
 std::vector<MarkerHitRegion> regions;
@@ -79,6 +82,9 @@ struct Click {
         fromToolsGamepad = false;
 };
 std::deque<Click> clicks;
+// Set while a route is being drawn by hand. A click on the big map then records a point instead of
+// being passed through to the game, which is why this is checked before the pass-through branches.
+bool handDrawMode = false;
 std::string context, expanded, selected, hoverGroup;
 std::string displayedProfile;
 std::string displayedRouteId, displayedRouteTarget;
@@ -287,6 +293,25 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
     const bool up = message == WM_KEYUP || message == WM_SYSKEYUP;
     if (!down && !up) return CallNextHookEx(keyboardHook, code, message, value);
     const bool focused = DrawItemBase::IsMarkerGameFocused(game);
+    // While a route is being drawn by hand, Escape belongs to the drawing. It is claimed here, before
+    // anything else can decide, because the fallback further down only claims Escape when the
+    // planning canvas is interactive — and letting it through closes the game's own big map, which is
+    // exactly what "Escape to leave the drawing" must not do.
+    if (info.vkCode == VK_ESCAPE && RoutePlanningService::View().handDrawnActive) {
+        if (down) handEscapeRequested = true;
+        return 1;
+    }
+    // Ctrl+Z removes the last point of a drawing. The key is claimed only while a drawing is
+    // running, so it keeps whatever meaning the game gives it in every other state.
+    if (down && info.vkCode == 'Z' && (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0) {
+        const auto hand = RoutePlanningService::View();
+        if (hand.handDrawnActive && focused) {
+            const auto result = RoutePlanningService::Command({{"action", "handUndo"}, {"profileId", hand.profileId}});
+            if (!result.value("accepted", false))
+                StructuredLogger::Record("warn", "routes", "hand-drawn-undo-failed", result.value("message", ""));
+            return 1;
+        }
+    }
     // 自动重复跟踪表按虚拟键码索引，所以**任何**用它之前都要先挡住越界的键。
     // 低层键盘钩子会送来媒体键(0xAD)、浏览器键(0xAB)、输入法键(0xE5) 这类大于 255 的 vkCode；
     // 图片键那一段原来是先索引、后检查（检查在下面 `if (info.vkCode != VK_ESCAPE)` 里），
@@ -463,10 +488,25 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
             capture->tracker.Down(target, info.pt.x, info.pt.y);
             return 1;
         }
-        if (!regionsFresh) return CallNextHookEx(mouseHook, code, message, value);
+        const bool focused = gameFocused || ToolsCanvasFocused();
+        // Drawing by hand registers no hit regions, so it cannot ride on the region freshness check
+        // the tool buttons depend on. It is valid whenever the map was drawn from a frame that is
+        // still fresh — the same evidence the planning canvas itself uses.
+        const bool handDrawClick = !right && handDrawMode && mapInteractive && planningBinding.presented.Fresh() &&
+            info.pt.x >= planningBinding.origin.x && info.pt.y >= planningBinding.origin.y &&
+            info.pt.x <= planningBinding.origin.x + planningBinding.rect.right &&
+            info.pt.y <= planningBinding.origin.y + planningBinding.rect.bottom;
+        if (!regionsFresh && !handDrawClick) return CallNextHookEx(mouseHook, code, message, value);
         if (!focused) return CallNextHookEx(mouseHook, code, message, value);
-        const bool backgroundGesture = !right && planningBinding.enabled && planningBinding.valid &&
-            (!planningBinding.toolsSession || ToolsCanvasFocused()) &&
+        // A click on the big map records a point and is swallowed, so the game never sees it: a
+        // click that both drew a point and moved the player would be worse than no click support.
+        if (handDrawClick) {
+            if (clicks.size() < 16)
+                clicks.push_back({"route:hand:point", false, info.pt, displayedProfile, {}, {},
+                    planningBinding.scene, planningBinding.generation, false});
+            return 1;
+        }
+        const bool backgroundGesture = !right && planningBinding.enabled && planningBinding.valid &&            (!planningBinding.toolsSession || ToolsCanvasFocused()) &&
             planningBinding.presented.Fresh() && !target.starts_with("route:") && target != "panel" &&
             !target.starts_with("page:") && (target.empty() || target.starts_with("p:") || target.starts_with("g:") || tool == "start" || shiftBox) &&
             (tool == "box" || tool == "lasso" || tool == "start") &&
@@ -538,6 +578,14 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
 }
 
 std::string PointKey(const ItemDatas& point) { return std::to_string(point.layer.stateId) + ":" + point.itemId; }
+// The point id behind a hit region key. A hit is "p:<pointId>" for a single marker and
+// "g:<pointId>" for a pile that shares one spot; the anchor's id is the one every member of that
+// pile agrees on, so both forms name a point the route can connect to.
+std::string RouteHandDrawnPointId(const std::string& hit) {
+    if (hit.starts_with("p:")) return hit.substr(2);
+    if (hit.starts_with("g:")) return hit.substr(2);
+    return {};
+}
 
 // The official map marks a collectible that lives in a layered map ("分层地图") with a small
 // stacked-layers glyph in the icon's lower-right corner: a dark disc with two plates, the
@@ -1152,10 +1200,28 @@ void DrawMarkerInteraction::BeginFrame() {
         // validates this frozen session before completing or opening a guide.
         DrawItemBase::PublishMarkerEvent(std::move(event));
     }
+    if (handEscapeRequested) {
+        handEscapeRequested = false;
+        const auto handView = RoutePlanningService::View();
+        if (handView.handDrawnActive) {
+            ClearSelection(); clicks.clear(); leftCapture.cancelled = true; rightCapture.cancelled = true; CancelGesture();
+            // Escape ends the drawing; it does not throw it away. The toolbar cannot be opened while
+            // the drawing is still taking clicks, so discarding here would destroy work the player
+            // never had a chance to save.
+            const auto result = RoutePlanningService::Command({{"action", "handFinish"}, {"profileId", handView.profileId}});
+            if (!result.value("accepted", false))
+                StructuredLogger::Record("warn", "routes", "hand-drawn-finish-failed", result.value("message", ""));
+        }
+    }
     if (planningEscapeRequested) {
         const auto request = *planningEscapeRequested; planningEscapeRequested.reset();
         ClearSelection(); clicks.clear(); leftCapture.cancelled = true; rightCapture.cancelled = true; CancelGesture();
-        if (!request.cancelOnly && DrawItemBase::IsMarkerGameFocused(game) && RoutePlanningService::PlanningMode())
+        // While drawing by hand, Escape means "leave the drawing" rather than "go back to pan": the
+        // selection toolbar is not open, so returning to pan would leave the player still recording.
+        const auto handView = RoutePlanningService::View();
+        if (handView.handDrawnActive && DrawItemBase::IsMarkerGameFocused(game))
+            PlanningResult(RoutePlanningService::Command({{"action", "handCancel"}, {"profileId", request.profile}}));
+        else if (!request.cancelOnly && DrawItemBase::IsMarkerGameFocused(game) && RoutePlanningService::PlanningMode())
             PlanningResult(RoutePlanningService::Command({{"action", "tool"}, {"tool", "pan"},
                 {"profileId", request.profile}, {"expectedSceneId", request.scene}, {"expectedGeneration", request.generation}}));
     }
@@ -1185,6 +1251,9 @@ void DrawMarkerInteraction::Clear() {
     routeGamepadSession = 0;
     autoReplanPending.reset();
     mapInteractive = false; regions.clear(); clicks.clear();
+    // No map is being drawn, so nothing may swallow a click or a key: the service cancels the
+    // drawing when the map goes away, and this only makes sure the one-frame window cannot outlive it.
+    handDrawMode = false; handEscapeRequested = false;
     const auto current = GamepadContextSnapshot::Shared().Read(DrawItemBase::MarkerProfile());
     for (auto* capture : {&leftCapture, &rightCapture})
         if (!(capture->owned && capture->target == "maptools:open" && capture->generation == current.generation &&
@@ -1302,6 +1371,17 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     POINT cursor{}; GetCursorPos(&cursor);
     const double mouseX = cursor.x - origin.x, mouseY = cursor.y - origin.y;
     const auto previousPlanning = RoutePlanningService::View();
+    // While a route is being drawn by hand the drawing is the plan being shown. It is not a
+    // "preview" because that word is tied to the selection mode, which hand drawing never enters.
+    // A drawing is "shown" from the first recorded point until it is saved or discarded — not only
+    // while clicks are still being taken. Leaving the drawing with Escape must not make its start,
+    // end, numbered marks and selected points vanish: nothing has been decided about it yet.
+    const bool drafting = previousPlanning.handDraft.has_value();
+    // The member picker is an input aid, so it only belongs to the part where points are being added.
+    const bool drawing = previousPlanning.handDrawnActive && previousPlanning.handDraft.has_value();
+    // The click handler runs on the mouse hook, which cannot read the planning state, so the one
+    // fact it needs is published here where the state is known to be fresh.
+    handDrawMode = previousPlanning.handDrawnActive;
     if (autoReplanPending) {
         if (*autoReplanPending == previousPlanning.autoReplanEnabled) {
             autoReplanPending.reset(); planningNotice = previousPlanning.autoReplanEnabled ? "实时规划已开启" : "实时规划已关闭";
@@ -1313,6 +1393,9 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         observedFarmNoticeSerial = previousPlanning.farmNoticeSerial;
         if (!previousPlanning.farmNotice.empty()) planningNotice = previousPlanning.farmNotice;
     }
+    // While a route is being drawn by hand, show what the next click would record. It is drawn near
+    // the end of this function, after the hit regions are rebuilt, so that it answers the very
+    // question the click answers.
     const auto mapTools = MapToolsBridge::Shared().Read(frame.profileId);
     const auto observedPanel = ToolsPanel(mapTools, origin);
     AutoRoute::ViewportCandidates eligible;
@@ -1357,6 +1440,12 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     planningBinding.enabled = planning.enabled;
     planningBinding.selectedKeys.clear();
     for (const auto& item : planning.selected) planningBinding.selectedKeys.insert(AutoRoute::Key(item));
+    // Points already recorded into a drawing count as selected, so connecting to a marker gives the
+    // same "this one is in" feedback the selection tool gives. This has to come *after* the clear
+    // above: that line rebuilds the set from the selection tool's own list and would drop these.
+    if (planning.handDraft)
+        for (const auto& item : planning.handDraft->stops)
+            if (!AutoRoute::IsFreeStop(item) && !item.itemId.empty()) planningBinding.selectedKeys.insert(AutoRoute::Key(item));
     std::vector<MarkerLayoutPoint> points;
     std::unordered_map<std::string, std::size_t> visible;
     for (std::size_t index = 0; index < frame.markers.size(); ++index) {
@@ -1446,7 +1535,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             if (!DrawItemBase::IsPointCompleted(frame.sceneName,grouped)) groupFootprint.members.push_back(grouped);
         }
         cursorGeometry.footprints.push_back(std::move(groupFootprint));
-        if (planning.enabled && selectedCount > 0) {
+        if ((planning.enabled || drafting) && selectedCount > 0) {
             const auto label = group.members.size() > 1 ? std::to_string(selectedCount) + "/" + std::to_string(group.members.size()) : std::string("已选");
             const auto size = ImGui::CalcTextSize(label.c_str());
             auto* draw = ImGui::GetBackgroundDrawList();
@@ -1460,11 +1549,32 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     }
     const auto now = Clock::now();
     if (hovered != hoverGroup) { hoverGroup = hovered; hoverAt = now; }
-    if (!gesture.active && expanded.empty() && !hovered.empty() && now - hoverAt >= std::chrono::milliseconds(350)) {
+    // While drawing by hand, points that overlap each other would otherwise be a lottery: the hit
+    // region on top wins and the rest can never be chosen. Standing near several of them opens the
+    // same member panel the selection tool uses, so every one of them is reachable — which is what
+    // "the overlapping points can be picked too" means.
+    std::vector<std::string> handNearby;
+    if (drawing && planningBinding.valid) {
+        for (const auto& [key, index] : visible) {
+            const auto position = motion.Apply(frame.markers[index].screenCoordiante);
+            if (std::hypot(position.x - mouseX, position.y - mouseY) <= radius + 8) handNearby.push_back(key);
+        }
+    }
+    if (handNearby.size() > 1) {
+        // Anchored at the cursor rather than at a member: the point of this panel is that the player
+        // has not been able to aim at one member yet.
+        expanded = "hand:" + handNearby.front();
+        expandedMembers = handNearby;
+        listPage = 0;
+        expandedAnchor = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
+        foundExpanded = true;
+    }
+    else if (!gesture.active && expanded.empty() && !hovered.empty() && now - hoverAt >= std::chrono::milliseconds(350)) {
         expanded = hovered; expandedMembers = groupMembers[hovered]; listPage = 0;
         // Geometry is built on the next frame, so no invisible member can be hit.
     }
-    if (!expandedMembers.empty() && visible.contains(expandedMembers.front())) {
+    // A pile owns its own anchor (the point the icons are drawn on). The hand picker keeps the cursor.
+    if (expanded.substr(0, 5) != "hand:" && !expandedMembers.empty() && visible.contains(expandedMembers.front())) {
         const auto anchor = motion.Apply(frame.markers[visible.at(expandedMembers.front())].screenCoordiante);
         expandedAnchor = ImVec2(static_cast<float>(anchor.x), static_cast<float>(anchor.y));
         foundExpanded = true;
@@ -1546,11 +1656,13 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             planning.enabled ? "Esc 收起 · 点击成员切换选中" : "Esc 收起 · 左键攻略 · 右键完成");
     }
     if (planningBinding.valid) {
-        const bool previewing = planning.enabled && planning.preview.has_value();
-        const auto* plan = previewing ? &*planning.preview : planning.active ? &*planning.active : nullptr;
+        const bool previewing = !drafting && planning.enabled && planning.preview.has_value();
+        const auto* plan = drafting ? &*planning.handDraft : previewing ? &*planning.preview : planning.active ? &*planning.active : nullptr;
         const auto* scene = Scene::Find(sceneId);
-        if (planning.enabled && planning.start.valid && planning.start.sceneId == sceneId && scene) {
-            const auto position = MapImageToScreen(planningBinding, {scene->originX + planning.start.roc.x, scene->originY - planning.start.roc.y});
+        // The "起" glyph used to require selection mode; a drawing has a start too, and so does a
+        // hand-drawn route being followed, so it follows whether there is a plan to show at all.
+        if (plan && plan->sceneId == sceneId && plan->start.valid && scene) {
+            const auto position = MapImageToScreen(planningBinding, {scene->originX + plan->start.roc.x, scene->originY - plan->start.roc.y});
             if (position.x >= 0 && position.y >= 0 && position.x <= rect.right && position.y <= rect.bottom) {
                 auto* draw = ImGui::GetBackgroundDrawList();
                 const ImVec2 center(static_cast<float>(position.x), static_cast<float>(position.y));
@@ -1560,12 +1672,26 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
                 draw->AddText(ImVec2(center.x - text.x / 2, center.y - text.y / 2), IM_COL32_WHITE, "起");
             }
         }
+        // The far end of the path. On a planned route the last stop is reached and disappears, so
+        // this is only drawn where the end is still meaningful: a drawing that has not been saved yet.
+        if (drafting && plan->stops.size() >= 2 && scene) {
+            const auto& last = plan->stops.back();
+            const auto position = MapImageToScreen(planningBinding, {scene->originX + last.itemMapROC.x, scene->originY - last.itemMapROC.y});
+            if (position.x >= 0 && position.y >= 0 && position.x <= rect.right && position.y <= rect.bottom) {
+                auto* draw = ImGui::GetBackgroundDrawList();
+                const ImVec2 center(static_cast<float>(position.x), static_cast<float>(position.y));
+                draw->AddCircleFilled(center, 12, IM_COL32(120, 62, 22, 250));
+                draw->AddCircle(center, 14, IM_COL32(255, 193, 73, 255), 0, 2);
+                const auto text = ImGui::CalcTextSize("终");
+                draw->AddText(ImVec2(center.x - text.x / 2, center.y - text.y / 2), IM_COL32_WHITE, "终");
+            }
+        }
         if (plan && plan->sceneId == sceneId && scene) {
             auto* draw = ImGui::GetBackgroundDrawList();
             std::unordered_map<std::string, std::size_t> badgesAtPosition;
             for (std::size_t index = 0; index < plan->stops.size(); ++index) {
                 const auto& stop = plan->stops[index];
-                if (plan->skipped.contains(AutoRoute::Key(stop)) || planning.completed.contains(AutoRoute::Key(stop))) continue;
+                if (!drafting && (plan->skipped.contains(AutoRoute::Key(stop)) || planning.completed.contains(AutoRoute::Key(stop)))) continue;
                 const auto position = MapImageToScreen(planningBinding, {scene->originX + stop.itemMapROC.x, scene->originY - stop.itemMapROC.y});
                 if (position.x < 0 || position.y < 0 || position.x > rect.right || position.y > rect.bottom) continue;
                 const auto bucket = std::to_string(static_cast<int>(position.x / 22)) + ":" + std::to_string(static_cast<int>(position.y / 22));
@@ -1575,12 +1701,36 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
                 if (offset) continue;
                 const auto label = std::to_string(index + 1);
                 const auto size = ImGui::CalcTextSize(label.c_str());
-                const float x = static_cast<float>(position.x + radius + 12), y = static_cast<float>(position.y);
-                const bool current = !previewing && static_cast<int>(index) == planning.currentTargetIndex;
+                // A stop with an icon has the badge beside it. A free point has no icon at all, so
+                // its number is the marker: the circle sits on the point rather than beside it.
+                const bool freeStop = AutoRoute::IsFreeStop(stop) || (drafting && stop.nameId.empty());
+                const float x = static_cast<float>(freeStop ? position.x : position.x + radius + 12);
+                const float y = static_cast<float>(position.y);
+                const bool current = !previewing && !drafting && static_cast<int>(index) == planning.currentTargetIndex;
                 draw->AddCircleFilled(ImVec2(x, y), std::max(10.0f, size.x / 2 + 4), current ? IM_COL32(233, 165, 57, 255) : IM_COL32(31, 114, 151, 245));
                 draw->AddText(ImVec2(x - size.x / 2, y - size.y / 2), IM_COL32_WHITE, label.c_str());
             }
         }
+    }
+    // While a route is being drawn by hand, show what the next click would record. This runs after
+    // the hit regions are rebuilt because it asks the *same* question the click asks — "which region
+    // is under the cursor" — so the preview and the result can never disagree.
+    if (previousPlanning.handDrawnActive && mouseX >= 0 && mouseY >= 0 && mouseX <= rect.right && mouseY <= rect.bottom) {
+        const auto onPoint = !RouteHandDrawnPointId(Hit(mouseX, mouseY)).empty();
+        auto* draw = ImGui::GetForegroundDrawList();
+        const ImU32 colour = onPoint ? IM_COL32(110, 250, 190, 255) : IM_COL32(233, 165, 57, 255);
+        draw->AddCircle(ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY)), radius + 4, colour, 0, 2.0f);
+        draw->AddLine(ImVec2(static_cast<float>(mouseX - radius - 8), static_cast<float>(mouseY)),
+            ImVec2(static_cast<float>(mouseX + radius + 8), static_cast<float>(mouseY)), colour, 1.0f);
+        draw->AddLine(ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY - radius - 8)),
+            ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY + radius + 8)), colour, 1.0f);
+        const auto key = RuntimeHotkeys::Label(RuntimeHotkeys::Snapshot().manualRouteKey);
+        const auto label = onPoint ? "点击连接到这个点位（或按 " + key + "）" : "点击记下这里（或按 " + key + "）";
+        const auto size = ImGui::CalcTextSize(label.c_str());
+        const ImVec2 text(mouseX - size.x / 2, mouseY + radius + 10);
+        draw->AddRectFilled(ImVec2(text.x - 4, text.y - 2), ImVec2(text.x + size.x + 4, text.y + size.y + 2),
+            IM_COL32(25, 31, 42, 225), 3);
+        draw->AddText(text, IM_COL32_WHITE, label.c_str());
     }
     GamepadCursorGeometry::Shared().Publish(std::move(cursorGeometry));
     mapInteractive = DrawItemBase::IsMarkerGameFocused(gameWindow) || ToolsFocused();
@@ -1599,6 +1749,28 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             CancelRouteGamepad("焦点或地图画面已变化，操作未执行"); break;
         }
         if (click.profile != DrawItemBase::MarkerProfile()) continue;
+        if (click.target == "route:hand:point") {
+            // The click was swallowed by the hook while a drawing was running; turn it into a point
+            // at the same position the cursor marker promised.
+            const auto view = RoutePlanningService::View();
+            if (!view.handDrawnActive) continue;
+            const auto local = Coordinate(click.position.x - planningBinding.origin.x,
+                click.position.y - planningBinding.origin.y);
+            // The point under the click is already known: the hook only records this click because a
+            // hit region matched, and that region's key names the point. Passing it along means the
+            // core does not have to guess the marker back from the cursor with a distance tolerance.
+            const auto pointId = RouteHandDrawnPointId(click.target);
+            const Coordinate roc = RelativeCoordinates::ImgMapCoordToROC(ScreenToMapImage(planningBinding, local), view.sceneId);
+            if (!std::isfinite(roc.x) || !std::isfinite(roc.y)) continue;
+            nlohmann::json command = {{"action", "handPoint"}, {"profileId", click.profile},
+                {"sceneId", view.sceneId}, {"x", roc.x}, {"y", roc.y},
+                {"key", pointId.empty() ? std::string{} :
+                    std::to_string(Scene::Find(view.sceneId)->kuroStateId) + ":" + pointId}};
+            StructuredLogger::Record("info", "routes", "hand-drawn-click",
+                "region=" + click.target + " pointId=" + (pointId.empty() ? std::string("<empty-ground>") : pointId));
+            PlanningResult(RoutePlanningService::Command(command));
+            continue;
+        }
         if (click.target.starts_with("route:")) {
             if (click.right || click.target == "route:panel" || click.target == "route:disabled") continue;
             CancelGesture();

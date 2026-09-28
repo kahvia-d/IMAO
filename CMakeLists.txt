@@ -378,11 +378,24 @@ target_link_libraries(IMaoLayeredMapTests PRIVATE ${OpenCV_LIBS} bcrypt.lib wind
 add_test(NAME IMaoLayeredMapTests COMMAND IMaoLayeredMapTests)
 
 add_executable(IMaoRoutePlanningTests IMao-Core/tests/RoutePlanningTests.cpp)
+# The source tree is passed in because CTest may run the binary from the build directory, and this
+# suite reads a fixture that has to come from the tree rather than from wherever it was started.
+target_compile_definitions(IMaoRoutePlanningTests PRIVATE
+    IMAO_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_include_directories(IMaoRoutePlanningTests PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
 set_target_properties(IMaoRoutePlanningTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoRoutePlanningTests COMMAND IMaoRoutePlanningTests)
+
+# The hand-drawn draft and the legacy-route import are pure logic: no map data, no marker store,
+# no IPC. Kept as its own binary so the feature's rules can be read and run on their own.
+add_executable(IMaoHandDrawnRouteTests IMao-Core/tests/HandDrawnRouteTests.cpp)
+target_include_directories(IMaoHandDrawnRouteTests PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
+set_target_properties(IMaoHandDrawnRouteTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoHandDrawnRouteTests COMMAND IMaoHandDrawnRouteTests)
 
 # Exercise the actual worker, command handling and atomic store with isolated
 # marker data. This test-only macro is never enabled on the production host.

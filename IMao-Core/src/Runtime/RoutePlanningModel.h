@@ -10,8 +10,22 @@
 namespace AutoRoute {
 inline constexpr std::size_t MaxTargets = 500;
 inline bool IsSurfaceTarget(const ItemDatas& item) { return item.layer.floorId.empty(); }
+// A stop is either an official point (identity = its point id) or a free point the player
+// dropped on empty map space while drawing a route by hand. Only free points may be missing a
+// type, because only they have no point in the upstream catalogue to take one from.
+inline bool IsFreeStop(const ItemDatas& item) { return item.layer.stopKind == StopKind::Free; }
 inline std::string Key(const ItemDatas& item) {
     return std::to_string(item.layer.stateId) + ":" + item.itemId;
+}
+// The distinct point types a route visits, in first-seen order. Free points carry no type and
+// contribute nothing: the route filter has no icon or filter row to switch on for them.
+inline std::vector<std::string> Kinds(const std::vector<ItemDatas>& stops) {
+    std::vector<std::string> kinds;
+    for (const auto& stop : stops) {
+        if (IsFreeStop(stop) || stop.nameId.empty()) continue;
+        if (std::find(kinds.begin(), kinds.end(), stop.nameId) == kinds.end()) kinds.push_back(stop.nameId);
+    }
+    return kinds;
 }
 struct Start {
     int sceneId = 0;
@@ -33,6 +47,17 @@ struct Plan {
     // herbs is a farming route every time it is loaded. The runtime mode still ends with the
     // navigation — this only decides what it is when the route starts again.
     bool farmMode = false;
+    // Which system produced this route. It changes no behaviour — the drawing, the ordering and
+    // the completion rules are the same for both — and exists so the route list can label a row
+    // and so the two are stored in separate folders.
+    bool handDrawn = false;
+    // A drawing that has not been saved yet. It is never written to disk; it exists so the renderer
+    // can tell "the path I am still building" apart from "a planned route awaiting confirmation".
+    bool handDraft = false;
+    // Whether applying this route should narrow the map filter to the point types it visits.
+    // Like the farming setting this belongs to the route: a route built for 叮叮咚 is a route
+    // the player wants to see only 叮叮咚 on.
+    bool filterByRoute = true;
 };
 struct SolveResult {
     std::vector<ItemDatas> stops;
@@ -44,8 +69,10 @@ struct DrawVisibility {
     bool navigating = false;
     std::uint64_t orderRevision = 0;
     bool comparisonVisible = false;
+    // Hand-drawn routes used to bypass this entirely, which meant a stale line could outlive
+    // switching profile, stopping the navigation or leaving the map. They are ordinary routes
+    // now, so there is one rule and no exception.
     bool Allows(const RouteDatas& route, bool minimap = false) const {
-        if (!route.automatic) return true;
         if (route.profileId != profileId || route.routePlanId.empty()) return false;
         if (route.preview) return !minimap && route.routePlanId == previewId;
         return route.routePlanId == activeId && route.orderRevision == orderRevision &&

@@ -1,7 +1,7 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace IMao_WinUI.Models;
-
 // The native core owns ordering, completion and persistence. These snapshots are display-only.
 public sealed record RoutePlanningState
 {
@@ -34,6 +34,22 @@ public sealed record RoutePlanningState
     public AutomaticRoute? Active { get; init; }
     public string NavigationStatus { get; init; } = "paused";
     public RouteStop? CurrentTarget { get; init; }
+    /// <summary>
+    /// The route the list page shows at the top: the active route, or — when nothing is active —
+    /// the preview the player has generated but not started. Saving and deleting act on this one.
+    /// </summary>
+    public AutomaticRoute? CurrentRoute { get; init; }
+    /// <summary>True when <see cref="CurrentRoute"/> is a generated preview rather than the active route.</summary>
+    public bool CurrentRouteIsPreview { get; init; }
+    /// <summary>True while the player is drawing a route by hand and every click records a point.</summary>
+    public bool HandDrawnActive { get; init; }
+    /// <summary>
+    /// True when a drawing was left (Escape) but not saved yet. The list offers to save or discard
+    /// it, which is the whole reason leaving must keep the points.
+    /// </summary>
+    public bool HandDrawnPending { get; init; }
+    /// <summary>How many points the hand-drawn drawing holds so far.</summary>
+    public int HandDrawnCount { get; init; }
     public SavedAutomaticRoute[] SavedRoutes { get; init; } = [];
 
     public static RoutePlanningState FromJson(JsonElement data) =>
@@ -116,11 +132,55 @@ public sealed record AutomaticRoute
     public double PlanarLength { get; init; }
 }
 
+/// <summary>
+/// One point type a route visits, as the core describes it: the identifier the map filter and the
+/// icon manifest use, the name the game shows, and the icon file the map itself draws. The core
+/// resolves these because the icon manifest knows far more types than the filter catalogue does —
+/// resolving on this side would leave most route rows with no icon at all.
+/// </summary>
+public sealed record RouteKindSummary
+{
+    public string NameId { get; init; } = "";
+    public string Name { get; init; } = "";
+    /// <summary>
+    /// Absolute path of the icon the map draws for this type. The name is spelled out because the
+    /// serializer matches properties to keys by name: "icon" would not otherwise reach "IconPath",
+    /// and the loss is silent — the row simply shows text instead of an icon.
+    /// </summary>
+    [JsonPropertyName("icon")]
+    public string? IconPath { get; init; }
+    public string Label => string.IsNullOrWhiteSpace(Name) ? NameId : Name;
+    public string IconUri
+    {
+        get
+        {
+            if (IconPath is not { Length: > 0 } path) return "";
+            // Absolute Windows paths need the two-argument Uri constructor: Uri.TryCreate with
+            // UriKind.Absolute rejects them, which silently turns every icon into plain text.
+            try { return new Uri(path).AbsoluteUri; }
+            catch (UriFormatException) { return ""; }
+        }
+    }
+    public bool HasIcon => IconUri.Length > 0;
+}
+
 public sealed record SavedAutomaticRoute
 {
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
     public int SceneId { get; init; }
     public string SceneName { get; init; } = "";
+    /// <summary>How many points the route visits, free points included.</summary>
+    public int StopCount { get; init; }
+    /// <summary>The distinct point types it visits, in the order they first appear.</summary>
+    public RouteKindSummary[] Kinds { get; init; } = [];
+    /// <summary>True when the player drew this route by hand rather than planning it.</summary>
+    public bool HandDrawn { get; init; }
+    /// <summary>The file could not be read; the row stays visible so it can still be deleted.</summary>
+    public bool Corrupt { get; init; }
     public string Label => $"{(string.IsNullOrWhiteSpace(Name) ? Id : Name)} · {SceneName}";
+    public string KindLabel => Kinds.Length == 0 ? (HandDrawn ? "自由点" : "无点位类型")
+        : string.Join("、", Kinds.Select(kind => kind.Label));
+    public string DetailLabel => $"{StopCount} 个点 · {(string.IsNullOrWhiteSpace(SceneName) ? "未知地图" : SceneName)} · " +
+        (HandDrawn ? "手绘" : "自动") + (Corrupt ? " · 文件损坏" : "");
 }

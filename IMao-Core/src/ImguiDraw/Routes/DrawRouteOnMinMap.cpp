@@ -1,35 +1,10 @@
 #include "DrawRouteOnMinMap.h"
-#include "LoadEditRouteData.h"
 #include "../../Coordinate/locationCalculator/ScreenCoordinate.h"
 #include "../../Runtime/RouteGeometry.h"
 #include "../../Runtime/RoutePlanningService.h"
 #include "../Items/DrawItemBase.h"
 using namespace std;
 using namespace cv;
-
-vector<RouteDatas> DrawRouteOnMinMap::routesDatas;
-mutex DrawRouteOnMinMap::routeMutex;
-
-void DrawRouteOnMinMap::GetRoutePointsScreen(const RECT& rect ,const Coordinate& playerROC, float minMapRadius, int senceId, double terrainScale) {
-	DrawRouteOnMinMap::ClearRountsData();
-	lock_guard<mutex> lock(routeMutex);
-
-	for (const auto& routeDatas : LoadEditRouteData::GetRoutesSnapshot()) {
-		if (routeDatas.senceId != senceId) continue;
-		vector<Coordinate> routePointsScreen;
-
-		for (const auto routePointROC : routeDatas.routePointsROC) {
-			// Offscreen endpoints may still form a segment crossing the minimap.
-			// Retain every endpoint, then clip original segments at draw time.
-			routePointsScreen.push_back(ScreenCoordinate::ItemScreenCoordinateOnMinMap(rect, routePointROC, playerROC, terrainScale));
-		}
-
-		if (routePointsScreen.size() >= 2)
-			DrawRouteOnMinMap::routesDatas.push_back(RouteDatas("name", routeDatas.senceId, vector<Coordinate>(), routePointsScreen));
-	}
-}
-
-
 
 void DrawRouteOnMinMap::DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion, Coordinate clipCenter, double clipRadius) {
 
@@ -39,7 +14,7 @@ void DrawRouteOnMinMap::DrawRoute(const std::vector<RouteDatas>& frame, int scen
 	const auto visibility = RoutePlanningService::DrawingVisibility();
 	for (const auto& routeDatas : frame) {
 		if (!visibility.Allows(routeDatas, true)) continue;
-		if (routeDatas.automatic && routeDatas.profileId != DrawItemBase::MarkerProfile()) continue;
+		if (routeDatas.profileId != DrawItemBase::MarkerProfile()) continue;
 
 		if (routeDatas.senceId != sceneId)
 			continue;
@@ -48,17 +23,19 @@ void DrawRouteOnMinMap::DrawRoute(const std::vector<RouteDatas>& frame, int scen
 
 		auto draw = ImGui::GetBackgroundDrawList();
 		for (std::size_t i = 0; i + 1 < screenPoints.size(); ++i) {
-			const auto first = i == 0 && routeDatas.automatic && (routeDatas.emphasized || routeDatas.previousTarget)
+			const auto first = i == 0 && (routeDatas.emphasized || routeDatas.previousTarget)
                 ? clipCenter : motion.Apply(screenPoints[i]);
 			const auto second = motion.Apply(screenPoints[i + 1]);
 			const auto segment = AutoRoute::ClipCircle(first, second, clipCenter, clipRadius);
 			if (!segment) continue;
 			ImVec2 p1(static_cast<float>(segment->first.x), static_cast<float>(segment->first.y));
 			ImVec2 p2(static_cast<float>(segment->second.x), static_cast<float>(segment->second.y));
-            const ImU32 color = !routeDatas.automatic ? IM_COL32(255, 0, 0, 255) : routeDatas.previousTarget ? IM_COL32(172, 180, 190, 195) : routeDatas.preview ?
+            const ImU32 color = routeDatas.handDrawn ? IM_COL32(102, 201, 222, 235) :
+                routeDatas.previousTarget ? IM_COL32(172, 180, 190, 195) : routeDatas.preview ?
 				IM_COL32(102, 201, 222, 190) : routeDatas.emphasized ? IM_COL32(255, 193, 73, 255) : IM_COL32(81, 168, 209, 210);
-			const float thickness = routeDatas.emphasized ? 3.0f : routeDatas.automatic ? 2.0f : 1.5f;
-            if (routeDatas.automatic && (routeDatas.preview || routeDatas.previousTarget)) {
+			const float thickness = routeDatas.handDrawn ? 3.5f : routeDatas.emphasized ? 3.0f : 2.0f;
+            if (routeDatas.handDrawn) draw->AddLine(p1, p2, color, thickness);
+            else if (routeDatas.preview || routeDatas.previousTarget) {
 				const float length = std::hypot(p2.x - p1.x, p2.y - p1.y);
 				for (float d = 0; d < length; d += 12.0f) {
 					const float end = std::min(d + 7.0f, length);
@@ -69,6 +46,3 @@ void DrawRouteOnMinMap::DrawRoute(const std::vector<RouteDatas>& frame, int scen
 		}
 	}
 }
-
-
-std::vector<RouteDatas> DrawRouteOnMinMap::Snapshot() { std::scoped_lock lock(routeMutex); return routesDatas; }

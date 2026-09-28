@@ -4,12 +4,18 @@
 #include <cstdint>
 #include <vector>
 
+// Official points come from the upstream catalogue and are identified by a point id. A route
+// drawn by hand may also drop a "free" point on empty map space; it exists only inside that one
+// route, so it has no catalogue entry, no type and no icon.
+enum class StopKind { Catalog, Free };
+
 // Official data identity is retained independently of projected screen coordinates.
 struct MapLayerIdentity {
     int stateId = 0;
     int countryId = 0;
     std::string floorId;
     std::string level;
+    StopKind stopKind = StopKind::Catalog;
     bool operator==(const MapLayerIdentity&) const = default;
 };
 
@@ -33,10 +39,13 @@ struct RouteDatas
 	int senceId;
 	std::vector<Coordinate> routePointsROC;
 	std::vector<Coordinate> routePointsScreenCoord;
-    bool automatic = false;
     bool emphasized = false;
     bool preview = false;
     bool previousTarget = false;
+    // A route the player is drawing right now. It shares the plan pipeline with everything else but
+    // is drawn as a solid, heavier line carrying direction arrows: while drawing, the path itself is
+    // what is being edited rather than a finished plan waiting to be confirmed.
+    bool handDrawn = false;
     std::uint64_t orderRevision = 0;
     std::string profileId;
 	std::string routePlanId;

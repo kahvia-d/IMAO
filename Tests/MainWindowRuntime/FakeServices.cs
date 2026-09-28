@@ -82,9 +82,6 @@ namespace IMao_WinUI.Services
         public void PublishStatus(CoreRuntimeStatus value) { Status=value; StatusChanged?.Invoke(this,value); PropertyChanged?.Invoke(this,new(nameof(Status))); }
         public void PublishRoute(RoutePlanningState value) { RoutePlanning=value; RoutePlanningChanged?.Invoke(this,value); }
         public void ReportUserError(string message) => LastFault=message;
-        public Task SetRouteNameAsync(string name) => Task.CompletedTask;
-        public Task LoadRoutesAsync() => Task.CompletedTask;
-        public Task LoadRouteAsync(string name) => Task.CompletedTask;
         public Task SetItemsEnabledAsync(IEnumerable<string> ids,bool enabled) => Task.CompletedTask;
         public Task SetDiagnosticsCaptureAsync(bool enabled) => Task.CompletedTask;
         public Task SetOverlayHiddenAsync(bool enabled) => Task.CompletedTask;

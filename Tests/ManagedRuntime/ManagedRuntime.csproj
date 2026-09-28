@@ -37,6 +37,8 @@
     <Compile Include="../../IMao-WinUI/Models/MarkerDetail.cs" Link="MarkerDetail.cs" />
     <Compile Include="../../IMao-WinUI/Models/MarkerGuideSession.cs" Link="MarkerGuideSession.cs" />
     <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="RoutePlanningState.cs" />
+    <Compile Include="../../IMao-WinUI/Services/RouteFilterPlan.cs" Link="RouteFilterPlan.cs" />
+    <Compile Include="../../IMao-WinUI/Services/RouteFilterSnapshot.cs" Link="RouteFilterSnapshot.cs" />
     <Compile Include="../../IMao-WinUI/Services/MarkerDetailService.cs" Link="MarkerDetailService.cs" />
     <Compile Include="../../IMao-WinUI/Helpers/LocalItemFilter.cs" Link="LocalItemFilter.cs" />
     <Compile Include="../../IMao-WinUI/Contracts/Services/ILocalSettingsService.cs" Link="ILocalSettingsService.cs" />

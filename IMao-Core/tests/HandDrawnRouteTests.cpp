@@ -1,0 +1,188 @@
+// Tests for drawing a route by hand: the ordered draft the picker collects, and the plan it
+// commits. These are pure logic and need no map data, no marker store and no IPC.
+#include "Runtime/HandDrawnRoute.h"
+#include "Runtime/LegacyHandRouteImport.h"
+#include <algorithm>
+#include <cmath>
+#include <functional>
+#include <iostream>
+#include <string>
+#include <vector>
+
+namespace {
+int failures = 0;
+void Check(bool condition, const std::string& message) {
+    if (!condition) { ++failures; std::cerr << "FAIL: " << message << '\n'; }
+}
+bool Near(Coordinate a, Coordinate b) { return std::abs(a.x - b.x) <= 1e-9 && std::abs(a.y - b.y) <= 1e-9; }
+
+constexpr int Scene1 = 1;                 // runtime scene: what a route stores
+int StateIdFor(int scene) { return Scene::Find(scene)->kuroStateId; }
+
+// An official point on the map, as the picker would hand it over when the player clicks an icon.
+ItemDatas Official(const std::string& id, double x, double y, int state) {
+    ItemDatas item;
+    item.itemId = id; item.nameId = "chest"; item.itemMapROC = {x, y};
+    item.layer.stateId = state;
+    return item;
+}
+// Empty map space: the picker knows only where the cursor was.
+ItemDatas Blank(double x, double y, int state) {
+    ItemDatas item;
+    item.itemMapROC = {x, y};
+    item.layer.stateId = state;
+    return item;
+}
+void Rejects(const std::function<void()>& action, const std::string& message) {
+    bool rejected = false;
+    try { action(); } catch (const std::exception&) { rejected = true; }
+    Check(rejected, message);
+}
+
+void DraftTests() {
+    AutoRoute::HandDrawnDraft draft;
+    Check(!draft.Active() && draft.Size() == 0, "a draft starts inactive and empty");
+    Rejects([&] { draft.Add(Blank(0, 0, StateIdFor(Scene1))); }, "adding a point before starting is refused");
+    Rejects([&] { draft.Start(999, StateIdFor(Scene1)); }, "drawing on an unknown map is refused");
+    Check(!draft.Active(), "a refused start leaves the draft inactive");
+
+    draft.Start(Scene1, StateIdFor(Scene1));
+    Check(draft.Active() && draft.SceneId() == Scene1, "starting records the map the drawing belongs to");
+    const auto first = draft.Add(Blank(10, 20, StateIdFor(Scene1)));
+    Check(first.itemId == "free:1" && AutoRoute::IsFreeStop(first) && first.nameId.empty() &&
+        Near(first.itemMapROC, {10, 20}),
+        "a click on empty space becomes the first numbered free point with no type");
+    const auto second = draft.Add(Official("chest-a", 30, 40, StateIdFor(Scene1)));
+    Check(second.itemId == "chest-a" && !AutoRoute::IsFreeStop(second) && second.nameId == "chest",
+        "a click on an official point connects to that point and keeps its type");
+    const auto third = draft.Add(Blank(50, 60, StateIdFor(Scene1)));
+    Check(third.itemId == "free:2", "free points are numbered in the order they were drawn");
+    Check(draft.Size() == 3, "every click adds exactly one stop");
+
+    Rejects([&] { draft.Add(Official("other", 0, 0, StateIdFor(2))); },
+        "a point from another map is refused instead of making a route span two maps");
+    Check(draft.Size() == 3, "a refused point does not enter the draft");
+
+    Check(draft.Undo() && draft.Size() == 2, "undo removes the last stop");
+    const auto afterUndo = draft.Add(Blank(70, 80, StateIdFor(Scene1)));
+    Check(afterUndo.itemId == "free:2",
+        "the number freed by undo is reused so the badges stay 1..n with no gap");
+    Check(draft.Undo() && draft.Undo() && draft.Undo() && !draft.Undo() && draft.Size() == 0,
+        "undo empties the draft and then reports there is nothing left");
+
+    // The first stop is the start and the last is the end: the player drew an ordered path, so
+    // nothing here may reorder it.
+    draft.Start(Scene1, StateIdFor(Scene1));
+    draft.Add(Blank(1, 1, StateIdFor(Scene1)));
+    draft.Add(Official("chest-a", 30, 40, StateIdFor(Scene1)));
+    draft.Add(Blank(9, 9, StateIdFor(Scene1)));
+    const auto plan = draft.Commit("route-1", "我的路线", "local");
+    Check(plan.handDrawn && plan.sceneId == Scene1 && plan.id == "route-1" && plan.name == "我的路线" &&
+        plan.profileId == "local", "the committed plan carries the route's identity and is marked hand-drawn");
+    Check(plan.start.valid && plan.start.sceneId == Scene1 && Near(plan.start.roc, {1, 1}),
+        "the first stop is the start of the route");
+    Check(plan.stops.size() == 3 && plan.stops.front().itemId == "free:1" && plan.stops.back().itemId == "free:2" &&
+        plan.stops[1].itemId == "chest-a",
+        "the committed stops keep the order the player drew, with the last one as the end");
+    Check(plan.start.source == "manual", "a hand-drawn start is recorded as manual, not as a player snapshot");
+
+    // One point is not a route: there would be no line to draw and no end.
+    draft.Start(Scene1, StateIdFor(Scene1));
+    draft.Add(Blank(1, 1, StateIdFor(Scene1)));
+    Rejects([&] { draft.Commit("route-2", "x", "local"); }, "a drawing with a single point cannot be committed");
+
+    // Leaving the drawing keeps it. The player cannot reach the toolbar while the drawing still owns
+    // the map, so discarding on the way out would destroy work they never had a chance to save.
+    draft.Start(Scene1, StateIdFor(Scene1));
+    draft.Add(Blank(1, 1, StateIdFor(Scene1)));
+    draft.Add(Blank(2, 2, StateIdFor(Scene1)));
+    Check(draft.Finish() && !draft.Active() && draft.Pending() && draft.Size() == 2,
+        "finishing a drawing stops it without losing what was drawn");
+    const auto kept = draft.Commit("route-kept", "我的路线", "local");
+    Check(kept.handDrawn && kept.stops.size() == 2 && kept.sceneId == Scene1,
+        "a finished drawing can still be committed afterwards");
+    Check(draft.Pending(), "committing does not itself clear the drawing; the caller decides");
+    draft.Cancel();
+    Check(!draft.Active() && !draft.Pending() && draft.Size() == 0,
+        "cancelling clears a finished drawing too");
+    Check(!draft.Finish(), "finishing when nothing is being drawn reports that there was nothing to finish");
+    draft.Start(Scene1, StateIdFor(Scene1));
+    Check(!draft.Finish() && !draft.Pending() && draft.Size() == 0,
+        "finishing an empty drawing leaves nothing pending");
+
+    draft.Start(Scene1, StateIdFor(Scene1));
+    draft.Add(Blank(1, 1, StateIdFor(Scene1)));
+    draft.Add(Blank(2, 2, StateIdFor(Scene1)));
+    draft.Finish();
+    Check(draft.Undo() && draft.Size() == 1 && draft.Pending(),
+        "a finished drawing can still be undone before it is saved");
+    draft.Cancel();
+    Rejects([&] { draft.Commit("route-3", "x", "local"); }, "committing after cancelling is refused");
+
+    // Coming back to a finished drawing continues it. This is the one place where "start" could have
+    // destroyed the player's work, which is why it resumes instead of clearing.
+    draft.Start(Scene1, StateIdFor(Scene1));
+    draft.Add(Blank(1, 1, StateIdFor(Scene1)));
+    draft.Add(Blank(2, 2, StateIdFor(Scene1)));
+    draft.Finish();
+    draft.Start(Scene1, StateIdFor(Scene1));
+    Check(draft.Active() && !draft.Pending() && draft.Size() == 2,
+        "starting again on the same map resumes the finished drawing instead of clearing it");
+    const auto resumed = draft.Add(Blank(3, 3, StateIdFor(Scene1)));
+    Check(resumed.itemId == "free:3" && draft.Size() == 3,
+        "a resumed drawing keeps numbering where it left off");
+    Check(draft.Finish() && draft.Pending() && draft.Size() == 3,
+        "a resumed drawing can be finished again holding everything it had");
+    Rejects([&] { draft.Start(2, StateIdFor(2)); },
+        "a finished drawing belonging to another map cannot be silently taken over");
+
+    // After discarding, starting again must still produce an empty drawing.
+    draft.Cancel();
+    draft.Start(Scene1, StateIdFor(Scene1));
+    Check(draft.Active() && draft.Size() == 0, "after discarding, starting again begins an empty drawing");
+    draft.Cancel();
+}
+
+void ImportTests() {
+    using Json = nlohmann::json;
+    const auto lookupScene = [](const std::string& name) { return Scene::SceneNameToId(name.c_str()); };
+    const auto noPoints = [](int, const Coordinate&) -> std::optional<ItemDatas> { return {}; };
+    const auto document = Json::parse(R"({"World":[[[0,0],[10,0]],[[10,0],[20,0]]]})");
+    const auto imported = AutoRoute::LegacyDocument::Import(document, "Routes", "local", lookupScene, noPoints);
+    Check(imported.rejected.empty() && imported.plans.size() == 1, "a legacy file becomes one hand-drawn route");
+    const auto& plan = imported.plans.front();
+    Check(plan.handDrawn && plan.sceneId == 1 && plan.stops.size() == 4 &&
+        plan.stops.front().itemId == "free:1" && plan.stops.back().itemId == "free:4",
+        "each endpoint of each segment becomes its own numbered stop in drawing order");
+    Check(plan.start.valid && Near(plan.start.roc, {0, 0}), "an imported route starts at its first point");
+    Check(std::all_of(plan.stops.begin(), plan.stops.end(),
+            [](const ItemDatas& stop) { return AutoRoute::IsFreeStop(stop) && stop.nameId.empty(); }),
+        "an import invents positions but never invents a point type");
+
+    const auto chest = Official("chest", 10, 0, StateIdFor(1));
+    const auto withPoint = AutoRoute::LegacyDocument::Import(document, "Routes", "local", lookupScene,
+        [&](int scene, const Coordinate&) -> std::optional<ItemDatas> { return scene == 1 ? std::optional<ItemDatas>{chest} : std::nullopt; });
+    Check(!AutoRoute::IsFreeStop(withPoint.plans.front().stops[1]) &&
+        withPoint.plans.front().stops[1].itemId == "chest" && AutoRoute::IsFreeStop(withPoint.plans.front().stops[0]),
+        "only the endpoint sitting on an official point is upgraded; the rest stay free");
+
+    const auto twoScenes = Json::parse(R"({"World":[[[0,0],[1,1]]],"Tethys":[[[2,2],[3,3]]]})");
+    const auto split = AutoRoute::LegacyDocument::Import(twoScenes, "Routes", "local", lookupScene, noPoints);
+    Check(split.plans.size() == 2 && split.plans[0].sceneId != split.plans[1].sceneId &&
+        split.plans[0].stops.size() == 2 && split.plans[1].stops.size() == 2,
+        "a legacy file spanning two maps imports as one route per map");
+
+    for (const auto& rejected : {Json::parse(R"({"NoSuchPlace":[[[0,0],[1,1]]]})"),
+            Json::parse(R"({"World":[[[0,0]]]})"), Json::parse(R"([1,2,3])")})
+        Check(!AutoRoute::LegacyDocument::Import(rejected, "x", "local", lookupScene, noPoints).rejected.empty(),
+            "a legacy file that cannot be understood is refused rather than guessed at");
+}
+} // namespace
+
+int main() {
+    try { DraftTests(); ImportTests(); }
+    catch (const std::exception& error) { ++failures; std::cerr << "UNEXPECTED: " << error.what() << '\n'; }
+    if (failures) { std::cerr << failures << " hand-drawn route test(s) failed\n"; return 1; }
+    std::cout << "Hand-drawn route tests passed\n";
+    return 0;
+}

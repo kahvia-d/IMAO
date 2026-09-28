@@ -28,6 +28,23 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
     private bool controllerConnected, canvasControllerOwned;
     private GamepadSample previous;
     private string profile = "";
+    /// <summary>
+    /// The filter the player had before a route narrowed it, kept in memory only: applying a route
+    /// is allowed to change what is drawn, but it must be possible to put it back.
+    /// </summary>
+    /// <summary>The route whose navigation is currently borrowing the map filter. Empty means none.</summary>
+    private string loanedRouteId = "";
+    /// <summary>What the map is currently narrowed to, for the list to show. Empty means "not narrowed".</summary>
+    private string FilteredRouteName = "";
+    private int FilteredKindCount;
+    /// <summary>True while a navigation is borrowing the filter, so the list can say so.</summary>
+    public bool RouteFilterActive => loanedRouteId.Length > 0;
+    /// <summary>
+    /// The page the tool window was last showing. Collapsing the window to its ball and opening it
+    /// again should land where the player left off — walking back through the outer menu every time
+    /// is exactly the annoyance this avoids. The canvas tool is deliberately not remembered.
+    /// </summary>
+    private string lastPage = "home";
     public bool IsOpen => window is not null;
     public bool IsReturning => closing;
     public bool ReturnFailed => returnFailed;
@@ -38,6 +55,15 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
     public MapToolsController(CoreHostService core, MarkerGuideCoordinator guides, FilterSelectionService filters)
     {
         this.core = core; this.guides = guides; this.filters = filters;
+        // A loan can outlive the process that took it: the narrowed filter was saved. Re-adopting it
+        // means the route restored from disk gives its map back when that navigation ends, instead of
+        // leaving the player with a filtered map they never chose.
+        if (RouteFilterSnapshot.Load() is { } outstanding)
+        {
+            loanedRouteId = outstanding.RouteId;
+            FilteredRouteName = "";
+            FilteredKindCount = 0;
+        }
         core.MarkerEvent += OnMarkerEvent;
         core.RoutePlanningChanged += OnRouteChanged;
         core.PropertyChanged += OnCoreChanged;
@@ -69,11 +95,19 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
         catch (Exception e) { core.ReportGamepadDiagnostic("map-tools-event-failed", e.Message); }
     }
 
-    private void OnRouteChanged(object? sender, RoutePlanningState value) => window?.RenderRoute(value);
+    private void OnRouteChanged(object? sender, RoutePlanningState value)
+    {
+        window?.RenderRoute(value);
+        window?.RenderRoutes(value, RouteFilterActive, FilteredRouteName, FilteredKindCount);
+    }
     private void OnCoreChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (window is null) return;
-        if (e.PropertyName == nameof(CoreHostService.Configuration)) window.RenderRoute(core.RoutePlanning);
+        if (e.PropertyName == nameof(CoreHostService.Configuration))
+        {
+            window.RenderRoute(core.RoutePlanning);
+            window.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);
+        }
         if (e.PropertyName == nameof(CoreHostService.IsConnected) && !core.IsConnected)
             _ = CloseAsync("核心连接已断开", true);
     }
@@ -99,11 +133,14 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
         var cancellation = new CancellationTokenSource(); sessionCancellation = cancellation;
         try
         {
-            window = new MapToolsWindow(filters, CommandAsync);
+            window = new MapToolsWindow(filters, core, CommandAsync, lastPage);
             var created = window;
             // 方向导航的几何候选写进 gamepad 日志：实机报告"左右换不了选项"时，这是唯一能区分
             // "那个方向本来没有相邻按钮"和"方向没被识别"的证据。
             created.DirectionDiagnostic = detail => core.ReportGamepadDiagnostic("map-tools-direction", detail);
+            // Why a route-list badge showed text instead of an icon is otherwise invisible: the
+            // image loader fails silently, so the reason goes to the gamepad log beside the rest.
+            created.KindDiagnostic = detail => core.ReportGamepadDiagnostic("map-tools-route-kind", detail);
             created.GeometryChanged += () => { ++layoutRevision; geometryDirty = true; };
             created.Closed += (_, _) => { if (ReferenceEquals(window, created)) _ = RetireAsync(); };
             created.Prepare(game);
@@ -126,6 +163,14 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
             if (!activated.Success) throw new InvalidOperationException("工具台未取得焦点：" + activated.Reason);
             await created.AnimateAsync(true, cancellation.Token);
             created.RenderRoute(core.RoutePlanning);
+            // Reopening on the route list needs its rows: the window restores the page, so the data
+            // for that page has to be fetched too, exactly as pressing the button would.
+            if (created.Page == "routes")
+            {
+                await core.ExecuteRoutePlanningAsync("list", new Dictionary<string, object?> { ["profileId"] = profile },
+                    cancellation.Token);
+                created.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);
+            }
             await UpdateAsync(interactive: true);
             created.FocusCurrent();
             core.ReportGamepadDiagnostic("map-tools-opened", $"session={sessionId} game={identity} host={created.Handle}");
@@ -324,16 +369,103 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
         {
             core.ReportGamepadDiagnostic("map-tools-back", $"page={window.Page} canvas={window.CanvasTool} foreground={GetForegroundWindow()}");
             if (window.CanvasTool != "pan") await CancelCanvasAsync("已取消绘制，保留已确认选点");
-            else if (window.Page != "home") { window.ShowPage("home"); navigation.Reset(); await UpdateAsync(true); }
+            else if (window.Page != "home") { ShowPage("home"); navigation.Reset(); await UpdateAsync(true); }
             else await CloseAsync("已返回游戏", true);
             return;
         }
         if (action.StartsWith("page:", StringComparison.Ordinal))
-        { window.ShowPage(action[5..]); navigation.Reset(); await UpdateAsync(true); return; }
+        { ShowPage(action[5..]); navigation.Reset(); await UpdateAsync(true); return; }
         commandBusy = true; window.SetBusy(true); samples.Clear();
         long operation = generation;
         try
         {
+            if (action == "routes")
+            {
+                // The list is a page, not a data fetch: enter it and ask the core for the rows.
+                ShowPage("routes"); navigation.Reset();
+                await core.ExecuteRoutePlanningAsync("list", new Dictionary<string, object?> { ["profileId"] = profile },
+                    sessionCancellation?.Token ?? default);
+                window.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);
+                return;
+            }
+            if (action == "filterByRoute")
+            {
+                // The filter follows the navigation: there is nothing to undo by hand, because
+                // leaving the navigation is what gives the map back. Only explain when asked.
+                Report(RouteFilterActive
+                    ? "当前处于路线导航中，点位筛选会随导航自动切换，退出导航后自动恢复"
+                    : "当前没有正在导航的路线，点位筛选由你自己设置");
+                return;
+            }
+            if (action is "saveCurrent" or "deleteCurrent")
+            {
+                var current = core.RoutePlanning.CurrentRoute;
+                if (current is null) { Report("当前没有可操作的路线"); return; }
+                var savedRow = core.RoutePlanning.SavedRoutes.FirstOrDefault(row => row.Id == current.Id);
+                if (action == "saveCurrent")
+                {
+                    // An unsaved drawing is saved through its own command: the generic "save" only
+                    // knows about planned previews and the active route.
+                    if (core.RoutePlanning.HandDrawnCount > 0 && savedRow is null && current.Id == HandDraftRouteId)
+                        await core.ExecuteRoutePlanningAsync("handCommit",
+                            new Dictionary<string, object?> { ["profileId"] = profile, ["name"] = current.Name },
+                            sessionCancellation?.Token ?? default);
+                    else
+                        await core.ExecuteRoutePlanningAsync("save",
+                            new Dictionary<string, object?> { ["profileId"] = profile, ["target"] = "preview", ["name"] = current.Name },
+                            sessionCancellation?.Token ?? default);
+                }
+                else if (savedRow is null) { Report("这条路线还没有保存"); return; }
+                else
+                {
+                    await core.ExecuteRoutePlanningAsync("delete",
+                        new Dictionary<string, object?> { ["profileId"] = profile, ["routeId"] = current.Id },
+                        sessionCancellation?.Token ?? default);
+                    // Deleting the route ends its navigation, so its loan ends with it.
+                    EndRouteFilterLoanIfNavigationEnded();
+                }
+                await core.ExecuteRoutePlanningAsync("list", new Dictionary<string, object?> { ["profileId"] = profile },
+                    sessionCancellation?.Token ?? default);
+                window.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);
+                Report(core.RoutePlanning.Message);
+                return;
+            }
+            if (action.StartsWith("switch:", StringComparison.Ordinal))
+            {
+                var routeId = action["switch:".Length..];
+                var row = core.RoutePlanning.SavedRoutes.FirstOrDefault(saved => saved.Id == routeId);
+                // Switching applies the route AND starts guiding it: that is what choosing a route
+                // from the in-game list means. Leaving the list still happens with 退出导航.
+                await core.ExecuteRoutePlanningAsync("switch",
+                    new Dictionary<string, object?> { ["profileId"] = profile, ["routeId"] = routeId, ["start"] = true,
+                        ["expectedSceneId"] = core.RoutePlanning.SceneId, ["expectedGeneration"] = core.RoutePlanning.Generation },
+                    sessionCancellation?.Token ?? default);
+                // Borrow the filter for this navigation. A route with no catalogue points (a drawing made
+                // only of free points) has nothing to narrow to, so it leaves the map as it is.
+                if (core.RoutePlanning.Active?.Id == routeId && row is not null && row.Kinds.Length > 0)
+                    await ApplyRouteFilterAsync(routeId, row.Name, row.Kinds.Select(kind => kind.NameId).ToArray());
+                await core.ExecuteRoutePlanningAsync("list", new Dictionary<string, object?> { ["profileId"] = profile },
+                    sessionCancellation?.Token ?? default);
+                window.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);
+                Report(core.RoutePlanning.Message);
+                return;
+            }
+            if (action is "handStart" or "handUndo" or "handCancel" or "handCommit" or "handFinish" or "handDiscard")
+            {
+                var name = string.IsNullOrWhiteSpace(window.HandRouteName) ? "我的路线" : window.HandRouteName.Trim();
+                await core.ExecuteRoutePlanningAsync(action,
+                    new Dictionary<string, object?>
+                    {
+                        ["profileId"] = profile,
+                        ["sceneId"] = core.RoutePlanning.SceneId,
+                        ["name"] = name
+                    }, sessionCancellation?.Token ?? default);
+                await core.ExecuteRoutePlanningAsync("list", new Dictionary<string, object?> { ["profileId"] = profile },
+                    sessionCancellation?.Token ?? default);
+                window.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);
+                Report(core.RoutePlanning.Message);
+                return;
+            }
             if (action == "guide")
             {
                 await UpdateAsync(false);
@@ -373,6 +505,10 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
             if (state.SceneId > 0 && action is not ("new" or "resume" or "pause" or "stop" or "undoSkip" or "farm"))
             { payload["expectedSceneId"] = state.SceneId; payload["expectedGeneration"] = state.Generation; }
             await core.ExecuteRoutePlanningAsync(routeAction, payload, sessionCancellation?.Token ?? default);
+            // 退出导航 is the ordinary way a navigation ends, and it is the moment the borrowed map
+            // filter has to go back. Deleting the route is handled where that happens, and the core
+            // dropping a broken route is caught here too, because this reads the resulting state.
+            EndRouteFilterLoanIfNavigationEnded();
             if (operation != generation || window is null) return;
             window.RenderRoute(core.RoutePlanning);
             if (action is "tool:box" or "tool:lasso" or "tool:point" or "tool:start")
@@ -402,6 +538,75 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
         }
     }
 
+    /// <summary>Shows a page and remembers it, so reopening the window lands where the player left.</summary>
+    private void ShowPage(string page)
+    {
+        lastPage = page;
+        window?.ShowPage(page);
+    }
+
+    /// <summary>The identity the core gives a drawing that has no route file yet.</summary>
+    private const string HandDraftRouteId = "hand-draft";
+
+    /// <summary>
+    /// Narrows the map to the point types a saved route visits, so navigating is not a hunt through
+    /// unrelated icons. The narrowing is a **loan tied to the navigation**: the player's own filter is
+    /// remembered first, and leaving that navigation gives it back. Nothing here is a preference
+    /// change, which is why the loan is written to disk — closing the app mid-route must not leave the
+    /// narrowed filter saved as if the player had chosen it.
+    /// </summary>
+    private Task ApplyRouteFilterAsync(string routeId, string routeName, string[] kinds)
+    {
+        if (kinds.Length == 0)
+        {
+            Report("这条路线没有可筛选的点位类型（手绘的自由点没有类型）");
+            return Task.CompletedTask;
+        }
+        var current = filters.Rows.ToDictionary(row => row.Id, row => row.IsEnabled, StringComparer.Ordinal);
+        // The first route of a session remembers the player's map; later ones reuse that memory, so
+        // switching routes can never promote a route's filter into the player's own setting.
+        RouteFilterSnapshot.Begin(routeId, current);
+        var plan = RouteFilterPlan.Narrow(current, kinds);
+        // Only the difference is sent: the native filter registry appends what it is given, so a
+        // full re-push every time would grow it without bound.
+        if (plan.Disable.Count > 0) filters.SetEnabled(plan.Disable, false);
+        if (plan.Enable.Count > 0) filters.SetEnabled(plan.Enable, true);
+        loanedRouteId = routeId;
+        FilteredRouteName = routeName;
+        FilteredKindCount = plan.Kept;
+        Report($"已按路线筛选：导航期间只显示这条路线用到的 {plan.Kept} 种点位，退出导航后自动恢复");
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gives the map back to the player. Called when the navigation the loan belongs to ends, and
+    /// when that route is deleted. Returns whether a loan was actually in effect.
+    /// </summary>
+    private bool EndRouteFilterLoan(string reason)
+    {
+        var loan = RouteFilterSnapshot.Load();
+        if (loan is null) { loanedRouteId = ""; FilteredRouteName = ""; FilteredKindCount = 0; return false; }
+        RouteFilterSnapshot.End();
+        loanedRouteId = ""; FilteredRouteName = ""; FilteredKindCount = 0;
+        var now = filters.Rows.ToDictionary(row => row.Id, row => row.IsEnabled, StringComparer.Ordinal);
+        foreach (var (id, enabled) in RouteFilterPlan.Restore(loan.Value.Enabled, now))
+            filters.SetEnabled([id], enabled);
+        Report(reason);
+        return true;
+    }
+
+    /// <summary>
+    /// Notices that the navigation which took the filter over has ended, whatever ended it — the
+    /// 退出导航 button, a deleted route, or the core refusing to keep a broken one. The loan names its
+    /// route, so only that route's end can give the map back.
+    /// </summary>
+    private void EndRouteFilterLoanIfNavigationEnded()
+    {
+        if (loanedRouteId.Length == 0) return;
+        var active = core.RoutePlanning.Active;
+        if (active is not null && active.Id == loanedRouteId) return;
+        EndRouteFilterLoan("已退出路线导航，恢复了导航前的点位筛选");
+    }
     public GamepadHandoffLease? AcquireHandoff(nint source)
     {
         var current = window;

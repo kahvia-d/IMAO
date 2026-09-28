@@ -145,6 +145,12 @@ public:
 
 	bool TryGetRoutePoint(Coordinate& point, int& sceneId);
 
+	// Drawing a route by hand: one press of the hand-drawing hotkey records the point under the
+	// cursor. Polled from the render loop rather than a thread of its own, because unlike the old
+	// two-endpoint tool it only ever does one thing per press.
+	void PollHandDrawnRoute();
+	bool handDrawnKeyDown = false;
+
 	Coordinate GetMapCoordinatesOfMousePos();
 
 	std::vector<cv::Point2f> GetCaptrueCorners() {

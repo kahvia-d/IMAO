@@ -13,6 +13,7 @@ using Clock=AutoRoute::ReplanClock;
 using Json=nlohmann::json;
 namespace {
 int failures=0;std::uint64_t sequence=0;
+void VerifyRouteListShape();
 void Check(bool condition,const char* message){if(!condition){++failures;std::cerr<<"FAIL: "<<message<<'\n';}}
 Json Command(Json command){const auto result=RoutePlanningService::Command(command);
     if(!result.value("accepted",false))throw std::runtime_error(result.value("message","command failed"));return result;}
@@ -481,6 +482,34 @@ void VerifyFarmMode(){
             "a route saved without the farming setting must not inherit the previous route's mode");
     }
 }
+// The route list is the one place a point type is described to the shell. The shell cannot resolve
+// it by itself — the filter catalogue it holds knows far fewer identifiers than routes actually use
+// — so the core has to send both the game's name and the resolved icon path.
+void VerifyRouteListShape(){
+    const auto listed=Command({{"action","list"}});
+    const auto& rows=listed.at("data").at("savedRoutes");
+    Check(rows.is_array()&&!rows.empty(),"the route list reports the routes that were saved");
+    std::size_t described=0;
+    for(const auto& row:rows){
+        if(!row.contains("stopCount")||!row.at("stopCount").is_number()){
+            Check(false,"a listed route reports how many points it visits");return;
+        }
+        if(!row.contains("kinds")||!row.at("kinds").is_array()){
+            Check(false,"a listed route carries a kinds array");return;
+        }
+        for(const auto& kind:row.at("kinds")){
+            if(!kind.contains("nameId")||!kind.contains("name")||!kind.contains("icon")){
+                Check(false,"each listed point type carries nameId, name and icon");return;
+            }
+            ++described;
+        }
+    }
+    Check(true,"the route list describes its point types with a name and an icon path");
+    // The fixture's route is built from catalogue points, so the descriptors must be non-empty: a
+    // silently empty list here is exactly the bug this check exists for.
+    Check(described>0,"the route list actually described the fixture's point types");
+    if(!described)std::cerr<<"note: fixture has no catalogue point types to describe\n";
+}
 }
 int main(int argc,char** argv){
     StructuredLogger::root=std::filesystem::absolute(argc>1?argv[1]:"out/auto-replan-native/service-data");
@@ -533,6 +562,7 @@ int main(int argc,char** argv){
         VerifyRouteToolbarNavigation();
         VerifyToolbarLayoutNavigation();
         VerifyFarmMode();
+        VerifyRouteListShape();
     }catch(const std::exception& e){++failures;std::cerr<<"UNEXPECTED: "<<e.what()<<'\n';}
     RoutePlanningService::Shutdown();
     std::cout<<"RoutePlanningService harness failures="<<failures<<'\n';return failures?1:0;

@@ -10,7 +10,6 @@
 #include "WindowsCapture/BitBltCapture/BitBltCapture.h"
 #include "ImguiDraw/InteractiveInterface/Notification.h"
 #include "ImguiDraw/Items/DrawItemOnGameMap.h"
-#include "ImguiDraw/Routes/LoadEditRouteData.h"
 #include "ImguiDraw/Items/DrawItemOnMinMap.h"
 #include "Diagnostics/Diagnostics.h"
 #include "Feature/RuntimeFeatureRepository.h"
@@ -50,12 +49,11 @@ DWORD requestedProcessId = 0;
 std::once_flag drawItemsInitialized;
 
 // Session ownership also covers partial startup and exception unwinding. Route
-// recording and drawing stop before their App pointer can be destroyed.
+// drawing stops before its App pointer can be destroyed.
 struct OverlaySession {
     std::unique_ptr<App> app;
     std::unique_ptr<ImGuiOverWindows> overlay;
     ~OverlaySession() {
-        LoadEditRouteData::StopThread();
         if (overlay) overlay->Stop();
         if (app) app->StopTasks();
         RoutePlanningService::SessionStopped();
@@ -84,7 +82,6 @@ bool RunOverlayAttempt(HWND hwnd, const RECT& clientRect, bool useGraphicsCaptur
 
     if (!currentApp->StartTasks()) return false;
 
-    LoadEditRouteData::Initi(currentApp.get());
     RuntimeStatus::SetCoreState("running", "核心正在运行");
     {
         std::unique_lock lock(runtimeMutex);
@@ -274,7 +271,6 @@ void Initi()
 	SetUnhandledExceptionFilter(WriteNativeCrashDump);
 	std::scoped_lock lock(runtimeMutex);
 	if (runtimeInitialized) return;
-	LoadEditRouteData::PrepareStorage();
 	std::call_once(drawItemsInitialized, [] { DrawItemBase::Initi(); });
 	Diagnostics::Initialize();
 	const auto assetRoot = ResourceSnapshotContext::BaselineRoot();
@@ -427,16 +423,4 @@ void SetOverlayPresentMode(int setValue) {
     StructuredLogger::Record("info", "core", "overlay-present-mode",
         std::string("requested=") + std::to_string(setValue) + " applied=" +
         std::to_string(ImGuiOverWindows::PresentMode()));
-}
-
-void SetSavedJsonRouteName(const char* itemId) {
-    LoadEditRouteData::SetRouteJsonName(itemId);
-}
-
-void LoadOneJsonRoute(const char* routeName) {
-    LoadEditRouteData::LoadRoutesDatasFromLocal(false, routeName);
-}
-
-void LoadJsonRoute() {
-    LoadEditRouteData::LoadRoutesDatasFromLocal(true,"");
 }

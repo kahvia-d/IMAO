@@ -25,6 +25,7 @@ try
     LegacyRecoveryTests.Run(root, Check);
     KuroSyncTests.Run(root, Check);
     RoutePlanningTests.Run(Check);
+    RouteFilterPlanTests.Run(Check);
     GamepadInputTests.Run(root, Check);
     GuideSkipHoldGestureTests.Run(Check);
     GuideFocusLatchTests.Run(Check);
@@ -185,22 +186,24 @@ try
             "toolbar request from a previous profile cannot change the active preference");
         await core.StopRuntimeAsync();
         Check(core.IsConnected, "stop while idle retains the connection");
-        await core.SetRouteNameAsync("../escape");
-        Check(core.LastFault.Contains("路线"), "route traversal is rejected by the native host");
-        string routesRoot = Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA")!, "IMao-WinUI", "SavedRoutes");
-        string routeId = "test-" + Guid.NewGuid().ToString("N");
-        string routePath = Path.Combine(routesRoot, routeId + ".json");
+        // The hand-drawn route surface used to be three one-way commands of its own; it is now a
+        // kind of route inside the shared store, so a hostile identifier goes through the same
+        // fence as any other route operation. A refused route command both surfaces a fault and
+        // throws, which is the contract the toolbar relies on.
+        core.LastFault = string.Empty;
+        string traversalRefusal = "";
+        try { await core.ExecuteRoutePlanningAsync("load", new { routeId = "../escape", profileId = "local" }); }
+        catch (InvalidOperationException error) { traversalRefusal = error.Message; }
+        Check(traversalRefusal.Length > 0 && core.LastFault.Length > 0,
+            "route traversal is refused by the native host and surfaced to the caller");
+        core.LastFault = string.Empty;
+        string missingRefusal = "";
         try
         {
-            File.WriteAllText(routePath, "{\"World\":[[[0,0],[10,0]]]}");
-            core.LastFault = string.Empty;
-            await core.LoadRouteAsync(routeId);
-            Check(core.LastFault.Length == 0, "route starting at the origin is accepted before game startup");
-            File.WriteAllText(routePath, "{\"World\":[[\"broken\"]]}");
-            await core.LoadRouteAsync(routeId);
-            Check(core.LastFault.Length > 0, "malformed route is rejected without crashing the host");
+            await core.ExecuteRoutePlanningAsync("load", new { routeId = "no-such-route-" + Guid.NewGuid().ToString("N"), profileId = "local" });
         }
-        finally { File.Delete(routePath); }
+        catch (InvalidOperationException error) { missingRefusal = error.Message; }
+        Check(missingRefusal.Length > 0, "loading a route that is not there is reported instead of silently succeeding");
         await Task.WhenAll(core.RestartAsync(), core.ConfigureAsync(minMapUpdateCycle: 90));
         Check(!core.Configuration.MapEnabled && core.Configuration.MapUpdateCycle == 95 && core.Configuration.MinMapUpdateCycle == 90, "restart preserves and merges configuration");
         Check(core.IsConnected, "restart and configuration are serialized");

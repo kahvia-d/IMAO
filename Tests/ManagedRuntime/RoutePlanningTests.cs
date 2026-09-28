@@ -18,12 +18,25 @@ internal static class RoutePlanningTests
                          {"key":"8:1409980210964680704","stateId":8,"pointId":"1409980210964680704","x":10,"y":20}],
              "preview":{"id":"preview","planarLength":42.5,"stops":[{"pointId":"1409980210964680704","order":1}]},
              "active":{"id":"active","stops":[{"pointId":"1409977912641277952","order":1,"skipped":true}]},
-             "savedRoutes":[{"id":"saved-one","name":"一号路线","sceneName":"World"}]}
+             "savedRoutes":[{"id":"saved-one","name":"一号路线","sceneName":"World","stopCount":151,"handDrawn":false,
+                             "kinds":[{"nameId":"SP_IconMonsterHead_1001_UI","name":"叮咚咚","icon":"C:\\icons\\icon-0318.png"},
+                                      {"nameId":"mystery","name":"","icon":""}]}]}
             """);
         var state = RoutePlanningState.FromJson(data.RootElement);
         check(state.Selected.Length == 2 && state.Selected[0].PointId == "1409977912641277952" &&
             state.Selected[1].PointId != state.Selected[0].PointId && state.Selected[1].X == state.Selected[0].X,
             "automatic route snapshots preserve opaque large IDs and distinct targets at equal coordinates");
+        // The route list shows the game's own name and icon for a point type, resolved by the core:
+        // the filter catalogue knows a different and much smaller set of ids than the icon manifest.
+        var kinds = state.SavedRoutes[0].Kinds;
+        check(state.SavedRoutes[0].StopCount == 151 && kinds.Length == 2 && kinds[0].NameId == "SP_IconMonsterHead_1001_UI" &&
+            kinds[0].Name == "叮咚咚" && kinds[0].Label == "叮咚咚",
+            "a route list row carries the point type's game name rather than its identifier");
+        check(kinds[0].HasIcon && kinds[0].IconUri.StartsWith("file:///", StringComparison.OrdinalIgnoreCase),
+            "an absolute Windows icon path becomes a usable file URI: path=" + (kinds[0].IconPath ?? "<null>") +
+            " uri=" + kinds[0].IconUri + " hasIcon=" + kinds[0].HasIcon);
+        check(!kinds[1].HasIcon && kinds[1].Label == "mystery",
+            "a point type with no icon and no name still shows something readable instead of nothing");
         check(state.Preview?.Id == "preview" && state.Active?.Id == "active" && state.Active.Stops[0].Skipped &&
             state.Preview.PlanarLength == 42.5, "automatic route preview and active navigation remain independent");
         check(state.Start.Valid && state.Start.X == 0 && state.Start.Generation == 12 && state.HiddenCount == 1 &&
@@ -298,6 +311,61 @@ internal static class RoutePlanningTests
             state = await core.ExecuteRoutePlanningAsync("load", new { routeId = activeId });
             check(state.NavigationStatus == "paused" && state.CurrentTarget?.Key == nextKey,
                 "explicit route load preserves durable completion and restores paused navigation");
+
+            // A hand-drawn route is the same document in a sibling folder, differing only in that a
+            // stop may be a free point. The list has to describe it and switching to it has to
+            // actually start guiding it, which is what separates `switch` from `load`.
+            string handId = "hand-route-ipc";
+            string handPath = Path.Combine(appData, "IMao-WinUI", "SavedRoutes", "Hand", "local", handId + ".json");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(handPath)!);
+                // Free points only: a catalogue stop would have to agree with the live marker data
+                // byte for byte, which is a property the core tests already pin. What this checks is
+                // that a hand-drawn document in the other folder is listed, switched to and
+                // restored, so the stops can be points the catalogue knows nothing about.
+                await File.WriteAllTextAsync(handPath, """
+                    {"formatVersion":1,"id":"hand-route-ipc","name":"手绘路线","profileId":"local","sceneId":1,
+                     "start":{"valid":true,"sceneId":1,"x":1,"y":2,"source":"manual","confirmedUnixMs":0,"generation":0},
+                     "handDrawn":true,"filterByRoute":true,
+                     "stops":[
+                       {"stateId":8,"pointId":"free:1","nameId":"","x":1,"y":2,"countryId":0,"floorId":"","level":"","skipped":false,"kind":"free"},
+                       {"stateId":8,"pointId":"free:2","nameId":"","x":3,"y":4,"countryId":0,"floorId":"","level":"","skipped":false,"kind":"free"},
+                       {"stateId":8,"pointId":"free:3","nameId":"","x":5,"y":6,"countryId":0,"floorId":"","level":"","skipped":false,"kind":"free"}
+                     ],
+                     "skipHistory":[]}
+                    """);
+                state = await core.ExecuteRoutePlanningAsync("list");
+                var handRow = state.SavedRoutes.SingleOrDefault(route => route.Id == handId);
+                check(handRow is not null && handRow.HandDrawn && handRow.StopCount == 3 &&
+                    handRow.SceneName.Length > 0 && handRow.Label.Contains("手绘路线"),
+                    "the route list describes a hand-drawn route with its point count, map and origin");
+                check(handRow!.Kinds.Length == 0 && handRow.KindLabel.Contains("自由点"),
+                    "a hand-drawn route of free points reports no filterable point types");
+                check(handRow.DetailLabel.Contains("3") && handRow.DetailLabel.Contains("手绘"),
+                    "a hand-drawn row says how many points it has and that it was drawn by hand");
+
+                state = await core.ExecuteRoutePlanningAsync("switch", new { routeId = handId, start = true, profileId = "local" });
+                check(state.Active?.Id == handId && state.CurrentRoute?.Id == handId && !state.CurrentRouteIsPreview,
+                    "switching applies the hand-drawn route and reports it as the current route: active=" +
+                    (state.Active?.Id ?? "<none>") + " current=" + (state.CurrentRoute?.Id ?? "<none>") +
+                    " preview=" + state.CurrentRouteIsPreview + " message=" + state.Message);
+                check(state.NavigationStatus is "navigating" or "waitingForLocation",
+                    "switching starts guiding the route instead of only loading it");
+                check(state.Active.Stops.Length == 3 && state.Active.Stops[0].PointId == "free:1",
+                    "the hand-drawn route keeps its free points and their drawing order across the round trip");
+
+                // The active pointer has to remember which folder the route lives in, or a restart
+                // would look for it under Auto and quietly lose it.
+                await core.RestartAsync();
+                var afterRestart = await core.ExecuteRoutePlanningAsync("state");
+                check(afterRestart.Active?.Id == handId && afterRestart.NavigationStatus == "paused",
+                    "a restart restores the hand-drawn route from the active pointer under the hand folder");
+            }
+            finally { if (File.Exists(handPath)) File.Delete(handPath); }
+
+            state = await core.ExecuteRoutePlanningAsync("load", new { routeId = activeId });
+            check(state.Active?.Id == activeId, "the automatic route can still be loaded after a hand-drawn one");
             await core.RestartAsync();
             var restarted = await core.ExecuteRoutePlanningAsync("state");
             check(core.IsConnected && restarted.Active?.Id == activeId && restarted.NavigationStatus == "paused" &&

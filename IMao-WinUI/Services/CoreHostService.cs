@@ -400,13 +400,6 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public Task SetIsolationSwitchesAsync(int mask, CancellationToken cancellationToken = default) =>
         SendCommandAsync("setIsolationSwitches", new Dictionary<string, object?> { ["mask"] = mask }, cancellationToken);
 
-    public Task SetRouteNameAsync(string routeName, CancellationToken cancellationToken = default) =>
-        SendCommandAsync("setRouteName", new Dictionary<string, object?> { ["routeName"] = routeName }, cancellationToken);
-
-    public Task LoadRoutesAsync(CancellationToken cancellationToken = default) => SendCommandAsync("loadRoutes", null, cancellationToken);
-    public Task LoadRouteAsync(string routeName, CancellationToken cancellationToken = default) =>
-        SendCommandAsync("loadRoute", new Dictionary<string, object?> { ["routeName"] = routeName }, cancellationToken);
-
     public async Task<RoutePlanningState> ExecuteRoutePlanningAsync(string action, object? arguments = null,
         CancellationToken cancellationToken = default)
     {

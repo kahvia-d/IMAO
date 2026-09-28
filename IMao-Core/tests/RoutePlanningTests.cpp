@@ -3,6 +3,7 @@
 #include "Runtime/FarmMode.h"
 #include "Runtime/RouteGeometry.h"
 #include "Runtime/RoutePlanStore.h"
+#include "Runtime/LegacyHandRouteImportFile.h"
 #include "Runtime/PlanningEscapeKey.h"
 #include "Runtime/RuntimeHotkeys.h"
 #include "Runtime/GuideHotkeyRouting.h"
@@ -38,6 +39,15 @@ ItemDatas Target(const std::string& id, double x, double y, int state = 1) {
     return item;
 }
 AutoRoute::Start Origin() { AutoRoute::Start start; start.sceneId = 1; start.valid = true; return start; }
+// A point the player dropped on empty map space while drawing a route by hand. It has no
+// catalogue entry, no type and no icon; it exists only inside the one route that holds it.
+ItemDatas FreeTarget(const std::string& id, double x, double y, int state = 1) {
+    ItemDatas item;
+    item.itemId = id; item.itemMapROC = {x, y};
+    item.layer.stateId = state;
+    item.layer.stopKind = StopKind::Free;
+    return item;
+}
 std::vector<ItemDatas> Sample(std::size_t count, unsigned seed) {
     std::mt19937 random(seed);
     std::vector<ItemDatas> result;
@@ -298,6 +308,286 @@ void StoreTests() {
     for (const auto& entry : fs::directory_iterator(planPath.parent_path()))
         Expect(entry.path().filename().string().find(".tmp-") == std::string::npos, "atomic save leaves no abandoned temporary files");
 }
+// A hand-drawn route is stored by the same store as an automatic one. The only thing that makes
+// it special is that a stop may be a free point: a position the player picked on empty map space
+// with nothing in the official catalogue behind it.
+void HandDrawnStoreTests() {
+    namespace fs = std::filesystem;
+    using Json = nlohmann::json;
+    const auto base = fs::weakly_canonical(fs::temp_directory_path());
+    const auto folder = base / ("imao-hand-tests-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64()));
+    if (!fs::create_directory(folder)) throw std::runtime_error("hand route test directory already exists");
+    struct Cleanup {
+        fs::path folder, base;
+        ~Cleanup() {
+            std::error_code error;
+            const auto resolved = fs::weakly_canonical(folder, error);
+            if (!error && resolved.parent_path() == base && resolved.filename().string().starts_with("imao-hand-tests-"))
+                fs::remove_all(resolved, error);
+        }
+    } cleanup{folder, base};
+    const auto read = [](const fs::path& path) { std::ifstream input(path, std::ios::binary); return std::string(std::istreambuf_iterator<char>(input), {}); };
+    AutoRoute::RoutePlanStore store(folder / "SavedRoutes");
+    const int state = Scene::Find(1)->kuroStateId;
+    const auto planPath = folder / "SavedRoutes" / "Hand" / "local" / "hand-1.json";
+    const auto autoPath = folder / "SavedRoutes" / "Auto" / "local" / "auto-1.json";
+    AutoRoute::Plan hand;
+    hand.id = "hand-1"; hand.name = "我的路线"; hand.profileId = "local"; hand.sceneId = 1;
+    hand.start = Origin();
+    hand.handDrawn = true;
+    hand.stops = {FreeTarget("free:1", 10, 20, state), Target("chest", 30, 40, state), FreeTarget("free:2", 50, 60, state)};
+    // The resolver reports the live catalogue: the one official point of this route, and nothing
+    // for the two free points, because a free point must never be looked up.
+    const auto officialStop = Target("chest", 30, 40, state);
+    const auto resolver = [&](int sceneId, const std::string& key) -> std::optional<ItemDatas> {
+        if (sceneId != hand.sceneId || key != AutoRoute::Key(officialStop)) return {};
+        return officialStop;
+    };
+    store.Save(hand, true);
+    const auto restored = store.Load("local", "hand-1", resolver);
+    Expect(restored.handDrawn && restored.stops.size() == 3 && Keys(restored.stops) == Keys(hand.stops),
+        "a hand-drawn route round-trips through the shared store with its order intact");
+    Expect(AutoRoute::IsFreeStop(restored.stops[0]) && AutoRoute::IsFreeStop(restored.stops[2]) &&
+        !AutoRoute::IsFreeStop(restored.stops[1]),
+        "free points and catalogue points keep their kind across a save and load");
+    Expect(restored.stops[0].nameId.empty() && Near(restored.stops[0].itemMapROC, {10, 20}) &&
+        restored.stops[0].layer.stateId == state && Near(restored.stops[2].itemMapROC, {50, 60}),
+        "a free point keeps its position and map without inventing a type for it");
+    Expect(restored.filterByRoute, "the route filter setting defaults on for a route that does not record it");
+    Expect(AutoRoute::Kinds(restored.stops).size() == 1 && AutoRoute::Kinds(restored.stops).front() == "chest",
+        "only catalogue points contribute point types to a route");
+    const auto document = Json::parse(read(planPath));
+    Expect(document.at("stops")[0].at("kind").get<std::string>() == "free" &&
+        document.at("stops")[1].at("kind").get<std::string>() == "catalog" && document.at("handDrawn").get<bool>(),
+        "the stored stop kind says which points exist only inside this route");
+    hand.filterByRoute = false;
+    store.Save(hand, true);
+    Expect(!store.Load("local", "hand-1", resolver).filterByRoute, "the route filter setting is remembered per route");
+    hand.filterByRoute = true;
+    store.Save(hand, true);
+    const auto active = store.LoadActive("local", resolver);
+    Expect(active && active->id == "hand-1" && active->handDrawn,
+        "the active pointer remembers that the active route is hand-drawn");
+    store.ClearActive("local");
+    Expect(!store.LoadActive("local", resolver), "clearing the pointer stops restoring a hand-drawn route too");
+
+    // A route file written before free points existed carries no kind. For a catalogue-only
+    // route the only safe reading is "catalogue point", so such a file must keep loading. Its
+    // resolver is stated independently of the plan so a failure cannot mean two things at once.
+    const auto oldRouteResolver = [&](int sceneId, const std::string& key) -> std::optional<ItemDatas> {
+        if (sceneId != 1) return {};
+        if (key == AutoRoute::Key(Target("chest", 1, 2, state))) return Target("chest", 1, 2, state);
+        if (key == AutoRoute::Key(Target("boss", 3, 4, state))) return Target("boss", 3, 4, state);
+        return {};
+    };
+    auto catalogueOnly = hand;
+    catalogueOnly.id = "auto-kindless"; catalogueOnly.name = "old route"; catalogueOnly.handDrawn = false;
+    catalogueOnly.stops = {Target("chest", 1, 2, state), Target("boss", 3, 4, state)};
+    store.Save(catalogueOnly, false);
+    const auto kindlessPath = folder / "SavedRoutes" / "Auto" / "local" / "auto-kindless.json";
+    const auto kindless = Json::parse(read(kindlessPath));
+    const auto withoutKindField = [](Json document) { for (auto& stop : document["stops"]) stop.erase("kind"); return document; };
+    WriteTextAtomically(kindlessPath, withoutKindField(kindless).dump());
+    Expect(!store.Load("local", "auto-kindless", oldRouteResolver).handDrawn,
+        "a route file written before free points existed still loads and is not mistaken for a hand-drawn one");
+    // For a file that *does* hold a free point there is no safe reading at all: "free" would be a
+    // guess, and "catalogue" needs a type the free point never had. Refusing is the honest answer.
+    WriteTextAtomically(planPath, withoutKindField(document).dump());
+    RejectsAny([&] { store.Load("local", "hand-1", resolver); },
+        "a hand-drawn route whose file predates stop kinds is refused instead of silently dropping a free point");
+    WriteTextAtomically(planPath, document.dump());
+    Expect(store.Load("local", "hand-1", resolver).stops.size() == 3, "restoring the kind field restores the route");
+
+    // The catalogue check for official points must not have been relaxed to let free points in.
+    // Checked on a route that holds no free point at all, so a failure can only mean the
+    // catalogue check moved.
+    auto automatic = hand; automatic.id = "auto-1"; automatic.name = "自动路线"; automatic.handDrawn = false;
+    automatic.stops = {Target("chest", 1, 2, state), Target("boss", 3, 4, state)};
+    store.Save(automatic, false);
+    auto shifted = automatic.stops[1]; shifted.itemMapROC = {3.001, 4};
+    const auto shiftedResolver = [&](int sceneId, const std::string& key) -> std::optional<ItemDatas> {
+        return key == AutoRoute::Key(automatic.stops[1]) ? std::optional<ItemDatas>{shifted} : std::nullopt; };
+    RejectsAny([&] { store.Load("local", "auto-1", shiftedResolver); },
+        "a catalogue point whose coordinates moved is still refused");
+    auto retyped = automatic.stops[1]; retyped.nameId = "other";
+    const auto retypedResolver = [&](int sceneId, const std::string& key) -> std::optional<ItemDatas> {
+        return key == AutoRoute::Key(automatic.stops[1]) ? std::optional<ItemDatas>{retyped} : std::nullopt; };
+    RejectsAny([&] { store.Load("local", "auto-1", retypedResolver); },
+        "a catalogue point whose type moved is still refused");
+    // A point that is not in the catalogue at all is still refused, which is the whole reason
+    // free points have to be marked as such in the file.
+    const auto emptyResolver = [&](int, const std::string&) -> std::optional<ItemDatas> { return {}; };
+    RejectsAny([&] { store.Load("local", "auto-1", emptyResolver); },
+        "a catalogue stop that no longer resolves is still refused");
+    store.Delete("local", "auto-1");
+
+    auto typedFree = hand; typedFree.stops[0].nameId = "chest";
+    Rejects([&] { store.Save(typedFree); }, "a free point cannot carry a point type");
+    auto unknownFree = hand; unknownFree.stops[0].itemId = "";
+    Rejects([&] { store.Save(unknownFree); }, "a stop without an identity is still refused");
+
+    // Two route folders, one list. auto-1 was already removed above, so what remains is the
+    // hand-drawn route plus the kindless automatic one.
+    const auto rows = store.List("local");
+    Expect(rows.size() == 2, "the route list merges hand-drawn and automatic routes");
+    const auto rowFor = [&](const std::string& id) -> Json {
+        for (const auto& row : rows) if (row.at("id").get<std::string>() == id) return row;
+        return Json::object(); };
+    const auto handRow = rowFor("hand-1"), automaticRow = rowFor("auto-kindless");
+    Expect(handRow.at("handDrawn").get<bool>() && !automaticRow.at("handDrawn").get<bool>(),
+        "a list row says which system produced the route");
+    Expect(handRow.at("stopCount").get<int>() == 3 && automaticRow.at("stopCount").get<int>() == 2,
+        "a list row reports how many points the route visits");
+    Expect(handRow.at("kinds").size() == 1 && handRow.at("kinds")[0].at("nameId") == "chest",
+        "a list row lists only the point types that have a filter row and an icon");
+    Expect(automaticRow.at("kinds").size() == 1 && automaticRow.at("sceneName") == Scene::SceneIdToName(1),
+        "a list row lists the distinct point types of an automatic route");
+    Expect(!handRow.contains("stops"), "the list does not ship every stop of every route to the interface");
+
+    Expect(store.Delete("local", "hand-1"), "deleting a hand-drawn route reports which folder it came from");
+    Expect(!fs::exists(planPath) && store.List("local").size() == 1, "the deleted hand-drawn route is gone and the automatic one remains");
+    Expect(!store.Delete("local", "auto-kindless"), "deleting an automatic route reports the automatic folder");
+    Expect(!fs::exists(kindlessPath), "the deleted automatic route is gone from disk");
+    Expect(store.List("local").empty(), "both folders empty out through the same list");
+    RejectsAny([&] { store.Delete("local", "hand-1"); }, "deleting a missing hand-drawn route is rejected");
+}
+// The old hand tool stored a route as bare line segments per scene, with no point identity at
+// all. The import has to invent positions without ever inventing a *type*, because a type is
+// what drives the icon and the map filter.
+void LegacyImportTests() {
+    using Json = nlohmann::json;
+    const int state = Scene::Find(1)->kuroStateId;
+    const auto lookupScene = [](const std::string& name) { return Scene::SceneNameToId(name.c_str()); };
+    const auto noPoints = [](int, const Coordinate&) -> std::optional<ItemDatas> { return {}; };
+    const auto legacy = Json::parse(R"({"World":[[[0,0],[10,0]],[[10,0],[20,0]]]})");
+    const auto imported = AutoRoute::LegacyDocument::Import(legacy, "Routes", "local", lookupScene, noPoints);
+    Expect(imported.rejected.empty() && imported.plans.size() == 1, "a legacy file becomes one hand-drawn route");
+    const auto& plan = imported.plans.front();
+    Expect(plan.handDrawn && plan.sceneId == 1 && plan.start.valid && Near(plan.start.roc, {0, 0}),
+        "an imported route is a hand-drawn route starting at its first point");
+    Expect(plan.stops.size() == 4 && Keys(plan.stops) == Keys({FreeTarget("free:1", 0, 0, state),
+        FreeTarget("free:2", 10, 0, state), FreeTarget("free:3", 10, 0, state), FreeTarget("free:4", 20, 0, state)}),
+        "every endpoint becomes its own numbered free point, keeping the order the player drew");
+    Expect(std::all_of(plan.stops.begin(), plan.stops.end(), [](const ItemDatas& stop) {
+            return AutoRoute::IsFreeStop(stop) && stop.nameId.empty(); }),
+        "an imported segment invents positions but never invents a point type");
+
+    // An endpoint that lands exactly on a known point of the scene keeps that point's identity,
+    // which is what lets an old route come back with the icon the player drew it around.
+    const auto chest = Target("chest", 10, 0, state);
+    const auto lookupPoint = [&](int scene, const Coordinate&) -> std::optional<ItemDatas> {
+        return scene == 1 ? std::optional<ItemDatas>{chest} : std::nullopt; };
+    const auto upgraded = AutoRoute::LegacyDocument::Import(legacy, "Routes", "local", lookupScene, lookupPoint);
+    Expect(upgraded.plans.size() == 1 && upgraded.plans.front().stops.size() == 4,
+        "upgrading an endpoint to a known point does not change how many stops the route has");
+    Expect(!AutoRoute::IsFreeStop(upgraded.plans.front().stops[1]) &&
+        upgraded.plans.front().stops[1].itemId == "chest" &&
+        AutoRoute::IsFreeStop(upgraded.plans.front().stops[0]),
+        "only the endpoint that sits on the known point is upgraded, the rest stay free");
+    // A near miss must stay free: claiming the player meant the collectible beside their line
+    // would give the route a type and an icon it was never about.
+    const auto beside = Target("chest", 10.5, 0, state);
+    const auto nearMiss = AutoRoute::LegacyDocument::Import(legacy, "Routes", "local", lookupScene,
+        [&](int, const Coordinate&) -> std::optional<ItemDatas> { return beside; });
+    Expect(std::all_of(nearMiss.plans.front().stops.begin(), nearMiss.plans.front().stops.end(),
+            [](const ItemDatas& stop) { return AutoRoute::IsFreeStop(stop); }),
+        "an endpoint that only sits near a known point stays a free point");
+
+    // A file can name several scenes; each becomes its own route because a route belongs to one map.
+    const auto twoScenes = Json::parse(R"({"World":[[[0,0],[1,1]]],"Tethys":[[[2,2],[3,3]]]})");
+    const auto split = AutoRoute::LegacyDocument::Import(twoScenes, "Routes", "local", lookupScene, noPoints);
+    Expect(split.plans.size() == 2 && split.plans[0].sceneId != split.plans[1].sceneId &&
+        split.plans[0].name == "Routes" && split.plans[0].stops.size() == 2 && split.plans[1].stops.size() == 2,
+        "a file spanning two scenes imports as one route per scene");
+
+    const auto unknownScene = Json::parse(R"({"NoSuchPlace":[[[0,0],[1,1]]]})");
+    Expect(!AutoRoute::LegacyDocument::Import(unknownScene, "x", "local", lookupScene, noPoints).rejected.empty(),
+        "a legacy file naming an unknown scene is rejected rather than guessed at");
+    const auto malformed = Json::parse(R"({"World":[[[0,0]]]})");
+    Expect(!AutoRoute::LegacyDocument::Import(malformed, "x", "local", lookupScene, noPoints).rejected.empty(),
+        "a segment without two endpoints is rejected");
+    const auto notAnObject = Json::parse(R"([1,2,3])");
+    Expect(!AutoRoute::LegacyDocument::Import(notAnObject, "x", "local", lookupScene, noPoints).rejected.empty(),
+        "a legacy file that is not a scene object is rejected");
+}
+
+// The file side of the same migration: import, then archive the original beside the routes.
+void LegacyImportFileTests() {
+    namespace fs = std::filesystem;
+    using Json = nlohmann::json;
+    const auto base = fs::weakly_canonical(fs::temp_directory_path());
+    const auto root = base / ("imao-legacy-import-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64()));
+    if (!fs::create_directory(root)) throw std::runtime_error("legacy import test directory already exists");
+    struct Cleanup {
+        fs::path root, base;
+        ~Cleanup() {
+            std::error_code error;
+            const auto resolved = fs::weakly_canonical(root, error);
+            if (!error && resolved.parent_path() == base && resolved.filename().string().starts_with("imao-legacy-import-"))
+                fs::remove_all(resolved, error);
+        }
+    } cleanup{root, base};
+    const int state = Scene::Find(1)->kuroStateId;
+    const auto lookupScene = [](const std::string& name) { return Scene::SceneNameToId(name.c_str()); };
+    const auto noPoints = [](int, const Coordinate&) -> std::optional<ItemDatas> { return {}; };
+    const std::string legacyText = R"({"World":[[[0,0],[10,0]],[[10,0],[20,0]]]})";
+    WriteTextAtomically(root / "Routes.json", legacyText);
+    std::vector<std::string> lines;
+    const auto log = [&](const std::string& line) { lines.push_back(line); };
+    AutoRoute::LegacyHandRouteFiles::Import(root, "local", lookupScene, noPoints, log);
+    Expect(fs::exists(root / "Hand" / "local" / "legacy-Routes.json"),
+        "the imported legacy file becomes a hand-drawn route in the Hand folder");
+    Expect(!fs::exists(root / "Routes.json") && fs::exists(root / "Legacy" / "Routes.json"),
+        "the original legacy file is moved into the archive rather than deleted");
+    { std::ifstream input(root / "Legacy" / "Routes.json"); const std::string archived((std::istreambuf_iterator<char>(input)), {});
+      Expect(archived == legacyText, "the archived legacy file is kept byte for byte"); }
+    Expect(lines.size() == 1 && lines.front().find("legacy-route-imported") != std::string::npos &&
+        lines.front().find("stops=4") != std::string::npos, "the import reports what it took in");
+    const auto routes = AutoRoute::RoutePlanStore(root).List("local");
+    Expect(routes.size() == 1 && routes[0].at("handDrawn").get<bool>() && routes[0].at("stopCount").get<int>() == 4,
+        "the imported route is listed like any other hand-drawn route");
+
+    // Running it again must do nothing: the legacy file is no longer at the top level.
+    lines.clear();
+    AutoRoute::LegacyHandRouteFiles::Import(root, "local", lookupScene, noPoints, log);
+    Expect(lines.empty() && AutoRoute::RoutePlanStore(root).List("local").size() == 1,
+        "a second import is a no-op and does not duplicate the route");
+
+    // A corrupt file must be reported and left alone, and must not stop the others.
+    WriteTextAtomically(root / "Broken.json", "{not json");
+    WriteTextAtomically(root / "Good.json", legacyText);
+    lines.clear();
+    AutoRoute::LegacyHandRouteFiles::Import(root, "local", lookupScene, noPoints, log);
+    const auto joined = [&] { std::string all; for (const auto& line : lines) all += line + "\n"; return all; }();
+    Expect(joined.find("legacy-route-skipped file=Broken") != std::string::npos && fs::exists(root / "Broken.json"),
+        "a corrupt legacy file is reported and left in place for the player to look at");
+    Expect(joined.find("legacy-route-imported file=Good") != std::string::npos &&
+        AutoRoute::RoutePlanStore(root).List("local").size() == 2,
+        "one corrupt legacy file does not stop the others from importing");
+}
+// The real file the old tool wrote on this machine, kept as a fixture: it is the only record of
+// what that writer actually produced, including its full-precision doubles and its `World` key.
+void RealLegacyFixtureTest() {
+    namespace fs = std::filesystem;
+    const auto relative = fs::path("IMao-Core") / "tests" / "fixtures" / "LegacyHandRoutes.json";
+    // CTest runs the binary from the build directory, so the fixture is found through the source
+    // tree the binary was compiled against, falling back to the working directory when there is one.
+    std::ifstream input(fs::path(IMAO_TEST_SOURCE_DIR) / relative);
+    if (!input) input.open(fs::current_path() / relative);
+    if (!input) { Expect(false, "the real legacy route fixture is missing under " IMAO_TEST_SOURCE_DIR); return; }
+    nlohmann::json document; input >> document;
+    const auto imported = AutoRoute::LegacyDocument::Import(document, "Routes", "local",
+        [](const std::string& name) { return Scene::SceneNameToId(name.c_str()); },
+        [](int, const Coordinate&) -> std::optional<ItemDatas> { return {}; });
+    Expect(imported.rejected.empty() && imported.plans.size() == 1,
+        "the real legacy file imports as one hand-drawn route on one map");
+    const auto& plan = imported.plans.front();
+    Expect(plan.sceneId == 1 && plan.stops.size() == 26 && plan.stops.front().itemId == "free:1" &&
+        plan.stops.back().itemId == "free:26",
+        "the real legacy file's 13 segments become 26 numbered stops in the order they were drawn");
+    Expect(AutoRoute::IsFreeStop(plan.stops[0]) && Near(plan.stops[0].itemMapROC, {2895.1936954060184, -3794.879955284593}),
+        "the real endpoint coordinates survive the import unchanged");
+}
 void EscapeOwnershipTests() {
     using AutoRoute::EscapeAction;
     AutoRoute::PlanningEscapeKey key;
@@ -319,27 +609,32 @@ void EscapeOwnershipTests() {
     Expect(key.Handle(false, false, false, false) == EscapeAction::PassThrough, "hook reset discards previous lifecycle ownership");
 }
 void DrawingVisibilityTests() {
-    RouteDatas legacy("legacy", 1, {{0, 0}, {10, 10}});
     RouteDatas active("automatic", 1, {{0, 0}, {10, 10}});
-    active.automatic = true; active.profileId = "local"; active.routePlanId = "route-a";
+    active.profileId = "local"; active.routePlanId = "route-a";
+    // A hand-drawn route is drawn from the same plan pipeline as an automatic one, so the only
+    // difference the renderer can see is its name. Everything below applies to both.
+    RouteDatas handDrawn("my hand route", 1, {{0, 0}, {10, 10}});
+    handDrawn.profileId = "local"; handDrawn.routePlanId = "route-a";
     RouteDatas preview = active; preview.preview = true; preview.routePlanId = "preview-a";
     AutoRoute::DrawVisibility visible{"local", "route-a", "preview-a", true};
-    Expect(visible.Allows(active) && visible.Allows(active, true), "current automatic route may draw on both maps while navigating");
+    Expect(visible.Allows(active) && visible.Allows(active, true), "current route may draw on both maps while navigating");
+    Expect(visible.Allows(handDrawn) && visible.Allows(handDrawn, true),
+        "a hand-drawn route obeys the same visibility rules as an automatic one, not a special case");
     Expect(visible.Allows(preview) && !visible.Allows(preview, true), "preview draws only on the large map");
     visible.navigating = false;
     Expect(visible.Allows(active) && !visible.Allows(active, true), "pause retains the large-map route but immediately hides cached minimap guidance");
     const AutoRoute::DrawVisibility stopped{"local", "", "", false};
     Expect(!stopped.Allows(active) && !stopped.Allows(active, true) && !stopped.Allows(preview),
-        "stop rejects previously captured automatic segments even when localization has stopped publishing frames");
+        "stop rejects previously captured segments even when localization has stopped publishing frames");
+    Expect(!stopped.Allows(handDrawn), "a hand-drawn route is rejected after stop for the same reason");
     visible.activeId = "route-b"; visible.previewId = "preview-b"; visible.navigating = true;
     Expect(!visible.Allows(active) && !visible.Allows(active, true) && !visible.Allows(preview),
         "replacing active route or preview rejects segments retained from their previous IDs");
     const AutoRoute::DrawVisibility otherProfile{"other", "route-a", "preview-a", true};
     Expect(!otherProfile.Allows(active) && !otherProfile.Allows(preview), "matching route IDs from a different profile cannot reuse cached geometry");
-    active.routePlanId.clear();
-    Expect(!stopped.Allows(active) && !visible.Allows(active), "automatic segments without stable plan identity are rejected");
-    Expect(stopped.Allows(legacy) && stopped.Allows(legacy, true) && otherProfile.Allows(legacy),
-        "legacy manually drawn routes remain governed by their existing rendering rules");
+    active.routePlanId.clear(); handDrawn.routePlanId.clear();
+    Expect(!stopped.Allows(active) && !visible.Allows(active) && !stopped.Allows(handDrawn) && !visible.Allows(handDrawn),
+        "segments without stable plan identity are rejected whichever system drew the route");
 }
 void HotkeyPressOwnershipTests() {
     using AutoRoute::EscapeAction;
@@ -857,7 +1152,7 @@ void AutoReplanTests() {
     Expect(AutoRoute::TargetSpacing({Target("a",0,0),Target("b",0,0)})==0,
         "co-located distinct IDs do not fabricate a distance scale");
     AutoRoute::DrawVisibility visible{"local","preserved","",true};visible.orderRevision=8;visible.comparisonVisible=true;
-    RouteDatas segment("route",1);segment.automatic=true;segment.profileId="local";segment.routePlanId="preserved";segment.orderRevision=7;
+    RouteDatas segment("route",1);segment.profileId="local";segment.routePlanId="preserved";segment.orderRevision=7;
     Expect(!visible.Allows(segment),"same route ID cannot reuse geometry from an older automatic order");
     segment.orderRevision=8;segment.previousTarget=true;
     Expect(visible.Allows(segment,true),"current comparison geometry may render while navigating");
@@ -951,7 +1246,7 @@ void FarmModeTests() {
 }
 }
 int main() {
-    try { SolverTests(); GeometryTests(); StoreTests(); EscapeOwnershipTests(); DrawingVisibilityTests(); AutoReplanTests(); FarmModeTests(); HotkeyPressOwnershipTests(); GuideHotkeyRoutingTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
+    try { SolverTests(); GeometryTests(); StoreTests(); HandDrawnStoreTests(); LegacyImportTests(); LegacyImportFileTests(); RealLegacyFixtureTest(); EscapeOwnershipTests(); DrawingVisibilityTests(); AutoReplanTests(); FarmModeTests(); HotkeyPressOwnershipTests(); GuideHotkeyRoutingTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
     catch (const std::exception& error) { ++failures; std::cerr << "UNEXPECTED: " << error.what() << '\n'; }
     if (failures) { std::cerr << failures << " route planning test(s) failed\n"; return 1; }
     std::cout << "Route planning tests passed\n";

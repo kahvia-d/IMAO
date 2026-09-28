@@ -66,6 +66,8 @@
 | [`LayeredMapFeatureMeasurement_20260922.md`](LayeredMapFeatureMeasurement_20260922.md) | 分层瓦片的实机测量（合成模型：地表底片 × 0.20 + 当前层） |
 | [`LayeredFloorIndexFrame_20260926.md`](LayeredFloorIndexFrame_20260926.md) | 隐海试验场分层索引建错坐标系的根因与重建 |
 | [`LayeredMapFalsePositive_Hukou_20260926.md`](LayeredMapFalsePositive_Hukou_20260926.md) | 虎口山脉"地表帧被当成层内"的根因与判定修正 |
+| [`RouteLibraryAndHandDrawn_20260928.md`](RouteLibraryAndHandDrawn_20260928.md) | **路线列表、手绘路线重做、旧手绘数据导入、按路线筛选（借出/归还）**：规格 + 实施记录 + 五轮实机反馈的真因 |
+| [`NativeRoutePlanningMap_20260928.md`](NativeRoutePlanningMap_20260928.md) | 原生路线规划逐行证据地图（命令协议、落盘 schema、命中与筛选机制） |
 
 ## 界面、手柄与覆盖层
 

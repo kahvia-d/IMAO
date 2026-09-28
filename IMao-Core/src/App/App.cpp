@@ -371,14 +371,11 @@ winrt::IAsyncAction App::Start() {
 					prediction.centerMapCoordinate, prediction.sceneId);
 				DrawItemOnGameMap::UpdateCenterPointNearItemsData(predictedCenterROC,
 					prediction.captureCorners, rect, prediction.sceneId);
-				DrawRouteOnMap::GetRoutePointsScreen(predictedCenterROC, prediction.captureCorners,
-					rect, prediction.sceneId);
 			}
 
 			cycleTime = App::updateMapDataCycleTime.load();
 		}else {
 			DrawItemOnGameMap::ClearNearItemsData();
-			DrawRouteOnMap::ClearRountsData();
 		}
 
 
@@ -529,15 +526,12 @@ winrt::IAsyncAction App::Start() {
 				}
 				if (enabledMinMapShowItem && renderTrusted) {
 					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, drawnMinimapROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
-					DrawRouteOnMinMap::GetRoutePointsScreen(rect, drawnMinimapROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
 				}
 				else {
 					DrawItemOnMinMap::ClearNearItemsData();
-					DrawRouteOnMinMap::ClearRountsData();
 				}
             } else {
                 DrawItemOnMinMap::ClearNearItemsData();
-                DrawRouteOnMinMap::ClearRountsData();
                 // This frame could not place the player, so the marker set was just thrown away.
                 // A marker that appears to flicker is either this or the set itself changing;
                 // one record a second is enough to tell those apart without drowning the log.
@@ -558,7 +552,6 @@ winrt::IAsyncAction App::Start() {
 			cycleTime = App::updateMinMapDataCycleTime;
 		}else{
 			DrawItemOnMinMap::ClearNearItemsData();
-			DrawRouteOnMinMap::ClearRountsData();
 		}
 
 		PublishOverlayFrame(captured, renderedViewport);
@@ -899,12 +892,10 @@ void App::Thread_DetectGameState() {
 			Diagnostics::SaveImage("state-change-full", stateSnapshot);
 			if (!MapUiStateController::IsStableBigMap(update.current)) {
 				DrawItemOnGameMap::ClearNearItemsData();
-				DrawRouteOnMap::ClearRountsData();
 				Diagnostics::Record("map-marker-cache", "cleared because big map is no longer confirmed");
 			}
 			if (!MapUiStateController::IsStableGameplay(update.current)) {
 				DrawItemOnMinMap::ClearNearItemsData();
-				DrawRouteOnMinMap::ClearRountsData();
 			}
 			if (MapUiStateController::IsStableGameplay(update.previous) &&
 				!MapUiStateController::IsStableGameplay(update.current)) {
@@ -949,9 +940,7 @@ void App::Thread_DetectGameState() {
 			coordinateSuspendRequested = true;
 			mapViewportResetRequested = true;
 			DrawItemOnGameMap::ClearNearItemsData();
-			DrawRouteOnMap::ClearRountsData();
 			DrawItemOnMinMap::ClearNearItemsData();
-			DrawRouteOnMinMap::ClearRountsData();
 			Diagnostics::Record("game-state-frame-error", exception.what());
 		}
 		catch (const std::exception& exception) {
@@ -965,9 +954,7 @@ void App::Thread_DetectGameState() {
 			coordinateSuspendRequested = true;
 			mapViewportResetRequested = true;
 			DrawItemOnGameMap::ClearNearItemsData();
-			DrawRouteOnMap::ClearRountsData();
 			DrawItemOnMinMap::ClearNearItemsData();
-			DrawRouteOnMinMap::ClearRountsData();
 			Diagnostics::Record("game-state-frame-error", exception.what());
 		}
 		catch (...) {
@@ -981,9 +968,7 @@ void App::Thread_DetectGameState() {
 			coordinateSuspendRequested = true;
 			mapViewportResetRequested = true;
 			DrawItemOnGameMap::ClearNearItemsData();
-			DrawRouteOnMap::ClearRountsData();
 			DrawItemOnMinMap::ClearNearItemsData();
-			DrawRouteOnMinMap::ClearRountsData();
 			Diagnostics::Record("game-state-frame-error", "unknown exception");
 		}
 		auto end = std::chrono::high_resolution_clock::now();
@@ -1939,7 +1924,6 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		}
 		if (coordinateRecovery.ShouldHideMarkers(now)) {
 			DrawItemOnMinMap::ClearNearItemsData();
-			DrawRouteOnMinMap::ClearRountsData();
 		}
 		co_return false;
 	}
@@ -1982,7 +1966,6 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		}
 		if (coordinateRecovery.ShouldHideMarkers(now)) {
 			DrawItemOnMinMap::ClearNearItemsData();
-			DrawRouteOnMinMap::ClearRountsData();
 			Diagnostics::Record("minimap-continuity", "action=hide-trusted-expired reason=featureless");
 		}
 		// No tracker ran on this frame either, so the same clock applies: the position is
@@ -2099,7 +2082,6 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	}
 	if (coordinateRecovery.ShouldHideMarkers(now)) {
 		DrawItemOnMinMap::ClearNearItemsData();
-		DrawRouteOnMinMap::ClearRountsData();
 		Diagnostics::Record("minimap-continuity", "action=hide-trusted-expired");
 	}
 	co_return false;
@@ -2131,7 +2113,6 @@ void App::SuspendPlayerLocationForMapTransition() {
 	identifyCoordinate = {};
 	++coordinateUiGeneration;
 	DrawItemOnMinMap::ClearNearItemsData();
-	DrawRouteOnMinMap::ClearRountsData();
 	Diagnostics::Record("player-location-suspended", "reason=map-ui-transition lock=" +
 		std::to_string(playerLocationLock.valid) + " scene=" +
 		std::to_string(playerLocationLock.sceneId));
@@ -2189,7 +2170,6 @@ void App::BeginMinimapReacquisition() {
 	++coordinateUiGeneration;
 	PrepareMinimapResumeHints(now);
 	DrawItemOnMinMap::ClearNearItemsData();
-	DrawRouteOnMinMap::ClearRountsData();
 	RuntimeStatus::SetLocalization("recovering", {}, "小地图正在重新定位");
 }
 
@@ -2522,7 +2502,6 @@ void App::ResetMapViewport() {
 	mapViewportRequestInFlight.reset();
 	pendingMapViewportAnchor.reset();
 	DrawItemOnGameMap::ClearNearItemsData();
-	DrawRouteOnMap::ClearRountsData();
 	Diagnostics::Record("map-viewport-reset", "reason=map-ui-transition");
 }
 
@@ -2534,8 +2513,7 @@ Coordinate App::GetMapCoordinatesOfMousePos() {
     return scene ? Coordinate(scene->originX + point.x, scene->originY - point.y) : Coordinate{};
 }
 
-bool App::TryGetRoutePoint(Coordinate& point, int& sceneId) {
-    const auto presented = presentedOverlay.Read();
+bool App::TryGetRoutePoint(Coordinate& point, int& sceneId) {    const auto presented = presentedOverlay.Read();
     const auto frame = presented->source;
     if (!presented->Fresh() || !presented->mapVisible || !overlayVisibility.Read()->AllowsMap(frame->frameId) || !IsWindowFocused(hwnd) ||
         frame->viewportScene <= 0 || frame->mapMotion.pixelsPerUnit <= 0.0) return false;
@@ -2551,6 +2529,38 @@ bool App::TryGetRoutePoint(Coordinate& point, int& sceneId) {
     sceneId = frame->viewportScene;
     point = RelativeCoordinates::ImgMapCoordToROC(mapPoint, sceneId);
     return std::isfinite(point.x) && std::isfinite(point.y);
+}
+
+// The hand-drawing key. While a drawing is running it records the point under the cursor; while
+// none is running it enters the drawing — starting a new one, or continuing the finished but
+// unsaved one — so one key both enters the mode and records points.
+void App::PollHandDrawnRoute() {
+    const auto key = RuntimeHotkeys::Snapshot().manualRouteKey;
+    const bool down = key > 0 && isKeyPressed(key);
+    const bool fresh = down && !handDrawnKeyDown;
+    handDrawnKeyDown = down;
+    if (!fresh) return;
+    // With the selection toolbar open the same key belongs to it, as before.
+    if (RoutePlanningService::View().enabled) return;
+    Coordinate roc;
+    int scene = 0;
+    if (!TryGetRoutePoint(roc, scene)) return;
+    const auto& view = RoutePlanningService::View();
+    if (!view.handDrawnActive) {
+        // Entering the drawing. `handStart` resumes a finished-but-unsaved drawing instead of
+        // clearing it, so this key can never be the thing that loses the player's work.
+        const auto entered = RoutePlanningService::Command({{"action", "handStart"}, {"profileId", view.profileId},
+            {"sceneId", scene}});
+        if (!entered.value("accepted", false))
+            Notification::AddError(NotificationDatas(entered.value("message", "无法进入手绘模式"), 5));
+        return;
+    }
+    if (scene != view.sceneId) return;
+    const auto result = RoutePlanningService::Command({{"action", "handPoint"}, {"profileId", view.profileId},
+        {"sceneId", scene}, {"x", roc.x}, {"y", roc.y},
+        {"expectedSceneId", view.sceneId}, {"expectedGeneration", view.generation}});
+    if (!result.value("accepted", false))
+        Notification::AddError(NotificationDatas(result.value("message", "手绘取点失败"), 5));
 }
 
 void App::Thread_KeyMonitoring_SavePlayerNearItemPoint() {
@@ -2743,10 +2753,11 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
     if (frame.mapVisible && frame.mapMotion.reliable && frame.Fresh())
         GamepadContextSnapshot::Shared().ObserveMapScene(coordinateSessionId, gamepadProfile,
             Scene::SceneIdToName(frame.viewportScene), frame.capturedAt);
-    frame.mapRoutes = DrawRouteOnMap::Snapshot(); frame.minimapRoutes = DrawRouteOnMinMap::Snapshot();
+    // The frame carries its own route segments now: they are projected from the route plans just
+    // below, so there is no cached list to seed from and nothing that can outlive the frame.
     RoutePlanningService::SetPlayerAvailable(frame.minimapVisible && frame.minimapMotion.reliable && frame.focused);
     const auto routeView = RoutePlanningService::View();
-    const auto appendRoute = [&](const AutoRoute::Plan& plan, bool preview) {
+    const auto appendRoute = [&](const AutoRoute::Plan& plan, bool preview, bool handDrawn = false) {
         const bool onMap = frame.mapVisible && plan.sceneId == frame.viewportScene;
         const bool onMini = !preview && frame.minimapVisible && plan.sceneId == frame.playerScene && routeView.navigating;
         if (!onMap && !onMini) return;
@@ -2763,7 +2774,8 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
                     ScreenCoordinate::ItemScreenCoordinateOnMinMap(captured.clientRect, roc, centerROC, minimapTerrainScale);
             };
             RouteDatas segment(plan.name, plan.sceneId, {previous, stop.itemMapROC}, {project(previous), project(stop.itemMapROC)});
-            segment.automatic = true; segment.preview = preview; segment.emphasized = !preview && first;
+            segment.preview = preview; segment.emphasized = !preview && !handDrawn && first;
+            segment.handDrawn = handDrawn;
             segment.profileId = plan.profileId;
             segment.routePlanId = plan.id;
             segment.orderRevision=routeView.orderRevision;
@@ -2783,10 +2795,16 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
             const auto project=[&](Coordinate roc){return onMap?ScreenCoordinate::ItemScreenCoordinateOnMap(center,roc,viewport.captureCorners,captured.clientRect):
                 ScreenCoordinate::ItemScreenCoordinateOnMinMap(captured.clientRect,roc,start,minimapTerrainScale);};
             RouteDatas hint(plan.name,plan.sceneId,{start,target.itemMapROC},{project(start),project(target.itemMapROC)});
-            hint.automatic=true;hint.previousTarget=true;hint.profileId=plan.profileId;hint.routePlanId=plan.id;hint.orderRevision=routeView.orderRevision;
+            hint.previousTarget=true;hint.profileId=plan.profileId;hint.routePlanId=plan.id;hint.orderRevision=routeView.orderRevision;
             (onMap?frame.mapRoutes:frame.minimapRoutes).push_back(std::move(hint));
         }
     }
     if (routeView.enabled && routeView.preview) appendRoute(*routeView.preview, true);
+    // The line being drawn by hand joins the frame through the same projection, but marks itself so
+    // the renderer draws it as the solid, arrowed path the player is building. That covers a drawing
+    // in progress and one that was finished but not saved yet — it stays on the map until the player
+    // decides to keep or discard it.
+    if (routeView.handDraftPreview && routeView.handDraftPreview->stops.size())
+        appendRoute(*routeView.handDraftPreview, true, routeView.handDraftPreview->handDraft);
     overlayFrames.Publish(std::move(frame));
 }

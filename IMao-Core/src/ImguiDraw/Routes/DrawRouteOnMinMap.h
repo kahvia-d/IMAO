@@ -5,20 +5,13 @@
 #include "../ImGuiOverWindows.h"
 #include "../../Coordinate/CoordinateStruct.h"
 #include "../../util.h"
-#include "LoadEditRouteData.h"
+#include "../../Domain/MapData.h"
 
 
+// Draws the route segments the frame carries. It owns no route state: the caller assembles the
+// segment list from the route plans and hands it over, so there is nothing here to clear or to
+// keep in sync with a store.
 class DrawRouteOnMinMap{
 public:
-	static void GetRoutePointsScreen(const RECT& rect,const Coordinate& playerROC, float minMapRadius, int senceId, double terrainScale = kNominalMinimapTerrainScale);
-	static void ClearRountsData() {
-		std::lock_guard<std::mutex> lock(routeMutex);
-		routesDatas.clear();
-	}
-
 	static void DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion = {}, Coordinate clipCenter = {}, double clipRadius = 0.0);
-    static std::vector<RouteDatas> Snapshot();
-private:
-	static std::vector<RouteDatas> routesDatas;
-	static std::mutex routeMutex;
 };

@@ -27,6 +27,9 @@ struct DrawItemBase {
     static bool IsPointCompleted(const std::string&,const ItemDatas& item){std::scoped_lock lock(mutex);return completed.contains(AutoRoute::Key(item));}
     static bool IsRefreshablePoint(const std::string& nameId){return refreshableCategories.contains(nameId);}
     static bool IsRefreshablePointId(const std::string& pointId){return refreshablePointIds.contains(pointId);}
+    // The isolated harness has no icon package. An empty path is also what the real one returns for
+    // a type the manifest does not know, so the snapshot keeps the same shape either way.
+    static std::string GetExternalIconPath(const std::string&){return {};}
     static bool ReportFarmLedgerExpiry(){return false;}
     static Json HandleMarkerCommand(const Json& command){
         std::size_t changed=0;

@@ -6,7 +6,6 @@
 #include "ImguiDraw/ImGuiOverWindows.h"
 #include "WindowsCapture/BitBltCapture/BitBltCapture.h"
 #include "ImguiDraw/InteractiveInterface/Notification.h"
-#include "ImguiDraw/Routes/LoadEditRouteData.h"
 using namespace std;
 
 int main() {
@@ -57,8 +56,6 @@ int main() {
     RECT clientRect{};
     if (!GetUsableClientRect(hwnd, clientRect)) return 1;
     App app(graphicsCapture, bitBltCapture, hwnd, clientRect);
-    App* p_app = &app;
-    LoadEditRouteData::Initi(p_app);
     ImGuiOverWindows imguioverwindows(hwnd, app);
     Notification::Start();
     Notification::AddInfo(NotificationDatas("The resource is loading, please be patient.", 15));
@@ -68,7 +65,6 @@ int main() {
     App::SetEnabledMinMapShowItem(true);
 
     app.StartTasks();
-    LoadEditRouteData::LoadRoutesDatasFromLocal(true,"");
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(10));
     }

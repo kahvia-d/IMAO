@@ -734,21 +734,6 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
             SendAck(events, command, true, std::string("隔离开关已应用：") + Isolation::Describe(applied));
             return true;
         }
-        if (type == "setRouteName") {
-            SetSavedJsonRouteName(command.value("routeName", "").c_str());
-            SendAck(events, command, true, "路线名称已更新");
-            return true;
-        }
-        if (type == "loadRoutes") {
-            LoadJsonRoute();
-            SendAck(events, command, true, "路线已加载");
-            return true;
-        }
-        if (type == "loadRoute") {
-            LoadOneJsonRoute(command.value("routeName", "").c_str());
-            SendAck(events, command, true, "路线已加载");
-            return true;
-        }
         if (type == "shutdown") {
             Stop();
             Shutdown();

@@ -882,6 +882,9 @@ int ImGuiOverWindows::start()
             if (!mapEligible) mapMotion.Reset();
             if (!drewMap) DrawMarkerInteraction::Clear();
             DrawMarkerInteraction::DrawMapToolsLauncher(GameRect, h_window);
+            // Hand-drawing is one press one point, so it is polled here rather than from a thread
+            // of its own: there is no two-endpoint state to keep between presses any more.
+            app.PollHandDrawnRoute();
             if (!drewMap && !drewMinimap) DrawItemBase::ClearMarkerCandidates();
             if (!minimapEligible) minimapMotion.Reset();
             presented.mapVisible = drewMap;

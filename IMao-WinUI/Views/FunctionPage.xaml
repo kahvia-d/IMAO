@@ -63,13 +63,15 @@
         </ContentControl>
         <Expander Header="手绘路线" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="14">
-                <TextBlock Text="记录地图上的线段，保留你自己的探索路径。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock Text="按一次键记一个点，默认第一个是起点、最后一个是终点；点在大地图上的点位会连到那个点位，点在空地上则生成一个带编号的标记。手绘路线和自动路线存在一起，都出现在上面的「已保存的路线」里。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <TextBlock x:Name="ManualRouteKeyDisplay" Foreground="{StaticResource IMaoAccentBrush}" FontSize="22" FontWeight="SemiBold" />
                 <TextBlock x:Name="ManualRouteDescription" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBox x:Name="TextBox_SavedRouteJsonName" Header="手绘路线名称" MaxWidth="450" HorizontalAlignment="Stretch" />
-                <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="设置保存名称" Click="Button_SavedRouteJsonName_Click" /><Button Content="打开路线目录" Click="Button_OpenRoutesFolder_Click" /><Button Content="加载全部手绘路线" Click="Button_LoadRoutesData_Click" /></controls:WrapPanel>
-                <ComboBox x:Name="ComboBox_RouteDataName" Header="已保存的手绘路线" HorizontalAlignment="Stretch" DropDownOpened="ComboBox_RouteDataName_DropDownOpened" />
-                <Button Content="加载所选手绘路线" Click="Button_LoadOneRouteData" />
+                <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                    <Button Content="在大地图上手绘" Tag="handStart" Click="AutoRouteAction_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+                    <Button Content="撤销上一个点" Tag="handUndo" Click="AutoRouteAction_Click" />
+                    <Button Content="完成手绘" Tag="handCommit" Click="AutoRouteAction_Click" />
+                    <Button Content="放弃手绘" Tag="handCancel" Click="AutoRouteAction_Click" />
+                </controls:WrapPanel>
             </StackPanel>
         </Expander>
         <Button Content="查看操作帮助" Click="UsageGuide_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />

@@ -29,6 +29,20 @@ struct RoutePlanningView {
     std::uint64_t farmNoticeSerial = 0;
     std::uint64_t orderRevision = 0;
     std::optional<ItemDatas> previousTarget;
+    // The route being drawn by hand, shaped like a plan so the renderer draws it through the very
+    // same path as a planned preview: one style, one set of stop badges, no second code path.
+    std::optional<AutoRoute::Plan> handDraftPreview;
+    // The same drawing, in the shape the marker layer needs to place the numbered badges and the
+    // start/end glyphs. It is separate from the preview above because a drawing is not gated on the
+    // selection mode the way a preview is.
+    std::optional<AutoRoute::Plan> handDraft;
+    // Drawing by hand is not the selection mode: the player never enters 选点, so the input side
+    // asks about it separately.
+    bool handDrawnActive = false;
+    // A drawing that was left with Escape but not saved yet. The toolbar offers to save or discard
+    // it, which is why leaving must not throw it away.
+    bool handDrawnPending = false;
+    std::size_t handDrawnCount = 0;
 };
 
 // Core owns selection, solver jobs and progress. UI/renderers consume snapshots.

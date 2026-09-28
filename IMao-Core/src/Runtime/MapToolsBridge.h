@@ -101,7 +101,7 @@ public:
     }
     State Update(std::uint64_t session, const std::string& page, const std::string& tool,
         std::uint64_t layoutRevision, RECT bounds, bool interactive, std::uint64_t expectedResultRevision = UINT64_MAX) {
-        if ((page != "home" && page != "route" && page != "filter") || !SupportsCanvasTool(tool) ||
+        if ((page != "home" && page != "route" && page != "filter" && page != "routes") || !SupportsCanvasTool(tool) ||
             bounds.right <= bounds.left || bounds.bottom <= bounds.top)
             throw std::invalid_argument("工具台页面或窗口边界无效");
         std::scoped_lock lock(mutex_);

@@ -1,39 +1,14 @@
-using IMao_WinUI.Helpers;
 using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
 using IMao_WinUI.ViewModels;
 using Microsoft.UI.Xaml.Controls;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace IMao_WinUI.Views;
 
-class RouteName
-{
-    private readonly string routesFolderPath = UserDataPaths.SavedRoutes;
-
-    public ObservableCollection<string> GetAllRouteFilesName()
-    {
-        try
-        {
-            string[] paths = Directory.GetFiles(routesFolderPath, "*.json");
-            return paths.Length == 0
-                ? new ObservableCollection<string> { "Empty" }
-                : new ObservableCollection<string>(paths.Select(path => Path.GetFileNameWithoutExtension(path)!));
-        }
-        catch (Exception exception)
-        {
-            Debug.WriteLine($"读取路线失败：{exception.Message}");
-            return new ObservableCollection<string> { "Empty" };
-        }
-    }
-}
-
 public sealed partial class FunctionPage : Page
 {
-    private readonly RouteName routeName = new();
     private readonly CoreHostService coreHost;
     private bool restoringConfiguration = true;
     private CancellationTokenSource? routePageLifetime;
@@ -48,7 +23,6 @@ public sealed partial class FunctionPage : Page
         ViewModel = App.GetService<FunctionViewModel>();
         coreHost = App.GetService<CoreHostService>();
         InitializeComponent();
-        ComboBox_RouteDataName.ItemsSource = routeName.GetAllRouteFilesName();
         RestoreConfiguration();
         Loaded += FunctionPage_Loaded;
         Unloaded += FunctionPage_Unloaded;
@@ -60,8 +34,9 @@ public sealed partial class FunctionPage : Page
         var value = coreHost.Configuration;
         AutoReplanToggle.IsOn = value.AutoReplanEnabled;
         ManualRouteKeyDisplay.Text = RuntimeConfiguration.HotkeyName(value.ManualRouteKey);
-        ManualRouteDescription.Text = value.ManualRouteKey == 0 ? "手绘路线快捷键已禁用，可在设置中调整。" :
-            $"大地图上按 {RuntimeConfiguration.HotkeyName(value.ManualRouteKey)} 记录鼠标位置 A，再按一次记录 B 并保存线段。自动路线选点期间暂停手绘。";
+        ManualRouteDescription.Text = value.ManualRouteKey == 0
+            ? "手绘快捷键已禁用，可在设置中调整；在大地图上点击也能加点。"
+            : $"大地图上点击要标记的位置就会加点，也可以按一次 {RuntimeConfiguration.HotkeyName(value.ManualRouteKey)} 记下鼠标当前位置；Ctrl+Z 撤销上一个点，Esc 结束手绘（已画的点会保留，回到路线列表可以保存）。自动路线选点期间暂停手绘。";
         AutoRouteGuide.Content = value.CurrentTargetGuideKey == 0 ? "查看当前目标攻略" :
             $"查看当前目标攻略（{RuntimeConfiguration.HotkeyName(value.CurrentTargetGuideKey)}）";
         restoringConfiguration = false;
@@ -92,40 +67,6 @@ public sealed partial class FunctionPage : Page
         }
         finally { savingAutoReplan = false; RestoreConfiguration(); AutoReplanToggle.IsEnabled = true; }
     }
-    private void Button_SavedRouteJsonName_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        string content = TextBox_SavedRouteJsonName.Text;
-        if (!String.IsNullOrWhiteSpace(content)) _ = coreHost.SetRouteNameAsync(content);
-    }
-
-    private void Button_OpenRoutesFolder_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        try
-        {
-            string routesPath = UserDataPaths.SavedRoutes;
-            if (Directory.Exists(routesPath))
-            {
-                Process.Start(new ProcessStartInfo(routesPath) { UseShellExecute = true, Verb = "open" });
-            }
-        }
-        catch (Exception exception)
-        {
-            Debug.WriteLine($"打开路线目录失败：{exception.Message}");
-        }
-    }
-
-    private void Button_LoadRoutesData_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (Directory.Exists(UserDataPaths.SavedRoutes)) _ = coreHost.LoadRoutesAsync();
-    }
-
-    private void Button_LoadOneRouteData(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (ComboBox_RouteDataName.SelectedItem is string selected && selected != "Empty") _ = coreHost.LoadRouteAsync(selected);
-    }
-
-    private void ComboBox_RouteDataName_DropDownOpened(object sender, object e) =>
-        ComboBox_RouteDataName.ItemsSource = routeName.GetAllRouteFilesName();
 
     private async void FunctionPage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
