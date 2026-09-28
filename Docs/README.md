@@ -79,6 +79,7 @@
 | [`GamepadCursor_20260908.md`](GamepadCursor_20260908.md) | 大地图手柄光标点位修复 |
 | [`ImageAnchoredOverlay_20260908.md`](ImageAnchoredOverlay_20260908.md) | 地形图像跟随与小地图浮动修复（2026-09-08） |
 | [`OverlayContinuityFix_20260908.md`](OverlayContinuityFix_20260908.md) | 小地图闪烁与大地图快拖错位（2026-09-08） |
+| [`MapMarkerFlicker_20260928.md`](MapMarkerFlicker_20260928.md) | 玩家反馈「标记一闪一闪」的日志分析与修复（2026-09-28） |
 
 ## 库街区进度同步扩展
 
@@ -109,6 +110,7 @@
 | [`Release-2026.9.19.2.md`](Release-2026.9.19.2.md) | 2026.9.19.2 |
 | [`Release-2026.9.22.1.md`](Release-2026.9.22.1.md) | 2026.9.22.1 |
 | [`Release-2026.9.23.1.md`](Release-2026.9.23.1.md) | 2026.9.23.1 |
+| [`Release-2026.9.28.2.md`](Release-2026.9.28.2.md) | 2026.9.28.2（程序分片增量更新，修标记闪烁） |
 | [`ReleaseAssets_v1.0.2.md`](ReleaseAssets_v1.0.2.md) | v1.0.2 发行资源归档 |
 | [`ReleaseAssets_v1.0.2.sha256`](ReleaseAssets_v1.0.2.sha256) | — |
 
