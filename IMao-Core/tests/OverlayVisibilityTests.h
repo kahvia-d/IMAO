@@ -57,15 +57,43 @@ inline void TestOverlayVisibility(void (*check)(bool, const std::string&)) {
     visibility.Publish(policy.Observe(17, start + 700ms, 500ms, state.State(), true, true, true));
     check(!visibility.Read()->AllowsMinimap(17, start + 700ms),
         "confirmed map controls suppress an incidental gameplay icon hit before the stable state changes");
-    visibility.Publish(policy.Observe(18, start + 800ms, 500ms, state.State(), false, true, false));
-    check(!visibility.Read()->AllowsMinimap(18, start + 800ms), "unfocused game UI cannot show markers");
     policy.Reset();
     visibility.Publish({});
-    check(!visibility.Read()->AllowsMap(18, start + 800ms) && !visibility.Read()->AllowsMinimap(18, start + 800ms),
+    check(!visibility.Read()->AllowsMap(17, start + 700ms) && !visibility.Read()->AllowsMinimap(17, start + 700ms),
         "capture errors and stopped sessions revoke both overlay surfaces");
-    visibility.Publish(policy.Observe(19, start + 900ms, 500ms, state.State(), false, true, true));
-    check(!visibility.Read()->AllowsMinimap(18, start + 900ms) && visibility.Read()->AllowsMinimap(19, start + 900ms),
+    visibility.Publish(policy.Observe(18, start + 800ms, 500ms, state.State(), false, true, true));
+    check(!visibility.Read()->AllowsMinimap(17, start + 800ms) && visibility.Read()->AllowsMinimap(18, start + 800ms),
         "new capture after focus loss restores gameplay while excluding the snapshot from before focus loss");
+
+    // Focus is a property of the desktop, not of the map. The 2026-09-28 player log has the marker
+    // layer withdrawn on the *first* frame this machine reported `focused=0` - while the big map was
+    // still positively detected on that very frame (rawCompass=1 rawControls=1, stableState=BigMap).
+    // A foreground that flickers away and back is not the player closing anything.
+    {
+        MapUiStateController held;
+        OverlayVisibilityPolicy focusPolicy;
+        SnapshotChannel<OverlayVisibilityFrame> focusVisibility;
+        held.Update({false, true});
+        held.Update({false, true});
+        focusVisibility.Publish(focusPolicy.Observe(30, start + 3000ms, 500ms, held.State(), false, true, true));
+        check(focusVisibility.Read()->AllowsMinimap(30, start + 3000ms), "confirmed gameplay is visible while focused");
+        focusVisibility.Publish(focusPolicy.Observe(31, start + 3100ms, 500ms, held.State(), false, true, false));
+        check(focusVisibility.Read()->AllowsMinimap(30, start + 3100ms),
+            "one frame of lost focus does not blink a held surface off");
+        focusVisibility.Publish(focusPolicy.Observe(32, start + 3400ms, 500ms, held.State(), false, true, false));
+        check(focusVisibility.Read()->AllowsMinimap(30, start + 3400ms),
+            "the focus hold covers consecutive unfocused frames");
+        // A supporting capture while unfocused must not restart the hold - the clock is the capture's.
+        focusVisibility.Publish(focusPolicy.Observe(33, start + 3900ms, 500ms, held.State(), false, true, false));
+        check(!focusVisibility.Read()->AllowsMinimap(33, start + 4200ms),
+            "the focus hold is bounded, so an alt-tab still clears the overlay");
+        // Focus returning restores the surface on that frame.
+        focusVisibility.Publish(focusPolicy.Observe(34, start + 4000ms, 500ms, held.State(), false, true, true));
+        check(focusVisibility.Read()->AllowsMinimap(34, start + 4000ms), "regaining focus restores the surface immediately");
+        focusVisibility.Publish(focusPolicy.Observe(35, start + 4100ms, 500ms, held.State(), false, true, false));
+        check(focusVisibility.Read()->AllowsMinimap(34, start + 4100ms),
+            "the hold restarts from the frame focus was last seen on");
+    }
 
     // The hold is bounded on purpose: the player may have closed the map while the probes were blind,
     // so a surface that stops being supported is revoked `kEvidenceHold` after the last observation

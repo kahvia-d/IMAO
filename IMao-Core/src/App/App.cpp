@@ -688,9 +688,16 @@ void App::Thread_DetectGameState() {
             std::chrono::steady_clock::now() - captured->capturedAt < captured->maximumAge;
         if (!liveCapture || captured->frameId == lastObservedFrame) {
             isWindowFocused = DrawItemBase::IsMarkerDisplayContext(hwnd) || IsWindowFocused(ImGuiOverWindows::overWindowsHwnd);
+            if (isWindowFocused.load()) NoteForegroundGame();
             if (!isWindowFocused.load()) {
                 // A paused capture must not preserve a visible snapshot across
-                // focus loss. Only a new observed game frame may restore it.
+                // focus loss. Only a new observed game frame may restore it -
+                // and until the focus grace has run out, the last published
+                // surface stays on screen instead of blinking off on this frame.
+                if (FrameObserved()) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime));
+                    continue;
+                }
                 visibilityPolicy.Reset(); minimapHudEvidence.Reset(); overlayVisibility.Publish({});
             }
             if (!liveCapture) {
@@ -713,6 +720,9 @@ void App::Thread_DetectGameState() {
 		const bool manualMapCheckPressed = Diagnostics::Enabled() && (GetAsyncKeyState(VK_F10) & 1) != 0;
 		const bool gameFocused = DrawItemBase::IsMarkerGameFocused(hwnd);
 		const bool focused = DrawItemBase::IsMarkerDisplayContext(hwnd);
+		// Every frame that sees the game in the foreground restarts the hold, so the marker layer and
+		// everything that keys off FrameObserved() agree on when the player stopped watching.
+		if (focused) NoteForegroundGame();
 		if ((mapKeyPressed || manualMapCheckPressed) && gameFocused) {
 			Diagnostics::Record("map-keypress", manualMapCheckPressed
 				? "F10 detected; requesting an immediate visual map check"
@@ -2642,12 +2652,30 @@ bool App::MapViewportAnchorFresh() const {
 	return now >= lastFix && now - lastFix <= kMapViewportFixFreshnessMs;
 }
 
+void App::NoteForegroundGame() {
+	lastForegroundGameMilliseconds.store(std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+
+bool App::FrameObserved() const {
+	const auto lastForeground = lastForegroundGameMilliseconds.load();
+	if (lastForeground <= 0) return false;
+	const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now().time_since_epoch()).count();
+	if (now < lastForeground) return false;
+	// Short once the map surface is up: the hold exists to absorb a foreground that flickers, not to
+	// keep an overlay on top of whatever the player switched to. Under the capture freshness window
+	// either way, so a surface nobody is watching expires rather than freezing on screen.
+	return now - lastForeground <= (isOpenMap.load()
+		? kFocusHandoffHold : kFocusHold).count();
+}
+
 void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPrediction& viewport) {
     OverlayFrame frame;
     frame.frameId = captured.frameId; frame.clientRect = captured.clientRect; frame.capturedAt = captured.capturedAt;
     frame.maximumAge = std::chrono::milliseconds(std::max(500, 2 * std::max(
         updateMapDataCycleTime.load(), updateMinMapDataCycleTime.load())));
-    frame.focused = isWindowFocused.load();
+    frame.focused = FrameObserved();
     // "The big map is up" is the debounced UI state's answer, exactly as it is for the minimap below.
     // Whether this frame can be *placed* is a separate question, and the renderer already asks it:
     // ImageAnchoredOverlay::Update refuses an unreliable pose. Gating this flag on the instantaneous
@@ -2656,7 +2684,8 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
     // ImGuiOverWindows' minimapWindowRequested - collapsed the full-screen map overlay into the small
     // minimap panel. The 2026-09-28 player log holds a 16-second window (16:51:59-16:52:15) where the
     // state was BigMap, the probes saw the map, and no marker was drawn for any of it.
-    frame.mapVisible = isOpenMap.load() && enabledMapShowItem.load() && !captured.image.empty();
+    frame.mapVisible = isOpenMap.load() && enabledMapShowItem.load() && !captured.image.empty() &&
+        FrameObserved();
     frame.minimapVisible = isExistMinMap.load() && !isOpenMap.load() && enabledMinMapShowItem.load() && !captured.image.empty();
     frame.playerScene = playerCurrentSceneId; frame.playerCoordinate = lastPlayerImgMapCoordinate;
     frame.viewportScene = viewport.sceneId; frame.viewportCenter = viewport.centerMapCoordinate;

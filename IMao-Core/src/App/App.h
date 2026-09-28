@@ -383,6 +383,11 @@ private:
 	// milliseconds. The state probes read a widget and can go blind for seconds while the map canvas
 	// keeps matching; the canvas match itself cannot, so it sustains the map state in that window.
 	std::atomic<std::int64_t> lastMapViewportFixMilliseconds{ 0 };
+	// When the game window was last seen in the foreground, as steady-clock milliseconds. A foreground
+	// that flickers - or that this machine reports as "not the game" for minutes at a time while the
+	// game is plainly still rendering - must not take the marker layer with it on the first frame.
+	// The limits live beside the marker policy that reads them (OverlayVisibilityPolicy.h).
+	std::atomic<std::int64_t> lastForegroundGameMilliseconds{ 0 };
 	Coordinate gameMapCenterCoordinateByMouseMonitoring;
 	std::atomic<float> inertiaStep = 1;
 	std::atomic<float> scaleFactor = 1;
@@ -402,6 +407,10 @@ private:
 	// True while the big map has a recently confirmed absolute fix behind it. See
 	// MapFrameEvidence::anchorFresh for why this outranks the HUD probes.
 	bool MapViewportAnchorFresh() const;
+	// True while the game window is in the foreground, or was within the focus hold. Read by the
+	// marker policy and by everything that has to agree with it about whether the player is watching.
+	bool FrameObserved() const;
+	void NoteForegroundGame();
 	winrt::IAsyncAction Start();
 	void Thread_DetectGameState();
 	bool Init();

@@ -810,7 +810,7 @@ int ImGuiOverWindows::start()
             bool mapEligible = false, minimapEligible = false;
             PresentedOverlayFrame presented{frame, {}, false, false, frameStart};
             presented.capture = capture;
-            if (frame->Fresh() && frame->focused && DrawItemBase::IsMarkerDisplayContext(h_window) &&
+            if (frame->Fresh() && DrawItemBase::IsMarkerDisplayContext(h_window) &&
                 frame->clientRect.right == GameRect.right && frame->clientRect.bottom == GameRect.bottom) {
                 if (frame->mapVisible && visibility->AllowsMap(frame->frameId)) {
                     mapEligible = true;

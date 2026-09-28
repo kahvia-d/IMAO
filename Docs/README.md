@@ -80,6 +80,7 @@
 | [`ImageAnchoredOverlay_20260908.md`](ImageAnchoredOverlay_20260908.md) | 地形图像跟随与小地图浮动修复（2026-09-08） |
 | [`OverlayContinuityFix_20260908.md`](OverlayContinuityFix_20260908.md) | 小地图闪烁与大地图快拖错位（2026-09-08） |
 | [`MapMarkerFlicker_20260928.md`](MapMarkerFlicker_20260928.md) | 玩家反馈「标记一闪一闪」的日志分析与修复（2026-09-28） |
+| [`MapMarkerFlicker_20260928_evening_playerlog.md`](MapMarkerFlicker_20260928_evening_playerlog.md) | 同一症状的第二轮排查：下午/傍晚新旧版对照，焦点门是大地图标记的另一条来源（2026-09-28） |
 
 ## 库街区进度同步扩展
 
