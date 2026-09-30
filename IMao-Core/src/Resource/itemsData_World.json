@@ -2493,6 +2493,45 @@
         "typeId": "42601560",
         "x": -593400.0,
         "y": -9600.0
+      },
+      {
+        "countryId": 1,
+        "description": "",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1545922524465848320",
+        "level": "0",
+        "online": false,
+        "stateId": 8,
+        "typeId": "42601560",
+        "x": -822100.0,
+        "y": 17000.0
+      },
+      {
+        "countryId": 1,
+        "description": "",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1545922524621037568",
+        "level": "0",
+        "online": false,
+        "stateId": 8,
+        "typeId": "42601560",
+        "x": -821900.0,
+        "y": 17100.0
+      },
+      {
+        "countryId": 1,
+        "description": "",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1545923326696423424",
+        "level": "0",
+        "online": false,
+        "stateId": 8,
+        "typeId": "42601560",
+        "x": -820600.0,
+        "y": 16700.0
       }
     ],
     "name": "白玉美人"
@@ -94310,7 +94349,7 @@
     "name": "机枢护心鳞"
   },
   {
-    "icon": "adminConfig/48/props_namephoto/1782890524253.png",
+    "icon": "adminConfig/48/props_namephoto/1789911157515.png",
     "id": "3510008",
     "location": [
       {
@@ -96222,7 +96261,7 @@
     "name": "窃金指爪"
   },
   {
-    "icon": "adminConfig/48/props_namephoto/1782891343330.png",
+    "icon": "adminConfig/48/props_namephoto/1789910627432.png",
     "id": "3510007",
     "location": [
       {
@@ -96912,7 +96951,7 @@
     "name": "霜鬃狼"
   },
   {
-    "icon": "adminConfig/48/props_namephoto/1782890606512.png",
+    "icon": "adminConfig/48/props_namephoto/1789911271140.png",
     "id": "3510005",
     "location": [
       {
@@ -96932,7 +96971,7 @@
     "name": "华胥院药店"
   },
   {
-    "icon": "adminConfig/48/props_namephoto/1782890602815.png",
+    "icon": "adminConfig/48/props_namephoto/1789910633866.png",
     "id": "3510004",
     "location": [
       {
@@ -96952,7 +96991,7 @@
     "name": "天工部印造处"
   },
   {
-    "icon": "adminConfig/48/props_namephoto/1782890788682.png",
+    "icon": "adminConfig/48/props_namephoto/1789910422764.png",
     "id": "3510002",
     "location": [
       {
@@ -96972,7 +97011,7 @@
     "name": "玉驹行商"
   },
   {
-    "icon": "adminConfig/48/props_namephoto/1782890988427.png",
+    "icon": "adminConfig/48/props_namephoto/1789910999689.png",
     "id": "3510001",
     "location": [
       {
@@ -145867,7 +145906,7 @@
     "name": "狂野之猩"
   },
   {
-    "icon": "adminConfig/52/props_namephoto/1762501107092.png",
+    "icon": "adminConfig/88/element_group_pic/1790731023694.png",
     "id": "37",
     "location": [
       {
@@ -145910,10 +145949,10 @@
         "y": 1399600.0
       }
     ],
-    "name": "烬潮之梦"
+    "name": "镜影流电之瞬"
   },
   {
-    "icon": "adminConfig/52/props_namephoto/1762501052318.png",
+    "icon": "adminConfig/88/element_group_pic/1790731109374.png",
     "id": "38",
     "location": [
       {
@@ -145930,7 +145969,7 @@
         "y": 1377700.0
       }
     ],
-    "name": "烬潮之梦·终末"
+    "name": "茜染怀想之花"
   },
   {
     "icon": "adminConfig/61/props_namephoto/1762501319154.png",
@@ -175512,7 +175551,7 @@
       },
       {
         "countryId": 3,
-        "description": "变兔子根据球的数量1234依次互动，完成互动后获得（标点由玩家silent提供）",
+        "description": "变兔子根据柱子下方粉色的球的数量由少到多1234依次互动，完成互动后获得（标点由玩家silent提供）",
         "floorId": "",
         "gravityType": 1,
         "id": "1325876464312541184",
@@ -178514,8 +178553,8 @@
         "y": 1375800.0
       },
       {
-        "countryId": 3,
-        "description": "在标点附近调查后出现宝箱（需先在P2处接取乌塔塔隐藏任务后才可交互！P3是游戏内接任务的地方）",
+        "countryId": 1,
+        "description": "在标点附近调查后出现宝箱（需先在P2处接取乌塔塔隐藏任务后才可交互！P3是游戏内接任务的地方）完成系列任务可获得成就【找到你了哦，呜獭獭】",
         "floorId": "",
         "gravityType": 1,
         "id": "1411088154771103744",
@@ -185452,7 +185491,7 @@
       },
       {
         "countryId": 1,
-        "description": "裸露宝箱，可直接开启",
+        "description": "裸露宝箱，可直接开启，在山脚下",
         "floorId": "",
         "gravityType": 1,
         "id": "1251250195548430336",

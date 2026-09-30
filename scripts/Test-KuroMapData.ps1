@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $root = Join-Path $repoRoot 'Assets\KuroMap'
-$routes = [ordered]@{ '8' = 'World'; '900' = 'Tethys'; '905' = 'Fabricatorium'; '903' = 'Avinoleum'; '906' = 'Lahai'; '902' = ''; '909' = ''; '910' = '' }
+$routes = [ordered]@{ '8' = 'World'; '900' = 'Tethys'; '905' = 'Fabricatorium'; '903' = 'Avinoleum'; '906' = 'Lahai'; '902' = ''; '909' = ''; '910' = ''; '912' = '' }
 $middleDot = [char]0x00B7
 $aliases = @{ ("sx${middleDot}qq") = 'sx_qq'; ("sx${middleDot}lgn") = 'sx_lgn' }
 function Normalize-Id([string]$Id) { if ($aliases.ContainsKey($Id)) { return $aliases[$Id] }; return $Id }

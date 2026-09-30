@@ -251,7 +251,8 @@ const std::string& DisplayName(const std::string& id) {
         for (const auto* source : {&DrawItemBase::itemsJsonData_World, &DrawItemBase::itemsJsonData_Tethys,
             &DrawItemBase::itemsJsonData_Fabricatorium, &DrawItemBase::itemsJsonData_Avinoleum,
             &DrawItemBase::itemsJsonData_Lahai, &DrawItemBase::itemsJsonData_LowerVault,
-            &DrawItemBase::itemsJsonData_Darkplain, &DrawItemBase::itemsJsonData_TimeRiftRuins}) {
+            &DrawItemBase::itemsJsonData_Darkplain, &DrawItemBase::itemsJsonData_TimeRiftRuins,
+            &DrawItemBase::itemsJsonData_MengshuTianluo}) {
             if (!source->is_array()) continue;
             for (const auto& category : *source) result[category.value("id", "")] = category.value("name", "标记");
         }

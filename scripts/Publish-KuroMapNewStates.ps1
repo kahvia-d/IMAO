@@ -11,14 +11,18 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # This intentionally publishes only files that did not exist before this feature:
-# three external runtime lists and one additive filter list.  It never overwrites
-# the global Kuro snapshot, icon manifest, or existing scene resources.
+# the external runtime lists and one additive filter list.  It never overwrites
+# the global Kuro snapshot, icon manifest, or existing scene resources.  It is how
+# every scene the full sync stages (supported = $false) reaches the runtime.
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $mapRoot = Join-Path $repoRoot 'Assets\KuroMap'
+# The expected counts are the review gate: this script refuses to publish when an
+# upstream resync changes a state's shape, so the new snapshot is looked at first.
 $routes = [ordered]@{
-    '902' = [ordered]@{ scene = 'LowerVault';    itemTypes = 37; points = 238 }
-    '909' = [ordered]@{ scene = 'Darkplain';     itemTypes = 43; points = 673 }
-    '910' = [ordered]@{ scene = 'TimeRiftRuins'; itemTypes = 9;  points = 59 }
+    '902' = [ordered]@{ scene = 'LowerVault';     itemTypes = 37; points = 238 }
+    '909' = [ordered]@{ scene = 'Darkplain';      itemTypes = 44; points = 702 }
+    '910' = [ordered]@{ scene = 'TimeRiftRuins';  itemTypes = 9;  points = 59 }
+    '912' = [ordered]@{ scene = 'MengshuTianluo'; itemTypes = 20; points = 231 }
 }
 $middleDot = [char]0x00B7
 $idAliases = @{ ("sx${middleDot}qq") = 'sx_qq'; ("sx${middleDot}lgn") = 'sx_lgn' }

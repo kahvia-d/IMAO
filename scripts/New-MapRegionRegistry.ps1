@@ -61,6 +61,10 @@ $regionTable = @(
     @{ Key = '905|3';           Id = 'fabricatorium'; Kind = 'subworld' }
     @{ Key = '900|泰缇斯之底';  Id = 'tethys';        Kind = 'subworld' }
     @{ Key = '910|时隙废都';    Id = 'timeriftruins'; Kind = 'subworld' }
+    # 梦枢天罗 owns its own frame (912). Its only level-2 area carries the name, so the
+    # region name needs no override even though the country entry 瑝珑 also reuses
+    # mapState 8 for 梦州.
+    @{ Key = '912|8';           Id = 'mengshutianluo'; Kind = 'subworld' }
 )
 $regionById = @{}
 foreach ($entry in $regionTable) {
@@ -138,6 +142,42 @@ if (Test-Path -LiteralPath $originEvidenceRoot) {
             OriginY = [double]$evidence.origin.y
             SampleCount = $samples.Count
             MaxNearestUnits = ($samples | ForEach-Object { [double]$_.nearestPointUnits } | Measure-Object -Maximum).Maximum
+            Source = [string]$file.Name
+        }
+    }
+}
+
+# A measured upstream tile footprint (map-regions/footprints/<region>.json, written by
+# scripts/Get-MapTileFootprint.ps1) is a direct measurement of where a frame's map
+# imagery is. It matters because it is independent of the raw->game origin: the
+# imagery sits at whatever tile indices the host serves it at, so a brand-new
+# independent sub-world gets a correct tile window before anyone has played it,
+# while the origin it still needs for placing markers stays explicitly unproven.
+$measuredFootprints = @{}
+$footprintRoot = Join-Path $SourceRoot 'map-regions/footprints'
+if (Test-Path -LiteralPath $footprintRoot) {
+    foreach ($file in @(Get-ChildItem -LiteralPath $footprintRoot -Filter '*.json' -File)) {
+        $evidence = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ([int]$evidence.formatVersion -ne 1) { throw "Unsupported tile footprint format: $($file.Name)" }
+        $regionId = [string]$evidence.region
+        if ($measuredFootprints.ContainsKey($regionId)) { throw "Duplicate tile footprint for region $regionId." }
+        $tiles = @($evidence.tiles)
+        $imagery = @($tiles | Where-Object { [bool]$_.imagery })
+        if ($imagery.Count -eq 0) { throw "Tile footprint for region $regionId has no imagery tiles." }
+        $generation = ([string]$evidence.generation).ToUpperInvariant()
+        $usable = $generation -eq ([string]$mapManifest.resourceVersion).ToUpperInvariant()
+        $measuredFootprints[$regionId] = [pscustomobject]@{
+            Scene = [string]$evidence.scene
+            State = [int]$evidence.state
+            Generation = $generation
+            Usable = $usable
+            MinX = ($imagery | ForEach-Object { [int]$_.x } | Measure-Object -Minimum).Minimum
+            MaxX = ($imagery | ForEach-Object { [int]$_.x } | Measure-Object -Maximum).Maximum
+            MinY = ($imagery | ForEach-Object { [int]$_.y } | Measure-Object -Minimum).Minimum
+            MaxY = ($imagery | ForEach-Object { [int]$_.y } | Measure-Object -Maximum).Maximum
+            ImageryTiles = $imagery.Count
+            ProbedTiles = $tiles.Count
+            PresentTiles = @($tiles | Where-Object { [bool]$_.present }).Count
             Source = [string]$file.Name
         }
     }
@@ -282,7 +322,7 @@ foreach ($country in $countries) {
 # ---------------------------------------------------------------------------
 # Points
 # ---------------------------------------------------------------------------
-$sceneNames = @('World', 'Tethys', 'Fabricatorium', 'Avinoleum', 'Lahai', 'LowerVault', 'Darkplain', 'TimeRiftRuins')
+$sceneNames = @('World', 'Tethys', 'Fabricatorium', 'Avinoleum', 'Lahai', 'LowerVault', 'Darkplain', 'TimeRiftRuins', 'MengshuTianluo')
 $points = [Collections.Generic.List[object]]::new()
 foreach ($sceneName in $sceneNames) {
     # The five legacy scenes ship as DLL resources under IMao-Core/src/Resource;
@@ -386,11 +426,67 @@ foreach ($entry in $regionTable) {
     #   calibrated       the frame carries a passed four-point calibration.
     #   origin-verified  the compiled origin is confirmed by in-game captures. Enough
     #                    for the tile grid, which needs only the origin.
+    #   footprint-measured  the window is the imagery the host actually serves for this
+    #                    frame, measured per tile. Independent of the origin, so it is
+    #                    trustworthy even while the origin is not.
     #   uncalibrated     no calibration and no origin evidence: the window is a guess
     #                    and must not be turned into a published pack.
     #   blocked          the frame origin is still the compiled zero placeholder.
     $confidence = 'blocked'
-    if ($transform.Trustworthy -and $gameX.Count -gt 0) {
+    $measured = if ($measuredFootprints.ContainsKey($entry.Id) -and $measuredFootprints[$entry.Id].Usable) { $measuredFootprints[$entry.Id] } else { $null }
+    $footprintRecord = $measured
+    if ($null -eq $measured -and $measuredFootprints.ContainsKey($entry.Id)) {
+        $stale = $measuredFootprints[$entry.Id]
+        Write-Warning "Region $($entry.Id) has a tile footprint measured against generation $($stale.Generation), not the registry generation $($mapManifest.resourceVersion); re-measure it with scripts/Get-MapTileFootprint.ps1 before trusting a window for it."
+    }
+    if ($null -ne $measured) {
+        if ($measured.Scene -ne $transform.Scene -or $measured.State -ne $state) {
+            throw "Tile footprint $($measured.Source) describes scene $($measured.Scene)/state $($measured.State), not $($transform.Scene)/$state."
+        }
+        # Every collectible has to land on a tile that carries imagery: the measured
+        # rectangle is where the map is, so a point outside it means the compiled
+        # origin contradicts the measurement, and the window would be wrong for it.
+        $outside = @($myAssignments | Where-Object {
+            $game = Convert-RawToGame $_.Point.X $_.Point.Y $transform
+            $tileX = Get-TileX $game.X
+            $tileY = Get-TileY $game.Y
+            $tileX -lt $measured.MinX -or $tileX -gt $measured.MaxX -or $tileY -lt $measured.MinY -or $tileY -gt $measured.MaxY
+        })
+        if ($outside.Count -gt 0) {
+            throw "Region $($entry.Id) has $($outside.Count) point(s) outside its measured tile footprint; the effective origin ($($transform.OriginX), $($transform.OriginY)) disagrees with the imagery and one of the two is wrong."
+        }
+        $tileMinX = $measured.MinX; $tileMaxX = $measured.MaxX
+        $tileMinY = $measured.MinY; $tileMaxY = $measured.MaxY
+        # Where the collectibles sit inside the measured window, under the effective
+        # (still unproven) origin. Recorded so the window can be reviewed against the
+        # points: a region whose points hug one edge of its imagery is a calibration
+        # smell, and a region whose points miss the imagery entirely already threw above.
+        $pointMinX = Get-TileX (Get-Quantile $gameX $LowerQuantile)
+        $pointMaxX = Get-TileX (Get-Quantile $gameX $UpperQuantile)
+        $pointMinY = Get-TileY (Get-Quantile $gameY $UpperQuantile)
+        $pointMaxY = Get-TileY (Get-Quantile $gameY $LowerQuantile)
+        if ($pointMinX -gt $pointMaxX) { $swap = $pointMinX; $pointMinX = $pointMaxX; $pointMaxX = $swap }
+        if ($pointMinY -gt $pointMaxY) { $swap = $pointMinY; $pointMinY = $pointMaxY; $pointMaxY = $swap }
+        $tileBounds = [ordered]@{
+            # No coverage margin: the measurement is the map, not a lower bound on it.
+            minX = $tileMinX; maxX = $tileMaxX; minY = $tileMinY; maxY = $tileMaxY
+            count = ($tileMaxX - $tileMinX + 1) * ($tileMaxY - $tileMinY + 1)
+            pointMinX = $pointMinX; pointMaxX = $pointMaxX; pointMinY = $pointMinY; pointMaxY = $pointMaxY
+            coverageMargin = 0
+            tightened = $false
+            basis = "measured upstream imagery footprint, generation $($measured.Generation)"
+            footprint = [ordered]@{
+                source = $measured.Source
+                minX = $measured.MinX; maxX = $measured.MaxX; minY = $measured.MinY; maxY = $measured.MaxY
+                imageryTiles = $measured.ImageryTiles
+                presentTiles = $measured.PresentTiles
+                probedTiles = $measured.ProbedTiles
+                generation = $measured.Generation
+            }
+        }
+        $confidence = 'footprint-measured'
+    }
+    elseif ($transform.Trustworthy -and $gameX.Count -gt 0) {
         $minX = Get-Quantile $gameX $LowerQuantile
         $maxX = Get-Quantile $gameX $UpperQuantile
         $minY = Get-Quantile $gameY $LowerQuantile
@@ -466,7 +562,7 @@ foreach ($entry in $regionTable) {
     $regions.Add([ordered]@{
         id = $entry.Id
         # A frame that owns exactly one collection area is named by that area
-        # (下层金库/阿维纽林/隐海试验场/泰缇斯之底/时隙废都/黑海岸群岛). A frame
+        # (下层金库/阿维纽林/隐海试验场/泰缇斯之底/时隙废都/黑海岸群岛/梦枢天罗). A frame
         # with several areas is named by the public map region (拉海洛/黯原).
         name = if ($mine.Count -eq 1) { $mine[0].Name } else { $mine[0].MapStateName }
         kind = $entry.Kind
@@ -482,11 +578,31 @@ foreach ($entry in $regionTable) {
         })
         anchor = $anchor
         tileBounds = $tileBounds
+        # A frame whose transform is unproven still has a computable point window. It is
+        # never a pack window (a wrong origin moves it), but it says where the points
+        # would land, which is what scripts/Get-MapTileFootprint.ps1 bounds its search
+        # with before anything has measured where the imagery actually is.
+        untrustedPointWindow = if ($null -eq $tileBounds -and $gameX.Count -gt 0) {
+            $windowMinX = Get-TileX (Get-Quantile $gameX $LowerQuantile)
+            $windowMaxX = Get-TileX (Get-Quantile $gameX $UpperQuantile)
+            $windowMinY = Get-TileY (Get-Quantile $gameY $UpperQuantile)
+            $windowMaxY = Get-TileY (Get-Quantile $gameY $LowerQuantile)
+            [ordered]@{
+                minX = [Math]::Min($windowMinX, $windowMaxX); maxX = [Math]::Max($windowMinX, $windowMaxX)
+                minY = [Math]::Min($windowMinY, $windowMaxY); maxY = [Math]::Max($windowMinY, $windowMaxY)
+                originSource = $transform.Source
+                originX = $transform.OriginX; originY = $transform.OriginY
+            }
+        } else { $null }
         tileConfidence = $confidence
-        buildable = ($confidence -eq 'validated' -or $confidence -eq 'calibrated' -or $confidence -eq 'origin-verified')
+        buildable = ($confidence -eq 'validated' -or $confidence -eq 'calibrated' -or $confidence -eq 'origin-verified' -or $confidence -eq 'footprint-measured')
         originEvidence = if ($null -ne $transform.OriginEvidence) {
             [ordered]@{ source = $transform.OriginEvidence.Source; samples = $transform.OriginEvidence.SampleCount
                 maxNearestPointUnits = $transform.OriginEvidence.MaxNearestUnits }
+        } else { $null }
+        footprintEvidence = if ($null -ne $footprintRecord) {
+            [ordered]@{ source = $footprintRecord.Source; generation = $footprintRecord.Generation
+                imageryTiles = $footprintRecord.ImageryTiles; presentTiles = $footprintRecord.PresentTiles }
         } else { $null }
         transformSource = $transform.Source
         requiresGameValidation = $transform.RequiresGameValidation
@@ -546,7 +662,7 @@ $report.Add('# 地图地区注册表')
 $report.Add('')
 $report.Add("由 ``scripts/New-MapRegionRegistry.ps1`` 生成，数据源 ``Assets/KuroMap``（Kuro resource version ``$($mapManifest.resourceVersion)``）。")
 $report.Add('')
-$report.Add('瓦片换算经过地面真值验证：14 个独立小世界子区域锚点全部落在其既有包的瓦片矩形内。')
+$report.Add('瓦片换算经过地面真值验证：15 个独立小世界子区域锚点（拉海洛 9、黯原 4、泰缇斯之底 1、梦枢天罗 1）全部落在其既有包的瓦片矩形内。')
 $report.Add('')
 $report.Add('| 地区 | id | 类型 | frame | mapState | 子区域 | 点数 | 瓦片窗口 | 窗口格数 | 实际有图 | 置信度 |')
 $report.Add('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |')
@@ -558,8 +674,8 @@ foreach ($region in $regions) {
 }
 $report.Add('')
 $report.Add("- 点位合计：**$totalPoints**（大世界 $overworld）")
-$report.Add("- 窗口格数合计：**$tileTotal**（含每侧 $CoverageMargin 块覆盖边距；仅统计可推导窗口的地区）")
-$report.Add("- 实际有图瓦片：**$presentTotal** 张（$presentRegions 个地区有归档；上游缺失的格子不计入，故小于窗口格数）")
+$report.Add("- 窗口格数合计：**$tileTotal**（点位推导的窗口含每侧 $CoverageMargin 块覆盖边距，实测足迹的窗口不含边距）")
+$report.Add("- 实际有图瓦片：**$presentTotal** 张（$presentRegions 个地区记在 ``tiles.manifest.json`` 里；实测足迹地区的瓦片清单记在 ``map-regions/footprints/``，上游缺失的格子不计入，故小于窗口格数）")
 $report.Add("- 注：**窗口格数不是下载量**。相邻地区在同一坐标平面上窗口会交叠（六个地表地区共用 frame 8），实际唯一瓦片文件数见 ``map-regions/tiles/tiles.manifest.json``。")
 $report.Add("- 触发 256 上限的地区：$(if ($overCap.Count) { ($overCap | ForEach-Object { "$($_['name'])($($_['tileBounds']['count']))" }) -join '、' } else { '无' })")
 $report.Add('')
@@ -569,8 +685,19 @@ $report.Add('## 置信度')
 $report.Add('')
 $report.Add('- `validated`：frame 8（大世界）。换算用 6 个既有包的锚点/矩形做过地面真值验证。')
 $report.Add('- `calibrated`：该 frame 有通过的四点校准。')
+$report.Add('- `footprint-measured`：窗口取**实测**的上游有图瓦片包围盒（`map-regions/footprints/<id>.json`）。窗口与原点无关，因此可信；但该 frame 的 raw→game 原点仍未证实，**打包可以，开放不行**。')
 $report.Add('- `uncalibrated`：无校准，窗口只是猜测，**不得据此发布资源包**。')
 $report.Add('- `blocked`：frame 原点仍是编译期占位值 `(0, 0)`。')
+$report.Add('')
+$report.Add('### 窗口已实测、但仍缺实机证据的地区')
+$report.Add('')
+$footprintMeasured = @($regions | Where-Object { $_['tileConfidence'] -eq 'footprint-measured' })
+if ($footprintMeasured.Count -eq 0) { $report.Add('无。') }
+else {
+    foreach ($region in $footprintMeasured) {
+        $report.Add("- $($region['name'])（``$($region['id'])``, frame $($region['frame'])）— 实测有图 $($region['tileBounds']['footprint']['imageryTiles']) 块 / 窗口 $($region['tileBounds']['count']) 块。缺：四点校准（实机读 4 个位置坐标）与参考小地图截图；补齐前该场景保持 ``approved=false``。")
+    }
+}
 $report.Add('')
 $report.Add('### 需要先补校准的地区')
 $report.Add('')
@@ -600,7 +727,7 @@ else {
     Write-Host "Wrote $OutputPath" -ForegroundColor Green
     Write-Host "Wrote $ReportPath" -ForegroundColor Green
 }
-Write-Host "Regions: $($regions.Count)  points: $totalPoints (overworld $overworld)  windowCells: $tileTotal  presentTiles: $presentTotal  blocked: $($blocked.Count)  uncalibrated: $($uncalibrated.Count)"
+Write-Host "Regions: $($regions.Count)  points: $totalPoints (overworld $overworld)  windowCells: $tileTotal  presentTiles: $presentTotal  blocked: $($blocked.Count)  uncalibrated: $($uncalibrated.Count)  footprintMeasured: $($footprintMeasured.Count)"
 foreach ($region in $regions) {
     $count = if ($null -ne $region['tileBounds']) { $region['tileBounds']['count'] } else { '—' }
     Write-Host ("  {0,-14} {1,-14} frame={2,-4} points={3,6} tiles={4,-5} {5}" -f $region['id'], $region['name'], $region['frame'], $region['points'], $count, $region['tileConfidence'])

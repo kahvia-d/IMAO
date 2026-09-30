@@ -2494,7 +2494,7 @@
       },
       {
         "countryId": 3,
-        "description": "在标点周围游荡的飞萤 漂泊者，捕捉它吧！",
+        "description": "在标点周围游荡的飞萤 漂泊者，捕捉它吧！\n云上",
         "floorId": "",
         "gravityType": 1,
         "id": "1409585831712002048",
@@ -3548,7 +3548,7 @@
         "countryId": 3,
         "description": "该挑战位置位于上重力区域 请注意切换重力方向后追踪前往",
         "floorId": "",
-        "gravityType": 2,
+        "gravityType": 1,
         "id": "1409576427113762816",
         "level": "0",
         "online": false,

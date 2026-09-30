@@ -56,7 +56,8 @@ public sealed class MarkerDetailService : IDisposable
         return index.Values.Select(detail => new MarkerSelection
         {
             Scene = stateId switch { 8 => "World", 900 => "Tethys", 905 => "Fabricatorium", 903 => "Avinoleum",
-                906 => "Lahai", 902 => "LowerVault", 909 => "Darkplain", 910 => "TimeRiftRuins", _ => string.Empty },
+                906 => "Lahai", 902 => "LowerVault", 909 => "Darkplain", 910 => "TimeRiftRuins",
+                912 => "MengshuTianluo", _ => string.Empty },
             NameId = detail.TypeId switch { "sx·qq" => "sx_qq", "sx·lgn" => "sx_lgn", _ => detail.TypeId },
             PointId = detail.PointId, StateId = stateId, CountryId = detail.CountryId,
             FloorId = detail.FloorId, Level = detail.Level

@@ -140,7 +140,7 @@ function Get-BundledPackageVersion([string]$Directory, [string]$Id) {
 }
 $assets = Join-Path $Destination 'Assets'
 $mapData = Join-Path $assets 'KuroMap'
-$sceneNames = @('World','Tethys','Fabricatorium','Avinoleum','Lahai','LowerVault','Darkplain','TimeRiftRuins')
+$sceneNames = @('World','Tethys','Fabricatorium','Avinoleum','Lahai','LowerVault','Darkplain','TimeRiftRuins','MengshuTianluo')
 $runtimeFiles = @($sceneNames | ForEach-Object { "runtime/itemsData_$_.json" })
 $iconData = Join-Path $assets 'KuroMapIcons'
 Assert-OutputInventory (Join-Path $SourceRoot 'Assets/KuroMap') $mapData $runtimeFiles -Skip @('icon-manifest.json', 'icons')
@@ -172,7 +172,7 @@ foreach ($scene in $sceneNames) {
 }
 # The archived upstream manifest predates the three runtime scene definitions.
 # Complete only their identity mapping; preserve supported=false and the independent approval gates.
-$stateScenes = @{8='World';900='Tethys';905='Fabricatorium';903='Avinoleum';906='Lahai';902='LowerVault';909='Darkplain';910='TimeRiftRuins'}
+$stateScenes = @{8='World';900='Tethys';905='Fabricatorium';903='Avinoleum';906='Lahai';902='LowerVault';909='Darkplain';910='TimeRiftRuins';912='MengshuTianluo'}
 $mapManifest = Get-Content -LiteralPath (Join-Path $mapData 'manifest.json') -Encoding UTF8 -Raw | ConvertFrom-Json
 foreach ($state in $mapManifest.states) {
     $name = $stateScenes[[int]$state.state]

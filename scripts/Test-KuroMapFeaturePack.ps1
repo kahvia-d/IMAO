@@ -10,8 +10,8 @@ $ErrorActionPreference = 'Stop'
 $manifestPath = Join-Path $PackRoot 'manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw "Missing pack manifest: $manifestPath" }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-$sceneStates = @{ World = 8; Tethys = 900; Fabricatorium = 905; Avinoleum = 903; Lahai = 906; LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910 }
-$sceneIds = @{ World = 1; Tethys = 2; Fabricatorium = 3; Avinoleum = 4; Lahai = 5; LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8 }
+$sceneStates = @{ World = 8; Tethys = 900; Fabricatorium = 905; Avinoleum = 903; Lahai = 906; LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910; MengshuTianluo = 912 }
+$sceneIds = @{ World = 1; Tethys = 2; Fabricatorium = 3; Avinoleum = 4; Lahai = 5; LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8; MengshuTianluo = 9 }
 if ($manifest.formatVersion -ne 1 -or -not $sceneStates.ContainsKey([string]$manifest.scene) -or [string]::IsNullOrWhiteSpace([string]$manifest.packId)) {
     throw 'Pack manifest format, scene, or identifier is invalid.'
 }

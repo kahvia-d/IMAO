@@ -35,6 +35,7 @@ json DrawItemBase::itemsJsonData_Lahai;
 json DrawItemBase::itemsJsonData_LowerVault;
 json DrawItemBase::itemsJsonData_Darkplain;
 json DrawItemBase::itemsJsonData_TimeRiftRuins;
+json DrawItemBase::itemsJsonData_MengshuTianluo;
 
 vector<ItemTextureData> DrawItemBase::itemsTextureData;
 unordered_map<string, size_t> DrawItemBase::itemTextureIndex;
@@ -286,6 +287,7 @@ bool DrawItemBase::FindItemJsonData(int sceneId, json*& data) {
     case 6: data = &itemsJsonData_LowerVault; break;
     case 7: data = &itemsJsonData_Darkplain; break;
     case 8: data = &itemsJsonData_TimeRiftRuins; break;
+    case 9: data = &itemsJsonData_MengshuTianluo; break;
     default: data = nullptr; return false;
     }
     return true;

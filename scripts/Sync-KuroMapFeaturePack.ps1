@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory = $true, ParameterSetName = 'Apply')]
     [switch]$Apply,
     [string]$PackId = 'Dreamzhou',
-    [ValidateSet('World', 'Tethys', 'Fabricatorium', 'Avinoleum', 'Lahai', 'LowerVault', 'Darkplain', 'TimeRiftRuins')]
+    [ValidateSet('World', 'Tethys', 'Fabricatorium', 'Avinoleum', 'Lahai', 'LowerVault', 'Darkplain', 'TimeRiftRuins', 'MengshuTianluo')]
     [string]$Scene = 'World',
     [int]$State = 8,
     [double]$AnchorWorldX = -6725,
@@ -70,8 +70,8 @@ $kuroApiHost = 'api.kurobbs.com'
 $kuroStaticHost = 'web-static.kurobbs.com'
 $tileSize = 1024
 $kuroVirtualMapSize = 850.0
-$sceneIds = @{ World = 1; Tethys = 2; Fabricatorium = 3; Avinoleum = 4; Lahai = 5; LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8 }
-$expectedStates = @{ World = 8; Tethys = 900; Fabricatorium = 905; Avinoleum = 903; Lahai = 906; LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910 }
+$sceneIds = @{ World = 1; Tethys = 2; Fabricatorium = 3; Avinoleum = 4; Lahai = 5; LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8; MengshuTianluo = 9 }
+$expectedStates = @{ World = 8; Tethys = 900; Fabricatorium = 905; Avinoleum = 903; Lahai = 906; LowerVault = 902; Darkplain = 909; TimeRiftRuins = 910; MengshuTianluo = 912 }
 if (-not $PSBoundParameters.ContainsKey('State')) { $State = $expectedStates[$Scene] }
 if ($Scene -ne 'World') {
     if (-not $PSBoundParameters.ContainsKey('PackId')) { $PackId = $Scene }
@@ -361,6 +361,11 @@ try {
     }
     $generatedManifestPath = Join-Path $generatedDir 'manifest.json'
     Write-Utf8Json $packManifest $generatedManifestPath
+    # $referenceVerification is an [ordered] dictionary on the skipped path and a
+    # PSCustomObject from the builder report otherwise. PSObject.Properties does not
+    # expose dictionary keys, so asking it about 'skipped' answered "no" for every
+    # unverified pack and the report claimed skipped=False while the manifest said true.
+    $referenceSkipped = if ($referenceVerification -is [Collections.IDictionary]) { [bool]$referenceVerification['skipped'] } else { [bool]$referenceVerification.skipped }
     $reportLines = @(
         '# Kuro map feature-pack report', '',
         "- Pack: $($packManifest.packId)",
@@ -372,7 +377,7 @@ try {
         "- Tiles absent from the public source: $missingTileCount",
         "- SURF keypoints extracted: $($builderReport.extractedKeypoints)",
         "- SURF keypoints retained: $($builderReport.selectedKeypoints)",
-        "- Reference-map verification: passed=$($referenceVerification.passed); skipped=$(if ($null -ne $referenceVerification.PSObject.Properties['skipped']) { $referenceVerification.skipped } else { $false }); error=$($referenceVerification.errorPixels) pixels",
+        "- Reference-map verification: passed=$($referenceVerification.passed); skipped=$referenceSkipped; error=$($referenceVerification.errorPixels) pixels",
         "- Feature SHA-256: $($builderReport.featuresSha256)", '',
         'The tiles were downloaded from Kuro public static assets. An unverified coverage pack must be checked against a real minimap before accuracy is claimed.'
     )

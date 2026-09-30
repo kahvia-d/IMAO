@@ -449,10 +449,11 @@ void TestWorldSearchPrior() {
 
 void TestNewSceneRegistry() {
     struct ExpectedScene { int id; const char* name; int state; };
-    const std::array<ExpectedScene, 3> expected = {{
+    const std::array<ExpectedScene, 4> expected = {{
         { 6, "LowerVault", 902 },
         { 7, "Darkplain", 909 },
-        { 8, "TimeRiftRuins", 910 }
+        { 8, "TimeRiftRuins", 910 },
+        { 9, "MengshuTianluo", 912 }
     }};
     for (const auto& entry : expected) {
         const auto* scene = Scene::Find(entry.id);

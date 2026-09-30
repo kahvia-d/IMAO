@@ -134,7 +134,7 @@ function Get-TileSpec([string]$imageName, [string]$localName, [bool]$layered) {
     }
 }
 
-$sceneIds = @{ World = 1; Tethys = 2; Fabricatorium = 3; Avinoleum = 4; Lahai = 5; LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8 }
+$sceneIds = @{ World = 1; Tethys = 2; Fabricatorium = 3; Avinoleum = 4; Lahai = 5; LowerVault = 6; Darkplain = 7; TimeRiftRuins = 8; MengshuTianluo = 9 }
 
 function Invoke-Build([string]$tag, [object[]]$specs) {
     $manifestPath = Join-Path $probe "manifest-$tag.json"

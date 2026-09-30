@@ -10,8 +10,8 @@ function Write-Fixture([string]$Relative, [string]$Text) {
     [IO.File]::WriteAllText($file,$Text,[Text.UTF8Encoding]::new($false))
 }
 Write-Fixture 'Version.props' '<Project><PropertyGroup><IMaoVersion>2026.9.9.1</IMaoVersion><IMaoBaselineId>staging-fixture</IMaoBaselineId></PropertyGroup></Project>'
-$scenes=@('World','Tethys','Fabricatorium','Avinoleum','Lahai','LowerVault','Darkplain','TimeRiftRuins')
-$states=@(8,900,905,903,906,902,909,910)
+$scenes=@('World','Tethys','Fabricatorium','Avinoleum','Lahai','LowerVault','Darkplain','TimeRiftRuins','MengshuTianluo')
+$states=@(8,900,905,903,906,902,909,910,912)
 $manifest=@{formatVersion=1;states=@()}
 for($i=0;$i -lt $scenes.Count;$i++) {
     $manifest.states += @{state=$states[$i];runtime=$scenes[$i];supported=($i -lt 5)}

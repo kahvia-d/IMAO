@@ -10,6 +10,7 @@
   "regions": {
     "jinzhou": { "name": "今州", "countryId": 1, "order": 1 },
     "mengzhou": { "name": "梦州", "countryId": 1, "order": 2 },
+    "mengshutianluo": { "name": "梦枢天罗", "countryId": 1, "order": 3 },
     "laguna": { "name": "拉古那", "countryId": 3, "order": 3 },
     "qiqiu": { "name": "七丘", "countryId": 3, "order": 4 },
     "roysurface": { "name": "冰原地表", "countryId": 4, "order": 5 },

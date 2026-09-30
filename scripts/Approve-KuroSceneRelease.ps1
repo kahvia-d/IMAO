@@ -1,7 +1,7 @@
 [CmdletBinding(DefaultParameterSetName = 'Check')]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('lowervault', 'darkplain', 'timeriftruins')]
+    [ValidateSet('lowervault', 'darkplain', 'timeriftruins', 'mengshutianluo')]
     [string]$Region,
     [Parameter(Mandatory = $true)]
     [string]$GameEvidencePath,
@@ -21,10 +21,10 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 # A pack directory is named after the region it covers, while calibration and validation
 # are keyed by scene name. The two are not interchangeable: the overworld is one scene
 # split across six region packs, so a scene name cannot address a pack directory.
-$regionScenes = @{ lowervault = 'LowerVault'; darkplain = 'Darkplain'; timeriftruins = 'TimeRiftRuins' }
+$regionScenes = @{ lowervault = 'LowerVault'; darkplain = 'Darkplain'; timeriftruins = 'TimeRiftRuins'; mengshutianluo = 'MengshuTianluo' }
 $Scene = $regionScenes[$Region]
-$stateIds = @{ lowervault = 902; darkplain = 909; timeriftruins = 910 }
-$sceneIds = @{ lowervault = 6; darkplain = 7; timeriftruins = 8 }
+$stateIds = @{ lowervault = 902; darkplain = 909; timeriftruins = 910; mengshutianluo = 912 }
+$sceneIds = @{ lowervault = 6; darkplain = 7; timeriftruins = 8; mengshutianluo = 9 }
 $calibrationPath = Join-Path $repoRoot 'Assets\KuroMap\scene-calibrations.json'
 $validationPath = Join-Path $repoRoot 'Assets\KuroMap\scene-validation.json'
 $packRoot = Join-Path $repoRoot "Assets\FeaturesDatas\KuroTilePacks\$Region"

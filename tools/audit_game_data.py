@@ -31,7 +31,7 @@ def audit(root):
                 result[identity] = normalized
         return result
 
-    new_scenes = {902: "LowerVault", 909: "Darkplain", 910: "TimeRiftRuins"}
+    new_scenes = {902: "LowerVault", 909: "Darkplain", 910: "TimeRiftRuins", 912: "MengshuTianluo"}
     for state in manifest["states"]:
         state_id = state["state"]
         path = data / f"states/state-{state_id}.json"

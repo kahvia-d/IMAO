@@ -441,7 +441,8 @@ int ImGuiOverWindows::start()
     uiGlyphs.AddText(IMaoUiGlyphs);
     for (const auto* categories : {&DrawItemBase::itemsJsonData_World, &DrawItemBase::itemsJsonData_Tethys,
         &DrawItemBase::itemsJsonData_Fabricatorium, &DrawItemBase::itemsJsonData_Avinoleum, &DrawItemBase::itemsJsonData_Lahai,
-        &DrawItemBase::itemsJsonData_LowerVault, &DrawItemBase::itemsJsonData_Darkplain, &DrawItemBase::itemsJsonData_TimeRiftRuins})
+        &DrawItemBase::itemsJsonData_LowerVault, &DrawItemBase::itemsJsonData_Darkplain, &DrawItemBase::itemsJsonData_TimeRiftRuins,
+        &DrawItemBase::itemsJsonData_MengshuTianluo})
         if (categories->is_array()) for (const auto& category : *categories)
             uiGlyphs.AddText(category.value("name", std::string{}).c_str());
     ImVector<ImWchar> uiRanges; uiGlyphs.BuildRanges(&uiRanges);

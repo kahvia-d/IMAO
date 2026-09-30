@@ -33,6 +33,18 @@
 | `LowerVault` | 902 | 声骸站台、贵金属与艺术品藏馆、人才藏馆、费舍塔 |
 | `Darkplain` | 909 | 落日堤屿、封存地、寂静断崖、恒黯之原 |
 | `TimeRiftRuins` | 910 | 时隙废都、细波大道、幸缘喷泉广场、列车长咖啡厅 |
+| `MengshuTianluo` | 912 | **待采集**。梦枢天罗是独立小世界，7 个子区域是 烬心域 / 怡心域 / 凄心域 / 墟心域 / 沉心域 / 心相迷宫 / 相心域；建议在其中**相距最远的四个**各采一组（同一区域内不要采两点），采样点彼此拉得越开，解出的缩放与原点越稳。 |
+
+采集命令（`-Scene` 已接受 `MengshuTianluo`）：
+
+```powershell
+.\scripts\Start-KuroCaptureAssistant.ps1 -Scene MengshuTianluo -Sample 01
+```
+
+> **采样前先知道**：这个 frame 的编译期原点是占位值 `(0, 0)`，**尚未证实**。所以采完四点、
+> 跑 `Set-KuroSceneCalibration.ps1 -Scene MengshuTianluo -Apply` 时，解出的 `originX/originY`
+> 大概率也在 0 附近（下层金库 −3.5/−2.5、黯原 −0.4/0.2 就是这样）；若解出的原点离 0 很远，
+> 先把大地图箭头换算再核对一遍，不要直接接受。
 
 将大地图箭头中心换算为本项目内部地图像素后，制作一个 JSON 文件：
 

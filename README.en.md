@@ -190,15 +190,22 @@ session the KuroBBS map page already holds.
 **13 regions, 51 sub-regions, about 23,800 markers** (527 icon types). Regions are grouped by country in
 Settings and can be disabled, deleted and re-downloaded (**changes apply after a full restart**).
 
+One further map is archived but **not open yet**: **Mengshu Tianluo (梦枢天罗)**, an independent sub-world
+under Huanglong (Kuro state 912, 20 item types / 231 markers). Its points, catalog, icons and tiles are in
+the repository and its map pack was built from a measured tile footprint, but it still needs an in-game
+four-point calibration and a reference minimap, so it stays out of filters, marker labels and visual
+localization. See [the calibration samples guide](Docs/KuroSceneCalibrationSamples.md).
+
 | Country | Regions |
 | :--- | :--- |
-| Huanglong (瑝珑) | Jinzhou (今州), Mengzhou (梦州) |
+| Huanglong (瑝珑) | Jinzhou (今州), Mengzhou (梦州) (+ Mengshu Tianluo, not open yet) |
 | Black Shores (黑海岸) | Black Shores Archipelago (黑海岸群岛), Tethys' Deep (泰缇斯之底), Time Rift Ruins (时隙废都) |
 | Rinascita (黎那汐塔) | Ragunna (拉古那), Septimont (七丘), Lower Vault (下层金库), Avinoleum (阿维纽林), Fabricatorium (隐海试验场) |
 | Roy's Icefield (罗伊冰原) | Icefield Surface (冰原地表), Lahai-Roi (拉海洛), Darkplain (黯原) |
 
 A single region pack ranges from about 3 MB (Time Rift Ruins) to about 211 MB (Lahai-Roi). Regions that
-ship with the program cost no extra download.
+ship with the program cost no extra download. Mengshu Tianluo is 12 tiles (about 9 MB), the same order of
+magnitude as Tethys' Deep and Time Rift Ruins.
 
 ### FAQ and known limits
 

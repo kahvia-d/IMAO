@@ -83,6 +83,7 @@ public:
 	static json itemsJsonData_LowerVault;
 	static json itemsJsonData_Darkplain;
 	static json itemsJsonData_TimeRiftRuins;
+	static json itemsJsonData_MengshuTianluo;
 	static std::shared_ptr<const std::vector<ItemsDatas>> GetSceneItemsSnapshot(int sceneId);
 
 private:

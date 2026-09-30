@@ -6,8 +6,8 @@
     "calibrations": "Assets/KuroMap/scene-calibrations.json",
     "validation": "Assets/KuroMap/scene-validation.json",
     "sceneTable": "IMao-Core/src/Coordinate/CoordinateStruct.h",
-    "kuroResourceVersion": "E62CEAC5F80745288BF76C7AD5F731C3",
-    "kuroStateCount": 8
+    "kuroResourceVersion": "13CCF182D6AF491CA1AC2A02754E5345",
+    "kuroStateCount": 9
   },
   "tileGrid": {
     "formula": "game = (raw - origin) / 100",
@@ -139,18 +139,18 @@
         }
       ],
       "anchor": {
-        "x": 3825.0,
-        "y": -425.0
+        "x": 4250.0,
+        "y": 1275.0
       },
       "tileBounds": {
         "minX": -3,
-        "maxX": 14,
-        "minY": -10,
+        "maxX": 15,
+        "minY": -14,
         "maxY": 11,
-        "count": 396,
+        "count": 494,
         "pointMinX": -1,
-        "pointMaxX": 12,
-        "pointMinY": -8,
+        "pointMaxX": 13,
+        "pointMinY": -12,
         "pointMaxY": 9,
         "coverageMargin": 2,
         "tightened": false,
@@ -164,17 +164,19 @@
           "requested": 396,
           "generation": "B50F4135DCCC4D8DA87ED33CE95EA31D",
           "usable": true,
-          "emptyInWindow": 200
+          "emptyInWindow": 298
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "validated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "builtin",
       "requiresGameValidation": false,
       "approved": true,
       "approvalReason": "",
-      "points": 9234,
+      "points": 9235,
       "outliers": 184
     },
     {
@@ -257,14 +259,16 @@
           "emptyInWindow": 0
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "validated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "builtin",
       "requiresGameValidation": false,
       "approved": true,
       "approvalReason": "",
-      "points": 1483,
+      "points": 1486,
       "outliers": 29
     },
     {
@@ -407,9 +411,11 @@
           "emptyInWindow": 35
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "validated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "builtin",
       "requiresGameValidation": false,
       "approved": true,
@@ -477,14 +483,16 @@
           "emptyInWindow": 33
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "validated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "builtin",
       "requiresGameValidation": false,
       "approved": true,
       "approvalReason": "",
-      "points": 1345,
+      "points": 1344,
       "outliers": 25
     },
     {
@@ -577,9 +585,11 @@
           "emptyInWindow": 20
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "validated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "builtin",
       "requiresGameValidation": false,
       "approved": true,
@@ -637,9 +647,11 @@
           "emptyInWindow": 2
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "validated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "builtin",
       "requiresGameValidation": false,
       "approved": true,
@@ -777,9 +789,11 @@
           "emptyInWindow": 22
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "calibrated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "calibration",
       "requiresGameValidation": false,
       "approved": true,
@@ -867,14 +881,16 @@
           "emptyInWindow": 31
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "calibrated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "calibration",
       "requiresGameValidation": true,
       "approved": true,
       "approvalReason": "",
-      "points": 673,
+      "points": 702,
       "outliers": 14
     },
     {
@@ -927,13 +943,15 @@
           "emptyInWindow": 90
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "calibrated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "calibration",
       "requiresGameValidation": true,
-      "approved": false,
-      "approvalReason": "等待四点校准、瓦片特征包与实机验证。",
+      "approved": true,
+      "approvalReason": "local trial only: the four-point calibration was measured from the user's own captures, the pack passes its reference-minimap check, and the user ran it in game; the full four-check verification and the 113-sample regression are still outstanding",
       "points": 238,
       "outliers": 4
     },
@@ -974,11 +992,24 @@
         "pointMaxY": 2,
         "coverageMargin": 2,
         "tightened": false,
-        "basis": "points p1..p99 grown by 2 tile(s)"
+        "basis": "points p1..p99 grown by 2 tile(s)",
+        "archivePresent": {
+          "minX": -2.0,
+          "maxX": 3.0,
+          "minY": -2.0,
+          "maxY": 3.0,
+          "present": 36,
+          "requested": 400,
+          "generation": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+          "usable": true,
+          "emptyInWindow": 364
+        }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "uncalibrated",
       "buildable": false,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "builtin",
       "requiresGameValidation": false,
       "approved": true,
@@ -1023,11 +1054,24 @@
         "pointMaxY": 2,
         "coverageMargin": 2,
         "tightened": false,
-        "basis": "points p1..p99 grown by 2 tile(s)"
+        "basis": "points p1..p99 grown by 2 tile(s)",
+        "archivePresent": {
+          "minX": -5.0,
+          "maxX": 6.0,
+          "minY": -4.0,
+          "maxY": 2.0,
+          "present": 84,
+          "requested": 117,
+          "generation": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+          "usable": true,
+          "emptyInWindow": 33
+        }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "uncalibrated",
       "buildable": false,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "builtin",
       "requiresGameValidation": false,
       "approved": true,
@@ -1085,9 +1129,11 @@
           "emptyInWindow": 23
         }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "calibrated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "calibration",
       "requiresGameValidation": false,
       "approved": true,
@@ -1132,17 +1178,97 @@
         "pointMaxY": 1,
         "coverageMargin": 2,
         "tightened": false,
-        "basis": "points p1..p99 grown by 2 tile(s)"
+        "basis": "points p1..p99 grown by 2 tile(s)",
+        "archivePresent": {
+          "minX": 0.0,
+          "maxX": 1.0,
+          "minY": 0.0,
+          "maxY": 1.0,
+          "present": 4,
+          "requested": 36,
+          "generation": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+          "usable": true,
+          "emptyInWindow": 32
+        }
       },
+      "untrustedPointWindow": null,
       "tileConfidence": "calibrated",
       "buildable": true,
       "originEvidence": null,
+      "footprintEvidence": null,
       "transformSource": "calibration",
       "requiresGameValidation": true,
-      "approved": false,
-      "approvalReason": "等待四点校准、瓦片特征包与实机验证。",
+      "approved": true,
+      "approvalReason": "local trial only: the four-point calibration was measured from the user's own captures, the pack passes its reference-minimap check, and the user ran it in game; the full four-check verification and the 113-sample regression are still outstanding",
       "points": 59,
       "outliers": 2
+    },
+    {
+      "id": "mengshutianluo",
+      "name": "梦枢天罗",
+      "kind": "subworld",
+      "frame": 912,
+      "scene": "MengshuTianluo",
+      "mapState": "8",
+      "countryId": 1,
+      "country": "瑝珑",
+      "areas": [
+        {
+          "name": "梦枢天罗",
+          "rawX": -4640.0,
+          "rawY": -12475.0,
+          "gameX": -46.4,
+          "gameY": -124.8,
+          "tileX": 0,
+          "tileY": 1,
+          "stateMatchValid": true
+        }
+      ],
+      "anchor": {
+        "x": -425.0,
+        "y": -425.0
+      },
+      "tileBounds": {
+        "minX": -1.0,
+        "maxX": 2.0,
+        "minY": -1.0,
+        "maxY": 2.0,
+        "count": 16.0,
+        "pointMinX": 0,
+        "pointMaxX": 1,
+        "pointMinY": 0,
+        "pointMaxY": 1,
+        "coverageMargin": 0,
+        "tightened": false,
+        "basis": "measured upstream imagery footprint, generation 13CCF182D6AF491CA1AC2A02754E5345",
+        "footprint": {
+          "source": "mengshutianluo.json",
+          "minX": -1.0,
+          "maxX": 2.0,
+          "minY": -1.0,
+          "maxY": 2.0,
+          "imageryTiles": 12,
+          "presentTiles": 60,
+          "probedTiles": 324,
+          "generation": "13CCF182D6AF491CA1AC2A02754E5345"
+        }
+      },
+      "untrustedPointWindow": null,
+      "tileConfidence": "footprint-measured",
+      "buildable": true,
+      "originEvidence": null,
+      "footprintEvidence": {
+        "source": "mengshutianluo.json",
+        "generation": "13CCF182D6AF491CA1AC2A02754E5345",
+        "imageryTiles": 12,
+        "presentTiles": 60
+      },
+      "transformSource": "builtin",
+      "requiresGameValidation": true,
+      "approved": false,
+      "approvalReason": "新地图首次接入：上游点位、目录与瓦片已归档，独立小世界的地图包已按实测瓦片足迹构建，但还缺少实机四点校准与参考小地图，因此点位、筛选与视觉定位一律不对外开放。",
+      "points": 231,
+      "outliers": 0
     }
   ]
 }

@@ -541,9 +541,10 @@ void AutoWorker(){
     }
 }
 void BuildCatalogLocked(){
-    auto& r=R();const std::array<const Json*,8> sources={&DrawItemBase::itemsJsonData_World,&DrawItemBase::itemsJsonData_Tethys,
+    auto& r=R();const std::array<const Json*,9> sources={&DrawItemBase::itemsJsonData_World,&DrawItemBase::itemsJsonData_Tethys,
         &DrawItemBase::itemsJsonData_Fabricatorium,&DrawItemBase::itemsJsonData_Avinoleum,&DrawItemBase::itemsJsonData_Lahai,
-        &DrawItemBase::itemsJsonData_LowerVault,&DrawItemBase::itemsJsonData_Darkplain,&DrawItemBase::itemsJsonData_TimeRiftRuins};
+        &DrawItemBase::itemsJsonData_LowerVault,&DrawItemBase::itemsJsonData_Darkplain,&DrawItemBase::itemsJsonData_TimeRiftRuins,
+        &DrawItemBase::itemsJsonData_MengshuTianluo};
     r.catalog.clear();r.names.clear();
     for(std::size_t i=0;i<sources.size();++i){const int scene=static_cast<int>(i+1);if(!sources[i]->is_array())continue;
         for(const auto& category:*sources[i]){

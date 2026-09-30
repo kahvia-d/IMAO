@@ -117,6 +117,7 @@ if (Test-Path -LiteralPath $candidateRegistryPath) {
                 'LowerVault' { 6 }
                 'Darkplain' { 7 }
                 'TimeRiftRuins' { 8 }
+                'MengshuTianluo' { 9 }
                 default { throw "Unsupported candidate scene: $candidateDirectory" }
             }
         }

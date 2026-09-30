@@ -28,6 +28,7 @@ public:
         if (scene == "LowerVault") return 902;
         if (scene == "Darkplain") return 909;
         if (scene == "TimeRiftRuins") return 910;
+        if (scene == "MengshuTianluo") return 912;
         return 0;
     }
 

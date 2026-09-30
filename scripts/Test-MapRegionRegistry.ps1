@@ -34,7 +34,7 @@ $registry = Get-Content -LiteralPath $RegistryPath -Raw -Encoding UTF8 | Convert
 Write-Host 'Registry structure'
 Check ([int]$registry['formatVersion'] -eq 1) 'formatVersion is 1'
 $regions = @($registry['regions'])
-Check ($regions.Count -eq 13) "registry declares 13 regions (found $($regions.Count))"
+Check ($regions.Count -eq 14) "registry declares 14 regions (found $($regions.Count))"
 $ids = @($regions | ForEach-Object { [string]$_['id'] })
 Check (($ids | Select-Object -Unique).Count -eq $ids.Count) 'region ids are unique'
 $keys = @($regions | ForEach-Object { "$($_['frame'])|$(if ([string]::IsNullOrEmpty([string]$_['mapState'])) { @($_['areas'])[0]['name'] } else { $_['mapState'] })" })
@@ -46,7 +46,7 @@ Check ($resourceVersion -match '^[A-Fa-f0-9]{32}$') "registry records a 32-hex r
 # A region must never span two coordinate frames: that is the invariant that makes
 # the frame split automatic and keeps coordinates comparable inside a region.
 Write-Host 'Frame containment'
-$sceneStates = @(8, 900, 902, 903, 905, 906, 909, 910)
+$sceneStates = @(8, 900, 902, 903, 905, 906, 909, 910, 912)
 foreach ($record in $regions) {
     $frame = [int]$record['frame']
     Check ($sceneStates -contains $frame) "region $($record['id']) uses a known frame ($frame)"
@@ -70,7 +70,7 @@ foreach ($match in [regex]::Matches($sceneHeader, $scenePattern)) {
     }
 }
 $calibrations = (Get-Content -LiteralPath (Join-Path $SourceRoot 'Assets/KuroMap/scene-calibrations.json') -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable)['scenes']
-$sceneNameByState = @{ 8 = 'World'; 900 = 'Tethys'; 902 = 'LowerVault'; 903 = 'Avinoleum'; 905 = 'Fabricatorium'; 906 = 'Lahai'; 909 = 'Darkplain'; 910 = 'TimeRiftRuins' }
+$sceneNameByState = @{ 8 = 'World'; 900 = 'Tethys'; 902 = 'LowerVault'; 903 = 'Avinoleum'; 905 = 'Fabricatorium'; 906 = 'Lahai'; 909 = 'Darkplain'; 910 = 'TimeRiftRuins'; 912 = 'MengshuTianluo' }
 foreach ($state in @($originByState.Keys)) {
     $sceneName = $sceneNameByState[$state]
     if ($calibrations.ContainsKey($sceneName) -and [bool]$calibrations[$sceneName]['passed']) {
@@ -98,7 +98,7 @@ foreach ($country in $countries) {
         })
     }
 }
-Check ($areas.Count -eq 51) "the public hierarchy yields 51 areas (found $($areas.Count))"
+Check ($areas.Count -eq 52) "the public hierarchy yields 52 areas (found $($areas.Count))"
 
 Write-Host 'Area coverage'
 $registryAreaKeys = @{}
@@ -145,7 +145,7 @@ foreach ($record in $regions) {
 # Point attribution
 # ---------------------------------------------------------------------------
 Write-Host 'Point attribution'
-$sceneNames = @('World', 'Tethys', 'Fabricatorium', 'Avinoleum', 'Lahai', 'LowerVault', 'Darkplain', 'TimeRiftRuins')
+$sceneNames = @('World', 'Tethys', 'Fabricatorium', 'Avinoleum', 'Lahai', 'LowerVault', 'Darkplain', 'TimeRiftRuins', 'MengshuTianluo')
 $points = [Collections.Generic.List[object]]::new()
 foreach ($sceneName in $sceneNames) {
     $file = Join-Path $SourceRoot "IMao-Core/src/Resource/itemsData_$sceneName.json"
@@ -161,7 +161,7 @@ foreach ($sceneName in $sceneNames) {
     }
 }
 $overworldPoints = @($points | Where-Object { $_.Frame -eq 8 })
-Check ($overworldPoints.Count -eq 19184) "overworld snapshot holds 19184 points (found $($overworldPoints.Count))"
+Check ($overworldPoints.Count -eq 19187) "overworld snapshot holds 19187 points (found $($overworldPoints.Count))"
 
 # Region key -> registry id, and the frame-(8) anchor pool per country.
 $idByKey = @{}
@@ -224,7 +224,7 @@ foreach ($record in $regions) {
     if ([int]$record['frame'] -eq 8) { $overworldAssigned += [int]$record['points'] }
 }
 Check ($overworldAssigned -eq $overworldPoints.Count) "overworld regions sum to the overworld snapshot ($overworldAssigned vs $($overworldPoints.Count))"
-$notes.Add("cross-canvas conflicts without the countryId filter: $crossCanvasConflicts (expected 476; this is why the filter is required)")
+$notes.Add("cross-canvas conflicts without the countryId filter: $crossCanvasConflicts (expected 477; this is why the filter is required)")
 
 # ---------------------------------------------------------------------------
 Write-Host ''

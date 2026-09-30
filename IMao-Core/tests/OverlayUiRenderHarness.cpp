@@ -37,7 +37,8 @@ struct DrawItemBase {
     inline static Json itemsJsonData_World = Json::array({{{"name", "凝素·冰棱"}}});
     inline static Json itemsJsonData_Tethys = Json::array(), itemsJsonData_Fabricatorium = Json::array(),
         itemsJsonData_Avinoleum = Json::array(), itemsJsonData_Lahai = Json::array(), itemsJsonData_LowerVault = Json::array(),
-        itemsJsonData_Darkplain = Json::array(), itemsJsonData_TimeRiftRuins = Json::array();
+        itemsJsonData_Darkplain = Json::array(), itemsJsonData_TimeRiftRuins = Json::array(),
+        itemsJsonData_MengshuTianluo = Json::array();
 };
 static std::string GetCurrentPath() { return (std::filesystem::current_path() / "x64/Release").string(); }
 static RouteGamepadDisplayLease::View fixtureReturnDisplay;

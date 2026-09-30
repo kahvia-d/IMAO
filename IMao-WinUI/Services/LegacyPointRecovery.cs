@@ -84,7 +84,8 @@ public sealed class LegacyPointRecovery
     private static readonly (string Scene, int State)[] Scenes =
     [
         ("World", 8), ("Tethys", 900), ("Fabricatorium", 905), ("Avinoleum", 903),
-        ("Lahai", 906), ("LowerVault", 902), ("Darkplain", 909), ("TimeRiftRuins", 910)
+        ("Lahai", 906), ("LowerVault", 902), ("Darkplain", 909), ("TimeRiftRuins", 910),
+        ("MengshuTianluo", 912)
     ];
 
     private readonly string savedPointsDirectory;

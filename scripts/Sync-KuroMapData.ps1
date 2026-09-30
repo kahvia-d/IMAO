@@ -12,15 +12,23 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $kuroApiHost = 'api.kurobbs.com'
 $kuroStaticHost = 'web-static.kurobbs.com'
+$stagedReason = '运行时点位由 Publish-KuroMapNewStates.ps1 单独发布；本表只归档上游快照。'
 $routes = [ordered]@{
     '8'   = [ordered]@{ runtime = 'World';         supported = $true;  reason = '' }
     '900' = [ordered]@{ runtime = 'Tethys';        supported = $true;  reason = '' }
     '905' = [ordered]@{ runtime = 'Fabricatorium'; supported = $true;  reason = '' }
     '903' = [ordered]@{ runtime = 'Avinoleum';     supported = $true;  reason = '' }
     '906' = [ordered]@{ runtime = 'Lahai';         supported = $true;  reason = '' }
-    '902' = [ordered]@{ runtime = 'LowerVault';    supported = $true;  reason = '' }
-    '909' = [ordered]@{ runtime = 'Darkplain';     supported = $true;  reason = '' }
-    '910' = [ordered]@{ runtime = 'TimeRiftRuins'; supported = $true;  reason = '' }
+    # The four scenes below publish their runtime point lists through
+    # scripts/Publish-KuroMapNewStates.ps1 instead of this snapshot.  Keeping them
+    # out of the supported set is what keeps their item ids in the *gated*
+    # new-state-filter-items.json table: an id that reaches filter-items.json is
+    # shown in the filter page regardless of scene approval, so an unreleased
+    # region would appear there before its pack and calibration exist.
+    '902' = [ordered]@{ runtime = 'LowerVault';    supported = $false; reason = $stagedReason }
+    '909' = [ordered]@{ runtime = 'Darkplain';     supported = $false; reason = $stagedReason }
+    '910' = [ordered]@{ runtime = 'TimeRiftRuins'; supported = $false; reason = $stagedReason }
+    '912' = [ordered]@{ runtime = 'MengshuTianluo'; supported = $false; reason = $stagedReason }
 }
 $middleDot = [char]0x00B7
 $idAliases = @{ ("sx${middleDot}qq") = 'sx_qq'; ("sx${middleDot}lgn") = 'sx_lgn' }
@@ -34,7 +42,9 @@ function Assert-KuroUri([string]$Url, [string[]]$AllowedHosts) {
 
 function Invoke-KuroDownload([string]$Url, [string]$Destination) {
     Assert-KuroUri $Url @($kuroStaticHost)
-    & curl.exe --fail --silent --show-error --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 45 $Url --output $Destination
+    # --retry covers the transport failures only (timeouts, resets, 5xx). A 404 is a
+    # real answer here and must still fail the run, which --retry-all-errors would hide.
+    & curl.exe --fail --silent --show-error --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 45 --retry 3 --retry-delay 2 $Url --output $Destination
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $Destination)) {
         throw "Download failed: $Url"
     }
@@ -194,20 +204,53 @@ try {
         Write-Host "Validated state ${stateId}: $($normalized.Count) item types, $pointCount points."
     }
 
-    $iconManifest = [ordered]@{ formatVersion = 1; icons = [ordered]@{} }
+    # Icon file names are stable per item id.  Assigning them by position in the
+    # sorted id list renumbers the whole set as soon as one id is inserted -- the
+    # 梦枢天罗 sync rewrote 469 of 527 files although only 10 images were new.
+    # Every id that already had a name keeps it, and only then do unseen ids take
+    # the lowest index nobody holds.  Reserving the survivors first is what makes
+    # this work: claiming names while walking the list in id order hands a new id
+    # the name of a later id and shifts everything after it.
+    $existingIconNames = @{}
+    $existingIconManifestPath = Join-Path $repoRoot 'Assets\KuroMap\icon-manifest.json'
+    if (Test-Path -LiteralPath $existingIconManifestPath) {
+        $existingIconManifest = Get-Content -LiteralPath $existingIconManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($null -ne $existingIconManifest.PSObject.Properties['icons']) {
+            foreach ($entry in $existingIconManifest.icons.PSObject.Properties) { $existingIconNames[$entry.Name] = [string]$entry.Value }
+        }
+    }
+
+    $sortedItemIds = @($iconSources.Keys | Sort-Object)
+    $iconNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    $iconNameById = @{}
+    foreach ($itemId in $sortedItemIds) {
+        if (-not $existingIconNames.ContainsKey($itemId)) { continue }
+        $candidate = $existingIconNames[$itemId]
+        if ($candidate -match '^icons/icon-\d{4}\.png$' -and $iconNames.Add($candidate)) { $iconNameById[$itemId] = $candidate }
+    }
     $iconIndex = 0
-    foreach ($itemId in @($iconSources.Keys | Sort-Object)) {
+    foreach ($itemId in $sortedItemIds) {
+        if ($iconNameById.ContainsKey($itemId)) { continue }
+        while ($iconNames.Contains('icons/icon-{0:D4}.png' -f $iconIndex)) { ++$iconIndex }
+        $assigned = 'icons/icon-{0:D4}.png' -f $iconIndex
+        [void]$iconNames.Add($assigned)
+        $iconNameById[$itemId] = $assigned
+    }
+
+    $iconManifest = [ordered]@{ formatVersion = 1; icons = [ordered]@{} }
+    $iconDownloadIndex = 0
+    foreach ($itemId in $sortedItemIds) {
         $relativeIcon = [string]$iconSources[$itemId]
         if ($relativeIcon.StartsWith('/')) { $relativeIcon = $relativeIcon.TrimStart('/') }
         $iconUrl = "https://$kuroStaticHost/$relativeIcon"
         Assert-KuroUri $iconUrl @($kuroStaticHost)
-        $downloadedIcon = Join-Path $rawDir ("icon-$iconIndex.download")
-        $asciiName = ('icon-{0:D4}.png' -f $iconIndex)
+        $asciiName = $iconNameById[$itemId]
+        $downloadedIcon = Join-Path $rawDir ("icon-$iconDownloadIndex.download")
         Invoke-KuroDownload $iconUrl $downloadedIcon
-        Copy-ValidatedPng $downloadedIcon (Join-Path $generatedDir "icons/$asciiName")
-        $iconManifest.icons[$itemId] = "icons/$asciiName"
-        $iconIndex++
-        if ($iconIndex % 50 -eq 0) { Write-Host "Validated $iconIndex of $($iconSources.Count) icons." }
+        Copy-ValidatedPng $downloadedIcon (Join-Path $generatedDir $asciiName)
+        $iconManifest.icons[$itemId] = $asciiName
+        $iconDownloadIndex++
+        if ($iconDownloadIndex % 50 -eq 0) { Write-Host "Validated $iconDownloadIndex of $($iconSources.Count) icons." }
     }
     Write-Utf8Json $iconManifest (Join-Path $generatedDir 'icon-manifest.json')
 
@@ -251,10 +294,24 @@ try {
     if ($Apply) {
         New-Item -ItemType Directory -Force -Path $target | Out-Null
         Copy-Item -Path (Join-Path $generatedDir '*') -Destination $target -Recurse -Force
+        # Stable icon names mean an id that disappeared upstream leaves its file
+        # behind, and the copy above never deletes. The icons directory is generated
+        # content whose only reference is the manifest, so anything the fresh
+        # manifest does not name is removed -- otherwise dead PNGs keep being staged
+        # into the downloadable resource package.
+        $iconDirectory = Join-Path $target 'icons'
+        if (Test-Path -LiteralPath $iconDirectory -PathType Container) {
+            $orphans = [Collections.Generic.List[string]]::new()
+            foreach ($file in @(Get-ChildItem -LiteralPath $iconDirectory -Filter 'icon-*.png' -File)) {
+                if (-not $iconNames.Contains("icons/$($file.Name)")) { $orphans.Add($file.FullName) }
+            }
+            foreach ($orphan in $orphans) { Remove-Item -LiteralPath $orphan -Force }
+            if ($orphans.Count -gt 0) { Write-Host "Removed $($orphans.Count) icon file(s) no id references any more." }
+        }
         foreach ($stateId in $routes.Keys) {
             if (-not $routes[$stateId].supported) { continue }
             $runtimeName = $routes[$stateId].runtime
-            if ($runtimeName -in @('LowerVault', 'Darkplain', 'TimeRiftRuins')) {
+            if ($runtimeName -in @('LowerVault', 'Darkplain', 'TimeRiftRuins', 'MengshuTianluo')) {
                 # New scenes stay as external staged resources.  IMao-Core.rc
                 # cannot be safely changed by the sync process, while the
                 # runtime loader verifies this explicit publication path.
@@ -265,7 +322,7 @@ try {
                 Write-Utf8Json $runtimeItems[$runtimeName] $runtimePath
             }
         }
-        Write-Host "Applied snapshots, icons, names, five embedded data files, and three externally staged new-scene data files."
+        Write-Host 'Applied Kuro map snapshots, icons, names and supported runtime point files.'
     }
 }
 finally {

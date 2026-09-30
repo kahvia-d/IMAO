@@ -80,6 +80,14 @@ struct SceneDefinition {
 struct Scene {
     // New independent Kuro tile packs use their own map-space origin. A later
     // four-anchor calibration only updates this table, never point data/routes.
+    //
+    // MengshuTianluo is the fourth independent sub-world package (梦枢天罗, Kuro
+    // state 912). Like LowerVault/Darkplain/TimeRiftRuins it is a frame of its own
+    // rather than part of the overworld frame 8, even though its country entry and
+    // its areas share mapState 8 with 梦州: the region key is (frame, mapState), and
+    // only the frame says which coordinate plane the tiles and points live in. Its
+    // origin is still the compiled placeholder, so requiresGameValidation keeps the
+    // scene closed until an in-game four-point calibration replaces it here.
     inline static std::vector<SceneDefinition> definitions = {
         { 1, "World",          8,  2474.0,  1957.0, 1.205, false },
         { 2, "Tethys",      900,  8593.0,  1382.0, 1.205, false },
@@ -88,12 +96,13 @@ struct Scene {
         { 5, "Lahai",      906, 21662.0, 13138.0, 1.205, false },
         { 6, "LowerVault", 902,     0.0,     0.0, 1.205, true  },
         { 7, "Darkplain",  909,     0.0,     0.0, 1.205, true  },
-        { 8, "TimeRiftRuins", 910,  0.0,     0.0, 1.205, true  }
+        { 8, "TimeRiftRuins", 910,  0.0,     0.0, 1.205, true  },
+        { 9, "MengshuTianluo", 912, 0.0,     0.0, 1.205, true  }
     };
-    inline static const std::vector<int> sceneIds = { 1,2,3,4,5,6,7,8 };
+    inline static const std::vector<int> sceneIds = { 1,2,3,4,5,6,7,8,9 };
     inline static const std::vector<std::string> sceneNames = {
         "World", "Tethys", "Fabricatorium", "Avinoleum", "Lahai",
-        "LowerVault", "Darkplain", "TimeRiftRuins"
+        "LowerVault", "Darkplain", "TimeRiftRuins", "MengshuTianluo"
     };
 
     // Calibration and release approval are deliberately external to the
