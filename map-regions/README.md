@@ -232,27 +232,61 @@ pwsh -File scripts\New-MapRegionRegistry.ps1
 pwsh -File scripts\Test-MapRegionRegistry.ps1
 
 # 5. 用**实测代次目录**重建地图包（不能用 tiles.manifest.json 里那个旧代次）
+#    此时还没有参考图 ⟹ 只能得到未验证覆盖包，能离线检查、进不了运行时
 pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply -RegionId <id> `
     -TileArchive map-regions\tiles\13CCF182D6AF491CA1AC2A02754E5345
+
+# 6. 采四组截图做四点校准（见 Docs/KuroSceneCalibrationSamples.md）
+pwsh -File scripts\Set-KuroSceneCalibration.ps1 -Scene <Scene> -SamplesPath map-regions\samples\<id>.json -Check
+pwsh -File scripts\Set-KuroSceneCalibration.ps1 -Scene <Scene> -SamplesPath map-regions\samples\<id>.json -Apply
+
+# 7. 记一条锚点观测（map-regions/anchors/<id>.json），并把那张整屏截图放到
+#    map-regions/references/<id>.png —— 参考图就是它，不需要另外去截小地图
+pwsh -File scripts\New-MapRegionRegistry.ps1      # 锚点改成观测值
+
+# 8. 重建 ⟹ **已验证包**（referenceVerification.passed = true）
+pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply -RegionId <id> `
+    -TileArchive map-regions\tiles\13CCF182D6AF491CA1AC2A02754E5345 -ReferenceFullSnapshot
+pwsh -File scripts\Test-KuroMapFeaturePack.ps1 -PackRoot out\map-regions\packs\<id>
+
+# 9. 开放审查（实机四项检查 + 113 张基线回归）——通过后它才会同时登记进
+#    kuro-tile-packs.json 并把 scene-validation.json 的 approved 改成 true
+pwsh -File scripts\Approve-KuroSceneRelease.ps1 -Region <id> -GameEvidencePath <evidence.json> -Apply
 ```
 
-没有 `map-regions/references/<id>.png` 时第 5 步会构建**未验证覆盖包**（`referenceVerification.skipped = true`）。
-它可以离线检查，但**进不了运行时**（`KuroTileFeaturePack.cpp` 要求 `passed == true`），所以
-**不要**把这样的包登记进 `Assets/FeaturesDatas/kuro-tile-packs.json`：注册表里"登记了但加载失败"的包会让
-整个资源加载中止（表现是"启动核心失败"）。`scripts/Test-KuroMapNewStates.ps1` 会拒绝"未开放却已登记"的状态。
+### 锚点：它是一条**观测**，不是一个要走去对齐的坐标
+
+参考验证拿"锚点这个游戏坐标对应的期望地图像素"去比对包在自己参考图上的定位结果（门限 8 px），
+所以锚点必须**等于**拍参考图时玩家真正站的位置。
+
+早先的做法是把窗口中心当锚点、再让人走到那里——**方向反了**：游戏左下角一直在打印玩家的精确坐标，
+那个数字就是观测值，而人是走不到"算出来的坐标"上的（走动一次就是好几个单位）。
+所以现在：
+
+- `map-regions/anchors/<region>.json` 记下 `anchor`（截图上的读数）、`capture`（哪张截图）、`referenceImage`；
+- 生成器读到它就**用它替换窗口中心**（`regions.json` 里 `anchorSource` 会写 `observation` 或 `window-centre`），
+  并校验它落在这个地区的窗口内；
+- 参考图 `map-regions/references/<region>.png` 就是**那张整屏截图**（既有地区也是这么做的，
+  例如 `lowervault.png` 是 2560×1440），构建时用 `-ReferenceFullSnapshot` 让工具按运行期几何自己裁小地图。
+
+没有参考图时第 8 步会退化成**未验证覆盖包**（`referenceVerification.skipped = true`）：
+可以离线检查，但**进不了运行时**（`KuroTileFeaturePack.cpp` 要求 `passed == true`），
+所以**不要**把这样的包登记进 `Assets/FeaturesDatas/kuro-tile-packs.json`。
+⚠️ 而且**已验证的包也不能提前登记**：`RuntimeFeatureRepository.cpp:270` 在快照模式下对
+"没加载成功**或未被运行期批准**"的已登记包直接抛错（表现同样是"启动核心失败"）。
+登记与 `approved=true` 必须同时发生，那正是 `Approve-KuroSceneRelease.ps1` 做的事。
+`scripts/Test-KuroMapNewStates.ps1` 会拒绝"未开放却已登记"的状态。
 
 ## 九、当前状态与未决项
 
-**已完成**：注册表（14 地区，校验全绿）；瓦片归档（既有 13 地区 638 块，跨地区去重；梦枢天罗另在 13CCF 代次下 12 块）；代次替换取证（302/302 一致）；五个脚本；重建脚本补强；blackshores 试点（28 块、15168 关键点）；**梦枢天罗接入**（点位/图标/筛选表已入库，实测足迹 12 块 / 窗口 16 块，地图包已建 26 101 关键点，四点校准已拟合，最大误差 0.534 px）。
+**已完成**：注册表（14 地区，校验全绿）；瓦片归档（既有 13 地区 638 块，跨地区去重；梦枢天罗另在 13CCF 代次下 12 块）；代次替换取证（302/302 一致）；五个脚本；重建脚本补强；blackshores 试点（28 块、15168 关键点）；**梦枢天罗接入**（点位/图标/筛选表已入库，实测足迹 12 块 / 窗口 16 块，26 101 关键点，四点校准 0.534 px，**已验证包 2.734 px**）。
 
 **未决项**
 
-1. **梦枢天罗缺一张参考小地图**：四点校准已完成（`map-regions/samples/mengshutianluo.json`），
-   但 `map-regions/references/mengshutianluo.png` 还不存在，所以包仍是**未验证覆盖包**
-   （`referenceVerification.skipped = true`），不能登记进瓦片包注册表。
-   注意参考图必须拍在**注册表给出的锚点**上（梦枢天罗是游戏坐标 `(-425, -425)`，即窗口中心），
-   因为参考验证是拿"该点的期望地图像素"去比对定位结果（门限 8 px）。
-   之后才是登记 `kuro-tile-packs.json` → `Approve-KuroSceneRelease.ps1 -Region mengshutianluo`。
+1. **梦枢天罗只差开放审查**：包已经是**已验证包**（`referenceVerification.passed = true`、`errorPixels = 2.734`），
+   锚点是用户 19:03:42 那张截图的读数 `(-413, -209)`（`map-regions/anchors/mengshutianluo.json`）。
+   剩下的是 `Approve-KuroSceneRelease.ps1 -Region mengshutianluo -GameEvidencePath <四项检查+113 张回归>`，
+   **在那之前它必须保持"未登记 + approved=false"**（理由见上一节）。
 2. **梦枢天罗的分层地图**（`layer.json` 里 6 个窟 / 8 层）尚未归档：`Get-MapLayerArchive.ps1` 与
    `New-LayeredFloorIndex.ps1` 都按 `tiles.manifest.json` 的代次取图层，而该文件的代次是旧代次。
    要接分层，先把梦枢天罗的图层单独归档，再让这两个脚本接受显式代次。
@@ -272,6 +306,10 @@ pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply -RegionId <id> `
 - `out/map-regions/packs/`（`features.imf` / `features.yml` / `visual-index.imx`）
 
 提交：`regions.json`、`regions.report.md`、`tiles.manifest.json`（哈希清单）、`footprints/`（实测足迹与每块 sha256，
-体积只有几十 KB，是**唯一**记录新 frame 瓦片身份的证据）、`references/`（自己的实机截图）、以及所有脚本。
+体积只有几十 KB，是**唯一**记录新 frame 瓦片身份的证据）、`anchors/`（锚点观测：读数 + 截图路径 + 参考图文件名）、
+`references/`（自己的实机截图）、以及所有脚本。
+
+⚠️ **`references/` 实际上被 `.gitignore` 忽略**（每张几 MB），所以锚点观测文件里那条 `capture` 路径
+就是它唯一的出处；参考图丢了就重跑一次构建即可，验证结果已经记在包 manifest 里。
 
 理由：现有 LFS 已有约 1.74 GB（其中 `features.yml` 占 879 MB，而**运行时只做存在性检查、内容根本不读**）。把重生成的特征提交进 LFS 会让每代再增加约 1.2 GB，而 LFS 不会因新提交释放旧对象。

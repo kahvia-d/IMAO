@@ -43,7 +43,28 @@
 
 > **这个 frame 的原点已实测证实**：拟合结果是 `origin = (-0.127, -0.511)`、`scale = 1.20700208`、
 > 最大误差 **0.534 px**——编译期占位值 `(0, 0)` 是对的（下层金库 −3.5/−2.5、黯原 −0.4/0.2 也是这个规律）。
-> 还缺的**不是**校准，而是一张**参考小地图**（见下）。
+
+### 参考图：**锚点是一条观测，不是要走去对齐的坐标**
+
+参考验证拿"锚点这个坐标的期望地图像素"去比对包在自己参考图上的定位结果（门限 8 px），
+所以锚点必须**等于**拍参考图时玩家真正站的位置。
+
+**不要**让人走到某个算出来的坐标上去（走动一次就是好几个单位，而 8 px ≈ 6.6 游戏单位）。
+正确做法是把观测记下来：
+
+```json
+// map-regions/anchors/<region>.json
+{ "formatVersion": 1, "region": "mengshutianluo", "scene": "MengshuTianluo", "state": 912,
+  "anchor": { "x": -413, "y": -209 },          // 截图左下角那行读数，就是精确位置
+  "capture": "…/…19.03.42.39.png",
+  "referenceImage": "mengshutianluo.png" }
+```
+
+再把**那张整屏截图**拷成 `map-regions/references/<region>.png`（既有地区也是整屏截图），
+然后 `New-MapRegionRegistry.ps1`（锚点换成观测值）+
+`Invoke-MapRegionRebuild … -ReferenceFullSnapshot`（工具按运行期几何自己裁小地图）⟹ **已验证包**。
+梦枢天罗实测 `errorPixels = 2.734`、14 个 good matches。
+
 
 将大地图箭头中心换算为本项目内部地图像素后，制作一个 JSON 文件：
 

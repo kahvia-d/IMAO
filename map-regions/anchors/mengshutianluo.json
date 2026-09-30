@@ -1,0 +1,15 @@
+{
+  "formatVersion": 1,
+  "region": "mengshutianluo",
+  "scene": "MengshuTianluo",
+  "state": 912,
+  "anchor": {
+    "x": -413,
+    "y": -209
+  },
+  "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.03.42.39.png",
+  "referenceImage": "mengshutianluo.png",
+  "readFrom": "on-screen coordinate readout (bottom-left of the frame), which is the game's own number for where the player was standing",
+  "measuredBy": "The reference image is that same frame; the builder crops the minimap at runtime geometry (--reference-full-snapshot) and requires the features to localize it within 8 map pixels of this coordinate.",
+  "note": "The anchor is an observation, not a target. It is the first of the four calibration captures because that frame happens to be a normal gameplay frame with a clean minimap; no extra walking was needed. The registry uses this instead of the derived window centre."
+}

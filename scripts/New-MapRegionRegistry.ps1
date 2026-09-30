@@ -147,6 +147,45 @@ if (Test-Path -LiteralPath $originEvidenceRoot) {
     }
 }
 
+# An anchor observation (map-regions/anchors/<region>.json) records a position the game itself
+# reported: a normal frame whose on-screen coordinate readout gives the player's exact position,
+# together with the reference image taken there. It replaces the derived window-centre anchor,
+# which exists only because a brand-new region has nothing observed yet.
+$anchorEvidence = @{}
+$anchorRoot = Join-Path $SourceRoot 'map-regions/anchors'
+if (Test-Path -LiteralPath $anchorRoot) {
+    foreach ($file in @(Get-ChildItem -LiteralPath $anchorRoot -Filter '*.json' -File)) {
+        $observation = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ([int]$observation.formatVersion -ne 1) { throw "Unsupported anchor observation format: $($file.Name)" }
+        $regionId = [string]$observation.region
+        if ($anchorEvidence.ContainsKey($regionId)) { throw "Duplicate anchor observation for region $regionId." }
+        $x = [double]$observation.anchor.x
+        $y = [double]$observation.anchor.y
+        if ([double]::IsNaN($x) -or [double]::IsNaN($y) -or [double]::IsInfinity($x) -or [double]::IsInfinity($y)) {
+            throw "Anchor observation for region $regionId is not a finite coordinate."
+        }
+        $referenceImage = if ($null -ne $observation.PSObject.Properties['referenceImage']) { [string]$observation.referenceImage } else { '' }
+        $referencePresent = $false
+        if (-not [string]::IsNullOrWhiteSpace($referenceImage)) {
+            $referencePresent = Test-Path -LiteralPath (Join-Path $SourceRoot "map-regions/references/$referenceImage") -PathType Leaf
+        }
+        $anchorEvidence[$regionId] = [pscustomobject]@{
+            Scene = [string]$observation.scene
+            State = [int]$observation.state
+            X = $x
+            Y = $y
+            Capture = [string]$observation.capture
+            ReferenceImage = $referenceImage
+            ReferencePresent = $referencePresent
+            Source = [string]$file.Name
+            # An observation is only usable once its reference image is on this machine: the
+            # registry declares the anchor the pack will be verified against, and a rebuild
+            # without the image can only produce an unverified pack.
+            Usable = $referencePresent
+        }
+    }
+}
+
 # A measured upstream tile footprint (map-regions/footprints/<region>.json, written by
 # scripts/Get-MapTileFootprint.ps1) is a direct measurement of where a frame's map
 # imagery is. It matters because it is independent of the raw->game origin: the
@@ -556,17 +595,41 @@ foreach ($entry in $regionTable) {
         $confidence = Get-WindowConfidence $transform $state 'uncalibrated'
     }
 
-    # The anchor must sit inside the explicit tile window, so it is the game
-    # coordinate at the window's centre. Reference verification still needs a
-    # real in-game minimap capture per region; the derived anchor is only a
-    # starting point for collection.
+    # The anchor is an observation: "the maintainer stood here and the game said so". A recorded
+    # observation (map-regions/anchors/<region>.json) therefore replaces the derived guess.
+    # The derived value is the window centre, which is only a starting point for collection --
+    # asking someone to walk to a computed coordinate is the wrong way round, because the game
+    # prints the player's position and that number is the observation.
     $anchor = $null
+    $anchorSource = $null
     if ($null -ne $tileBounds) {
-        $centreTileX = ($tileBounds.minX + $tileBounds.maxX) / 2.0
-        $centreTileY = ($tileBounds.minY + $tileBounds.maxY) / 2.0
-        $anchor = [ordered]@{
-            x = [Math]::Round((($centreTileX - 1) * $virtualMapSize), 3)
-            y = [Math]::Round((-$centreTileY * $virtualMapSize), 3)
+        $observed = if ($anchorEvidence.ContainsKey($entry.Id) -and $anchorEvidence[$entry.Id].Usable) { $anchorEvidence[$entry.Id] } else { $null }
+        if ($null -eq $observed -and $anchorEvidence.ContainsKey($entry.Id)) {
+            $missing = $anchorEvidence[$entry.Id]
+            Write-Warning "Region $($entry.Id) has an anchor observation ($($missing.Source)) but its reference image map-regions/references/$($missing.ReferenceImage) is not on this machine; falling back to the derived window-centre anchor, and a rebuild can only produce an unverified pack."
+        }
+        if ($null -ne $observed) {
+            if ($observed.Scene -ne $transform.Scene -or $observed.State -ne $state) {
+                throw "Anchor observation $($observed.Source) describes scene $($observed.Scene)/state $($observed.State), not $($transform.Scene)/$state."
+            }
+            # The window has to contain the anchor, or the pack could not verify against it.
+            $anchorTileX = Get-TileX $observed.X
+            $anchorTileY = Get-TileY $observed.Y
+            if ($anchorTileX -lt $tileBounds.minX -or $anchorTileX -gt $tileBounds.maxX -or
+                $anchorTileY -lt $tileBounds.minY -or $anchorTileY -gt $tileBounds.maxY) {
+                throw "Anchor observation $($observed.Source) puts $($entry.Id) at tile ($anchorTileX, $anchorTileY), outside its window x $($tileBounds.minX)..$($tileBounds.maxX) y $($tileBounds.minY)..$($tileBounds.maxY)."
+            }
+            $anchor = [ordered]@{ x = $observed.X; y = $observed.Y }
+            $anchorSource = 'observation'
+        }
+        else {
+            $centreTileX = ($tileBounds.minX + $tileBounds.maxX) / 2.0
+            $centreTileY = ($tileBounds.minY + $tileBounds.maxY) / 2.0
+            $anchor = [ordered]@{
+                x = [Math]::Round((($centreTileX - 1) * $virtualMapSize), 3)
+                y = [Math]::Round((-$centreTileY * $virtualMapSize), 3)
+            }
+            $anchorSource = 'window-centre'
         }
     }
 
@@ -588,6 +651,11 @@ foreach ($entry in $regionTable) {
                 tileX = $_.TileX; tileY = $_.TileY; stateMatchValid = $_.StateMatchValid }
         })
         anchor = $anchor
+        anchorSource = $anchorSource
+        anchorEvidence = if ($anchorSource -eq 'observation' -and $anchorEvidence.ContainsKey($entry.Id)) {
+            [ordered]@{ source = $anchorEvidence[$entry.Id].Source; capture = $anchorEvidence[$entry.Id].Capture
+                referenceImage = $anchorEvidence[$entry.Id].ReferenceImage }
+        } else { $null }
         tileBounds = $tileBounds
         # A frame whose transform is unproven still has a computable point window. It is
         # never a pack window (a wrong origin moves it), but it says where the points

@@ -142,6 +142,8 @@
         "x": 4250.0,
         "y": 1275.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": -3,
         "maxX": 15,
@@ -234,6 +236,8 @@
         "x": -7650.0,
         "y": -850.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": -12,
         "maxX": -4,
@@ -386,6 +390,8 @@
         "x": 8075.0,
         "y": 5525.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": 6,
         "maxX": 15,
@@ -458,6 +464,8 @@
         "x": 11475.0,
         "y": 11900.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": 11,
         "maxX": 18,
@@ -560,6 +568,8 @@
         "x": -850.0,
         "y": -7225.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": -4,
         "maxX": 4,
@@ -622,6 +632,8 @@
         "x": 2550.0,
         "y": 425.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": 2,
         "maxX": 6,
@@ -764,6 +776,8 @@
         "x": -2125.0,
         "y": -6800.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": -7,
         "maxX": 4,
@@ -856,6 +870,8 @@
         "x": 425.0,
         "y": 0.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": -2,
         "maxX": 5,
@@ -918,6 +934,8 @@
         "x": 4250.0,
         "y": 850.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": 1,
         "maxX": 11,
@@ -980,6 +998,8 @@
         "x": 4675.0,
         "y": 4675.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": -3,
         "maxX": 16,
@@ -1042,6 +1062,8 @@
         "x": 0.0,
         "y": 0.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": -5,
         "maxX": 7,
@@ -1104,6 +1126,8 @@
         "x": -425.0,
         "y": 425.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": -2,
         "maxX": 3,
@@ -1166,6 +1190,8 @@
         "x": -425.0,
         "y": -425.0
       },
+      "anchorSource": "window-centre",
+      "anchorEvidence": null,
       "tileBounds": {
         "minX": -2,
         "maxX": 3,
@@ -1225,8 +1251,14 @@
         }
       ],
       "anchor": {
-        "x": -425.0,
-        "y": -425.0
+        "x": -413.0,
+        "y": -209.0
+      },
+      "anchorSource": "observation",
+      "anchorEvidence": {
+        "source": "mengshutianluo.json",
+        "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.03.42.39.png",
+        "referenceImage": "mengshutianluo.png"
       },
       "tileBounds": {
         "minX": -1.0,
@@ -1266,7 +1298,7 @@
       "transformSource": "calibration",
       "requiresGameValidation": true,
       "approved": false,
-      "approvalReason": "新地图首次接入：上游点位、目录与瓦片已归档，独立小世界的地图包已按实测瓦片足迹构建，但还缺少实机四点校准与参考小地图，因此点位、筛选与视觉定位一律不对外开放。",
+      "approvalReason": "新地图接入：上游点位、目录与瓦片已归档，地图包已按实测瓦片足迹构建，四点校准已由用户 2026-09-30 的四组截图拟合（scale 1.20700208 / origin (-0.127, -0.511) / 最大误差 0.534 px）。还缺参考小地图（包目前是未验证覆盖包）与实机四项检查，因此点位、筛选与视觉定位仍不对外开放。",
       "points": 231,
       "outliers": 0
     }

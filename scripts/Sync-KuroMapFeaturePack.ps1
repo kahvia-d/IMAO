@@ -365,7 +365,15 @@ try {
     # PSCustomObject from the builder report otherwise. PSObject.Properties does not
     # expose dictionary keys, so asking it about 'skipped' answered "no" for every
     # unverified pack and the report claimed skipped=False while the manifest said true.
-    $referenceSkipped = if ($referenceVerification -is [Collections.IDictionary]) { [bool]$referenceVerification['skipped'] } else { [bool]$referenceVerification.skipped }
+    # A verified report has no 'skipped' key at all, and Set-StrictMode makes reading a
+    # missing property an error, so both shapes need their own branch.
+    $referenceSkipped = if ($referenceVerification -is [Collections.IDictionary]) {
+        [bool]$referenceVerification['skipped']
+    }
+    elseif ($null -ne $referenceVerification.PSObject.Properties['skipped']) {
+        [bool]$referenceVerification.skipped
+    }
+    else { $false }
     $reportLines = @(
         '# Kuro map feature-pack report', '',
         "- Pack: $($packManifest.packId)",
