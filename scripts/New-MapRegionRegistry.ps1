@@ -407,6 +407,16 @@ if ($unmatched -ne 0) { throw "$unmatched overworld points had no area anchor in
 # ---------------------------------------------------------------------------
 # Region records
 # ---------------------------------------------------------------------------
+# A region's window and its transform are separate evidence: the window says where
+# the imagery is, the transform says where the player is. A region can have both
+# (a measured window and a passed calibration), so the confidence names the
+# strongest one while tileBounds.basis records where the window came from.
+function Get-WindowConfidence($Transform, [int]$State, [string]$WindowOnly) {
+    if ($State -eq 8) { return 'validated' }
+    if ($Transform.Source -eq 'calibration') { return 'calibrated' }
+    if ($null -ne $Transform.OriginEvidence) { return 'origin-verified' }
+    return $WindowOnly
+}
 $regions = [Collections.Generic.List[object]]::new()
 foreach ($entry in $regionTable) {
     $mine = @($areas | Where-Object { $_.RegionKey -eq $entry.Key })
@@ -484,7 +494,7 @@ foreach ($entry in $regionTable) {
                 generation = $measured.Generation
             }
         }
-        $confidence = 'footprint-measured'
+        $confidence = Get-WindowConfidence $transform $state 'footprint-measured'
     }
     elseif ($transform.Trustworthy -and $gameX.Count -gt 0) {
         $minX = Get-Quantile $gameX $LowerQuantile
@@ -543,6 +553,7 @@ foreach ($entry in $regionTable) {
         elseif ($transform.Source -eq 'calibration') { $confidence = 'calibrated' }
         elseif ($null -ne $transform.OriginEvidence) { $confidence = 'origin-verified' }
         else { $confidence = 'uncalibrated' }
+        $confidence = Get-WindowConfidence $transform $state 'uncalibrated'
     }
 
     # The anchor must sit inside the explicit tile window, so it is the game
@@ -689,13 +700,15 @@ $report.Add('- `footprint-measured`：窗口取**实测**的上游有图瓦片�
 $report.Add('- `uncalibrated`：无校准，窗口只是猜测，**不得据此发布资源包**。')
 $report.Add('- `blocked`：frame 原点仍是编译期占位值 `(0, 0)`。')
 $report.Add('')
-$report.Add('### 窗口已实测、但仍缺实机证据的地区')
+$report.Add('### 窗口来自实测足迹的地区')
 $report.Add('')
-$footprintMeasured = @($regions | Where-Object { $_['tileConfidence'] -eq 'footprint-measured' })
+$footprintMeasured = @($regions | Where-Object { $null -ne $_['tileBounds'] -and $_['tileBounds'].Contains('footprint') })
 if ($footprintMeasured.Count -eq 0) { $report.Add('无。') }
 else {
     foreach ($region in $footprintMeasured) {
-        $report.Add("- $($region['name'])（``$($region['id'])``, frame $($region['frame'])）— 实测有图 $($region['tileBounds']['footprint']['imageryTiles']) 块 / 窗口 $($region['tileBounds']['count']) 块。缺：四点校准（实机读 4 个位置坐标）与参考小地图截图；补齐前该场景保持 ``approved=false``。")
+        $footprint = $region['tileBounds']['footprint']
+        $gap = if ($region['tileConfidence'] -eq 'calibrated' -or $region['tileConfidence'] -eq 'validated') { '换算是校准/验证过的' } else { '换算仍未证实' }
+        $report.Add("- $($region['name'])（``$($region['id'])``, frame $($region['frame'])）— 实测有图 $($footprint['imageryTiles']) 块 / 窗口 $($region['tileBounds']['count']) 块（代次 $($footprint['generation'])）；当前置信度 ``$($region['tileConfidence'])``，$gap。")
     }
 }
 $report.Add('')

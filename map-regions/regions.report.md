@@ -19,7 +19,7 @@
 | 隐海试验场 | `fabricatorium` | subworld | 905 | 3 | 1 | 236 | x -5..7, y -4..4 | 117 | 84 | uncalibrated |
 | 泰缇斯之底 | `tethys` | subworld | 900 |  | 1 | 415 | x -2..3, y -3..2 | 36 | 13 | calibrated |
 | 时隙废都 | `timeriftruins` | subworld | 910 |  | 1 | 59 | x -2..3, y -2..3 | 36 | 4 | calibrated |
-| 梦枢天罗 | `mengshutianluo` | subworld | 912 | 8 | 1 | 231 | x -1..2, y -1..2 | 16 | — | footprint-measured |
+| 梦枢天罗 | `mengshutianluo` | subworld | 912 | 8 | 1 | 231 | x -1..2, y -1..2 | 16 | — | calibrated |
 
 - 点位合计：**24066**（大世界 19187）
 - 窗口格数合计：**1761**（点位推导的窗口含每侧 2 块覆盖边距，实测足迹的窗口不含边距）
@@ -37,9 +37,9 @@
 - `uncalibrated`：无校准，窗口只是猜测，**不得据此发布资源包**。
 - `blocked`：frame 原点仍是编译期占位值 `(0, 0)`。
 
-### 窗口已实测、但仍缺实机证据的地区
+### 窗口来自实测足迹的地区
 
-- 梦枢天罗（`mengshutianluo`, frame 912）— 实测有图 12 块 / 窗口 16 块。缺：四点校准（实机读 4 个位置坐标）与参考小地图截图；补齐前该场景保持 `approved=false`。
+- 梦枢天罗（`mengshutianluo`, frame 912）— 实测有图 12 块 / 窗口 16 块（代次 13CCF182D6AF491CA1AC2A02754E5345）；当前置信度 `calibrated`，换算是校准/验证过的。
 
 ### 需要先补校准的地区
 

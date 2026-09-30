@@ -1,0 +1,60 @@
+{
+  "formatVersion": 1,
+  "scene": "MengshuTianluo",
+  "state": 912,
+  "measuredBy": "IMaoVisualRegression <root> <viewport manifest> — viewport replay with diagnosticPacks=[mengshutianluo]; map is the localized big-map viewport centre, which is where the game centres the map when it is opened. The player arrow was detected independently in each capture and sits within 4 screen px of that centre, so the two agree; the centre is used because the four centre values fit one game->map transform to 0.53 px while the arrow centroids (a colour-threshold centroid of the marker glyph, partly overlapped by other map icons) only fit to 2.25 px.",
+  "samples": [
+    {
+      "game": {
+        "x": -413,
+        "y": -209
+      },
+      "map": {
+        "x": -498.6147155761719,
+        "y": -252.9639892578125
+      },
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.03.42.39.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.03.50.34.png",
+      "arrowScreen": [1278.7, 723.2]
+    },
+    {
+      "game": {
+        "x": -179,
+        "y": 281
+      },
+      "map": {
+        "x": -215.87838745117188,
+        "y": 338.518310546875
+      },
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.04.14.83.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.04.18.25.png",
+      "arrowScreen": [1276.1, 721.9]
+    },
+    {
+      "game": {
+        "x": 409,
+        "y": 390
+      },
+      "map": {
+        "x": 493.71173095703125,
+        "y": 470.7242736816406
+      },
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.05.09.86.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.05.14.41.png",
+      "arrowScreen": [1280.9, 722.9]
+    },
+    {
+      "game": {
+        "x": 490,
+        "y": -124
+      },
+      "map": {
+        "x": 590.8236694335938,
+        "y": -150.35714721679688
+      },
+      "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.06.03.74.png",
+      "mapCapture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.06.06.50.png",
+      "arrowScreen": [1276.7, 721.7]
+    }
+  ]
+}

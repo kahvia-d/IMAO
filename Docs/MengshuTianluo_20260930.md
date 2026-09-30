@@ -124,21 +124,52 @@ referenceVerification = { skipped: true, passed: false, reason: 'No game minimap
 `Test-KuroMapFeaturePack.ps1 -AllowUnverified` 通过。**这是未验证覆盖包**：没有参考小地图，
 `KuroTileFeaturePack.cpp` 的运行期门禁不会放行，所以它现在只能离线用。
 
-## 三、还差什么（需要用户实机）
+## 三、四点校准（2026-09-30 已完成）
 
-1. **四点校准**：在梦枢天罗里挑**相距最远的四个位置**，每个位置采一对图（正常画面读游戏内坐标 +
-   打开大地图截玩家箭头），然后
-   `Set-KuroSceneCalibration.ps1 -Scene MengshuTianluo -SamplesPath … -Apply`。
-   采样命令：`.\scripts\Start-KuroCaptureAssistant.ps1 -Scene MengshuTianluo -Sample 01`。
-   ⚠️ 这个 frame 的编译期原点是占位值 `(0,0)`，**尚未证实**；解出的原点偏离 0 很远时先复核截图换算。
-2. **参考小地图**：放到 `map-regions/references/mengshutianluo.png`，包就会变成已验证包
-   （门限 8 像素）。
-3. 之后才是：登记 `kuro-tile-packs.json` → `Approve-KuroSceneRelease.ps1 -Region mengshutianluo`
-   → 场景对玩家开放。
-4. **分层地图未归档**：`Get-MapLayerArchive.ps1` / `New-LayeredFloorIndex.ps1` 都按
-   `tiles.manifest.json` 的代次取图层，而那个代次是旧的；要接 912 的 6 组 8 层，先让这两个脚本接受显式代次。
+用户当晚提供了 **4 对截图**（`C:\Users\Kahvia\Videos\NVIDIA\Wuthering Waves`，19:03–19:06）：
+每对是"正常画面（左下角有游戏坐标）+ 紧接着的大地图"。正常画面读出的游戏平面坐标：
 
-## 四、⚠️ 发布这条资源时必须带 `minAppVersion`
+| # | 正常画面 | 大地图 | 游戏坐标 |
+| --- | --- | --- | --- |
+| 1 | 19:03:42.39 | 19:03:50.34 | **(-413, -209)** |
+| 2 | 19:04:14.83 | 19:04:18.25 | **(-179, 281)** |
+| 3 | 19:05:09.86 | 19:05:14.41 | **(409, 390)** |
+| 4 | 19:06:03.74 | 19:06:06.50 | **(490, -124)** |
+
+`map`（内部地图像素坐标）由**大地图视口定位**离线量出——这是首次把这条方法完整写进文档，
+命令与几何见 [新地区四点校准样本](KuroSceneCalibrationSamples.md#map-值怎么量2026-09-30-实测确定以前没写下来)。
+四张大地图全部解出 `sceneId = 9`、matches 126~368、inliers 122~364。
+
+```
+scale  = 1.20700208
+origin = (-0.127, -0.511)
+maxError = 0.534 px            （门限 8 px；既有五个场景是 0.20 ~ 0.82 px）
+```
+
+⟹ **编译期占位原点 `(0, 0)` 是对的**，这个 frame 和其他三个独立小世界（下层金库 −3.5/−2.5、
+黯原 −0.4/0.2、时隙废都 −1.8/−1.9）一个规律。样本存 `map-regions/samples/mengshutianluo.json`。
+
+> **为什么用视口中心而不是箭头质心**：两件事都测了。用中心拟合 max **0.534 px**，用箭头像素质心拟合
+> max **2.247 px**。箭头质心在 y 上系统性偏下约 2.4 屏幕像素（图标字形的锚点与着色像素质心不重合，
+> 且第 1 张的箭头还压在传送环上）。两条都过门限，但中心那条好一倍——这也反过来证明
+> **游戏打开大地图时确实把视口居中在玩家身上**。
+
+`Assets/KuroMap/scene-calibrations.json` 已写入该记录，注册表里梦枢天罗随之变成 `calibrated`
+（窗口仍然来自实测足迹，`tileBounds.basis` 记着这件事）。**这不会让地区对玩家开放**：
+`scene-validation.json` 里它仍是 `approved = false`。
+
+## 四、还差什么
+
+1. **一张参考小地图** —— `map-regions/references/mengshutianluo.png`，包就会从"未验证覆盖包"变成已验证包
+   （门限 8 px）。⚠️ 它必须拍在**注册表给出的锚点**上：梦枢天罗是游戏坐标 **(-425, -425)**（窗口中心），
+   因为参考验证是拿"该点的期望地图像素"去比对定位结果。**用户已有的四张截图都在别的位置，不能直接用。**
+   （另一条路是把锚点改成其中一张截图的位置——那需要给 `Invoke-MapRegionRebuild` 开一个锚点覆盖参数。）
+2. 之后才是登记 `kuro-tile-packs.json` → `Approve-KuroSceneRelease.ps1 -Region mengshutianluo`
+   （还要求实机四项检查与 113 张基线回归）。
+3. **分层地图未归档**：6 组 8 层（朔寒窟/临渊窟/悬瀑秘窟/千绽窟/徊心墟/沉凄渡）。
+   `Get-MapLayerArchive.ps1` / `New-LayeredFloorIndex.ps1` 都按 `tiles.manifest.json` 的旧代次取图层。
+
+## 五、⚠️ 发布这条资源时必须带 `minAppVersion`
 
 `ResourceSnapshotContext.cpp` 的 `CheckConfig`（第 80 行）对 `scene-validation.json` / `scene-calibrations.json`
 里的**每一个**场景名做 `Definition(scene) != nullptr` 检查，**不认识就整份快照验证失败**：
@@ -161,7 +192,7 @@ unknown scene in scene-validation
 **加了场景定义之后必须 `Refresh-MapTestBinaries.ps1` 刷新测试树**（它要求 `x64/Release` 是自包含构建，
 framework-dependent 的 `dotnet build` 会被它拒绝——这正是它注释里写的那件事）。
 
-## 五、顺手修掉的两个缺陷
+## 六、顺手修掉的两个缺陷
 1. **图标文件名不稳定**（`Sync-KuroMapData.ps1`）：原来按"排序后 id 列表里的位次"编号，
    插入一个新 state 会让位次整体平移 ⟹ 本次同步改写了 **527 张里的 469 张**，而真正新增的只有 10 张。
    现在：**老 id 保留原名，只有新 id 取一个没人占用的编号**（先给所有存活 id 占位，再分配新编号——
@@ -171,7 +202,7 @@ framework-dependent 的 `dotnet build` 会被它拒绝——这正是它注释�
    `skipped: true`，`report.md` 却打 `skipped=False`。原因是在 `[ordered]` 字典上查
    `PSObject.Properties['skipped']` —— **字典的键不在 `PSObject.Properties` 里**，于是永远走 `else { $false }`。
 
-## 六、本次验证（全部实跑）
+## 七、本次验证（全部实跑）
 
 | 检查 | 结果 |
 | --- | --- |
@@ -181,18 +212,21 @@ framework-dependent 的 `dotnet build` 会被它拒绝——这正是它注释�
 | `Test-KuroMapNewStates.ps1` | 通过（4 场景 / 110 类 / 1230 点 / 91 个物品 id） |
 | `Test-MapRegionRegistry.ps1` | 通过（14 地区、24066 点、跨国冲突 477） |
 | `Test-KuroMapFeaturePack.ps1 -AllowUnverified` | 通过（未验证覆盖包） |
-| `Refresh-MapTestBinaries.ps1` | 刷新 27 个文件（场景定义变了就必须刷，见 §四） |
+| `Refresh-MapTestBinaries.ps1` | 刷新 27 个文件（场景定义变了就必须刷，见 §五） |
+| `IMaoVisualRegression` 视口定位四张大地图 | 4/4 `accepted`、`sceneId=9`，matches 126~368 |
+| `Set-KuroSceneCalibration.ps1 -Check` | scale 1.20700208、origin (-0.127,-0.511)、**maxError 0.534 px** |
 | `Test-Runtime.ps1` 全量门禁 | **通过，exit 0**（`Runtime tests passed. Evidence: out\system-audit`） |
 
 > 门禁第一次跑**失败**在"原生区域选择检查"：`unknown scene in scene-validation`。
-> 原因就是 §四 那条——测试树的数据跟着源码走、二进制没跟着刷。刷新后重跑通过。
+> 原因就是 §五 那条——测试树的数据跟着源码走、二进制没跟着刷。刷新后重跑通过。
 > 另有一次 `route-service-tests` 报 `Unable to commit user data: Windows error 5`
 > （`AtomicFile.h` 的 `MoveFileExW` 瞬时被拒），**同一二进制、同一目录立刻重跑即通过**，
 > 属 Windows 上的偶发占用，与本次改动无关。
 
-## 七、给以后接新地图的人
+## 八、给以后接新地图的人
 
 顺序是：**同步点位 → 加一行场景定义并 `requiresGameValidation = true` → 生成注册表（拿到
 `untrustedPointWindow`）→ 实测瓦片足迹并 `-Download` → 再生成注册表（变 `footprint-measured`）
-→ 用实测代次目录重建包 → 补实机四点校准与参考小地图 → 才谈开放**。
-`map-regions/README.md` §八 有可复制的命令清单。
+→ 用实测代次目录重建包 → 采四组截图做四点校准 → 在锚点上补一张参考小地图 → 才谈登记与开放**。
+`map-regions/README.md` §八 有可复制的命令清单，
+`Docs/KuroSceneCalibrationSamples.md` 有 `map` 值的离线量法。

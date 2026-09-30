@@ -330,6 +330,65 @@
           "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.14 - 11.16.41.32.png"
         }
       ]
+    },
+    "MengshuTianluo": {
+      "scene": "MengshuTianluo",
+      "state": 912,
+      "sampleCount": 4,
+      "passed": true,
+      "coordinateTransform": {
+        "originX": -0.12683567584804223,
+        "originY": -0.5113142362267098,
+        "scale": 1.207002084907731
+      },
+      "maxErrorPixels": 0.5341559242582287,
+      "rmsErrorPixels": 0.41644571162028393,
+      "samples": [
+        {
+          "game": {
+            "x": -413.0,
+            "y": -209.0
+          },
+          "map": {
+            "x": -498.6147155761719,
+            "y": -252.9639892578125
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.03.42.39.png"
+        },
+        {
+          "game": {
+            "x": -179.0,
+            "y": 281.0
+          },
+          "map": {
+            "x": -215.87838745117188,
+            "y": 338.518310546875
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.04.14.83.png"
+        },
+        {
+          "game": {
+            "x": 409.0,
+            "y": 390.0
+          },
+          "map": {
+            "x": 493.71173095703125,
+            "y": 470.7242736816406
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.05.09.86.png"
+        },
+        {
+          "game": {
+            "x": 490.0,
+            "y": -124.0
+          },
+          "map": {
+            "x": 590.8236694335938,
+            "y": -150.35714721679688
+          },
+          "capture": "C:/Users/Kahvia/Videos/NVIDIA/Wuthering Waves/Wuthering Waves Screenshot 2026.09.30 - 19.06.03.74.png"
+        }
+      ]
     }
   }
 }

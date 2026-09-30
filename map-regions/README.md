@@ -70,22 +70,9 @@ tileY = ceil(-gameY / 850)
 
 交叉验证：**梦州推导出 63 块，而旧的 Dreamzhou 49 + DreamzhouWest 9 = 58 块**，两者高度吻合。
 
-| 地区 | 窗口 | 瓦片 | 置信度 |
-| --- | --- | --- | --- |
-| jinzhou 今州 | x -3..14, y -10..11 | 396 | validated |
-| laguna 拉古那 | x 6..15, y -12..-1 | 120 | validated |
-| roysurface 冰原地表 | x -4..4, y 4..13 | 90 | validated |
-| qiqiu 七丘 | x 11..18, y -18..-10 | 72 | validated |
-| mengzhou 梦州 | x -12..-4, y -2..4 | 63 | validated |
-| blackshores 黑海岸群岛 | x 2..6, y -3..2 | 30 | validated |
-| lahai 拉海洛 | x -7..4, y 3..13 | 132 | calibrated |
-| darkplain 黯原 | x -2..5, y -3..3 | 56 | calibrated |
-| tethys 泰缇斯之底 | x -2..3, y -3..2 | 36 | calibrated |
-| avinoleum 阿维纽林 | x -1..14, y -13..2 | 400 | **uncalibrated** |
-| fabricatorium 隐海试验场 | x -3..5, y -2..2 | 117 | **uncalibrated** |
-| lowervault 下层金库 | x 2..4, y -1..1 | 9 | **origin-verified**（已收紧） |
-| timeriftruins 时隙废都 | — | — | **blocked** |
-| mengshutianluo 梦枢天罗 | x -1..2, y -1..2 | 12（窗口 16） | **footprint-measured** |
+⚠️ **这里不再手抄窗口表**：它曾经是一张手写表，于是 `lower vault`/`timeriftruins` 那几行在地区被校准、
+被收紧之后仍然写着旧值（"origin-verified（已收紧）"、"blocked"），而 `regions.json` 里早已是 `calibrated`。
+**窗口、格数、置信度一律看生成物** `regions.report.md`（随 `regions.json` 一起生成、由 `Test-MapRegionRegistry.ps1` 校验）。
 
 置信度含义：
 
@@ -95,10 +82,14 @@ tileY = ceil(-gameY / 850)
 - `footprint-measured`：窗口取**实测**的上游有图瓦片包围盒（`map-regions/footprints/<region>.json`），见下一节。
   **窗口与原点无关**，所以在一个 frame 的原点还没被实机证实之前，它就是那个 frame 唯一可信的窗口。
   它代替的是"按点位分位数猜窗口"，因此**不含覆盖边距**：测量结果就是地图本身，不是地图的下界。
+  ⚠️ 窗口与换算是**两件独立证据**，可以同时成立：梦枢天罗的窗口来自实测，换算后来又被四点校准证实，
+  于是它的置信度报 `calibrated`（最强的那条），窗口来源记在 `tileBounds.basis` 与报告里。
 - `uncalibrated`：无校准也无原点证据，窗口只是猜测，**不得据此发布**。
 - `blocked`：frame 原点仍是编译期占位值 `(0, 0)`，且无证据。
 
-**只剩 `时隙废都`(910) 仍被阻塞。** `下层金库`(902) 已由 `map-regions/origins/lowervault.json` 的实机证据解除阻塞。
+**`时隙废都`(910) 已不再被阻塞**（它现在是 `calibrated`）；上面这句是旧记录，保留是为了说明 `origins/` 这条路的来历——
+该目录在当前仓库里**并不存在**，`regions.json` 才是真相：`lowervault` 现在是 `calibrated`（窗口 99 格、`tightened = false`），
+不是早先写的"收紧到 9 块"。
 
 ### 实测瓦片足迹（`-SearchMargin` / `map-regions/footprints/`）
 
@@ -252,28 +243,26 @@ pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply -RegionId <id> `
 
 ## 九、当前状态与未决项
 
-**已完成**：注册表（14 地区，校验全绿）；瓦片归档（既有 13 地区 638 块，跨地区去重；梦枢天罗另在 13CCF 代次下 12 块）；代次替换取证（302/302 一致）；五个脚本；重建脚本补强；下层金库解除阻塞并**收紧到 9 块、建成完整包**（9008 关键点，`Test-KuroMapFeaturePack.ps1` 通过）；blackshores 试点（28 块、15168 关键点）；**梦枢天罗接入**（点位/图标/筛选表已入库，实测足迹 12 块 / 窗口 16 块，地图包已建）。
+**已完成**：注册表（14 地区，校验全绿）；瓦片归档（既有 13 地区 638 块，跨地区去重；梦枢天罗另在 13CCF 代次下 12 块）；代次替换取证（302/302 一致）；五个脚本；重建脚本补强；blackshores 试点（28 块、15168 关键点）；**梦枢天罗接入**（点位/图标/筛选表已入库，实测足迹 12 块 / 窗口 16 块，地图包已建 26 101 关键点，四点校准已拟合，最大误差 0.534 px）。
 
 **未决项**
 
-1. **梦枢天罗缺实机证据**：四点校准（4 个位置各一张正常画面 + 一张大地图）与参考小地图。
-   在此之前它保持 `approved=false`，不进筛选、标注与视觉定位；地图包是未验证覆盖包，不能登记进瓦片包注册表。
-   采样位置命令见 [新地区四点校准样本](../Docs/KuroSceneCalibrationSamples.md)。
+1. **梦枢天罗缺一张参考小地图**：四点校准已完成（`map-regions/samples/mengshutianluo.json`），
+   但 `map-regions/references/mengshutianluo.png` 还不存在，所以包仍是**未验证覆盖包**
+   （`referenceVerification.skipped = true`），不能登记进瓦片包注册表。
+   注意参考图必须拍在**注册表给出的锚点**上（梦枢天罗是游戏坐标 `(-425, -425)`，即窗口中心），
+   因为参考验证是拿"该点的期望地图像素"去比对定位结果（门限 8 px）。
+   之后才是登记 `kuro-tile-packs.json` → `Approve-KuroSceneRelease.ps1 -Region mengshutianluo`。
 2. **梦枢天罗的分层地图**（`layer.json` 里 6 个窟 / 8 层）尚未归档：`Get-MapLayerArchive.ps1` 与
    `New-LayeredFloorIndex.ps1` 都按 `tiles.manifest.json` 的代次取图层，而该文件的代次是旧代次。
    要接分层，先把梦枢天罗的图层单独归档，再让这两个脚本接受显式代次。
-3. **时隙废都(910) 缺原点证据或校准**，阿维纽林(903)、隐海试验场(905) 缺校准。按用户要求先放着，不要求一次做完。
-
-**未决项**
-
-1. **时隙废都(910) 缺原点证据或校准**，阿维纽林(903)、隐海试验场(905) 缺校准。按用户要求先放着，不要求一次做完。
-2. **下层金库的四点校准记录还差一步**：`map-regions/origins/lowervault.json` 里 4 个 `game` 坐标已经读出（截图在 `C:\Users\Kahvia\Videos\NVIDIA\Wuthering Waves`，成对的时间戳见文件里的 `capture`/`mapCapture` 字段），`map` 留空待填。填法是"把大地图箭头中心换算为内部地图像素"：仓库里唯一的完整样例是 `Tests/VisualLocalization/20260909-sparse-minimap/provenance.json`（含 `mapCaptureCorners` 与 `arrowNominalScreen`），消费方是 `IMao-Core/tests/SparseMinimapTests.h`。**该四角是把大地图裁剪图独立匹配到地图影像上得到的**，所以先要有该地区的地图影像——这也是为什么先建包、后校准是自然的顺序。填好后跑 `scripts/Set-KuroSceneCalibration.ps1`。
-2. **参考小地图**：`map-regions/references/<region>.png` 放一张实机小地图截图后，该地区就会构建成**已验证**包；没有的话构建会明确标记为 unverified 覆盖包（`referenceVerification.skipped=true`）。现有 4 张可复用的参考：`Assets/FeaturesDatas/KuroTilePacks/*/reference-minimap.png`。
-3. **`legacyBaseExclusions` 需要重新生成**。旧包 `Tethys`/`Lahai` 带有这个字段，它记录的是**与该包特征重复的基线 IMF 行号**（由 `IMao-Core/src/Feature/LegacyFeatureExclusions.h` 在运行时排除）。旧脚本在特征哈希变化时拒绝继承，而重建必然变化，所以：
+3. **阿维纽林(903)、隐海试验场(905) 缺校准**。按用户要求先放着，不要求一次做完。
+4. **参考小地图**：`map-regions/references/<region>.png` 放一张实机小地图截图后，该地区就会构建成**已验证**包；没有的话构建会明确标记为 unverified 覆盖包（`referenceVerification.skipped=true`）。现有 4 张可复用的参考：`Assets/FeaturesDatas/KuroTilePacks/*/reference-minimap.png`。
+5. **`legacyBaseExclusions` 需要重新生成**。旧包 `Tethys`/`Lahai` 带有这个字段，它记录的是**与该包特征重复的基线 IMF 行号**（由 `IMao-Core/src/Feature/LegacyFeatureExclusions.h` 在运行时排除）。旧脚本在特征哈希变化时拒绝继承，而重建必然变化，所以：
    - `-OutputRoot` 指向全新目录时该门禁自动跳过（干净重做语义）；
    - 但如果新包的瓦片仍与旧基线图集重叠，就必须用 `scripts/Register-LegacySceneFeatures.py` **重新计算排除集**，否则运行时会双重匹配。**这是发布前必须验证的一项。**
-4. **覆盖边距 `-CoverageMargin`（默认 2）需要实机确认**。窗口偏小时走路到区域边缘会匹配失败；偏大只是多下几块瓦片。
-5. **上游 41%（326/795）的瓦片不存在**，因为矩形窗口覆盖了不规则地图之外的空白。这与旧包的情况一致（旧包缺失率 20–45%），但需要逐地区复核窗口形状。
+6. **覆盖边距 `-CoverageMargin`（默认 2）需要实机确认**。窗口偏小时走路到区域边缘会匹配失败；偏大只是多下几块瓦片。
+7. **上游 41%（326/795）的瓦片不存在**，因为矩形窗口覆盖了不规则地图之外的空白。这与旧包的情况一致（旧包缺失率 20–45%），但需要逐地区复核窗口形状。
 
 ## 十、不进 git 的东西
 

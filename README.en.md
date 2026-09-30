@@ -192,9 +192,10 @@ Settings and can be disabled, deleted and re-downloaded (**changes apply after a
 
 One further map is archived but **not open yet**: **Mengshu Tianluo (梦枢天罗)**, an independent sub-world
 under Huanglong (Kuro state 912, 20 item types / 231 markers). Its points, catalog, icons and tiles are in
-the repository and its map pack was built from a measured tile footprint, but it still needs an in-game
-four-point calibration and a reference minimap, so it stays out of filters, marker labels and visual
-localization. See [the calibration samples guide](Docs/KuroSceneCalibrationSamples.md).
+the repository, its map pack was built from a measured tile footprint, and its four-point calibration was
+fitted from four in-game captures on 2026-09-30 (0.53 px maximum error); what is still missing is a
+reference minimap at the pack anchor, so it stays out of filters, marker labels and visual localization.
+See [the calibration samples guide](Docs/KuroSceneCalibrationSamples.md).
 
 | Country | Regions |
 | :--- | :--- |
@@ -238,7 +239,8 @@ magnitude as Tethys' Deep and Time Rift Ruins.
 - **When will new regions be available?**
   A new region needs four-point calibration, its own tile feature pack and in-game validation.
   Lower Vault, Darkplain and Time Rift Ruins are calibrated from local captures and usable today, while
-  the full four-check verification and the 113-sample regression are still outstanding.
+  the full four-check verification and the 113-sample regression are still outstanding. Mengshu Tianluo
+  (archived 2026-09-30) is calibrated too and is waiting for its reference minimap and in-game validation.
 - **Does it cost frame rate?**
   The overlay only paints the minimap and status-bar area (about **3.3%** of a 2560×1440 screen), and
   screen capture is limited to the regions exploration needs — measured capture cost dropped from about
