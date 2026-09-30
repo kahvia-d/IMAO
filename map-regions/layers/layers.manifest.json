@@ -1,9 +1,9 @@
 {
   "formatVersion": 1,
-  "registryResourceVersion": "E62CEAC5F80745288BF76C7AD5F731C3",
-  "layerResourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
-  "generatedAtUtc": "2026-09-22T15:43:13.8454027Z",
-  "archiveRoot": "map-regions/layers/B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "registryResourceVersion": "13CCF182D6AF491CA1AC2A02754E5345",
+  "layerResourceVersion": "C9D8F32B5FC7430A808FFCFCBE0ED9F8",
+  "generatedAtUtc": "2026-09-30T12:05:06.9445329Z",
+  "archiveRoot": "map-regions/layers/C9D8F32B5FC7430A808FFCFCBE0ED9F8",
   "states": {
     "8": {
       "hasLayers": true,
@@ -960,7 +960,8 @@
           "sha256": "05923eec82eaac8edcb99b9d49b2ac0cd35102b0d6287fe7215e0c94f52c298c",
           "absent": false
         }
-      ]
+      ],
+      "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D"
     },
     "900": {
       "hasLayers": true,
@@ -1062,7 +1063,8 @@
           "sha256": "8fdcd65387e4d00e8be87bf961369084c6de7520c384413f7798f74456a2d864",
           "absent": false
         }
-      ]
+      ],
+      "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D"
     },
     "902": {
       "hasLayers": true,
@@ -1253,12 +1255,14 @@
           "sha256": "f86b993ba1f942af765a3b05da9361dc6099b286e24e9bbd203c057c6ee71d62",
           "absent": false
         }
-      ]
+      ],
+      "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D"
     },
     "903": {
       "hasLayers": true,
       "layers": [],
-      "tiles": []
+      "tiles": [],
+      "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D"
     },
     "905": {
       "hasLayers": true,
@@ -1302,7 +1306,8 @@
           "sha256": "c53d26d3b59b27966a18dccd2f97a6d05404c13d1f7b16c4d9a3ac67d891117d",
           "absent": false
         }
-      ]
+      ],
+      "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D"
     },
     "906": {
       "hasLayers": true,
@@ -1848,7 +1853,8 @@
           "sha256": "dce16d3a7a0f56d8e45f967f186b33dc4752c5dbb14ccacfe5adf8db3f07fa1e",
           "absent": false
         }
-      ]
+      ],
+      "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D"
     },
     "909": {
       "hasLayers": true,
@@ -1988,12 +1994,162 @@
           "sha256": "1916f05c11d621fd4b7720beec6006f202e840188312a33e960d721d1ed6b489",
           "absent": false
         }
-      ]
+      ],
+      "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D"
     },
     "910": {
       "hasLayers": true,
       "layers": [],
-      "tiles": []
+      "tiles": [],
+      "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D"
+    },
+    "912": {
+      "hasLayers": true,
+      "resourceVersion": "C9D8F32B5FC7430A808FFCFCBE0ED9F8",
+      "layers": [
+        {
+          "id": "64",
+          "name": "朔寒窟",
+          "floors": [
+            {
+              "id": "-1/64",
+              "name": "朔寒窟·上层",
+              "sort": 1,
+              "tiles": [
+                "/64/-1/1_0.png"
+              ]
+            },
+            {
+              "id": "-2/64",
+              "name": "朔寒窟·下层",
+              "sort": 2,
+              "tiles": [
+                "/64/-2/1_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "65",
+          "name": "临渊窟",
+          "floors": [
+            {
+              "id": "-1/65",
+              "name": "临渊窟",
+              "sort": 1,
+              "tiles": [
+                "/65/-1/-0_1.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "60",
+          "name": "悬瀑秘窟",
+          "floors": [
+            {
+              "id": "-1/60",
+              "name": "悬瀑秘窟",
+              "sort": 1,
+              "tiles": [
+                "/60/-1/-0_0.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "61",
+          "name": "千绽窟",
+          "floors": [
+            {
+              "id": "-1/61",
+              "name": "千绽窟",
+              "sort": 1,
+              "tiles": [
+                "/61/-1/-0_0.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "62",
+          "name": "徊心墟",
+          "floors": [
+            {
+              "id": "-1/62",
+              "name": "徊心墟",
+              "sort": 1,
+              "tiles": [
+                "/62/-1/-0_0.png"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "63",
+          "name": "沉凄渡",
+          "floors": [
+            {
+              "id": "-1/63",
+              "name": "沉凄渡·上层",
+              "sort": 1,
+              "tiles": [
+                "/63/-1/0_0.png"
+              ]
+            },
+            {
+              "id": "-2/63",
+              "name": "沉凄渡·下层",
+              "sort": 2,
+              "tiles": [
+                "/63/-2/1_0.png"
+              ]
+            }
+          ]
+        }
+      ],
+      "tiles": [
+        {
+          "file": "tiles/912/64/-1/1_0.png",
+          "sha256": "b838c2f5bd7b7967edf37a649cd43a3e432d7effc20d25c2149589b1a09b78dc",
+          "absent": false
+        },
+        {
+          "file": "tiles/912/64/-2/1_1.png",
+          "sha256": "1dfb5abea30f737b0c7e1180f6014c261aece00f5756bdee5879eca78f7484be",
+          "absent": false
+        },
+        {
+          "file": "tiles/912/65/-1/-0_1.png",
+          "sha256": "cc376c2e9be01a056d7b79d0a4b369bf91f4c07069bf151c0d04d97822498042",
+          "absent": false
+        },
+        {
+          "file": "tiles/912/60/-1/-0_0.png",
+          "sha256": "eb51708b16b56b424c0d4615ce7d4dad220240ad00a76835411ebef7ea8189d9",
+          "absent": false
+        },
+        {
+          "file": "tiles/912/61/-1/-0_0.png",
+          "sha256": "90091d80a358eb027b6e31b99f578754a891ee39504dd900e4c7e7cefe6c5114",
+          "absent": false
+        },
+        {
+          "file": "tiles/912/62/-1/-0_0.png",
+          "sha256": "feae7c8af8a3f7a786d47d8bc27bcbcfa95bbefad88a19fa016ba043b2055148",
+          "absent": false
+        },
+        {
+          "file": "tiles/912/63/-1/0_0.png",
+          "sha256": "1b895f29082e7adda761d344307ef56f62cfb645bb77094c654e07b98cae4b75",
+          "absent": false
+        },
+        {
+          "file": "tiles/912/63/-2/1_0.png",
+          "sha256": "f4d06c5ec2281d3fea4ba505850dfc3fe214742a0cca8a79cf4b7e2e83dc746c",
+          "absent": false
+        }
+      ]
     }
   }
 }

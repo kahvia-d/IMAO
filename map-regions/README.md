@@ -166,6 +166,8 @@ pwsh -File scripts\New-MapRegionRegistry.ps1 -TightenRegionId lowervault
 | `scripts/New-MapRegionRegistry.ps1` | 从 `Assets/KuroMap` 生成 `regions.json` + `regions.report.md` |
 | `scripts/Test-MapRegionRegistry.ps1` | 独立重新推导归因并校验注册表（结构/覆盖/frame/窗口/点归属） |
 | `scripts/Get-MapTileArchive.ps1` | 按注册表下载瓦片到 `map-regions/tiles/<generation>/`，跨地区自动去重，记录 sha256 |
+| `scripts/Get-MapLayerArchive.ps1` | 归档某个 frame 的**图层**（`mcmap/layer/<代次>/<frame>/layer.json` + 每层瓦片）到 `map-regions/layers/<代次>/`。**清单是合并写入**，每个 frame 记自己的 `resourceVersion`——上游换代次时，后归档的 frame 与先归档的不在同一个代次目录里 |
+| `scripts/Invoke-LayeredMapRollout.ps1` | 逐地区合成"分层视图"瓦片并按楼层建特征索引（`out/map-regions/composite/<id>/k035` + `<pack>/layered-floors/`） |
 | `scripts/Get-MapTileFootprint.ps1` | **测量**某个 frame 实际上有图的格子（HEAD + Content-Length），写 `map-regions/footprints/<region>.json`；`-Download` 顺带取回瓦片 |
 | `scripts/Invoke-MapRegionRebuild.ps1` | 按注册表逐个地区重建特征包，产物写到 `out/map-regions/packs/` |
 
@@ -249,10 +251,24 @@ pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply -RegionId <id> `
     -TileArchive map-regions\tiles\13CCF182D6AF491CA1AC2A02754E5345 -ReferenceFullSnapshot
 pwsh -File scripts\Test-KuroMapFeaturePack.ps1 -PackRoot out\map-regions\packs\<id>
 
-# 9. 开放审查（实机四项检查 + 113 张基线回归）——通过后它才会同时登记进
-#    kuro-tile-packs.json 并把 scene-validation.json 的 approved 改成 true
+# 9. 该 frame 有分层地图时：归档图层 → 合成 → 楼层索引 → 再重建一次包
+#    （第 8 步的包只有地表；第 9 步把每层外观折进去，关键点数与瓦片条目都会涨）
+pwsh -File scripts\Get-MapLayerArchive.ps1 -State <frame> -ResourceVersion <当前代次>
+pwsh -File scripts\Invoke-LayeredMapRollout.ps1 -RegionId <id>
+pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply -RegionId <id> `
+    -TileArchive map-regions\tiles\<当前代次> -ReferenceFullSnapshot
+pwsh -File scripts\Test-KuroMapFeaturePack.ps1 -PackRoot out\map-regions\packs\<id>   # 应报 layeredFloors=<层数>
+
+# 10. 开放审查（实机四项检查 + 113 张基线回归）——通过后它才会同时登记进
+#     kuro-tile-packs.json 并把 scene-validation.json 的 approved 改成 true
 pwsh -File scripts\Approve-KuroSceneRelease.ps1 -Region <id> -GameEvidencePath <evidence.json> -Apply
 ```
+
+> **图层代次是逐 frame 的**：`layers.manifest.json` 的每个 frame 记自己的 `resourceVersion`，
+> 合成/索引两步都按它取图，并要求与地表同代次。上游换代次（2026-09-30 当天就换过一次）之后
+> 归档的新 frame 与既有 frame 不会在同一个目录里，这是设计如此，不是错误。
+> 上游对 `x = 0` 有 `0_0.png` 与 `-0_0.png` 两种拼法，脚本按解析后的整数拼地表瓦片名——
+> 直接拿图层文件名去拼会静默跳过那些层。
 
 ### 锚点：它是一条**观测**，不是一个要走去对齐的坐标
 
@@ -279,14 +295,20 @@ pwsh -File scripts\Approve-KuroSceneRelease.ps1 -Region <id> -GameEvidencePath <
 
 ## 九、当前状态与未决项
 
-**已完成**：注册表（14 地区，校验全绿）；瓦片归档（既有 13 地区 638 块，跨地区去重；梦枢天罗另在 13CCF 代次下 12 块）；代次替换取证（302/302 一致）；五个脚本；重建脚本补强；blackshores 试点（28 块、15168 关键点）；**梦枢天罗接入**（点位/图标/筛选表已入库，实测足迹 12 块 / 窗口 16 块，26 101 关键点，四点校准 0.534 px，**已验证包 2.734 px**）。
+**已完成**：注册表（14 地区，校验全绿）；瓦片归档（既有 13 地区 638 块，跨地区去重；梦枢天罗另在 13CCF/C9D8F 代次下各 12 块，**逐字节相同**）；代次替换取证（302/302 一致）；六个脚本；重建脚本补强；blackshores 试点（28 块、15168 关键点）；**梦枢天罗接入**（点位/图标/筛选表已入库，实测足迹 12 块 / 窗口 16 块，四点校准 0.534 px，**已验证包 2.745 px**、26 101 → **41 424 关键点**，**分层 6 组 8 层**）。
 
 **未决项**
 
-1. **梦枢天罗只差开放审查**：包已经是**已验证包**（`referenceVerification.passed = true`、`errorPixels = 2.734`），
-   锚点是用户 19:03:42 那张截图的读数 `(-413, -209)`（`map-regions/anchors/mengshutianluo.json`）。
-   剩下的是 `Approve-KuroSceneRelease.ps1 -Region mengshutianluo -GameEvidencePath <四项检查+113 张回归>`，
+1. **梦枢天罗只差开放审查**：包已经是**已验证包**（`referenceVerification.passed = true`、`errorPixels = 2.745`），
+   锚点是用户 19:03:42 那张截图的读数 `(-413, -209)`（`map-regions/anchors/mengshutianluo.json`）；
+   分层地图也已接上（6 组 8 层，包内 `layered-floors/`，`Test-KuroMapFeaturePack` 报 `layeredFloors=8`），
+   但**洞穴内定位尚未实机确认**。剩下的是
+   `Approve-KuroSceneRelease.ps1 -Region mengshutianluo -GameEvidencePath <四项检查+113 张回归>`，
    **在那之前它必须保持"未登记 + approved=false"**（理由见上一节）。
+2. **阿维纽林(903)、隐海试验场(905) 缺校准**。按用户要求先放着，不要求一次做完。
+3. **代次会继续轮换**：2026-09-30 一天之内 `13CCF182…` 就被 `C9D8F32B…` 取代（且影像逐字节相同）。
+   已归档的瓦片不受影响，但**下一个 frame 或下一次同步要按当时的代次走**；`tiles.manifest.json`
+   里记的仍然是 `B50F…`，那是既有 13 个地区的瓦片所在的代次。
 2. **梦枢天罗的分层地图**（`layer.json` 里 6 个窟 / 8 层）尚未归档：`Get-MapLayerArchive.ps1` 与
    `New-LayeredFloorIndex.ps1` 都按 `tiles.manifest.json` 的代次取图层，而该文件的代次是旧代次。
    要接分层，先把梦枢天罗的图层单独归档，再让这两个脚本接受显式代次。

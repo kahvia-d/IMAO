@@ -80,11 +80,14 @@ elseif ($ResourceVersion) {
 Write-Host "Registry generation: $recordedVersion"
 Write-Host "Layer generation:    $tileVersion"
 
-$states = if ([string]::IsNullOrWhiteSpace($State)) {
-    @(Get-ChildItem -LiteralPath (Join-Path $SourceRoot 'Assets/KuroMap/states') -Filter 'state-*.json' |
-        ForEach-Object { [int]($_.BaseName -replace '^state-', '') } | Sort-Object)
+# The @() wraps the whole if: `$x = if (...) { @(912) }` collapses to the scalar 912, because a
+# statement's output is enumerated before it is assigned. Without this, -State with a single frame
+# died on `$states.Count` and only a multi-frame or full run ever worked.
+$states = @(if ([string]::IsNullOrWhiteSpace($State)) {
+    Get-ChildItem -LiteralPath (Join-Path $SourceRoot 'Assets/KuroMap/states') -Filter 'state-*.json' |
+        ForEach-Object { [int]($_.BaseName -replace '^state-', '') } | Sort-Object
 }
-else { @($State.Split(',') | ForEach-Object { [int]$_.Trim() }) }
+else { $State.Split(',') | ForEach-Object { [int]$_.Trim() } })
 if ($states.Count -eq 0) { throw 'No states to archive.' }
 
 function Invoke-LayerDownload([string]$Url, [string]$Destination) {
@@ -102,6 +105,13 @@ function Invoke-LayerDownload([string]$Url, [string]$Destination) {
     return 200
 }
 
+# The manifest is MERGED, never replaced: upstream retires a generation directory whenever the map
+# data is republished, so a frame added later is archived at a newer generation than the frames
+# already on disk (梦枢天罗's layers exist only at 13CCF…, the other thirteen frames only at
+# B50F…). Each state therefore records its own generation, and the top-level layerResourceVersion
+# stays as the default for a state that does not carry one. Rewriting the file from scratch - the
+# way Get-MapTileArchive.ps1 does - would have dropped every other frame's layers on the floor.
+$manifestPath = Join-Path $ArchiveRoot 'layers.manifest.json'
 $manifest = [ordered]@{
     formatVersion = 1
     registryResourceVersion = $recordedVersion
@@ -109,6 +119,21 @@ $manifest = [ordered]@{
     generatedAtUtc = [DateTime]::UtcNow.ToString('o')
     archiveRoot = "map-regions/layers/$tileVersion"
     states = [ordered]@{}
+}
+if (Test-Path -LiteralPath $manifestPath) {
+    $existing = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ([int]$existing.formatVersion -ne 1) { throw "Unsupported layer manifest format: $manifestPath" }
+    $existingDefault = [string]$existing.layerResourceVersion
+    foreach ($property in $existing.states.PSObject.Properties) {
+        $entry = $property.Value
+        # Backfill: an entry written before per-state generations existed inherits the old default,
+        # which is the generation its tiles are actually in.
+        $version = if ($null -ne $entry.PSObject.Properties['resourceVersion']) { [string]$entry.resourceVersion } else { $existingDefault }
+        $record = [ordered]@{ hasLayers = [bool]$entry.hasLayers; layers = @($entry.layers); tiles = @($entry.tiles) }
+        if (-not [string]::IsNullOrWhiteSpace($version)) { $record['resourceVersion'] = $version }
+        $manifest.states[$property.Name] = $record
+    }
+    Write-Host "Merging into $manifestPath ($($manifest.states.Count) frame(s) already recorded)"
 }
 $totalTiles = 0
 $totalAbsent = 0
@@ -119,7 +144,7 @@ foreach ($stateId in $states) {
     $status = Invoke-LayerDownload $layerJsonUrl $layerJsonPath
     if ($status -eq 404) {
         Write-Host ("  state {0,-4} no layered maps (layer.json 404)" -f $stateId)
-        $manifest.states[[string]$stateId] = [ordered]@{ hasLayers = $false; layers = @(); tiles = @() }
+        $manifest.states[[string]$stateId] = [ordered]@{ hasLayers = $false; layers = @(); tiles = @(); resourceVersion = $tileVersion }
         continue
     }
     $layers = @(Get-Content -LiteralPath $layerJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json)
@@ -153,6 +178,7 @@ foreach ($stateId in $states) {
         $stateId, $layers.Count, $floorCount, $unique.Count, $present, $absent)
     $manifest.states[[string]$stateId] = [ordered]@{
         hasLayers = $true
+        resourceVersion = $tileVersion
         layers = @($layers | ForEach-Object {
             [ordered]@{ id = [string]$_.id; name = [string]$_.name; floors = @($_.floors | ForEach-Object {
                 [ordered]@{ id = [string]$_.id; name = [string]$_.name; sort = $_.sort; tiles = @($_.tiles) } }) }
@@ -171,4 +197,4 @@ if ($Check) {
 $manifestPath = Join-Path $ArchiveRoot 'layers.manifest.json'
 [IO.File]::WriteAllText($manifestPath, (($manifest | ConvertTo-Json -Depth 12) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
 Write-Host "Archived $totalTiles layer tiles ($totalAbsent absent upstream) under $ArchiveRoot/$tileVersion" -ForegroundColor Green
-Write-Host "Manifest: $manifestPath"
+Write-Host "Manifest: $manifestPath ($($manifest.states.Count) frame(s) recorded)"

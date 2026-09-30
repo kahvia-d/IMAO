@@ -54,17 +54,12 @@ $region = $region[0]
 $tileManifestPath = Join-Path $TileArchiveRoot 'tiles.manifest.json'
 if (-not (Test-Path -LiteralPath $tileManifestPath)) { throw "Tile archive manifest is missing: $tileManifestPath" }
 $tileManifest = Get-Content -LiteralPath $tileManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-$tileVersion = if ($ResourceVersion) { $ResourceVersion.ToUpperInvariant() } else { [string]$tileManifest.tileResourceVersion }
-if ($tileVersion -notmatch '^[A-Fa-f0-9]{32}$') { throw "Tile generation is invalid: $tileVersion" }
 
 $layerManifestPath = Join-Path $LayerArchiveRoot 'layers.manifest.json'
 if (-not (Test-Path -LiteralPath $layerManifestPath)) {
     throw "Layer archive manifest is missing: $layerManifestPath (run scripts/Get-MapLayerArchive.ps1 first)."
 }
 $layerManifest = Get-Content -LiteralPath $layerManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-if ([string]$layerManifest.layerResourceVersion -ne $tileVersion) {
-    throw "Layer archive generation $($layerManifest.layerResourceVersion) does not match tile generation $tileVersion."
-}
 
 $state = [int]$region.frame
 $stateNode = $layerManifest.states.PSObject.Properties[[string]$state]
@@ -72,6 +67,23 @@ if ($null -eq $stateNode -or -not $stateNode.Value.hasLayers) {
     throw "Frame $state has no layered maps; nothing to composite for $RegionId."
 }
 $layers = @($stateNode.Value.layers)
+
+# The generation is per FRAME, not global: upstream retires a generation directory when the map data
+# is republished, so a frame archived later lives at a newer generation than the rest (梦枢天罗 at
+# 13CCF…, the older frames at B50F…). The archive records each frame's own generation; a frame
+# without one falls back to the manifest's default. The surface tile and the overlay have to come
+# from the SAME generation - compositing 13CCF art onto B50F imagery would silently mix two map
+# versions - so that equality is what is checked, not equality with the tile manifest.
+$layerVersion = if ($null -ne $stateNode.Value.PSObject.Properties['resourceVersion']) {
+    [string]$stateNode.Value.resourceVersion
+} else { [string]$layerManifest.layerResourceVersion }
+if ($layerVersion -notmatch '^[A-Fa-f0-9]{32}$') { throw "Frame $state records an invalid layer generation: $layerVersion" }
+$tileVersion = if ($ResourceVersion) { $ResourceVersion.ToUpperInvariant() } else { $layerVersion }
+if ($tileVersion -notmatch '^[A-Fa-f0-9]{32}$') { throw "Tile generation is invalid: $tileVersion" }
+if ($tileVersion -ne $layerVersion) {
+    throw "Frame $state keeps its layered maps at $layerVersion, not at the requested $tileVersion; the surface and overlay tiles must come from one generation."
+}
+Write-Host "Frame $state generation: $tileVersion (tile manifest default: $($tileManifest.tileResourceVersion))"
 
 # Which layered maps belong to this region is shared with the per-floor index step, because the
 # two disagreeing silently produces a pack whose appearances sit under the wrong region.
@@ -128,25 +140,40 @@ $records = New-Object System.Collections.ArrayList
 foreach ($layer in $regionLayers) {
     foreach ($floor in $layer.floors) {
         foreach ($image in @($floor.tiles)) {
-            $leaf = ($image -split '/')[-1]                                # 3_-3.png
-            $surfacePath = Join-Path $tileRoot "$state/${state}_$leaf"
+            # Upstream spells a zero coordinate two ways: 沉凄渡's ground floor is "0_0.png" while
+            # 梦枢天罗's other five caves use "-0_0.png" / "-0_1.png". Both parse to 0, but only the
+            # parsed numbers rebuild the SURFACE tile's name ("912_0_0.png"), so the surface path is
+            # built from them rather than from the layer file's own leaf. Measured 2026-09-30: no
+            # frame archived before this one uses the "-0" spelling, which is why reusing the leaf
+            # looked correct for thirteen regions and silently skipped four floors of the fourteenth.
+            $parts = ((($image -split '/')[-1]) -replace '\.png$', '').Split('_')
+            if ($parts.Count -ne 2) { throw "Unexpected layer tile name in $state's layer manifest: $image" }
+            $tileX = [int]$parts[0]; $tileY = [int]$parts[1]
+            $surfaceName = "${state}_${tileX}_${tileY}.png"
+            $surfacePath = Join-Path $tileRoot "$state/$surfaceName"
+            # The overlay keeps the manifest's own path: that is where the file was archived.
             $overlayPath = Join-Path $LayerArchiveRoot "$tileVersion/$state$image"
             if (-not (Test-Path -LiteralPath $surfacePath)) {
-                Write-Warning "No archived surface tile for $state/$leaf; skipping $($layer.name) $($floor.name)."
+                Write-Warning "No archived surface tile for $state/$surfaceName (layer tile $image); skipping $($layer.name) $($floor.name)."
                 continue
             }
             if (-not (Test-Path -LiteralPath $overlayPath)) { throw "Layer tile is missing: $overlayPath" }
             $opaque = Get-OpaqueSampleCount $overlayPath
             if ($opaque -eq 0) { continue }                                 # fully transparent floor
-            $parts = ($leaf -replace '\.png$', '').Split('_')
             $floorTag = $floor.id -replace '/', '-'
             [void]$records.Add([pscustomobject]@{
                 layerId = [string]$layer.id; layerName = [string]$layer.name
                 floorId = [string]$floor.id; floorName = [string]$floor.name
-                x = [int]$parts[0]; y = [int]$parts[1]
+                x = $tileX; y = $tileY
                 surfacePath = $surfacePath; overlayPath = $overlayPath
+                # The floor index reads the overlay back to build the occupancy and shared grids, and
+                # it joins this onto <layer root>/<generation>/<state>/. Re-deriving it from the
+                # parsed numbers wrote "60/-1/0_0.png" for a file that is archived as
+                # "60/-1/-0_0.png", and the index then skipped the floor silently - empty grids, a
+                # floor the runtime could never place the player in.
+                overlay = $image.TrimStart('/')
                 opaqueSamples = $opaque
-                file = "L$($layer.id)_F$floorTag`_${state}_$leaf"
+                file = "L$($layer.id)_F$floorTag`_${state}_$($image -split '/' | Select-Object -Last 1)"
             })
         }
     }
@@ -177,7 +204,7 @@ foreach ($factor in @($BaseFactor | Sort-Object -Descending)) {
             opaqueSamples = $record.opaqueSamples
             # Kept so the floor index can read this floor's own alpha mask without having to
             # guess the upstream path layout again.
-            overlay = "$($record.layerId)/$(([string]$record.floorId -split '/')[0])/$($record.x)_$($record.y).png"
+            overlay = $record.overlay
             sha256 = (Get-FileHash -LiteralPath $outPath -Algorithm SHA256).Hash.ToLowerInvariant()
         })
     }

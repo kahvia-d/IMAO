@@ -22,7 +22,9 @@ param(
     [string]$LayerArchiveRoot,
     [string]$TileArchiveRoot,
     [string]$OutputRoot,
-    [string]$Version = 'B50F4135DCCC4D8DA87ED33CE95EA31D',
+    # Empty means "use the generation the composite was built from" - a hardcoded default silently
+    # read the wrong generation for anything archived after the map data was republished.
+    [string]$Version = '',
     [ValidateSet('k100', 'k035')]
     [string]$Factor = 'k035'
 )
@@ -45,8 +47,23 @@ if (-not $OutputRoot) { $OutputRoot = Join-Path $SourceRoot "out/map-regions/pac
 $tileManifestPath = Join-Path $TileArchiveRoot 'tiles.manifest.json'
 if (-not (Test-Path -LiteralPath $tileManifestPath)) { throw "Tile archive manifest is missing: $tileManifestPath" }
 $tileManifest = Get-Content -LiteralPath $tileManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-$tileVersion = if ($Version) { $Version.ToUpperInvariant() } else { [string]$tileManifest.tileResourceVersion }
+
+# The composite manifest names the generation it was built from, and that is the one this step must
+# read the overlays and the surface tiles from: both live under <root>/<generation>/<frame>/, and a
+# frame archived later sits at a newer generation than the tile manifest's default (梦枢天罗 at
+# 13CCF… vs B50F…). -Version still overrides, and has to agree.
+$compositeManifestPath = Join-Path (Split-Path -Parent $CompositeRoot) 'composite.manifest.json'
+if (-not (Test-Path -LiteralPath $compositeManifestPath)) {
+    throw "Composite manifest is missing: $compositeManifestPath (run scripts/New-LayeredTileComposite.ps1 first)."
+}
+$compositeManifest = Get-Content -LiteralPath $compositeManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$compositeVersion = [string]$compositeManifest.tileResourceVersion
+if ($compositeVersion -notmatch '^[A-Fa-f0-9]{32}$') { throw "Composite manifest records an invalid generation: $compositeVersion" }
+$tileVersion = if ($Version) { $Version.ToUpperInvariant() } else { $compositeVersion }
 if ($tileVersion -notmatch '^[A-Fa-f0-9]{32}$') { throw "Tile generation is invalid: $tileVersion" }
+if ($tileVersion -ne $compositeVersion) {
+    throw "The composite for $RegionId was built from $compositeVersion, not from the requested $tileVersion; rebuild the composite instead of mixing generations."
+}
 $tileRoot = Join-Path $TileArchiveRoot $tileVersion
 
 $builder = Join-Path $SourceRoot 'x64/RelWithDebInfo/KuroMapFeatureBuilder.exe'
@@ -56,11 +73,6 @@ foreach ($tool in $builder, $converter) {
 }
 $env:PATH = (Join-Path $SourceRoot 'x64/Release') + ';' + $env:PATH
 
-$compositeManifestPath = Join-Path (Split-Path -Parent $CompositeRoot) 'composite.manifest.json'
-if (-not (Test-Path -LiteralPath $compositeManifestPath)) {
-    throw "Composite manifest is missing: $compositeManifestPath (run scripts/New-LayeredTileComposite.ps1 first)."
-}
-$compositeManifest = Get-Content -LiteralPath $compositeManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $factorNode = $compositeManifest.factors.PSObject.Properties[$Factor]
 if ($null -eq $factorNode) {
     throw "The composite manifest has no '$Factor' factor. Available: $(($compositeManifest.factors.PSObject.Properties.Name) -join ', ')"
@@ -207,7 +219,7 @@ foreach ($group in $groups | Sort-Object Name) {
     # registry names the scene; the shipped pack for the region is the authority on its runtime
     # scene id.
     $manifest = [ordered]@{
-        formatVersion = 1; packId = "$RegionId-floor-$tag"; resourceVersion = $Version
+        formatVersion = 1; packId = "$RegionId-floor-$tag"; resourceVersion = $tileVersion
         scene = $scene; sceneId = $sceneId
         source = [ordered]@{ static = 'https://web-static.kurobbs.com'; state = $state; tileSize = 1024; virtualMapSize = 850.0 }
         coordinateTransform = [ordered]@{ originX = $originX; originY = $originY; scale = $scale }
@@ -297,7 +309,7 @@ $index = [ordered]@{
     regionId = $RegionId
     frame = $state
     baseFactor = [double]$factorNode.Value.baseFactor
-    tileResourceVersion = $Version
+    tileResourceVersion = $tileVersion
     # Needed to turn a runtime map coordinate into a tile pixel when testing the footprints.
     coordinateTransform = [ordered]@{ originX = $originX; originY = $originY; scale = $scale; virtualMapSize = 850.0; tileSize = 1024 }
     gridSize = $gridSize

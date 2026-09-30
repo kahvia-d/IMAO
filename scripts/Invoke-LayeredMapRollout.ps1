@@ -31,10 +31,12 @@ if (-not $SourceRoot) { $SourceRoot = Split-Path -Parent $PSScriptRoot }
 $SourceRoot = [IO.Path]::GetFullPath($SourceRoot)
 
 $registry = Get-Content -LiteralPath (Join-Path $SourceRoot 'map-regions/regions.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-$regions = if ([string]::IsNullOrWhiteSpace($RegionId)) {
-    @($registry.regions | ForEach-Object { $_.id })
+# The @() wraps the whole if: `$x = if (...) { @('a') }` collapses to the scalar 'a', because a
+# statement's output is enumerated before it is assigned, and `.Count` then throws under StrictMode.
+$regions = @(if ([string]::IsNullOrWhiteSpace($RegionId)) {
+    $registry.regions | ForEach-Object { $_.id }
 }
-else { @($RegionId.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+else { $RegionId.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ } })
 if ($regions.Count -eq 0) { throw 'No regions selected.' }
 
 $compositeScript = Join-Path $PSScriptRoot 'New-LayeredTileComposite.ps1'

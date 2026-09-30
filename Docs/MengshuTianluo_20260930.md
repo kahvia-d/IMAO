@@ -41,7 +41,7 @@
   现在四个"外部运行时点位"的 state 统一是 `supported = $false`，行为与仓库里已发布的快照一致。
 - 同步结果（`-Apply`）：World **19184 → 19187**（+3）、黯原 **673 → 702 点 / 43 → 44 类**、
   下层金库有一条描述被上游改写、新增 state 912 与 10 张新图标；其余 state 未变。
-- **图标文件名改成按 id 稳定分配**（见 §七）。
+- **图标文件名改成按 id 稳定分配**（见 §八）。
 
 ### 2. 运行时场景（原生 + 托管）
 
@@ -194,15 +194,58 @@ Test-KuroMapFeaturePack.ps1（**不加** -AllowUnverified）→ 通过
 `RuntimeFeatureRepository.cpp:270` 在快照模式下对"没加载成功**或未被运行期批准**"的已登记包直接抛错
 （表现是"启动核心失败"）。**登记与 `approved=true` 必须同时发生。**
 
-## 五、还差什么
+## 五、分层地图
+
+912 有 **6 组 8 层**（朔寒窟上/下、临渊窟、悬瀑秘窟、千绽窟、徊心墟、沉凄渡上/下），全部接上了。
+流水线四步，全部实跑：
+
+```powershell
+pwsh -File scripts\Get-MapLayerArchive.ps1 -State 912 -ResourceVersion <当前代次>
+pwsh -File scripts\Invoke-LayeredMapRollout.ps1 -RegionId mengshutianluo   # 合成 + 楼层索引
+pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply -RegionId mengshutianluo `
+    -TileArchive map-regions\tiles\<当前代次> -ReferenceFullSnapshot
+pwsh -File scripts\Test-KuroMapFeaturePack.ps1 -PackRoot out\map-regions\packs\mengshutianluo
+```
+
+结果：`layered-floors/floor-index.json` + 8 个楼层 IMF（903~3282 关键点/层，ownMask 全部非空，
+`surfaceAccess` 全部 `enclosed`——洞穴，地表不算一层）；包从 26 101 关键点涨到 **41 424**、
+瓦片条目 12 → **20**（+8 层外观）、`Test-KuroMapFeaturePack` 报 `layered floors: 8` 且通过。
+
+### 这一步踩到的三件事（都是"以前的数据形状没暴露过"）
+
+1. **代次仓库又换了一次**：开工时 `13CCF182…` 已经整目录 404，当前是 `C9D8F32B…`。
+   所以 912 的图层只能在**新代次**下载，而它的地表瓦片是上一代次存下来的。
+   先验证：**12 块地表瓦片在 13CCF 与 C9D8F 之间逐字节相同**（12/12 sha256 一致，共 9 216 830 字节），
+   于是把地表也按 C9D8F 取了一份，合成/索引/建包都在 C9D8F 这一代次里做，两边不会混版本。
+   ⟹ 这也是"上游只是换了版本目录名"的第三次实测。
+2. **图层归档原来假定"整个仓库只有一个代次"**：`layers.manifest.json` 只有一个
+   `layerResourceVersion`，而 `Get-MapLayerArchive.ps1` 是**整份重写**清单的。给 912 归档会：
+   ① 把清单的顶层代次改成新代次（其余 8 个 frame 的条目就"继承"了错误的代次）；
+   ② 把其余 frame 的 `states` 条目全删掉。所以改成：**清单合并**、每个 state 记自己的
+   `resourceVersion`，合成与索引两步都按该 frame 的代次取图，并要求**地表与图层必须同代次**
+   （否则会把两个地图版本叠在一起）。
+3. **上游把 `x = 0` 写成两种拼法**：`沉凄渡` 的地面是 `0_0.png`，其余五个窟是 `-0_0.png` / `-0_1.png`。
+   合成脚本原来直接拿图层文件名去拼地表瓦片名（`912_-0_0.png`）⟹ 找不到 ⟹ **静默跳过 4 层**；
+   而写进清单的 `overlay` 字段又是从解析后的整数重新拼的（`60/-1/0_0.png`）⟹ 楼层索引回读时
+   同样找不到 ⟹ **占用网格与共享网格为空**（那一层运行时永远认不出来）。
+   现在：地表瓦片名按**解析后的整数**拼，`overlay` 字段保留**上游原始路径**。
+   实测既有 13 个地区的图层档案里**一块 `-0` 都没有**，所以这个坑是第 14 个地区第一次露出来的。
+
+顺带修掉两个**同形状的既有 PowerShell 陷阱**：`$states`（`Get-MapLayerArchive.ps1`）与
+`$regions`（`Invoke-LayeredMapRollout.ps1`）都写成 `$x = if (...) { @(单个值) }`——
+语句输出在赋值前会被枚举，单元素数组塌成标量，于是 `.Count` 在 `Set-StrictMode -Version Latest` 下
+直接抛错。**`-State <单个 frame>` 与 `-RegionId <单个地区>` 这两个用法因此从来没成功过。**
+（`PSObject` 有标量 `Count` 兜底，所以只有"值类型/字符串"的数组会炸——排查时按这一条筛。）
+
+## 六、还差什么
 
 1. **开放审查**：`Approve-KuroSceneRelease.ps1 -Region mengshutianluo -GameEvidencePath <证据.json>`，
    要求实机四项检查（小地图定位 / 连续跟踪 / 大地图标记 / 小地图标记）与 113 张基线回归。
    在那之前场景保持 `approved = false`、包不登记。
-2. **分层地图未归档**：6 组 8 层（朔寒窟/临渊窟/悬瀑秘窟/千绽窟/徊心墟/沉凄渡）。
-   `Get-MapLayerArchive.ps1` / `New-LayeredFloorIndex.ps1` 都按 `tiles.manifest.json` 的旧代次取图层。
+2. **尚未实机确认洞穴内的定位**：包与楼层索引都已就绪、离线校验通过，但"站在窟里能不能认出来"
+   只有进游戏才算数。`out\map-test` 已经装载带分层的包（见 §九）。
 
-## 六、⚠️ 发布这条资源时必须带 `minAppVersion`
+## 七、⚠️ 发布这条资源时必须带 `minAppVersion`
 
 `ResourceSnapshotContext.cpp` 的 `CheckConfig`（第 80 行）对 `scene-validation.json` / `scene-calibrations.json`
 里的**每一个**场景名做 `Definition(scene) != nullptr` 检查，**不认识就整份快照验证失败**：
@@ -225,7 +268,7 @@ unknown scene in scene-validation
 **加了场景定义之后必须 `Refresh-MapTestBinaries.ps1` 刷新测试树**（它要求 `x64/Release` 是自包含构建，
 framework-dependent 的 `dotnet build` 会被它拒绝——这正是它注释里写的那件事）。
 
-## 七、顺手修掉的两个缺陷
+## 八、顺手修掉的缺陷
 
 1. **图标文件名不稳定**（`Sync-KuroMapData.ps1`）：原来按"排序后 id 列表里的位次"编号，
    插入一个新 state 会让位次整体平移 ⟹ 本次同步改写了 **527 张里的 469 张**，而真正新增的只有 10 张。
@@ -240,7 +283,7 @@ framework-dependent 的 `dotnet build` 会被它拒绝——这正是它注释�
    "在此对象上找不到属性"。第一次建已验证包就撞上了，现在的写法对**三种形状**都成立：
    字典 / 有该属性的对象 / 没该属性的对象。
 
-## 八、本次验证（全部实跑）
+## 九、本次验证（全部实跑）
 
 | 检查 | 结果 |
 | --- | --- |
@@ -250,20 +293,23 @@ framework-dependent 的 `dotnet build` 会被它拒绝——这正是它注释�
 | `Test-KuroMapNewStates.ps1` | 通过（4 场景 / 110 类 / 1230 点 / 91 个物品 id） |
 | `Test-MapRegionRegistry.ps1` | 通过（14 地区、24066 点、跨国冲突 477） |
 | `Test-KuroMapFeaturePack.ps1 -AllowUnverified` | 通过（未验证覆盖包） |
-| `Refresh-MapTestBinaries.ps1` | 刷新 27 个文件（场景定义变了就必须刷，见 §六） |
+| `Refresh-MapTestBinaries.ps1` | 刷新 27 个文件（场景定义变了就必须刷，见 §七） |
 | `IMaoVisualRegression` 视口定位四张大地图 | 4/4 `accepted`、`sceneId=9`，matches 126~368 |
 | `Set-KuroSceneCalibration.ps1 -Check` | scale 1.20700208、origin (-0.127,-0.511)、**maxError 0.534 px** |
 | `Invoke-MapRegionRebuild … -ReferenceFullSnapshot` | **已验证包**：`errorPixels = 2.734`、14 个 good matches |
 | `Test-KuroMapFeaturePack.ps1`（不加 `-AllowUnverified`） | 通过 |
+| `Invoke-LayeredMapRollout -RegionId mengshutianluo` | 8 层全部合成 + 建索引（首次只出 4 层，见 §五） |
+| `Invoke-MapRegionRebuild … -ReferenceFullSnapshot`（带分层） | 20 个瓦片条目 / 8 层外观 / **41 424 关键点** / `errorPixels = 2.745` |
+| `Test-KuroMapFeaturePack.ps1`（分层包） | 通过：`layered=8 … layeredFloors=8` |
 | `Test-Runtime.ps1` 全量门禁 | **通过，exit 0**（`Runtime tests passed. Evidence: out\system-audit`） |
 
 > 门禁第一次跑**失败**在"原生区域选择检查"：`unknown scene in scene-validation`。
-> 原因就是 §六 那条——测试树的数据跟着源码走、二进制没跟着刷。刷新后重跑通过。
+> 原因就是 §七 那条——测试树的数据跟着源码走、二进制没跟着刷。刷新后重跑通过。
 > 另有一次 `route-service-tests` 报 `Unable to commit user data: Windows error 5`
 > （`AtomicFile.h` 的 `MoveFileExW` 瞬时被拒），**同一二进制、同一目录立刻重跑即通过**，
 > 属 Windows 上的偶发占用，与本次改动无关。
 
-## 九、给以后接新地图的人
+## 十、给以后接新地图的人
 
 顺序是：**同步点位 → 加一行场景定义并 `requiresGameValidation = true` → 生成注册表（拿到
 `untrustedPointWindow`）→ 实测瓦片足迹并 `-Download` → 再生成注册表（变 `footprint-measured`）
