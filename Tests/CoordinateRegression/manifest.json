@@ -491,6 +491,24 @@
       "coordinateVisible": true,
       "sceneId": null,
       "labelConfidence": "ocr-observed-needs-review"
+    },
+    {
+      "id": "mengshutianluo-p1-190342",
+      "image": "map-regions/references/mengshutianluo.png",
+      "expectedText": "-413,-209,15",
+      "coordinateVisible": true,
+      "sceneId": 9,
+      "fullSnapshot": true,
+      "labelConfidence": "manually-verified"
+    },
+    {
+      "id": "mengshutianluo-p2-190414",
+      "image": "map-regions/references/mengshutianluo-p2.png",
+      "expectedText": "-179,281,-23",
+      "coordinateVisible": true,
+      "sceneId": 9,
+      "fullSnapshot": true,
+      "labelConfidence": "manually-verified"
     }
   ]
 }

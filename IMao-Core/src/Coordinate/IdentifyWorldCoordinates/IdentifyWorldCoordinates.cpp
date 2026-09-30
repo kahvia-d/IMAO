@@ -156,6 +156,16 @@ public:
 
         std::vector<std::string> texts;
         std::vector<float> scores;
+        // 一帧只跑一条预处理路线是为了省一次推理，但**没有新鲜先验的帧**必须例外：那时没有任何
+        // 位置证据能校验符号，而两条路线**都会**认错符号、只是错在不同的帧上。2026-09-30 用真实
+        // 截图跑出来的结果：
+        //   -413,-209,15  contrast 读对        tophat 读成 -413,209,15（丢掉 y 的负号）
+        //   -179,281,-23  contrast 读成 +179,281,-23（负号变成加号）  tophat 读对
+        // 所以这种帧两条路线都跑，只保留**两条路线都读出来的**坐标（x 与 y 完全相同）。符号于是由
+        // 两个互不相关的预处理作证，而不是由"连续两帧一样"——同一个输入连错两次是必然的，
+        // 那正是这条错误能穿过闸门的原因（OcrCoordinateGate.h 开头就记着这个事实）。
+        std::vector<std::string> crossTexts;
+        std::vector<float> crossScores;
         const auto inferenceStart = std::chrono::steady_clock::now();
         {
             std::scoped_lock inferenceLock(inferenceMutex_);
@@ -163,22 +173,25 @@ public:
                 result.status = CoordinateRecognitionStatus::ModelUnavailable;
                 return result;
             }
-            const auto runVariant = [&](const cv::Mat& variant) {
+            const auto runVariant = [&](const cv::Mat& variant, std::vector<std::string>& outTexts,
+                std::vector<float>& outScores) {
                 std::vector<std::string> variantTexts(1);
                 std::vector<float> variantScores(1);
                 std::vector<double> times{ 0.0, 0.0, 0.0 };
                 recognizer_->Run({ variant }, variantTexts, variantScores, times);
-                texts.push_back(std::move(variantTexts.front()));
-                scores.push_back(variantScores.front());
+                outTexts.push_back(std::move(variantTexts.front()));
+                outScores.push_back(variantScores.front());
             };
-            // The low-contrast client coordinate text loses leading minus
-            // signs most often in the contrast/binary paths. The TopHat path
-            // is specifically shaped to preserve those thin glyphs. Runtime
-            // recognition runs one selected path per frame (rather than all
-            // three serially); the App still requires a second fresh frame
-            // before a coordinate can be published.
+            // The low-contrast client coordinate text loses leading minus signs most often in the
+            // contrast/binary paths, and the TopHat path was shaped to preserve those thin glyphs -
+            // but the measurement above shows neither path is reliable on its own, so the two are
+            // used as witnesses for each other on the frames that have no prior to check against.
+            // Runtime recognition still runs one selected path per frame when a fresh lock exists;
+            // the App requires a second fresh frame before a coordinate can be published.
             const std::size_t selectedRoute = request.useTopHatRoute && variants.size() >= 3 ? 2 : 0;
-            runVariant(variants[selectedRoute]);
+            const bool crossCheckRoutes = request.crossCheckRoutes && variants.size() >= 3;
+            runVariant(variants[selectedRoute], texts, scores);
+            if (crossCheckRoutes) runVariant(variants[selectedRoute == 2 ? 0 : 2], crossTexts, crossScores);
         }
         result.inferenceMilliseconds = MillisecondsSince(inferenceStart);
 
@@ -186,6 +199,23 @@ public:
         std::set<std::tuple<int, int, int>> seen;
         for (std::size_t index = 0; index < texts.size() && index < scores.size(); ++index) {
             auto parsed = CoordinateCandidateParser::Parse(texts[index], scores[index], request.previousTrusted);
+            // 双路线帧：另一条路线读出来的坐标就是唯一的见证者（见上面 crossCheckRoutes 的说明）。
+            std::size_t droppedByRouteAgreement = 0;
+            if (!crossTexts.empty()) {
+                std::vector<CoordinateCandidate> witness;
+                for (std::size_t witnessIndex = 0; witnessIndex < crossTexts.size() &&
+                        witnessIndex < crossScores.size(); ++witnessIndex) {
+                    auto witnessParsed = CoordinateCandidateParser::Parse(crossTexts[witnessIndex],
+                        crossScores[witnessIndex], request.previousTrusted);
+                    witness.insert(witness.end(), std::make_move_iterator(witnessParsed.begin()),
+                        std::make_move_iterator(witnessParsed.end()));
+                }
+                parsed = CoordinateCandidateParser::Corroborate(parsed, witness, &droppedByRouteAgreement);
+                Diagnostics::Record("ocr-route-agreement", "request=" + std::to_string(request.requestId) +
+                    " kept=" + std::to_string(parsed.size()) +
+                    " dropped=" + std::to_string(droppedByRouteAgreement) +
+                    " primary=" + texts[index] + " witness=" + crossTexts.front());
+            }
             for (auto& candidate : parsed) {
                 if (result.candidates.size() >= 8) break;
                 if (seen.emplace(candidate.x, candidate.y, candidate.z).second) {

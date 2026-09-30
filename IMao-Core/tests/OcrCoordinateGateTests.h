@@ -108,4 +108,52 @@ inline void TestOcrCoordinateGate(void (*check)(bool, const std::string&)) {
         "a frame with no reading clears the streak");
     missing.Reset();
     check(missing.AgreementCount() == 0, "reset clears the agreement state");
+
+    // ---------------------------------------------------------------------------------------
+    // 2026-09-30 梦枢天罗实测（events-20260930.jsonl 19:52:21）：丢负号的读数**穿过**了位移预算。
+    // 锁是 63 秒前开大地图时确认的 (490,-124)，预算 = 63×100 = 6300 单位；玩家已经走了约 900 单位，
+    // 读数把 y 的负号丢了 ⟹ 位移 965 单位"在预算内"，以 reason=confirmed 发布；随后真值反而被
+    // 当成 407 单位的跳变拒掉（position-commit-rejected reason=jump）。
+    // 当时图像匹配给出的位置一直是正确的一侧（50 ms 前，y=-247.4），所以"候选正好是它的镜像"
+    // 是那一刻唯一拦得住的判据。
+    auto toMap9 = [](double worldX, double worldY) {
+        return Coordinate(worldX * 1.20700208 - 0.126835675848042, worldY * 1.20700208 - 0.51131423622671);
+    };
+    VisualPrior visualPrior;
+    visualPrior.valid = true;
+    visualPrior.sceneId = 9;
+    visualPrior.mapCoordinate = toMap9(-415.0, -205.0);      // 图像匹配看到的真值
+    Lock staleLock;                                          // 63 秒前确认的锁：预算 6300
+    staleLock.valid = true;
+    staleLock.sceneId = 9;
+    staleLock.mapCoordinate = toMap9(490.0, -124.0);
+    staleLock.sceneScale = 1.20700208;
+    staleLock.secondsSinceLock = 63.0;
+    Reading flippedRead;                                     // 丢负号：世界 y 从 -205 变 +205
+    flippedRead.valid = true;
+    flippedRead.sceneId = 9;
+    flippedRead.score = 0.966f;
+    flippedRead.mapCoordinate = toMap9(-415.0, 205.0);
+    Reading truthRead = flippedRead;
+    truthRead.mapCoordinate = toMap9(-415.0, -204.0);
+
+    double bareJump = 0.0;
+    check(Acceptable(flippedRead, staleLock, Config{}, &bareJump),
+        "the jump budget alone lets the lost minus through on a stale lock (" +
+        std::to_string(bareJump) + " units against a budget of 6300)");
+    const char* rejectReason = nullptr;
+    double mirroredJump = 0.0;
+    check(!Acceptable(flippedRead, staleLock, Config{}, &mirroredJump, &visualPrior, &rejectReason) &&
+        rejectReason != nullptr && std::string(rejectReason) == "sign-mirror",
+        "a reading that mirrors the visual prior is refused as sign-mirror");
+    check(Acceptable(truthRead, staleLock, Config{}, nullptr, &visualPrior, &rejectReason),
+        "the truthful reading next to it still publishes (the rule does not fight the truth)");
+    // 视觉先验必须在同一个场景：别的场景的镜像与这次读数无关
+    VisualPrior foreignPrior = visualPrior;
+    foreignPrior.sceneId = 1;
+    check(Acceptable(flippedRead, staleLock, Config{}, nullptr, &foreignPrior, &rejectReason),
+        "a visual prior from another scene cannot veto this reading");
+    // 没有视觉先验（追踪停摆、没有图像定位）时这条规则不参与——这正是"双路线互证"要补的缺口
+    check(Acceptable(flippedRead, staleLock, Config{}, nullptr, nullptr, &rejectReason),
+        "without a visual prior the mirror rule stays silent (the dual-route check covers that frame)");
 }

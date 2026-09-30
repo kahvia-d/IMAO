@@ -105,6 +105,24 @@ std::string CoordinateCandidateParser::Normalize(const std::string& utf8Text) {
     return normalizedWhitespace;
 }
 
+std::vector<CoordinateCandidate> CoordinateCandidateParser::Corroborate(
+    const std::vector<CoordinateCandidate>& primary, const std::vector<CoordinateCandidate>& witness,
+    std::size_t* dropped) {
+    std::set<std::pair<std::int32_t, std::int32_t>> witnessed;
+    for (const auto& candidate : witness) witnessed.emplace(candidate.x, candidate.y);
+    std::vector<CoordinateCandidate> output;
+    std::size_t rejected = 0;
+    for (const auto& candidate : primary) {
+        if (witnessed.find(std::make_pair(candidate.x, candidate.y)) == witnessed.end()) {
+            ++rejected;
+            continue;
+        }
+        output.push_back(candidate);
+    }
+    if (dropped != nullptr) *dropped = rejected;
+    return output;
+}
+
 std::vector<CoordinateCandidate> CoordinateCandidateParser::Parse(const std::string& utf8Text, float score,
     std::optional<Coordinate> previousTrusted) {
     std::vector<CoordinateCandidate> output;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../CoordinateStruct.h"
+#include "CoordinateTrust.h"
 
 #include <algorithm>
 #include <cmath>
@@ -20,6 +21,13 @@
 //
 // 于是判据是三个条件的合取：分数够高 + 位移在预算内 + 连续 N 次通过。
 // 分数只是必要条件（因为高分也可能错），位移预算才是关键。
+//
+// 2026-09-30 补充：位移预算在"锁很旧 + 真的走了很远"时**失效**，因为预算按"距上次可信位置的
+// 时间"放大（`JumpBudgetUnits`）。实测梦枢天罗 19:52:21：锁是 63 秒前开大地图时确认的
+// （预算 6300 单位），玩家已经走了约 900 单位，读数把 y 的负号丢了 ⟹ 位移 965 单位"在预算内"，
+// 以 reason=confirmed 发布；随后正确读数反而被当成跳变拒掉。此时唯一拦得住它的判据是
+// **符号的精确签名**：候选正好是某个**独立视觉定位**关于地图原点的镜像（`IsMirrorOf`）。
+// 视觉定位是图像匹配，读数永远写不进它，所以这条判据不会像"拿当前位置当参照"那样自我锁死。
 namespace OcrCoordinateGate {
 
 struct Config {
@@ -38,6 +46,18 @@ struct Config {
     // 连续两次读数之间允许的差（世界单位）：走路时坐标本身在变，所以不是要求完全相同。
     double agreementToleranceUnits = 30.0;
     int requiredAgreements = 2;
+    // "候选正好是独立视觉定位的镜像"这个丢负号签名的容差（世界单位）。与
+    // CoordinateTrust::kMirrorToleranceUnits 同值：60 单位 ≈ 0.6 秒飞行的位移，
+    // 而镜像误差是 2×|坐标|（梦枢天罗那次是 494 地图像素 ≈ 410 单位）。
+    double mirrorToleranceUnits = 60.0;
+};
+
+// 一个**独立**的视觉定位（小地图图像匹配 / 全局图像匹配），用来给"符号"作证。
+// 只由视觉来源写入——读数写进来的话，一次丢负号的发布就会把真值判成镜像，反而锁死。
+struct VisualPrior {
+    bool valid = false;
+    int sceneId = 0;
+    Coordinate mapCoordinate{};
 };
 
 struct Reading {
@@ -92,15 +112,34 @@ inline double JumpBudgetUnits(const Config& config, const Lock& lock) {
         lock.secondsSinceLock * config.maximumSpeedUnitsPerSecond);
 }
 
+// 丢负号的精确签名：候选正好是独立视觉定位关于地图原点的镜像（x 轴或 y 轴）。
+// 与位移预算互补——预算看得见"跳了多远"，看不见"跳到了关于原点对称的地方"；
+// 而锁越旧、玩家走得越远，预算就越大，正是这种错最容易溜过去的时刻。
+inline bool MirrorsVisualPrior(int sceneId, const Coordinate& candidate, const VisualPrior& prior,
+    const Config& config) {
+    if (!prior.valid || prior.sceneId != sceneId) return false;
+    return CoordinateTrust::IsMirrorOf(sceneId, candidate, prior.mapCoordinate, config.mirrorToleranceUnits);
+}
+
 inline bool Acceptable(const Reading& reading, const Lock& lock, const Config& config,
-    double* jumpUnits = nullptr) {
+    double* jumpUnits = nullptr, const VisualPrior* visualPrior = nullptr,
+    const char** rejectReason = nullptr) {
     double jump = 0.0;
     bool ok = reading.valid && reading.score >= config.minimumScore;
+    const char* reason = nullptr;
+    if (ok && visualPrior != nullptr && MirrorsVisualPrior(reading.sceneId, reading.mapCoordinate,
+            *visualPrior, config)) {
+        // 只有分数门槛之上才判：低分垃圾读数本来就进不来，不必再给它一个理由。
+        ok = false;
+        reason = "sign-mirror";
+    }
     if (ok && lock.valid) {
         jump = DistanceUnits(reading.mapCoordinate, lock.mapCoordinate, lock.sceneScale);
         ok = lock.sceneId == reading.sceneId && jump <= JumpBudgetUnits(config, lock);
+        if (!ok) reason = "jump";
     }
     if (jumpUnits != nullptr) *jumpUnits = jump;
+    if (rejectReason != nullptr) *rejectReason = reason;
     return ok;
 }
 

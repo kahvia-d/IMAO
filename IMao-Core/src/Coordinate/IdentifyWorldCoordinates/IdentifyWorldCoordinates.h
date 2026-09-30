@@ -18,6 +18,11 @@ struct CoordinateRecognitionRequest {
     RECT clientRect{};
     std::optional<Coordinate> previousTrusted;
     bool useTopHatRoute = false;
+    // 这一帧没有任何位置先验可用来校验符号时，让**另一条**预处理路线也读一次，只保留两条路线
+    // 读出来的同一个位置（CoordinateCandidateParser::Corroborate）。代价是多一次推理，所以由
+    // 调用方显式打开：运行时在没有新鲜锁的帧上打开，诊断工具保持关闭——它存在的意义就是分别
+    // 看清每一条路线读出了什么。
+    bool crossCheckRoutes = false;
 };
 
 class IdentifyWorldCoordinates {

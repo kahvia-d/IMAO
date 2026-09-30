@@ -1264,6 +1264,12 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// pixel self-confirmation are only ever relative to what we already believe.
 		if (recognition || !visual || !relative) {
 			lastAbsoluteFixAt = now;
+			// 视觉来源的绝对定位单独留一份：读数的符号要拿它当参照，而它必须**只**由图像匹配写入
+			// （见 App.h 里这两个成员的注释——读数写进去会让一次丢负号的发布把真值判成镜像）。
+			if (visual && candidate.sceneId > 0) {
+				lastVisualFixMapCoordinate = candidate.mapCenter;
+				lastVisualFixAt = now;
+			}
 			// 影子预测的残差：预测值 vs 这次的真值。horizonMs 说明外推了多久，
 			// 这样"外推多准"就是可以在日志里直接分档统计的数字。
 			// 只对**有意义的**真值记录：读数/全局匹配（间隔 0.25~3 秒，正是要替代的那种空档），
@@ -1426,9 +1432,21 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						lock.sceneScale = lockedScene->scale;
 					}
 				}
+				// 符号的独立见证：**最近一次图像来源的绝对定位**（不是读数——读数会把参照带偏）。
+				// 只要它够新，就能识别"候选正好是它的镜像"这个丢负号的精确签名；而这件事位移预算
+				// 看不见：预算随锁龄放大，锁旧 + 走远了的时候窗口最大（实测 19:52:21 预算 6300、
+				// 镜像误差 965，读数以 reason=confirmed 发布，随后真值反被当成跳变拒掉）。
+				// 1.5 秒的窗口是有意的：本地追踪正常时几帧就刷新一次，追踪停摆时它自然失效。
+				OcrCoordinateGate::VisualPrior visualPrior;
+				if (playerCurrentSceneId > 0 &&
+					lastVisualFixAt != std::chrono::steady_clock::time_point{} &&
+					now - lastVisualFixAt <= std::chrono::milliseconds(1500)) {
+					visualPrior.valid = true;
+					visualPrior.sceneId = playerCurrentSceneId;
+					visualPrior.mapCoordinate = lastVisualFixMapCoordinate;
+				}
 				std::vector<const CoordinateCandidate*> ordered;
-				std::vector<const CoordinateCandidate*> repaired;
-				for (const auto& candidate : ocrResult.candidates) {
+				std::vector<const CoordinateCandidate*> repaired;				for (const auto& candidate : ocrResult.candidates) {
 					(candidate.correction.empty() ? ordered : repaired).push_back(&candidate);
 				}
 				std::sort(ordered.begin(), ordered.end(),
@@ -1515,7 +1533,19 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						reading.mapCoordinate = chosen->mapCoordinate;
 					}
 					double jumpUnits = 0.0;
-					if (!OcrCoordinateGate::Acceptable(reading, lock, ocrCoordinateGate.Settings(), &jumpUnits)) {
+					const char* rejectReason = nullptr;
+					if (!OcrCoordinateGate::Acceptable(reading, lock, ocrCoordinateGate.Settings(), &jumpUnits,
+							&visualPrior, &rejectReason)) {
+						if (rejectReason != nullptr && std::string(rejectReason) == "sign-mirror") {
+							// 记下来：这条错法就是这次要拦的东西，日志里必须能一眼数出来。
+							Diagnostics::Record("coordinate-publish-rejected", "reason=sign-mirror scene=" +
+								std::to_string(reading.sceneId) + " world=" + world +
+								" visualPrior=" + std::to_string(visualPrior.mapCoordinate.x) + "," +
+								std::to_string(visualPrior.mapCoordinate.y) +
+								" score=" + std::to_string(reading.score) +
+								" correction=" + (candidate->correction.empty() ? "none" : candidate->correction) +
+								" request=" + std::to_string(ocrResult.requestId));
+						}
 						continue;
 					}
 					// Exactly one reading per frame: the gate counts frames, so feeding the
@@ -1739,6 +1769,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// Preserve thin minus signs. OCR agreement never substitutes for
 		// independent image confirmation.
 		ocrRequest.useTopHatRoute = true;
+		// 没有新鲜锁 = 这一帧没有任何位置先验能校验符号（位移预算在锁旧 + 走远了的时候等于没有），
+		// 所以让另一条路线也读一次，只接受两条路线读出来的同一个位置。有新鲜锁时不必花这第二次
+		// 推理——位移预算在那种情况下是有效的（2026-09-30 实测的那次丢负号正是"锁旧 + 走远了"）。
+		ocrRequest.crossCheckRoutes = !ocrRequest.previousTrusted.has_value();
 		if (!IdentifyWorldCoordinates::Submit(std::move(ocrRequest))) return;
 		++ocrAttemptsForRecovery;
 		lastOcrSubmitAt = now;

@@ -16,6 +16,7 @@
 #include "HudLayoutTests.h"
 #include "DenseMapConfirmerTests.h"
 #include "OcrCoordinateGateTests.h"
+#include "OcrRouteAgreementTests.h"
 #include "CoordinateTrustTests.h"
 #include "Runtime/SnapshotChannel.h"
 #include "Runtime/FrameState.h"
@@ -986,6 +987,7 @@ int main(int argc, char** argv) {
     TestHudLayout(Expect);
     TestDenseMapConfirmer(Expect);
     TestOcrCoordinateGate(Expect);
+    TestOcrRouteAgreement(Expect);
     TestCoordinateTrust(Expect);
     TestFineViewportMotion(Expect);
 	TestMapUiStateController();

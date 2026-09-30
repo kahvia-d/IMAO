@@ -335,6 +335,14 @@ private:
     // they can only ever agree with where we already think we are - so they may bridge a moment,
     // never hold a position on their own.
     std::chrono::steady_clock::time_point lastAbsoluteFixAt{};
+    // The last position an *image* match produced, and when.  Deliberately separate from
+    // lastPlayerImgMapCoordinate, which every publish moves - including a readout, and a readout
+    // with a lost minus sign would then be the reference that makes the correct reading look like
+    // a mirror of it.  Only a visual source may write these two, so they stay independent
+    // evidence of where the player is; the readout gate uses them to recognise the exact
+    // signature of a lost minus sign (OcrCoordinateGate::MirrorsVisualPrior).
+    Coordinate lastVisualFixMapCoordinate{};
+    std::chrono::steady_clock::time_point lastVisualFixAt{};
     // 影子预测（用户 2026-09-21 的设计，第一步只测量）：每帧用记录拟合出的速度外推一个位置，
     // 1 秒记一条；下一条独立定位到来时记"预测 vs 真值"的残差。有了外推 0.5/1/2 秒的残差数字，
     // 才决定要不要在读数被丢弃时用预测**替代**冻结的位置。它绝不写入记录、绝不刷新任何确认时间戳。
