@@ -26,9 +26,12 @@
       "reason": "local trial only: the four-point calibration was measured from the user's own captures, the pack passes its reference-minimap check, and the user ran it in game; the full four-check verification and the 113-sample regression are still outstanding"
     },
     "MengshuTianluo": {
-      "approved": false,
+      "approved": true,
       "state": 912,
-      "reason": "新地图接入：上游点位、目录与瓦片已归档，地图包已按实测瓦片足迹构建，四点校准已由用户 2026-09-30 的四组截图拟合（scale 1.20700208 / origin (-0.127, -0.511) / 最大误差 0.534 px）。还缺参考小地图（包目前是未验证覆盖包）与实机四项检查，因此点位、筛选与视觉定位仍不对外开放。"
+      "approvedAtUtc": "2026-09-30T14:29:11.6499177Z",
+      "calibrationMaxErrorPixels": 0.5341559242582287,
+      "gameEvidenceSha256": "473270f6f3ac9d5c50f8aa838482b9611672f25a2ac0295304aa326fb78d07cf",
+      "validationScope": "local-capture-trial"
     }
   }
 }

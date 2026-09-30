@@ -1,0 +1,190 @@
+{
+  "formatVersion": 1,
+  "packId": "mengshutianluo-kurotiles",
+  "scene": "MengshuTianluo",
+  "sceneId": 9,
+  "resourceVersion": "C9D8F32B5FC7430A808FFCFCBE0ED9F8",
+  "generatedAtUtc": "2026-09-30T12:07:08.2483166Z",
+  "source": {
+    "static": "https://web-static.kurobbs.com",
+    "state": 912,
+    "tileSize": 1024,
+    "virtualMapSize": 850.0
+  },
+  "coordinateTransform": {
+    "originX": 0.0,
+    "originY": 0.0,
+    "scale": 1.205
+  },
+  "anchorWorldCoordinate": {
+    "x": -413.0,
+    "y": -209.0
+  },
+  "tileRadius": null,
+  "tileBounds": {
+    "minX": -1,
+    "maxX": 2,
+    "minY": -1,
+    "maxY": 2
+  },
+  "tiles": [
+    {
+      "x": -1,
+      "y": 0,
+      "file": "tiles/912_-1_0.png",
+      "sha256": "36360a53b65b3d84b8937766029370c4a9f51e73941b51ac28398d43a2cb5495"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "file": "tiles/912_-1_1.png",
+      "sha256": "fe443c7de668d6d171328f64bdeba6a68ccc4214f8700f480d7b9d958ff64fd5"
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "file": "tiles/912_0_-1.png",
+      "sha256": "fe6e20900918230006148191cc95da6a6154e21da5da7604c0ca155a083c8156"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/912_0_0.png",
+      "sha256": "4f6ef18edf5df4734ecb9972de75718a32fb102671c5975cfaaa5935aa425181"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/912_0_1.png",
+      "sha256": "6abd7359e2d2927f0fc6fe3052b10bb84316c606208c9acb53ebfafd6f871529"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "file": "tiles/912_0_2.png",
+      "sha256": "d4e8fc7a0ad21b099e77d0025e97cbff89b657ff1db9cabf699cad93ee64ae7e"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "file": "tiles/912_1_-1.png",
+      "sha256": "50fabcc3c0ffb9265a3cd0a037b64fbd96a4cea43d531e17c3431b2be8e67424"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "file": "tiles/912_1_0.png",
+      "sha256": "fcb30b3e9c6e9744723acca4366b3ffda277ce722fd7f7b0dd70be764d329160"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "file": "tiles/912_1_1.png",
+      "sha256": "87136a4b401f1bec77b280287af80b825caafdbd3c907bc4cc32c80873ad4f45"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "file": "tiles/912_1_2.png",
+      "sha256": "c932cbd65478339f5bf206e90aee0415f7d834dbd7e943a67288d56c5fdba5ab"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "file": "tiles/912_2_0.png",
+      "sha256": "13c62c1dc228f8879ad2f965aa2b2e62cc4b836cafd7ade6d89ca2106f87813e"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "file": "tiles/912_2_1.png",
+      "sha256": "d37322d983ac5d243504433639452fa23e803bda1bd4594b356e69c14a3721d3"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/layered_L60_F-1-60_912_-0_0.png",
+      "sha256": "487c2c1c0dba493360d85ba079eb39b605dfa1956b47006643721139bbc558ba"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/layered_L61_F-1-61_912_-0_0.png",
+      "sha256": "5e675f46ee7c5ecb102a824ebef6d95f59bdf31e91ccf1a89c9faaf6ac36a501"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/layered_L62_F-1-62_912_-0_0.png",
+      "sha256": "a53e367777b7d77c76dd6bc8e0cf6be0959d60706b5b9ddffed5824891958453"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "file": "tiles/layered_L63_F-1-63_912_0_0.png",
+      "sha256": "6f5f2eb72bb6d926f12de20fd7c89e22a25ed2e012d801bf79f87bbe5dd01f9b"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "file": "tiles/layered_L63_F-2-63_912_1_0.png",
+      "sha256": "2c5cb2b5fc2388e0bafc4de7a9988d56bde9ee50dea9994897039141fa2965e7"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "file": "tiles/layered_L64_F-1-64_912_1_0.png",
+      "sha256": "6d14c38da7c2ae2b2646c27bc10d1b458719ed90817f528c797b9232548f73d7"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "file": "tiles/layered_L64_F-2-64_912_1_1.png",
+      "sha256": "b8a3d71108971ac9d4d05a1121c0d0132d5af6f27299df90a65be0924c0b55ab"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "file": "tiles/layered_L65_F-1-65_912_-0_1.png",
+      "sha256": "9718fb7ab47d4dce14c1bafb0defe89f20dc433aabc2bb47306f95f5500a347d"
+    }
+  ],
+  "missingTileCount": 4,
+  "layeredTileCount": 8,
+  "coordinateBounds": {
+    "maxX": 1472.4129638671875,
+    "maxY": 1558.480224609375,
+    "minX": -1438.016845703125,
+    "minY": -1358.9178466796875
+  },
+  "referenceVerification": {
+    "errorPixels": 2.7453391909920266,
+    "expectedMapCoordinate": {
+      "x": -498.61869674274095,
+      "y": -252.77474998194248
+    },
+    "geometryDiagnostic": {
+      "inliers": 13,
+      "mapX": -500.43009495070083,
+      "mapY": -254.78883242907642,
+      "rotationDegrees": 0.08188915331100005,
+      "scale": 1.0732038055985145
+    },
+    "goodMatches": 17,
+    "mapKeypoints": 1145,
+    "minimapKeypoints": 110,
+    "nearAnchorMatches": 14,
+    "passed": true,
+    "reference": "mengshutianluo.png",
+    "resultMapCoordinate": {
+      "x": -501.12976683741033,
+      "y": -253.8844410440196
+    }
+  },
+  "features": {
+    "file": "features.yml",
+    "sha256": "ca6609490394eac936c522e8bd8ea0f515f60b568b3bc977577a0effdab587ed",
+    "keypointCount": 41424,
+    "extractedKeypointCount": 41424
+  }
+}

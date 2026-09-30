@@ -1,17 +1,18 @@
 {
   "formatVersion": 1,
   "packs": [
+    "avinoleum",
+    "blackshores",
+    "darkplain",
+    "fabricatorium",
     "jinzhou",
-    "mengzhou",
     "laguna",
+    "lahai",
+    "lowervault",
+    "mengshutianluo",
+    "mengzhou",
     "qiqiu",
     "roysurface",
-    "blackshores",
-    "lahai",
-    "darkplain",
-    "lowervault",
-    "avinoleum",
-    "fabricatorium",
     "tethys",
     "timeriftruins"
   ]
