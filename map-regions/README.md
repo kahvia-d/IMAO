@@ -269,6 +269,16 @@ pwsh -File scripts\Approve-KuroSceneRelease.ps1 -Region <id> -GameEvidencePath <
 > 归档的新 frame 与既有 frame 不会在同一个目录里，这是设计如此，不是错误。
 > 上游对 `x = 0` 有 `0_0.png` 与 `-0_0.png` 两种拼法，脚本按解析后的整数拼地表瓦片名——
 > 直接拿图层文件名去拼会静默跳过那些层。
+>
+> **试用树必须用 `-IsolateTrialState` 建**（`scripts/New-MapTestTree.ps1`）。快照模式下运行时
+> **只读 `Assets/Updates/bundled-snapshot.json` 里列的包**，而那份快照是从源码 registry 生成的
+> （不含未开放地区）；`Assets/Updates` 若只是指向构建产物的联接，**下一次构建就会把快照换成没有
+> 这个地区包的版本**，包静默消失、`scene9` 在视觉索引里归零、客户端一直显示"正在恢复定位"。
+> 同理 `Assets/KuroMap` 的 `approved` 标记也必须落在树自己的拷贝里：
+> ```powershell
+> pwsh -File scripts\New-MapTestTree.ps1 -PackRegionId <id> -IsolateTrialState -ApproveScene <Scene>
+> pwsh -File scripts\Refresh-MapTestBinaries.ps1   # 会核对"装了但不在快照里"的包并警告
+> ```
 
 ### 锚点：它是一条**观测**，不是一个要走去对齐的坐标
 

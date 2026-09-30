@@ -16,6 +16,15 @@ param(
     # Copy the binaries even when the run root already has them. They are locked while the
     # application is running, and only Assets change between rebuilds.
     [switch]$RefreshBinaries,
+    # Copy (rather than link) the two Assets entries that carry trial state - Updates/ (the bundled
+    # snapshot the runtime loads packs from) and KuroMap/ (the scene approval flag) - so that a later
+    # staging run cannot silently revert this tree to the source's state. Use it for any tree that
+    # tests a region the repo has not opened yet; see the comment at step 2.
+    [switch]$IsolateTrialState,
+    # Comma-separated scene names to mark approved in THIS tree only, with
+    # validationScope="staged-dev-tree-only". Requires -IsolateTrialState. The source repo keeps
+    # such a scene at approved=false until Approve-KuroSceneRelease.ps1 opens it for real.
+    [string]$ApproveScene,
     [string]$SourceRoot
 )
 
@@ -70,13 +79,32 @@ Write-Host "  binaries: $copiedBinaries copied, $skippedBinaries already present
 
 # 2. Assets. Everything links to the source tree except the two levels that must be
 #    replaceable: FeaturesDatas/KuroTilePacks and FeaturesDatas/kuro-tile-packs.json.
+#
+#    Two entries additionally carry TRIAL state, and linking them is what silently reverts a trial:
+#      * Updates/bundled-snapshot.json is the list the runtime loads packs from in snapshot mode
+#        (KuroTileFeaturePack::LoadRegistered walks snapshot.packages and never reads the registry),
+#        and staging rewrites it from the source registry - which does not name an unopened region.
+#        2026-09-30: a rebuild wrote it through the junction, 梦枢天罗's pack dropped out of the
+#        snapshot, the runtime loaded 13 packs instead of 14, scene 9 had no imagery, and the client
+#        sat on "正在恢复定位" for the whole session.
+#      * KuroMap/scene-validation.json carries the `approved` flag that lets an unopened region's pack
+#        load at all, and staging rewrites it back to false.
+#    -IsolateTrialState copies those two instead of linking them, so a later build cannot touch them.
 $runAssets = Join-Path $RunRoot 'Assets'
 if (Test-Path -LiteralPath $runAssets) { Remove-Item -LiteralPath $runAssets -Recurse -Force }
 [IO.Directory]::CreateDirectory($runAssets) | Out-Null
+$isolated = [Collections.Generic.List[string]]::new()
+$statefulEntries = if ($IsolateTrialState) { @('Updates', 'KuroMap') } else { @() }
 foreach ($entry in @(Get-ChildItem -LiteralPath $assetsRoot -Force)) {
     if ($entry.Name -eq 'FeaturesDatas') { continue }
+    if ($statefulEntries -contains $entry.Name) {
+        Copy-Item -LiteralPath $entry.FullName -Destination (Join-Path $runAssets $entry.Name) -Recurse -Force
+        $isolated.Add($entry.Name)
+        continue
+    }
     New-LinkedEntry (Join-Path $runAssets $entry.Name) $entry.FullName
 }
+if ($isolated.Count -gt 0) { Write-Host "  copied (not linked)  : $($isolated -join ', ')" }
 $runFeatureDatas = Join-Path $runAssets 'FeaturesDatas'
 [IO.Directory]::CreateDirectory($runFeatureDatas) | Out-Null
 foreach ($entry in @(Get-ChildItem -LiteralPath (Join-Path $assetsRoot 'FeaturesDatas') -Force)) {
@@ -225,10 +253,37 @@ $registry = [ordered]@{
 $registryPath = Join-Path $runFeatureDatas 'kuro-tile-packs.json'
 [IO.File]::WriteAllText($registryPath, (($registry | ConvertTo-Json -Depth 4) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
 
+# 7. Trial approval. The source repo keeps an unreviewed scene at approved=false and out of the
+#    registry on purpose; opening one in the run root only is what makes it testable in game. This
+#    needs the copy of KuroMap that -IsolateTrialState makes, or the patch would land in the build
+#    output and be wiped by the next staging run.
+$approvedScenes = [Collections.Generic.List[string]]::new()
+if ($ApproveScene) {
+    $validationPath = Join-Path $runAssets 'KuroMap/scene-validation.json'
+    if (-not (Test-Path -LiteralPath $validationPath)) { throw "The run root has no scene-validation.json: $validationPath" }
+    if (-not $IsolateTrialState) {
+        throw ('-ApproveScene needs -IsolateTrialState: without it this tree''s KuroMap/ is a link to the ' +
+            'build output, so the approval would be written into the build output and the next staging run would revert it.')
+    }
+    $validation = Get-Content -LiteralPath $validationPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($scene in @($ApproveScene -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })) {
+        $node = $validation.scenes.PSObject.Properties[$scene]
+        if ($null -eq $node) {
+            throw "scene-validation.json has no scene '$scene'. Known: $(($validation.scenes.PSObject.Properties.Name) -join ', ')"
+        }
+        $node.Value.approved = $true
+        $node.Value | Add-Member -NotePropertyName validationScope -NotePropertyValue 'staged-dev-tree-only' -Force
+        $approvedScenes.Add($scene)
+    }
+    [IO.File]::WriteAllText($validationPath, (($validation | ConvertTo-Json -Depth 10) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
+}
+
 Write-Host "Test run root ready: $RunRoot" -ForegroundColor Green
 Write-Host "  binaries copied from : $BinaryRoot (its Assets untouched)"
 Write-Host "  rebuilt packs        : $($replaced -join ', ')"
 Write-Host "  excluded old packs   : $($excluded -join ', ')"
 Write-Host "  snapshot tile packs  : $($snapshotPackDirs -join ', ')   <- what the runtime actually loads"
 Write-Host "  Assets cloned from   : $assetsRoot (untouched)"
+Write-Host "  trial-only isolation : $(if ($isolated.Count -gt 0) { $isolated -join ', ' } else { 'none (links to the build output; a staging run can revert this tree)' })"
+Write-Host "  approved in this tree: $(if ($approvedScenes.Count -gt 0) { $approvedScenes -join ', ' } else { 'none' })"
 Write-Host "Launch: $RunRoot\IMao-WinUI.exe"

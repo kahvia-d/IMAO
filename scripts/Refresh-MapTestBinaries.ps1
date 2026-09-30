@@ -192,4 +192,34 @@ else {
     Write-Host ('run root runtime: self-contained ({0} frameworks), hostpolicy/coreclr/CoreLib present' -f `
             $runOptions.includedFrameworks.Count)
 }
+
+# A pack that is installed but not named by the snapshot is a pack the runtime will never load,
+# because KuroTileFeaturePack::LoadRegistered walks snapshot.packages and never reads
+# kuro-tile-packs.json. That is invisible from every other angle - the directory is there, the
+# registry names it, the layered indices resolve - so it is checked here, where it is cheap.
+# 2026-09-30: a staging run rewrote the shared Assets/Updates/bundled-snapshot.json through the
+# junction out/map-test/Assets/Updates, 梦枢天罗's pack fell out of the snapshot, and the client
+# localized nothing at all while looking perfectly healthy.
+$runSnapshotPath = Join-Path $RunRoot 'Assets/Updates/bundled-snapshot.json'
+$snapshotTileDirs = @()
+if (Test-Path -LiteralPath $runSnapshotPath) {
+    $snapshot = Get-Content -LiteralPath $runSnapshotPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $snapshotTileDirs = @($snapshot.packages | Where-Object { [string]$_.kind -eq 'tile' } |
+        ForEach-Object { ($_.directory -split '/')[-1] } | Sort-Object -Unique)
+    $installedDirs = @(Get-ChildItem -LiteralPath $packsRoot -Directory -ErrorAction SilentlyContinue |
+        ForEach-Object { $_.Name } | Sort-Object -Unique)
+    $notLoaded = @($installedDirs | Where-Object { $snapshotTileDirs -notcontains $_ })
+    Write-Host ''
+    Write-Host ('snapshot tile packs ({0}): {1}' -f $snapshotTileDirs.Count, ($snapshotTileDirs -join ', '))
+    if ($notLoaded.Count -gt 0) {
+        Write-Warning ('installed but NOT in the snapshot, so the runtime will never load: {0}' -f ($notLoaded -join ', '))
+        Write-Warning ('  fix: pwsh -File scripts\New-MapTestTree.ps1 -PackRegionId {0} -IsolateTrialState -ApproveScene <scene>' -f ($notLoaded -join ','))
+    }
+    $updates = Get-Item -LiteralPath (Join-Path $RunRoot 'Assets/Updates') -Force
+    if ($updates.LinkType) {
+        Write-Warning ('Assets/Updates is a {0} to the build output: the next staging run replaces the snapshot ' +
+            'above and can drop packs from it. Re-run New-MapTestTree.ps1 -IsolateTrialState to make this tree own it.' -f $updates.LinkType)
+    }
+}
+else { Write-Warning "the run root has no bundled snapshot: $runSnapshotPath" }
 Write-Host 'Launch with: out\map-test\IMao-WinUI.exe   (administrator, game running; any client aspect ratio)'
