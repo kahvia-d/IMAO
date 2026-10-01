@@ -60,7 +60,10 @@ public:
     // component is already "Auto"/"Hand" is recognised, so both older callers and the service
     // can construct this without caring which form they hold.
     explicit RoutePlanStore(std::filesystem::path directory):root(ResolveRoot(std::move(directory))){}
-    void Save(const Plan& plan,bool makeActive=false) const {
+    // The document a route is stored as. It is public because the export bundle has to hold exactly
+    // this: one schema written by one function, so a route that survives being saved always survives
+    // being carried to another machine.
+    static Json Document(const Plan& plan) {
         Validate(plan);
         Json stops=Json::array();
         for(const auto& p:plan.stops) stops.push_back({{"stateId",p.layer.stateId},{"pointId",p.itemId},
@@ -69,7 +72,7 @@ public:
             // Written for every stop, including official ones: the reader must never have to
             // guess whether an empty nameId means "a new kind of stop" or "a corrupt file".
             {"kind",p.layer.stopKind==StopKind::Free?"free":"catalog"}});
-        const Json doc={{"formatVersion",1},{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},
+        return {{"formatVersion",1},{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},
             {"sceneId",plan.sceneId},{"start",StartJson(plan.start)},{"stops",std::move(stops)},{"skipHistory",plan.skipHistory},
             // A missing field on an older file means "not a farming route", which is the only
             // safe reading: turning the mode on by default would auto-mark points on routes the
@@ -84,7 +87,9 @@ public:
             // routes have always been shown. Written for every route so the reader never has to
             // guess, the same way `kind` is written for every stop.
             {"collection",NormalizeCollectionId(plan.collection)}};
-        WriteTextAtomically(Path(plan.profileId,plan.id,plan.handDrawn),doc.dump(2));
+    }
+    void Save(const Plan& plan,bool makeActive=false) const {
+        WriteTextAtomically(Path(plan.profileId,plan.id,plan.handDrawn),Document(plan).dump(2));
         if(makeActive)WriteTextAtomically(ActivePath(plan.profileId),
             Json({{"formatVersion",1},{"routeId",plan.id},{"handDrawn",plan.handDrawn}}).dump(2));
     }

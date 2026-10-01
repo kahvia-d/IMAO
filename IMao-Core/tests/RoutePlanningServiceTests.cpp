@@ -1,6 +1,7 @@
 #include "RoutePlanningServiceTestHost.h"
 #include "Runtime/RoutePlanStore.h"
 #include "Runtime/RouteCollections.h"
+#include "Runtime/RouteBundle.h"
 #include "Runtime/RouteViewportCandidates.h"
 #include "Runtime/RouteToolbarNavigation.h"
 #include "Runtime/OverlayPanelLayout.h"
@@ -483,6 +484,139 @@ void VerifyFarmMode(){
             "a route saved without the farming setting must not inherit the previous route's mode");
     }
 }
+// A route package is what one player hands to another. It holds the very documents the store writes,
+// because a route that survives being saved has to survive being carried; and the file itself says
+// whether it is a whole collection or a handful of routes, so importing never asks the player to
+// classify a file the file already describes.
+void VerifyRouteBundle(){
+    // Collections live in memory for the life of the process, so a clean slate is made through the
+    // service rather than by rewriting the file behind its back.
+    const auto before=[&]{return RoutePlanningService::Snapshot().at("collections");}();
+    for(const auto& row:before)
+        if(!row.value("system",false))
+            RoutePlanningService::Command({{"action","collectionDelete"},{"collectionId",row.value("id",std::string{})}});
+    AutoRoute::RoutePlanStore store(StructuredLogger::root/"SavedRoutes"/"Auto");
+    const auto refused=[&](Json command){return !RoutePlanningService::Command(command).value("accepted",false);};
+    const auto message=[&](){return RoutePlanningService::Snapshot().value("message",std::string{});};
+    const auto exported=[&](const std::filesystem::path& path){
+        std::ifstream input(path,std::ios::binary);
+        if(!input)return Json(nullptr);
+        return Json::parse(std::string(std::istreambuf_iterator<char>(input),{}));
+    };
+    const auto root=AutoRoute::Utf8Text(StructuredLogger::root);
+    // The folder and the files are named in Chinese on purpose: the path arrives from the interface
+    // as UTF-8, and a narrow std::filesystem::path would read it in the process code page. Every path
+    // here is therefore built from UTF-8 text, never by appending a literal to a path.
+    const auto under=[&](const std::string& name){return AutoRoute::Utf8Path(root+"/路线包/"+name);};
+    const auto collectionPath=under("宝箱路线.json");
+    const auto routesPath=under("选中的路线.json");
+    // A template route written by the service itself, so every clone of it resolves against the
+    // catalogue this harness installed.
+    Command({{"action","new"},{"sceneId",1}});
+    Command({{"action","setStart"},{"sceneId",1},{"x",100},{"y",0}});
+    {
+        const auto* scene=Scene::Find(1);
+        std::vector<std::string> keys;
+        for(const auto* id:{"alpha","beta","gamma"})keys.push_back(std::to_string(scene->kuroStateId)+":"+id);
+        Command({{"action","add"},{"keys",keys}});
+    }
+    Command({{"action","generate"}});
+    {
+        const auto deadline=Clock::now()+3s;
+        while(!RoutePlanningService::View().preview&&Clock::now()<deadline)std::this_thread::sleep_for(10ms);
+    }
+    Command({{"action","activate"}});
+    const auto template_=*RoutePlanningService::View().active;
+    Command({{"action","stop"}});
+    const auto write=[&](const std::string& id,const std::string& name,const std::string& collection){
+        auto plan=template_;plan.id=id;plan.name=name;plan.collection=collection;
+        plan.skipped.clear();plan.skipHistory.clear();store.Save(plan,false);
+    };
+    const auto rowIdByName=[&](const std::string& name)->std::string{
+        const auto rows=RoutePlanningService::Snapshot().at("savedRoutes");
+        for(const auto& row:rows)if(row.value("name",std::string{})==name)return row.value("id",std::string{});
+        return {};
+    };
+
+    Command({{"action","collectionNew"},{"name","待导出"}});
+    const auto sourceId=RoutePlanningService::Snapshot().value("currentCollection",std::string{});
+    write("bundle-a","甲路线",sourceId);
+    write("bundle-b","乙路线",sourceId);
+    write("bundle-c","丙路线",AutoRoute::DefaultCollectionId);
+    Command({{"action","list"}});
+
+    // Exporting a whole collection.
+    Command({{"action","export"},{"path",AutoRoute::Utf8Text(collectionPath)},{"collectionId",sourceId}});
+    Check(std::filesystem::exists(collectionPath),"a bundle is written where the path says, Chinese folder and all");
+    {
+        const auto document=exported(collectionPath);
+        Check(document.is_object()&&document.value("kind",std::string{})=="collection"&&
+            document.value("formatVersion",0)==1&&document.value("app",std::string{})=="IMao",
+            "a collection bundle says what it is and which format it is in");
+        Check(document.at("collection").value("name",std::string{})=="待导出",
+            "a collection bundle carries the collection's name, which is the only thing that names it on the other side");
+        Check(document.at("routes").size()==2,"a collection bundle holds exactly the routes filed in that collection");
+        // Verbatim: the bundle route and the stored route have to be the same document, or a route
+        // would survive a save and not a transfer.
+        std::ifstream stored(AutoRoute::Utf8Path(root+"/SavedRoutes/Auto/local/bundle-a.json"),std::ios::binary);
+        const auto storedDocument=Json::parse(std::string(std::istreambuf_iterator<char>(stored),{}));
+        const auto inBundle=[&](){
+            for(const auto& entry:document.at("routes"))
+                if(entry.value("id",std::string{})=="bundle-a")return entry;
+            return Json(nullptr);}();
+        Check(inBundle==storedDocument,"the route inside a bundle is byte for byte the document the store writes");
+    }
+    Check(message().find("2 条路线")!=std::string::npos&&message().find("宝箱路线.json")!=std::string::npos,
+        "the report says how many routes were exported and which file they went to");
+
+    // Exporting a hand-picked batch produces the other kind, and carries no collection at all.
+    Command({{"action","export"},{"path",AutoRoute::Utf8Text(routesPath)},
+        {"routeIds",Json::array({"bundle-a","bundle-c"})}});
+    {
+        const auto document=exported(routesPath);
+        Check(document.value("kind",std::string{})=="routes"&&!document.contains("collection"),
+            "a bundle of picked routes is not a collection and does not pretend to be one");
+        Check(document.at("routes").size()==2,"a bundle of picked routes holds exactly the ones that were picked");
+    }
+
+    // The default collection is exportable like any other: it is only special in that it always exists.
+    Command({{"action","export"},{"path",AutoRoute::Utf8Text(under("默认合集.json"))},{"collectionId",AutoRoute::DefaultCollectionId}});
+    {
+        const auto document=exported(under("默认合集.json"));
+        bool carried=false;
+        for(const auto& entry:document.at("routes"))if(entry.value("id",std::string{})=="bundle-c")carried=true;
+        Check(document.value("kind",std::string{})=="collection"&&carried,
+            "the default collection exports like any other collection");
+    }
+
+    Check(refused({{"action","export"},{"path",AutoRoute::Utf8Text(under("none.json"))},{"routeIds",Json::array()}}),
+        "exporting nothing is refused rather than written as an empty bundle");
+    Check(refused({{"action","export"},{"path",AutoRoute::Utf8Text(under("none.json"))},{"collectionId","no-such-collection"}}),
+        "exporting a collection that does not exist is refused");
+    Check(refused({{"action","export"},{"path",""},{"collectionId",sourceId}}),
+        "exporting without a destination is refused");
+    Check(refused({{"action","export"},{"collectionId",sourceId}}),
+        "exporting without a destination at all is refused");
+    Check(refused({{"action","export"},{"path",AutoRoute::Utf8Text(under("bad.json"))},{"routeIds",Json::array({"no-such-route"})}}),
+        "exporting routes that cannot be read is refused instead of writing an empty bundle");
+    Check(!std::filesystem::exists(under("bad.json")),"a refused export writes no file");
+
+    // One damaged route must not cost the player the rest of the collection: what can be read is
+    // exported, and the report says that something was left out. The damaged route is the one in the
+    // default collection, because a file that cannot be parsed cannot say which collection it was in
+    // — reading it there is the only safe answer, and that is what makes it visible to this export.
+    WriteTextAtomically(AutoRoute::Utf8Path(root+"/SavedRoutes/Auto/local/bundle-c.json"),"{not a route");
+    Command({{"action","list"}});
+    Command({{"action","export"},{"path",AutoRoute::Utf8Text(under("部分.json"))},{"collectionId",AutoRoute::DefaultCollectionId}});
+    {
+        const auto document=exported(under("部分.json"));
+        bool carriedDamaged=false;
+        for(const auto& entry:document.at("routes"))if(entry.value("id",std::string{})=="bundle-c")carriedDamaged=true;
+        Check(!carriedDamaged,"a collection with a damaged route does not carry that route into the bundle");
+    }
+    Check(message().find("条读不出来")!=std::string::npos,"the report names that some routes were left out");
+}
+
 // The route list is the one place a point type is described to the shell. The shell cannot resolve
 // it by itself — the filter catalogue it holds knows far fewer identifiers than routes actually use
 // — so the core has to send both the game's name and the resolved icon path.
@@ -798,6 +932,7 @@ int main(int argc,char** argv){
         VerifyFarmMode();
         VerifyRouteListShape();
         VerifyCollections();
+        VerifyRouteBundle();
     }catch(const std::exception& e){++failures;std::cerr<<"UNEXPECTED: "<<e.what()<<'\n';}
     RoutePlanningService::Shutdown();
     std::cout<<"RoutePlanningService harness failures="<<failures<<'\n';return failures?1:0;

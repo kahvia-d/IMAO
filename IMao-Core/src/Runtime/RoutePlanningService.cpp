@@ -1,6 +1,7 @@
 #include "RoutePlanningService.h"
 #include "RoutePlanStore.h"
 #include "RouteCollections.h"
+#include "RouteBundle.h"
 #include "LegacyHandRouteImportFile.h"
 #include "HandDrawnRoute.h"
 #include "FarmMode.h"
@@ -1156,6 +1157,45 @@ Json RoutePlanningService::Command(const Json& command){
             if(!failure.empty())
                 throw std::runtime_error("有路线没能移动（"+failure+"），已移动 "+std::to_string(moved)+" 条");
             r.message="已把 "+std::to_string(moved)+" 条路线移到「"+CollectionNameLocked(target)+"」";
+        }else if(action=="export"){
+            // `routeIds` for a hand-picked batch and `collectionId` for a whole collection: never
+            // `routeId`, which the pre-action fence would refuse for every route but the active one.
+            if(!command.contains("path"))throw std::invalid_argument("请先选择要保存的位置");
+            const auto path=AutoRoute::Utf8Path(command.at("path").get<std::string>());
+            const bool wholeCollection=command.contains("collectionId");
+            std::vector<AutoRoute::Plan> plans;std::string target;
+            std::size_t unreadable=0;
+            if(wholeCollection){
+                const auto id=AutoRoute::NormalizeCollectionId(command.at("collectionId").get<std::string>());
+                if(!AutoRoute::RouteCollections::Exists(r.collections,id))throw std::runtime_error("要导出的合集不存在");
+                target=CollectionNameLocked(id);
+                for(const auto& row:r.saved){
+                    if(!AutoRoute::SameRouteId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}),id))continue;
+                    // A route whose file is damaged, or whose points no longer resolve against the
+                    // current resources, is skipped rather than failing the export: the player is
+                    // asking to keep what they have, and one bad row is not a reason to hand them
+                    // nothing. The count is reported so the gap is never silent.
+                    if(row.value("corrupt",false)){++unreadable;continue;}
+                    try {plans.push_back(r.store->Load(r.profile,row.value("id",std::string{}),ResolveLocked));}
+                    catch(const std::exception&){++unreadable;}
+                }
+                if(plans.empty())throw std::runtime_error("合集「"+target+"」里没有能导出的路线");
+            }else{
+                const auto ids=command.at("routeIds").get<std::vector<std::string>>();
+                if(ids.empty())throw std::invalid_argument("请先选择要导出的路线");
+                for(const auto& routeId:ids){
+                    try {plans.push_back(r.store->Load(r.profile,routeId,ResolveLocked));}
+                    catch(const std::exception&){++unreadable;}
+                }
+                if(plans.empty())throw std::runtime_error("选中的路线都读不出来，无法导出");
+            }
+            AutoRoute::RouteBundle::Save(path,AutoRoute::RouteBundle::Write(wholeCollection,target,plans));
+            r.message="已导出 "+std::to_string(plans.size())+" 条路线到「"+
+                AutoRoute::Utf8Text(path.filename())+"」"+
+                (unreadable? "（有 "+std::to_string(unreadable)+" 条读不出来，没有导出）":"");
+            StructuredLogger::Record("info","routes","route-bundle-exported",
+                "kind="+std::string(wholeCollection?"collection":"routes")+" routes="+std::to_string(plans.size())+
+                " skipped="+std::to_string(unreadable)+" path="+AutoRoute::Utf8Text(path));
         }else if(action=="pause"){r.runRequested=false;InvalidateAutoLocked();r.message="导航已暂停；如需隐藏并结束路线，请退出导航";}
         else if(action=="resume"){
             if(!r.active)throw std::runtime_error("请先加载或生成路线");InvalidateLocked();r.runRequested=true;r.enabled=false;r.tool="pan";r.message="已继续导航";
