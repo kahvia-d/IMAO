@@ -58,6 +58,12 @@ struct Plan {
     // Like the farming setting this belongs to the route: a route built for 叮叮咚 is a route
     // the player wants to see only 叮叮咚 on.
     bool filterByRoute = true;
+    // Which collection the route is filed under. It is a field of the route rather than a folder,
+    // because the store already reads every route file to describe it in the list — one more key
+    // costs nothing, while a folder would make listing recursive and would have to be taught to
+    // Load, Delete and the active pointer. `default` is reserved and always exists, so a route
+    // file written before collections existed already belongs to the default collection.
+    std::string collection = "default";
 };
 struct SolveResult {
     std::vector<ItemDatas> stops;

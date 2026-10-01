@@ -3,6 +3,7 @@
 #include "Runtime/FarmMode.h"
 #include "Runtime/RouteGeometry.h"
 #include "Runtime/RoutePlanStore.h"
+#include "Runtime/RouteCollections.h"
 #include "Runtime/LegacyHandRouteImportFile.h"
 #include "Runtime/PlanningEscapeKey.h"
 #include "Runtime/RuntimeHotkeys.h"
@@ -215,6 +216,29 @@ void StoreTests() {
     WriteTextAtomically(planPath, beforeFarmMode.dump());
     Expect(!store.Load("local", "route-1", resolver).farmMode,
         "a route file written before farming mode existed is not a farming route");
+    // Collections are a field of the route, so a route keeps its collection through the same
+    // roundtrip as everything else, and a file written before collections existed reads as the
+    // default collection rather than as "no collection at all".
+    Expect(document.at("collection").get<std::string>() == AutoRoute::DefaultCollectionId,
+        "every saved route records a collection, so the reader never has to guess");
+    auto filed = plan; filed.collection = "chest-runs";
+    store.Save(filed, false);
+    Expect(store.Load("local", "route-1", resolver).collection == "chest-runs",
+        "a route's collection survives save and load");
+    Expect(store.List("local").front().at("collection").get<std::string>() == "chest-runs",
+        "listing a profile reports which collection each route is filed under");
+    auto beforeCollections = document;
+    WriteTextAtomically(planPath, beforeCollections.dump());
+    Expect(store.Load("local", "route-1", resolver).collection == AutoRoute::DefaultCollectionId &&
+        store.List("local").front().at("collection").get<std::string>() == AutoRoute::DefaultCollectionId,
+        "a route file written before collections existed belongs to the default collection");
+    // A hand-edited or truncated value must not make the route unloadable: the route stays visible
+    // and usable, and the only safe reading is the one every player already has.
+    auto scribbled = document; scribbled["collection"] = "../escape";
+    WriteTextAtomically(planPath, scribbled.dump());
+    Expect(store.Load("local", "route-1", resolver).collection == AutoRoute::DefaultCollectionId &&
+        store.List("local").front().at("collection").get<std::string>() == AutoRoute::DefaultCollectionId,
+        "an unusable collection id reads as the default collection instead of hiding the route");
     store.Save(plan, false);
     auto invalidHistory = plan; invalidHistory.skipHistory.push_back(plan.skipHistory.front());
     RejectsAny([&] { store.Save(invalidHistory); }, "duplicate skip undo history rejected");
@@ -308,6 +332,118 @@ void StoreTests() {
     for (const auto& entry : fs::directory_iterator(planPath.parent_path()))
         Expect(entry.path().filename().string().find(".tmp-") == std::string::npos, "atomic save leaves no abandoned temporary files");
 }
+// The collections index: which collections exist, what they are called, and which one the player
+// is currently in. It is a per-profile file beside the route folders, because one collection spans
+// both `Auto/` and `Hand/`.
+void CollectionIndexTests() {
+    namespace fs = std::filesystem;
+    using Json = nlohmann::json;
+    using Index = AutoRoute::RouteCollections::Index;
+    const auto base = fs::weakly_canonical(fs::temp_directory_path());
+    const auto folder = base / ("imao-collection-tests-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64()));
+    if (!fs::create_directory(folder)) throw std::runtime_error("collection test directory already exists");
+    struct Cleanup {
+        fs::path folder, base;
+        ~Cleanup() {
+            std::error_code error;
+            const auto resolved = fs::weakly_canonical(folder, error);
+            if (!error && resolved.parent_path() == base && resolved.filename().string().starts_with("imao-collection-tests-"))
+                fs::remove_all(resolved, error);
+        }
+    } cleanup{folder, base};
+    const auto read = [](const fs::path& path) { std::ifstream input(path, std::ios::binary); return std::string(std::istreambuf_iterator<char>(input), {}); };
+    AutoRoute::RouteCollections collections(folder / "SavedRoutes" / "Auto");
+    const auto indexPath = folder / "SavedRoutes" / "Collections" / "local.json";
+    Expect(collections.Path("local") == indexPath,
+        "the index lives beside the route folders, so one collection can span auto and hand routes");
+
+    // Nothing on disk yet: the default collection is not stored anywhere, it simply always exists.
+    const auto fresh = collections.Load("local");
+    Expect(fresh.collections.empty() && fresh.current == AutoRoute::DefaultCollectionId,
+        "a profile with no index file has the default collection and nothing else");
+    Expect(AutoRoute::RouteCollections::Exists(fresh, AutoRoute::DefaultCollectionId),
+        "the default collection exists even though it is never written down");
+
+    Index index;
+    index.collections.push_back({"chest-runs", "宝箱路线", 1790000000000});
+    index.collections.push_back({"herbs", "采集", 1790000001000});
+    index.current = "herbs";
+    collections.Save("local", index);
+    const auto restored = collections.Load("local");
+    Expect(restored.current == "herbs" && restored.collections.size() == 2 &&
+        restored.collections[0].id == "chest-runs" && restored.collections[0].name == "宝箱路线" &&
+        restored.collections[0].createdUnixMs == 1790000000000 && restored.collections[1].name == "采集",
+        "the collections index round-trips ids, names, creation order and the current collection");
+    Expect(AutoRoute::RouteCollections::Find(restored, "CHEST-RUNS") != nullptr,
+        "collection ids are matched case-insensitively, like route ids");
+    Expect(AutoRoute::RouteCollections::FindByName(restored, "宝箱路线") != nullptr &&
+        AutoRoute::RouteCollections::FindByName(restored, "没有这个") == nullptr,
+        "a collection can be found by the name the player sees");
+    Expect(AutoRoute::RouteCollections::Find(restored, AutoRoute::DefaultCollectionId) == nullptr,
+        "the default collection is not one of the stored rows");
+
+    // A pointer left behind by a deleted collection must never survive a *read*: the file is
+    // written by hand here, because Save would have normalised the value before it reached disk.
+    collections.Save("local", index);
+    auto orphaned = Json::parse(read(indexPath));
+    orphaned["current"] = "deleted-already";
+    WriteTextAtomically(indexPath, orphaned.dump());
+    Expect(collections.Load("local").current == AutoRoute::DefaultCollectionId &&
+        collections.Load("local").collections.size() == 2,
+        "a current collection that no longer exists falls back to the default collection");
+    collections.Save("local", Index{});
+    Expect(collections.Load("local").current == AutoRoute::DefaultCollectionId,
+        "saving an empty index keeps the default collection current");
+
+    // Names are display-only, so the rules are the ones a row needs and nothing more.
+    Expect(AutoRoute::RouteCollections::TrimName("  宝箱路线  ") == "宝箱路线" &&
+        AutoRoute::RouteCollections::TrimName(" \t\r\n ").empty(),
+        "a collection name is trimmed, and one that is only whitespace is empty");
+    Expect(AutoRoute::RouteCollections::IsValidName("宝箱路线") &&
+        AutoRoute::RouteCollections::IsValidName(std::string(40, 'a')) &&
+        !AutoRoute::RouteCollections::IsValidName(std::string(41, 'a')),
+        "a collection name is measured in characters, so forty of them fit and forty-one do not");
+    Expect(AutoRoute::RouteCollections::CodePointCount("宝箱") == 2 && AutoRoute::RouteCollections::CodePointCount("ab") == 2,
+        "the name limit counts characters rather than bytes, so Chinese names are not cut short");
+    Expect(!AutoRoute::RouteCollections::IsValidName("bad\nname") && !AutoRoute::RouteCollections::IsValidName(""),
+        "a collection name cannot be empty or carry a control character into a log line");
+    Expect(AutoRoute::RouteCollections::UniqueName(restored, "宝箱路线") == "宝箱路线 (2)" &&
+        AutoRoute::RouteCollections::UniqueName(restored, "新合集") == "新合集" &&
+        AutoRoute::RouteCollections::UniqueName(restored, AutoRoute::DefaultCollectionName) == std::string(AutoRoute::DefaultCollectionName) + " (2)",
+        "a name that is already taken gets a numbered suffix, and a free one is kept as typed");
+
+    // The name is not a path, so it may hold anything a row can show; the id still may not.
+    Index bad;
+    bad.collections.push_back({"../escape", "宝箱路线", 0});
+    RejectsAny([&] { collections.Save("local", bad); }, "a collection id that is a path is rejected on save");
+    bad.collections.clear();
+    bad.collections.push_back({AutoRoute::DefaultCollectionId, "我的默认", 0});
+    RejectsAny([&] { collections.Save("local", bad); }, "the default collection cannot be written into the index");
+    bad.collections.clear();
+    bad.collections.push_back({"ok-id", "bad\nname", 0});
+    RejectsAny([&] { collections.Save("local", bad); }, "an unusable collection name is rejected on save");
+    for (const auto* unsafe : {"../escape", "..\\escape", "C:escape", ""})
+        RejectsAny([&] { collections.Load(unsafe); }, "the index rejects profile traversal");
+
+    // A damaged index is not a reason to lose the player's route list, and it is not a reason to
+    // throw away bytes that might still be readable by hand.
+    collections.Save("local", index);
+    const auto goodBytes = read(indexPath);
+    WriteTextAtomically(indexPath, "{not an index");
+    const auto damaged = collections.Load("local");
+    Expect(damaged.collections.empty() && damaged.current == AutoRoute::DefaultCollectionId &&
+        read(indexPath) == "{not an index",
+        "a damaged index reads as the default collection only, and its bytes are left alone");
+    WriteTextAtomically(indexPath, Json{{"formatVersion", 99}, {"current", "herbs"}}.dump());
+    Expect(collections.Load("local").collections.empty(),
+        "an index written by a newer version is not guessed at");
+    WriteTextAtomically(indexPath, goodBytes);
+    Expect(collections.Load("local").collections.size() == 2, "the index is readable again once the bytes are restored");
+    for (const auto& entry : fs::directory_iterator(indexPath.parent_path()))
+        Expect(entry.path().filename().string().find(".tmp-") == std::string::npos,
+            "saving the index leaves no abandoned temporary files");
+}
+
 // A hand-drawn route is stored by the same store as an automatic one. The only thing that makes
 // it special is that a stop may be a free point: a position the player picked on empty map space
 // with nothing in the official catalogue behind it.
@@ -1246,7 +1382,7 @@ void FarmModeTests() {
 }
 }
 int main() {
-    try { SolverTests(); GeometryTests(); StoreTests(); HandDrawnStoreTests(); LegacyImportTests(); LegacyImportFileTests(); RealLegacyFixtureTest(); EscapeOwnershipTests(); DrawingVisibilityTests(); AutoReplanTests(); FarmModeTests(); HotkeyPressOwnershipTests(); GuideHotkeyRoutingTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
+    try { SolverTests(); GeometryTests(); StoreTests(); CollectionIndexTests(); HandDrawnStoreTests(); LegacyImportTests(); LegacyImportFileTests(); RealLegacyFixtureTest(); EscapeOwnershipTests(); DrawingVisibilityTests(); AutoReplanTests(); FarmModeTests(); HotkeyPressOwnershipTests(); GuideHotkeyRoutingTests(); HotkeyConfigurationTests(); GuidePaginationTests(); MarkerGuideProtocolTests(); Benchmark(); }
     catch (const std::exception& error) { ++failures; std::cerr << "UNEXPECTED: " << error.what() << '\n'; }
     if (failures) { std::cerr << failures << " route planning test(s) failed\n"; return 1; }
     std::cout << "Route planning tests passed\n";

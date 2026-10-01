@@ -11,13 +11,39 @@ inline nlohmann::json StartJson(const Start& s) {
     return {{"valid",s.valid},{"sceneId",s.sceneId},{"x",s.roc.x},{"y",s.roc.y},
         {"source",s.source},{"confirmedUnixMs",s.confirmedUnixMs},{"generation",s.generation}};
 }
+// The collection every route belongs to unless it was filed somewhere else. It is reserved: it is
+// never stored in the collections index, it can never be created by hand, and it can never be
+// renamed or deleted — which is what makes "the routes you already had are all in the default
+// collection" true without any migration at all.
+inline constexpr const char* DefaultCollectionId = "default";
+// A single path-safe component. Route ids, profile ids and collection ids are all shaped like this
+// so none of them can ever become a path surprise, and so the same validator serves all three.
+inline bool IsRouteComponent(const std::string& value) {
+    return !value.empty()&&value.size()<=96&&std::all_of(value.begin(),value.end(),[](unsigned char c){
+        return std::isalnum(c)||c=='-'||c=='_';});
+}
 inline void ValidateRouteComponent(const std::string& value) {
-    if(value.empty()||value.size()>96||!std::all_of(value.begin(),value.end(),[](unsigned char c){
-        return std::isalnum(c)||c=='-'||c=='_';}))throw std::invalid_argument("自动路线标识无效");
+    if(!IsRouteComponent(value))throw std::invalid_argument("自动路线标识无效");
+}
+// A collection id read from a file the player may have edited by hand. Anything unusable means
+// "the default collection": the route stays visible and usable instead of disappearing because of
+// a value nothing can name.
+inline std::string NormalizeCollectionId(const std::string& value) {
+    return IsRouteComponent(value)?value:std::string(DefaultCollectionId);
 }
 inline bool SameRouteId(const std::string& first,const std::string& second) {
     return first.size()==second.size()&&std::equal(first.begin(),first.end(),second.begin(),
         [](unsigned char a,unsigned char b){return std::tolower(a)==std::tolower(b);});
+}
+inline bool IsDefaultCollection(const std::string& value) {
+    return SameRouteId(NormalizeCollectionId(value),DefaultCollectionId);
+}
+// Every store under SavedRoutes accepts either the root itself or one of its route folders, so a
+// caller never has to care which form it happens to hold.
+inline std::filesystem::path ResolveSavedRoutesRoot(std::filesystem::path directory) {
+    const auto leaf=directory.filename().string();
+    if(SameRouteId(leaf,"Auto")||SameRouteId(leaf,"Hand"))return directory.parent_path();
+    return directory;
 }
 class DeleteRollbackFailure : public std::runtime_error {
 public:
@@ -53,7 +79,11 @@ public:
             // Absent on older files means "on": that is what the player asked for when they
             // applied a route, and it is also the only reading that cannot silently change what
             // an existing route does.
-            {"filterByRoute",plan.filterByRoute}};
+            {"filterByRoute",plan.filterByRoute},
+            // Absent on older files means the default collection, which is exactly where those
+            // routes have always been shown. Written for every route so the reader never has to
+            // guess, the same way `kind` is written for every stop.
+            {"collection",NormalizeCollectionId(plan.collection)}};
         WriteTextAtomically(Path(plan.profileId,plan.id,plan.handDrawn),doc.dump(2));
         if(makeActive)WriteTextAtomically(ActivePath(plan.profileId),
             Json({{"formatVersion",1},{"routeId",plan.id},{"handDrawn",plan.handDrawn}}).dump(2));
@@ -92,7 +122,7 @@ public:
     }
     Json List(const std::string& profile) const {
         Json rows=Json::array();
-        struct Row { std::string id,name,sceneName; int sceneId=0,stopCount=0; bool handDrawn=false; std::vector<std::string> kinds; bool corrupt=false; };
+        struct Row { std::string id,name,sceneName,collection=DefaultCollectionId; int sceneId=0,stopCount=0; bool handDrawn=false; std::vector<std::string> kinds; bool corrupt=false; };
         std::vector<Row> found;
         for(const bool handDrawn:{false,true}){
             const auto folder=Root(profile,handDrawn);
@@ -105,6 +135,7 @@ public:
                     row.name=doc.value("name",row.id);
                     row.sceneId=doc.value("sceneId",0);
                     row.sceneName=Scene::SceneIdToName(row.sceneId);
+                    row.collection=NormalizeCollectionId(doc.value("collection",std::string{DefaultCollectionId}));
                     if(doc.contains("stops")&&doc.at("stops").is_array())for(const auto& stop:doc.at("stops")){
                         ++row.stopCount;
                         const auto nameId=stop.value("nameId",std::string{});
@@ -122,16 +153,14 @@ public:
             Json kinds=Json::array();for(const auto& kind:row.kinds)kinds.push_back({{"nameId",kind},{"name",kind}});
             rows.push_back({{"id",row.id},{"name",row.name},{"sceneId",row.sceneId},{"sceneName",row.sceneName},
                 {"stopCount",row.stopCount},{"kinds",std::move(kinds)},{"handDrawn",row.handDrawn},
-                {"corrupt",row.corrupt}});
+                {"corrupt",row.corrupt},{"collection",row.collection}});
         }
         return rows;
     }
 private:
     std::filesystem::path root;
     static std::filesystem::path ResolveRoot(std::filesystem::path directory) {
-        const auto leaf=directory.filename().string();
-        if(SameRouteId(leaf,"Auto")||SameRouteId(leaf,"Hand"))return directory.parent_path();
-        return directory;
+        return ResolveSavedRoutesRoot(std::move(directory));
     }
     std::filesystem::path Root(const std::string& profile,bool handDrawn) const {
         ValidateRouteComponent(profile);
@@ -199,6 +228,7 @@ private:
         plan.farmMode=doc.value("farmMode",false);
         plan.handDrawn=doc.value("handDrawn",false);
         plan.filterByRoute=doc.value("filterByRoute",true);
+        plan.collection=NormalizeCollectionId(doc.value("collection",std::string{DefaultCollectionId}));
         Validate(plan);return plan;
     }
     bool DeleteIn(const std::string& profile,const std::string& id,bool handDrawn) const {
