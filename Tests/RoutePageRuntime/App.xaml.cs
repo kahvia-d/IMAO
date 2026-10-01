@@ -155,8 +155,14 @@ public partial class App : Application
                 }
             }
             CheckButtonsFit("默认宽度", false);
-            Check(Descendants((DependencyObject)page.FindName("RouteActions")!).OfType<Button>().Count() == 5,
-                "路线列表的按钮行就是那五个：刷新、删除所选、批量、导入、导出当前合集");
+            var actionLabels = Descendants((DependencyObject)page.FindName("RouteActions")!).OfType<Button>()
+                .Select(button => (string)button.Content).ToArray();
+            Check(actionLabels.SequenceEqual(new[] { "刷新列表", "删除所选路线", "批量操作", "导入路线包", "导出当前合集" }),
+                "路线列表的按钮行就是那五个，而且每个都把要做的事说完：" + string.Join(" / ", actionLabels));
+            // 标签结尾的「…」会被读成"系统把文字截断了"——玩家 2026-10-01 就是这么报的，而实测五个按钮的
+            // 左右留白完全一致（15/16px），一个像素都没裁。所以这里钉的是"标签里不出现省略号"。
+            Check(actionLabels.All(label => !label.EndsWith('…')),
+                "操作按钮的标签不以省略号结尾：那看起来像被截断，而不像「还会再问一步」");
 
             // 4b. 圆点只认"正在走的那条"。这一页列出的是保存过的路线，所以它不该依赖核心同时填
             //     CurrentRoute——上面的夹具就故意没填，圆点仍然落在 route-9 上。

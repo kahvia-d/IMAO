@@ -40,7 +40,7 @@
                             </Grid.ColumnDefinitions>
                             <Button Grid.Column="0" Content="全选" Click="RouteBatchSelectAll_Click" />
                             <Button Grid.Column="1" Content="导出所选" Click="RouteBatchExport_Click" />
-                            <Button Grid.Column="2" Content="移动到…" Click="RouteBatchMove_Click" />
+                            <Button Grid.Column="2" Content="移动到合集" Click="RouteBatchMove_Click" />
                             <Button Grid.Column="3" Content="删除所选" Click="RouteBatchDelete_Click" />
                             <Button Grid.Column="4" Content="退出批量" Click="RouteBatchExit_Click" />
                         </Grid>
@@ -72,9 +72,9 @@
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" Content="刷新列表" Tag="list" Click="AutoRouteAction_Click" />
                         <Button Grid.Column="1" x:Name="AutoRouteDelete" Content="删除所选路线" Click="AutoRouteDelete_Click" />
-                        <Button Grid.Column="2" Content="批量…" Click="RouteBatchEnter_Click" />
-                        <Button Grid.Column="3" Content="导入…" Click="RouteImport_Click" />
-                        <Button Grid.Column="4" Content="导出当前合集…" Click="RouteExportCollection_Click" />
+                        <Button Grid.Column="2" Content="批量操作" Click="RouteBatchEnter_Click" />
+                        <Button Grid.Column="3" Content="导入路线包" Click="RouteImport_Click" />
+                        <Button Grid.Column="4" Content="导出当前合集" Click="RouteExportCollection_Click" />
                     </Grid>
                     <TextBlock Text="开始指引、选点、手绘都在游戏内大地图的「路径自动规划」面板里做，那里点一条路线就开始指引。这一页负责整理：切换合集、改名、删除、导入导出。删除只移除路线文件，点位的完成记录仍然保留。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                 </StackPanel>
