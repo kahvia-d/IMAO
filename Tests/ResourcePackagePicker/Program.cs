@@ -10,6 +10,9 @@ internal static class Program
 {
     private static readonly List<string> Passed = [];
     private static Type PickerType = typeof(ResourcePackagePicker);
+    // The OPENFILENAMEW declaration moved into the shared dialog helper when a second caller appeared;
+    // the ABI check follows it, because that declaration is what the check exists to protect.
+    private static Type DialogType = typeof(NativeFileDialog);
 
     [STAThread]
     private static int Main(string[] args)
@@ -24,8 +27,9 @@ internal static class Program
             if (assemblyArgument >= 0)
             {
                 if (assemblyArgument + 1 >= args.Length) throw new ArgumentException("--assembly requires an application DLL path.");
-                PickerType = Assembly.LoadFrom(Path.GetFullPath(args[assemblyArgument + 1]))
-                    .GetType("IMao_WinUI.Helpers.ResourcePackagePicker", throwOnError: true)!;
+                var assembly = Assembly.LoadFrom(Path.GetFullPath(args[assemblyArgument + 1]));
+                PickerType = assembly.GetType("IMao_WinUI.Helpers.ResourcePackagePicker", throwOnError: true)!;
+                DialogType = assembly.GetType("IMao_WinUI.Helpers.NativeFileDialog", throwOnError: true)!;
             }
             CheckAbi();
             if (dialogs) CheckDialogs(output);
@@ -48,7 +52,7 @@ internal static class Program
     {
         // Windows SDK commdlg.h: DWORD/WORD/pointer fields of OPENFILENAMEW.
         // This checks the actual application declaration; an independent good declaration would miss regressions.
-        var type = PickerType.GetNestedType("OpenFileName", BindingFlags.NonPublic)
+        var type = DialogType.GetNestedType("OpenFileName", BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("The application OPENFILENAMEW declaration was not found.");
         int size = Marshal.SizeOf(type); // The original StringBuilder field throws here before any dialog exists.
         Check(size == (IntPtr.Size == 8 ? 152 : 88), "OPENFILENAMEW native structure size");

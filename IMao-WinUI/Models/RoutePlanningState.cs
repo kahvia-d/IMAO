@@ -50,6 +50,19 @@ public sealed record RoutePlanningState
     public bool HandDrawnPending { get; init; }
     /// <summary>How many points the hand-drawn drawing holds so far.</summary>
     public int HandDrawnCount { get; init; }
+    /// <summary>
+    /// Which collection a newly saved route will be filed under, and the collections that exist for
+    /// this record book. Both come from the core, which owns the index: the default collection is
+    /// emitted like any other row so nothing on this side has to know how it is special.
+    /// </summary>
+    public string CurrentCollection { get; init; } = "default";
+    public RouteCollection[] Collections { get; init; } = [];
+    /// <summary>
+    /// What the last <c>importInspect</c> found, or null when no package is waiting on a decision.
+    /// The file's kind, its collection name and the collection it would collide with all live here:
+    /// the shell never opens a route package itself.
+    /// </summary>
+    public RouteBundleTransfer? Transfer { get; init; }
     public SavedAutomaticRoute[] SavedRoutes { get; init; } = [];
 
     public static RoutePlanningState FromJson(JsonElement data) =>
@@ -170,6 +183,12 @@ public sealed record SavedAutomaticRoute
     public string Name { get; init; } = "";
     public int SceneId { get; init; }
     public string SceneName { get; init; } = "";
+    /// <summary>
+    /// Which collection the route is filed under, as the core resolved it. A file that names a
+    /// collection the index does not know arrives here already mapped onto the default one, so a
+    /// corrupt or hand-edited route stays visible instead of falling out of every list at once.
+    /// </summary>
+    public string Collection { get; init; } = "default";
     /// <summary>How many points the route visits, free points included.</summary>
     public int StopCount { get; init; }
     /// <summary>The distinct point types it visits, in the order they first appear.</summary>
@@ -190,4 +209,55 @@ public sealed record SavedAutomaticRoute
         : string.Join("、", Kinds.Select(kind => kind.Label));
     public string DetailLabel => $"{StopCount} 个点 · {(string.IsNullOrWhiteSpace(SceneName) ? "未知地图" : SceneName)} · " +
         (HandDrawn ? "手绘" : "自动") + (Corrupt ? " · 文件损坏" : "");
+}
+
+/// <summary>
+/// One collection as the route list shows it. The default collection arrives like any other row —
+/// it is only special in that the core always reports it and never lets it be renamed or deleted.
+/// </summary>
+public sealed record RouteCollection
+{
+    public string Id { get; init; } = "default";
+    public string Name { get; init; } = "";
+    public int RouteCount { get; init; }
+    /// <summary>The collection a newly saved route lands in.</summary>
+    public bool Current { get; init; }
+    /// <summary>The default collection: always present, never renamable, never deletable.</summary>
+    public bool System { get; init; }
+    [JsonIgnore] public bool Selected { get; set; }
+    public string DisplayLabel => (Current ? "● " : "") + Name;
+    public string DetailLabel => System ? $"{RouteCount} 条 · 默认" : $"{RouteCount} 条";
+    /// <summary>Whether this row can be renamed or deleted at all, which the buttons ask before acting.</summary>
+    public bool Editable => !System;
+}
+
+/// <summary>The collection an imported package would land on that already has its name.</summary>
+public sealed record RouteBundleConflict
+{
+    public string CollectionId { get; init; } = "";
+    public string Name { get; init; } = "";
+    public int RouteCount { get; init; }
+}
+
+/// <summary>
+/// What the core found inside a route package, before anything was written. <see cref="Kind"/> is
+/// <c>collection</c> or <c>routes</c> and decides which question the player is asked.
+/// </summary>
+public sealed record RouteBundleTransfer
+{
+    public string Kind { get; init; } = "routes";
+    public string Path { get; init; } = "";
+    public string CollectionName { get; init; } = "";
+    public int RouteCount { get; init; }
+    /// <summary>Routes in the package that could not be read, so a partial import is never silent.</summary>
+    public int Skipped { get; init; }
+    /// <summary>The collection whose name is already taken, or null when the name is free.</summary>
+    public RouteBundleConflict? Conflict { get; init; }
+
+    public bool IsCollection => Kind == "collection";
+    /// <summary>How many routes the import would actually write.</summary>
+    public int ImportableCount => Math.Max(0, RouteCount - Skipped);
+    /// <summary>The name the package would arrive under, for the sentence the player is shown.</summary>
+    public string PackageLabel => IsCollection && CollectionName.Length > 0 ? $"合集「{CollectionName}」" : "路线包";
+    public string SkippedLabel => Skipped > 0 ? $"（另有 {Skipped} 条读不出来，会跳过）" : "";
 }

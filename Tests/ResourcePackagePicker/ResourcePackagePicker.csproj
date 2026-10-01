@@ -5,8 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ResourcePackagePickerSource Condition="'$(ResourcePackagePickerSource)' == ''">../../IMao-WinUI/Helpers/ResourcePackagePicker.cs</ResourcePackagePickerSource>
+    <NativeFileDialogSource Condition="'$(NativeFileDialogSource)' == ''">../../IMao-WinUI/Helpers/NativeFileDialog.cs</NativeFileDialogSource>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(ResourcePackagePickerSource)" Link="ResourcePackagePicker.cs" />
+    <Compile Include="$(NativeFileDialogSource)" Link="NativeFileDialog.cs" />
   </ItemGroup>
 </Project>
