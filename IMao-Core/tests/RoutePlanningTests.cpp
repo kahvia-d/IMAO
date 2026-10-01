@@ -329,6 +329,26 @@ void StoreTests() {
         "deleting active route removes it from disk and prevents automatic restoration");
     Expect(store.LoadActive("other-profile", resolver)->id == "route-2" && read(legacyPath) == legacy,
         "same-ID route in another profile and all legacy route files survive deletion");
+    // A destination that is held open for a moment and then let go must still be committed. This is
+    // the ordinary Windows case — a scanner or the search indexer picking up a file that was written
+    // a microsecond ago — and losing the save to that timing would be data loss, not slowness. The
+    // write below fails on its first attempt and can only succeed if the commit is retried. It runs
+    // last because it adds a route to the profile the assertions above count.
+    {
+        auto retryPlan = plan; retryPlan.id = "retry-route"; retryPlan.name = "before the hold";
+        store.Save(retryPlan, false);
+        const auto retryPath = planPath.parent_path() / "retry-route.json";
+        HANDLE held = CreateFileW(retryPath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+        Expect(held != INVALID_HANDLE_VALUE, "can hold a destination open to exercise the commit retry");
+        if (held != INVALID_HANDLE_VALUE) {
+            std::thread release([&] { std::this_thread::sleep_for(std::chrono::milliseconds(30)); CloseHandle(held); });
+            retryPlan.name = "committed after a transient hold";
+            store.Save(retryPlan, false);
+            release.join();
+            Expect(store.Load("local", "retry-route", resolver).name == "committed after a transient hold",
+                "a save whose destination is released a moment later is committed instead of lost");
+        }
+    }
     for (const auto& entry : fs::directory_iterator(planPath.parent_path()))
         Expect(entry.path().filename().string().find(".tmp-") == std::string::npos, "atomic save leaves no abandoned temporary files");
 }

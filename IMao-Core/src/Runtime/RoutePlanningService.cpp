@@ -1,5 +1,6 @@
 #include "RoutePlanningService.h"
 #include "RoutePlanStore.h"
+#include "RouteCollections.h"
 #include "LegacyHandRouteImportFile.h"
 #include "HandDrawnRoute.h"
 #include "FarmMode.h"
@@ -40,6 +41,13 @@ struct Job {
     // carry that route's farming setting. Without this, 重新规划 followed by 开始指引 would
     // quietly switch the mode off while the player is standing on a farming route.
     bool farmMode=false;
+    // Where the resulting preview belongs. Empty means "not decided yet": a freshly planned route
+    // belongs to whichever collection the player is in when they *save* it, not to the one they
+    // happened to be in when they pressed 生成预览 — otherwise saving a preview after switching
+    // collections would file it in the wrong place. A replan is the exception, and says so by
+    // filling this in: it is still the route it came from, and re-applying it must not move that
+    // route into whichever collection the player is looking at.
+    std::string collection;
 };
 struct Runtime {
     std::mutex mutex,eventMutex;
@@ -61,7 +69,14 @@ struct Runtime {
     std::vector<std::string> skipHistory;
     std::optional<Job> pending;
     std::unique_ptr<AutoRoute::RoutePlanStore> store;
+    std::unique_ptr<AutoRoute::RouteCollections> collectionStore;
     Json saved=Json::array();
+    // Which collections exist for this profile and which one the player is in. The current one is
+    // where a newly saved route lands; a route that is already saved keeps its own, because moving
+    // the player's existing work just because they looked at another collection is not a thing they
+    // asked for.
+    AutoRoute::RouteCollections::Index collections;
+    std::string currentCollection=AutoRoute::DefaultCollectionId;
     std::function<void(const Json&)> callback;
     Clock::time_point lastVisibilityEvent{};
     bool visibilityEventPending=false;
@@ -134,6 +149,95 @@ Json KindJsonLocked(const std::string& nameId){
 }
 // The saved-route rows the list shows. Each row describes what it is made of, and the type
 // descriptors are resolved here rather than left for the interface to look up.
+// The rows the interface sees, with every collection the index does not know mapped onto the
+// default one. A route file can name a collection that no longer exists — the index was deleted,
+// the file was edited by hand, the profile was copied around — and such a route must stay visible
+// and usable rather than falling out of every list at once.
+void ReloadSavedLocked(){
+    auto& r=R();
+    r.saved=r.store->List(r.profile);
+    for(auto& row:r.saved){
+        const auto named=AutoRoute::NormalizeCollectionId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}));
+        row["collection"]=AutoRoute::RouteCollections::Exists(r.collections,named)?named:std::string(AutoRoute::DefaultCollectionId);
+    }
+}
+// How many routes each collection holds, counted from the rows the list is about to show rather
+// than asked of the store a second time: the count and the rows can then never disagree.
+Json CollectionsJsonLocked(){
+    const auto& r=R();
+    const auto count=[&](const std::string& id){
+        std::size_t total=0;
+        for(const auto& row:r.saved)
+            if(AutoRoute::SameRouteId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}),id))++total;
+        return total;
+    };
+    Json rows=Json::array();
+    // The default collection is always first and always present, and it is not stored anywhere:
+    // it is the bucket every route already had before collections existed.
+    rows.push_back({{"id",AutoRoute::DefaultCollectionId},{"name",AutoRoute::DefaultCollectionName},
+        {"routeCount",count(AutoRoute::DefaultCollectionId)},{"current",AutoRoute::IsDefaultCollection(r.currentCollection)},
+        {"system",true}});
+    for(const auto& collection:r.collections.collections)
+        rows.push_back({{"id",collection.id},{"name",collection.name},{"routeCount",count(collection.id)},
+            {"current",AutoRoute::SameRouteId(collection.id,r.currentCollection)},{"system",false}});
+    return rows;
+}
+// Re-read the index and make the pointer agree with the rows. Nothing else in the service touches
+// the collections file, so this is the one place a collection can appear or disappear from the
+// snapshot.
+void ReloadCollectionsLocked(){
+    auto& r=R();
+    r.collections=r.collectionStore->Load(r.profile);
+    r.currentCollection=AutoRoute::NormalizeCollectionId(r.collections.current);
+    if(!AutoRoute::RouteCollections::Exists(r.collections,r.currentCollection))
+        r.currentCollection=AutoRoute::DefaultCollectionId;
+}
+// Writing the index is always the second half of changing it: the pointer moves only once the file
+// says so, so a failed write leaves the collections as they were instead of promising a switch
+// that was never recorded.
+void SaveCollectionsLocked(){
+    auto& r=R();
+    r.collections.current=r.currentCollection;
+    r.collectionStore->Save(r.profile,r.collections);
+}
+// A mutable handle on a stored collection, or null. The index's own Find is const so that a caller
+// which only wants to read cannot change the file by accident.
+AutoRoute::Collection* MutableCollectionLocked(const std::string& id){
+    auto& r=R();
+    const auto normalized=AutoRoute::NormalizeCollectionId(id);
+    for(auto& collection:r.collections.collections)
+        if(AutoRoute::SameRouteId(collection.id,normalized))return &collection;
+    return nullptr;
+}
+std::string CollectionNameLocked(const std::string& id){
+    const auto* found=AutoRoute::RouteCollections::Find(R().collections,id);
+    return found?found->name:std::string(AutoRoute::DefaultCollectionName);
+}
+// Everything that has to happen once a route file is gone, in one place: the navigation it was
+// running and the preview that was standing in for it. Deleting one route and deleting a whole
+// collection must not drift apart on this.
+void ForgetDeletedRouteLocked(const std::string& routeId){
+    auto& r=R();
+    if(r.active&&AutoRoute::SameRouteId(r.active->id,routeId))StopNavigationLocked();
+    else for(auto& [scene,draft]:r.drafts)
+        if(draft.preview&&AutoRoute::SameRouteId(draft.preview->id,routeId)){draft.preview.reset();InvalidateLocked();}
+}
+std::int64_t NowUnixMs(){
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+}
+// Which collection a route belongs to at the moment it is first written. An empty value means the
+// plan never made that decision — a freshly planned preview does not know where it will be filed
+// until the player saves it, and a drawing never knows at all — so those take the current
+// collection. A plan that already names one (a replan, or a re-save of a preview after the
+// collection was deleted) keeps it when it still exists.
+std::string NewRouteCollectionLocked(const AutoRoute::Plan& plan){
+    const auto& r=R();
+    if(plan.collection.empty())return r.currentCollection;
+    const auto named=AutoRoute::NormalizeCollectionId(plan.collection);
+    return AutoRoute::RouteCollections::Exists(r.collections,named)?named:r.currentCollection;
+}
+// The list the player sees grouped by collection, so a row and its collection come from one place.
 Json SavedRoutesJsonLocked(){
     const auto& r=R();Json rows=Json::array();
     for(const auto& row:r.saved){
@@ -244,12 +348,15 @@ void HandleHandDrawnLocked(const std::string& action,const Json& command){
         if(!r.handDraft.Size())throw std::runtime_error("当前没有正在绘制的手绘路线");
         const auto name=command.value("name",std::string{"我的路线"});
         auto plan=r.handDraft.Commit(NewId(),name.empty()?std::string{"我的路线"}:name,r.profile);
+        // A drawing is a route that has never been written, so it lands in the collection the
+        // player is standing in — the whole point of being able to switch collections.
+        plan.collection=NewRouteCollectionLocked(plan);
         r.store->Save(plan,false);
         r.handDraft.Cancel();
         // The drawing is saved, not started: the player asked to keep it, and quietly switching
         // what they are following would be a different decision than the one they made.
-        r.saved=r.store->List(r.profile);
-        r.message="手绘路线已保存（"+std::to_string(plan.stops.size())+" 个点），可在路线列表里应用";
+        ReloadSavedLocked();
+        r.message="手绘路线已保存到「"+CollectionNameLocked(plan.collection)+"」（"+std::to_string(plan.stops.size())+" 个点），可在路线列表里应用";
         StructuredLogger::Record("info","routes","hand-drawn-committed",
             "routeId="+plan.id+" scene="+std::to_string(plan.sceneId)+" stops="+std::to_string(plan.stops.size())+
             " freeStops="+std::to_string(std::count_if(plan.stops.begin(),plan.stops.end(),
@@ -351,6 +458,7 @@ Json SnapshotLocked(){
         {"currentRouteIsPreview",CurrentRouteIsPreviewLocked()},
         {"handDrawnActive",r.handDraft.Active()},{"handDrawnPending",r.handDraft.Pending()},
         {"handDrawnCount",r.handDraft.Size()},
+        {"currentCollection",r.currentCollection},{"collections",CollectionsJsonLocked()},
         {"savedRoutes",SavedRoutesJsonLocked()}};
 }
 void Emit(){
@@ -365,9 +473,12 @@ void SyncProfileLocked(){
     InvalidateLocked();r.profile=profile;r.enabled=false;r.pendingNew=false;r.drafts.clear();r.active.reset();r.skipHistory.clear();
     InvalidateAutoLocked(true);r.stablePlayer.Reset();r.hasAutoPosition=false;
     r.farmMode=false;r.farmConfirmation.Reset();r.farmNotice.clear();
+    // The other profile's collections must not survive the switch even if reading the new index
+    // fails below: a list built from the wrong profile's collections would look like data loss.
+    r.collections={};r.currentCollection=AutoRoute::DefaultCollectionId;
     r.handDraft.Cancel();
     r.runRequested=false;r.completed.clear();r.message.clear();r.tool="pan";
-    try {r.saved=r.store->List(profile);r.active=r.store->LoadActive(profile,ResolveLocked);
+    try {ReloadCollectionsLocked();ReloadSavedLocked();r.active=r.store->LoadActive(profile,ResolveLocked);
         if(r.active){r.skipHistory=r.active->skipHistory;r.message="已恢复自动路线，点击继续导航";
             // A restored route carries its own farming setting; it stays off until the player
             // resumes, because the mode itself only acts while the navigation is running.
@@ -409,7 +520,8 @@ void QueueSolveLocked(bool replan){
     if(targets.size()>AutoRoute::MaxTargets)throw std::runtime_error("单条路线最多 500 点");
     InvalidateLocked();draft.preview.reset();r.enabled=true;r.computing=true;r.message="正在优化访问顺序";
     r.pending=Job{r.epoch.load(),r.profile,r.scene,draft.start,std::move(targets),
-        replan&&r.active?r.active->farmMode:false};r.wake.notify_one();
+        replan&&r.active?r.active->farmMode:false,
+        replan&&r.active?AutoRoute::NormalizeCollectionId(r.active->collection):std::string{}};r.wake.notify_one();
 }
 void Worker(){
     auto& r=R();for(;;){
@@ -424,7 +536,8 @@ void Worker(){
                 if(std::any_of(result.stops.begin(),result.stops.end(),[&](const ItemDatas& p){return CompletedNow(job.scene,p);}))
                     r.message="目标完成状态已变化，请重新生成路线";
                 else {AutoRoute::Plan plan;plan.id=NewId();plan.name="自动路线";plan.profileId=job.profile;plan.sceneId=job.scene;
-                    plan.start=job.start;plan.stops=result.stops;plan.farmMode=job.farmMode;r.drafts[job.scene].preview=std::move(plan);r.message="路线预览已生成，点击开始导航";}
+                    plan.start=job.start;plan.stops=result.stops;plan.farmMode=job.farmMode;plan.collection=job.collection;
+                    r.drafts[job.scene].preview=std::move(plan);r.message="路线预览已生成，点击开始导航";}
                 ++r.revision;}
             StructuredLogger::Record("info","routes","auto-route-solved","targets="+std::to_string(job.selected.size())+
                 " elapsedMs="+std::to_string(std::chrono::duration<double,std::milli>(Clock::now()-begin).count())+
@@ -565,6 +678,7 @@ void BuildCatalogLocked(){
 void RoutePlanningService::Initialize(){
     auto& r=R();{std::scoped_lock lock(r.mutex);if(r.ready)return;
         r.store=std::make_unique<AutoRoute::RoutePlanStore>(StructuredLogger::ApplicationDataDirectory()/"SavedRoutes");
+        r.collectionStore=std::make_unique<AutoRoute::RouteCollections>(StructuredLogger::ApplicationDataDirectory()/"SavedRoutes");
         BuildCatalogLocked();r.stopping=false;r.ready=true;}
     // Routes drawn by the old hand tool are imported once, before anything reads the store. The
     // catalogue is already built, so an endpoint that lands on a known point keeps its type.
@@ -899,13 +1013,18 @@ Json RoutePlanningService::Command(const Json& command){
         }else if(action=="activate"){
             auto& draft=DraftLocked();if(!draft.preview)throw std::runtime_error("请先生成路线预览");
             InvalidateLocked();
-            RefreshCompletedLocked();r.store->Save(*draft.preview,true);r.active=*draft.preview;r.skipHistory.clear();r.runRequested=true;r.enabled=false;r.tool="pan";
+            // A preview has never been on disk, so this is the moment it becomes a real route and
+            // the moment it takes the collection the player is saved it from: the current one for
+            // a fresh plan, the source route's own for a replan.
+            auto plan=*draft.preview;
+            plan.collection=NewRouteCollectionLocked(plan);
+            RefreshCompletedLocked();r.store->Save(plan,true);r.active=plan;r.skipHistory.clear();r.runRequested=true;r.enabled=false;r.tool="pan";
             // The route brings its own farming setting: a route built to sweep monsters and
             // herbs switches the mode on by itself every time it is started again.
             r.farmMode=r.active->farmMode;r.farmConfirmation.Reset();r.farmNotice.clear();
             InvalidateAutoLocked(true);r.hasAutoPosition=false;
             draft.preview.reset();
-            r.saved=r.store->List(r.profile);r.message="自动路线已保存并开始导航";
+            ReloadSavedLocked();r.message="自动路线已保存到「"+CollectionNameLocked(plan.collection)+"」并开始导航";
         }else if(action=="stop"){
             // Persist the exit before changing runtime state. A failed write
             // leaves the previous route usable and reports the failure.
@@ -919,10 +1038,124 @@ Json RoutePlanningService::Command(const Json& command){
                 if(removingActive)StopNavigationLocked();
                 throw;
             }
-            if(removingActive)StopNavigationLocked();
-            else for(auto& [scene,draft]:r.drafts)if(draft.preview&&AutoRoute::SameRouteId(draft.preview->id,id)){draft.preview.reset();InvalidateLocked();}
-            RefreshCompletedLocked();r.saved=r.store->List(r.profile);
+            ForgetDeletedRouteLocked(id);
+            RefreshCompletedLocked();ReloadSavedLocked();
             r.message=removingActive?"路线已删除并退出导航，点位完成记录保留":"路线已删除，点位完成记录保留";
+        }else if(action=="collectionNew"){
+            const auto name=AutoRoute::RouteCollections::TrimName(command.value("name",std::string{}));
+            if(!AutoRoute::RouteCollections::IsValidName(name))
+                throw std::invalid_argument("合集名字要在 1–40 个字之间");
+            if(AutoRoute::SameRouteId(name,AutoRoute::DefaultCollectionName))
+                throw std::invalid_argument(std::string("「")+AutoRoute::DefaultCollectionName+"」是保留名字，请换一个");
+            // Creating a name that is already taken is refused rather than silently numbered: the
+            // player typed a name, and answering "that one exists" is the only honest reply.
+            if(AutoRoute::RouteCollections::FindByName(r.collections,name))
+                throw std::runtime_error("已经有叫「"+name+"」的合集了，请换个名字");
+            AutoRoute::Collection created;
+            created.id=NewId();created.name=name;created.createdUnixMs=NowUnixMs();
+            r.collections.collections.push_back(created);
+            // Creating a collection is also entering it: the player asked for a place to put
+            // routes, and the next route they save is the one they are thinking about.
+            r.currentCollection=created.id;
+            SaveCollectionsLocked();
+            r.message="已创建合集「"+name+"」，之后保存的路线会放进这里";
+            StructuredLogger::Record("info","routes","collection-created",
+                "collectionId="+created.id+" name="+name);
+        }else if(action=="collectionRename"){
+            const auto id=command.at("collectionId").get<std::string>();
+            if(AutoRoute::IsDefaultCollection(id))throw std::invalid_argument("默认合集的名字不能改");
+            auto* found=MutableCollectionLocked(id);
+            if(!found)throw std::runtime_error("要改名的合集不存在");
+            const auto name=AutoRoute::RouteCollections::TrimName(command.value("name",std::string{}));
+            if(!AutoRoute::RouteCollections::IsValidName(name))
+                throw std::invalid_argument("合集名字要在 1–40 个字之间");
+            if(AutoRoute::SameRouteId(name,AutoRoute::DefaultCollectionName))
+                throw std::invalid_argument(std::string("「")+AutoRoute::DefaultCollectionName+"」是保留名字，请换一个");
+            if(const auto* clash=AutoRoute::RouteCollections::FindByName(r.collections,name);
+                clash&&!AutoRoute::SameRouteId(clash->id,found->id))
+                throw std::runtime_error("已经有叫「"+name+"」的合集了，请换个名字");
+            const auto before=found->name;
+            found->name=name;
+            SaveCollectionsLocked();
+            r.message="合集「"+before+"」已改名为「"+name+"」";
+        }else if(action=="collectionDelete"){
+            const auto id=command.at("collectionId").get<std::string>();
+            if(AutoRoute::IsDefaultCollection(id))throw std::invalid_argument("默认合集不能删除");
+            const auto* found=AutoRoute::RouteCollections::Find(r.collections,AutoRoute::NormalizeCollectionId(id));
+            if(!found)throw std::runtime_error("要删除的合集不存在");
+            const auto name=found->name,collectionId=found->id;
+            // Deleting a collection takes its routes with it — that is the rule the player picked.
+            // The victims are collected from the rows the interface is showing, so what is deleted
+            // is exactly what the confirmation counted.
+            std::vector<std::string> doomed;
+            for(const auto& row:r.saved)
+                if(AutoRoute::SameRouteId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}),collectionId))
+                    doomed.push_back(row.value("id",std::string{}));
+            const bool removingActive=r.active&&std::any_of(doomed.begin(),doomed.end(),
+                [&](const std::string& routeId){return AutoRoute::SameRouteId(r.active->id,routeId);});
+            std::size_t removed=0;std::string failure;
+            for(const auto& routeId:doomed){
+                try {r.store->Delete(r.profile,routeId);++removed;}
+                catch(const AutoRoute::DeleteRollbackFailure&){
+                    if(removingActive)StopNavigationLocked();
+                    throw;
+                }catch(const std::exception& error){if(failure.empty())failure=error.what();}
+            }
+            if(!failure.empty()){
+                // A collection that could not be emptied keeps its name and its remaining routes.
+                // Saying so beats reporting a deletion that did not happen to everything.
+                ReloadSavedLocked();
+                throw std::runtime_error("合集「"+name+"」里有路线没能删除（"+failure+"），已删除 "+
+                    std::to_string(removed)+" 条，合集仍然保留");
+            }
+            if(removingActive)StopNavigationLocked();
+            if(AutoRoute::SameRouteId(r.currentCollection,collectionId))r.currentCollection=AutoRoute::DefaultCollectionId;
+            r.collections.collections.erase(std::remove_if(r.collections.collections.begin(),r.collections.collections.end(),
+                [&](const AutoRoute::Collection& item){return AutoRoute::SameRouteId(item.id,collectionId);}),
+                r.collections.collections.end());
+            SaveCollectionsLocked();
+            ReloadSavedLocked();
+            RefreshCompletedLocked();
+            r.message="已删除合集「"+name+"」和它里面的 "+std::to_string(removed)+" 条路线，点位完成记录保留";
+            StructuredLogger::Record("info","routes","collection-deleted",
+                "collectionId="+collectionId+" name="+name+" routes="+std::to_string(removed));
+        }else if(action=="collectionCurrent"){
+            const auto id=AutoRoute::NormalizeCollectionId(command.at("collectionId").get<std::string>());
+            if(!AutoRoute::RouteCollections::Exists(r.collections,id))
+                throw std::runtime_error("要切换的合集不存在");
+            if(!AutoRoute::SameRouteId(id,r.currentCollection)){
+                r.currentCollection=id;
+                SaveCollectionsLocked();
+            }
+            r.message="已切换到合集「"+CollectionNameLocked(id)+"」，之后保存的路线会放进这里";
+        }else if(action=="routeCollection"){
+            // `routeIds`, never `routeId`: the pre-action fence refuses any command that names a
+            // route other than the active one, and moving a batch out of the list is exactly that.
+            // (`switch` was refused in production once for missing the exemption.)
+            const auto ids=command.at("routeIds").get<std::vector<std::string>>();
+            if(ids.empty())throw std::invalid_argument("请先选择要移动的路线");
+            const auto target=AutoRoute::NormalizeCollectionId(command.at("collectionId").get<std::string>());
+            if(!AutoRoute::RouteCollections::Exists(r.collections,target))
+                throw std::runtime_error("要移动到的合集不存在");
+            std::size_t moved=0;std::string failure;
+            for(const auto& routeId:ids){
+                try {
+                    auto plan=r.store->Load(r.profile,routeId,ResolveLocked);
+                    if(AutoRoute::SameRouteId(AutoRoute::NormalizeCollectionId(plan.collection),target))continue;
+                    plan.collection=target;
+                    // `false`: moving a route must not move the active pointer. Whether it happens
+                    // to be the route being followed is none of this operation's business.
+                    r.store->Save(plan,false);
+                    // The in-memory copy has to follow, or saving the active route afterwards would
+                    // write the old collection back over this move.
+                    if(r.active&&AutoRoute::SameRouteId(r.active->id,routeId))r.active=plan;
+                    ++moved;
+                }catch(const std::exception& error){if(failure.empty())failure=error.what();}
+            }
+            ReloadSavedLocked();
+            if(!failure.empty())
+                throw std::runtime_error("有路线没能移动（"+failure+"），已移动 "+std::to_string(moved)+" 条");
+            r.message="已把 "+std::to_string(moved)+" 条路线移到「"+CollectionNameLocked(target)+"」";
         }else if(action=="pause"){r.runRequested=false;InvalidateAutoLocked();r.message="导航已暂停；如需隐藏并结束路线，请退出导航";}
         else if(action=="resume"){
             if(!r.active)throw std::runtime_error("请先加载或生成路线");InvalidateLocked();r.runRequested=true;r.enabled=false;r.tool="pan";r.message="已继续导航";
@@ -967,10 +1200,15 @@ Json RoutePlanningService::Command(const Json& command){
         }else if(action=="save"){
             AutoRoute::Plan plan;const bool preview=command.value("target","")=="preview"||!r.active;
             if(preview){const auto& draft=DraftLocked();if(!draft.preview)throw std::runtime_error("没有可保存的预览");plan=*draft.preview;
-                if(r.active&&r.active->id==plan.id)throw std::runtime_error("该预览已成为活动路线，请保存活动路线");}
+                if(r.active&&r.active->id==plan.id)throw std::runtime_error("该预览已成为活动路线，请保存活动路线");
+                // Only a route that has never been written takes the current collection. Saving an
+                // already-saved active route rewrites its own file and must leave it where it is:
+                // looking at another collection is not a request to move the player's work.
+                plan.collection=NewRouteCollectionLocked(plan);}
             else plan=*r.active;
             plan.name=command.value("name",plan.name);r.store->Save(plan,!preview);
-            if(preview)r.drafts[r.scene].preview=plan;else r.active=plan;r.saved=r.store->List(r.profile);r.message="自动路线已保存";
+            if(preview)r.drafts[r.scene].preview=plan;else r.active=plan;ReloadSavedLocked();
+            r.message=preview?"自动路线已保存到「"+CollectionNameLocked(plan.collection)+"」":"自动路线已保存";
         }else if(action=="load"){
             const auto next=r.store->Load(r.profile,command.at("routeId").get<std::string>(),ResolveLocked);
             r.store->Save(next,true);InvalidateLocked();r.active=next;r.runRequested=false;r.skipHistory=next.skipHistory;r.enabled=false;r.tool="pan";
@@ -994,7 +1232,7 @@ Json RoutePlanningService::Command(const Json& command){
             // Reading only: the list page asks what the top row should say.
         }else if(action=="handStart"||action=="handPoint"||action=="handUndo"||action=="handCancel"||action=="handCommit"||action=="handFinish"||action=="handDiscard"){
             HandleHandDrawnLocked(command.value("action",std::string{}),command);
-        }else if(action=="list"){r.saved=r.store->List(r.profile);}
+        }else if(action=="list"){ReloadSavedLocked();}
         else if(action!="state")throw std::invalid_argument("未知的自动路线操作");
         ++r.revision;result={{"accepted",true},{"message",r.message},{"data",SnapshotLocked()}};
     }catch(const std::exception& e){

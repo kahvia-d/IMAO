@@ -117,6 +117,10 @@ public:
         plan.profileId = profileId;
         plan.sceneId = scene;
         plan.handDrawn = true;
+        // A drawing has never been written, so it has not chosen a collection: it belongs to
+        // whichever one the player is in when they save it. Empty is how a plan says "not decided
+        // yet" — the model's own default is what an already-stored route would have.
+        plan.collection.clear();
         plan.start.sceneId = scene;
         plan.start.roc = points.front().itemMapROC;
         plan.start.source = "manual";

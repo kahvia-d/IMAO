@@ -1,5 +1,6 @@
 #include "RoutePlanningServiceTestHost.h"
 #include "Runtime/RoutePlanStore.h"
+#include "Runtime/RouteCollections.h"
 #include "Runtime/RouteViewportCandidates.h"
 #include "Runtime/RouteToolbarNavigation.h"
 #include "Runtime/OverlayPanelLayout.h"
@@ -510,10 +511,243 @@ void VerifyRouteListShape(){
     Check(described>0,"the route list actually described the fixture's point types");
     if(!described)std::cerr<<"note: fixture has no catalogue point types to describe\n";
 }
+
+// Collections are the route list's own organisation: which bucket a route is filed under, which
+// bucket a route that has never been written lands in, and what deleting a collection does to the
+// routes inside it. It installs its own point catalogue and restarts the service, because it writes
+// routes of its own and must not depend on which fixture the block before it left behind — the
+// farming block swaps the catalogue out from under everything that ran before it.
+void VerifyCollections(){
+    RoutePlanningService::Shutdown();
+    AutoRoute::RouteCollections index(StructuredLogger::root/"SavedRoutes");
+    const auto* scene=Scene::Find(1);
+    const auto state=std::to_string(scene->kuroStateId);
+    Json points=Json::array();
+    for(const auto& pair:std::vector<std::pair<std::string,double>>{{"alpha",100},{"beta",200},{"gamma",300}})
+        points.push_back({{"id",pair.first},{"x",pair.second/scene->scale*100},{"y",0},{"stateId",scene->kuroStateId}});
+    DrawItemBase::itemsJsonData_World=Json::array({{{"id","chest"},{"name","test"},{"location",points}}});
+    DrawItemBase::completed.clear();
+    DrawItemBase::refreshablePointIds.clear();
+    DrawItemBase::refreshableCategories.clear();
+    RoutePlanningService::Initialize();
+    AutoRoute::RoutePlanStore store(StructuredLogger::root/"SavedRoutes"/"Auto");
+    const auto refused=[&](Json command){
+        const auto result=RoutePlanningService::Command(command);
+        return !result.value("accepted",false);
+    };
+    // Every helper holds the snapshot it read. `at()` hands back a reference into the object it was
+    // called on, so ranging over `Snapshot().at(...)` directly would walk a destroyed temporary.
+    const auto state_=[&](){return RoutePlanningService::Snapshot();};
+    const auto collections=[&](){return state_().at("collections");};
+    const auto collectionRow=[&](const std::string& id)->Json{
+        const auto rows=collections();
+        for(const auto& row:rows)if(row.value("id",std::string{})==id)return row;
+        return Json(nullptr);
+    };
+    const auto currentCollection=[&](){return state_().value("currentCollection",std::string{});};
+    const auto routeCount=[&](const std::string& id){return collectionRow(id).at("routeCount").get<int>();};
+    const auto savedIdByName=[&](const std::string& name)->std::string{
+        const auto rows=state_().at("savedRoutes");
+        for(const auto& row:rows)if(row.value("name",std::string{})==name)return row.value("id",std::string{});
+        return {};
+    };
+    const auto rowCollection=[&](const std::string& routeId)->std::string{
+        const auto rows=state_().at("savedRoutes");
+        for(const auto& row:rows)if(row.value("id",std::string{})==routeId)return row.value("collection",std::string{});
+        return "";
+    };
+
+    // The template every route in this block is cloned from. It is written by the service itself, so
+    // it resolves against the catalogue installed just above.
+    Command({{"action","new"},{"sceneId",1}});
+    Command({{"action","setStart"},{"sceneId",1},{"x",100},{"y",0}});
+    {
+        std::vector<std::string> keys;for(const auto* id:{"alpha","beta","gamma"})keys.push_back(state+":"+id);
+        Command({{"action","add"},{"keys",keys}});
+    }
+    Command({{"action","generate"}});
+    {
+        const auto deadline=Clock::now()+3s;
+        while(!RoutePlanningService::View().preview&&Clock::now()<deadline)std::this_thread::sleep_for(10ms);
+    }
+    Command({{"action","activate"}});
+    const auto template_=*RoutePlanningService::View().active;
+    Command({{"action","stop"}});
+    const auto write=[&](const std::string& id,const std::string& name,const std::string& collection){
+        auto plan=template_;plan.id=id;plan.name=name;plan.collection=collection;
+        plan.skipped.clear();plan.skipHistory.clear();store.Save(plan,false);
+    };
+    // A route id identifies one route but not which folder holds it, so the path has to say.
+    const auto routePath=[&](const std::string& id,bool handDrawn=false){
+        return StructuredLogger::root/"SavedRoutes"/(handDrawn?"Hand":"Auto")/"local"/(id+".json");};
+
+    Command({{"action","list"}});
+    Check(collections().size()==1&&collectionRow(AutoRoute::DefaultCollectionId).is_object(),
+        "the default collection is the whole list until the player creates one");
+    Check(collectionRow(AutoRoute::DefaultCollectionId).value("system",false)&&
+        collectionRow(AutoRoute::DefaultCollectionId).value("current",false),
+        "the default collection is marked as the system one and starts out current");
+    Check(AutoRoute::RouteCollections::Find(index.Load("local"),AutoRoute::DefaultCollectionId)==nullptr,
+        "the default collection is never written into the index file");
+
+    Command({{"action","collectionNew"},{"name","  宝箱路线  "}});
+    const auto chestId=currentCollection();
+    Check(chestId!=AutoRoute::DefaultCollectionId&&collections().size()==2,
+        "creating a collection adds it to the list");
+    Check(collectionRow(chestId).value("name",std::string{})=="宝箱路线"&&collectionRow(chestId).value("current",false),
+        "a collection name is trimmed, and creating one also enters it");
+    Check(routeCount(chestId)==0,"a new collection starts empty");
+    Check(!collectionRow(chestId).value("system",true),"a collection the player created is not a system one");
+    Check(index.Load("local").current==chestId,"entering a new collection is written to the index, not only held in memory");
+
+    Check(refused({{"action","collectionNew"},{"name","宝箱路线"}}),
+        "creating a collection whose name is taken is refused rather than silently numbered");
+    Check(refused({{"action","collectionNew"},{"name",AutoRoute::DefaultCollectionName}}),
+        "the default collection's name is reserved");
+    Check(refused({{"action","collectionNew"},{"name","   "}}),
+        "a collection name cannot be blank");
+    Check(refused({{"action","collectionNew"},{"name",std::string(41,'a')}}),
+        "a collection name cannot be longer than the row that shows it");
+    Check(refused({{"action","collectionNew"},{"name","bad\nname"}}),
+        "a collection name cannot carry a control character");
+    Check(currentCollection()==chestId&&collections().size()==2,
+        "a refused collection leaves both the list and the current collection as they were");
+
+    // A route written before collections existed already belongs to the default collection, and a
+    // route whose file names a collection the index does not know is shown under it too, rather
+    // than disappearing from every list at once.
+    write("ghost-route","幽灵路线","no-such-collection");
+    Command({{"action","list"}});
+    Check(rowCollection("ghost-route")==AutoRoute::DefaultCollectionId,
+        "a route naming a collection that does not exist is shown under the default collection");
+    Check(routeCount(AutoRoute::DefaultCollectionId)>=1,
+        "the collection counts match the rows the list is showing");
+
+    // A drawing and a fresh preview both land in the collection the player is in *at save time*,
+    // which is the whole reason the collection can be switched at all.
+    RoutePlanningService::ObserveMap(1,{});
+    Command({{"action","handStart"}});
+    Command({{"action","handPoint"},{"x",7},{"y",0}});
+    Command({{"action","handPoint"},{"x",9},{"y",0}});
+    Command({{"action","handCommit"},{"name","手绘进合集"}});
+    const auto handId=savedIdByName("手绘进合集");
+    Check(!handId.empty()&&rowCollection(handId)==chestId,
+        "a hand-drawn route is saved into the collection the player is currently in");
+    Check(routeCount(chestId)>=1,"the drawing is counted in that collection");
+    {
+        const auto document=[&]{std::ifstream input(routePath(handId,true));return Json::parse(input);}();
+        Check(document.value("collection",std::string{})==chestId&&document.value("handDrawn",false),
+            "the collection is written into the route file, so it survives a restart");
+    }
+
+    Command({{"action","collectionCurrent"},{"collectionId",AutoRoute::DefaultCollectionId}});
+    Check(currentCollection()==AutoRoute::DefaultCollectionId,"switching back to the default collection is reported");
+    write("keep-a","保持原位",AutoRoute::DefaultCollectionId);
+    write("keep-b","也保持原位",chestId);
+    // A route file written before collections existed has no collection key at all. Removing it by
+    // hand is the only honest way to test that, because Save always writes one.
+    {
+        auto document=[&]{std::ifstream input(routePath("keep-a"));return Json::parse(input);}();
+        document.erase("collection");
+        WriteTextAtomically(routePath("keep-a"),document.dump(2));
+    }
+    Command({{"action","list"}});
+    Check(rowCollection("keep-a")==AutoRoute::DefaultCollectionId&&rowCollection("keep-b")==chestId,
+        "a route file with no collection field at all reads as the default collection");
+
+    // Moving is the only way a route changes collection after it is written. The active route must
+    // be somewhere else entirely, because that is the case the pre-action fence guards.
+    Command({{"action","load"},{"routeId","keep-b"}});
+    RoutePlanningService::ObserveMap(1,{});
+    Command({{"action","resume"}});
+    Check(RoutePlanningService::View().active&&RoutePlanningService::View().active->id=="keep-b",
+        "fixture must be following keep-b while another route is moved");
+    Check(refused({{"action","state"},{"routeId","keep-a"}}),
+        "the active-route fence refuses a route named with the singular routeId");
+    Check(!refused({{"action","routeCollection"},{"routeIds",Json::array({"keep-a"})},
+        {"collectionId",chestId}}),
+        "a batch move names its routes with routeIds, so the active-route fence never sees them");
+    Check(rowCollection("keep-a")==chestId,"moving a route rewrites which collection its file names");
+    Check(RoutePlanningService::View().active->id=="keep-b"&&rowCollection("keep-b")==chestId,
+        "moving another route neither switches nor moves the active one");
+    Check(store.Load("local","keep-a",[&](int scene,const std::string& key)->std::optional<ItemDatas>{
+        if(scene!=template_.sceneId)return {};for(const auto& item:template_.stops)if(AutoRoute::Key(item)==key)return item;return {};}).name=="保持原位",
+        "moving a route changes nothing but its collection");
+    Check(refused({{"action","routeCollection"},{"routeIds",Json::array({"keep-a"})},{"collectionId","gone"}}),
+        "moving into a collection that does not exist is refused");
+    Check(refused({{"action","routeCollection"},{"routeIds",Json::array()},{"collectionId",chestId}}),
+        "moving nothing is refused rather than reported as a success");
+    Command({{"action","routeCollection"},{"routeIds",Json::array({"keep-b"})},
+        {"collectionId",AutoRoute::DefaultCollectionId}});
+    Check(rowCollection("keep-b")==AutoRoute::DefaultCollectionId&&
+        RoutePlanningService::View().active->collection==AutoRoute::DefaultCollectionId,
+        "moving the route being followed keeps the in-memory copy in step with the file");
+
+    // Saving an already-saved route rewrites its own file and leaves it where it is: looking at
+    // another collection is not a request to move the player's work.
+    Command({{"action","collectionCurrent"},{"collectionId",chestId}});
+    Command({{"action","save"},{"name","改过名字的路线"}});
+    Check(rowCollection("keep-b")==AutoRoute::DefaultCollectionId&&
+        RoutePlanningService::View().active->collection==AutoRoute::DefaultCollectionId,
+        "saving an already-saved route keeps its own collection instead of the current one");
+    Command({{"action","collectionCurrent"},{"collectionId",AutoRoute::DefaultCollectionId}});
+
+    // Deleting a collection takes its routes with it — the rule the player chose — and everything
+    // that was pointing at one of them has to let go.
+    Command({{"action","routeCollection"},{"routeIds",Json::array({"keep-b"})},{"collectionId",chestId}});
+    Command({{"action","load"},{"routeId","keep-b"}});
+    RoutePlanningService::ObserveMap(1,{});
+    Command({{"action","resume"}});
+    Check(RoutePlanningService::View().active&&RoutePlanningService::View().active->id=="keep-b",
+        "fixture must be following a route inside the collection that is about to be deleted");
+    Command({{"action","collectionDelete"},{"collectionId",chestId}});
+    Check(!std::filesystem::exists(routePath("keep-b"))&&!std::filesystem::exists(routePath("keep-a")),
+        "deleting a collection deletes the routes that were filed in it");
+    Check(rowCollection("ghost-route")==AutoRoute::DefaultCollectionId,
+        "deleting a collection leaves every other route alone");
+    Check(RoutePlanningService::View().active==std::nullopt,
+        "deleting a collection that held the route being followed ends that navigation");
+    Check(currentCollection()==AutoRoute::DefaultCollectionId&&collections().size()==1,
+        "the deleted collection is gone and the player is back in the default one");
+    Check(index.Load("local").collections.empty(),"the deleted collection is gone from the index file too");
+    Check(!std::filesystem::exists(routePath("keep-b").string()+".deleting"),
+        "deleting a collection leaves no half-deleted route behind");
+
+    Check(refused({{"action","collectionDelete"},{"collectionId",AutoRoute::DefaultCollectionId}}),
+        "the default collection cannot be deleted");
+    Check(refused({{"action","collectionRename"},{"collectionId",AutoRoute::DefaultCollectionId},{"name","改名"}}),
+        "the default collection cannot be renamed");
+    Check(refused({{"action","collectionRename"},{"collectionId","no-such-collection"},{"name","改名"}}),
+        "renaming a collection that does not exist is refused");
+    Check(refused({{"action","collectionCurrent"},{"collectionId","no-such-collection"}}),
+        "switching to a collection that does not exist is refused");
+    Check(refused({{"action","collectionDelete"},{"collectionId","no-such-collection"}}),
+        "deleting a collection that does not exist is refused");
+
+    Command({{"action","collectionNew"},{"name","采集"}});
+    const auto herbId=currentCollection();
+    Command({{"action","collectionRename"},{"collectionId",herbId},{"name","采集路线"}});
+    Check(collectionRow(herbId).value("name",std::string{})=="采集路线",
+        "a collection can be renamed, and the new name is what the list reports");
+    Check(refused({{"action","collectionRename"},{"collectionId",herbId},{"name",AutoRoute::DefaultCollectionName}}),
+        "renaming onto the reserved name is refused");
+    Command({{"action","collectionRename"},{"collectionId",herbId},{"name","采集路线"}});
+    Check(currentCollection()==herbId,"renaming does not change which collection the player is in");
+    Command({{"action","collectionCurrent"},{"collectionId",AutoRoute::DefaultCollectionId}});
+    // The index is the authority on restart: whatever it says is where the player comes back to.
+    Check(index.Load("local").current==AutoRoute::DefaultCollectionId&&index.Load("local").collections.size()==1,
+        "the index on disk holds exactly the collections that survived, in creation order");
+}
 }
 int main(int argc,char** argv){
     StructuredLogger::root=std::filesystem::absolute(argc>1?argv[1]:"out/auto-replan-native/service-data");
     std::filesystem::create_directories(StructuredLogger::root);
+    // The service reads the collections index exactly once per process, on its first profile sync,
+    // which happens before any test can reset it. The harness owns this directory and may be reusing
+    // one from an earlier run, so the index is cleared here: a collection left over from last time
+    // would otherwise look exactly like a bug in this run.
+    AutoRoute::RouteCollections(StructuredLogger::root/"SavedRoutes")
+        .Save("local",AutoRoute::RouteCollections::Index{});
     const bool failSave=argc>2&&std::string(argv[2])=="save-failure";
     try{
         const auto original=Prepare();const auto originalIds=Ids(original);const auto oldKey=AutoRoute::Key(original.stops.front());
@@ -563,6 +797,7 @@ int main(int argc,char** argv){
         VerifyToolbarLayoutNavigation();
         VerifyFarmMode();
         VerifyRouteListShape();
+        VerifyCollections();
     }catch(const std::exception& e){++failures;std::cerr<<"UNEXPECTED: "<<e.what()<<'\n';}
     RoutePlanningService::Shutdown();
     std::cout<<"RoutePlanningService harness failures="<<failures<<'\n';return failures?1:0;
