@@ -7,14 +7,15 @@ using System.Text.Json;
 
 namespace IMao_WinUI.Views;
 
+// 这一页只有两件事：讲清路线在游戏里怎么操作，以及把保存过的路线列出来（带类型图标）。
+// 选点画布、生成预览、开始/暂停/跳过/完成都在游戏内大地图的「地图工具台 → 路径自动规划」里，
+// 这里不再放那些入口：它们要么得到「请先打开大地图并完成识别」，要么静默无效。
 public sealed partial class FunctionPage : Page
 {
     private readonly CoreHostService coreHost;
-    private bool restoringConfiguration = true;
     private CancellationTokenSource? routePageLifetime;
     private RoutePlanningState renderedRouteState = new();
     private bool deletingRoute;
-    private bool savingAutoReplan;
 
     public FunctionViewModel ViewModel { get; }
 
@@ -23,69 +24,26 @@ public sealed partial class FunctionPage : Page
         ViewModel = App.GetService<FunctionViewModel>();
         coreHost = App.GetService<CoreHostService>();
         InitializeComponent();
-        RestoreConfiguration();
         Loaded += FunctionPage_Loaded;
         Unloaded += FunctionPage_Unloaded;
     }
 
-    private void RestoreConfiguration()
-    {
-        restoringConfiguration = true;
-        var value = coreHost.Configuration;
-        AutoReplanToggle.IsOn = value.AutoReplanEnabled;
-        ManualRouteKeyDisplay.Text = RuntimeConfiguration.HotkeyName(value.ManualRouteKey);
-        ManualRouteDescription.Text = value.ManualRouteKey == 0
-            ? "手绘快捷键已禁用，可在设置中调整；在大地图上点击也能加点。"
-            : $"大地图上点击要标记的位置就会加点，也可以按一次 {RuntimeConfiguration.HotkeyName(value.ManualRouteKey)} 记下鼠标当前位置；Ctrl+Z 撤销上一个点，Esc 结束手绘（已画的点会保留，回到路线列表可以保存）。自动路线选点期间暂停手绘。";
-        AutoRouteGuide.Content = value.CurrentTargetGuideKey == 0 ? "查看当前目标攻略" :
-            $"查看当前目标攻略（{RuntimeConfiguration.HotkeyName(value.CurrentTargetGuideKey)}）";
-        restoringConfiguration = false;
-    }
-
-    private async void AutoReplan_Toggled(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (restoringConfiguration || savingAutoReplan || !IsLoaded) return;
-        savingAutoReplan = true;
-        AutoReplanToggle.IsEnabled = false;
-        bool requested = AutoReplanToggle.IsOn;
-        try
-        {
-            bool applied = await coreHost.ConfigureAsync(autoReplanEnabled: requested);
-            if (!applied)
-            {
-                AutoRouteMessage.Severity = InfoBarSeverity.Warning;
-                AutoRouteMessage.Message = (coreHost.Configuration.AutoReplanEnabled == requested
-                    ? "实时规划设置已保存，但尚未应用：" : "实时规划设置未能保存：") + coreHost.LastFault;
-                AutoRouteMessage.IsOpen = true;
-            }
-        }
-        catch (Exception exception)
-        {
-            AutoRouteMessage.Severity = InfoBarSeverity.Error;
-            AutoRouteMessage.Message = "无法保存实时规划设置：" + exception.Message;
-            AutoRouteMessage.IsOpen = true;
-        }
-        finally { savingAutoReplan = false; RestoreConfiguration(); AutoReplanToggle.IsEnabled = true; }
-    }
-
     private async void FunctionPage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        RestoreConfiguration();
         routePageLifetime?.Cancel();
         routePageLifetime?.Dispose();
         routePageLifetime = new();
         coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
         coreHost.RoutePlanningChanged += CoreHost_RoutePlanningChanged;
-        coreHost.PropertyChanged -= CoreHost_ConfigurationChanged;
-        coreHost.PropertyChanged += CoreHost_ConfigurationChanged;
         RenderRouteState(coreHost.RoutePlanning);
-        await RouteCommandAsync("state");
+        // The list is the one thing here the core does not push on its own: ask for it, so reopening the
+        // page after changing routes in the game shows the current rows.
+        await RouteCommandAsync("list");
     }
 
     private void FunctionPage_Unloaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
-        coreHost.PropertyChanged -= CoreHost_ConfigurationChanged;
         routePageLifetime?.Cancel();
         routePageLifetime?.Dispose();
         routePageLifetime = null;
@@ -93,43 +51,39 @@ public sealed partial class FunctionPage : Page
 
     private void CoreHost_RoutePlanningChanged(object? sender, RoutePlanningState state) => RenderRouteState(state);
 
-    private void CoreHost_ConfigurationChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(CoreHostService.Configuration) && !savingAutoReplan) RestoreConfiguration();
-    }
-
     private void RenderRouteState(RoutePlanningState state)
     {
         renderedRouteState = state;
-        AutoReplanStateText.Text = state.AutoReplanLabel;
         AutoRouteMessage.Severity = InfoBarSeverity.Informational;
         AutoRouteMessage.Message = state.Message;
         AutoRouteMessage.IsOpen = !string.IsNullOrWhiteSpace(state.Message);
-        string tool = state.Tool switch { "point" => "单点选择", "box" => "矩形框选", "lasso" => "自由套索", "start" => "指定起点", _ => "移动地图" };
-        AutoRouteSelectionSummary.Text = $"已选 {state.SelectedCount} / 500 · 当前不可见 {state.HiddenCount} 个 · " +
-            (state.Enabled ? $"{tool} · {state.SceneName}" : "未进入选点");
-        AutoRouteStartSummary.Text = state.Start.Valid
-            ? $"起点：{(state.Start.Source == "manual" ? "手动指定" : "玩家位置快照")}（{state.Start.X:F1}, {state.Start.Y:F1}）"
-            : "起点：尚未获取；可在大地图上指定起点，或返回游戏重新定位。";
-        AutoRouteProgress.Visibility = state.Computing ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-        AutoRouteGenerate.IsEnabled = state.Enabled && !state.Computing && state.SelectedCount > 0;
-        AutoRouteActivate.IsEnabled = state.Preview is not null && !state.Computing;
-        AutoRouteStop.IsEnabled = state.Active is not null;
-        AutoRouteGuide.IsEnabled = state.Active is not null && state.CurrentTarget is not null;
-        AutoRouteSelectedStops.ItemsSource = state.Selected;
-        AutoRoutePreviewStops.ItemsSource = state.Preview?.Stops;
-        AutoRoutePreviewSummary.Text = state.Preview is { } preview
-            ? $"预览：{preview.Stops.Length} 个目标 · 平面连线长度 {preview.PlanarLength:F1} · 点击“开始导航”启用。"
-            : "尚未生成预览";
-        AutoRouteActiveStops.ItemsSource = state.Active?.Stops;
-        AutoRouteActiveSummary.Text = state.Active is { } activeRoute
-            ? $"活动路线：{activeRoute.Name} · {state.NavigationLabel} · {activeRoute.Stops.Length} 个目标 · 平面连线长度 {activeRoute.PlanarLength:F1}"
-            : "当前没有活动路线";
-        AutoRouteCurrentTarget.Text = state.CurrentTarget is { } target ? $"当前目标：{target.ListLabel}" : "当前目标：无";
+        AutoRouteListSummary.Text = state.Active is { } activeRoute
+            ? $"正在走的路线：{activeRoute.Name} · {state.NavigationLabel} · " +
+              $"已完成 {activeRoute.Stops.Count(stop => stop.Completed)} / {activeRoute.Stops.Length} · " +
+              $"当前目标 {(state.CurrentTarget?.DisplayName ?? "无")}。"
+            : "当前没有在走的路线。下面任何一条都可以直接开始指引，或者在大地图上新建一条。";
+
+        // The dot on the row that is currently applied is set here rather than derived: a row cannot see
+        // the state object that holds both the list and the current route. Records are `with`-copied all
+        // over this codebase, so a flag on the previous snapshot's rows does not leak into this one.
+        // `Active` is the one that matters here - this page lists saved routes and says which of them is
+        // the route being followed - so it does not depend on the core also filling `CurrentRoute`.
         string? selectedId = (AutoRouteSavedRoutes.SelectedItem as SavedAutomaticRoute)?.Id;
-        AutoRouteSavedRoutes.ItemsSource = state.SavedRoutes;
-        AutoRouteSavedRoutes.SelectedItem = state.SavedRoutes.FirstOrDefault(route => route.Id == selectedId);
+        var currentId = state.Active?.Id ?? state.CurrentRoute?.Id ?? "";
+        var rows = state.SavedRoutes
+            .Select(saved => saved with { Current = currentId.Length > 0 && saved.Id == currentId })
+            .ToArray();
+        AutoRouteSavedRoutes.ItemsSource = rows;
+        AutoRouteSavedRoutes.SelectedItem = rows.FirstOrDefault(row => row.Id == selectedId);
+        AutoRouteEmptyHint.Visibility = rows.Length == 0 ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+        UpdateSwitchAvailability();
     }
+
+    private void AutoRouteSavedRoutes_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateSwitchAvailability();
+
+    /// <summary>The switch button acts on one row, so it says so by being unavailable until one is picked.</summary>
+    private void UpdateSwitchAvailability() =>
+        AutoRouteSwitch.IsEnabled = AutoRouteSavedRoutes.SelectedItem is SavedAutomaticRoute { Corrupt: false };
 
     private async Task RouteCommandAsync(string action, object? arguments = null)
     {
@@ -161,42 +115,26 @@ public sealed partial class FunctionPage : Page
 
     private async void AutoRouteAction_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string action }) return;
-        if (action is "complete" or "skip" or "guide")
+        if (sender is Button { Tag: string action }) await RouteCommandAsync(action);
+    }
+
+    /// <summary>
+    /// Applying a route from the desktop is the same command the in-game list sends when a row is picked:
+    /// <c>switch</c> loads it, makes it active and starts guiding it, and it is fenced to the map context
+    /// the player was looking at, so applying a route for another map is refused instead of silently
+    /// starting a navigation with no target on screen.
+    /// </summary>
+    private async void AutoRouteSwitch_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (AutoRouteSavedRoutes.SelectedItem is not SavedAutomaticRoute selected || selected.Corrupt) return;
+        var state = renderedRouteState;
+        await RouteCommandAsync("switch", new
         {
-            var state = renderedRouteState;
-            if (state.CurrentTarget is not { } target || state.Active is not { } route) return;
-            await RouteCommandAsync(action, new { key = target.Key, profileId = state.ProfileId, routeId = route.Id });
-        }
-        else if (action == "stop" && renderedRouteState.Active is { } activeRoute)
-            await RouteCommandAsync(action, new { routeId = activeRoute.Id, profileId = renderedRouteState.ProfileId });
-        else await RouteCommandAsync(action);
-    }
-
-    private async void AutoRouteTool_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string tool }) await RouteCommandAsync("tool", new { tool });
-    }
-
-    private async void AutoRouteRemove_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string key }) await RouteCommandAsync("remove", new { key });
-    }
-
-    private async void AutoRouteSave_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string target })
-        {
-            var arguments = new Dictionary<string, object?> { ["target"] = target };
-            if (!string.IsNullOrWhiteSpace(AutoRouteName.Text)) arguments["name"] = AutoRouteName.Text.Trim();
-            await RouteCommandAsync("save", arguments);
-        }
-    }
-
-    private async void AutoRouteLoad_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (AutoRouteSavedRoutes.SelectedItem is SavedAutomaticRoute selected)
-            await RouteCommandAsync("load", new { routeId = selected.Id });
+            routeId = selected.Id,
+            start = true,
+            expectedSceneId = state.SceneId,
+            expectedGeneration = state.Generation
+        });
     }
 
     private async void AutoRouteDelete_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -206,7 +144,7 @@ public sealed partial class FunctionPage : Page
         {
             AutoRouteMessage.IsOpen = true;
             AutoRouteMessage.Severity = InfoBarSeverity.Informational;
-            AutoRouteMessage.Message = "请先在已保存路线列表中选择要删除的路线。";
+            AutoRouteMessage.Message = "请先在路线列表中选择要删除的路线。";
             return;
         }
         var profile = renderedRouteState.ProfileId;
@@ -214,7 +152,7 @@ public sealed partial class FunctionPage : Page
         {
             XamlRoot = XamlRoot,
             Title = $"删除“{(string.IsNullOrWhiteSpace(selected.Name) ? selected.Id : selected.Name)}”？",
-            Content = "将删除这条已保存的自动路线；如果它正在导航，也会退出导航。点位的完成记录仍然保留。",
+            Content = "将删除这条已保存的路线；如果它正在导航，也会退出导航。点位的完成记录仍然保留。",
             PrimaryButtonText = "删除路线",
             CloseButtonText = "取消",
             DefaultButton = ContentDialogButton.Close

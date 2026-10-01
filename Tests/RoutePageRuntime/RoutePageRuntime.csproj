@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>RoutePageRuntime</RootNamespace>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <EnableDefaultPriItems>true</EnableDefaultPriItems>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <OutputPath>../../out/route-page-runtime/</OutputPath>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <DefaultLanguage>zh-CN</DefaultLanguage>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.250402" />
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The page under test, verbatim: only the services it talks to are fixtures. -->
+    <Page Include="../../IMao-WinUI/Views/FunctionPage.xaml" Link="Views/FunctionPage.xaml" />
+    <Compile Include="../../IMao-WinUI/Views/FunctionPage.xaml.cs" Link="Views/FunctionPage.xaml.cs" />
+    <Compile Include="../../IMao-WinUI/ViewModels/FunctionViewModel.cs" Link="Production/FunctionViewModel.cs" />
+    <Compile Include="../../IMao-WinUI/ViewModels/UsageGuideViewModel.cs" Link="Production/UsageGuideViewModel.cs" />
+    <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="Production/RoutePlanningState.cs" />
+    <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="Production/GamepadInput.cs" />
+    <Compile Include="../../IMao-WinUI/Helpers/RouteKindIconConverter.cs" Link="Production/RouteKindIconConverter.cs" />
+    <Compile Include="../../IMao-WinUI/Contracts/Services/INavigationService.cs" Link="Production/INavigationService.cs" />
+    <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
+    <Page Include="../../IMao-WinUI/Styles/Thickness.xaml" Link="Styles/Thickness.xaml" />
+  </ItemGroup>
+</Project>
