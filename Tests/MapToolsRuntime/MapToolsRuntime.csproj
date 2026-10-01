@@ -12,23 +12,35 @@
     <ProjectReference Include="../../IMao-WinUI.Core/IMao-WinUI.Core.csproj" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
     <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.250402" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" />
     <Manifest Include="$(ApplicationManifest)" />
     <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
     <Page Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml" Link="Views/Controls/FilterControl.xaml" />
     <Compile Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml.cs" Link="Production/FilterControl.xaml.cs" />
     <Compile Include="../../IMao-WinUI/Views/MapToolsWindow.cs" Link="Production/MapToolsWindow.cs" />
-    <Compile Include="../../IMao-WinUI/Services/MapToolsController.cs" Link="Production/MapToolsController.cs" />
-    <Compile Include="../../IMao-WinUI/Services/IMapToolsController.cs" Link="Production/IMapToolsController.cs" />
-    <Compile Include="../../IMao-WinUI/Services/FilterSelectionService.cs" Link="Production/FilterSelectionService.cs" />
-    <Compile Include="../../IMao-WinUI/Services/GamepadWindowActivation.cs" Link="Production/GamepadWindowActivation.cs" />
-    <Compile Include="../../IMao-WinUI/Services/GamepadWindowReturn.cs" Link="Production/GamepadWindowReturn.cs" />
-    <Compile Include="../../IMao-WinUI/Services/GamepadWindowVisibility.cs" Link="Production/GamepadWindowVisibility.cs" />
-    <Compile Include="../../IMao-WinUI/Services/GamepadWindowChrome.cs" Link="Production/GamepadWindowChrome.cs" />
-    <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="Production/GamepadInput.cs" />
-    <Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="Production/MapFilterCatalog.cs" />
-    <Compile Include="../../IMao-WinUI/Helpers/ResourceSessionPaths.cs" Link="Production/ResourceSessionPaths.cs" />
-    <Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="Production/RoutePlanningState.cs" />
-    <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" />
-    <Compile Include="../../IMao-WinUI/Models/CoreRuntimeStatus.cs" Link="Production/CoreRuntimeStatus.cs" />
+    <Compile Include="../../IMao-WinUI/Views/RouteGamepadInputHost.cs" Link="Production/RouteGamepadInputHost.cs" />
+    <!-- Folders rather than a hand-picked list. The list this replaces named each production file one by one,
+         and it went stale the moment MapToolsWindow started using a model nobody had linked
+         (GamepadNavigationList) - which is why this harness had not compiled since 2026-09-27.
+
+         The Exclude lists are the harness's own boundary, in three groups:
+
+         1. Types FakeServices.cs provides on purpose. LocalItemFilter/FilterItemDatas and StringItem are the
+            load-bearing ones: the fakes THROW, so any code path that falls back to the player's own filter
+            storage or reads the real catalog fails loudly instead of writing to their data. Linking the
+            production files would quietly re-enable those writes.
+         2. The real services that own a device, a pipe or a file this harness must not touch: CoreHostService,
+            GamepadInputService, LocalSettingsService, AppNotificationService.
+         3. Desktop-shell code the tools window never reaches: the record-book and KuroSync stack, the
+            exploration hotkey, the page/navigation plumbing (it needs Microsoft.Xaml.Behaviors and the six
+            pages, neither of which belongs here) and the legacy route-gamepad fallback. -->
+    <Compile Include="../../IMao-WinUI/Models/*.cs" Link="Production/Models/%(Filename)%(Extension)" />
+    <Compile Include="../../IMao-WinUI/Helpers/*.cs" Link="Production/Helpers/%(Filename)%(Extension)"
+             Exclude="../../IMao-WinUI/Helpers/LocalItemFilter.cs" />
+    <Compile Include="../../IMao-WinUI/Contracts/Services/*.cs" Link="Production/Contracts/%(Filename)%(Extension)" />
+    <Compile Include="../../IMao-WinUI/Contracts/ViewModels/INavigationAware.cs" Link="Production/INavigationAware.cs" />
+    <Compile Include="../../IMao-WinUI/Services/*.cs" Link="Production/Services/%(Filename)%(Extension)"
+             Exclude="../../IMao-WinUI/Services/GamepadHandoffLease.cs;../../IMao-WinUI/Services/MarkerGuideCoordinator.cs;../../IMao-WinUI/Services/CoreHostService.cs;../../IMao-WinUI/Services/GamepadInputService.cs;../../IMao-WinUI/Services/LocalSettingsService.cs;../../IMao-WinUI/Services/AppNotificationService.cs;../../IMao-WinUI/Services/ActivationService.cs;../../IMao-WinUI/Services/KuroProgressSyncService.cs;../../IMao-WinUI/Services/KuroAutoSyncService.cs;../../IMao-WinUI/Services/KuroSyncSettings.cs;../../IMao-WinUI/Services/LocalAccountCatalog.cs;../../IMao-WinUI/Services/LegacyPointRecovery.cs;../../IMao-WinUI/Services/LocalMarkerProfileSelection.cs;../../IMao-WinUI/Services/ExplorationHotkeyService.cs;../../IMao-WinUI/Services/NavigationViewService.cs;../../IMao-WinUI/Services/PageService.cs;../../IMao-WinUI/Services/RouteGamepadController.cs" />
+    <Compile Include="../../IMao-WinUI/ViewModels/*ViewModel.cs" Link="Production/ViewModels/%(Filename)%(Extension)" Exclude="../../IMao-WinUI/ViewModels/SettingsViewModel.cs" />
   </ItemGroup>
 </Project>

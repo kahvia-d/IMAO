@@ -23,6 +23,15 @@ will correctly stop at its bootstrap, before testing tools activation. Coordinat
 with other UI tests and let this executable own its test windows until it exits.
 The harness restores focus only among its own source/tools/coordination windows.
 
+> **Why the file list became globs.** This project used to name every production file it compiled. That list
+> went stale the moment `MapToolsWindow` started using `GamepadNavigationList` — a model nobody had linked —
+> and the harness stopped compiling on 2026-09-27 without anyone having removed a type. It now links folders
+> (`Models`, `Helpers`, `Contracts`, `Services`, `ViewModels`, plus `MapToolsWindow` and the input host) and
+> excludes exactly what `FakeServices.cs` replaces, each with its reason in the project file. Two of those
+> exclusions are load-bearing: the fake `LocalItemFilter`/`FilterItemDatas` and `StringItem` **throw**, so any
+> code path that falls back to the player's own filter storage or reads the real catalog fails loudly instead
+> of writing to their data.
+
 Evidence goes to `out/map-tools-runtime/evidence-<timestamp>` and successful runs
 update `out/map-tools-runtime/latest-results.txt`. The process exits nonzero on
 the first failed assertion. Screenshots capture the actual displayed production

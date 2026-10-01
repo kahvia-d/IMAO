@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using IMao_WinUI.Models;
+using Microsoft.UI.Xaml;
 
 namespace IMao_WinUI
 {
@@ -9,6 +10,11 @@ namespace IMao_WinUI
     {
         public static Dictionary<Type, object> Services { get; } = new();
         public static T GetService<T>() where T : class => (T)Services[typeof(T)];
+        // TitleBarHelper (linked production helper) and NavigationService both reach for these two, so the
+        // fixture offers the same shape the real App does: the harness's own window, and no title bar to
+        // restyle. Nothing here opens or activates a window.
+        public static Window MainWindow { get; set; } = null!;
+        public static UIElement? AppTitlebar { get; set; }
     }
 }
 namespace IMao_WinUI.Helpers
