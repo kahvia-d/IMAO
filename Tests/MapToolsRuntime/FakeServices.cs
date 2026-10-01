@@ -87,6 +87,8 @@ namespace IMao_WinUI.Services
         private string canvas = "pan", page = "home";
         private uint lastButtons;
         public JsonElement Context => JsonSerializer.SerializeToElement(new { gameHwnd = (ulong)Game, profileId = "fixture", contextGeneration = 12UL });
+        /// <summary>Publishes a route state the way the core would push one, for the list pages.</summary>
+        public void Seed(RoutePlanningState value) { RoutePlanning = value; RoutePlanningChanged?.Invoke(this, RoutePlanning); }
         public void ReportGamepadDiagnostic(string tag, string message)
         { Diagnostics.Add(tag + ": " + message); File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "diagnostics.log"), tag + ": " + message + "\n"); }
         public Task<bool> SynchronizeFilterAsync(IReadOnlyDictionary<string, bool> values, CancellationToken cancellationToken = default) => Task.FromResult(IsConnected);
@@ -107,6 +109,15 @@ namespace IMao_WinUI.Services
                 "tool" => RoutePlanning with { Enabled = true, Tool = data.GetProperty("tool").GetString()! },
                 "end" => RoutePlanning with { Enabled = false, Tool = "pan" },
                 "clear" => RoutePlanning with { SelectedCount = 0 },
+                // Entering a collection moves the pointer, exactly as the core does: the route list
+                // then shows that collection and the next save lands in it.
+                "collectionCurrent" => RoutePlanning with
+                {
+                    CurrentCollection = data.GetProperty("collectionId").GetString()!,
+                    Collections = RoutePlanning.Collections
+                        .Select(collection => collection with { Current = collection.Id == data.GetProperty("collectionId").GetString() })
+                        .ToArray()
+                },
                 _ => RoutePlanning
             };
             RoutePlanning = RoutePlanning with { Revision = RoutePlanning.Revision + 1 };

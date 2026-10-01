@@ -33,6 +33,7 @@ internal sealed class MapToolsWindow : Window
     private readonly TextBlock routesCurrentKinds = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel routesCurrentKindsIcons = new() { Orientation = Orientation.Horizontal, Spacing = 10 };
     private readonly WrapPanel routesHeader = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
+    private readonly WrapPanel routesCollections = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
     private readonly TextBlock routesEmpty = new() { FontSize = 15, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock routesFilter = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
     private readonly TextBox routesName = new() { PlaceholderText = "手绘路线名称", MaxWidth = 360, HorizontalAlignment = HorizontalAlignment.Left };
@@ -312,7 +313,33 @@ internal sealed class MapToolsWindow : Window
             routesEmpty.Text = "还没有保存的路线。生成预览后可以「保存这条路线」，或在大地图上手绘一条。";
             routes.Children.Add(routesEmpty);
         }
-        foreach (var saved in next.SavedRoutes)
+        // Which collection the player is in is the thing that decides where the next save lands, so it
+        // sits above the list rather than behind a filter button, and the list itself shows that
+        // collection: a row from somewhere else would make "保存到当前合集" mean nothing.
+        routes.Children.Add(new TextBlock { Text = "合集", FontSize = 16, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+        routesCollections.Children.Clear();
+        foreach (var collection in next.Collections)
+        {
+            var chip = MakeButton(collection.Name + (collection.RouteCount > 0 ? $"（{collection.RouteCount}）" : ""),
+                "collection:" + collection.Id, $"{collection.Name}，{collection.RouteCount} 条路线" +
+                (collection.Current ? "，当前合集" : "，按 A 进入"));
+            chip.Background = GamepadWindowChrome.Brush(collection.Current ? "IMaoAccentBrush" : "IMaoSurfaceBrush",
+                collection.Current ? 0x63D8E8u : 0x19222Eu);
+            chip.Foreground = GamepadWindowChrome.Brush(collection.Current ? "IMaoCanvasBrush" : "IMaoTextBrush",
+                collection.Current ? 0x10151Du : 0xE7F0F7u);
+            routesCollections.Children.Add(chip);
+        }
+        routes.Children.Add(routesCollections);
+        var mine = next.SavedRoutes.Where(saved => saved.Collection == next.CurrentCollection).ToArray();
+        var elsewhere = next.SavedRoutes.Length - mine.Length;
+        separator.Text = $"「{CurrentCollectionName(next)}」里的路线（{mine.Length} 条）" +
+            (elsewhere > 0 ? $" · 其它合集还有 {elsewhere} 条" : "");
+        if (next.SavedRoutes.Length > 0 && mine.Length == 0)
+        {
+            routesEmpty.Text = "这个合集里还没有路线。在别的合集里点一条可以开始指引它，或者把「保存这条路线」用在当前预览上。";
+            routes.Children.Add(routesEmpty);
+        }
+        foreach (var saved in mine)
         {
             var row = BuildSavedRow(saved, current?.Id == saved.Id);
             savedRows.Add((row, saved));
@@ -341,7 +368,9 @@ internal sealed class MapToolsWindow : Window
         else if (next.HandDrawnPending)
         {
             routesHandButtons.Children.Add(MakeButton("继续绘制", "handStart"));
-            routesHandButtons.Children.Add(MakeButton("保存手绘路线", "handCommit", null, next.HandDrawnCount >= 2));
+            // The button says where the drawing will land: "保存到当前合集" is only true if the player
+            // can see which collection that is at the moment they press it.
+            routesHandButtons.Children.Add(MakeButton($"保存到「{CurrentCollectionName(next)}」", "handCommit", null, next.HandDrawnCount >= 2));
             routesHandButtons.Children.Add(MakeButton("放弃这次手绘", "handDiscard"));
         }
         else
@@ -354,6 +383,10 @@ internal sealed class MapToolsWindow : Window
 
     /// <summary>The key the player presses to record a point, as the settings show it.</summary>
     private string HotkeyLabel => RuntimeConfiguration.HotkeyName(core.Configuration.ManualRouteKey);
+
+    /// <summary>The current collection's name, as the buttons that save into it should say it.</summary>
+    private static string CurrentCollectionName(RoutePlanningState state) =>
+        state.Collections.FirstOrDefault(collection => collection.Current)?.Name ?? "默认合集";
 
     /// <summary>The hand-drawn route's name as typed in the list page.</summary>
     public string HandRouteName => routesName.Text ?? "";
@@ -492,8 +525,15 @@ internal sealed class MapToolsWindow : Window
         foreach (var button in children.OfType<Button>().Where(b => b.IsEnabled && b.Visibility == Visibility.Visible))
             entries.Add(new(button, (string)button.Tag));
         if (Page == "routes")
+        {
+            // The collection chips take part in the ring too: choosing a collection is the one thing
+            // on this page that changes what the next save does.
+            foreach (var button in routesCollections.Children.OfType<Button>()
+                         .Where(b => b.IsEnabled && b.Visibility == Visibility.Visible))
+                entries.Add(new(button, (string)button.Tag));
             foreach (var button in SavedRowButtons.Where(b => b.IsEnabled && b.Visibility == Visibility.Visible))
                 entries.Add(new(button, (string)button.Tag));
+        }
         entries.Add(new(back, "back")); entries.Add(new(close, "close"));
         navigation.Rebuild(entries);
     }
@@ -528,9 +568,9 @@ internal sealed class MapToolsWindow : Window
         {
             "home" => width < 560 ? 320 : 225,
             "filter" => 520,
-            // The list is the one page that is meant to be big: it holds the current route, every
-            // saved route and the controls that act on them.
-            "routes" => 640,
+            // The list is the one page that is meant to be big: it holds the collection bar, the
+            // current route, every saved route of the collection and the controls that act on them.
+            "routes" => 700,
             _ => 370
         };
         double height = Math.Min(wantedHeight, Math.Max(180, rect.Bottom / scale - 96));

@@ -152,6 +152,43 @@ public partial class App : Application
                     Check(core.Commands.Skip(enabledAt).Count(c => c.Type == "markerMapToolsInput") >= 3,
                         "neutral, A down and A release reach native after delayed activation");
                 }
+                // The collection bar is the one thing the in-game list gained: which collection the
+                // player is in decides where the next save lands, so it has to be visible and
+                // switchable right there.
+                core.Seed(core.RoutePlanning with
+                {
+                    CurrentCollection = "default",
+                    Collections = [ new RouteCollection { Id = "default", Name = "默认合集", RouteCount = 2, Current = true, System = true },
+                                    new RouteCollection { Id = "chest", Name = "宝箱路线", RouteCount = 1 } ],
+                    SavedRoutes = [ new SavedAutomaticRoute { Id = "r-1", Name = "北岸", SceneName = "瑝珑", StopCount = 3, Collection = "default" },
+                                    new SavedAutomaticRoute { Id = "r-2", Name = "南岸", SceneName = "瑝珑", StopCount = 4, Collection = "default" },
+                                    new SavedAutomaticRoute { Id = "r-3", Name = "宝箱巡游", SceneName = "瑝珑", StopCount = 5, Collection = "chest" } ],
+                    HandDrawnPending = true, HandDrawnCount = 3
+                });
+                await Click(window, "routes"); await Until(() => window.Page == "routes", "routes page");
+                await Task.Delay(150);
+                var listButtons = Descendants((DependencyObject)window.Content).OfType<Button>().ToArray();
+                Check(listButtons.Any(b => Equals(b.Tag, "collection:default") && Equals(b.Tag, "collection:chest") == false),
+                    "the in-game list offers the default collection");
+                Check(listButtons.Any(b => Equals(b.Tag, "collection:chest") && ((string)b.Content).Contains("宝箱路线")),
+                    "every collection is offered by name, with its route count");
+                Check(listButtons.Any(b => Equals(b.Tag, "switch:r-1")) && listButtons.Any(b => Equals(b.Tag, "switch:r-2")),
+                    "the rows the current collection holds are the rows listed");
+                Check(!listButtons.Any(b => Equals(b.Tag, "switch:r-3")),
+                    "a route from another collection is not in this list, because saving goes to the current one");
+                Check(listButtons.Any(b => b.Content is string text && text.Contains("保存到「默认合集」")),
+                    "the hand-drawing save button says which collection it will save into");
+                await Capture(folder, $"{width}-routes-collections", window, game.Handle, Check);
+                core.Commands.Clear();
+                await Click(window, "collection:chest"); await Until(() => core.RoutePlanning.CurrentCollection == "chest", "collection switch");
+                Check(core.Commands.Any(c => c.Type == "route:collectionCurrent" &&
+                    c.Data.GetProperty("collectionId").GetString() == "chest"),
+                    "picking a collection in the game is the same command the desktop page sends");
+                await Task.Delay(150);
+                var switched = Descendants((DependencyObject)window.Content).OfType<Button>().ToArray();
+                Check(switched.Any(b => Equals(b.Tag, "switch:r-3")) && !switched.Any(b => Equals(b.Tag, "switch:r-1")),
+                    "switching collections switches which routes the list shows");
+                await Click(window, "page:route"); await Until(() => window.Page == "route", "back from routes");
                 await Back(controller); await Until(() => window.Page == "home", "B route to home");
                 Check(controller.IsOpen && window.Page == "home", "B returns route subtool to home without closing");
                 await Click(window, "page:filter"); await Until(() => window.Page == "filter", "filter page");

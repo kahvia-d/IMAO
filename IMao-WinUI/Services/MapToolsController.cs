@@ -430,6 +430,19 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
                 Report(core.RoutePlanning.Message);
                 return;
             }
+            if (action.StartsWith("collection:", StringComparison.Ordinal))
+            {
+                // Entering a collection from the in-game list. It is the same command the desktop page
+                // sends: which collection the player is in is one piece of state, not two.
+                await core.ExecuteRoutePlanningAsync("collectionCurrent",
+                    new Dictionary<string, object?> { ["profileId"] = profile, ["collectionId"] = action["collection:".Length..] },
+                    sessionCancellation?.Token ?? default);
+                await core.ExecuteRoutePlanningAsync("list", new Dictionary<string, object?> { ["profileId"] = profile },
+                    sessionCancellation?.Token ?? default);
+                window.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);
+                Report(core.RoutePlanning.Message);
+                return;
+            }
             if (action.StartsWith("switch:", StringComparison.Ordinal))
             {
                 var routeId = action["switch:".Length..];

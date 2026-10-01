@@ -441,4 +441,77 @@ internal static class NativeFileDialog {
 
 ## 11. 实施记录
 
-（待实施，按 §6 逐阶段续写。）
+八个阶段全部落地，每个阶段一个提交，每个阶段都带能变红的测试。分支 `feature/route-collections-import-export`。
+
+| 提交 | 阶段 | 内容 |
+|---|---|---|
+| `9c57ccd` | S1 | `Plan::collection`、Store 读写与 `List` 带出、`RouteCollections.h` |
+| `1be36a0` | S2 | 5 个合集 action、保存落合集、快照三字段、`AtomicFile` 重试 |
+| `6e3d13e` | S3 | `RouteBundle.h` 写入、`export` action、UTF-8 路径桥 |
+| `80aca47` | S4 | 路线包读取、`importInspect`/`importApply`、三种 mode |
+| `5f8fe12` | S5 | 托管模型三字段、`NativeFileDialog` |
+| `d101674` | S6 | 桌面页合集条、批量模式、导入导出、两个弹窗 |
+| （S7/S8） | S7/S8 | 游戏内合集条与保存目标注明、本文档 |
+
+### 11.1 与 §4/§5 的偏差（都是查证后改的，不是漏做）
+
+| 计划 | 实际 | 为什么 |
+|---|---|---|
+| `RoutePlanningView` 加 `collections`/`currentCollection`/`transfer` | **没加** | `RoutePlanningView` 里本来就没有 `saved`（路线列表只走 JSON 快照），加合集字段会与既有分层不一致 |
+| 「空 collection = 未定」由 planner 统一决定 | **分两处**：新预览/手绘在**保存时**取当前合集；`重新规划` 产出的预览带**源路线**的合集 | 第一版把「空 = 未定」写进 `Plan`，结果手绘的 `Plan` 带着模型默认值 `"default"`，永远不会落到当前合集。测试 T5 抓到了这一点；现在 `HandDrawnDraft::Commit` 显式 `collection.clear()` 表示「还没决定」 |
+| 导入用 `transfer` 缓存大 JSON | **不缓存**：`importApply` 重读重校验 | 少一份状态；文件在两步之间被换掉时以新文件为准，而不是照旧执行 |
+| 坏路线包整体拒绝 | **先全部校验、再落盘**；无效的逐条跳过并报数；**有效 0 条整批放弃** | 「一半完成的导入比不导入更糟」是仓库既有纪律，这里沿用 |
+
+### 11.2 测试与实测
+
+| 项 | 结果 |
+|---|---|
+| `IMaoRoutePlanningTests`（含新增 `CollectionIndexTests` + 提交重试用例） | **通过**，exit 0 |
+| `IMaoRoutePlanningServiceTests`（含 `VerifyCollections` + `VerifyRouteBundle`） | **通过**，exit 0；**连跑 12 次全绿**（同一目录复用） |
+| `IMaoRoutePlanningServiceTests save-failure` 模式 | **通过**，exit 0 |
+| `IMaoHandDrawnRouteTests` | **通过**，exit 0 |
+| `IMao-CoreHost` Release/x64 | 0 错误 |
+| `IMao-WinUI` Release/x64 | 0 错误（仅既有告警） |
+| `Tests/RoutePageRuntime` | **86 条断言全绿**（原 62 条），exit 0；截图 `out/route-page-runtime/*.png` |
+| `Tests/ResourcePackagePicker --abi-only` | **25 条断言全绿**（结构体搬到 `NativeFileDialog` 后跟随） |
+| `Tests/MapToolsRuntime` | ⚠️ **本会话跑不完**：它在第 12 条断言处报 `STATUS 工具台已失去焦点`，随后 `Click` 抛 `CO_E_RELEASED`。这是**环境限制**（harness 需要约 30 秒不受打扰的前台窗口，而本会话的终端/浏览器会抢焦点），不是本轮改动：把改动 `git stash` 后重跑，它在更早的一条前台断言上同样失败。**需要你在一台安静的桌面上跑一次**：`pwsh -File Tests\MapToolsRuntime\Build.ps1` 然后 `Run.ps1` |
+| `scripts/Test-Runtime.ps1` 全量门禁 | 见 §11.5 |
+
+### 11.3 对照实验（每条都真的变红过）
+
+| 被撤掉的行为 | 变红的断言 |
+|---|---|
+| `Load` 不读 `collection` 字段 | "a route's collection survives save and load" |
+| `RouteCollections::Normalized` 直接返回 | "a current collection that no longer exists falls back to the default collection" |
+| `NewRouteCollectionLocked` 永远返回默认合集 | 手绘落合集那 3 条 |
+| `collectionDelete` 不删路线 | "deleting a collection deletes the routes that were filed in it" |
+| 路线包不用 Store 的文档 | "the route inside a bundle is byte for byte the document the store writes" |
+| 覆盖模式不清空合集 | 7 条（含"importing the same collection bundle again settles…"） |
+| 导入永远沿用包里的 id | 4 条（含"an id that is already taken here belongs to the route that had it"） |
+
+### 11.4 顺带修掉的两件事（都不是本轮引入）
+
+1. **`AtomicFile.h` 的原子提交会输给一次瞬时占用。** 路线服务测试每 7 次左右就有一次报 `Unable to commit user data: Windows error 5`；加诊断后确认：失败发生在替换**已存在**的文件时，`MoveFileExW` 立刻重试就成功——`Docs\MengshuTianluo_20260930.md:308` 早就记过这次偶发并判定「与改动无关」，但没人修。现在对 `ERROR_ACCESS_DENIED`/`ERROR_SHARING_VIOLATION`/`ERROR_LOCK_VIOLATION` 重试 6 次（约 0.3 秒封顶），真正被锁住的文件仍然照实报错。`StoreTests` 新增一条用例：把目标文件按住 30 毫秒再放开，保存必须成功。
+2. **`std::filesystem::path` 的窄字符串走的是进程代码页，不是 UTF-8。** 跨 IPC 传过来的路径是 UTF-8，`path(std::string)` 在中文目录名上会抛 `No mapping for the Unicode character exists`。`RouteBundle.h` 的 `Utf8Path`/`Utf8Text` 显式转换，测试用「路线包」这个中文目录名钉住。
+
+### 11.5 门禁与部署
+
+- `scripts/Test-Runtime.ps1`：**exit 0**（`out\system-audit-collections`）。日志：`native-build.log`、`route-planning-tests.log`、`route-service-tests.log`、`managed-tests.log` 等。
+- **`Tests/RoutePageRuntime` 与 `Tests/MapToolsRuntime` 都不在门禁里**（门禁只跑 `ManagedRuntime` + 原生套件 + 资源/程序更新那几个脚本）。这是既有缺口，本轮没有扩大它：两个 harness 都按各自 README/Build/Run 手动跑过，`RoutePageRuntime` 全绿并留了截图，`MapToolsRuntime` 见 §11.2。
+- **没有发版**：`Version.props` 未动，没有构建候选包，没有发布。
+- **没有部署到 `out\map-test`**：本轮只改代码与测试，没有刷新测试树（真机验收前再刷）。
+
+### 11.6 遗留
+
+1. **`Tests/MapToolsRuntime` 需要你在一台安静的桌面上跑一次**（原因见 §11.2）。
+2. **真机验收 6 条**（§6 末）一条都还没做——都需要提权的 `IMao-WinUI.exe`。
+3. **`SavedRoutes\Hand\<记录本>` 在删记录本时仍不归档**（R11，既有缺口，本轮只补了 `Collections`）。
+4. 桌面页 `删除所选路线` 与批量 `删除所选` 都在 UI 侧逐条发 `delete`；核心没有批量删除动作。条数不多时无所谓，将来若要一次性删很多可以补一个 `routeIds` 版本。
+5. **文档索引**：`Docs/README.md` 本轮登记了本文与漏登记的 `RouteUiTrimAudit_20261001.md`；发行说明表仍停在 `Release-2026.9.28.2.md`，那属于发版流程，没动。
+
+### 11.7 给后来者
+
+- **合集是路线文件里的一个字段，不是目录。** 想改成目录之前先读 §4.1：`List` 会变成递归遍历，`Load`/`Delete`/`active.json` 全部要跟着改，而收益只是"看起来整齐"。
+- **新增的批量动作一律用 `routeIds`（复数）。** 前置栅栏 `RoutePlanningService.cpp:865-866` 只认 `routeId`，用单数会被静默拒绝——`switch` 当年就是这样在生产上被拒的。服务测试里那两条（一条断言栅栏仍然会拒，一条断言批量动作不被拒）就是钉这个的。
+- **核心是唯一知道"这个 id 是哪个合集"的地方。** 托管侧不解析路线包、不读路线文件，只认快照里的 `collections`/`currentCollection`/`transfer`。
+
