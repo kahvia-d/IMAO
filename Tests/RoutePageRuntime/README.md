@@ -25,17 +25,26 @@ $env:LOCALAPPDATA   = "$env:USERPROFILE\AppData\Local"
 Run `out/route-page-runtime/RoutePageRuntime.exe`. It shows its own window briefly, writes
 `out/route-page-runtime/route-page-tests.log` and exits with the assertion count.
 
-What it pins (23 assertions):
+What it pins (62 assertions):
 
-- The game-only entries are **gone** from the page (box/lasso/point/start tools, 加入可见点, 结束选点, the whole
-  hand-drawn section, route naming, save/load buttons) and the saved-route list is a read-only `ListView`.
-- The operations that do work without the map still dispatch the same commands with the same identities:
-  `complete`/`skip`/`guide` carry key + routeId + profileId, `stop` carries routeId + profileId.
-- The shared real-time-planning setting still follows the core snapshot and still writes back through
-  `ConfigureAsync`.
-- The page still renders at the 800×500 minimum window size, with 当前目标攻略 reachable.
+- The page is only the operation guide plus the route list: every game-only entry is gone (the selection
+  tools, 加入可见点, hand-drawing, save/load, and now also complete/skip/pause/stop, generate/activate and
+  the real-time-planning switch), and the saved-route list is a `ListView`.
+- Each row carries the point-type icons the way the in-game list does: a real PNG from
+  `Assets/KuroMap/icons` is handed to the row the same way the core hands over `icon-manifest.json` paths,
+  and the test asserts the row produced an `Image` whose source is a **decoded** `BitmapImage` with pixels,
+  that the type name sits beside it, and that the path text does **not** leak into the row. The fallback
+  (unreadable path → the path text, empty type table → 自由点（无类型）) is pinned through the converter
+  directly.
+- The row for the route being followed carries the dot. The fixture deliberately leaves `CurrentRoute`
+  empty on the snapshot, so the dot is proven to come from `Active` alone.
+- 开始指引 sends `switch` with the route id, the profile, `start: true` and the map context
+  (`expectedSceneId`/`expectedGeneration`) - the same command the in-game list sends when a row is picked.
+  A corrupt row cannot be switched to.
+- The page renders at the 800×500 minimum window size.
 
-Screenshots: `route-empty.png`, `route-active.png` (active route + saved routes), `route-800.png`.
+Screenshots: `route-empty.png`, `route-active.png` (the route list with icons and the ● row), `route-800.png`.
 
 It is a page-wiring and layout fixture. It does not replace native runtime, real persistence, real-game
 controller or physical DPI testing, and it does not exercise the other five pages.
+

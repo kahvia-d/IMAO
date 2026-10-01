@@ -179,6 +179,13 @@ public sealed record SavedAutomaticRoute
     /// <summary>The file could not be read; the row stays visible so it can still be deleted.</summary>
     public bool Corrupt { get; init; }
     public string Label => $"{(string.IsNullOrWhiteSpace(Name) ? Id : Name)} · {SceneName}";
+    /// <summary>
+    /// Row title. <see cref="Current"/> marks the route the list opens on — the one being followed, or the
+    /// generated preview — and the dot is the only cue for "this is the one you are on". It is set while
+    /// rendering rather than derived, because a single row cannot see the state that holds both routes.
+    /// </summary>
+    public string DisplayLabel => (Current ? "● " : "") + (string.IsNullOrWhiteSpace(Name) ? Id : Name);
+    [JsonIgnore] public bool Current { get; set; }
     public string KindLabel => Kinds.Length == 0 ? (HandDrawn ? "自由点" : "无点位类型")
         : string.Join("、", Kinds.Select(kind => kind.Label));
     public string DetailLabel => $"{StopCount} 个点 · {(string.IsNullOrWhiteSpace(SceneName) ? "未知地图" : SceneName)} · " +

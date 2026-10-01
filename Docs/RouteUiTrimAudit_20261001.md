@@ -244,6 +244,76 @@ UI 真正该做的是**介绍、配置、查看与离线可用的少数操作**�
 
 ---
 
+## 11. 第二轮精简：只留讲解 + 带图标的路线列表（2026-10-01，用户拍板）
+
+用户要求：**「路线这一页就保留路线功能操作讲解和路线列表以及列表的一些操作选项」**，
+并且**把列表做成游戏内路线列表那样带图标**。于是 02/03 两张卡整块去掉。
+
+### 11.1 现在的页面
+
+| 区块 | 内容 |
+|---|---|
+| 标题 | 「路线 · 路线怎么操作，以及你保存过哪些路线。」 |
+| 消息条 | 仍然保留：命令成功/被拒的那句话是这一页唯一的反馈通道 |
+| **01 路线怎么操作** | 纯讲解，五段：入口（键鼠圆钮 / 手柄 LB）· 选点 · 成线 · 导航 · 手绘，最后一句讲暂停/退出/删除的边界 |
+| **02 路线列表** | 一行说明「正在走的路线 / 已完成 N / 当前目标」，然后是带图标的列表 |
+| 列表操作 | **开始指引这条路线**（主按钮）· 刷新列表 · 删除所选路线 |
+
+本轮删掉的控件：`AutoRouteCurrentTarget` · `AutoRouteGuide` · 「完成当前目标」·「跳过当前目标」·
+暂停/继续/撤销跳过/停止导航 · `AutoRouteActiveStops` · `AutoRouteGenerate` · `AutoRouteActivate` ·
+`AutoRoutePreviewStops` · `AutoReplanToggle` + `AutoReplanStateText`。加上第一轮删掉的，
+这一页现在**只剩两个可点区域**：列表行与那三个按钮。
+
+### 11.2 「开始指引」用的是游戏内那条命令
+
+不再是 `load`（只加载、不导航、也不借筛选），而是和游戏内列表点一行完全同源的 `switch`：
+
+```
+{"action":"switch","routeId":…,"start":true,"expectedSceneId":…,"expectedGeneration":…,"profileId":…}
+```
+
+证据：`MapToolsController.cs:433-451` 是游戏内那条路。桌面这条**不借出筛选**（借还逻辑整个长在
+`MapToolsController` 里，见 §5 停止导航那条注记），所以它只做"换一条正在走的路线"。
+
+### 11.3 图标是同一批
+
+- 核心解析：`RoutePlanningService.cpp:132` 的 `DrawItemBase::GetExternalIconPath(nameId)` 从
+  `icon-manifest.json` 得到**绝对路径**，随 `RouteKindSummary.IconPath` 下发。
+- 显示：新增 `IMao-WinUI/Helpers/RouteKindIconConverter.cs`，做法照
+  `MapToolsWindow.LoadIcon`（`:410-426`）——按路径缓存、字节自己读进来（无包身份下图片加载器
+  拿不到文件授权，失败还是静默的）；读不到或不是 PNG 就退化成路径文字，不假装有图标。
+- 行内容与游戏内一致：`● 名称` · `点数 · 地图 · 自动/手绘` · 每个类型「图标 + 名字」；
+  没有类型的（手绘）显示「自由点（无类型）」。
+- `SavedAutomaticRoute.DisplayLabel` / `Current`（`Models/RoutePlanningState.cs:181-188`）承载那个圆点：
+  它在渲染时用 `with` 标上，因为单独一行看不到"哪条是当前路线"这个全局信息。
+
+### 11.4 验证
+
+| 项 | 结果 |
+|---|---|
+| `IMao-WinUI` Release/x64 | 0 错误 |
+| `Tests/RoutePageRuntime` | **62 条断言全绿**，退出码 0 |
+| 图标真的解码了 | 夹具把仓库里真实的 `Assets/KuroMap/icons/icon-0000.png` 当类型图标交给行，断言渲染出的 `Image.Source` 是**有像素的** `BitmapImage`，且行里没有退化成路径文字 |
+| 圆点不依赖 `CurrentRoute` | 夹具**故意不填** `CurrentRoute`，圆点仍落在正在走的那条上（第一版依赖了它，是这个用例把它抓出来的） |
+| `switch` 的身份 | 断言 routeId / profileId / `start:true` / `expectedSceneId` / `expectedGeneration` 全在 |
+
+### 11.5 仍未做
+
+- §6.3 那处「实时规划三处重复」现在只剩**两处**（设置页 + 游戏内工具栏），因为这一页的开关已随本轮删除。
+  `Tests/MainWindowRuntime` 里那条钉它的用例仍处于"夹具编译不过"状态，见 §9.4。
+- 「完成当前目标 / 跳过 / 暂停 / 停止导航」这些**在桌面上本来有效**的操作随本轮一起从这一页消失，
+  现在只能在游戏内做。这是用户明确要的结果，不是遗漏。
+
+### 11.6 部署
+
+`out\map-test` 已按本轮构建刷新（自包含；`IMao-WinUI.exe` / `.dll` / `.Core.dll` / `resources.pri`
+与 `x64\Release` 逐字节相等）。部署后的 `resources.pri` 里：
+**在**「路线怎么操作」「开始指引这条路线」；**不在**「完成当前目标」「生成路线预览」「实时规划剩余路线」。
+`build-info.json` 保持发布版戳（`1fd9414` / `dirty=false`），没有被脏构建戳覆盖。
+`out\map-test\IMaoRoutePageRuntime.exe` 同步更新，双击即可在不开游戏的情况下看这一页。
+
+---
+
 ## 10. 修正记录（2026-10-01，同日）
 
 ### 10.1 01 卡默认了手柄玩法（用户指出）
