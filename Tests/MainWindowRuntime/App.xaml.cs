@@ -30,6 +30,13 @@ public partial class App : Application
         TestApp.Services[typeof(CoreHostService)]=core;
         TestApp.Services[typeof(FilterSelectionService)]=new FilterSelectionService(core);
         TestApp.Services[typeof(GamepadInputService)]=new GamepadInputService();
+        // The settings page constructs these three directly, so the fixture has to provide them. The sync
+        // services are the real ones, pointed at a scratch credential root: they only act when asked, so the
+        // harness never reaches the network, and the scratch root keeps the player's own credential untouched.
+        TestApp.Services[typeof(KuroProgressSyncService)]=new KuroProgressSyncService(core, Path.Combine(AppContext.BaseDirectory, "fixture", "kuro-sync"));
+        TestApp.Services[typeof(ILocalSettingsService)]=new FixtureLocalSettingsService();
+        TestApp.Services[typeof(KuroAutoSyncService)]=new KuroAutoSyncService(
+            TestApp.GetService<KuroProgressSyncService>(), TestApp.GetService<ILocalSettingsService>(), core);
         string updateRoot = Path.Combine(AppContext.BaseDirectory, "fixture", "update-ui-" + Guid.NewGuid().ToString("N"));
         var snapshots = new ResourceSnapshotService(updateRoot, new ResourceSnapshot { SnapshotId = "bundled-ui-fixture", BaselineId = "fixture", BaselineRoot = AppContext.BaseDirectory, MapDataRoot = AppContext.BaseDirectory, Bundled = true }, "2026.9.9.1");
         await snapshots.InitializeAsync();
@@ -97,7 +104,7 @@ public partial class App : Application
                     await Capture(shell,$"{size.Width}-{page.GetType().Name}.png");
                     if(size.Width==800)
                     {
-                        string? controlName=page switch { FilterPage=>"SelectResults",FunctionPage=>"AutoRouteGuide",SettingsPage=>"SaveShortcuts",_=>null };
+                        string? controlName=page switch { FilterPage=>"SelectResults",FunctionPage=>"AutoRouteSwitch",SettingsPage=>"SaveShortcuts",_=>null };
                         if(controlName is not null)
                         {
                             var control=(FrameworkElement)(page is FilterPage filterPage ? filterPage.Filter.FindName(controlName) : page.FindName(controlName));
@@ -139,22 +146,38 @@ public partial class App : Application
             automatic.IsOn=true;await Task.Delay(80);Check(core.Configuration.AutoReplanEnabled,"settings auto replan toggle updates configuration");
             navigation.NavigateTo(typeof(FunctionViewModel).FullName!);await Task.Delay(120);
             var routes=(FunctionPage)navigation.Frame!.Content;
-            var routeToggle=(ToggleSwitch)routes.FindName("AutoReplanToggle");
-            Check(routeToggle.IsOn,"route toggle restores shared setting");
-            await core.ConfigureAsync(autoReplanEnabled:false);await Task.Delay(50);
-            Check(!routeToggle.IsOn,"route toggle follows external configuration updates");
-            core.RejectConfigure=true;routeToggle.IsOn=true;await Task.Delay(80);
-            Check(!routeToggle.IsOn&&((InfoBar)routes.FindName("AutoRouteMessage")).IsOpen,"route failed setting restores value and reports failure");core.RejectConfigure=false;
+            // The route page is the operation guide plus the saved-route list now, so what the harness can
+            // pin here is that the list is driven by the published snapshot. The shared real-time-planning
+            // setting belongs to the settings page and is checked there, where the control lives.
             var stop=new IMao_WinUI.Models.RouteStop { Key="3:point-17",PointId="point-17",Name="测试目标" };
-            core.PublishRoute(new() {ProfileId="fixture",Active=new(){Id="route-9",Name="测试路线",Stops=[stop]},CurrentTarget=stop});
-            typeof(FunctionPage).GetMethod("AutoRouteAction_Click",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(routes,[new Button {Tag="complete"},new RoutedEventArgs()]);
-            await Task.Delay(50);var command=core.RouteCommands.Last();
+            core.PublishRoute(new() {ProfileId="fixture",Active=new(){Id="route-9",Name="测试路线",Stops=[stop]},CurrentTarget=stop,
+                SavedRoutes=[new(){Id="route-9",Name="测试路线",SceneName="瑝珑",StopCount=1}]});
+            await Task.Delay(80);
+            var savedList=(ListView)routes.FindName("AutoRouteSavedRoutes")!;
+            Check(savedList.Items.Count==1,"route list renders the published snapshot");
+            Check(((TextBlock)routes.FindName("AutoRouteListSummary")!).Text.Contains("测试路线"),"route list reports the route being followed");
+            Check(((IMao_WinUI.Models.SavedAutomaticRoute)savedList.Items[0]!).DisplayLabel.StartsWith("●"),"the row being followed is marked");
+            var switchButton=(Button)routes.FindName("AutoRouteSwitch")!;
+            savedList.SelectedItem=savedList.Items[0];await Task.Delay(80);
+            core.RouteCommands.Clear();
+            typeof(FunctionPage).GetMethod("AutoRouteSwitch_Click",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(routes,[switchButton,new RoutedEventArgs()]);
+            await Task.Delay(80);var command=core.RouteCommands.Last();
             var json=System.Text.Json.JsonSerializer.Serialize(command.Arguments);
-            Check(command.Action=="complete"&&json.Contains("point-17")&&json.Contains("route-9")&&json.Contains("fixture"),"route completion keeps exact target/profile/route identity");
+            Check(command.Action=="switch"&&json.Contains("route-9")&&json.Contains("fixture")&&json.Contains("\"start\":true"),
+                "starting a route from the desktop sends the in-game switch command: "+json);
             navigation.NavigateTo(typeof(StartViewModel).FullName!);await Task.Delay(80);
             var home=(StartPage)navigation.Frame!.Content;
             Check(((TextBlock)home.FindName("OverviewRouteTitle")).Text=="测试路线","overview shows active route");
             Check(((TextBlock)home.FindName("OverviewRouteTarget")).Text.Contains("测试目标"),"overview shows actual current target");
+            // The one shared route setting left outside the game is on the settings page: it must follow an
+            // external change, and a rejected save must put it back and report the failure.
+            navigation.NavigateTo(typeof(SettingsViewModel).FullName!);await Task.Delay(120);
+            settings=(SettingsPage)navigation.Frame!.Content;
+            var replan=(ToggleSwitch)settings.FindName("AutomaticReplan");
+            await core.ConfigureAsync(autoReplanEnabled:true);await Task.Delay(80);
+            Check(replan.IsOn,"settings replan toggle follows the shared configuration");
+            core.RejectConfigure=true;replan.IsOn=false;await Task.Delay(120);
+            Check(replan.IsOn&&((InfoBar)settings.FindName("RuntimeMessage")).IsOpen,"rejected replan save restores the value and reports failure");core.RejectConfigure=false;
             await FilterSharingTests.RunAsync(window, Check);
             log.WriteLine("ALL "+assertions+" ASSERTIONS PASSED");
             Environment.ExitCode=0;

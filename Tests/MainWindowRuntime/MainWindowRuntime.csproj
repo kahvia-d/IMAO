@@ -1,29 +1,43 @@
 <Project Sdk="Microsoft.NET.Sdk">
 <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows10.0.26100.0</TargetFramework><TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion><SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion><RootNamespace>MainWindowRuntime</RootNamespace><Platforms>x64</Platforms><PlatformTarget>x64</PlatformTarget><RuntimeIdentifier>win-x64</RuntimeIdentifier><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><UseWinUI>true</UseWinUI><WindowsPackageType>None</WindowsPackageType><WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained><SelfContained>true</SelfContained><EnableMsixTooling>true</EnableMsixTooling><EnableDefaultPriItems>true</EnableDefaultPriItems><AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath><AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath><OutputPath>../../out/main-window-runtime/</OutputPath><ApplicationManifest>app.manifest</ApplicationManifest><DefaultLanguage>zh-CN</DefaultLanguage></PropertyGroup>
-<ItemGroup><PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" /><PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" /><PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.250402" /><Manifest Include="$(ApplicationManifest)" /></ItemGroup>
+<ItemGroup><PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" /><PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" /><PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.250402" /><PackageReference Include="Newtonsoft.Json" Version="13.0.2" /><PackageReference Include="WinUIEx" Version="2.3.2" /><Manifest Include="$(ApplicationManifest)" /></ItemGroup>
 <ItemGroup>
 <Compile Include="../../IMao-WinUI.Core/Updates/*.cs" Link="Updates/%(Filename)%(Extension)" />
-<Compile Include="../../IMao-WinUI.Core/Helpers/AtomicFile.cs" Link="Helpers/%(Filename)%(Extension)" />
-<Compile Include="../../IMao-WinUI.Core/Helpers/CurrentUserDpapi.cs" Link="Helpers/%(Filename)%(Extension)" />
-<Compile Include="../../IMao-WinUI/Services/UpdateUiController.cs" Link="Production/UpdateUiController.cs" />
-<Compile Include="../../IMao-WinUI/Services/ResourceUpdateBootstrap.cs" Link="Production/ResourceUpdateBootstrap.cs" />
-<Compile Include="../../IMao-WinUI/Helpers/ResourceSessionPaths.cs" Link="Production/ResourceSessionPaths.cs" />
-<Compile Include="../../IMao-WinUI/Helpers/ResourcePackagePicker.cs" Link="Production/ResourcePackagePicker.cs" />
+<Compile Include="../../IMao-WinUI.Core/KuroSync/*.cs" Link="KuroSync/%(Filename)%(Extension)" />
+<Compile Include="../../IMao-WinUI.Core/Contracts/Services/IFileService.cs" Link="Contracts/IFileService.cs" />
+<Compile Include="../../IMao-WinUI.Core/Helpers/*.cs" Link="CoreHelpers/%(Filename)%(Extension)" />
 <Page Include="../../IMao-WinUI/Views/*Page.xaml" Link="Views/%(Filename)%(Extension)" />
-<Compile Include="../../IMao-WinUI/Views/*Page.xaml.cs" Link="Views/%(Filename)%(Extension)" />
-<Page Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml" Link="Views/Controls/FilterControl.xaml" />
-<Compile Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml.cs" Link="Views/Controls/FilterControl.xaml.cs" />
-<Compile Include="../../IMao-WinUI/Services/FilterSelectionService.cs" Link="Production/FilterSelectionService.cs" />
+<Page Include="../../IMao-WinUI/Views/*Dialog.xaml" Link="Views/%(Filename)%(Extension)" />
+<Page Include="../../IMao-WinUI/Views/Controls/*.xaml" Link="Views/Controls/%(Filename)%(Extension)" />
 <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
 <Page Include="../../IMao-WinUI/Styles/Thickness.xaml" Link="Styles/Thickness.xaml" />
+<Compile Include="../../IMao-WinUI/Views/*Page.xaml.cs" Link="Views/%(Filename)%(Extension)" />
+<Compile Include="../../IMao-WinUI/Views/*Dialog.xaml.cs" Link="Views/%(Filename)%(Extension)" />
+<Compile Include="../../IMao-WinUI/Views/Controls/*.xaml.cs" Link="Views/Controls/%(Filename)%(Extension)" />
+<!-- The windows that are not pages: both tool windows, the guide windows and the input host. They are
+     linked but never constructed here - the harness only navigates the six pages. -->
+<Compile Include="../../IMao-WinUI/Views/*.cs" Link="Views/%(Filename)%(Extension)"
+         Exclude="../../IMao-WinUI/Views/*Page.xaml.cs;../../IMao-WinUI/Views/*Dialog.xaml.cs" />
+<Compile Include="../../IMao-WinUI/Activation/*.cs" Link="Production/Activation/%(Filename)%(Extension)"
+         Exclude="../../IMao-WinUI/Activation/AppNotificationActivationHandler.cs" />
 <Compile Include="../../IMao-WinUI/ViewModels/*ViewModel.cs" Exclude="../../IMao-WinUI/ViewModels/SettingsViewModel.cs" Link="Production/%(Filename)%(Extension)" />
-<Compile Include="../../IMao-WinUI/Contracts/Services/INavigation*.cs" Link="Production/%(Filename)%(Extension)" />
-<Compile Include="../../IMao-WinUI/Contracts/Services/IPageService.cs" Link="Production/IPageService.cs" />
+<Compile Include="../../IMao-WinUI/Contracts/Services/*.cs" Link="Production/Contracts/%(Filename)%(Extension)" />
 <Compile Include="../../IMao-WinUI/Contracts/ViewModels/INavigationAware.cs" Link="Production/INavigationAware.cs" />
-<Compile Include="../../IMao-WinUI/Services/NavigationService.cs" Link="Production/NavigationService.cs" /><Compile Include="../../IMao-WinUI/Services/NavigationViewService.cs" Link="Production/NavigationViewService.cs" /><Compile Include="../../IMao-WinUI/Services/PageService.cs" Link="Production/PageService.cs" />
-<Compile Include="../../IMao-WinUI/Helpers/NavigationHelper.cs" Link="Production/NavigationHelper.cs" /><Compile Include="../../IMao-WinUI/Helpers/FrameExtensions.cs" Link="Production/FrameExtensions.cs" />
-<Compile Include="../../IMao-WinUI/Helpers/MainWindowPlacement.cs" Link="Production/MainWindowPlacement.cs" />
-<Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" /><Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="Production/GamepadInput.cs" /><Compile Include="../../IMao-WinUI/Models/CoreRuntimeStatus.cs" Link="Production/CoreRuntimeStatus.cs" /><Compile Include="../../IMao-WinUI/Models/RoutePlanningState.cs" Link="Production/RoutePlanningState.cs" /><Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="Production/MapFilterCatalog.cs" />
+<Compile Include="../../IMao-WinUI/Models/*.cs" Link="Production/Models/%(Filename)%(Extension)" />
+<Compile Include="../../IMao-WinUI/Helpers/*.cs" Link="Production/Helpers/%(Filename)%(Extension)" />
+<!-- Whole folders, not a hand-picked file list. The old list named each service and helper one by one and
+     silently stopped compiling on 2026-09-27, when SettingsPage and UsageGuidePage grew their KuroSync and
+     legacy-recovery dependencies: the harness reported 13 errors about types nobody had removed. Globs keep
+     this file from going stale the same way.
+
+     Two files are excluded, and both because FakeServices.cs replaces the type and the fixture depends on the
+     fake: CoreHostService (the real one starts the native core, opens the pipe and reads the user's settings)
+     and GamepadInputService (the real one polls XInput). LocalSettingsService is the third: it needs
+     Microsoft.Extensions.Options, and the fixture wants an in-memory store rather than a file anyway.
+     Excluding exactly those three is what keeps this harness from touching the game, a controller or the
+     user's data; everything else is the production file. -->
+<Compile Include="../../IMao-WinUI/Services/*.cs" Link="Production/Services/%(Filename)%(Extension)"
+         Exclude="../../IMao-WinUI/Services/CoreHostService.cs;../../IMao-WinUI/Services/GamepadInputService.cs;../../IMao-WinUI/Services/LocalSettingsService.cs;../../IMao-WinUI/Services/AppNotificationService.cs" />
 <PRIResource Include="../../IMao-WinUI/Strings/zh-CN/Resources.resw" Link="Strings/zh-CN/Resources.resw" />
 <Content Include="../../IMao-WinUI/Assets/WindowIcon.ico" Link="Assets/WindowIcon.ico" CopyToOutputDirectory="PreserveNewest" />
 </ItemGroup></Project>

@@ -6,13 +6,6 @@ using System.Text.Json;
 
 namespace IMao_WinUI.Services;
 
-public sealed class GamepadHandoffLease(Action<nint, bool> finished) : IDisposable
-{
-    private bool done;
-    public void Complete(nint target) { if (!done) { done = true; finished(target, true); } }
-    public void Dispose() { if (!done) { done = true; finished(0, false); } }
-}
-
 internal sealed class RouteGamepadController(CoreHostService core) : IDisposable
 {
     private RouteGamepadInputHost? host;

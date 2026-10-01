@@ -20,24 +20,7 @@ namespace IMao_WinUI.ViewModels
 }
 namespace IMao_WinUI.Helpers
 {
-    public static class StringExtensions { public static string GetLocalized(this string value) => value == "AppDisplayName" ? "IMao" : value; }
-    public static class TitleBarHelper { public static void UpdateTitleBar(ElementTheme theme) {} }
     public static class GameWindow { public static bool CheckGameWindowSize() => true; }
-    public static class BitBltRegistryHelper { public static bool TryDisableSwapEffectUpgrade(out string error) { error = ""; return true; } }
-    public static class UserDataPaths
-    {
-        public static string Root => Path.Combine(AppContext.BaseDirectory,"fixture");
-        public static string SavedRoutes => Path.Combine(AppContext.BaseDirectory,"fixture","routes");
-        public static string SavedPoints => Path.Combine(AppContext.BaseDirectory,"fixture","points");
-    }
-    public sealed record FilterItemDatas(string Name,int Status);
-    public sealed class LocalItemFilter
-    {
-        public static Dictionary<string,int> Saved { get; } = new();
-        public string LastError => "";
-        public List<FilterItemDatas> GetFilteredItemsDatas() => Saved.Select(p=>new FilterItemDatas(p.Key,p.Value)).ToList();
-        public bool SetItemsStatus(IEnumerable<string> ids,int status) { foreach(var id in ids) Saved[id]=status;return true; }
-    }
 }
 namespace IMao_WinUI.StringItems
 {
@@ -51,18 +34,38 @@ namespace IMao_WinUI.StringItems
 }
 namespace IMao_WinUI.Services
 {
+    /// <summary>
+    /// In-memory stand-in for the real local settings store. The pages only need the setting to come back
+    /// in the same session, and the fixture must not write to the user's own settings file.
+    /// </summary>
+    public sealed class FixtureLocalSettingsService : ILocalSettingsService
+    {
+        private readonly Dictionary<string, object?> values = new();
+        public Task<T?> ReadSettingAsync<T>(string key) =>
+            Task.FromResult(values.TryGetValue(key, out var found) && found is T typed ? typed : default);
+        public Task SaveSettingAsync<T>(string key, T value) { values[key] = value; return Task.CompletedTask; }
+    }
+    public sealed record FixtureLog(string DisplayText);
+    public enum ExplorationToggleResult { Started, Stopped, WindowSizeRejected }
     public sealed class GamepadInputService : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
         public string StatusMessage => "测试手柄：已连接";
         public void SetConfigurationPending(bool pending) => PropertyChanged?.Invoke(this,new(nameof(StatusMessage)));
     }
-    public sealed record FixtureLog(string DisplayText);
+    /// <summary>
+    /// The pages talk to the shell through this one type, so the fixture has to answer with the same surface
+    /// the real host does - but with every answer coming from memory. Nothing here starts the native core,
+    /// opens the pipe, polls a controller or reads the user's own settings. The record books are a real
+    /// <see cref="LocalAccountCatalog"/> over a temporary directory instead of the user's, because the pages
+    /// render its rows and the fixture should exercise that path rather than a stub of it.
+    /// </summary>
     public sealed class CoreHostService : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
         public event EventHandler<CoreRuntimeStatus>? StatusChanged;
         public event EventHandler<RoutePlanningState>? RoutePlanningChanged;
+        public event EventHandler<System.Text.Json.JsonElement>? MarkerEvent;
         public RuntimeConfiguration Configuration { get; private set; } = new();
         public bool IsConnected { get; private set; } = true;
         public Task<bool> SynchronizeFilterAsync(IReadOnlyDictionary<string,bool> values,CancellationToken cancellationToken=default) => Task.FromResult(IsConnected);
@@ -75,10 +78,20 @@ namespace IMao_WinUI.Services
         public string CrashDirectory => Path.Combine(AppContext.BaseDirectory,"fixture","crashes");
         public bool RejectConfigure { get; set; }
         public List<(string Action,object? Arguments)> RouteCommands { get; } = new();
+        public List<(string Operation,object? Arguments)> MarkerCommands { get; } = new();
+        /// <summary>Record books over a throwaway directory: the fixture must never touch the user's own.</summary>
+        public LocalAccountCatalog? LedgerCatalog { get; } = new(
+            Path.Combine(AppContext.BaseDirectory,"fixture","accounts.json"),
+            Path.Combine(AppContext.BaseDirectory,"fixture","points"),
+            routesDirectory: Path.Combine(AppContext.BaseDirectory,"fixture","routes"));
+        public LocalAccount? ActiveLocalAccount => LedgerCatalog?.Active;
+        public void ReportGamepadDiagnostic(string message, string details = "") { }
         public Task EnsureStartedAsync() => Task.CompletedTask;
         public Task StartRuntimeAsync() { PublishStatus(new() { CoreState="running",Message="地图叠加正在运行",MapMarkers=178,MinimapMarkers=12 }); return Task.CompletedTask; }
         public Task StopRuntimeAsync() { PublishStatus(new() { CoreState="ready",Message="探索已暂停。" });return Task.CompletedTask; }
         public Task RestartAsync() => StopRuntimeAsync();
+        public Task<ExplorationToggleResult> ToggleExplorationAsync(bool canStart = true, CancellationToken cancellationToken = default) =>
+            Task.FromResult(IsConnected && canStart ? ExplorationToggleResult.Started : ExplorationToggleResult.WindowSizeRejected);
         public void PublishStatus(CoreRuntimeStatus value) { Status=value; StatusChanged?.Invoke(this,value); PropertyChanged?.Invoke(this,new(nameof(Status))); }
         public void PublishRoute(RoutePlanningState value) { RoutePlanning=value; RoutePlanningChanged?.Invoke(this,value); }
         public void ReportUserError(string message) => LastFault=message;
@@ -89,13 +102,24 @@ namespace IMao_WinUI.Services
         public Task SetIsolationSwitchesAsync(int mask) => Task.CompletedTask;
         public Task<RoutePlanningState> ExecuteRoutePlanningAsync(string action,object? arguments=null,CancellationToken cancellationToken=default)
         { RouteCommands.Add((action,arguments)); return Task.FromResult(RoutePlanning); }
-        public Task<bool> ConfigureAsync(int? captureWay=null,int? overlayPresentMode=null,int? mapUpdateCycle=null,int? minMapUpdateCycle=null,bool? mapEnabled=null,bool? minMapEnabled=null,bool? savedPointsEnabled=null,bool? statusBarEnabled=null,CancellationToken cancellationToken=default,int? nearestCompletionKey=null,int? manualRouteKey=null,int? currentTargetGuideKey=null,int? guidePreviousImageKey=null,int? guideNextImageKey=null,bool? gamepadEnabled=null,int? gamepadControllerIndex=null,GamepadButtons? gamepadEntryButton=null,bool? autoReplanEnabled=null)
+        /// <summary>Marker commands are only logged: a page rendering its lists must not mutate any progress.</summary>
+        public Task<System.Text.Json.JsonElement> ExecuteMarkerAsync(string operation, object? arguments = null, CancellationToken cancellationToken = default)
+        { MarkerCommands.Add((operation,arguments)); return Task.FromResult(EmptyJson()); }
+        public Task<System.Text.Json.JsonElement> ExecuteConnectedMarkerAsync(string operation, object? arguments = null, CancellationToken cancellationToken = default) =>
+            ExecuteMarkerAsync(operation, arguments, cancellationToken);
+        public Task<System.Text.Json.JsonElement> ImportLegacyPointsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(System.Text.Json.JsonSerializer.SerializeToElement(new { imported = 0, alreadyCompleted = 0, skipped = 0 }));
+        private static System.Text.Json.JsonElement EmptyJson() => System.Text.Json.JsonSerializer.SerializeToElement(new { });
+        public Task<bool> ConfigureAsync(int? captureWay=null,int? overlayPresentMode=null,int? mapUpdateCycle=null,int? minMapUpdateCycle=null,bool? mapEnabled=null,bool? minMapEnabled=null,bool? savedPointsEnabled=null,bool? statusBarEnabled=null,bool? mapStatusBarEnabled=null,bool? statusBallEnabled=null,CancellationToken cancellationToken=default,int? nearestCompletionKey=null,int? manualRouteKey=null,int? currentTargetGuideKey=null,int? guideSkipKey=null,int? guidePreviousImageKey=null,int? guideNextImageKey=null,int? toggleEnabledKey=null,bool? gamepadEnabled=null,int? gamepadControllerIndex=null,GamepadButtons? gamepadEntryButton=null,bool? autoReplanEnabled=null,bool? expectedAutoReplanEnabled=null,string? expectedAutoReplanProfile=null,int? completionRangePixels=null,int? guideRangePixels=null,int? farmRangePixels=null)
         {
             if(RejectConfigure) { LastFault="测试保存拒绝"; return Task.FromResult(false); }
             var next=Configuration with {
                 CaptureWay=captureWay??Configuration.CaptureWay,OverlayPresentMode=overlayPresentMode??Configuration.OverlayPresentMode,MapUpdateCycle=mapUpdateCycle??Configuration.MapUpdateCycle,MinMapUpdateCycle=minMapUpdateCycle??Configuration.MinMapUpdateCycle,
                 MapEnabled=mapEnabled??Configuration.MapEnabled,MinMapEnabled=minMapEnabled??Configuration.MinMapEnabled,SavedPointsEnabled=savedPointsEnabled??Configuration.SavedPointsEnabled,StatusBarEnabled=statusBarEnabled??Configuration.StatusBarEnabled,
-                NearestCompletionKey=nearestCompletionKey??Configuration.NearestCompletionKey,ManualRouteKey=manualRouteKey??Configuration.ManualRouteKey,CurrentTargetGuideKey=currentTargetGuideKey??Configuration.CurrentTargetGuideKey,GuidePreviousImageKey=guidePreviousImageKey??Configuration.GuidePreviousImageKey,GuideNextImageKey=guideNextImageKey??Configuration.GuideNextImageKey,
+                MapStatusBarEnabled=mapStatusBarEnabled??Configuration.MapStatusBarEnabled,StatusBallEnabled=statusBallEnabled??Configuration.StatusBallEnabled,
+                NearestCompletionKey=nearestCompletionKey??Configuration.NearestCompletionKey,ManualRouteKey=manualRouteKey??Configuration.ManualRouteKey,CurrentTargetGuideKey=currentTargetGuideKey??Configuration.CurrentTargetGuideKey,GuideSkipKey=guideSkipKey??Configuration.GuideSkipKey,GuidePreviousImageKey=guidePreviousImageKey??Configuration.GuidePreviousImageKey,GuideNextImageKey=guideNextImageKey??Configuration.GuideNextImageKey,
+                ToggleEnabledKey=toggleEnabledKey??Configuration.ToggleEnabledKey,
+                CompletionRangePixels=completionRangePixels??Configuration.CompletionRangePixels,GuideRangePixels=guideRangePixels??Configuration.GuideRangePixels,FarmRangePixels=farmRangePixels??Configuration.FarmRangePixels,
                 GamepadEnabled=gamepadEnabled??Configuration.GamepadEnabled,GamepadControllerIndex=gamepadControllerIndex??Configuration.GamepadControllerIndex,AutoReplanEnabled=autoReplanEnabled??Configuration.AutoReplanEnabled };
             next.Validate();Configuration=next;PropertyChanged?.Invoke(this,new(nameof(Configuration)));
             PublishRoute(RoutePlanning with { AutoReplanEnabled=next.AutoReplanEnabled });

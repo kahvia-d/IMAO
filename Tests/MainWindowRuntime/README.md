@@ -1,6 +1,8 @@
 # Main WinUI runtime verification
 
-This isolated executable links the production Shell, all six pages, navigation services, view models, map catalog model and theme. CoreHost, controller status and local filter storage are in-memory fixtures. It never starts the native core, reads the user's controller or writes the user's configuration.
+This isolated executable links the production Shell, all six pages, navigation services, view models, map catalog model and theme — plus, since 2026-10-01, the production services and helpers they call, by folder rather than by a hand-picked list. CoreHost and GamepadInput are in-memory fixtures (the real CoreHostService would start the native core, and the real GamepadInputService polls XInput), and local settings use an in-memory store. It never starts the native core, reads the user's controller or writes the user's configuration.
+
+> **Why the file list became globs.** Until 2026-09-27 this project named every production file it compiled. That day `SettingsPage`/`UsageGuidePage` grew their KuroSync and legacy-recovery dependencies, the list was not updated, and the harness stopped compiling with 13 errors about types nobody had removed — and it stayed that way until 2026-10-01, which meant the route page had no runnable UI check at all. If you add a production file that a page needs, the globs pick it up; if you must exclude one, exclude it in the `Exclude` list with a reason beside it.
 
 Build from the repository root:
 
@@ -14,9 +16,9 @@ The suite checks:
 
 - All six destinations at 1120×780 and 800×500, using the real Frame and footer navigation selection.
 - No horizontal page scrolling, bounded filter/log viewports and virtualization with 600 filter rows.
-- Filtering and access to selection, route guide and shortcut-saving controls at the minimum size.
-- Shared settings/route real-time planning switches, external configuration changes and rejected-save rollback.
-- Exact marker/profile/route identity in the route completion command.
+- Filtering and access to selection, route switch and shortcut-saving controls at the minimum size.
+- The route page renders the published snapshot: the list rows, the dot on the route being followed, and 开始指引 sending the same `switch` command the in-game list sends (route id, profile, `start: true`, map context).
+- The shared real-time-planning setting, on the settings page where its control lives: it follows an external configuration change, and a rejected save puts it back and reports the failure.
 - Actual active route and target data in the overview.
 - Restored window bounds and physical-pixel clamping on a negative-coordinate monitor with a 200% sized window.
 - Shared filter controls with character/weapon shortcuts, material/acronym search, selected-only views, exact current-result batch changes and gamepad access to virtualized items.
