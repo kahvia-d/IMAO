@@ -1082,11 +1082,19 @@ int main(int argc,char** argv){
         }
         Check(current.active&&Ids(*current.active)==originalIds&&current.active->skipHistory==original.skipHistory&&
             current.active->skipped==original.skipped,"real automatic application preserves all IDs and skipped undo history");
+        // Every read of the current target is checked before it is indexed. A harness that dereferences
+        // a target which is not there does not fail — it dies with an access violation and prints
+        // nothing at all, so a whole run becomes "exit code 0xC0000005" with no clue how far it got.
+        // (Found 2026-10-01 while releasing: the atomic-commit retry shifted the timing enough to reach
+        // a state this line assumed was impossible.)
+        if(!current.active||current.currentTargetIndex<0)
+            throw std::runtime_error("real worker left no current target to compare with");
         Check(current.previousTarget&&AutoRoute::Key(*current.previousTarget)==oldKey&&
             current.active->stops[current.currentTargetIndex].itemId=="second","real worker selects new target and retains exactly the former one");
         AutoRoute::RoutePlanStore store(StructuredLogger::root/"SavedRoutes"/"Auto");
         const auto saved=store.Load("local",original.id,[&](int scene,const std::string& key)->std::optional<ItemDatas>{
             if(scene==original.sceneId)for(const auto& item:original.stops)if(AutoRoute::Key(item)==key)return item;return {};});
+        if(!current.active)throw std::runtime_error("route disappeared before the saved file could be compared");
         Check(AutoRoute::SameOrder(saved.stops,current.active->stops)&&Ids(saved)==originalIds&&saved.skipHistory==original.skipHistory,
             "accepted automatic order survives loading the actual route file with every skipped and completed member");
         ItemDatas unrelated;unrelated.itemId="unrelated";unrelated.layer.stateId=Scene::Find(1)->kuroStateId;
@@ -1096,12 +1104,17 @@ int main(int argc,char** argv){
         Check(Pump([]{return !RoutePlanningService::View().previousTarget;},1500ms,0),"sustained nearby observations erase the dashed hint");
         Check(RoutePlanningService::View().completed==completedBefore,"nearby confirmation never completes the new target");
         RoutePlanningService::SetAutoReplanEnabled(false);
-        const auto target=RoutePlanningService::View().active->stops[RoutePlanningService::View().currentTargetIndex];
+        const auto settled=RoutePlanningService::View();
+        if(!settled.active||settled.currentTargetIndex<0)
+            throw std::runtime_error("reordered route has no current target left to complete");
+        const auto target=settled.active->stops[settled.currentTargetIndex];
         Complete(target,true);Complete(target,false);current=RoutePlanningService::View();
+        if(!current.active)throw std::runtime_error("completing and cancelling removed the whole route");
         Check(Ids(*current.active)==originalIds&&current.active->skipHistory==original.skipHistory&&!current.completed.contains(AutoRoute::Key(target)),
             "completion and cancellation keep all route members and skipped undo history");
         Command({{"action","undoSkip"}});
-        Check(RoutePlanningService::View().active->skipped.empty(),"original skip can still be undone after automatic reordering");
+        Check(RoutePlanningService::View().active&&RoutePlanningService::View().active->skipped.empty(),
+            "original skip can still be undone after automatic reordering");
         VerifyViewportSelection(original);
         VerifyGuideSkipGuard(original);
         VerifyRouteToolbarNavigation();

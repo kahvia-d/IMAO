@@ -32,7 +32,13 @@ inline void WriteTextAtomically(const std::filesystem::path& path, const std::st
             output.flush();
             output.close();
         }
-        constexpr int commitAttempts = 6;
+        // Short on purpose. The transient case this exists for — a scanner holding the file we just
+        // closed — resolved on the very first retry when it was measured, so four attempts over ~60ms
+        // is already generous. The budget cannot be large: a *permanently* locked file costs this much
+        // on every attempt, and the auto-replan worker saves in a 500ms loop against a deadline —
+        // a 300ms budget made `route-service-failure-tests` fail about one run in four (measured:
+        // 2/8 with the long budget, 0/8 with none), which is how this number was chosen.
+        constexpr int commitAttempts = 4;
         for (int attempt = 1;; ++attempt) {
             if (MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
                 break;
@@ -41,7 +47,7 @@ inline void WriteTextAtomically(const std::filesystem::path& path, const std::st
                 error == ERROR_LOCK_VIOLATION;
             if (!transient || attempt >= commitAttempts)
                 throw std::runtime_error("Unable to commit user data: Windows error " + std::to_string(error));
-            Sleep(20 * static_cast<DWORD>(attempt));
+            Sleep(10 * static_cast<DWORD>(attempt));
         }
     }
     catch (...) {
