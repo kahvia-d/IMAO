@@ -38,6 +38,8 @@
     <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="Production/RuntimeConfiguration.cs" />
     <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="Production/GamepadInput.cs" />
     <Compile Include="../../IMao-WinUI/Helpers/RouteKindIconConverter.cs" Link="Production/RouteKindIconConverter.cs" />
+    <Compile Include="../../IMao-WinUI/Helpers/BoolToVisibilityConverter.cs" Link="Production/BoolToVisibilityConverter.cs" />
+    <Compile Include="../../IMao-WinUI/Helpers/NativeFileDialog.cs" Link="Production/NativeFileDialog.cs" />
     <Compile Include="../../IMao-WinUI/Contracts/Services/INavigationService.cs" Link="Production/INavigationService.cs" />
     <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
     <Page Include="../../IMao-WinUI/Styles/Thickness.xaml" Link="Styles/Thickness.xaml" />

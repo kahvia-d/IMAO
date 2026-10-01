@@ -86,6 +86,12 @@ public partial class App : Application
                 ProfileId = "fixture", SceneId = 3, SceneName = "瑝珑", Revision = 4, Generation = 9,
                 Message = "自动路线已保存并开始导航",
                 Active = active, CurrentTarget = stop, NavigationStatus = "navigating",
+                CurrentCollection = "default",
+                Collections =
+                [
+                    new RouteCollection { Id = "default", Name = "默认合集", RouteCount = 3, Current = true, System = true },
+                    new RouteCollection { Id = "chest", Name = "宝箱路线", RouteCount = 1 }
+                ],
                 SavedRoutes =
                 [
                     new SavedAutomaticRoute { Id = "route-9", Name = "测试路线 · 北岸", SceneId = 3, SceneName = "瑝珑", StopCount = 2,
@@ -93,6 +99,9 @@ public partial class App : Application
                                  new RouteKindSummary { NameId = "enemy", Name = "敌人", IconPath = realIcon }] },
                     new SavedAutomaticRoute { Id = "route-10", Name = "手绘的一条", SceneId = 4, SceneName = "今州", StopCount = 7, HandDrawn = true },
                     new SavedAutomaticRoute { Id = "route-11", Name = "", SceneId = 5, SceneName = "黑海岸", StopCount = 12, Corrupt = true,
+                        Kinds = [new RouteKindSummary { NameId = "chest", Name = "宝箱", IconPath = realIcon }] },
+                    // 另一条合集里的路线：列表默认只显示当前合集，所以它不会挤进上面那三条里。
+                    new SavedAutomaticRoute { Id = "route-12", Name = "宝箱巡游", SceneId = 3, SceneName = "瑝珑", StopCount = 21, Collection = "chest",
                         Kinds = [new RouteKindSummary { NameId = "chest", Name = "宝箱", IconPath = realIcon }] }
                 ]
             });
@@ -166,7 +175,98 @@ public partial class App : Application
             Check((string)converter.Convert(new[] { new RouteKindSummary { NameId = "x", Name = "宝箱" } }, typeof(object), "empty", "") == "",
                 "有类型时不显示占位");
 
-            // 6. 800×500 的最小窗口下列表仍然可用。
+            // 6. 合集：条上的每个按钮就是"进入这个合集"，而"全部"只是把列表铺开。
+            var chips = (Microsoft.UI.Xaml.Controls.Panel)page.FindName("RouteCollectionChips")!;
+            var chipButtons = Descendants(chips).OfType<Button>().ToList();
+            Check(chipButtons.Count == 3, "合集条列出每个合集，外加一个「全部」：" + chipButtons.Count);
+            Check(chipButtons.Any(chip => Equals(chip.Content, "默认合集（3）")) &&
+                chipButtons.Any(chip => Equals(chip.Content, "宝箱路线（1）")),
+                "每个合集按钮带着它的路线条数");
+            Check(chipButtons.Any(chip => Equals(chip.Tag, "all")), "「全部」是条上的一项，而不是别的控件");
+
+            core.RouteCommands.Clear();
+            var chestChip = chipButtons.Single(chip => Equals(chip.Tag, "chest"));
+            Invoke(page, "CollectionChip_Click", chestChip);
+            await Task.Delay(150);
+            var chipCommand = core.RouteCommands.SingleOrDefault(entry => entry.Action == "collectionCurrent");
+            Check(chipCommand is not null &&
+                System.Text.Json.JsonSerializer.Serialize(chipCommand.Arguments).Contains("\"collectionId\":\"chest\""),
+                "点合集名就是切换当前合集");
+            list = (ListView)page.FindName("AutoRouteSavedRoutes")!;
+            Check(list.Items.Count == 1 && list.Items[0] is SavedAutomaticRoute { Id: "route-12" },
+                "列表只显示当前合集里的路线");
+
+            core.RouteCommands.Clear();
+            var allChip = chipButtons.Single(chip => Equals(chip.Tag, "all"));
+            Invoke(page, "CollectionChip_Click", allChip);
+            await Task.Delay(150);
+            Check(core.RouteCommands.Count == 0, "「全部」只是把列表铺开，不改变当前合集，也不发命令");
+            Check(list.Items.Count == 4, "「全部」把四个合集里的路线都列出来");
+            // 默认合集是系统的：不能改名，也不能删。
+            Check(!((Button)page.FindName("RouteCollectionRename")!).IsEnabled &&
+                !((Button)page.FindName("RouteCollectionDelete")!).IsEnabled,
+                "「全部」下没有可改名或可删除的合集，两个按钮置灰");
+
+            // 6b. 批量模式：勾选框出现，勾选数实时报出，导出带的是勾中的那几条。
+            var batchBar = (StackPanel)page.FindName("RouteBatchBar")!;
+            Check(batchBar.Visibility == Visibility.Collapsed, "平时没有批量工具条");
+            Invoke(page, "RouteBatchEnter_Click", (Button)page.FindName("RouteCollectionNew")!);
+            await Task.Delay(150);
+            Check(batchBar.Visibility == Visibility.Visible, "点「批量…」后批量工具条出现");
+            Check(Descendants(list).OfType<CheckBox>().Count() == 4, "批量模式下每一行前面都有勾选框");
+            Check(!((Button)page.FindName("AutoRouteSwitch")!).IsEnabled, "批量模式下不再有「开始指引」的本行操作");
+
+            var boxes = Descendants(list).OfType<CheckBox>().ToList();
+            boxes[0].IsChecked = true;
+            boxes[1].IsChecked = true;
+            Invoke(page, "RouteRowCheck_Click", boxes[0]);
+            await Task.Delay(100);
+            Check(((TextBlock)page.FindName("RouteBatchSummary")!).Text.Contains("已选 2 条"), "勾选数写在工具条上");
+
+            FunctionPage.SaveBundlePath = _ => @"C:\fixture\selected.json";
+            core.RouteCommands.Clear();
+            Invoke(page, "RouteBatchExport_Click", boxes[0]);
+            await Task.Delay(200);
+            var exportCommand = core.RouteCommands.SingleOrDefault(entry => entry.Action == "export");
+            Check(exportCommand is not null, "导出所选发的是 export");
+            var exportJson = System.Text.Json.JsonSerializer.Serialize(exportCommand!.Arguments);
+            Check(exportJson.Contains("route-9") && exportJson.Contains("route-10") && !exportJson.Contains("route-11") &&
+                !exportJson.Contains("route-12"),
+                "导出的就是勾中的那几条：" + exportJson);
+            Check(exportJson.Contains("selected.json"), "导出用的是对话框给出的路径：" + exportJson);
+            Check(batchBar.Visibility == Visibility.Collapsed, "导出结束后退出批量模式");
+
+            // 6c. 导入：文件类型决定问哪一句，同名合集才问「覆盖还是新建」。
+            FunctionPage.OpenBundlePath = _ => @"C:\fixture\incoming.json";
+            var routesTransfer = new RouteBundleTransfer { Kind = "routes", Path = @"C:\fixture\incoming.json", RouteCount = 5 };
+            var routesDialog = page.TransferDialog(routesTransfer)!;
+            Check(routesDialog.SecondaryButtonText is null or "" && Equals(routesDialog.PrimaryButtonText, "导入"),
+                "路线包只问一句「导入吗」，不给多余的选项");
+            Check(((string)routesDialog.Content).Contains("默认合集"), "路线包说明它会进哪个合集");
+            Check(FunctionPage.ImportModeFor(routesTransfer, ContentDialogResult.Primary) == "routes" &&
+                FunctionPage.ImportModeFor(routesTransfer, ContentDialogResult.None) is null,
+                "同意就是 routes，关掉就什么都不做");
+
+            var clashTransfer = new RouteBundleTransfer
+            {
+                Kind = "collection", Path = @"C:\fixture\incoming.json", CollectionName = "宝箱路线", RouteCount = 4,
+                Conflict = new RouteBundleConflict { CollectionId = "chest", Name = "宝箱路线", RouteCount = 1 }
+            };
+            var clashDialog = page.TransferDialog(clashTransfer)!;
+            Check(Equals(clashDialog.PrimaryButtonText, "覆盖") && Equals(clashDialog.SecondaryButtonText, "新建"),
+                "同名合集才给「覆盖 / 新建」两个选择");
+            Check(((string)clashDialog.Content).Contains("换掉这个合集里现有的 1 条"), "覆盖的代价写在弹窗里");
+            Check(FunctionPage.ImportModeFor(clashTransfer, ContentDialogResult.Primary) == "collectionOverwrite" &&
+                FunctionPage.ImportModeFor(clashTransfer, ContentDialogResult.Secondary) == "collectionNew" &&
+                FunctionPage.ImportModeFor(clashTransfer, ContentDialogResult.None) is null,
+                "覆盖 / 新建 / 取消各自映射到对应的导入方式");
+
+            var freshTransfer = clashTransfer with { Conflict = null };
+            Check(FunctionPage.ImportModeFor(freshTransfer, ContentDialogResult.Primary) == "collectionNew" &&
+                FunctionPage.ImportModeFor(freshTransfer, ContentDialogResult.Secondary) is null,
+                "没有同名合集时不问「覆盖」，直接新建");
+
+            // 7. 800×500 的最小窗口下列表仍然可用。
             window.AppWindow.Resize(new SizeInt32(800, 500));
             await Task.Delay(250);
             host.UpdateLayout();
@@ -188,6 +288,11 @@ public partial class App : Application
         var handler = typeof(FunctionPage).GetMethod("AutoRouteAction_Click", BindingFlags.NonPublic | BindingFlags.Instance)!;
         handler.Invoke(page, [new Button { Tag = tag }, new RoutedEventArgs()]);
     }
+
+    /// <summary>Invokes one of the page's own click handlers, the way a real click would reach it.</summary>
+    private static void Invoke(FunctionPage page, string handler, object sender) =>
+        typeof(FunctionPage).GetMethod(handler, BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(page, [sender, new RoutedEventArgs()]);
 
     private static List<string> Labels(DependencyObject root)
     {

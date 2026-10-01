@@ -205,6 +205,10 @@ public sealed record SavedAutomaticRoute
     /// </summary>
     public string DisplayLabel => (Current ? "● " : "") + (string.IsNullOrWhiteSpace(Name) ? Id : Name);
     [JsonIgnore] public bool Current { get; set; }
+    /// <summary>Ticked in the batch bar. Only meaningful while the list is in batch mode.</summary>
+    [JsonIgnore] public bool Selected { get; set; }
+    /// <summary>Whether the list is in batch mode, so the row shows a checkbox instead of plain text.</summary>
+    [JsonIgnore] public bool Batch { get; set; }
     public string KindLabel => Kinds.Length == 0 ? (HandDrawn ? "自由点" : "无点位类型")
         : string.Join("、", Kinds.Select(kind => kind.Label));
     public string DetailLabel => $"{StopCount} 个点 · {(string.IsNullOrWhiteSpace(SceneName) ? "未知地图" : SceneName)} · " +

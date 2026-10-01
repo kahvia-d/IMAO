@@ -25,7 +25,7 @@ $env:LOCALAPPDATA   = "$env:USERPROFILE\AppData\Local"
 Run `out/route-page-runtime/RoutePageRuntime.exe`. It shows its own window briefly, writes
 `out/route-page-runtime/route-page-tests.log` and exits with the assertion count.
 
-What it pins (62 assertions):
+What it pins (86 assertions):
 
 - The page is only the operation guide plus the route list: every game-only entry is gone (the selection
   tools, 加入可见点, hand-drawing, save/load, and now also complete/skip/pause/stop, generate/activate and
@@ -41,10 +41,26 @@ What it pins (62 assertions):
 - 开始指引 sends `switch` with the route id, the profile, `start: true` and the map context
   (`expectedSceneId`/`expectedGeneration`) - the same command the in-game list sends when a row is picked.
   A corrupt row cannot be switched to.
+- **Collections**: the bar is built from the snapshot, each chip carries its route count, clicking one
+  sends `collectionCurrent` with that id and narrows the list to it, and 全部 widens the list back to
+  every collection **without sending anything** - it is a way of looking, not a place to save into.
+  The rename and delete buttons stand down while 全部 is showing, because there is no single collection
+  they could act on.
+- **Batch mode**: 批量… reveals the bar and turns every row into a checkbox, the count is reported as
+  boxes are ticked, and 导出所选 sends `export` with exactly the ticked ids - not the unticked ones,
+  and not the corrupt one - to the path the (substituted) file dialog returned. The single-row actions
+  stand down while the bar is up.
+- **Import**: the two dialogs are built but not shown, so the branches can be asserted without a modal
+  window. A routes package asks one question and has no 覆盖/新建 choice; a collection package colliding
+  with an existing name is the only case offering 覆盖 / 新建, and its text states how many routes would
+  be replaced. Primary/Secondary/None map to `collectionOverwrite`/`collectionNew`/`routes`/nothing.
+  (This assertion found a real bug: a routes package was being mapped to "create a new collection".)
 - The page renders at the 800×500 minimum window size.
 
 Screenshots: `route-empty.png`, `route-active.png` (the route list with icons and the ● row), `route-800.png`.
 
 It is a page-wiring and layout fixture. It does not replace native runtime, real persistence, real-game
-controller or physical DPI testing, and it does not exercise the other five pages.
+controller or physical DPI testing, and it does not exercise the other five pages. The two file dialogs are
+the one thing it cannot click: `FunctionPage.OpenBundlePath` / `SaveBundlePath` substitute them, and in
+production the page still calls the native common dialog.
 

@@ -1,5 +1,8 @@
 <Page x:Class="IMao_WinUI.Views.FunctionPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="using:CommunityToolkit.WinUI.Controls" xmlns:helpers="using:IMao_WinUI.Helpers">
-    <Page.Resources><helpers:RouteKindIconConverter x:Key="RouteKindIcon" /></Page.Resources>
+    <Page.Resources>
+        <helpers:RouteKindIconConverter x:Key="RouteKindIcon" />
+        <helpers:BoolToVisibilityConverter x:Key="FlagToVisibility" />
+    </Page.Resources>
     <StackPanel x:Name="ContentArea" Spacing="22">
         <StackPanel Spacing="5"><TextBlock Text="ROUTE STUDIO" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="路线" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="路线怎么操作，以及你保存过哪些路线。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
         <InfoBar x:Name="AutoRouteMessage" IsOpen="False" IsClosable="True" />
@@ -20,11 +23,29 @@
             <Border Style="{StaticResource IMaoCardStyle}">
                 <StackPanel Spacing="14">
                     <TextBlock Text="02  路线列表" Style="{StaticResource IMaoSectionTitleStyle}" />
+                    <TextBlock Text="合集把路线分开放。切换合集就是决定「之后保存的路线放进哪一格」——游戏里保存的自动路线和手绘路线，都进当前合集。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <controls:WrapPanel x:Name="RouteCollectionChips" HorizontalSpacing="8" VerticalSpacing="8" />
+                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                        <Button x:Name="RouteCollectionNew" Content="新建合集" Click="RouteCollectionNew_Click" />
+                        <Button x:Name="RouteCollectionRename" Content="重命名合集" Click="RouteCollectionRename_Click" />
+                        <Button x:Name="RouteCollectionDelete" Content="删除合集" Click="RouteCollectionDelete_Click" />
+                    </controls:WrapPanel>
                     <TextBlock x:Name="AutoRouteListSummary" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <StackPanel x:Name="RouteBatchBar" Spacing="8" Visibility="Collapsed">
+                        <TextBlock x:Name="RouteBatchSummary" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                        <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                            <Button Content="全选" Click="RouteBatchSelectAll_Click" />
+                            <Button Content="导出所选" Click="RouteBatchExport_Click" />
+                            <Button Content="移动到…" Click="RouteBatchMove_Click" />
+                            <Button Content="删除所选" Click="RouteBatchDelete_Click" />
+                            <Button Content="退出批量" Click="RouteBatchExit_Click" />
+                        </controls:WrapPanel>
+                    </StackPanel>
                     <ListView x:Name="AutoRouteSavedRoutes" MaxHeight="420" SelectionMode="Single" HorizontalContentAlignment="Stretch" SelectionChanged="AutoRouteSavedRoutes_SelectionChanged">
                         <ListView.ItemTemplate><DataTemplate>
                             <StackPanel Spacing="4" Padding="0,4">
-                                <TextBlock Text="{Binding DisplayLabel}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <CheckBox Content="{Binding DisplayLabel}" IsChecked="{Binding Selected, Mode=TwoWay}" Click="RouteRowCheck_Click" FontSize="17" FontWeight="SemiBold" Visibility="{Binding Batch, Converter={StaticResource FlagToVisibility}}" />
+                                <TextBlock Text="{Binding DisplayLabel}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="{Binding Batch, Converter={StaticResource FlagToVisibility}, ConverterParameter=invert}" />
                                 <TextBlock Text="{Binding DetailLabel}" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="{Binding Kinds, Converter={StaticResource RouteKindIcon}, ConverterParameter=empty}" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
@@ -45,7 +66,11 @@
                     <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                         <Button x:Name="AutoRouteSwitch" Content="开始指引这条路线" Click="AutoRouteSwitch_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
                         <Button Content="刷新列表" Tag="list" Click="AutoRouteAction_Click" />
-                        <Button Content="删除所选路线" Click="AutoRouteDelete_Click" /></controls:WrapPanel>
+                        <Button x:Name="AutoRouteDelete" Content="删除所选路线" Click="AutoRouteDelete_Click" />
+                        <Button Content="批量…" Click="RouteBatchEnter_Click" />
+                        <Button Content="导入…" Click="RouteImport_Click" />
+                        <Button Content="导出当前合集…" Click="RouteExportCollection_Click" />
+                    </controls:WrapPanel>
                     <TextBlock Text="开始指引会切换到选中的那条并立刻导航，和在游戏内列表里点它一下是同一件事。删除只移除路线文件，点位的完成记录仍然保留。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
