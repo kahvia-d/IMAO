@@ -21,6 +21,7 @@
 #include <limits>
 #include <map>
 #include <mutex>
+#include <set>
 #include <thread>
 
 namespace {
@@ -78,6 +79,10 @@ struct Runtime {
     // asked for.
     AutoRoute::RouteCollections::Index collections;
     std::string currentCollection=AutoRoute::DefaultCollectionId;
+    // What the last `importInspect` found, shown to the player before anything moves. It is the
+    // reason the import can be two steps: the file's kind, the names and the conflict are answered
+    // here, so the interface never has to parse a route package itself.
+    Json transfer=nullptr;
     std::function<void(const Json&)> callback;
     Clock::time_point lastVisibilityEvent{};
     bool visibilityEventPending=false;
@@ -237,6 +242,56 @@ std::string NewRouteCollectionLocked(const AutoRoute::Plan& plan){
     if(plan.collection.empty())return r.currentCollection;
     const auto named=AutoRoute::NormalizeCollectionId(plan.collection);
     return AutoRoute::RouteCollections::Exists(r.collections,named)?named:r.currentCollection;
+}
+// Route ids and names are compared the way the store compares them — case-insensitively — so the
+// two places that answer "is this taken?" cannot disagree with the rest of the code.
+std::string LowerKey(const std::string& value){
+    std::string result=value;
+    std::transform(result.begin(),result.end(),result.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
+    return result;
+}
+std::size_t CollectionRouteCountLocked(const std::string& collectionId){
+    std::size_t total=0;
+    for(const auto& row:R().saved)
+        if(AutoRoute::SameRouteId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}),collectionId))++total;
+    return total;
+}
+// The documents in a bundle, turned into plans this profile could store. It never writes anything:
+// the caller decides where the point of no return is, which is what lets an import be inspected and
+// let go of without one byte changing. A route that cannot be turned into a plan is counted and
+// skipped rather than sinking the whole bundle, the way the legacy route import already behaves.
+std::vector<AutoRoute::Plan> ParseBundledRoutesLocked(const AutoRoute::RouteBundle::Contents& bundle,std::size_t& skipped){
+    const auto& r=R();std::vector<AutoRoute::Plan> plans;
+    for(const auto& document:bundle.routes){
+        try{
+            auto entry=document;
+            entry["profileId"]=r.profile;
+            // The id is the importer's business — it has to be free in the target profile — so all
+            // this needs is a shape the document can be judged with. What is being judged is the
+            // scene, the points and whether their resources still match.
+            if(!entry.contains("id")||!entry.at("id").is_string()||!AutoRoute::IsRouteComponent(entry.at("id").get<std::string>()))
+                entry["id"]=std::string("imported");
+            plans.push_back(AutoRoute::RoutePlanStore::Parse(entry,r.profile,entry.at("id").get<std::string>(),ResolveLocked));
+        }catch(const std::exception& error){
+            ++skipped;
+            StructuredLogger::Record("warn","routes","route-bundle-route-skipped",std::string("reason=")+error.what());
+        }
+    }
+    return plans;
+}
+// A name that is free in the collection the route is about to join. Two routes with the same name in
+// one collection are indistinguishable in a list, so the second one is numbered — the same rule the
+// collections themselves follow.
+std::string UniqueRouteNameLocked(const std::string& wanted,const std::set<std::string>& taken){
+    if(!taken.contains(LowerKey(wanted)))return wanted;
+    for(std::size_t nth=2;nth<=9999;++nth){
+        const auto suffix=" ("+std::to_string(nth)+")";
+        // The store caps a name at 256 characters; numbering must not push a long name over it.
+        const auto stem=wanted.size()+suffix.size()<=256?wanted:wanted.substr(0,256-suffix.size());
+        const auto candidate=stem+suffix;
+        if(!taken.contains(LowerKey(candidate)))return candidate;
+    }
+    throw std::runtime_error("无法为导入的路线取一个可用的名字");
 }
 // The list the player sees grouped by collection, so a row and its collection come from one place.
 Json SavedRoutesJsonLocked(){
@@ -460,6 +515,7 @@ Json SnapshotLocked(){
         {"handDrawnActive",r.handDraft.Active()},{"handDrawnPending",r.handDraft.Pending()},
         {"handDrawnCount",r.handDraft.Size()},
         {"currentCollection",r.currentCollection},{"collections",CollectionsJsonLocked()},
+        {"transfer",r.transfer},
         {"savedRoutes",SavedRoutesJsonLocked()}};
 }
 void Emit(){
@@ -477,6 +533,8 @@ void SyncProfileLocked(){
     // The other profile's collections must not survive the switch even if reading the new index
     // fails below: a list built from the wrong profile's collections would look like data loss.
     r.collections={};r.currentCollection=AutoRoute::DefaultCollectionId;
+    // A package inspected under one profile must never be applied under another.
+    r.transfer=nullptr;
     r.handDraft.Cancel();
     r.runRequested=false;r.completed.clear();r.message.clear();r.tool="pan";
     try {ReloadCollectionsLocked();ReloadSavedLocked();r.active=r.store->LoadActive(profile,ResolveLocked);
@@ -1196,6 +1254,111 @@ Json RoutePlanningService::Command(const Json& command){
             StructuredLogger::Record("info","routes","route-bundle-exported",
                 "kind="+std::string(wholeCollection?"collection":"routes")+" routes="+std::to_string(plans.size())+
                 " skipped="+std::to_string(unreadable)+" path="+AutoRoute::Utf8Text(path));
+        }else if(action=="importInspect"){
+            // Reading only. The player is shown what the file holds — and, for a collection whose
+            // name is already taken, what the choice would do — before a single byte is written.
+            const auto path=AutoRoute::Utf8Path(command.at("path").get<std::string>());
+            // Whatever was pending is the answer to the previous file, and this is a different
+            // question. Dropping it first also means a file that cannot be read leaves nothing
+            // behind that could still be applied.
+            r.transfer=nullptr;
+            const auto bundle=AutoRoute::RouteBundle::Load(path);
+            std::size_t skipped=0;
+            const auto plans=ParseBundledRoutesLocked(bundle,skipped);
+            if(plans.empty())
+                throw std::runtime_error("这个路线包里没有能导入的路线"+(skipped?"（"+std::to_string(skipped)+" 条读不出来）":""));
+            Json conflict=nullptr;
+            if(bundle.collection)
+                if(const auto* clash=AutoRoute::RouteCollections::FindByName(r.collections,bundle.collectionName))
+                    conflict={{"collectionId",clash->id},{"name",clash->name},
+                        {"routeCount",CollectionRouteCountLocked(clash->id)}};
+            r.transfer={{"kind",bundle.collection?"collection":"routes"},
+                {"path",command.at("path").get<std::string>()},
+                {"collectionName",bundle.collectionName},
+                {"collectionId",conflict.is_null()?std::string{}:conflict.at("collectionId").get<std::string>()},
+                {"routeCount",plans.size()},{"skipped",skipped},{"conflict",std::move(conflict)}};
+            r.message=bundle.collection
+                ? "路线包「"+bundle.collectionName+"」里有 "+std::to_string(plans.size())+" 条路线"
+                : "路线包里有 "+std::to_string(plans.size())+" 条路线，将导入当前合集「"+CollectionNameLocked(r.currentCollection)+"」";
+            StructuredLogger::Record("info","routes","route-bundle-inspected",
+                "kind="+std::string(bundle.collection?"collection":"routes")+" routes="+std::to_string(plans.size())+
+                " skipped="+std::to_string(skipped)+" path="+AutoRoute::Utf8Text(path));
+        }else if(action=="importApply"){
+            const auto path=AutoRoute::Utf8Path(command.at("path").get<std::string>());
+            const auto mode=command.value("mode",std::string{});
+            // Applying means the player was already shown this file: the inspection is what carried
+            // the kind, the name and the conflict, and re-deciding them here would be a second,
+            // quieter decision made on their behalf.
+            if(!r.transfer.is_object()||r.transfer.value("path",std::string{})!=command.at("path").get<std::string>())
+                throw std::runtime_error("请先选择要导入的路线包");
+            if(mode!="routes"&&mode!="collectionNew"&&mode!="collectionOverwrite")
+                throw std::invalid_argument("导入方式无效");
+            const auto bundle=AutoRoute::RouteBundle::Load(path);
+            if(bundle.collection!=(mode!="routes"))
+                throw std::invalid_argument(bundle.collection?"这是合集路线包，只能按合集导入":"这是路线包，只能按路线导入");
+            // Everything is read and validated before anything is written. Only then does the one
+            // destructive branch — replacing a collection — delete what is already there, so a
+            // bundle that cannot be imported never costs the player the collection it collided with.
+            std::size_t skipped=0;
+            const auto plans=ParseBundledRoutesLocked(bundle,skipped);
+            if(plans.empty())throw std::runtime_error("这个路线包里没有能导入的路线，已放弃导入");
+            std::string target;
+            AutoRoute::Collection created;
+            if(mode=="routes"){
+                target=r.currentCollection;
+            }else if(mode=="collectionNew"){
+                created.id=NewId();
+                created.name=AutoRoute::RouteCollections::UniqueName(r.collections,bundle.collectionName);
+                created.createdUnixMs=NowUnixMs();
+                target=created.id;
+                r.collections.collections.push_back(created);
+            }else{
+                const auto* clash=AutoRoute::RouteCollections::FindByName(r.collections,bundle.collectionName);
+                if(!clash)throw std::runtime_error("没有叫「"+bundle.collectionName+"」的合集可以覆盖");
+                target=clash->id;
+                for(const auto& row:r.saved){
+                    if(!AutoRoute::SameRouteId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}),target))continue;
+                    r.store->Delete(r.profile,row.value("id",std::string{}));
+                }
+                // The list still describes the routes that were just deleted; the ids they held have
+                // to be free again before the incoming ones are matched against them, or importing
+                // the same bundle twice would keep inventing new ids.
+                ReloadSavedLocked();
+            }
+            // Ids are file names, so "free" means no file holds it. A bundle that carries an id this
+            // profile already uses gets a fresh one instead of quietly overwriting an unrelated
+            // route — except in the replacing branch, where the collection was just emptied and the
+            // ids it freed make importing the same bundle twice settle on the same answer.
+            std::set<std::string> takenIds,takenNames;
+            for(const auto& row:r.saved){
+                takenIds.insert(LowerKey(row.value("id",std::string{})));
+                if(AutoRoute::SameRouteId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}),target))
+                    takenNames.insert(LowerKey(row.value("name",std::string{})));
+            }
+            std::size_t written=0;
+            for(auto plan:plans){
+                if(!takenIds.insert(LowerKey(plan.id)).second){
+                    auto replacement=NewId();
+                    while(!takenIds.insert(LowerKey(replacement)).second)replacement=NewId();
+                    plan.id=replacement;
+                }
+                plan.name=UniqueRouteNameLocked(plan.name,takenNames);
+                takenNames.insert(LowerKey(plan.name));
+                plan.collection=target;
+                r.store->Save(plan,false);
+                ++written;
+            }
+            // Entering what was just imported is the point for a collection: the next route the
+            // player saves belongs beside the ones they came for.
+            r.currentCollection=target;
+            SaveCollectionsLocked();
+            r.transfer=nullptr;
+            ReloadSavedLocked();
+            r.message="已导入 "+std::to_string(written)+" 条路线到「"+CollectionNameLocked(target)+"」"+
+                (skipped? "，跳过 "+std::to_string(skipped)+" 条（点位资源已变化或文件损坏）":"");
+            StructuredLogger::Record("info","routes","route-bundle-imported",
+                "mode="+mode+" collectionId="+target+" routes="+std::to_string(written)+
+                " skipped="+std::to_string(skipped)+" path="+AutoRoute::Utf8Text(path));
         }else if(action=="pause"){r.runRequested=false;InvalidateAutoLocked();r.message="导航已暂停；如需隐藏并结束路线，请退出导航";}
         else if(action=="resume"){
             if(!r.active)throw std::runtime_error("请先加载或生成路线");InvalidateLocked();r.runRequested=true;r.enabled=false;r.tool="pan";r.message="已继续导航";

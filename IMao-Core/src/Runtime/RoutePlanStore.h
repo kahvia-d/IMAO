@@ -162,34 +162,10 @@ public:
         }
         return rows;
     }
-private:
-    std::filesystem::path root;
-    static std::filesystem::path ResolveRoot(std::filesystem::path directory) {
-        return ResolveSavedRoutesRoot(std::move(directory));
-    }
-    std::filesystem::path Root(const std::string& profile,bool handDrawn) const {
-        ValidateRouteComponent(profile);
-        return root/(handDrawn?"Hand":"Auto")/std::filesystem::path(profile);
-    }
-    // The pointer sits in the route folder it mostly governs and names the other folder when the
-    // active route is a hand-drawn one, so loading never has to probe both.
-    std::filesystem::path ActivePath(const std::string& profile) const {
-        return Root(profile,false)/"active.json";
-    }
-    static std::filesystem::path DeletingPath(std::filesystem::path path) {path+=L".deleting";return path;}
-    std::filesystem::path Path(const std::string& profile,const std::string& id,bool handDrawn) const {
-        ValidateRouteComponent(id);
-        auto normalized=id;std::transform(normalized.begin(),normalized.end(),normalized.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
-        if(normalized=="active")throw std::invalid_argument("保留的自动路线标识");
-        return Root(profile,handDrawn)/std::filesystem::path(id+".json");
-    }
-    static Json Read(const std::filesystem::path& path) {
-        if(!std::filesystem::exists(path)||std::filesystem::file_size(path)>2*1024*1024)
-            throw std::runtime_error("无法读取自动路线文件");
-        std::ifstream input(path);return Json::parse(input);
-    }
-    Plan LoadFolder(const std::string& profile,const std::string& id,const std::filesystem::path& folder,const Resolver& resolve) const {
-        const auto doc=Read(folder/(id+".json"));
+    // A stored document, turned back into a plan. Public because an imported bundle carries the very
+    // same documents: an import has to run them through exactly this validation, or a route could
+    // arrive by file transfer that could never have been saved locally in the first place.
+    static Plan Parse(const Json& doc,const std::string& profile,const std::string& id,const Resolver& resolve) {
         if(doc.value("formatVersion",0)!=1||doc.value("profileId","")!=profile||doc.value("id","")!=id)
             throw std::runtime_error("自动路线文件版本或档案不匹配");
         Plan plan;plan.id=id;plan.profileId=profile;plan.name=doc.at("name").get<std::string>();
@@ -235,6 +211,35 @@ private:
         plan.filterByRoute=doc.value("filterByRoute",true);
         plan.collection=NormalizeCollectionId(doc.value("collection",std::string{DefaultCollectionId}));
         Validate(plan);return plan;
+    }
+private:
+    std::filesystem::path root;
+    static std::filesystem::path ResolveRoot(std::filesystem::path directory) {
+        return ResolveSavedRoutesRoot(std::move(directory));
+    }
+    std::filesystem::path Root(const std::string& profile,bool handDrawn) const {
+        ValidateRouteComponent(profile);
+        return root/(handDrawn?"Hand":"Auto")/std::filesystem::path(profile);
+    }
+    // The pointer sits in the route folder it mostly governs and names the other folder when the
+    // active route is a hand-drawn one, so loading never has to probe both.
+    std::filesystem::path ActivePath(const std::string& profile) const {
+        return Root(profile,false)/"active.json";
+    }
+    static std::filesystem::path DeletingPath(std::filesystem::path path) {path+=L".deleting";return path;}
+    std::filesystem::path Path(const std::string& profile,const std::string& id,bool handDrawn) const {
+        ValidateRouteComponent(id);
+        auto normalized=id;std::transform(normalized.begin(),normalized.end(),normalized.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
+        if(normalized=="active")throw std::invalid_argument("保留的自动路线标识");
+        return Root(profile,handDrawn)/std::filesystem::path(id+".json");
+    }
+    static Json Read(const std::filesystem::path& path) {
+        if(!std::filesystem::exists(path)||std::filesystem::file_size(path)>2*1024*1024)
+            throw std::runtime_error("无法读取自动路线文件");
+        std::ifstream input(path);return Json::parse(input);
+    }
+    Plan LoadFolder(const std::string& profile,const std::string& id,const std::filesystem::path& folder,const Resolver& resolve) const {
+        return Parse(Read(folder/(id+".json")),profile,id,resolve);
     }
     bool DeleteIn(const std::string& profile,const std::string& id,bool handDrawn) const {
         const auto routePath=Path(profile,id,handDrawn),pendingPath=DeletingPath(routePath);

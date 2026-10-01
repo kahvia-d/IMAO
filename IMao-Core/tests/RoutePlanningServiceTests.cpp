@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <limits>
+#include <set>
 #include <thread>
 
 using namespace std::chrono_literals;
@@ -615,6 +616,179 @@ void VerifyRouteBundle(){
         Check(!carriedDamaged,"a collection with a damaged route does not carry that route into the bundle");
     }
     Check(message().find("条读不出来")!=std::string::npos,"the report names that some routes were left out");
+
+    // --- importing -------------------------------------------------------------------------------
+    const auto state_=[&](){return RoutePlanningService::Snapshot();};
+    const auto collections=[&](){return state_().at("collections");};
+    const auto collectionRow=[&](const std::string& id)->Json{
+        const auto rows=collections();
+        for(const auto& row:rows)if(row.value("id",std::string{})==id)return row;
+        return Json(nullptr);
+    };
+    const auto routeCount=[&](const std::string& id){return collectionRow(id).at("routeCount").get<int>();};
+    const auto currentCollection=[&](){return state_().value("currentCollection",std::string{});};
+    const auto transfer=[&](){return state_().at("transfer");};
+    const auto rowCollection=[&](const std::string& routeId)->std::string{
+        const auto rows=state_().at("savedRoutes");
+        for(const auto& row:rows)if(row.value("id",std::string{})==routeId)return row.value("collection",std::string{});
+        return {};
+    };
+    const auto rowName=[&](const std::string& routeId)->std::string{
+        const auto rows=state_().at("savedRoutes");
+        for(const auto& row:rows)if(row.value("id",std::string{})==routeId)return row.value("name",std::string{});
+        return {};
+    };
+    const auto routeIdByName=[&](const std::string& name)->std::string{
+        const auto rows=state_().at("savedRoutes");
+        for(const auto& row:rows)if(row.value("name",std::string{})==name)return row.value("id",std::string{});
+        return {};
+    };
+    // The same name can legitimately exist in several collections, so "which route is this" is only
+    // answered by the name *and* the collection: an id alone would pick whichever sorts first.
+    const auto routeIdIn=[&](const std::string& name,const std::string& collectionId)->std::string{
+        const auto rows=state_().at("savedRoutes");
+        for(const auto& row:rows)
+            if(row.value("name",std::string{})==name&&
+                AutoRoute::SameRouteId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}),collectionId))
+                return row.value("id",std::string{});
+        return {};
+    };
+    const auto savedIds=[&](){
+        std::set<std::string> ids;
+        for(const auto& row:state_().at("savedRoutes"))ids.insert(row.value("id",std::string{}));
+        return ids;
+    };
+    // A bundle whose routes carry ids that are free here, so what the import does *with* an id can be
+    // told apart from what it does *about* a collision. The read is scoped on purpose: an open
+    // std::ifstream shares reading and writing but not deleting, so a stream still alive here would
+    // block the atomic replace that writes the file back.
+    const auto rewriteIds=[&](const std::filesystem::path& path,const std::vector<std::string>& ids){
+        Json document;
+        {
+            std::ifstream input(path,std::ios::binary);
+            document=Json::parse(std::string(std::istreambuf_iterator<char>(input),{}));
+        }
+        for(std::size_t i=0;i<ids.size();++i)document["routes"][i]["id"]=ids[i];
+        WriteTextAtomically(path,document.dump(2));
+    };
+    const auto collectionBundle=under("导入测试.json");
+    const auto routesBundle=under("导入路线.json");
+    const auto brokenBundle=under("坏包.json");
+
+    Command({{"action","collectionNew"},{"name","来源"}});
+    const auto originId=currentCollection();
+    write("import-a","共享甲",originId);
+    write("import-b","共享乙",originId);
+    Command({{"action","list"}});
+    Command({{"action","export"},{"path",AutoRoute::Utf8Text(collectionBundle)},{"collectionId",originId}});
+    rewriteIds(collectionBundle,{"shared-x","shared-y"});
+
+    // Inspecting is reading, and nothing else. Everything the player is asked to decide is answered
+    // here, so the interface never has to open a route package itself.
+    const auto idsBefore=savedIds();
+    Command({{"action","importInspect"},{"path",AutoRoute::Utf8Text(collectionBundle)}});
+    Check(transfer().is_object()&&transfer().value("kind",std::string{})=="collection"&&
+        transfer().value("collectionName",std::string{})=="来源"&&transfer().value("routeCount",0)==2&&
+        transfer().value("skipped",0)==0,
+        "inspecting a collection bundle answers what it is, what it is called and how much is in it");
+    Check(transfer().at("conflict").is_object()&&
+        transfer().at("conflict").value("collectionId",std::string{})==originId&&
+        transfer().at("conflict").value("routeCount",0)==2,
+        "inspecting reports the collection whose name is already taken, with what is in it");
+    Check(savedIds()==idsBefore&&currentCollection()==originId&&routeCount(originId)==2,
+        "inspecting a bundle changes nothing at all");
+    Check(message().find("来源")!=std::string::npos&&message().find("2 条路线")!=std::string::npos,
+        "the inspection says what the file holds before anything is decided");
+
+    Check(refused({{"action","importApply"},{"path",AutoRoute::Utf8Text(routesBundle)},{"mode","routes"}}),
+        "applying a bundle that was never inspected is refused");
+    Check(refused({{"action","importApply"},{"path",AutoRoute::Utf8Text(collectionBundle)},{"mode","routes"}}),
+        "a collection bundle cannot be applied as a bundle of routes");
+    Check(refused({{"action","importApply"},{"path",AutoRoute::Utf8Text(collectionBundle)},{"mode","nonsense"}}),
+        "an import mode nobody recognises is refused");
+    Check(!transfer().is_null()&&routeCount(originId)==2,
+        "a refused import leaves the pending inspection and the collections as they were");
+
+    // Overwrite: the collection is replaced, and because it is emptied first the ids the bundle
+    // carries are free again — which is what makes importing the same package twice settle.
+    Command({{"action","importApply"},{"path",AutoRoute::Utf8Text(collectionBundle)},{"mode","collectionOverwrite"}});
+    Check(rowCollection("shared-x")==originId&&rowCollection("shared-y")==originId,
+        "importing a collection keeps the ids the bundle carries when they are free here");
+    Check(rowName("shared-x")=="共享甲"&&rowName("shared-y")=="共享乙",
+        "imported routes keep their names when nothing in the collection has taken them");
+    Check(routeCount(originId)==2,
+        "replacing a collection leaves exactly the imported routes in it");
+    Check(currentCollection()==originId,"importing a collection enters it, so the next save lands beside it");
+    Check(transfer().is_null(),"the pending inspection is cleared once it has been applied");
+    Command({{"action","importInspect"},{"path",AutoRoute::Utf8Text(collectionBundle)}});
+    Command({{"action","importApply"},{"path",AutoRoute::Utf8Text(collectionBundle)},{"mode","collectionOverwrite"}});
+    Check(rowCollection("shared-x")==originId&&rowCollection("shared-y")==originId&&routeCount(originId)==2,
+        "importing the same collection bundle again settles on the same routes instead of piling up copies");
+
+    // New: a second collection under a name that is taken gets a number, and nothing is replaced.
+    Command({{"action","importInspect"},{"path",AutoRoute::Utf8Text(collectionBundle)}});
+    Command({{"action","importApply"},{"path",AutoRoute::Utf8Text(collectionBundle)},{"mode","collectionNew"}});
+    {
+        const auto copyId=currentCollection();
+        Check(copyId!=originId&&collectionRow(copyId).value("name",std::string{})=="来源 (2)",
+            "importing a same-name collection without overwriting makes a numbered one instead");
+        Check(routeCount(copyId)==2&&routeCount(originId)==2,
+            "the numbered collection gets the routes and the original keeps its own");
+        Check(rowCollection("shared-x")==originId,
+            "the routes that were already here are not moved by importing a copy of them");
+    }
+
+    // A hand-picked bundle goes into the collection the player is in, and collisions are answered
+    // rather than silently overwriting something unrelated.
+    Command({{"action","export"},{"path",AutoRoute::Utf8Text(routesBundle)},
+        {"routeIds",Json::array({"shared-x","shared-y"})}});
+    Command({{"action","collectionCurrent"},{"collectionId",AutoRoute::DefaultCollectionId}});
+    Command({{"action","importInspect"},{"path",AutoRoute::Utf8Text(routesBundle)}});
+    Check(transfer().value("kind",std::string{})=="routes"&&transfer().at("conflict").is_null()&&
+        transfer().value("collectionName",std::string{}).empty(),
+        "a bundle of picked routes carries no collection and has nothing to collide with");
+    Check(message().find("默认合集")!=std::string::npos,
+        "the inspection says which collection the routes are about to join");
+    Command({{"action","importApply"},{"path",AutoRoute::Utf8Text(routesBundle)},{"mode","routes"}});
+    Check(currentCollection()==AutoRoute::DefaultCollectionId,
+        "importing routes does not move the player out of the collection they are in");
+    Check(rowCollection("shared-x")==originId&&rowName("shared-x")=="共享甲",
+        "an id that is already taken here belongs to the route that had it, not to the newcomer");
+    {
+        const auto imported=routeIdIn("共享甲",AutoRoute::DefaultCollectionId);
+        Check(!imported.empty()&&imported!="shared-x",
+            "an imported route whose name is free in the target collection keeps it, under a fresh id");
+        Check(rowCollection("shared-x")==originId,
+            "the route that already held the id is the one it stays with");
+    }
+    Check(routeIdIn("共享甲 (2)",AutoRoute::DefaultCollectionId).empty(),
+        "a name that is not taken in the collection is not numbered");
+    // Importing the same picked routes a second time is the same answer again: the ids are taken and
+    // so is the name, so this time both are answered.
+    Command({{"action","importInspect"},{"path",AutoRoute::Utf8Text(routesBundle)}});
+    Command({{"action","importApply"},{"path",AutoRoute::Utf8Text(routesBundle)},{"mode","routes"}});
+    Check(!routeIdIn("共享甲 (2)",AutoRoute::DefaultCollectionId).empty(),
+        "importing the same picked routes twice numbers the second copy instead of overwriting");
+
+    // A package whose routes cannot be read is refused as a whole, and the collections do not move.
+    {
+        Json document;
+        {
+            std::ifstream input(routesBundle,std::ios::binary);
+            document=Json::parse(std::string(std::istreambuf_iterator<char>(input),{}));
+        }
+        // Every route, so the package really has nothing importable in it.
+        for(auto& route:document["routes"])route["stops"][0]["pointId"]="not-a-point";
+        WriteTextAtomically(brokenBundle,document.dump(2));
+    }
+    const auto idsNow=savedIds();
+    Check(refused({{"action","importInspect"},{"path",AutoRoute::Utf8Text(brokenBundle)}}),
+        "a bundle whose only route cannot be resolved is refused at inspection");
+    Check(refused({{"action","importApply"},{"path",AutoRoute::Utf8Text(brokenBundle)},{"mode","routes"}}),
+        "and it is refused again if it is applied anyway");
+    Check(savedIds()==idsNow&&currentCollection()==AutoRoute::DefaultCollectionId,
+        "a bundle that cannot be imported changes nothing at all");
+    Check(transfer().is_null(),"a refused inspection leaves no pending import behind");
 }
 
 // The route list is the one place a point type is described to the shell. The shell cannot resolve
@@ -876,12 +1050,15 @@ void VerifyCollections(){
 int main(int argc,char** argv){
     StructuredLogger::root=std::filesystem::absolute(argc>1?argv[1]:"out/auto-replan-native/service-data");
     std::filesystem::create_directories(StructuredLogger::root);
-    // The service reads the collections index exactly once per process, on its first profile sync,
-    // which happens before any test can reset it. The harness owns this directory and may be reusing
-    // one from an earlier run, so the index is cleared here: a collection left over from last time
-    // would otherwise look exactly like a bug in this run.
-    AutoRoute::RouteCollections(StructuredLogger::root/"SavedRoutes")
-        .Save("local",AutoRoute::RouteCollections::Index{});
+    // The harness owns this directory and may be handed one an earlier run used — the gate reuses
+    // out\system-audit\route-service-data. Its route tree is cleared so every run starts from the
+    // same state: the service reads the collections index once per process, before any test can
+    // reset it, and a leftover collection or a leftover route name would otherwise be read as a
+    // change in behaviour rather than as yesterday's data.
+    {
+        std::error_code ignored;
+        std::filesystem::remove_all(StructuredLogger::root/"SavedRoutes",ignored);
+    }
     const bool failSave=argc>2&&std::string(argv[2])=="save-failure";
     try{
         const auto original=Prepare();const auto originalIds=Ids(original);const auto oldKey=AutoRoute::Key(original.stops.front());
