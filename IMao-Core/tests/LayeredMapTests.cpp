@@ -35,6 +35,30 @@ ItemDatas Marker(int kuroStateId, const std::string& mapId, const std::string& l
     return item;
 }
 
+// The grid packing the floors below share: one bit per cell, four cells per hex nibble.
+std::string PackGrid(const std::vector<int>& source) {
+    std::string hex;
+    for (std::size_t i = 0; i < source.size(); i += 4) {
+        hex += "0123456789abcdef"[source[i] | (source[i + 1] << 1) | (source[i + 2] << 2) |
+            (source[i + 3] << 3)];
+    }
+    return hex;
+}
+
+// A floor whose occupancy covers tile (3,0) completely, so a position in it is "inside the
+// footprint" whatever the vote says about the floor.
+void CoverTile(LayeredFloors::FloorEntry& floor) {
+    const int grid = 64;
+    const int bits = grid * grid;
+    std::vector<int> occupancy(bits, 1), shared(bits, 0);
+    LayeredFloors::FloorTile tile;
+    tile.x = 3;
+    tile.y = 0;
+    tile.occupancy = PackGrid(occupancy);
+    tile.shared = PackGrid(shared);
+    floor.tiles.push_back(std::move(tile));
+}
+
 // A single-tile floor whose occupancy covers the whole tile and whose left half is marked as
 // ground the layered map copied from the surface. Used to pin SharedFraction: the left half must
 // read as shared and the right half as the layer's own art.
@@ -50,19 +74,11 @@ LayeredFloors::FloorEntry SharedGroundFloor() {
     for (int y = 0; y < grid; ++y) {
         for (int x = 0; x < grid / 2; ++x) shared[y * grid + x] = 1;
     }
-    const auto pack = [&](const std::vector<int>& source) {
-        std::string hex;
-        for (int i = 0; i < bits; i += 4) {
-            hex += "0123456789abcdef"[source[i] | (source[i + 1] << 1) | (source[i + 2] << 2) |
-                (source[i + 3] << 3)];
-        }
-        return hex;
-    };
     LayeredFloors::FloorTile tile;
     tile.x = 3;
     tile.y = 0;
-    tile.occupancy = pack(occupancy);
-    tile.shared = pack(shared);
+    tile.occupancy = PackGrid(occupancy);
+    tile.shared = PackGrid(shared);
     floor.tiles.push_back(std::move(tile));
     return floor;
 }
@@ -115,6 +131,18 @@ ImageFeatureData QueryWithDescriptors(int rows) {
     ImageFeatureData query;
     query.imgDescriptors = OneHotDescriptors(rows);
     for (int row = 0; row < rows; ++row) query.imgKeypoints.emplace_back(0.0f, 0.0f, 1.0f);
+    return query;
+}
+
+// A frame no floor was built from: the surface's own drawing over a cave, where the vote is a flat
+// scatter that names nothing. Rows 100/101 are outside every basis the floors below use.
+ImageFeatureData UnrelatedQuery() {
+    ImageFeatureData query;
+    query.imgDescriptors = cv::Mat::zeros(2, 128, CV_32FC1);
+    for (int row = 0; row < 2; ++row) {
+        query.imgDescriptors.at<float>(row, 100 + row) = 1.0f;
+        query.imgKeypoints.emplace_back(0.0f, 0.0f, 1.0f);
+    }
     return query;
 }
 
@@ -443,6 +471,68 @@ int main() {
                 LayeredMap::SetForTest(State(15, "-1/15", -1));
                 LayeredMap::ObservePosition(1, inside.first, inside.second);
                 Require(LayeredMap::Read().active, "being inside again must not clear it");
+                LayeredMap::SetEntriesForTest(1, {}, transform);
+            }
+
+            // The surface ABOVE a cave shares the coordinate, so the footprint cannot say whether
+            // the player is still inside it - LayeredFloorIndex.h says as much where it defines
+            // Contains. Field case 2026-10-01, roysurface's 天槎空间站 (layer 44) under 盲望之塌's
+            // snow: adopted -3/44 实验舱段一区 while the player was inside it (own 9/9), then
+            // own 3 -> 0 with ownShare 0.000 for four minutes after they walked back out, with
+            // containing=[-1/44 -3/44 -4/44] the whole time. The state held an enclosed floor the
+            // player had left, so SurfaceRole hid every surface marker and every other layered
+            // map's marker, and the minimap was down to the two markers of the wrong floor.
+            //
+            // What ends the floor now is the vote, not the footprint: the frame has to still look
+            // like art the floor draws itself (the same own-art measurement the adoption veto uses).
+            {
+                LayeredFloors::Transform transform;   // World defaults again
+                // Two floors of layer 44, each covering the tile the player stands on, so the vote
+                // has a competitor to be undecided against and containment is true either way.
+                auto basement = ClassifierFloor("-3/44", 44, {0, 1, 2, 3, 4}, {1, 1, 1, 1, 1});
+                basement.floorName = "实验舱段一区·天槎空间站";
+                basement.level = -3;
+                CoverTile(basement);
+                auto deeper = ClassifierFloor("-4/44", 44, {5, 6, 7, 8, 9}, {1, 1, 1, 1, 1});
+                deeper.floorName = "实验舱段二区·天槎空间站";
+                deeper.level = -4;
+                CoverTile(deeper);
+                LayeredMap::SetEntriesForTest(1, { basement, deeper }, transform);
+
+                const auto pixelToMap = [&](double pixelX, double pixelY) {
+                    const double gameX = (3.0 * transform.tileSize + pixelX - transform.tileSize) *
+                        transform.virtualMapSize / transform.tileSize;
+                    const double gameY = pixelY * transform.virtualMapSize / transform.tileSize;
+                    return std::pair<double, double>{ gameX * transform.scale + transform.originX,
+                        gameY * transform.scale + transform.originY };
+                };
+                const auto here = pixelToMap(512.0, 512.0);
+                Require(LayeredFloors::Contains(basement, transform, here.first, here.second),
+                    "this case is only interesting while the footprint still contains the player");
+
+                LayeredMap::SetForTest(State(44, "-3/44", -3));
+                // A frame that matches both floors equally: no 2x lead, so nothing is identified -
+                // but every match the held floor gets is still its own art (5/5), which is the
+                // 眠龙庭·上层 situation (2-5 own matches inside a floor) and must not end it.
+                const auto tie = QueryWithDescriptors(10);
+                for (int frame = 0; frame < 12; ++frame) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(320));
+                    LayeredMap::ObserveMinimap(tie, 1, here.first, here.second);
+                }
+                Require(LayeredMap::Read().active && LayeredMap::Read().floorId == "-3/44",
+                    "weak support that is still the floor's own art must keep it, however long it lasts");
+
+                // The surface's own frame, with the player in exactly the same place: this is what
+                // the field log spent four minutes in.
+                const auto surface = UnrelatedQuery();
+                for (int frame = 0; frame < 12; ++frame) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(320));
+                    LayeredMap::ObserveMinimap(surface, 1, here.first, here.second);
+                }
+                Require(!LayeredMap::Read().active,
+                    "a frame that is no longer the floor's own art must end it, footprint or not");
+                Require(LayeredMap::RoleFor(Marker(8, "", "")) == MarkerRole::Normal,
+                    "and clearing it must give the surface markers back");
                 LayeredMap::SetEntriesForTest(1, {}, transform);
             }
         }

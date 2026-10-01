@@ -32,11 +32,15 @@ function Invoke-TestCommand([string]$Command, [string]$LogName) {
     if ($code -ne 0) { throw "$LogName failed with exit code $code; see $log" }
 }
 if (-not $SkipBuild) {
-    Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests IMaoRoutePlanningTests IMaoRoutePlanningServiceTests IMaoVisualRegression IMaoResourceSnapshotTests --parallel ' + $Parallel) 'native-build.log'
+    Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests IMaoRoutePlanningTests IMaoRoutePlanningServiceTests IMaoVisualRegression IMaoResourceSnapshotTests IMaoLayeredMapTests --parallel ' + $Parallel) 'native-build.log'
     Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" build Tests\ManagedRuntime\ManagedRuntime.csproj -c Release --output "' + $taskManagedOutput + '" --source "' + $env:NUGET_PACKAGES + '" -p:NuGetAudit=false') 'managed-build.log'
 }
 Invoke-TestCommand 'x64\Release\IMaoOptimizationTests.exe' 'native-tests.log'
 Invoke-TestCommand 'x64\Release\IMaoMarkerTests.exe' 'marker-tests.log'
+# The layered floor state machine had its own suite registered with ctest since 2026-09 but this
+# gate neither built nor ran it, so a rule that held a floor the player had left could ship without
+# anything going red (2026-10-01, 天槎空间站). It is cheap - no model, no capture - so it runs here.
+Invoke-TestCommand 'x64\Release\IMaoLayeredMapTests.exe' 'layered-map-tests.log'
 Invoke-TestCommand 'x64\Release\IMaoResourceSnapshotTests.exe' 'resource-snapshot-tests.log'
 if (Test-Path -LiteralPath (Join-Path $taskRepo 'out\auto-replan-native\IMaoRoutePlanningServiceTests.exe')) {
     Invoke-TestCommand ('out\auto-replan-native\IMaoRoutePlanningServiceTests.exe "' + (Join-Path $taskOutput 'route-service-data') + '"') 'route-service-tests.log'

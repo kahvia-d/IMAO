@@ -216,9 +216,18 @@ if (Test-Path -LiteralPath $runSnapshotPath) {
         Write-Warning ('  fix: pwsh -File scripts\New-MapTestTree.ps1 -PackRegionId {0} -IsolateTrialState -ApproveScene <scene>' -f ($notLoaded -join ','))
     }
     $updates = Get-Item -LiteralPath (Join-Path $RunRoot 'Assets/Updates') -Force
-    if ($updates.LinkType) {
-        Write-Warning ('Assets/Updates is a {0} to the build output: the next staging run replaces the snapshot ' +
-            'above and can drop packs from it. Re-run New-MapTestTree.ps1 -IsolateTrialState to make this tree own it.' -f $updates.LinkType)
+    # A link is only a problem when THIS tree loads something staging would not keep: then the next
+    # staging run replaces the snapshot through the link and the pack disappears. A tree whose packs
+    # all come from the published registry is fine either way - after 2026-09-30's release the trial
+    # no longer needs isolation, and warning about the link there was pure noise.
+    $stagedRegistry = Join-Path $BinaryRoot 'Assets/FeaturesDatas/kuro-tile-packs.json'
+    $stagedPacks = if (Test-Path -LiteralPath $stagedRegistry) {
+        @((Get-Content -LiteralPath $stagedRegistry -Raw -Encoding UTF8 | ConvertFrom-Json).packs)
+    } else { @() }
+    $keptByStaging = @($snapshotTileDirs | Where-Object { $stagedPacks -contains $_ })
+    if ($updates.LinkType -and $keptByStaging.Count -lt $snapshotTileDirs.Count) {
+        $dropped = @($snapshotTileDirs | Where-Object { $stagedPacks -notcontains $_ })
+        Write-Warning ('Assets/Updates is a {0} to the build output, and this tree loads packs the staged registry does not name ({1}): the next staging run replaces the snapshot through that link and they stop loading. Re-run New-MapTestTree.ps1 -IsolateTrialState to make this tree own it.' -f $updates.LinkType, ($dropped -join ', '))
     }
 }
 else { Write-Warning "the run root has no bundled snapshot: $runSnapshotPath" }

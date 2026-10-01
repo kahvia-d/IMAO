@@ -33,6 +33,27 @@ constexpr int kSwitchFrames = 3;
 // Long enough that a stretch of weak classifications cannot end a floor the player never left
 // (see the footprint check in ObserveMinimap, which normally decides this on its own).
 constexpr int kClearFrames = 10;
+// How much of the active floor's own vote has to survive a frame that does NOT identify it, for the
+// floor to stay adopted. The footprint alone cannot answer this: the surface directly above a cave
+// shares the coordinate, so "the player is still inside the footprint" is as true on the snow over
+// 天槎空间站 as it is inside its 实验舱段一区 (LayeredFloorIndex.h says as much). What does separate
+// them is the composition of the frame's matches, which is the same measurement the adoption veto
+// uses - out in the open the matches are the surface base plate every co-located floor carries
+// (own/total 0.00-0.14), inside a cave they are the floor's own drawing (0.24-0.90).
+//
+// Field case, roysurface's 天槎空间站 (layer 44), 2026-10-01: adopted -3/44 inside 实验舱段一区 with
+// own 9/9, and after the player walked out onto 盲望之塌's snow the same floor read own 3 -> 0 with
+// ownShare 0.000 for four minutes while `containing=[-1/44 -3/44 -4/44]` stayed true, so the state
+// kept an enclosed floor the player had left: every surface marker and every other layered map's
+// marker stayed hidden, and the minimap was down to the two markers of the wrong floor.
+constexpr double kRetainOwnShare = 0.20;
+// The active floor's share of own-art matches in one frame's vote, and the counts behind it. No
+// matches at all means the frame says nothing about the floor, which is read as no support.
+struct VoteSupport {
+    int own = 0;
+    int total = 0;
+    double share = 0.0;
+};
 // How long the player may stand outside the known floor's footprint before it is dropped. This is
 // the position-only test, so it also runs while no minimap is being captured at all, and it is
 // counted in TIME rather than classifications: those arrive every few seconds in practice, not
@@ -189,6 +210,22 @@ void Install(const std::filesystem::path& featureDataRoot) {
     sharedGroundLogged = false;
     outsideFootprintSince = std::chrono::steady_clock::time_point{};
     Diagnostics::Record("layered-floor-index", "stage=ready floors=" + std::to_string(entries.size()));
+}
+
+// What this frame's vote says about one floor: how many of its matches came from art it draws
+// itself, out of how many it got at all. Both tables are searched because Classify keeps them
+// separate (see Classification::votes and ::ownVotes).
+VoteSupport SupportOf(const LayeredFloors::Classification& classification, int layerId,
+    const std::string& floorId) {
+    VoteSupport support;
+    for (const auto& vote : classification.votes) {
+        if (vote.layerId == layerId && vote.floorId == floorId) { support.total = vote.matches; break; }
+    }
+    for (const auto& vote : classification.ownVotes) {
+        if (vote.layerId == layerId && vote.floorId == floorId) { support.own = vote.ownMatches; break; }
+    }
+    if (support.total > 0) support.share = static_cast<double>(support.own) / support.total;
+    return support;
 }
 
 void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double mapX, double mapY) {
@@ -488,7 +525,16 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         });
         const bool stillInside = current.active && active != entries.end() &&
             LayeredFloors::Contains(active->floor, active->transform, mapX, mapY);
-        if (current.active && unknownCount >= kClearFrames && !stillInside) {
+        // ... and "standing in that floor's cave" cannot be read off the footprint, because the
+        // surface ABOVE a cave shares the coordinate: the player who walked out of 天槎空间站's
+        // 实验舱段一区 onto the snow above it is still inside every one of that map's footprints.
+        // The vote is what tells the two apart, and this is the same measurement the adoption veto
+        // uses (see kRetainOwnShare): while the frame still looks like the floor's own art the floor
+        // is kept, however weak the identification is, and once it stops looking like it the floor is
+        // dropped even with the position unchanged.
+        const auto support = SupportOf(classification, current.layerId, current.floorId);
+        const bool stillSupported = support.total > 0 && support.share >= kRetainOwnShare;
+        if (current.active && unknownCount >= kClearFrames && (!stillInside || !stillSupported)) {
             const auto previous = current.floorId;
             current = Snapshot{};
             decisiveStreak = 0;
@@ -499,7 +545,10 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             outsideFootprintSince = std::chrono::steady_clock::time_point{};
             ++current.revision;
             Diagnostics::Record("layered-floor-change", "scene=" + std::to_string(sceneId) +
-                " floor=cleared previous=" + previous + " unknownFrames=" + std::to_string(unknownCount));
+                " floor=cleared previous=" + previous + " unknownFrames=" + std::to_string(unknownCount) +
+                " reason=" + (stillInside ? "unsupported" : "left-footprint") +
+                " ownShare=" + std::to_string(support.share) +
+                " own=" + std::to_string(support.own) + " total=" + std::to_string(support.total));
         }
     }
 
@@ -507,6 +556,9 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     // it decided: the vote table is what makes a wrong decision diagnosable after the fact.
     if (now - lastReportAt >= std::chrono::seconds(5)) {
         lastReportAt = now;
+        // This frame's support for the floor being held, which is what ends it now that the
+        // footprint cannot tell "inside the cave" from "on the surface above it".
+        const auto activeSupport = SupportOf(classification, current.layerId, current.floorId);
         Diagnostics::Record("layered-floor", "scene=" + std::to_string(sceneId) +
             " active=" + std::to_string(current.active) + " floor=" + (current.floorId.empty() ? "-" : current.floorId) +
             " open=" + std::to_string(current.openToSurface) +
@@ -519,6 +571,9 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
             " decisiveStreak=" + std::to_string(decisiveStreak) +
             " closeStreak=" + std::to_string(closeStreak) +
             " equivalent=[" + JoinFloors(current.equivalentFloorIds) + "]" +
+            " activeOwn=" + std::to_string(activeSupport.own) +
+            " activeTotal=" + std::to_string(activeSupport.total) +
+            " activeShare=" + std::to_string(activeSupport.share) +
             " winner=" + std::to_string(classification.winnerMatches) +
             " runnerUp=" + std::to_string(classification.runnerUpMatches) +
             " ownWinner=" + std::to_string(classification.winnerOwnMatches) +
