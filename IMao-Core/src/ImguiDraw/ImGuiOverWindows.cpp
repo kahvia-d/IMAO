@@ -26,6 +26,7 @@
 #include "../Runtime/MapToolsBridge.h"
 #include "../Runtime/IsolationSwitches.h"
 #include "../Runtime/RuntimeStatus.h"
+#include "../Runtime/StructuredLogger.h"
 #include "Routes/DrawRouteOnMap.h"
 #include "Routes/DrawRouteOnMinMap.h"
 
@@ -403,6 +404,17 @@ int ImGuiOverWindows::start()
     ImGui::CreateContext();
     contextReady = true;
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    // Dear ImGui defaults IniFilename to "imgui.ini" RELATIVE TO THE WORKING DIRECTORY, and this
+    // overlay runs with the program directory as its working directory - so every session wrote a
+    // file no release manifest can declare. The updater verifies the program directory against that
+    // manifest file by file, read the stray file as a damaged program, rolled back to a kept
+    // version and then refused every later update (2026-10-01, C:\Dapps\IMao: a 53-byte window
+    // layout blocked the 梦枢天罗 release). The layout is a user setting, so it moves next to the
+    // logs rather than being switched off. The string has to outlive the context: ImGui keeps the
+    // pointer, not a copy.
+    static const std::string iniPath =
+        (StructuredLogger::ApplicationDataDirectory() / L"imgui.ini").string();
+    io.IniFilename = iniPath.c_str();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     // WinUI owns the single controller reader and dispatches contextual actions.
     // The click-through drawing surface must not navigate from game presses.

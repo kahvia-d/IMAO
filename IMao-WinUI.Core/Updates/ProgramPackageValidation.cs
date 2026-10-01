@@ -11,6 +11,32 @@ public static class ProgramPackageValidation
     public const int LauncherProtocol = 1;
     public static readonly string[] RequiredFiles = ["IMao-WinUI.exe", "IMao-WinUI.dll", "IMao-CoreHost.exe", "IMao-Launcher.exe", "build-info.json", "Assets/Updates/bundled-snapshot.json", "Assets/Updates/trusted-keys.json"];
 
+    /// <summary>
+    /// Files the running program writes into its own directory. No release manifest can declare them,
+    /// so a program directory that has been RUN once contains files the manifest does not list - and
+    /// reading that as corruption turned a 53-byte window layout into "程序文件损坏", a rollback to a
+    /// kept version, and a refusal of every later update (2026-10-01, C:\Dapps\IMao: the 梦枢天罗
+    /// release could not be installed because the build 天槎空间站 came with had written `imgui.ini`
+    /// next to its executable).
+    ///
+    /// Matched by file NAME rather than by path: the overlay is started with whatever working
+    /// directory the launcher happens to have, so the file is not always at the root of the tree.
+    /// Deliberately a short allow-list and not "ignore anything small" - the walk exists to catch a
+    /// program directory that is not the one the manifest describes, and this exemption is only safe
+    /// because the contents cannot carry code (Dear ImGui reads window geometry out of it and
+    /// nothing else).
+    ///
+    /// The overlay now writes its layout under %LOCALAPPDATA%\IMao-WinUI instead (see
+    /// ImGuiOverWindows.cpp), so a version installed from here on has none of these; this keeps the
+    /// installs that predate that change updateable.
+    /// </summary>
+    public static readonly IReadOnlySet<string> RuntimeArtifacts =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "imgui.ini" };
+
+    /// <summary>True when the path names a file the program writes at run time, not a release file.</summary>
+    public static bool IsRuntimeArtifact(string relativePath) =>
+        RuntimeArtifacts.Contains(Path.GetFileName(relativePath));
+
     public static void Validate(ProgramPackage package)
     {
         UpdateSignature.ValidateUrl(package.Url, true);
@@ -228,7 +254,10 @@ public static class ProgramPackageValidation
             {
                 UpdateStorage.RejectLink(path);
                 if (Directory.Exists(path)) { pending.Push(path); continue; }
-                if (!paths.Contains(Path.GetRelativePath(directory, path).Replace('\\', '/'))) throw new InvalidDataException("程序目录包含清单之外的文件。");
+                var relative = Path.GetRelativePath(directory, path).Replace('\\', '/');
+                // Written by the program itself, so the manifest cannot declare it: see RuntimeArtifacts.
+                if (IsRuntimeArtifact(relative)) continue;
+                if (!paths.Contains(relative)) throw new InvalidDataException("程序目录包含清单之外的文件。");
                 seen++;
             }
         }

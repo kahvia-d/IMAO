@@ -954,6 +954,24 @@ await Test("current signed program tampering falls back to preserved bootstrap",
     var store = Store(); await store.PrepareAsync(envelope, Download); var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
     File.Delete(Path.Combine(store.AppDirectory(launch.Id), "IMao-WinUI.dll")); Assert((await store.BeginLaunchAsync()).Id == "");
 });
+// 2026-10-01, C:\Dapps\IMao: the overlay writes its window layout (imgui.ini) into whatever
+// directory it runs from - the version's app directory - and no manifest can declare a file no
+// release ships. The next launch validated that directory against the manifest, called the program
+// damaged, rolled back to a kept version, and every later update attempt failed the same way, so the
+// 梦枢天罗 release could not be installed at all. The file is inert (Dear ImGui reads window geometry
+// out of it and nothing else) and the overlay now writes it under %LOCALAPPDATA%, so the walk
+// tolerates exactly these names and keeps refusing everything else.
+await Test("a program the installation has run stays launchable after it wrote its own files", async () =>
+{
+    var store = Store(); await store.PrepareAsync(envelope, Download);
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    File.WriteAllText(Path.Combine(store.AppDirectory(launch.Id), "imgui.ini"), "[Window][Debug##Default]\nPos=60,60\n");
+    var again = await store.BeginLaunchAsync();
+    Assert(again.Id == launch.Id, "the overlay's layout file must not turn the installed program into a damaged one");
+    // ... and the tolerance is exactly that name: anything else is still corruption.
+    File.WriteAllText(Path.Combine(store.AppDirectory(launch.Id), "stray.dll"), "not part of any release");
+    Assert((await store.BeginLaunchAsync()).Id != launch.Id, "a file no release ships must still end the version");
+});
 await Test("damaged current and predecessor still retain the original bootstrap", async () =>
 {
     var store = Store(); await store.PrepareAsync(envelope, Download); var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
