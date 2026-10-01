@@ -7,14 +7,19 @@ using System.Text.Json;
 
 namespace IMao_WinUI.Views;
 
+// 这一页是路线的**只读视图 + 不需要地图的操作**。
+// 选点画布（矩形框选/套索/单点/加入视野/指定起点）、手绘加点、按路线切换与保存，
+// 全部在游戏内大地图的「地图工具台 → 路径自动规划」里完成（WinUI 工具窗，见 MapToolsWindow）。
+// 在这里放那些按钮只会得到「请先打开大地图并完成识别」或者静默无效，所以不提供入口。
 public sealed partial class FunctionPage : Page
 {
     private readonly CoreHostService coreHost;
-    private bool restoringConfiguration = true;
     private CancellationTokenSource? routePageLifetime;
     private RoutePlanningState renderedRouteState = new();
     private bool deletingRoute;
     private bool savingAutoReplan;
+    // 只用于区分"用户在拨开关"和"界面在按配置把开关摆正"：前者才允许写配置。
+    private bool restoringConfiguration = true;
 
     public FunctionViewModel ViewModel { get; }
 
@@ -33,12 +38,16 @@ public sealed partial class FunctionPage : Page
         restoringConfiguration = true;
         var value = coreHost.Configuration;
         AutoReplanToggle.IsOn = value.AutoReplanEnabled;
-        ManualRouteKeyDisplay.Text = RuntimeConfiguration.HotkeyName(value.ManualRouteKey);
-        ManualRouteDescription.Text = value.ManualRouteKey == 0
-            ? "手绘快捷键已禁用，可在设置中调整；在大地图上点击也能加点。"
-            : $"大地图上点击要标记的位置就会加点，也可以按一次 {RuntimeConfiguration.HotkeyName(value.ManualRouteKey)} 记下鼠标当前位置；Ctrl+Z 撤销上一个点，Esc 结束手绘（已画的点会保留，回到路线列表可以保存）。自动路线选点期间暂停手绘。";
         AutoRouteGuide.Content = value.CurrentTargetGuideKey == 0 ? "查看当前目标攻略" :
             $"查看当前目标攻略（{RuntimeConfiguration.HotkeyName(value.CurrentTargetGuideKey)}）";
+        restoringConfiguration = false;
+    }
+
+    // 核心推来的共享设置（设置页、游戏内工具栏都能改），摆正开关而不回写配置。
+    private void SetToggleFromCore(bool value)
+    {
+        restoringConfiguration = true;
+        AutoReplanToggle.IsOn = value;
         restoringConfiguration = false;
     }
 
@@ -76,16 +85,16 @@ public sealed partial class FunctionPage : Page
         routePageLifetime = new();
         coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
         coreHost.RoutePlanningChanged += CoreHost_RoutePlanningChanged;
-        coreHost.PropertyChanged -= CoreHost_ConfigurationChanged;
-        coreHost.PropertyChanged += CoreHost_ConfigurationChanged;
         RenderRouteState(coreHost.RoutePlanning);
+        // The saved list is the one thing here the core does not push on its own: ask for it, so
+        // reopening the page after changing routes elsewhere shows the current rows.
+        await RouteCommandAsync("list");
         await RouteCommandAsync("state");
     }
 
     private void FunctionPage_Unloaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
-        coreHost.PropertyChanged -= CoreHost_ConfigurationChanged;
         routePageLifetime?.Cancel();
         routePageLifetime?.Dispose();
         routePageLifetime = null;
@@ -93,38 +102,31 @@ public sealed partial class FunctionPage : Page
 
     private void CoreHost_RoutePlanningChanged(object? sender, RoutePlanningState state) => RenderRouteState(state);
 
-    private void CoreHost_ConfigurationChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(CoreHostService.Configuration) && !savingAutoReplan) RestoreConfiguration();
-    }
-
     private void RenderRouteState(RoutePlanningState state)
     {
         renderedRouteState = state;
+        // 设置页、游戏内工具栏都可能改这一项；快照里的值就是权威值，跟着它把开关摆正。
+        if (AutoReplanToggle.IsOn != state.AutoReplanEnabled) SetToggleFromCore(state.AutoReplanEnabled);
         AutoReplanStateText.Text = state.AutoReplanLabel;
         AutoRouteMessage.Severity = InfoBarSeverity.Informational;
         AutoRouteMessage.Message = state.Message;
         AutoRouteMessage.IsOpen = !string.IsNullOrWhiteSpace(state.Message);
-        string tool = state.Tool switch { "point" => "单点选择", "box" => "矩形框选", "lasso" => "自由套索", "start" => "指定起点", _ => "移动地图" };
-        AutoRouteSelectionSummary.Text = $"已选 {state.SelectedCount} / 500 · 当前不可见 {state.HiddenCount} 个 · " +
-            (state.Enabled ? $"{tool} · {state.SceneName}" : "未进入选点");
-        AutoRouteStartSummary.Text = state.Start.Valid
-            ? $"起点：{(state.Start.Source == "manual" ? "手动指定" : "玩家位置快照")}（{state.Start.X:F1}, {state.Start.Y:F1}）"
-            : "起点：尚未获取；可在大地图上指定起点，或返回游戏重新定位。";
-        AutoRouteProgress.Visibility = state.Computing ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-        AutoRouteGenerate.IsEnabled = state.Enabled && !state.Computing && state.SelectedCount > 0;
+        // 生成与开始是交给核心去判断的：起点的有效性取决于你在游戏里的位置，
+        // 这里只把闸门照原样搬到按钮上，按不动的时候下方那句话说明原因。
+        AutoRouteGenerate.IsEnabled = !state.Computing && state.SelectedCount > 0;
         AutoRouteActivate.IsEnabled = state.Preview is not null && !state.Computing;
         AutoRouteStop.IsEnabled = state.Active is not null;
         AutoRouteGuide.IsEnabled = state.Active is not null && state.CurrentTarget is not null;
-        AutoRouteSelectedStops.ItemsSource = state.Selected;
         AutoRoutePreviewStops.ItemsSource = state.Preview?.Stops;
-        AutoRoutePreviewSummary.Text = state.Preview is { } preview
-            ? $"预览：{preview.Stops.Length} 个目标 · 平面连线长度 {preview.PlanarLength:F1} · 点击“开始导航”启用。"
-            : "尚未生成预览";
+        AutoRoutePreviewState.Text = state.Preview is { } preview
+            ? $"当前预览：{preview.Stops.Length} 个目标 · 平面连线长度 {preview.PlanarLength:F1} · 点「开始导航」启用。"
+            : state.Enabled
+                ? $"正在选点：已选 {state.SelectedCount} 个目标，还没有生成预览。"
+                : "还没有可用的预览。";
         AutoRouteActiveStops.ItemsSource = state.Active?.Stops;
         AutoRouteActiveSummary.Text = state.Active is { } activeRoute
             ? $"活动路线：{activeRoute.Name} · {state.NavigationLabel} · {activeRoute.Stops.Length} 个目标 · 平面连线长度 {activeRoute.PlanarLength:F1}"
-            : "当前没有活动路线";
+            : "当前没有活动路线。";
         AutoRouteCurrentTarget.Text = state.CurrentTarget is { } target ? $"当前目标：{target.ListLabel}" : "当前目标：无";
         string? selectedId = (AutoRouteSavedRoutes.SelectedItem as SavedAutomaticRoute)?.Id;
         AutoRouteSavedRoutes.ItemsSource = state.SavedRoutes;
@@ -171,32 +173,6 @@ public sealed partial class FunctionPage : Page
         else if (action == "stop" && renderedRouteState.Active is { } activeRoute)
             await RouteCommandAsync(action, new { routeId = activeRoute.Id, profileId = renderedRouteState.ProfileId });
         else await RouteCommandAsync(action);
-    }
-
-    private async void AutoRouteTool_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string tool }) await RouteCommandAsync("tool", new { tool });
-    }
-
-    private async void AutoRouteRemove_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string key }) await RouteCommandAsync("remove", new { key });
-    }
-
-    private async void AutoRouteSave_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string target })
-        {
-            var arguments = new Dictionary<string, object?> { ["target"] = target };
-            if (!string.IsNullOrWhiteSpace(AutoRouteName.Text)) arguments["name"] = AutoRouteName.Text.Trim();
-            await RouteCommandAsync("save", arguments);
-        }
-    }
-
-    private async void AutoRouteLoad_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (AutoRouteSavedRoutes.SelectedItem is SavedAutomaticRoute selected)
-            await RouteCommandAsync("load", new { routeId = selected.Id });
     }
 
     private async void AutoRouteDelete_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
