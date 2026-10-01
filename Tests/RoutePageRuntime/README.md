@@ -25,7 +25,7 @@ $env:LOCALAPPDATA   = "$env:USERPROFILE\AppData\Local"
 Run `out/route-page-runtime/RoutePageRuntime.exe`. It shows its own window briefly, writes
 `out/route-page-runtime/route-page-tests.log` and exits with the assertion count.
 
-What it pins (86 assertions):
+What it pins (104 assertions):
 
 - The page is only the operation guide plus the route list: every game-only entry is gone (the selection
   tools, 加入可见点, hand-drawing, save/load, and now also complete/skip/pause/stop, generate/activate and
@@ -38,9 +38,18 @@ What it pins (86 assertions):
   directly.
 - The row for the route being followed carries the dot. The fixture deliberately leaves `CurrentRoute`
   empty on the snapshot, so the dot is proven to come from `Active` alone.
-- 开始指引 sends `switch` with the route id, the profile, `start: true` and the map context
-  (`expectedSceneId`/`expectedGeneration`) - the same command the in-game list sends when a row is picked.
-  A corrupt row cannot be switched to.
+- **Nothing in a row is empty but still takes a line.** The point-type placeholder and the badge row are
+  alternatives: a `TextBlock` with `Text=""` still occupies a whole line in WinUI, so an always-visible
+  placeholder put a blank row inside every route that has kinds (44px instead of 22px). Found from a
+  player screenshot, 2026-10-01.
+- **开始指引 is not on this page.** Starting a route happens in the game's own route list; the desktop
+  keeps the organisation (collections, rename, delete, import/export). The fixture asserts the button is
+  gone and that the list can still be selected, because 删除所选路线 works off that selection.
+- **Every action button fits its own label** — checked at the default width and again at the 800px
+  minimum, which required pinning `host.Width` as well as the window: resizing only the window leaves the
+  page laid out at its old width and tests nothing. The rows are `Auto`-column `Grid`s rather than
+  toolkit `WrapPanel`s, because a WrapPanel that is nearly full squeezes its last child instead of
+  wrapping — that is what pushed the ellipsis of 导出当前合集… onto the border in the player's window.
 - **Collections**: the bar is built from the snapshot, each chip carries its route count, clicking one
   sends `collectionCurrent` with that id and narrows the list to it, and 全部 widens the list back to
   every collection **without sending anything** - it is a way of looking, not a place to save into.

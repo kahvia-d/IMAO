@@ -472,7 +472,7 @@ internal static class NativeFileDialog {
 | `IMaoHandDrawnRouteTests` | **通过**，exit 0 |
 | `IMao-CoreHost` Release/x64 | 0 错误 |
 | `IMao-WinUI` Release/x64 | 0 错误（仅既有告警） |
-| `Tests/RoutePageRuntime` | **86 条断言全绿**（原 62 条），exit 0；截图 `out/route-page-runtime/*.png` |
+| `Tests/RoutePageRuntime` | **104 条断言全绿**（原 62 → 合集与批量 86 → 本轮修补 104），exit 0；截图 `out/route-page-runtime/*.png` |
 | `Tests/ResourcePackagePicker --abi-only` | **25 条断言全绿**（结构体搬到 `NativeFileDialog` 后跟随） |
 | `Tests/MapToolsRuntime` | ⚠️ **本会话跑不完**：它在第 12 条断言处报 `STATUS 工具台已失去焦点`，随后 `Click` 抛 `CO_E_RELEASED`。这是**环境限制**（harness 需要约 30 秒不受打扰的前台窗口，而本会话的终端/浏览器会抢焦点），不是本轮改动：把改动 `git stash` 后重跑，它在更早的一条前台断言上同样失败。**需要你在一台安静的桌面上跑一次**：`pwsh -File Tests\MapToolsRuntime\Build.ps1` 然后 `Run.ps1` |
 | `scripts/Test-Runtime.ps1` 全量门禁 | 见 §11.5 |
@@ -509,7 +509,24 @@ internal static class NativeFileDialog {
 4. 桌面页 `删除所选路线` 与批量 `删除所选` 都在 UI 侧逐条发 `delete`；核心没有批量删除动作。条数不多时无所谓，将来若要一次性删很多可以补一个 `routeIds` 版本。
 5. **文档索引**：`Docs/README.md` 本轮登记了本文与漏登记的 `RouteUiTrimAudit_20261001.md`；发行说明表仍停在 `Release-2026.9.28.2.md`，那属于发版流程，没动。
 
-### 11.7 给后来者
+### 11.7 玩家验收反馈的第一轮修补（2026-10-01 晚，同一分支）
+
+玩家在真机上验收通过（"功能已经测试过了，我很满意。没什么异常"），同时指出桌面路线页三处问题。
+三处都在 `Tests/RoutePageRuntime` 里复现并钉住，断言从 86 条涨到 104 条。
+
+| # | 玩家的话 | 真因 | 修法 |
+|---|---|---|---|
+| 1 | 「红框里貌似有空白行出现，游戏里的路线列表就很好」 | 行模板里**占位行与徽标行同时在场**：类型表非空时占位 `TextBlock` 的 `Text` 是空串，但 **WinUI 的空 `TextBlock` 仍然占一整行高**。夹具实测：有类型的行内层 44px、无类型的 18px，差的就是那 18+4px | 占位行改成只在类型表为空时可见（转换器新增 `none`/`any` 两个参数；原来的 `hasIcon` 会连带把"有类型但没图标"的名字一起收掉，一并去掉） |
+| 2 | 「开始指引功能不需要，玩家在游戏里开始指引就行了」 | —— | 删掉 `AutoRouteSwitch` 与 `AutoRouteSwitch_Click`/`UpdateSwitchAvailability`/`SelectionChanged`；说明文字改成"开始指引在游戏内做，这一页负责整理"；`AutoRouteDelete` 改由批量模式单独让位 |
+| 3 | 「右边按钮的框内文字显示不全」 | 按钮行原来用 `controls:WrapPanel`，**行快满时它会挤窄最后一个子元素而不是换行**；玩家窗口的内容区比夹具窄，于是 `导出当前合集…` 的省略号顶到边框 | 两行按钮改成 `Auto` 列的 `Grid`（内容决定宽度，不会被挤）；并在夹具里加了"每个按钮放得下自己的文字"的断言 |
+
+**夹具本身也修了一处**：`route-800.png` 一直没真正测到窄宽度——它只改了窗口尺寸，而 `host.Width`
+仍然是 1000，页面照旧按 1000 排版。现在两者一起收，第 3 条才有意义。
+
+截图（本轮重新生成）：`out/route-page-runtime/route-active.png`（行内不再有空行、按钮行只剩五个）、
+`route-800.png`（800 宽下逐个按钮都放得下文字）。
+
+### 11.8 给后来者
 
 - **合集是路线文件里的一个字段，不是目录。** 想改成目录之前先读 §4.1：`List` 会变成递归遍历，`Load`/`Delete`/`active.json` 全部要跟着改，而收益只是"看起来整齐"。
 - **新增的批量动作一律用 `routeIds`（复数）。** 前置栅栏 `RoutePlanningService.cpp:865-866` 只认 `routeId`，用单数会被静默拒绝——`switch` 当年就是这样在生产上被拒的。服务测试里那两条（一条断言栅栏仍然会拒，一条断言批量动作不被拒）就是钉这个的。

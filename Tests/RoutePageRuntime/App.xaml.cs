@@ -117,8 +117,7 @@ public partial class App : Application
             Check(list.Items[2] is SavedAutomaticRoute { DisplayLabel: "route-11" }, "没有名字的路线退回用 id 显示");
             Check(((TextBlock)page.FindName("AutoRouteListSummary")!).Text.Contains("测试路线 · 北岸"), "说明行报出正在走的路线");
 
-            var rowKinds = Descendants(list).OfType<ItemsControl>().FirstOrDefault();
-            var icons = rowKinds is null ? [] : Descendants(rowKinds).OfType<Image>().ToList();
+            var rowKinds = Descendants(list).OfType<ItemsControl>().FirstOrDefault();            var icons = rowKinds is null ? [] : Descendants(rowKinds).OfType<Image>().ToList();
             Check(icons.Count > 0, "类型徽标渲染了图标，而不是只有文字");
             Check(icons.Any(image => image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage), "图标真的是解码出来的位图");
             Check(icons.Where(image => image.Source is Microsoft.UI.Xaml.Media.Imaging.BitmapImage).All(
@@ -128,28 +127,36 @@ public partial class App : Application
             Check(!Descendants(list).OfType<TextBlock>().Any(text => text.Text == realIcon), "图标可用时不会退化成显示路径");
             Check(Descendants(list).OfType<TextBlock>().Any(text => text.Text == "自由点（无类型）"), "手绘路线那行说明它是自由点");
 
-            // 4. 列表上的操作：选中一条 → 开始指引，发的是和游戏内同一族命令。
-            var switchButton = (Button)page.FindName("AutoRouteSwitch")!;
-            Check(!switchButton.IsEnabled, "没选路线时不能开始指引");
+            // 4. 列表上的操作：删除用列表选中项；开始指引**不在这一页**了（玩家在游戏内点一条就开始）。
+            var deleteButton = (Button)page.FindName("AutoRouteDelete")!;
+            Check(deleteButton.IsEnabled, "删除所选路线一直在，它按列表的选中项工作");
+            Check(!labels.Contains("开始指引这条路线") && page.FindName("AutoRouteSwitch") is null,
+                "开始指引这条路线已移除：开始指引只发生在游戏内的路线列表里");
             list.SelectedItem = list.Items[1];
             await Task.Delay(120);
-            Check(switchButton.IsEnabled, "选中一条路线后可以开始指引");
-            core.RouteCommands.Clear();
-            switchButton.IsEnabled = true;
-            typeof(FunctionPage).GetMethod("AutoRouteSwitch_Click", BindingFlags.NonPublic | BindingFlags.Instance)!
-                .Invoke(page, [switchButton, new RoutedEventArgs()]);
-            await Task.Delay(120);
-            var switchCommand = core.RouteCommands.FirstOrDefault(entry => entry.Action == "switch");
-            Check(switchCommand is not null, "开始指引发的是 switch");
-            var switchJson = System.Text.Json.JsonSerializer.Serialize(switchCommand!.Arguments);
-            Check(switchJson.Contains("route-10") && switchJson.Contains("fixture") && switchJson.Contains("\"start\":true"),
-                "switch 带路线身份、档案身份并要求开始指引：" + switchJson);
-            Check(switchJson.Contains("expectedSceneId") && switchJson.Contains("expectedGeneration"),
-                "switch 绑定了操作时的地图上下文（与游戏内列表同一个栅栏）");
+            Check(ReferenceEquals(list.SelectedItem, list.Items[1]), "列表仍然可以选中一条，删除靠它");
 
-            list.SelectedItem = list.Items[2];
-            await Task.Delay(120);
-            Check(!switchButton.IsEnabled, "文件损坏的那条不允许开始指引");
+            // 4b. 按钮里的字必须真的放得下。整行用 Auto 列布局而不是 WrapPanel：WrapPanel 在行快满的
+            //     时候会把最后一个子元素**挤窄**而不是换行，玩家的窗口比夹具窄，于是「导出当前合集…」
+            //     的省略号顶到了边框上（2026-10-01 玩家截图）。这条断言把"文字放得下"钉死。
+            void CheckButtonsFit(string where, bool batch)
+            {
+                var rows = batch ? new[] { "RouteActions", "RouteBatchActions" } : ["RouteActions"];
+                foreach (var row in rows)
+                {
+                    var panel = (Panel)page.FindName(row)!;
+                    foreach (var button in Descendants(panel).OfType<Button>())
+                    {
+                        var label = Descendants(button).OfType<TextBlock>().FirstOrDefault();
+                        if (label is null || label.ActualWidth <= 0) continue;
+                        Check(button.ActualWidth >= label.ActualWidth + 20,
+                            $"{where}：按钮「{button.Content}」放得下它的文字（按钮 {button.ActualWidth:F0} / 文字 {label.ActualWidth:F0}）");
+                    }
+                }
+            }
+            CheckButtonsFit("默认宽度", false);
+            Check(Descendants((DependencyObject)page.FindName("RouteActions")!).OfType<Button>().Count() == 5,
+                "路线列表的按钮行就是那五个：刷新、删除所选、批量、导入、导出当前合集");
 
             // 4b. 圆点只认"正在走的那条"。这一页列出的是保存过的路线，所以它不该依赖核心同时填
             //     CurrentRoute——上面的夹具就故意没填，圆点仍然落在 route-9 上。
@@ -214,7 +221,9 @@ public partial class App : Application
             await Task.Delay(150);
             Check(batchBar.Visibility == Visibility.Visible, "点「批量…」后批量工具条出现");
             Check(Descendants(list).OfType<CheckBox>().Count() == 4, "批量模式下每一行前面都有勾选框");
-            Check(!((Button)page.FindName("AutoRouteSwitch")!).IsEnabled, "批量模式下不再有「开始指引」的本行操作");
+            Check(!((Button)page.FindName("AutoRouteDelete")!).IsEnabled,
+                "批量模式下按列表选中项的删除让位给勾选框，避免两个「这些」同时成立");
+            CheckButtonsFit("批量模式", true);
 
             var boxes = Descendants(list).OfType<CheckBox>().ToList();
             boxes[0].IsChecked = true;
@@ -266,7 +275,9 @@ public partial class App : Application
                 FunctionPage.ImportModeFor(freshTransfer, ContentDialogResult.Secondary) is null,
                 "没有同名合集时不问「覆盖」，直接新建");
 
-            // 7. 800×500 的最小窗口下列表仍然可用。
+            // 7. 800×500 的最小窗口下列表仍然可用，而且没有按钮把文字挤掉。
+            //    host 的宽度也要跟着收：只改窗口尺寸的话页面仍然按 1000 排版，等于没测。
+            host.Width = 800;
             window.AppWindow.Resize(new SizeInt32(800, 500));
             await Task.Delay(250);
             host.UpdateLayout();
@@ -274,6 +285,7 @@ public partial class App : Application
             await Task.Delay(200);
             host.UpdateLayout();
             Check(list.ActualWidth > 0 && page.ActualWidth > 400, "最小尺寸下路线列表仍然渲染");
+            CheckButtonsFit("800 宽", false);
             await Capture(host, "route-800.png");
 
             log.WriteLine("ALL " + assertions + " ROUTE PAGE ASSERTIONS PASSED");

@@ -33,45 +33,50 @@
                     <TextBlock x:Name="AutoRouteListSummary" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                     <StackPanel x:Name="RouteBatchBar" Spacing="8" Visibility="Collapsed">
                         <TextBlock x:Name="RouteBatchSummary" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                        <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
-                            <Button Content="全选" Click="RouteBatchSelectAll_Click" />
-                            <Button Content="导出所选" Click="RouteBatchExport_Click" />
-                            <Button Content="移动到…" Click="RouteBatchMove_Click" />
-                            <Button Content="删除所选" Click="RouteBatchDelete_Click" />
-                            <Button Content="退出批量" Click="RouteBatchExit_Click" />
-                        </controls:WrapPanel>
+                        <Grid x:Name="RouteBatchActions" ColumnSpacing="8" HorizontalAlignment="Left">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="全选" Click="RouteBatchSelectAll_Click" />
+                            <Button Grid.Column="1" Content="导出所选" Click="RouteBatchExport_Click" />
+                            <Button Grid.Column="2" Content="移动到…" Click="RouteBatchMove_Click" />
+                            <Button Grid.Column="3" Content="删除所选" Click="RouteBatchDelete_Click" />
+                            <Button Grid.Column="4" Content="退出批量" Click="RouteBatchExit_Click" />
+                        </Grid>
                     </StackPanel>
-                    <ListView x:Name="AutoRouteSavedRoutes" MaxHeight="420" SelectionMode="Single" HorizontalContentAlignment="Stretch" SelectionChanged="AutoRouteSavedRoutes_SelectionChanged">
+                    <ListView x:Name="AutoRouteSavedRoutes" MaxHeight="420" SelectionMode="Single" HorizontalContentAlignment="Stretch">
                         <ListView.ItemTemplate><DataTemplate>
                             <StackPanel Spacing="4" Padding="0,4">
                                 <CheckBox Content="{Binding DisplayLabel}" IsChecked="{Binding Selected, Mode=TwoWay}" Click="RouteRowCheck_Click" FontSize="17" FontWeight="SemiBold" Visibility="{Binding Batch, Converter={StaticResource FlagToVisibility}}" />
                                 <TextBlock Text="{Binding DisplayLabel}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="{Binding Batch, Converter={StaticResource FlagToVisibility}, ConverterParameter=invert}" />
                                 <TextBlock Text="{Binding DetailLabel}" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="{Binding Kinds, Converter={StaticResource RouteKindIcon}, ConverterParameter=empty}" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                    <ItemsControl ItemsSource="{Binding Kinds}" Visibility="{Binding Kinds, Converter={StaticResource RouteKindIcon}, ConverterParameter=hasIcon}">
-                                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:WrapPanel HorizontalSpacing="12" VerticalSpacing="4" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate><DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Image Source="{Binding IconPath, Converter={StaticResource RouteKindIcon}, ConverterParameter=icon}" Width="22" Height="22" Stretch="Uniform" VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding Label}" FontSize="13" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </DataTemplate></ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
+                                <TextBlock Text="{Binding Kinds, Converter={StaticResource RouteKindIcon}, ConverterParameter=empty}" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource IMaoSecondaryTextBrush}" Visibility="{Binding Kinds, Converter={StaticResource RouteKindIcon}, ConverterParameter=none}" />
+                                <ItemsControl ItemsSource="{Binding Kinds}" Visibility="{Binding Kinds, Converter={StaticResource RouteKindIcon}, ConverterParameter=any}">
+                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><controls:WrapPanel HorizontalSpacing="12" VerticalSpacing="4" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate><DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <Image Source="{Binding IconPath, Converter={StaticResource RouteKindIcon}, ConverterParameter=icon}" Width="22" Height="22" Stretch="Uniform" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Label}" FontSize="13" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate></ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </DataTemplate></ListView.ItemTemplate>
                     </ListView>
                     <TextBlock x:Name="AutoRouteEmptyHint" Text="还没有保存的路线。选好点生成预览后，在游戏内工具台里保存；也可以直接在大地图上手绘一条。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" Visibility="Collapsed" />
-                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
-                        <Button x:Name="AutoRouteSwitch" Content="开始指引这条路线" Click="AutoRouteSwitch_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
-                        <Button Content="刷新列表" Tag="list" Click="AutoRouteAction_Click" />
-                        <Button x:Name="AutoRouteDelete" Content="删除所选路线" Click="AutoRouteDelete_Click" />
-                        <Button Content="批量…" Click="RouteBatchEnter_Click" />
-                        <Button Content="导入…" Click="RouteImport_Click" />
-                        <Button Content="导出当前合集…" Click="RouteExportCollection_Click" />
-                    </controls:WrapPanel>
-                    <TextBlock Text="开始指引会切换到选中的那条并立刻导航，和在游戏内列表里点它一下是同一件事。删除只移除路线文件，点位的完成记录仍然保留。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <Grid x:Name="RouteActions" ColumnSpacing="8" HorizontalAlignment="Left">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="刷新列表" Tag="list" Click="AutoRouteAction_Click" />
+                        <Button Grid.Column="1" x:Name="AutoRouteDelete" Content="删除所选路线" Click="AutoRouteDelete_Click" />
+                        <Button Grid.Column="2" Content="批量…" Click="RouteBatchEnter_Click" />
+                        <Button Grid.Column="3" Content="导入…" Click="RouteImport_Click" />
+                        <Button Grid.Column="4" Content="导出当前合集…" Click="RouteExportCollection_Click" />
+                    </Grid>
+                    <TextBlock Text="开始指引、选点、手绘都在游戏内大地图的「路径自动规划」面板里做，那里点一条路线就开始指引。这一页负责整理：切换合集、改名、删除、导入导出。删除只移除路线文件，点位的完成记录仍然保留。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
         </StackPanel>

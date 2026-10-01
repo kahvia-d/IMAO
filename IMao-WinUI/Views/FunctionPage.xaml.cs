@@ -72,7 +72,7 @@ public sealed partial class FunctionPage : Page
             ? $"正在走的路线：{activeRoute.Name} · {state.NavigationLabel} · " +
               $"已完成 {activeRoute.Stops.Count(stop => stop.Completed)} / {activeRoute.Stops.Length} · " +
               $"当前目标 {(state.CurrentTarget?.DisplayName ?? "无")}。"
-            : "当前没有在走的路线。下面任何一条都可以直接开始指引，或者在大地图上新建一条。";
+            : "当前没有在走的路线。开始指引在游戏内大地图的「路径自动规划」面板里做——这一页负责整理它们。";
 
         RenderCollections(state);
 
@@ -91,7 +91,6 @@ public sealed partial class FunctionPage : Page
         AutoRouteSavedRoutes.SelectedItem = rows.FirstOrDefault(row => row.Id == selectedId);
         AutoRouteEmptyHint.Visibility = rows.Length == 0 ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
         UpdateBatchSummary();
-        UpdateSwitchAvailability();
     }
 
     private const string AllCollections = "all";
@@ -208,9 +207,8 @@ public sealed partial class FunctionPage : Page
     private void RouteBatchEnter_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         RouteBatchBar.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-        // Rows cannot be both "click to follow" and "click to tick", so the single-row actions stand
-        // down while the batch bar is up.
-        AutoRouteSwitch.IsEnabled = false;
+        // The list's own selection and the tick boxes would mean two different "these ones" at once,
+        // so the single-row delete stands down while the batch bar is up.
         AutoRouteDelete.IsEnabled = false;
         RenderRouteState(renderedRouteState);
     }
@@ -218,6 +216,7 @@ public sealed partial class FunctionPage : Page
     private void RouteBatchExit_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         RouteBatchBar.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        AutoRouteDelete.IsEnabled = true;
         foreach (var row in Rows()) row.Selected = false;
         RenderRouteState(renderedRouteState);
     }
@@ -438,11 +437,7 @@ public sealed partial class FunctionPage : Page
         AutoRouteMessage.IsOpen = true;
     }
 
-    private void AutoRouteSavedRoutes_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateSwitchAvailability();
-
-    /// <summary>The switch button acts on one row, so it says so by being unavailable until one is picked.</summary>
-    private void UpdateSwitchAvailability() =>
-        AutoRouteSwitch.IsEnabled = !BatchMode && AutoRouteSavedRoutes.SelectedItem is SavedAutomaticRoute { Corrupt: false };
+    private void AutoRouteSavedRoutes_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
 
     private async Task RouteCommandAsync(string action, object? arguments = null)
     {
@@ -480,29 +475,6 @@ public sealed partial class FunctionPage : Page
             try { await RouteCommandAsync(action); }
             catch (Exception) { /* already reported on the bar */ }
         }
-    }
-
-    /// <summary>
-    /// Applying a route from the desktop is the same command the in-game list sends when a row is picked:
-    /// <c>switch</c> loads it, makes it active and starts guiding it, and it is fenced to the map context
-    /// the player was looking at, so applying a route for another map is refused instead of silently
-    /// starting a navigation with no target on screen.
-    /// </summary>
-    private async void AutoRouteSwitch_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (AutoRouteSavedRoutes.SelectedItem is not SavedAutomaticRoute selected || selected.Corrupt) return;
-        var state = renderedRouteState;
-        try
-        {
-            await RouteCommandAsync("switch", new
-            {
-                routeId = selected.Id,
-                start = true,
-                expectedSceneId = state.SceneId,
-                expectedGeneration = state.Generation
-            });
-        }
-        catch (Exception) { /* already reported on the bar */ }
     }
 
     private async void AutoRouteDelete_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

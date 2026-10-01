@@ -18,8 +18,13 @@ namespace IMao_WinUI.Helpers;
 /// <item><c>ConverterParameter=icon</c>：一个类型 → 它的图标（拿不到就是路径文字）。</item>
 /// <item><c>ConverterParameter=text</c>：一个类型的名字（图标旁边那行字）。</item>
 /// <item><c>ConverterParameter=empty</c>：整张类型表 → 空表时那句「自由点（无类型）」，否则空串。</item>
-/// <item><c>ConverterParameter=hasIcon</c>：整张类型表 → 有没有可显示的图标，用来收掉占位行。</item>
+/// <item><c>ConverterParameter=none</c>：整张类型表 → 空表时显示占位行，否则**收起来**。</item>
+/// <item><c>ConverterParameter=any</c>：整张类型表 → 有类型时显示徽标行，否则收起来。</item>
 /// </list>
+///
+/// 后两个参数存在的理由：占位行与徽标行**只能有一个在场**。占位行即使文字是空串也仍然占一整行
+/// 的高度（TextBlock 不因为 Text="" 就变成 0 高），于是有类型的行里会多出一条空白行——游戏内那张
+/// 列表没有这个问题，正是因为它改成按需添加子元素（2026-10-01 玩家截图指出，实测 44px → 22px）。
 ///
 /// 两件事必须照 <see cref="IMao_WinUI.Views.MapToolsWindow"/> 的做法来：
 /// <list type="number">
@@ -40,7 +45,10 @@ public sealed class RouteKindIconConverter : IValueConverter
             "icon" => value is string path && path.Length > 0 ? (object?)Load(path) ?? path : "",
             "text" => value is RouteKindSummary kind ? kind.Label : "",
             "empty" => Whole(value) is { Count: 0 } ? "自由点（无类型）" : "",
-            "hasIcon" => HasIcon(value) ? Visibility.Visible : Visibility.Collapsed,
+            // The placeholder and the badges are alternatives, never both: an empty TextBlock still
+            // occupies a whole line, which is what put a blank row inside every route that has kinds.
+            "none" => Whole(value) is { Count: 0 } ? Visibility.Visible : Visibility.Collapsed,
+            "any" => Whole(value) is { Count: > 0 } ? Visibility.Visible : Visibility.Collapsed,
             _ => "",
         };
 
@@ -50,9 +58,6 @@ public sealed class RouteKindIconConverter : IValueConverter
     /// <summary>手绘路线只有自由点、没有类型，核心给出的类型表就是空的：那一行要说清是"自由点"而不是留白。</summary>
     private static IReadOnlyList<RouteKindSummary>? Whole(object value) =>
         value as IReadOnlyList<RouteKindSummary> ?? (value as RouteKindSummary[]);
-
-    private static bool HasIcon(object value) =>
-        Whole(value) is { Count: > 0 } kinds && kinds.Any(kind => kind.HasIcon);
 
     private static BitmapImage? Load(string path)
     {
