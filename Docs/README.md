@@ -68,6 +68,7 @@
 | [`LayeredMapFalsePositive_Hukou_20260926.md`](LayeredMapFalsePositive_Hukou_20260926.md) | 虎口山脉"地表帧被当成层内"的根因与判定修正 |
 | [`LayeredFloorRetention_20261001.md`](LayeredFloorRetention_20261001.md) | 天槎空间站"走出洞穴后层不解除"：`盲望之塌` 是地表而非楼层，保留判据从足迹改为影像（同前一条的另一半） |
 | [`RouteLibraryAndHandDrawn_20260928.md`](RouteLibraryAndHandDrawn_20260928.md) | **路线列表、手绘路线重做、旧手绘数据导入、按路线筛选（借出/归还）**：规格 + 实施记录 + 五轮实机反馈的真因 |
+| [`RouteCollectionsAndTransfer_20261001.md`](RouteCollectionsAndTransfer_20261001.md) | **路线合集 + 路线包导入导出**：方案（现行，未实施）——合集落盘、9 个新命令、路线包格式、两步导入、界面分工、8 个实施阶段 |
 | [`NativeRoutePlanningMap_20260928.md`](NativeRoutePlanningMap_20260928.md) | 原生路线规划逐行证据地图（命令协议、落盘 schema、命中与筛选机制） |
 
 ## 界面、手柄与覆盖层
@@ -75,6 +76,7 @@
 | 文档 | 内容 |
 |---|---|
 | [`MapTools_20260908.md`](MapTools_20260908.md) | 地图工具台与附近点位操作 |
+| [`RouteUiTrimAudit_20261001.md`](RouteUiTrimAudit_20261001.md) | **路线功能界面精简**：三个面（桌面页/游戏内工具窗/死掉的 ImGui 工具栏）的边界审计 + 两轮精简的实施记录 |
 | [`AutoRoutePlanningTests_20260908.md`](AutoRoutePlanningTests_20260908.md) | 自动路线规划测试命令 |
 | [`RouteUsability_20260908.md`](RouteUsability_20260908.md) | 路线退出、删除与快捷键指南 |
 | [`MarkerGuideLayout_20260908.md`](MarkerGuideLayout_20260908.md) | 攻略白边、默认位置与图片翻页 |
