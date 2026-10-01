@@ -25,7 +25,7 @@ public sealed record RoutePlanningState
     public RouteStop? PreviousTarget { get; init; }
     public ulong Revision { get; init; }
     public ulong Generation { get; init; }
-    public string Message { get; init; } = "打开游戏大地图后开始选点。";
+    public string Message { get; init; } = "打开游戏大地图后开始选点：键鼠点底部中央的圆钮，手柄按 LB。";
     public int SelectedCount { get; init; }
     public int HiddenCount { get; init; }
     public RouteStart Start { get; init; } = new();

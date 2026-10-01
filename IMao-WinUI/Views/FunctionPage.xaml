@@ -7,8 +7,9 @@
             <Border Style="{StaticResource IMaoCardStyle}">
                 <StackPanel Spacing="14">
                     <TextBlock Text="01  在哪里操作" Style="{StaticResource IMaoSectionTitleStyle}" />
-                    <TextBlock Text="路线的选点画布就是游戏的大地图。打开大地图后按 LB 进入「地图工具台 → 路径自动规划」，下面的操作都在那里：矩形框选 · 自由套索 · 单点选择 · 加入当前视野 · 指定起点 · 生成预览 · 开始指引 · 重新规划 · 刷怪采集 · 路线列表（切换与保存） · 手绘路线（点击大地图记点，Esc 结束）。" Style="{StaticResource IMaoBodyTextStyle}" TextWrapping="Wrap" />
-                    <TextBlock Text="大地图按 RB 是点位助手（看攻略、完成点位），与路线分工不同。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <TextBlock Text="路线的选点画布就是游戏的大地图，选点、框选、套索、手绘都只在大地图上做得了。打开大地图后，两种操作方式都能进「地图工具台 → 路径自动规划」：" Style="{StaticResource IMaoBodyTextStyle}" TextWrapping="Wrap" />
+                    <TextBlock Text="· 键鼠：点大地图底部中央的那个圆形按钮（浅蓝描边的小圆），它就是工具台入口，鼠标点一下即可。&#x0a;· 手柄：按 LB。大地图上按 RB 是点位助手（看攻略、完成点位），与路线分工不同；键鼠用户走上面的圆钮。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <TextBlock Text="进去之后：矩形框选 · 自由套索 · 单点选择 · 加入当前视野 · 指定起点 · 生成预览 · 开始指引 · 重新规划 · 刷怪采集 · 路线列表（切换与保存）。框选与套索用鼠标拖动画，Shift + 左键拖拽是临时框选，Esc 取消未提交的选区；手绘在大地图上点一下记一个点，Esc 结束。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                     <TextBlock Text="这一页只留下不需要地图也能做的事：看清当前导航、生成/开始一条已有选点的路线、翻看已保存的路线。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
