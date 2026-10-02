@@ -40,5 +40,5 @@ map-regions/references/
 # rather than for building - each is tens of megabytes and cannot be regenerated from the current
 # source - so the note beside them is committed and the binaries stay local. README.md explains what
 # they are and why they had to leave x64/Release.
-archive/native-release-debris-*/
+archive/native-release-debris-*/*
 !archive/native-release-debris-*/README.md
