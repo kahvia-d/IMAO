@@ -104,6 +104,41 @@ try
     Check(first.SetItmeFilterStatus("one", 1) && second.SetItmeFilterStatus("two", 1), "independent filter instances save");
     var names = first.GetFilteredItemsDatas().Select(x => x.Name).ToHashSet();
     Check(names.Contains("one") && names.Contains("two") && names.Contains("legacy"), "filter instances do not overwrite each other");
+    // The first-run default is a hardcoded list while the categories come from the shipped data, so nothing
+    // stopped the two from drifting apart - the old list mixed collectibles, gatherables and enemies. This
+    // pins the list to the collectible category of the data actually shipped: a new category member has to
+    // be added deliberately, and a category the player did not ask for cannot creep back in. The data lives
+    // in the repository rather than in the run root, and a run without a host has no run root to read.
+    {
+        var shippedDefaults = new LocalItemFilter(Path.Combine(root, "fresh.json"), Path.Combine(root, "fresh-legacy.json"))
+            .GetFilteredItemsDatas().Where(item => item.Status == 1).Select(item => item.Name!).ToHashSet(StringComparer.Ordinal);
+        string? filterItems = null;
+        // The gate runs this from the repository root, while the fixture root may sit under the system temp
+        // directory - so look both ways before giving up on the cross-check.
+        foreach (var start in new[] { new DirectoryInfo(Directory.GetCurrentDirectory()), new DirectoryInfo(root) })
+        {
+            for (var directory = start; directory is not null; directory = directory.Parent)
+            {
+                string candidate = Path.Combine(directory.FullName, "Assets", "KuroMap", "filter-items.json");
+                if (File.Exists(candidate)) { filterItems = candidate; break; }
+            }
+            if (filterItems is not null) break;
+        }
+        if (filterItems is null)
+        {
+            Check(shippedDefaults.Count > 0, "first-run default enables something even without the shipped data");
+        }
+        else
+        {
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(filterItems));
+            HashSet<string> collectibles = document.RootElement.EnumerateObject()
+                .Where(category => category.Name.EndsWith("收集道具", StringComparison.Ordinal))
+                .SelectMany(category => category.Value.EnumerateObject().Select(entry => entry.Name))
+                .ToHashSet(StringComparer.Ordinal);
+            Check(collectibles.Count > 0 && shippedDefaults.SetEquals(collectibles),
+                $"first-run default is exactly the collectible category ({shippedDefaults.Count} of {collectibles.Count} match)");
+        }
+    }
     Check(File.ReadAllText(legacy).Contains("legacy"), "legacy file is retained");
     Check(first.SetItemsStatus(new[] { "one", "two", "one" }, 0), "batch filter removal saves atomically");
     var afterBatch = second.GetFilteredItemsDatas().ToDictionary(item => item.Name!, item => item.Status);

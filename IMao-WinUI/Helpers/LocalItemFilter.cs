@@ -12,17 +12,18 @@ class FilterItemDatas
 
 class LocalItemFilter
 {
+    // What a player gets before they have ever opened the filter page. It used to mix categories - eight
+    // collectibles, twenty gatherables and four enemies - so a first run dropped markers for things nobody
+    // asked for. The default is now exactly the collectible category the map data publishes, and every other
+    // category starts off: a marker that is on by default is a marker the player has to hunt down and turn
+    // off. Only applies until the player chooses; a saved selection always wins over this list.
     private static readonly string[] DefaultEnabledItemIds =
     {
-        "sx", "qzx_01", "qzx_02", "qzx_03", "T_IconC_046_UI",
-        "SP_IconMonsterHead_326_UI", "T_IconC_SM_Gat_19A_UI", "T_IconC_049_UI",
-        "T_IconC_SM_Gat_22A_UI", "SP_IconMonsterHead_331_UI", "sx_lgn",
-        "cx_02", "cx_01", "cx_03", "SP_IconMonsterHead_315_UI",
-        "SSP_IconMonsterHead_977_UI", "SP_IconMonsterHead_32030_UI",
-        "T_IconC_029_UI", "T_IconC_030_UI", "T_IconC_031_UI", "T_IconC_032_UI",
-        "T_IconC_035_UI", "T_IconC_036_UI", "T_IconC_037_UI", "T_IconC_038_UI",
-        "T_IconC_039_UI", "T_IconC_040_UI", "T_IconC_041_UI", "T_IconC_042_UI",
-        "T_IconC_043_UI", "T_IconC_044_UI", "T_IconC_045_UI", "T_IconC_054_UI"
+        "cx_01", "cx_02", "cx_03", "fls",
+        "fsc", "gjd", "Play_12", "qzx_01",
+        "qzx_02", "qzx_03", "qzx_04", "sx",
+        "sx_lgn", "sx_qq", "wzdly", "xsd",
+        "YHYC", "zscj"
     };
 
     private static readonly object gate = new();

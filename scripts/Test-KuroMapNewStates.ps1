@@ -16,7 +16,7 @@ $expected = [ordered]@{
     LowerVault     = [ordered]@{ state = 902; types = 37; points = 238; released = $true }
     Darkplain      = [ordered]@{ state = 909; types = 44; points = 702; released = $true }
     TimeRiftRuins  = [ordered]@{ state = 910; types = 9;  points = 59;  released = $true }
-    MengshuTianluo = [ordered]@{ state = 912; types = 20; points = 231; released = $true }
+    MengshuTianluo = [ordered]@{ state = 912; types = 24; points = 243; released = $true }
 }
 
 function Read-Json([string]$Path) {

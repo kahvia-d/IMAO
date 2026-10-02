@@ -118,6 +118,26 @@
     "name": "梦构心傀"
   },
   {
+    "icon": "adminConfig/65/props_namephoto/1790135209700.png",
+    "id": "jxp",
+    "location": [
+      {
+        "countryId": 1,
+        "description": "如无法进入该地下区域请先完成任务匣中奇谭·苍狐记\n开始挑战前请做好准备",
+        "floorId": "64",
+        "gravityType": 1,
+        "id": "1555619225389752320",
+        "level": "-1000000/64",
+        "online": false,
+        "stateId": 912,
+        "typeId": "jxp",
+        "x": 42757.0,
+        "y": -3622.0
+      }
+    ],
+    "name": "绝息魄"
+  },
+  {
     "icon": "adminConfig/65/props_namephoto/1790135370668.png",
     "id": "qzk",
     "location": [
@@ -287,7 +307,7 @@
       },
       {
         "countryId": 1,
-        "description": "红名BOSS的潮汐。",
+        "description": "红名BOSS的奖励，如果没看到的话，需要走一下道引任务“遗频归心”。",
         "floorId": "",
         "gravityType": 1,
         "id": "1554328680763744256",
@@ -391,7 +411,7 @@
       },
       {
         "countryId": 1,
-        "description": "红名BOSS击败奖励",
+        "description": "红名BOSS的奖励，如果没看到的话，需要走一下道引任务“遗频归心”。",
         "floorId": "65",
         "gravityType": 1,
         "id": "1554573890311675904",
@@ -401,6 +421,32 @@
         "typeId": "cx_03",
         "x": -14000.0,
         "y": -57300.0
+      },
+      {
+        "countryId": 1,
+        "description": "红名BOSS的奖励，如果没看到的话，需要走一下道引任务“遗频归心”。",
+        "floorId": "64",
+        "gravityType": 1,
+        "id": "1555388174277009408",
+        "level": "-1/64",
+        "online": false,
+        "stateId": 912,
+        "typeId": "cx_03",
+        "x": 43600.0,
+        "y": -4900.0
+      },
+      {
+        "countryId": 1,
+        "description": "红名BOSS的奖励，这里刚来是没有BOSS的，需要走一下道引任务“遗频归心”，任务的最后，这个怪才会出来。",
+        "floorId": "60",
+        "gravityType": 1,
+        "id": "1555397330311016448",
+        "level": "-1/60",
+        "online": false,
+        "stateId": 912,
+        "typeId": "cx_03",
+        "x": -60000.0,
+        "y": 32700.0
       }
     ],
     "name": "潮汐之遗·金"
@@ -1931,6 +1977,19 @@
         "typeId": "qzx_02",
         "x": 20400.0,
         "y": -4400.0
+      },
+      {
+        "countryId": 1,
+        "description": "这个宝箱的位置比较刁钻，标点旁边有个瀑布，紧贴着瀑布缓慢下落，在瀑布较下面的地方，可以进去；这个宝箱需要过完奇谭任务“璇心如月寄尘情”。",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1555603583603798016",
+        "level": "0",
+        "online": false,
+        "stateId": 912,
+        "typeId": "qzx_02",
+        "x": 46700.0,
+        "y": -36200.0
       }
     ],
     "name": "基准奇藏箱"
@@ -2283,6 +2342,19 @@
         "typeId": "qzx_03",
         "x": 23927.0,
         "y": 21255.0
+      },
+      {
+        "countryId": 1,
+        "description": "奇谭任务“璇心如月寄尘情”任务进程中的宝箱，第一次来到墟心域肯定会碰到这个宝箱。",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1555590896018747392",
+        "level": "0",
+        "online": false,
+        "stateId": 912,
+        "typeId": "qzx_03",
+        "x": 53500.0,
+        "y": -53300.0
       }
     ],
     "name": "精密奇藏箱"
@@ -2537,6 +2609,45 @@
         "typeId": "qzx_01",
         "x": 20300.0,
         "y": -4900.0
+      },
+      {
+        "countryId": 1,
+        "description": "秧秧面前的绿色石块打碎会有一个朴素宝箱；奇谭任务“璇心如月寄尘情”任务进程中，跟着任务指引走，这宝箱在必经之路上。",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1555592047327436800",
+        "level": "0",
+        "online": false,
+        "stateId": 912,
+        "typeId": "qzx_01",
+        "x": 35700.0,
+        "y": -49800.0
+      },
+      {
+        "countryId": 1,
+        "description": "奇谭任务“璇心如月寄尘情”任务进程中，跟着任务指引走，这宝箱在必经之路上。",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1555593421406593024",
+        "level": "0",
+        "online": false,
+        "stateId": 912,
+        "typeId": "qzx_01",
+        "x": 39200.0,
+        "y": -37900.0
+      },
+      {
+        "countryId": 1,
+        "description": "这宝箱在第三张图墟心域红框位置建筑的最上面，来这里需要先过奇谭任务“璇心如月寄尘情”。",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1555602460813783040",
+        "level": "0",
+        "online": false,
+        "stateId": 912,
+        "typeId": "qzx_01",
+        "x": 30000.0,
+        "y": -33200.0
       }
     ],
     "name": "朴素奇藏箱"
@@ -2573,6 +2684,39 @@
       }
     ],
     "name": "无音区"
+  },
+  {
+    "icon": "adminConfig/61/props_namephoto/1762500639698.png",
+    "id": "qzx_04",
+    "location": [
+      {
+        "countryId": 1,
+        "description": "奇谭任务“璇心如月寄尘情”任务进程中的宝箱。",
+        "floorId": "62",
+        "gravityType": 1,
+        "id": "1555589670942240768",
+        "level": "-1/62",
+        "online": false,
+        "stateId": 912,
+        "typeId": "qzx_04",
+        "x": -54500.0,
+        "y": 52000.0
+      },
+      {
+        "countryId": 1,
+        "description": "奇谭任务“璇心如月寄尘情”任务进程中的宝箱。",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1555595420167008256",
+        "level": "0",
+        "online": false,
+        "stateId": 912,
+        "typeId": "qzx_04",
+        "x": 30400.0,
+        "y": -49400.0
+      }
+    ],
+    "name": "辉光奇藏箱"
   },
   {
     "icon": "adminConfig/52/props_namephoto/1762501267031.png",
@@ -3069,6 +3213,46 @@
       }
     ],
     "name": "危锁奇藏"
+  },
+  {
+    "icon": "adminConfig/52/props_namephoto/1789911355802.png",
+    "id": "83",
+    "location": [
+      {
+        "countryId": 1,
+        "description": "你受澄怀所托，前往烬心域调查异常的扰动。\n在调查过程中，你结识了一位名为杚山的舞者，与他一同踏入了一场古怪的“朝月会”。\n在朝月会上，你们解救了杚山的几位师妹。但异常似乎并未解除，终于，在层叠的锦灯轿里，你抓住了异常的关键，成功破除了深藏在人心中的迷障……",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1555610692069875712",
+        "level": "0",
+        "online": false,
+        "stateId": 912,
+        "typeId": "83",
+        "x": -30085.0,
+        "y": -53369.0
+      }
+    ],
+    "name": "朝朝何年月"
+  },
+  {
+    "icon": "adminConfig/52/props_namephoto/1789911157040.png",
+    "id": "84",
+    "location": [
+      {
+        "countryId": 1,
+        "description": "在游方的指引下，你从凄心域的机傀残骸中取出了一枚特殊枢芯，它似乎能够打开一个独立的神秘空间。\n在那里发生的一切都似曾相识，却又和现实完全无关。但无论如何，它映照的都只是来自遥远过去的虚像而已。",
+        "floorId": "",
+        "gravityType": 1,
+        "id": "1555617940597338112",
+        "level": "0",
+        "online": false,
+        "stateId": 912,
+        "typeId": "84",
+        "x": 44171.0,
+        "y": -1341.0
+      }
+    ],
+    "name": "匣中奇谭·苍狐记"
   },
   {
     "icon": "adminConfig/52/props_namephoto/1782890759236.png",
