@@ -76,6 +76,16 @@ public sealed class UpdateUiController : INotifyPropertyChanged
             // waits out MirrorChyan's on-demand packaging here, which is why the stage above is shown first.
             var release = updater.LastCheckResult?.AppUpdate;
             var plan = release is null ? null : await updater.ResolveMirrorChyanPackageAsync(release, ct);
+            // One line when the question is answered, before anything is downloaded. Until 2026-10-02 the log
+            // held only failures and completed preparations, so a player reporting "it said the incremental was
+            // ready and then downloaded from GitHub anyway" left nothing to read: the mirror's answer, the
+            // player's own choice about it and an abandoned attempt were all invisible. Whether the mirror
+            // merely answered or actually carried the update is the whole point of having it.
+            Audit("program-resolve preferred=" + preferred + " answer="
+                + (plan is null ? "none" : plan.IsWholePackage ? "full" : "incremental")
+                + (plan?.Size is long planSize and > 0 ? " size=" + planSize : "")
+                + " version=" + (plan?.Version ?? release?.Version ?? ""));
+            var declinedMirrorWholePackage = false;
             if (plan is not null && plan.IsWholePackage && confirmWholePackage is not null &&
                 !await OnUiThreadAsync(() => confirmWholePackage("Mirror酱 目前提供的是完整程序包（约 " + PackageSize(plan) + "），而不是增量包。"
                     + "这会下载接近 1 GB 的流量。要继续吗？")))
@@ -85,13 +95,30 @@ public sealed class UpdateUiController : INotifyPropertyChanged
                 // smaller - a version whose only change is the interface is one 59 MB shard. Dropping the mirror
                 // lets the shards carry the update, and the message below names whatever actually did.
                 plan = null;
+                declinedMirrorWholePackage = true;
                 Message = "已取消从 Mirror酱 下载完整程序包，改用 GitHub 分片。";
             }
             progress.Report(plan is null
                 ? new UpdateProgress(preferred == "Mirror酱" ? "Mirror酱 未能提供文件，改用 GitHub 分片" : "准备从 GitHub 分片下载", 0, 0, "GitHub 分片")
                 : new UpdateProgress(plan.IsWholePackage ? "Mirror酱 提供的是完整程序包" : "Mirror酱 已备好增量包", 0, 0,
                     plan.IsWholePackage ? "Mirror酱（完整程序包）" : "Mirror酱（增量包）"));
-            await updater.PrepareProgramAsync(programs!, progress, ct, plan);
+            try
+            {
+                await updater.PrepareProgramAsync(programs!, progress, ct, plan);
+            }
+            catch
+            {
+                // An attempt that never finished is the case this log was missing entirely: a mirror answer
+                // followed by an abandoned download left no line at all, because the completion record below
+                // only runs on success. Logged from what the service knows at this moment, then rethrown so the
+                // caller's own wording, cancellation handling and state are exactly as they were.
+                Audit("program-attempt-abandoned reason=" + (ct.IsCancellationRequested ? "canceled" : "failed")
+                    + (declinedMirrorWholePackage ? " declined-mirror-full" : "")
+                    + " catalog-downloads=" + (programs?.LastCatalogDownloadCount ?? 0)
+                    + (updater.LastProgramMirrorRefusal.Length > 0
+                        ? " mirror-refused=" + updater.LastProgramMirrorRefusal : ""));
+                throw;
+            }
             programState = programs!.ReadState();
             // Named from what the transport actually was, not from whether a MirrorChyan plan existed: a plan
             // whose package turned out unusable leaves the signed shards doing the work.
