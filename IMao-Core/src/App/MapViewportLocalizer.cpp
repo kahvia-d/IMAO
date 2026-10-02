@@ -58,6 +58,10 @@ const bool matcherAbEnabled = [] {
 // matcher that finds the same place faster is a candidate; one that finds a different place is not.
 void RecordMatcherComparison(const MapViewportLocalizationResult& shipped,
     const MapViewportLocalizationResult& exact, double exactMs, std::size_t rows, double shippedMs) {
+    // Capped per session: a search runs about once a second while the map is open, and a flood of lines is
+    // both unreadable and slow enough to distort what is being measured.
+    static std::atomic_int comparisons = 0;
+    if (comparisons.fetch_add(1) >= 200) return;
     double distance = -1.0;
     if (shipped.accepted && exact.accepted) distance = std::hypot(shipped.centerMapCoordinate.x - exact.centerMapCoordinate.x,
         shipped.centerMapCoordinate.y - exact.centerMapCoordinate.y);
