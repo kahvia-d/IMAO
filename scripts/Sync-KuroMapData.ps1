@@ -1,3 +1,16 @@
+# Point synchronization supplies runtime point data. New scenes remain release-gated until their
+# independently verified Kuro tile feature pack and game validation evidence are present.
+#
+# This script writes Assets\KuroMap only. Two other things carry the same data and are NOT written here, so a
+# points refresh that stops after -Apply leaves the program serving the old set (2026-10-02):
+#   * Assets\KuroMapIcons does not exist in the repository. Staging splits the icons out of KuroMap into a
+#     separate package (Stage-UpdateResources.ps1), and the packaged copy under x64\Release\Assets - which
+#     out\map-test links to - keeps the old icon-manifest.json and icon files until staging runs again. A new
+#     point category then has no icon reference, and the native validator rejects the whole snapshot with
+#     "point category missing icon reference", failing Test-ResourceUpdates' region-selection check.
+#   * Publish-KuroMapNewStates.ps1 refuses to publish a gated scene whose count no longer matches its own
+#     expected table, and Test-KuroMapNewStates.ps1 keeps a second copy of that table. Both are deliberate
+#     review gates: update them by hand after looking at what upstream changed.
 [CmdletBinding(DefaultParameterSetName = 'Check')]
 param(
     [Parameter(ParameterSetName = 'Check')]
