@@ -393,13 +393,23 @@ private:
         }
         // The cache is bounded by bytes, not by entry count. Counting entries read as "24 small things",
         // while each entry is a candidate set of 6k-36k keypoints plus its FLANN index, 5-19 MB and 12.7 MB
-        // on average. The budget is set from the working set actually measured on a session that moved
-        // around: 23 distinct search windows, 274 MB to hold all of them. A budget below that does not
-        // bound the cost, it converts the cache into a churn - 96 MB produced 99 evictions and 105 rebuilds
-        // of 23 windows, 1335 MB of allocation for a 274 MB working set (2026-10-02). The entry cap is a
-        // backstop for many tiny windows, not the primary bound.
-        constexpr std::size_t kMaximumLocalMatcherBytes = 320 * 1024 * 1024;
-        constexpr std::size_t kMaximumLocalMatcherCaches = 48;
+        // on average, so the old cap of 24 could hold 370 MB.
+        //
+        // The budget is deliberately small. Two measurements settled it (2026-10-02): with a 320 MB budget
+        // the cache filled to 24 entries and a roaming session peaked at 1783 MB, while keeping a single
+        // entry - every window rebuilt and discarded - held the working set flat around 700 MB through 151
+        // rebuilds and 1.8 GB of allocation. So the resident pages came from how many sets were held at
+        // once, not from rebuilding: the allocator reuses the freed slots when the same sizes come back.
+        // A few entries keep the easy hits (the window the player is in and its neighbours) without turning
+        // the cache into a second copy of the map.
+        //
+        // IMAO_LOCAL_MATCHER_CACHE=1 keeps a single entry, which is the experiment that established this.
+        static const bool singleEntry = [] {
+            char value[8]{}; std::size_t length = 0;
+            return getenv_s(&length, value, sizeof(value), "IMAO_LOCAL_MATCHER_CACHE") == 0 && value[0] == '1';
+        }();
+        const std::size_t byteBudget = singleEntry ? 0 : 48 * 1024 * 1024;
+        const std::size_t entryBudget = singleEntry ? 1 : 8;
         LocalMatcherCache cache;
         cache.candidates = SelectSceneCandidates(*resources_, tileIndices);
         if (cache.candidates.imgDescriptors.empty()) return nullptr;
@@ -414,8 +424,8 @@ private:
         // allocates plus the FLANN index trained over them, and churn is what the trace showed at 1.3
         // searches a second.
         while (!localMatchers_.empty() &&
-            (localMatcherBytes_ + cache.bytes > kMaximumLocalMatcherBytes ||
-                localMatchers_.size() >= kMaximumLocalMatcherCaches)) {
+            (localMatcherBytes_ + cache.bytes > byteBudget ||
+                localMatchers_.size() >= entryBudget)) {
             const auto oldest = std::min_element(localMatchers_.begin(), localMatchers_.end(),
                 [](const auto& left, const auto& right) {
                     return left.second.lastUsed < right.second.lastUsed;
@@ -428,10 +438,17 @@ private:
         if (trace) Diagnostics::Record("local-matcher-cache", "result=miss tiles=" + std::to_string(tileIndices.size()) +
             " keypoints=" + std::to_string(cache.candidates.imgKeypoints.size()) + " bytes=" +
             std::to_string(cache.bytes) + " entries=" + std::to_string(localMatchers_.size()) +
-            " held=" + std::to_string(localMatcherBytes_) + " budget=" + std::to_string(kMaximumLocalMatcherBytes) +
-            " evictions=" + std::to_string(localMatcherEvictions_));
+            " held=" + std::to_string(localMatcherBytes_) + " budget=" + std::to_string(byteBudget) +
+            " evictions=" + std::to_string(localMatcherEvictions_) +
+            (singleEntry ? " mode=single-entry" : ""));
         const auto inserted = localMatchers_.emplace(key, std::move(cache));
         localMatcherBytes_ += inserted.first->second.bytes;
+        // A memory reading on every rebuild, not on a timer: the question is whether the pages a rebuild
+        // allocates go back to the system when the entry is evicted, and only a reading taken here can
+        // answer it. Misses are rare enough (tens a session) that this stays cheap.
+        Diagnostics::RecordMemory(std::string("local-matcher-built") + (singleEntry ? "-single" : "") +
+            "Mb" + std::to_string(inserted.first->second.bytes / (1024 * 1024)) +
+            "Entries" + std::to_string(localMatchers_.size()));
         return &inserted.first->second;
     }
 
