@@ -247,6 +247,17 @@ void App::Thread_Capture() {
                 }
             }
             const auto now = std::chrono::steady_clock::now();
+            // A session's cost is not settled at the first frame: the map UI, the viewport search and the
+            // recognizer all allocate later, and on 2026-10-02 a live host sat 1.2 GB above its first-frame
+            // measurement with no way to say which step did it. Sampling for the first five minutes turns
+            // that into a timeline; after that once a minute is enough to catch a leak.
+            static const auto startAt = std::chrono::steady_clock::now();
+            static int nextSample = 30;
+            const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - startAt).count();
+            if (elapsed >= nextSample) {
+                Diagnostics::RecordMemory("runtime-" + std::to_string(elapsed) + "s");
+                nextSample = elapsed < 300 ? static_cast<int>(elapsed) + 30 : static_cast<int>(elapsed) + 60;
+            }
             // The window capture runs synchronously against the game, so it only follows the overlay
             // rate while an overlay is attached to fresh pixels; otherwise it runs at the recognition
             // cadence and asks the game for far fewer extra frames.
@@ -900,6 +911,14 @@ void App::Thread_DetectGameState() {
 		if (update.changed) {
 			Diagnostics::Record("map-ui-transition", std::string(MapUiStateController::StateName(update.previous)) +
 				"->" + MapUiStateController::StateName(update.current));
+			// The full-screen map is where the viewport search, its tile images and the dense confirmer all
+			// come alive, and on 2026-10-02 a session was 1.2 GB above its first-frame measurement while the
+			// player sat on that map. Both directions are marked once, because the cost may be attached to
+			// entering rather than to being there.
+			if (MapUiStateController::IsStableBigMap(update.current) && !MapUiStateController::IsStableBigMap(update.previous)) {
+				static const bool firstEntryMeasured = [] { Diagnostics::RecordMemory("bigmap-entered"); return true; }();
+				(void)firstEntryMeasured;
+			}
 			Diagnostics::SaveImage("state-change-full", stateSnapshot);
 			if (!MapUiStateController::IsStableBigMap(update.current)) {
 				DrawItemOnGameMap::ClearNearItemsData();

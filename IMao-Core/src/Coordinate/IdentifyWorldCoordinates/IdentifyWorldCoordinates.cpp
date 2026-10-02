@@ -99,11 +99,6 @@ public:
         std::unique_lock lock(mutex_);
         condition_.wait(lock, [this] { return initializationComplete_; });
         error = error_;
-        // Both entry points to the recognizer land here - the warmup after the first successful lock and
-        // the bootstrap when the minimap tracker has lost the map - so this is the one place that can say
-        // what the recognizer actually costs. It is measured when the model is ready, not when the load was
-        // asked for, because Begin() only starts a background thread.
-        Diagnostics::RecordMemory(recognizer_ != nullptr ? "ocr-ready" : "ocr-failed");
         return recognizer_ != nullptr;
     }
 
@@ -350,6 +345,10 @@ private:
         IdentifyWorldCoordinates::isLoaded.store(ready);
         Diagnostics::Record("ocr-initialize", "durationMs=" + std::to_string(MillisecondsSince(start)) +
             " ready=" + std::to_string(ready) + " error=" + error_);
+        // Measured here, on the initialization thread, rather than in Await(): no caller in the host ever
+        // awaits, so Await is dead code and the linker drops it - the first version of this probe was dropped
+        // with it and the log simply had no OCR line at all (2026-10-02).
+        Diagnostics::RecordMemory(ready ? "ocr-ready" : "ocr-failed");
         condition_.notify_all();
     }
 
