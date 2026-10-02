@@ -142,6 +142,15 @@ static class Publisher
             if (r.Sequence < 1 || r.Sequence > c.Sequence || r.Packages.Count(p => p.Kind == "map-data") != 1) throw new InvalidDataException("Each snapshot requires exactly one map-data package and valid sequence.");
             FourPartVersion(r.MinAppVersion);
             if (r.MaxAppVersion is not null && Version.Parse(r.MaxAppVersion) < Version.Parse(r.MinAppVersion)) throw new InvalidDataException("Invalid compatibility range.");
+            // The oldest program a release may run on is also the oldest program that can be handed it, and
+            // nothing in the client can go and fetch a newer program on its own. A line published for a
+            // program that is not out yet therefore strands every installed client at once: the settings page
+            // offers the regions, and switching one on ends in "no compatible resource update". That is
+            // exactly what resources-2026.10.1.2 did to every player on 2026.10.1.1, whose bytes it carried
+            // unchanged. Publishing the program first, or naming the program already out with
+            // --min-app-version, are both fine; this pair is not.
+            if (Version.Parse(r.MinAppVersion) > Version.Parse(c.App.Version))
+                throw new InvalidDataException($"资源发布要求程序 {r.MinAppVersion}，而本次发布的程序是 {c.App.Version}：先发布程序，或用 --min-app-version 指定已经发布的程序版本。");
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var p in r.Packages)
             {
@@ -592,6 +601,13 @@ static class Publisher
         RequireGithub("https://github.com/kahvia-d/WWMAP-TOOLS/releases/tag/v1", false);
         passed.Add("release URL validation is independent of the repository name it was signed under");
         Reject("missing map-data rejected", () => ValidateCatalog(catalog with { Resources = [catalog.Resources[0] with { Packages = [] }] }));
+        // A resource line the program being published cannot run is the shape of the 2026-10-02 outage: the
+        // client keeps offering the regions, and switching one on can only fail because no release in the
+        // channel will ever match an installed program that is older than the line.
+        var baseVersion = Version.Parse(catalog.App.Version);
+        var newerProgram = new Version(baseVersion.Major, baseVersion.Minor, baseVersion.Build, baseVersion.Revision + 1);
+        Reject("a resource line the published program cannot run is refused", () => ValidateCatalog(catalog with { Resources = [catalog.Resources[0] with { MinAppVersion = newerProgram.ToString() }] }));
+        ValidateCatalog(catalog with { Resources = [catalog.Resources[0] with { MinAppVersion = catalog.App.Version }] });
         Reject("reserved Windows filename rejected", () => SafeFile(root, "CON.json"));
         var originalZip = Path.Combine(root, "packages", "map-data-2026.9.9.1.zip");
         var duplicateZip = Path.Combine(root, "duplicate.zip");

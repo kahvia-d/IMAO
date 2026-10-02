@@ -465,63 +465,74 @@ public sealed class UpdateService : IDisposable
         _state = LoadState();
         var catalog = UpdateSignature.Verify(_checkedEnvelope, _keys, _allowTestKeys);
         AcceptCatalog(catalog, _checkedEnvelope);
-        var release = InstalledRelease(catalog);
-        // The release decides what can be downloaded, but not what can be switched on: a region whose copy is
-        // already on this machine needs no publication entry to be activated, which is what lets a region the
-        // player turned off be turned back on without any network at all.
-        var localOnly = new List<SnapshotPackage>();
+        // The publication is what a download would come from, and it is deliberately optional here. The release
+        // decides what can be downloaded, but not what can be switched on: a region whose copy is already on
+        // this machine needs no publication entry to be activated, which is what lets a region the player
+        // turned off be turned back on without any network at all.
+        //
+        // Requiring a compatible release up front is what once made that impossible. A resource line names the
+        // oldest program it may run on, and the publisher defaults that to its own build version, so a line
+        // published for a program newer than the one running refuses the whole client - even when every byte
+        // the request needs is already on disk. A player on 2026.10.1.1 could not turn 今州 back on while the
+        // published line was resources-2026.10.1.2, although that release shipped the very same packages.
+        var release = CompatibleRelease(catalog);
+        var plan = new List<PlannedPackage>();
         foreach (var id in wanted)
         {
-            var offered = release.Packages.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.Ordinal));
-            if (offered is null)
+            var offered = release?.Packages.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.Ordinal));
+            if (offered is not null)
             {
-                // The copy has to be on disk: activating a package whose directory is gone would hand the host
-                // a snapshot it refuses, which takes the whole resource set down with it.
-                var local = _snapshots.Current.Packages.FirstOrDefault(p =>
-                    string.Equals(p.Id, id, StringComparison.Ordinal) && Directory.Exists(p.Directory))
-                    ?? throw new InvalidDataException("这个区域本机没有副本，更新渠道也不提供，暂时无法启用：" + id);
-                if (!ResourceSnapshotService.IsSelectable(local)) throw new InvalidDataException("该资源包为必需资源，不能单独安装：" + id);
-                localOnly.Add(local);
+                if (!ResourceSnapshotService.IsSelectable(new SnapshotPackage { Id = offered.Id, Version = offered.Version, Kind = offered.Kind }))
+                    throw new InvalidDataException("该资源包为必需资源，不能单独安装：" + id);
+                plan.Add(new PlannedPackage(id, offered, null));
                 continue;
             }
-            if (!ResourceSnapshotService.IsSelectable(new SnapshotPackage { Id = offered.Id, Version = offered.Version, Kind = offered.Kind }))
-                throw new InvalidDataException("该资源包为必需资源，不能单独安装：" + id);
+            // No publication offers it, so the copy on this machine is the whole story. It has to be on disk:
+            // activating a package whose directory is gone would hand the host a snapshot it refuses, which
+            // takes the whole resource set down with it.
+            var local = _snapshots.Current.Packages.FirstOrDefault(p =>
+                string.Equals(p.Id, id, StringComparison.Ordinal) && Directory.Exists(p.Directory));
+            if (local is null) throw new InvalidDataException(MissingRegionMessage(id, release));
+            if (!ResourceSnapshotService.IsSelectable(local)) throw new InvalidDataException("该资源包为必需资源，不能单独安装：" + id);
+            plan.Add(new PlannedPackage(id, null, local));
         }
         // Required packages are never asked for by name, but a layout can still lack them locally; the
-        // snapshot cannot load without them, so install them as part of whichever region is requested.
-        var installSet = new HashSet<string>(wanted, StringComparer.Ordinal);
-        foreach (var package in release.Packages)
-            if (!ResourceSnapshotService.IsSelectable(new SnapshotPackage { Id = package.Id, Version = package.Version, Kind = package.Kind }))
-                installSet.Add(package.Id);
+        // snapshot cannot load without them, so install them as part of whichever region is requested. They
+        // only ever come from a publication: a client that cannot read one has nothing to install them from.
+        if (release is not null)
+            foreach (var package in release.Packages)
+                if (!ResourceSnapshotService.IsSelectable(new SnapshotPackage { Id = package.Id, Version = package.Version, Kind = package.Kind }) &&
+                    !plan.Any(p => string.Equals(p.Id, package.Id, StringComparison.Ordinal)))
+                    plan.Add(new PlannedPackage(package.Id, package, null));
         var needed = new List<ResourcePackage>();
         var missing = new List<string>();
-        foreach (var package in release.Packages.Where(p => installSet.Contains(p.Id)))
+        foreach (var item in plan)
         {
             ct.ThrowIfCancellationRequested();
-            var target = PackageDirectory(package);
+            if (item.Release is null) continue; // A local copy is already where it has to be.
+            var target = PackageDirectory(item.Release);
             // A package that ships inside the program resolves to its installation copy, which is already
             // there; only the packages genuinely absent from this machine are downloaded.
-            if (FindBundled(package) is not null) continue;
-            if (Directory.Exists(target)) await VerifyInstalledAsync(target, package, ct).ConfigureAwait(false);
-            else { needed.Add(package); missing.Add(package.Id); }
+            if (FindBundled(item.Release) is not null) continue;
+            if (Directory.Exists(target)) await VerifyInstalledAsync(target, item.Release, ct).ConfigureAwait(false);
+            else { needed.Add(item.Release); missing.Add(item.Release.Id); }
         }
         // Ask before downloading: a player who selects a whole region wants to know it will not fit first.
         var requiredBytes = checked(needed.Sum(p => checked(p.Size + p.Files.Sum(f => f.Size))) + 64L * 1024 * 1024);
         if (needed.Count > 0 && _freeSpace() < requiredBytes) throw new IOException("磁盘空间不足，无法安装所选区域。");
+        // Everything this request prepares, plus the required packages: an install rewrites the descriptor
+        // for the release it stages, so the packages that make the snapshot loadable travel with it.
+        var installSet = new HashSet<string>(plan.Where(item => item.Release is not null).Select(item => item.Id), StringComparer.Ordinal);
         // Activate the requested regions on the active snapshot. This happens before staging so the stored
         // descriptor already names the region that is being reinstalled, which is what lets the narrowed
         // staged snapshot keep it.
-        var activating = localOnly.Concat(wanted.Where(id => release.Packages.Any(p => string.Equals(p.Id, id, StringComparison.Ordinal))).Select(id =>
+        var activating = plan.Where(item => wanted.Contains(item.Id)).Select(item => item.Local ?? new SnapshotPackage
         {
-            var package = release.Packages.First(p => string.Equals(p.Id, id, StringComparison.Ordinal));
-            return new SnapshotPackage
-            {
-                Id = package.Id, Version = package.Version, Kind = package.Kind,
-                Directory = PackageDirectory(package), Sha256 = package.Sha256, Files = package.Files
-            };
-        })).ToList();
+            Id = item.Release!.Id, Version = item.Release.Version, Kind = item.Release.Kind,
+            Directory = PackageDirectory(item.Release), Sha256 = item.Release.Sha256, Files = item.Release.Files
+        }).ToList();
         await _snapshots.AttachPackagesAsync(activating, ct).ConfigureAwait(false);
-        if (needed.Count > 0) await InstallReleaseAsync(release, null, progress, ct, installSet, missing.ToHashSet(StringComparer.Ordinal)).ConfigureAwait(false);
+        if (needed.Count > 0) await InstallReleaseAsync(release!, null, progress, ct, installSet, missing.ToHashSet(StringComparer.Ordinal)).ConfigureAwait(false);
         // The install changed what is on disk, so the host view is recomputed from the expanded snapshot.
         await _snapshots.RefreshRuntimeViewAsync(ct).ConfigureAwait(false);
         progress?.Report(new UpdateProgress("区域已就绪，重启软件后生效", 0, 0));
@@ -551,15 +562,46 @@ public sealed class UpdateService : IDisposable
     /// The release this installation currently runs, so a per-region install or removal never crosses to a
     /// different resource version on its own.
     /// </summary>
-    private ResourceRelease InstalledRelease(UpdateCatalog catalog)
+    private ResourceRelease InstalledRelease(UpdateCatalog catalog) =>
+        CompatibleRelease(catalog) ?? throw new InvalidOperationException("没有与当前程序兼容的资源更新。");
+
+    /// <summary>
+    /// The newest published release this program may run, or null when the channel offers none for it.
+    ///
+    /// Null is a state a client reaches without being broken: a resource line names the oldest program it
+    /// runs on, and a line published for a newer program than the one installed refuses this client. A
+    /// wholesale resource install does nothing without a release and stays refused, but an operation that
+    /// only needs bytes already on this machine must ask this first and carry on when the answer is nothing.
+    /// </summary>
+    private ResourceRelease? CompatibleRelease(UpdateCatalog catalog)
     {
-        var compatible = SelectCompatible(catalog) ?? throw new InvalidOperationException("没有与当前程序兼容的资源更新。");
+        var compatible = SelectCompatible(catalog);
+        if (compatible is null) return null;
         if (compatible.SnapshotId == _snapshots.Current.SnapshotId) return compatible;
         // A bundled snapshot is the program's own resource set; the published release is the only
         // descriptor that carries per-region packages for it.
         if (_snapshots.Current.Bundled) return compatible;
         throw new InvalidOperationException("当前资源版本不在更新清单中，请先检查更新。");
     }
+
+    /// <summary>
+    /// Why a region the player switched on cannot be switched on.
+    ///
+    /// "没有与当前程序兼容的资源更新" is true and useless: the file the player has to act on is the program, and
+    /// a message about resources points at the update button that is not the one to press. The two causes are
+    /// therefore named separately - nothing left to download from this channel, or a channel that refuses
+    /// this program version. The second one must not claim the region is gone: its bytes are published, the
+    /// client is simply too old to be handed them.
+    /// </summary>
+    private static string MissingRegionMessage(string packageId, ResourceRelease? release) => release is null
+        ? "当前程序版本过旧，更新渠道里没有它可用的资源发布，无法下载这个区域。请先把程序更新到最新版本再试：" + packageId
+        : "这个区域本机没有副本，更新渠道也不提供，暂时无法启用：" + packageId;
+
+    /// <summary>
+    /// One package an install request has to account for: either a publication offers it, or the copy that is
+    /// already on this machine is the whole story. Never both.
+    /// </summary>
+    private sealed record PlannedPackage(string Id, ResourcePackage? Release, SnapshotPackage? Local);
 
     public async Task ImportOfflineAsync(string zipPath, IProgress<UpdateProgress>? progress = null, CancellationToken ct = default)
     {

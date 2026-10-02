@@ -1213,6 +1213,66 @@ await Test("deleting a copy the program ships makes enabling that region downloa
     True(Directory.Exists(Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2")));
 });
 
+await Test("a publication that refuses this program does not block re-enabling a region already on disk", async () =>
+{
+    // The player's report, reduced to its essentials: 2026.10.1.1 could not switch 今州 back on while the
+    // published line was resources-2026.10.1.2, even though that release carried the very same packages and
+    // the copy was sitting in the program directory the whole time. Enabling asked for a compatible release
+    // before it looked at the disk, and the line - whose minAppVersion defaults to the publisher's own build
+    // version - offered none for this client.
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    var bundledCopy = Path.Combine(f.Root, "baseline", "regions", "tethys-kurotiles");
+    // Turned off, not deleted: this is the switch, and the switch touches no files.
+    await f.Snapshots.SetDeselectedPackagesAsync(["tethys-kurotiles"]);
+    True(Directory.Exists(bundledCopy));
+    EqualSequence(["tethys-kurotiles"], f.Snapshots.DeselectedPackageIds);
+    False(f.Snapshots.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+
+    // Now the channel moves past this program: the only line left refuses 2026.9.9.1.
+    var incompatible = release.Resources[0] with { MinAppVersion = "2027.1.1.1" };
+    f.Publish(release with { Resources = [incompatible] });
+    await f.Updates.CheckAsync();
+    False(f.Updates.CurrentRelease is not null);
+
+    f.Network.Requests.Clear();
+    await f.Updates.EnsureInstalledAsync(["tethys-kurotiles"]);
+    // The copy on disk is the whole story: the region comes back without a single network request.
+    Equal(0, f.Network.Requests.Count);
+    Equal(0, f.Snapshots.DeselectedPackageIds.Count);
+    True(f.Snapshots.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+});
+
+await Test("a region missing from this machine still refuses, and says the program is what to update", async () =>
+{
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();
+    var release = f.RegionCatalog();
+    f.Publish(release); await f.Updates.CheckAsync();
+    var bundledCopy = Path.Combine(f.Root, "baseline", "regions", "tethys-kurotiles");
+    // Turned off and then deleted, which is the state that genuinely needs the channel: nothing local, and
+    // no copy in the program directory either.
+    await f.Snapshots.SetDeselectedPackagesAsync(["tethys-kurotiles"]);
+    Directory.Delete(bundledCopy, true);
+
+    // The bytes are published but this program is too old to be handed them, and the player has to be told
+    // the program is the thing to update - "no compatible resource update" sends them to the wrong button.
+    f.Publish(release with { Resources = [release.Resources[0] with { MinAppVersion = "2027.1.1.1" }] });
+    await f.Updates.CheckAsync();
+    False(f.Updates.CurrentRelease is not null);
+    f.Network.Requests.Clear();
+    var error = await CaptureAsync(() => f.Updates.EnsureInstalledAsync(["tethys-kurotiles"]));
+    True(error.Contains("请先把程序更新到最新版本"), error);
+    Equal(0, f.Network.Requests.Count);
+
+    // A line this program may run that simply does not carry the region is a different sentence: the bytes
+    // exist nowhere the client can reach, which is not something a program update would fix.
+    f.Publish(release with { Resources = [release.Resources[0] with { Packages = [release.Resources[0].Packages[0]] }] });
+    await f.Updates.CheckAsync();
+    error = await CaptureAsync(() => f.Updates.EnsureInstalledAsync(["tethys-kurotiles"]));
+    True(error.Contains("更新渠道也不提供"));
+});
+
 await Test("a selected region whose copy is gone never reaches the host snapshot", async () =>
 {
     using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();
@@ -1441,8 +1501,20 @@ await File.WriteAllTextAsync(Path.Combine(output, "results.json"), JsonSerialize
 Console.WriteLine($"Resource update checks: {passed.Count} passed, {failed.Count} failed. Evidence: {suiteRoot}");
 if (failed.Count > 0) Environment.ExitCode = 1;
 
-static void True(bool value) { if (!value) throw new Exception("Expected true."); }
+/// <summary>True, with the value that was expected reported when it is not - an assertion about text has to
+/// show the text it got, or the only way to learn it is another run.</summary>
+static void True(bool value, string? detail = null) { if (!value) throw new Exception("Expected true." + (detail is null ? "" : " Got: " + detail)); }
 static void False(bool value) => True(!value);
+/// <summary>
+/// The message of the exception an operation is expected to fail with. What a player reads is the whole
+/// point of some of these checks, and a message is not something <c>ThrowsAsync</c> can assert on.
+/// </summary>
+static async Task<string> CaptureAsync(Func<Task> action)
+{
+    try { await action(); }
+    catch (Exception error) { return error.Message; }
+    throw new Exception("Expected the operation to fail.");
+}
 /// <summary>
 /// A synthetic local copy declares no files, so nothing hashes it. Writing the bytes the real zip carries is
 /// the only alternative, and the fixtures do not have them.

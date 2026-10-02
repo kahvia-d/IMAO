@@ -24,6 +24,17 @@ $taskText = $taskStdout.GetAwaiter().GetResult() + $taskStderr.GetAwaiter().GetR
 [IO.File]::WriteAllText((Join-Path $taskOutput 'build.log'), $taskText)
 Write-Host $taskText
 if ($taskProcess.ExitCode -ne 0) { throw 'Resource update test build failed.' }
+# This suite compiles IMao-WinUI.Core's sources by link, so it is exactly the kind of project where a stale
+# intermediate turns a source edit into a run of the previous code - and the result then reads as a real
+# failure (2026-10-02, K48: a message fix "failed" three times against a binary built before it). One
+# comparison against the sources makes that state loud instead of invisible.
+$taskSources = Get-ChildItem -File -Path (Join-Path $taskRoot 'IMao-WinUI.Core/Updates/*.cs'), (Join-Path $taskRoot 'IMao-WinUI.Core/Helpers/AtomicFile.cs'), (Join-Path $taskRoot 'IMao-WinUI.Core/Helpers/CurrentUserDPapi.cs'), (Join-Path $taskRoot 'Tests/ResourceUpdates/*.cs')
+$taskSuite = Join-Path $taskOutput 'bin/ResourceUpdates.dll'
+$taskNewestSource = ($taskSources | Sort-Object LastWriteTime -Descending | Select-Object -First 1).LastWriteTime
+$taskSuiteTime = if (Test-Path -LiteralPath $taskSuite) { (Get-Item -LiteralPath $taskSuite).LastWriteTime } else { [datetime]::MinValue }
+if ($taskSuiteTime -lt $taskNewestSource) {
+    throw "ResourceUpdates.dll ($taskSuiteTime) is older than its newest source ($taskNewestSource). Delete IMao-WinUI.Core\obj and Tests\ResourceUpdates\obj and run this script again."
+}
 $taskInfo.ArgumentList.Clear()
 $taskInfo.ArgumentList.Add((Join-Path $taskOutput 'bin/ResourceUpdates.dll'))
 $taskInfo.ArgumentList.Add($taskOutput)

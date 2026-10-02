@@ -194,10 +194,18 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     /// A region whose copy was deleted has to come from the signed publication, so the check that fetches
     /// that publication is part of enabling rather than a separate errand the player is expected to know
     /// about. Without one the operation could only refuse, which is what "请先检查更新" used to mean.
+    ///
+    /// The publication is fetched but not required. Switching a region on whose bytes are already on this
+    /// machine has to work with no channel at all - when the check fails, and equally when the channel
+    /// refuses this program version - so what a missing publication costs is a download, never the switch.
     /// </summary>
     public Task EnableRegionAsync(string packageId) => RunAsync(async ct =>
     {
-        if (updater.CurrentRelease is null) await updater.CheckAsync(automatic: false, ct);
+        if (updater.CurrentRelease is null)
+        {
+            try { await updater.CheckAsync(automatic: false, ct); }
+            catch (Exception error) when (error is not OperationCanceledException) { Audit("region-enable check skipped: " + error.Message); }
+        }
         await updater.EnsureInstalledAsync([packageId], Progress(), ct);
         Message = "已启用该区域，副本已就绪。请退出并重新打开软件后生效。";
     });
