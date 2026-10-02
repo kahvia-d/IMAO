@@ -15,8 +15,15 @@ Mat ImageProcessing::extractCircularRegionFromImage(Mat img,Point center,int rad
 
 Mat ImageProcessing::imgToGray(Mat img) {
 	Mat ImgGray;
-	cvtColor(img, ImgGray, COLOR_BGR2GRAY);
-
+	// A capture is always four-channel BGRA, which is what this used to assume. An offline caller - the
+	// matcher benchmark reads a grayscale map image - passes one channel, and the unchecked conversion
+	// aborted the process instead of failing the call (2026-10-02). Convert from whatever arrived.
+	switch (img.channels()) {
+	case 1: return img;
+	case 3: cvtColor(img, ImgGray, COLOR_BGR2GRAY); break;
+	case 4: cvtColor(img, ImgGray, COLOR_BGRA2GRAY); break;
+	default: return {};
+	}
 	return ImgGray;
 }
 

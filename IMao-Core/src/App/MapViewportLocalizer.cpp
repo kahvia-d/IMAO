@@ -3,6 +3,8 @@
 #include "../Feature/Match/ExactDescriptorMatcher.h"
 #include "MapViewportLocalizer.h"
 #include "MapViewportGeometry.h"
+#include "MapViewportCandidates.h"
+#include "MapViewportMatch.h"
 #include "../Feature/Match/UniqueMapFeatures.h"
 #include "../Runtime/ThreadPriority.h"
 #include "../Diagnostics/Diagnostics.h"
@@ -25,161 +27,53 @@
 #include <vector>
 
 namespace {
+// Row and candidate selection lives in one shared header so the offline comparison of the two matchers
+// drives the same code this file ships. Bringing the names in here keeps every call site unchanged.
+using namespace MapViewportCandidates;
+
 double ElapsedMilliseconds(const std::chrono::steady_clock::time_point& start) {
     return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
 }
 
-int TileScene(const RuntimeFeatureResources& resources, std::size_t index) {
-    return index < resources.baseVisualTileCount ? Scene::SceneNameToId("World") :
-        resources.visualIndex.tiles[index].sceneId;
+
+// The decision half of a match - fit, inliers, reprojection error, support - lives in a shared header so
+// an alternative matcher can be judged by exactly the same gate as the shipped one. Bringing the names in
+// keeps the call sites below unchanged.
+using MapViewportMatch::TryMatch;
+using MapViewportMatch::TryMatchRows;
+
+// The comparison that decides whether the viewport search can stop building a de-duplicated copy of the map
+// rows for every window. With IMAO_MATCHER_AB=1 the same query, the same rows and the same gate are run a
+// second time through the copy-free matcher, and the two outcomes are recorded side by side. It is the only
+// way to compare them on a real query: an offline query cannot be brought onto the features' own scale, so
+// the offline attempts matched nothing and could say nothing (2026-10-02). Measurement only, off by default
+// - with it on each search does its work twice and the map answers more slowly.
+const bool matcherAbEnabled = [] {
+    char value[8]{}; std::size_t length = 0;
+    return getenv_s(&length, value, sizeof(value), "IMAO_MATCHER_AB") == 0 && value[0] == '1';
+}();
+
+// One row per compared search: what the shipped matcher decided, what the copy-free matcher decided on the
+// same query, and how far apart the two positions are. centerDistance is the number that matters - a
+// matcher that finds the same place faster is a candidate; one that finds a different place is not.
+void RecordMatcherComparison(const MapViewportLocalizationResult& shipped,
+    const MapViewportLocalizationResult& exact, double exactMs, std::size_t rows, double shippedMs) {
+    double distance = -1.0;
+    if (shipped.accepted && exact.accepted) distance = std::hypot(shipped.centerMapCoordinate.x - exact.centerMapCoordinate.x,
+        shipped.centerMapCoordinate.y - exact.centerMapCoordinate.y);
+    Diagnostics::Record("matcher-ab", "scene=" + std::to_string(shipped.sceneId) +
+        " rows=" + std::to_string(rows) +
+        " shippedAccepted=" + std::to_string(shipped.accepted ? 1 : 0) +
+        " shippedGood=" + std::to_string(shipped.goodMatchCount) +
+        " shippedInliers=" + std::to_string(shipped.inlierCount) +
+        " shippedMs=" + std::to_string(shippedMs) +
+        " exactAccepted=" + std::to_string(exact.accepted ? 1 : 0) +
+        " exactGood=" + std::to_string(exact.goodMatchCount) +
+        " exactInliers=" + std::to_string(exact.inlierCount) +
+        " exactMs=" + std::to_string(exactMs) +
+        " centerDistance=" + std::to_string(distance));
 }
 
-bool IntersectsPrior(const MapVisualTile& tile, const WorldSearchPrior& prior) {
-    const double nearestX = std::clamp(prior.centerMapCoordinate.x,
-        static_cast<double>(tile.minX), static_cast<double>(tile.maxX));
-    const double nearestY = std::clamp(prior.centerMapCoordinate.y,
-        static_cast<double>(tile.minY), static_cast<double>(tile.maxY));
-    return std::hypot(prior.centerMapCoordinate.x - nearestX,
-        prior.centerMapCoordinate.y - nearestY) <= prior.radius;
-}
-
-std::vector<std::uint32_t> SelectSceneTileIndices(const RuntimeFeatureResources& resources,
-    int sceneId, const std::optional<WorldSearchPrior>& prior) {
-    // Build the verification set from the visual-index rows rather than
-    // merely filtering all map keypoints by X/Y.  This keeps an independent
-    // state with overlapping internal coordinates out of a World search, and
-    // includes every approved World supplement (such as BlackShores) exactly
-    // once.
-    if (!resources.visualIndexReady || resources.visualIndex.tiles.empty()) {
-        return {};
-    }
-
-    std::vector<std::uint32_t> selected;
-    for (std::size_t tileIndex = 0; tileIndex < resources.visualIndex.tiles.size(); ++tileIndex) {
-        const auto& tile = resources.visualIndex.tiles[tileIndex];
-        if (TileScene(resources, tileIndex) != sceneId ||
-            (prior.has_value() && prior->valid && !IntersectsPrior(tile, *prior))) {
-            continue;
-        }
-        selected.push_back(static_cast<std::uint32_t>(tileIndex));
-    }
-    return selected;
-}
-
-ImageFeatureData SelectSceneCandidates(const RuntimeFeatureResources& resources,
-    const std::vector<std::uint32_t>& tileIndices) {
-    if (tileIndices.empty()) return {};
-    std::vector<unsigned char> selected(resources.map.imgKeypoints.size(), 0);
-    for (const auto tileIndex : tileIndices) {
-        if (tileIndex >= resources.visualIndex.tiles.size()) continue;
-        const auto& tile = resources.visualIndex.tiles[tileIndex];
-        const std::size_t first = tile.featureRowOffset;
-        const std::size_t last = first + tile.featureRowCount;
-        if (last > resources.visualIndex.featureRows.size()) continue;
-        for (std::size_t index = first; index < last; ++index) {
-            const auto row = resources.visualIndex.featureRows[index];
-            if (row < selected.size()) selected[row] = 1;
-        }
-    }
-    ImageFeatureData candidates;
-    UniqueMapFeatures unique;
-    for (std::size_t row = 0; row < selected.size(); ++row) {
-        if (!selected[row] || !resources.FeatureRowEnabled(row)) continue;
-        if (!unique.Insert(resources.map.imgKeypoints[row],
-                resources.map.imgDescriptors.row(static_cast<int>(row)))) continue;
-        candidates.imgKeypoints.push_back(resources.map.imgKeypoints[row]);
-        candidates.imgDescriptors.push_back(resources.map.imgDescriptors.row(static_cast<int>(row)));
-    }
-    return candidates;
-}
-
-std::string TileSetKey(const std::vector<std::uint32_t>& tileIndices) {
-    std::string key;
-    key.reserve(tileIndices.size() * 6);
-    for (const auto tileIndex : tileIndices) {
-        key += std::to_string(tileIndex);
-        key.push_back(',');
-    }
-    return key;
-}
-
-std::vector<cv::DMatch> FilterGoodMatches(const std::vector<std::vector<cv::DMatch>>& pairs) {
-    std::vector<cv::DMatch> goodMatches;
-    for (const auto& pair : pairs) {
-        if (pair.size() < 2 || pair[0].distance >= 0.62f * pair[1].distance || pair[0].distance > 0.50f) continue;
-        goodMatches.push_back(pair[0]);
-    }
-    return goodMatches;
-}
-
-bool TryMatch(const ImageFeatureData& cropFeatures, const cv::Mat& crop,
-    const ImageFeatureData& candidateFeatures, const std::vector<cv::DMatch>& goodMatches,
-    MapViewportLocalizationResult& result) {
-    if (cropFeatures.imgDescriptors.empty() || candidateFeatures.imgDescriptors.empty()) return false;
-    result.goodMatchCount = static_cast<int>(goodMatches.size());
-    if (result.goodMatchCount < 12) return false;
-
-    std::vector<cv::Point2f> cropPoints;
-    std::vector<cv::Point2f> mapPoints;
-    cropPoints.reserve(goodMatches.size());
-    mapPoints.reserve(goodMatches.size());
-    for (const auto& match : goodMatches) {
-        if (match.queryIdx < 0 || match.trainIdx < 0 ||
-            match.queryIdx >= static_cast<int>(cropFeatures.imgKeypoints.size()) ||
-            match.trainIdx >= static_cast<int>(candidateFeatures.imgKeypoints.size())) continue;
-        cropPoints.push_back(cropFeatures.imgKeypoints[match.queryIdx].pt);
-        mapPoints.push_back(candidateFeatures.imgKeypoints[match.trainIdx].pt);
-    }
-    if (cropPoints.size() < 12) return false;
-
-    cv::Mat inlierMask;
-    const cv::Mat homography = FitMapViewportTransform(cropPoints, mapPoints, inlierMask);
-    if (homography.empty() || inlierMask.empty()) return false;
-    result.inlierCount = cv::countNonZero(inlierMask);
-    result.inlierRatio = static_cast<double>(result.inlierCount) / cropPoints.size();
-    if (result.inlierCount < 12 || result.inlierRatio < 0.35) return false;
-
-    const cv::Point2f cropCenter(crop.cols / 2.0f, crop.rows / 2.0f);
-    std::array<bool, 4> quadrants{};
-    std::vector<cv::Point2f> projected;
-    cv::perspectiveTransform(cropPoints, projected, homography);
-    std::vector<double> errors;
-    errors.reserve(static_cast<std::size_t>(result.inlierCount));
-    for (int index = 0; index < inlierMask.rows; ++index) {
-        if (inlierMask.at<std::uint8_t>(index) == 0) continue;
-        const auto& source = cropPoints[static_cast<std::size_t>(index)];
-        const auto& expected = mapPoints[static_cast<std::size_t>(index)];
-        const auto& mapped = projected[static_cast<std::size_t>(index)];
-        errors.push_back(cv::norm(mapped - expected));
-        const int quadrant = (source.x >= cropCenter.x ? 1 : 0) + (source.y >= cropCenter.y ? 2 : 0);
-        quadrants[quadrant] = true;
-    }
-    std::sort(errors.begin(), errors.end());
-    result.medianReprojectionError = errors.empty() ? 0.0 : errors[errors.size() / 2];
-    result.coveredQuadrants = static_cast<int>(std::count(quadrants.begin(), quadrants.end(), true));
-    if (!HasMapViewportSupport(cropPoints, inlierMask, crop.size()) ||
-        result.medianReprojectionError > 3.0) return false;
-
-    std::vector<cv::Point2f> cropCorners = {
-        { 0.0f, 0.0f }, { static_cast<float>(crop.cols), 0.0f },
-        { static_cast<float>(crop.cols), static_cast<float>(crop.rows) },
-        { 0.0f, static_cast<float>(crop.rows) }
-    };
-    std::vector<cv::Point2f> corners;
-    cv::perspectiveTransform(cropCorners, corners, homography);
-    if (corners.size() != 4) return false;
-    Coordinate center((corners[0].x + corners[2].x) / 2.0,
-        (corners[0].y + corners[2].y) / 2.0);
-    const double width = cv::norm(corners[1] - corners[0]);
-    const double height = cv::norm(corners[3] - corners[0]);
-    if (!std::isfinite(center.x) || !std::isfinite(center.y) || !std::isfinite(width) ||
-        !std::isfinite(height) || width < 50.0 || height < 50.0) {
-        return false;
-    }
-    result.centerMapCoordinate = center;
-    result.captureCorners = std::move(corners);
-    return true;
-}
 
 class MapViewportRuntime {
 public:
@@ -340,8 +234,27 @@ private:
                     attempt.inlierRatio = attempt.medianReprojectionError = 0.0;
                     attempt.cropKeypointCount = static_cast<int>(features.imgKeypoints.size());
                     attempt.captureCorners.clear();
+                    const auto shippedStart = std::chrono::steady_clock::now();
                     attempt.accepted = TryMatch(features, request.mapCrop, cache->candidates,
                         FilterGoodMatches(pairs), attempt);
+                    const double shippedMs = ElapsedMilliseconds(shippedStart);
+                    // The comparison runs on the same query and the same tiles, whether or not the shipped
+                    // matcher accepted: a rejection the copy-free matcher would have accepted is exactly the
+                    // kind of difference this is looking for.
+                    if (matcherAbEnabled) {
+                        const auto abRows = SelectCandidateRows(*resources_, tiles);
+                        MapViewportLocalizationResult exactAttempt;
+                        exactAttempt.accepted = false;
+                        exactAttempt.sceneId = sceneId;
+                        exactAttempt.cropKeypointCount = static_cast<int>(features.imgKeypoints.size());
+                        const auto exactStart = std::chrono::steady_clock::now();
+                        const auto exactPairs = MatchRowsExactly(*resources_, abRows, features.imgDescriptors);
+                        const auto exactGood = DeduplicatePairs(*resources_, abRows, exactPairs);
+                        exactAttempt.accepted = TryMatchRows(features, request.mapCrop, *resources_, abRows,
+                            exactGood, exactAttempt);
+                        RecordMatcherComparison(attempt, exactAttempt, ElapsedMilliseconds(exactStart),
+                            abRows.size(), shippedMs);
+                    }
                     if (attempt.accepted) ++acceptedScenes;
                     if (attempt.accepted || (!result.accepted &&
                         (attempt.inlierCount > result.inlierCount ||

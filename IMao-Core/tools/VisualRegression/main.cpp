@@ -11,6 +11,7 @@
 #include "Feature/VisualIndex/MapVisualIndex.h"
 #include "ImageProcessing/ImageProcessing.h"
 #include "Runtime/ResourceSnapshotContext.h"
+#include "MatcherBench.h"
 
 #include <nlohmann/json.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -503,7 +504,11 @@ int wmain(int argumentCount, wchar_t** arguments) {
         return 1;
     }
     const auto manifest = nlohmann::json::parse(manifestFile);
-    if (!manifest.contains("samples") || !manifest.at("samples").is_array() || manifest.at("samples").empty()) {
+    // A matcher-bench manifest carries no sample list and no expectations: it is a measurement, not a
+    // regression, so it loads resources through the same path and then leaves before the sample checks.
+    const bool matcherBench = manifest.contains("matcherBench");
+    if (!matcherBench &&
+        (!manifest.contains("samples") || !manifest.at("samples").is_array() || manifest.at("samples").empty())) {
         std::cerr << "Visual regression requires a non-empty sample list.\n";
         return 2;
     }
@@ -532,6 +537,22 @@ int wmain(int argumentCount, wchar_t** arguments) {
     if (!resources) {
         std::cerr << "Visual resources failed to load: " << error << '\n';
         return 1;
+    }
+    // Offline comparison of the two matchers a full-screen search could use. It needs the loaded resources
+    // but neither localizer, because it drives the row selection and the matching directly - the same code
+    // the shipped viewport path calls. See MatcherBench.cpp for what the numbers mean.
+    if (matcherBench) {
+        nlohmann::json benchReport;
+        const int benchResult = MatcherBench::Run(*resources, repositoryRoot, manifest.at("matcherBench"), benchReport);
+        if (benchResult != 0) return benchResult;
+        std::ofstream benchFile(reportPath);
+        if (!benchFile) {
+            std::cerr << "Matcher bench cannot write its report.\n";
+            return 1;
+        }
+        benchFile << benchReport.dump(2) << '\n';
+        std::cout << benchReport.dump(2) << '\n';
+        return 0;
     }
     if (manifest.value("viewport", false)) return ReplayViewports(repositoryRoot, manifest, reportPath, resources);
     if (manifest.value("recoverySequence", false)) return ReplayRecoverySequence(repositoryRoot, manifest, reportPath, resources);
