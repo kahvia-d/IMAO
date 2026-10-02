@@ -36,3 +36,9 @@ map-regions/layers/*/
 # Reference captures staged for a rebuild are copies of the user's game screenshots;
 # their source paths are recorded in map-regions/origins/ and the pack manifests.
 map-regions/references/
+# Historical native binaries pulled out of the build output directory. They are kept for forensics
+# rather than for building - each is tens of megabytes and cannot be regenerated from the current
+# source - so the note beside them is committed and the binaries stay local. README.md explains what
+# they are and why they had to leave x64/Release.
+archive/native-release-debris-*/
+!archive/native-release-debris-*/README.md
