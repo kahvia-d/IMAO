@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -124,39 +125,72 @@ inline std::vector<cv::DMatch> FilterGoodMatches(const std::vector<std::vector<c
     return goodMatches;
 }
 
-// The alternative: match every chosen row against the query and keep the pairs that pass the same ratio
-// test, reporting match indices against the *row list* rather than against a copy. Nothing is allocated
-// beyond the result vectors and the pair list, and de-duplication happens on the pairs, where it costs a
-// hash insert per surviving match instead of one per candidate row.
+// Exhaustive nearest and second-nearest map row for every query descriptor, over the given rows only. The
+// same batching and cancellation points as MatchDescriptorsExactly, but keyed by the row list rather than by
+// the whole matrix, and taking both places per query - which is what the ratio test needs.
+inline void MatchDescriptorNeighbours(const cv::Mat& queryDescriptors, const cv::Mat& mapDescriptors,
+    const std::vector<std::uint32_t>& rows, std::vector<float>& best, std::vector<float>& second,
+    std::vector<int>& bestRow, const std::function<bool()>& interrupted = {}) {
+    if (rows.empty() || queryDescriptors.empty() || mapDescriptors.empty()) return;
+    std::vector<int> rowPositions(mapDescriptors.rows, -1);
+    for (std::size_t position = 0; position < rows.size(); ++position) {
+        const auto row = rows[position];
+        if (row < rowPositions.size()) rowPositions[row] = static_cast<int>(position);
+    }
+    // Bound the temporary distance block the way MatchDescriptorsExactly does, so a large query cannot make
+    // the batch allocate without limit.
+    constexpr std::size_t distanceBufferBytes = 2 * 1024 * 1024;
+    const int batchRows = static_cast<int>(std::max<std::size_t>(1, std::min<std::size_t>(4096,
+        distanceBufferBytes / (static_cast<std::size_t>(queryDescriptors.rows) * sizeof(float)))));
+    for (int begin = 0; begin < mapDescriptors.rows; begin += batchRows) {
+        if (interrupted && interrupted()) throw SearchInterrupted{};
+        const int end = std::min(begin + batchRows, mapDescriptors.rows);
+        cv::Mat distances;
+        cv::batchDistance(mapDescriptors.rowRange(begin, end), queryDescriptors, distances, CV_32F,
+            cv::noArray(), cv::NORM_L2);
+        for (int row = begin; row < end; ++row) {
+            const int position = rowPositions[row];
+            if (position < 0) continue;
+            const float* values = distances.ptr<float>(row - begin);
+            for (int column = 0; column < queryDescriptors.rows; ++column) {
+                const float distance = values[column];
+                if (distance < best[column]) {
+                    second[column] = best[column];
+                    best[column] = distance;
+                    bestRow[column] = position;
+                } else if (distance < second[column]) {
+                    second[column] = distance;
+                }
+            }
+        }
+    }
+}
+
+// The alternative: match every chosen row against the query, then keep the pairs that pass the same ratio
+// test the shipped path applies - and in the same direction. The ratio has to be taken per *query*
+// descriptor, over its two nearest map rows; taking it per map row instead, over the row's two nearest
+// query descriptors, measures a different thing and rejects essentially everything, because map rows are
+// far more numerous than query descriptors and many of them sit close together (2026-10-02).
 inline std::vector<cv::DMatch> MatchRowsExactly(const RuntimeFeatureResources& resources,
     const std::vector<std::uint32_t>& rows, const cv::Mat& queryDescriptors,
     const std::function<bool()>& interrupted = {}) {
     std::vector<cv::DMatch> good;
     if (rows.empty() || queryDescriptors.empty()) return good;
-    // MatchDescriptorsExactly reports its first argument by row index, and its first argument is the query,
-    // so a pair that relates query descriptor `trainIdx` to map row `queryIdx` is exactly the relation this
-    // path needs. Getting those two the wrong way round is a crash, not a wrong answer: the indices are then
-    // used against arrays sized the other way (2026-10-02).
-    std::vector<std::vector<cv::DMatch>> forward;
-    std::vector<std::vector<cv::DMatch>> reverse;
-    MatchDescriptorsExactly(queryDescriptors, resources.map.imgDescriptors, forward, reverse, interrupted);
-    good.reserve(rows.size());
-    for (std::size_t position = 0; position < rows.size(); ++position) {
-        const std::size_t row = rows[position];
-        if (row >= forward.size()) continue;
-        const auto& pairs = forward[row];
-        if (pairs.size() < 2 || pairs[0].distance >= 0.62f * pairs[1].distance ||
-            pairs[0].distance > 0.50f) continue;
-        // trainIdx is a row of the second argument, which here is the map: that is the map row this query
-        // descriptor chose, and it has to be the row being considered.
-        if (pairs[0].trainIdx < 0 || static_cast<std::size_t>(pairs[0].trainIdx) != row) continue;
-        // Mutual: the crop descriptor's own nearest row must also be this one. The windowed path gets this
-        // from matching one query against a de-duplicated candidate set, where a shared second choice can
-        // only cost a match; matching the whole map row set makes the check explicit.
-        const int queryIndex = pairs[0].queryIdx;
-        if (queryIndex < 0 || queryIndex >= static_cast<int>(reverse.size())) continue;
-        if (reverse[queryIndex].empty() || reverse[queryIndex][0].trainIdx != static_cast<int>(row)) continue;
-        good.emplace_back(static_cast<int>(position), queryIndex, pairs[0].distance);
+
+    // Two nearest map rows per query descriptor, computed from the exhaustive pass rather than asked for in
+    // reverse, so the ratio below is the same quantity the shipped matcher's knnMatch(k=2) produces.
+    std::vector<float> best(queryDescriptors.rows, std::numeric_limits<float>::max());
+    std::vector<float> second(queryDescriptors.rows, std::numeric_limits<float>::max());
+    std::vector<int> bestRow(queryDescriptors.rows, -1);
+    MatchDescriptorNeighbours(queryDescriptors, resources.map.imgDescriptors, rows, best, second, bestRow,
+        interrupted);
+
+    good.reserve(queryDescriptors.rows);
+    for (int index = 0; index < queryDescriptors.rows; ++index) {
+        if (bestRow[index] < 0) continue;
+        if (second[index] > 0.0f && best[index] >= 0.62f * second[index]) continue;
+        if (best[index] > 0.50f) continue;
+        good.emplace_back(static_cast<int>(bestRow[index]), index, best[index]);
     }
     return good;
 }

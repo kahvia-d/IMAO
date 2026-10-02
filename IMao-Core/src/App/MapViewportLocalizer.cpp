@@ -53,6 +53,56 @@ const bool matcherAbEnabled = [] {
     return getenv_s(&length, value, sizeof(value), "IMAO_MATCHER_AB") == 0 && value[0] == '1';
 }();
 
+// Nearest and second-nearest descriptor distances for a sample of the query, measured the same way the
+// matcher measures them. The shipped path finds hundreds of good pairs while the copy-free path finds none,
+// and the difference can only be the ratio test or the distance ceiling - the two numbers below say which,
+// instead of leaving it to be guessed (2026-10-02).
+std::string NearestDistanceSummary(const RuntimeFeatureResources& resources,
+    const std::vector<std::uint32_t>& rows, const ImageFeatureData& query) {
+    if (rows.empty() || query.imgDescriptors.empty()) return "dist=none";
+    std::vector<std::vector<cv::DMatch>> forward, reverse;
+    MatchDescriptorsExactly(resources.map.imgDescriptors, query.imgDescriptors, forward, reverse);
+    // Both directions over the same data, in one run, because getting this wrong is the failure that cost a
+    // day: the ratio test has to be taken per query descriptor, over its two nearest map rows. Taken per map
+    // row instead - over the row's two nearest query descriptors - it measures a different quantity, and row
+    // and query counts differ by three orders of magnitude here. The two counts below should differ wildly;
+    // if they do not, the direction is not what is wrong.
+    std::vector<float> best(query.imgDescriptors.rows, std::numeric_limits<float>::max());
+    std::vector<float> second(query.imgDescriptors.rows, std::numeric_limits<float>::max());
+    std::vector<int> bestRow(query.imgDescriptors.rows, -1);
+    MatchDescriptorNeighbours(query.imgDescriptors, resources.map.imgDescriptors, rows, best, second, bestRow);
+    int queryRatio = 0;
+    for (int index = 0; index < query.imgDescriptors.rows; ++index) {
+        if (bestRow[index] < 0) continue;
+        if (second[index] > 0.0f && best[index] >= 0.62f * second[index]) continue;
+        if (best[index] > 0.50f) continue;
+        ++queryRatio;
+    }
+    std::vector<double> nearest, ratios;
+    int passRatio = 0;
+    const std::size_t step = std::max<std::size_t>(1, rows.size() / 64);
+    for (std::size_t position = 0; position < rows.size(); position += step) {
+        const auto row = rows[position];
+        if (row >= forward.size() || forward[row].size() < 2) continue;
+        nearest.push_back(forward[row][0].distance);
+        if (forward[row][1].distance > 0.0f) ratios.push_back(forward[row][0].distance / forward[row][1].distance);
+        if (forward[row][0].distance >= 0.62f * forward[row][1].distance ||
+            forward[row][0].distance > 0.50f) continue;
+        ++passRatio;
+    }
+    if (nearest.empty()) return "dist=none";
+    const auto middle = [](std::vector<double> values) {
+        std::sort(values.begin(), values.end());
+        return values.empty() ? 0.0 : values[values.size() / 2];
+    };
+    int underCeiling = 0;
+    for (const auto distance : nearest) if (distance <= 0.50) ++underCeiling;
+    return "nearestP50=" + std::to_string(middle(nearest)) +
+        " ratioP50=" + std::to_string(middle(ratios)) +
+        " underCeiling=" + std::to_string(underCeiling) + "/" + std::to_string(nearest.size()) +
+        " rowRatio=" + std::to_string(passRatio) + " queryRatio=" + std::to_string(queryRatio);
+}
+
 // One row per compared search: what the shipped matcher decided, what the copy-free matcher decided on the
 // same query, and how far apart the two positions are. centerDistance is the number that matters - a
 // matcher that finds the same place faster is a candidate; one that finds a different place is not.
@@ -256,8 +306,18 @@ private:
                         const auto exactGood = DeduplicatePairs(*resources_, abRows, exactPairs);
                         exactAttempt.accepted = TryMatchRows(features, request.mapCrop, *resources_, abRows,
                             exactGood, exactAttempt);
-                        RecordMatcherComparison(attempt, exactAttempt, ElapsedMilliseconds(exactStart),
-                            abRows.size(), shippedMs);
+                        const double exactMs = ElapsedMilliseconds(exactStart);
+                        // The raw counts are what diagnoses the copy-free path when it finds nothing while the
+                        // shipped one finds hundreds: whether the pairs never survived the ratio test, or
+                        // survived and were then dropped by the vote-per-point filter.
+                        Diagnostics::Record("matcher-ab-pairs", "candidates=" + std::to_string(cache->candidates.imgKeypoints.size()) +
+                            " rows=" + std::to_string(abRows.size()) +
+                            " queryKeypoints=" + std::to_string(features.imgKeypoints.size()) +
+                            " queryColumns=" + std::to_string(features.imgDescriptors.cols) +
+                            " mapColumns=" + std::to_string(resources_->map.imgDescriptors.cols) +
+                            " exactRaw=" + std::to_string(exactPairs.size()) +
+                            " exactDedup=" + std::to_string(exactGood.size()) + " " + NearestDistanceSummary(*resources_, abRows, features));
+                        RecordMatcherComparison(attempt, exactAttempt, exactMs, abRows.size(), shippedMs);
                     }
                     if (attempt.accepted) ++acceptedScenes;
                     if (attempt.accepted || (!result.accepted &&
