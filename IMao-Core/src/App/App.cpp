@@ -922,6 +922,14 @@ void App::Thread_DetectGameState() {
 				static const bool firstEntryMeasured = [] { Diagnostics::RecordMemory("bigmap-entered"); return true; }();
 				(void)firstEntryMeasured;
 			}
+			// The pair around the full-screen map, so the readings bracket the viewport search instead of the
+			// entry: on 2026-10-02 the five seconds after the map opened carried the largest single step a
+			// session takes, 429 MB, and a search that frees what it allocated looks very different from one
+			// that keeps it once the map is closed.
+			if (!MapUiStateController::IsStableBigMap(update.current) && MapUiStateController::IsStableBigMap(update.previous)) {
+				static const bool firstExitMeasured = [] { Diagnostics::RecordMemory("bigmap-left"); return true; }();
+				(void)firstExitMeasured;
+			}
 			Diagnostics::SaveImage("state-change-full", stateSnapshot);
 			if (!MapUiStateController::IsStableBigMap(update.current)) {
 				DrawItemOnGameMap::ClearNearItemsData();
@@ -2414,6 +2422,11 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
 		" inlierRatio=" + std::to_string(result.inlierRatio) + " quadrants=" +
 		std::to_string(result.coveredQuadrants) + " reprojectionMedian=" +
 		std::to_string(result.medianReprojectionError) + " durationMs=" + std::to_string(result.durationMilliseconds));
+	// The first accepted viewport result, once per session. Between this and the next runtime sample lie the
+	// searches that follow it, which is the difference between "one search is expensive" and "every search
+	// keeps what it allocated" - the question the 429 MB step after the map opened raised on 2026-10-02.
+	static const bool firstViewportResultMeasured = [] { Diagnostics::RecordMemory("viewport-first-result"); return true; }();
+	(void)firstViewportResultMeasured;
 	RuntimeStatus::SetLocalization("mapTracking", {}, "大地图定位正常");
 }
 
