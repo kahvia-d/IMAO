@@ -2266,8 +2266,18 @@ void App::BeginMapViewportSession() {
 	activeWorldSearchPrior.reset();
 	if (featureResources && playerLocationLock.valid &&
 		Scene::IsRuntimeApproved(playerLocationLock.sceneId)) {
+		// Snap the search centre to the tile grid before the prior decides which tiles it touches.
+		// The prior is a 512-unit hint, but the centre is the per-frame player coordinate, so a walk of a
+		// few units moved tiles in and out of the circle and changed which tile set the viewport search
+		// asked for - each new set building a fresh 6-19 MB candidate matcher, measured at 53 rebuilds and
+		// 778 MB in one session (2026-10-02). Snapping moves the window by at most half a stride, well
+		// inside a hint whose radius is more than twice the stride, and keeps one matcher for one place.
+		const double stride = static_cast<double>(MapVisualIndex::TileStride);
+		const Coordinate searchCentre{
+			std::round(playerLocationLock.mapCoordinate.x / stride) * stride,
+			std::round(playerLocationLock.mapCoordinate.y / stride) * stride };
 		activeWorldSearchPrior = worldSearchPriorIndex.Build(*featureResources,
-			playerLocationLock.mapCoordinate, 512.0, playerLocationLock.sceneId);
+			searchCentre, 512.0, playerLocationLock.sceneId);
 	}
 	if (activeWorldSearchPrior.has_value() && activeWorldSearchPrior->valid) {
 		Diagnostics::Record("scene-search-prior", "used=true area=" + activeWorldSearchPrior->areaName +

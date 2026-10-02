@@ -226,6 +226,8 @@ public:
         request_.reset();
         result_.reset();
         localMatchers_.clear();
+        localMatcherBytes_ = 0;
+        localMatcherEvictions_ = 0;
         localMatcherUseCounter_ = 0;
         resources_.reset();
     }
@@ -372,6 +374,7 @@ private:
         ImageFeatureData candidates;
         cv::Ptr<cv::FlannBasedMatcher> matcher;
         std::uint64_t lastUsed = 0;
+        std::size_t bytes = 0;
     };
 
     LocalMatcherCache* GetLocalMatcher(const std::vector<std::uint32_t>& tileIndices) {
@@ -388,14 +391,12 @@ private:
                 " entries=" + std::to_string(localMatchers_.size()));
             return &found->second;
         }
+        // The cache is bounded by bytes, not by entry count. Counting entries read as "24 small things",
+        // while each entry is a candidate set of 12k-36k keypoints plus its FLANN index - about 15 MB, so
+        // the old limit could hold 370 MB (measured 2026-10-02). A byte budget says what it costs, and it
+        // is what makes the limit tunable against the memory it is meant to bound.
+        constexpr std::size_t kMaximumLocalMatcherBytes = 96 * 1024 * 1024;
         constexpr std::size_t kMaximumLocalMatcherCaches = 24;
-        if (localMatchers_.size() >= kMaximumLocalMatcherCaches) {
-            const auto oldest = std::min_element(localMatchers_.begin(), localMatchers_.end(),
-                [](const auto& left, const auto& right) {
-                    return left.second.lastUsed < right.second.lastUsed;
-                });
-            if (oldest != localMatchers_.end()) localMatchers_.erase(oldest);
-        }
         LocalMatcherCache cache;
         cache.candidates = SelectSceneCandidates(*resources_, tileIndices);
         if (cache.candidates.imgDescriptors.empty()) return nullptr;
@@ -403,12 +404,31 @@ private:
         cache.matcher->add(std::vector<cv::Mat>{ cache.candidates.imgDescriptors });
         cache.matcher->train();
         cache.lastUsed = ++localMatcherUseCounter_;
+        cache.bytes = cache.candidates.imgDescriptors.total() * cache.candidates.imgDescriptors.elemSize() +
+            cache.candidates.imgKeypoints.capacity() * sizeof(cv::KeyPoint);
+        // Evict until this entry fits, oldest first. Evictions are counted because they are the difference
+        // between a cache that grows to its budget once and one that churns: a rebuild costs the bytes it
+        // allocates plus the FLANN index trained over them, and churn is what the trace showed at 1.3
+        // searches a second.
+        while (!localMatchers_.empty() &&
+            (localMatcherBytes_ + cache.bytes > kMaximumLocalMatcherBytes ||
+                localMatchers_.size() >= kMaximumLocalMatcherCaches)) {
+            const auto oldest = std::min_element(localMatchers_.begin(), localMatchers_.end(),
+                [](const auto& left, const auto& right) {
+                    return left.second.lastUsed < right.second.lastUsed;
+                });
+            if (oldest == localMatchers_.end()) break;
+            localMatcherBytes_ -= oldest->second.bytes;
+            localMatchers_.erase(oldest);
+            ++localMatcherEvictions_;
+        }
         if (trace) Diagnostics::Record("local-matcher-cache", "result=miss tiles=" + std::to_string(tileIndices.size()) +
             " keypoints=" + std::to_string(cache.candidates.imgKeypoints.size()) + " bytes=" +
-            std::to_string(cache.candidates.imgDescriptors.total() * cache.candidates.imgDescriptors.elemSize() +
-                cache.candidates.imgKeypoints.capacity() * sizeof(cv::KeyPoint)) +
-            " entries=" + std::to_string(localMatchers_.size()) + " limit=" + std::to_string(kMaximumLocalMatcherCaches));
+            std::to_string(cache.bytes) + " entries=" + std::to_string(localMatchers_.size()) +
+            " held=" + std::to_string(localMatcherBytes_) + " budget=" + std::to_string(kMaximumLocalMatcherBytes) +
+            " evictions=" + std::to_string(localMatcherEvictions_));
         const auto inserted = localMatchers_.emplace(key, std::move(cache));
+        localMatcherBytes_ += inserted.first->second.bytes;
         return &inserted.first->second;
     }
 
@@ -439,6 +459,8 @@ private:
     bool ready_ = false;
     std::shared_ptr<const RuntimeFeatureResources> resources_;
     std::unordered_map<std::string, LocalMatcherCache> localMatchers_;
+    std::size_t localMatcherBytes_ = 0;
+    std::uint64_t localMatcherEvictions_ = 0;
     std::uint64_t localMatcherUseCounter_ = 0;
     std::optional<MapViewportLocalizationRequest> request_;
     std::optional<MapViewportLocalizationResult> result_;
