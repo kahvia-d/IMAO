@@ -685,6 +685,8 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
         if (type == "start") {
             const bool accepted = Start() != 0;
             if (!accepted) RuntimeStatus::SetCoreState("waitingForGame", "未找到可用的游戏窗口");
+            // What the host costs with no game attached: the floor under every measurement that follows.
+            Diagnostics::RecordMemory(accepted ? "start-accepted" : "start-no-game-window");
             SendAck(events, command, accepted, accepted ? "正在启动游戏叠加层" : "未找到可用的游戏窗口");
             return true;
         }

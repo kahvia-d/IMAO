@@ -421,6 +421,9 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
             throw std::runtime_error("地图视觉索引不可用：" + visualError);
         }
         RuntimeStatus::SetMessage("地图识别资源已就绪");
+        // The packs are merged and the index is final: what the process holds here is the whole cost of the
+        // selected regions, and the difference against the next milestone is what the rest of the tool adds.
+        Diagnostics::RecordMemory("resource-load-complete");
     }
     catch (const std::exception& exception) {
         failure = exception.what();

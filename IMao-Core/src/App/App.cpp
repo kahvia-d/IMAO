@@ -168,6 +168,9 @@ bool App::Init() {
 	Diagnostics::Record("app-ready", "snapshot=" + std::string(isReady ? "available" : "empty") +
 		" durationMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now() - initialCaptureStart).count()));
+	// First measurement of a session that has a game window: everything the capture path allocates is
+	// already in place here, and nothing downstream of it is yet.
+	Diagnostics::RecordMemory("app-ready");
 	RuntimeStatus::SetLocalization(isReady ? "waiting" : "recovering", {},
 		isReady ? "等待游戏界面确认" : "未能获取游戏画面");
 	if (Diagnostics::Enabled()) {
@@ -233,6 +236,14 @@ void App::Thread_Capture() {
                 else {
                     capturedFrames.Publish({frameId, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250)});
                     ++published;
+                    // Once per session, after a real frame has travelled the whole capture path: this is the
+                    // measurement that separates "the tool costs this much to exist" from "it costs this much
+                    // to watch the game".
+                    static const bool firstFrameMeasured = [] {
+                        Diagnostics::RecordMemory("runtime-first-frame");
+                        return true;
+                    }();
+                    (void)firstFrameMeasured;
                 }
             }
             const auto now = std::chrono::steady_clock::now();

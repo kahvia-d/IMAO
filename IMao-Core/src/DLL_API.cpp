@@ -273,12 +273,16 @@ void Initi()
 	if (runtimeInitialized) return;
 	std::call_once(drawItemsInitialized, [] { DrawItemBase::Initi(); });
 	Diagnostics::Initialize();
+	// Before a single region pack is read: the floor under "what does IMAO cost", with the modules loaded and
+	// the logger running but no map data yet.
+	Diagnostics::RecordMemory("core-baseline");
 	const auto assetRoot = ResourceSnapshotContext::BaselineRoot();
 	RuntimeFeatureRepository::Instance().BeginPreload(assetRoot);
 	// Layered-floor indexes travel inside the region packs; load whatever is there so the
 	// marker display can tell which floor the player is standing on. Regions without layered
 	// maps have no index and behave exactly as before.
 	LayeredMap::Install(assetRoot / "FeaturesDatas");
+	Diagnostics::RecordMemory("layered-floor-index");
 	Diagnostics::Record("ocr-preload", "deferred=until-app-ready background preload");
 	shutdownRequested = false;
 	runRequested = false;

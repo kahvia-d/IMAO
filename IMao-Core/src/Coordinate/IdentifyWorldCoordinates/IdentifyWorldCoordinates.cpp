@@ -99,6 +99,11 @@ public:
         std::unique_lock lock(mutex_);
         condition_.wait(lock, [this] { return initializationComplete_; });
         error = error_;
+        // Both entry points to the recognizer land here - the warmup after the first successful lock and
+        // the bootstrap when the minimap tracker has lost the map - so this is the one place that can say
+        // what the recognizer actually costs. It is measured when the model is ready, not when the load was
+        // asked for, because Begin() only starts a background thread.
+        Diagnostics::RecordMemory(recognizer_ != nullptr ? "ocr-ready" : "ocr-failed");
         return recognizer_ != nullptr;
     }
 

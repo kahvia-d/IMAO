@@ -14,6 +14,8 @@
 #include <sstream>
 
 #include <atomic>
+#include <psapi.h>
+#include <processthreadsapi.h>
 
 namespace {
     std::mutex diagnosticsMutex;
@@ -106,8 +108,23 @@ void Diagnostics::Record(const std::string& eventName, const std::string& detail
     events << Timestamp() << '\t' << eventName << '\t' << details << '\n';
 }
 
-void Diagnostics::SaveImage(const std::string& tag, const cv::Mat& image) {
-    if (!captureEnabled.load()) return;
+void Diagnostics::RecordMemory(const std::string& point) {
+    PROCESS_MEMORY_COUNTERS_EX counters{};
+    if (!GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&counters),
+        sizeof(counters))) return;
+    const auto megabytes = [](std::size_t bytes) { return std::to_string(bytes / (1024 * 1024)); };
+    // Handles travel with the bytes because a per-frame leak of device contexts or capture sessions shows up
+    // there first, and a growing handle count next to a growing working set names the culprit immediately.
+    DWORD handles = 0;
+    GetProcessHandleCount(GetCurrentProcess(), &handles);
+    Record("memory", "point=" + point +
+        " wsMB=" + megabytes(counters.WorkingSetSize) +
+        " privateMB=" + megabytes(counters.PagefileUsage) +
+        " peakWsMB=" + megabytes(counters.PeakWorkingSetSize) +
+        " handles=" + std::to_string(handles));
+}
+
+void Diagnostics::SaveImage(const std::string& tag, const cv::Mat& image) {    if (!captureEnabled.load()) return;
     if (image.empty()) {
         Record("image-skipped", tag + " image=empty");
         return;
