@@ -2422,11 +2422,16 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
 		" inlierRatio=" + std::to_string(result.inlierRatio) + " quadrants=" +
 		std::to_string(result.coveredQuadrants) + " reprojectionMedian=" +
 		std::to_string(result.medianReprojectionError) + " durationMs=" + std::to_string(result.durationMilliseconds));
-	// The first accepted viewport result, once per session. Between this and the next runtime sample lie the
-	// searches that follow it, which is the difference between "one search is expensive" and "every search
-	// keeps what it allocated" - the question the 429 MB step after the map opened raised on 2026-10-02.
-	static const bool firstViewportResultMeasured = [] { Diagnostics::RecordMemory("viewport-first-result"); return true; }();
-	(void)firstViewportResultMeasured;
+		// Every twentieth accepted viewport result, once the search is under way. A session was measured 800 MB
+		// heavier when its map closed than when it opened, and the projection results already carry their own
+		// timeline - this pairs that timeline with what the process held at the time, so "which searches cost
+		// it" is read off rather than inferred. Idempotent per count, so the branch stays cheap.
+		static std::atomic_int viewportResultsMeasured = 0;
+		const int viewportResultNumber = ++viewportResultsMeasured;
+		if (viewportResultNumber == 1 || viewportResultNumber % 20 == 0) {
+			Diagnostics::RecordMemory("viewport-result-" + std::to_string(viewportResultNumber) +
+				" atMs" + std::to_string(static_cast<long long>(result.durationMilliseconds)));
+	}
 	RuntimeStatus::SetLocalization("mapTracking", {}, "大地图定位正常");
 }
 
