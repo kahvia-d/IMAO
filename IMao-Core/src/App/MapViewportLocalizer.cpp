@@ -5,6 +5,7 @@
 #include "MapViewportGeometry.h"
 #include "../Feature/Match/UniqueMapFeatures.h"
 #include "../Runtime/ThreadPriority.h"
+#include "../Diagnostics/Diagnostics.h"
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/features2d.hpp>
@@ -376,9 +377,15 @@ private:
     LocalMatcherCache* GetLocalMatcher(const std::vector<std::uint32_t>& tileIndices) {
         if (tileIndices.empty()) return nullptr;
         const std::string key = TileSetKey(tileIndices);
+        const bool trace = Diagnostics::MemoryTraceEnabled();
         const auto found = localMatchers_.find(key);
         if (found != localMatchers_.end()) {
             found->second.lastUsed = ++localMatcherUseCounter_;
+            // A hit means this map window was paid for on an earlier visit: the difference between a player
+            // who stays in one place and one who teleports is exactly how often this branch is taken.
+            if (trace) Diagnostics::Record("local-matcher-cache", "result=hit tiles=" + std::to_string(tileIndices.size()) +
+                " keypoints=" + std::to_string(found->second.candidates.imgKeypoints.size()) +
+                " entries=" + std::to_string(localMatchers_.size()));
             return &found->second;
         }
         constexpr std::size_t kMaximumLocalMatcherCaches = 24;
@@ -396,6 +403,11 @@ private:
         cache.matcher->add(std::vector<cv::Mat>{ cache.candidates.imgDescriptors });
         cache.matcher->train();
         cache.lastUsed = ++localMatcherUseCounter_;
+        if (trace) Diagnostics::Record("local-matcher-cache", "result=miss tiles=" + std::to_string(tileIndices.size()) +
+            " keypoints=" + std::to_string(cache.candidates.imgKeypoints.size()) + " bytes=" +
+            std::to_string(cache.candidates.imgDescriptors.total() * cache.candidates.imgDescriptors.elemSize() +
+                cache.candidates.imgKeypoints.capacity() * sizeof(cv::KeyPoint)) +
+            " entries=" + std::to_string(localMatchers_.size()) + " limit=" + std::to_string(kMaximumLocalMatcherCaches));
         const auto inserted = localMatchers_.emplace(key, std::move(cache));
         return &inserted.first->second;
     }

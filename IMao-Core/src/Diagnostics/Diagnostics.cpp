@@ -124,6 +124,14 @@ void Diagnostics::RecordMemory(const std::string& point) {
         " handles=" + std::to_string(handles));
 }
 
+bool Diagnostics::MemoryTraceEnabled() {
+    static const bool enabled = [] {
+        char value[8]{}; std::size_t length = 0;
+        return getenv_s(&length, value, sizeof(value), "IMAO_MEMORY_TRACE") == 0 && value[0] == '1';
+    }();
+    return enabled;
+}
+
 void Diagnostics::SaveImage(const std::string& tag, const cv::Mat& image) {    if (!captureEnabled.load()) return;
     if (image.empty()) {
         Record("image-skipped", tag + " image=empty");

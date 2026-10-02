@@ -15,6 +15,10 @@ namespace Diagnostics {
     // attributed by subtracting headless measurements from a live one, which reads as OCR or as the packs
     // depending on who is guessing (2026-10-02). These lines make the attribution the process's own.
     void RecordMemory(const std::string& point);
+    // Opt-in tracing for a hunt that needs per-call detail, where RecordMemory's milestones are too coarse:
+    // enabled by IMAO_MEMORY_TRACE=1. Callers check it before building the detail string, so a normal run
+    // pays one relaxed load per call and writes nothing.
+    bool MemoryTraceEnabled();
     void SaveImage(const std::string& tag, const cv::Mat& image);
     std::string SessionDirectory();
 }

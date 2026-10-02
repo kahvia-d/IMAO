@@ -1,6 +1,7 @@
 #pragma once
 #include "FeatureMatch.h"
 #include "UniqueMapFeatures.h"
+#include "../../Diagnostics/Diagnostics.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -17,10 +18,19 @@ public:
 
     std::shared_ptr<const ImageFeatureData> Get(std::span<const uint32_t> rows, const std::function<bool()>& interrupted = {}) const {
         const std::vector<uint32_t> key(rows.begin(), rows.end());
+        const bool trace = Diagnostics::MemoryTraceEnabled();
         {
             std::scoped_lock lock(mutex_);
             const auto found = entries_.find(key);
-            if (found != entries_.end()) { found->second.used = ++clock_; return found->second.data; }
+            if (found != entries_.end()) {
+                found->second.used = ++clock_;
+                // A hit says the previous search of this tile set is being reused, which is the difference
+                // between a location being paid for once and being paid for on every visit.
+                if (trace) Diagnostics::Record("feature-row-cache", "result=hit rows=" + std::to_string(rows.size()) +
+                    " bytes=" + std::to_string(found->second.bytes) + " entries=" + std::to_string(entries_.size()) +
+                    " held=" + std::to_string(bytes_));
+                return found->second.data;
+            }
         }
         auto data = std::make_shared<ImageFeatureData>();
         data->imgDescriptors.create(static_cast<int>(rows.size()), source_.imgDescriptors.cols, CV_32FC1);
@@ -41,6 +51,18 @@ public:
             data->imgDescriptors = data->imgDescriptors.rowRange(0, static_cast<int>(data->imgKeypoints.size())).clone();
         const size_t bytes = data->imgDescriptors.total() * data->imgDescriptors.elemSize() +
             data->imgKeypoints.capacity() * sizeof(cv::KeyPoint) + key.size() * sizeof(uint32_t);
+        // The row sets a full-screen search builds are far larger than a tracking window's, and this is the
+        // branch that decides whether one is remembered or rebuilt on every visit. A miss over the budget is
+        // allocated, used and dropped each time - which is what a location-dependent climb would look like -
+        // so the trace reports the size and the budget next to the decision. Capped per session: one global
+        // search can miss on dozens of tile sets, and a flood of lines is unreadable and slows the search
+        // being measured.
+        static std::atomic_int tracedMisses = 0;
+        if (trace && tracedMisses.fetch_add(1) < 400) Diagnostics::Record("feature-row-cache", "result=" +
+            std::string(bytes > budget_ ? "miss-over-budget" : "miss-cached") +
+            " rows=" + std::to_string(rows.size()) + " keypoints=" + std::to_string(data->imgKeypoints.size()) +
+            " bytes=" + std::to_string(bytes) + " budget=" + std::to_string(budget_) +
+            " entries=" + std::to_string(entries_.size()) + " held=" + std::to_string(bytes_));
         if (bytes > budget_) return data;
         std::scoped_lock lock(mutex_);
         if (auto found = entries_.find(key); found != entries_.end()) return found->second.data;
