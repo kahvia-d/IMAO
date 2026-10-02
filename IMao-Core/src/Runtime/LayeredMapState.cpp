@@ -1,13 +1,16 @@
 #include "LayeredMapState.h"
 
 #include "../Diagnostics/Diagnostics.h"
+#include "../Runtime/ResourceSnapshotContext.h"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <mutex>
+#include <set>
 
 namespace LayeredMap {
 namespace {
@@ -163,9 +166,31 @@ void Install(const std::filesystem::path& featureDataRoot) {
         Diagnostics::Record("layered-floor-index", "stage=skipped reason=no-packs-dir root=" + packsRoot.string());
         return;
     }
+    // Only the regions the player has switched on. Walking the directory took every pack on disk, so a
+    // player who turned thirteen regions off still paid for their cave floors - measured at 205 MB for one
+    // selected region against 354 MB for fourteen on 2026-10-02. Tile packages are what carry a floor
+    // index, and the snapshot is the authority on which of them are selected, exactly as it is for the
+    // feature packs themselves. Without a snapshot (a development tree, or --check-resources on a plain
+    // asset root) every pack on disk is still the right answer.
+    std::set<std::string> selected;
+    if (ResourceSnapshotContext::Configured()) {
+        for (const auto& package : ResourceSnapshotContext::Snapshot().at("packages")) {
+            if (package.at("kind") != "tile") continue;
+            selected.insert(ResourceSnapshotContext::Path(package.at("directory").get<std::string>())
+                .filename().string());
+        }
+    }
+    std::size_t skipped = 0;
     for (const auto& directory : std::filesystem::directory_iterator(packsRoot, error)) {
         if (error || !directory.is_directory()) continue;
         const auto packRoot = directory.path();
+        // The final path component names the pack on both sides: the snapshot stores where this machine
+        // keeps the copy, which may be an absolute path elsewhere or a junction under the run root, while
+        // this walk produces the directory it found.
+        if (ResourceSnapshotContext::Configured() && selected.find(packRoot.filename().string()) == selected.end()) {
+            ++skipped;
+            continue;
+        }
         if (!std::filesystem::exists(packRoot / "layered-floors" / "floor-index.json")) continue;
         int sceneId = 0;
         int kuroStateId = 0;
@@ -209,7 +234,9 @@ void Install(const std::filesystem::path& featureDataRoot) {
     sharedGround = false;
     sharedGroundLogged = false;
     outsideFootprintSince = std::chrono::steady_clock::time_point{};
-    Diagnostics::Record("layered-floor-index", "stage=ready floors=" + std::to_string(entries.size()));
+    Diagnostics::Record("layered-floor-index", "stage=ready floors=" + std::to_string(entries.size()) +
+        " packsSkipped=" + std::to_string(skipped) + " selectedPacks=" +
+        std::to_string(ResourceSnapshotContext::Configured() ? selected.size() : 0));
 }
 
 // What this frame's vote says about one floor: how many of its matches came from art it draws

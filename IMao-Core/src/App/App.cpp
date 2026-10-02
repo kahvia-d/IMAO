@@ -248,15 +248,18 @@ void App::Thread_Capture() {
             }
             const auto now = std::chrono::steady_clock::now();
             // A session's cost is not settled at the first frame: the map UI, the viewport search and the
-            // recognizer all allocate later, and on 2026-10-02 a live host sat 1.2 GB above its first-frame
-            // measurement with no way to say which step did it. Sampling for the first five minutes turns
-            // that into a timeline; after that once a minute is enough to catch a leak.
+            // recognizer all allocate later, and on 2026-10-02 a live host sat 1.4 GB above its first-frame
+            // measurement with nothing in the log between the two readings. The first minute is sampled
+            // every five seconds because that is where the climb happened, then every thirty, then once a
+            // minute - enough to catch both a step and a leak without filling the log.
             static const auto startAt = std::chrono::steady_clock::now();
-            static int nextSample = 30;
+            static int nextSample = 5;
             const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - startAt).count();
             if (elapsed >= nextSample) {
                 Diagnostics::RecordMemory("runtime-" + std::to_string(elapsed) + "s");
-                nextSample = elapsed < 300 ? static_cast<int>(elapsed) + 30 : static_cast<int>(elapsed) + 60;
+                nextSample = elapsed < 60 ? static_cast<int>(elapsed) + 5
+                    : elapsed < 300 ? static_cast<int>(elapsed) + 30
+                    : static_cast<int>(elapsed) + 60;
             }
             // The window capture runs synchronously against the game, so it only follows the overlay
             // rate while an overlay is attached to fresh pixels; otherwise it runs at the recognition
