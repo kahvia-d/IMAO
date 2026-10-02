@@ -248,16 +248,17 @@ void App::Thread_Capture() {
             }
             const auto now = std::chrono::steady_clock::now();
             // A session's cost is not settled at the first frame: the map UI, the viewport search and the
-            // recognizer all allocate later, and on 2026-10-02 a live host sat 1.4 GB above its first-frame
-            // measurement with nothing in the log between the two readings. The first minute is sampled
-            // every five seconds because that is where the climb happened, then every thirty, then once a
-            // minute - enough to catch both a step and a leak without filling the log.
+            // recognizer all allocate later. On 2026-10-02 a session went from 592 MB to 1575 MB inside ten
+            // seconds of the map opening, and five-second spacing could not say which second carried it.
+            // The first half minute is therefore sampled every two seconds, then every five, thirty and
+            // sixty - dense enough to catch a step, sparse enough to leave the log readable.
             static const auto startAt = std::chrono::steady_clock::now();
-            static int nextSample = 5;
+            static int nextSample = 2;
             const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - startAt).count();
             if (elapsed >= nextSample) {
                 Diagnostics::RecordMemory("runtime-" + std::to_string(elapsed) + "s");
-                nextSample = elapsed < 60 ? static_cast<int>(elapsed) + 5
+                nextSample = elapsed < 30 ? static_cast<int>(elapsed) + 2
+                    : elapsed < 60 ? static_cast<int>(elapsed) + 5
                     : elapsed < 300 ? static_cast<int>(elapsed) + 30
                     : static_cast<int>(elapsed) + 60;
             }
@@ -2087,6 +2088,15 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			" independentAgeMs=" + std::to_string(lastAbsoluteFixAt == std::chrono::steady_clock::time_point{}
 				? -1 : static_cast<long long>(std::chrono::duration<double, std::milli>(fixAge).count())) +
 			" " + dense.detail);
+		// The dense confirmer decodes map tiles from disk, 1 MB each with an LRU of 48, and it starts as soon
+		// as the map opens - the same window in which a session was measured gaining 607 MB. Marking the
+		// first few confirmations says whether that climb is the tile cache filling or something else.
+		static std::atomic_int denseConfirmed = 0;
+		const int denseNumber = ++denseConfirmed;
+		if (denseNumber <= 10 || denseNumber % 50 == 0) {
+			Diagnostics::RecordMemory("dense-confirm-" + std::to_string(denseNumber) +
+				" available" + std::to_string(dense.available) + " accepted" + std::to_string(dense.accepted));
+		}
 		if (dense.accepted && independentRecently) {
 			tracked = {};
 			tracked.sceneId = playerCurrentSceneId;
@@ -2432,13 +2442,13 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
 		" inlierRatio=" + std::to_string(result.inlierRatio) + " quadrants=" +
 		std::to_string(result.coveredQuadrants) + " reprojectionMedian=" +
 		std::to_string(result.medianReprojectionError) + " durationMs=" + std::to_string(result.durationMilliseconds));
-		// Every twentieth accepted viewport result, once the search is under way. A session was measured 800 MB
-		// heavier when its map closed than when it opened, and the projection results already carry their own
-		// timeline - this pairs that timeline with what the process held at the time, so "which searches cost
-		// it" is read off rather than inferred. Idempotent per count, so the branch stays cheap.
+		// Every tenth accepted viewport result, once the search is under way, and every result for the first
+		// thirty: the projection's own durationMs is the clock, and a session was measured gaining 607 MB
+		// between its fifteenth and twentieth second with the map open. Pairing that climb with which
+		// searches had run is what says whether it belongs to the candidate sets or to something else.
 		static std::atomic_int viewportResultsMeasured = 0;
 		const int viewportResultNumber = ++viewportResultsMeasured;
-		if (viewportResultNumber == 1 || viewportResultNumber % 20 == 0) {
+		if (viewportResultNumber <= 30 || viewportResultNumber % 10 == 0) {
 			Diagnostics::RecordMemory("viewport-result-" + std::to_string(viewportResultNumber) +
 				" atMs" + std::to_string(static_cast<long long>(result.durationMilliseconds)));
 	}
