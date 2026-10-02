@@ -392,11 +392,14 @@ private:
             return &found->second;
         }
         // The cache is bounded by bytes, not by entry count. Counting entries read as "24 small things",
-        // while each entry is a candidate set of 12k-36k keypoints plus its FLANN index - about 15 MB, so
-        // the old limit could hold 370 MB (measured 2026-10-02). A byte budget says what it costs, and it
-        // is what makes the limit tunable against the memory it is meant to bound.
-        constexpr std::size_t kMaximumLocalMatcherBytes = 96 * 1024 * 1024;
-        constexpr std::size_t kMaximumLocalMatcherCaches = 24;
+        // while each entry is a candidate set of 6k-36k keypoints plus its FLANN index, 5-19 MB and 12.7 MB
+        // on average. The budget is set from the working set actually measured on a session that moved
+        // around: 23 distinct search windows, 274 MB to hold all of them. A budget below that does not
+        // bound the cost, it converts the cache into a churn - 96 MB produced 99 evictions and 105 rebuilds
+        // of 23 windows, 1335 MB of allocation for a 274 MB working set (2026-10-02). The entry cap is a
+        // backstop for many tiny windows, not the primary bound.
+        constexpr std::size_t kMaximumLocalMatcherBytes = 320 * 1024 * 1024;
+        constexpr std::size_t kMaximumLocalMatcherCaches = 48;
         LocalMatcherCache cache;
         cache.candidates = SelectSceneCandidates(*resources_, tileIndices);
         if (cache.candidates.imgDescriptors.empty()) return nullptr;
