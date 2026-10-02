@@ -40,93 +40,6 @@ double ElapsedMilliseconds(const std::chrono::steady_clock::time_point& start) {
 // an alternative matcher can be judged by exactly the same gate as the shipped one. Bringing the names in
 // keeps the call sites below unchanged.
 using MapViewportMatch::TryMatch;
-using MapViewportMatch::TryMatchRows;
-
-// The comparison that decides whether the viewport search can stop building a de-duplicated copy of the map
-// rows for every window. With IMAO_MATCHER_AB=1 the same query, the same rows and the same gate are run a
-// second time through the copy-free matcher, and the two outcomes are recorded side by side. It is the only
-// way to compare them on a real query: an offline query cannot be brought onto the features' own scale, so
-// the offline attempts matched nothing and could say nothing (2026-10-02). Measurement only, off by default
-// - with it on each search does its work twice and the map answers more slowly.
-const bool matcherAbEnabled = [] {
-    char value[8]{}; std::size_t length = 0;
-    return getenv_s(&length, value, sizeof(value), "IMAO_MATCHER_AB") == 0 && value[0] == '1';
-}();
-
-// Nearest and second-nearest descriptor distances for a sample of the query, measured the same way the
-// matcher measures them. The shipped path finds hundreds of good pairs while the copy-free path finds none,
-// and the difference can only be the ratio test or the distance ceiling - the two numbers below say which,
-// instead of leaving it to be guessed (2026-10-02).
-std::string NearestDistanceSummary(const RuntimeFeatureResources& resources,
-    const std::vector<std::uint32_t>& rows, const ImageFeatureData& query) {
-    if (rows.empty() || query.imgDescriptors.empty()) return "dist=none";
-    std::vector<std::vector<cv::DMatch>> forward, reverse;
-    MatchDescriptorsExactly(resources.map.imgDescriptors, query.imgDescriptors, forward, reverse);
-    // Both directions over the same data, in one run, because getting this wrong is the failure that cost a
-    // day: the ratio test has to be taken per query descriptor, over its two nearest map rows. Taken per map
-    // row instead - over the row's two nearest query descriptors - it measures a different quantity, and row
-    // and query counts differ by three orders of magnitude here. The two counts below should differ wildly;
-    // if they do not, the direction is not what is wrong.
-    std::vector<float> best(query.imgDescriptors.rows, std::numeric_limits<float>::max());
-    std::vector<float> second(query.imgDescriptors.rows, std::numeric_limits<float>::max());
-    std::vector<int> bestRow(query.imgDescriptors.rows, -1);
-    MatchDescriptorNeighbours(query.imgDescriptors, resources.map.imgDescriptors, rows, best, second, bestRow);
-    int queryRatio = 0;
-    for (int index = 0; index < query.imgDescriptors.rows; ++index) {
-        if (bestRow[index] < 0) continue;
-        if (second[index] > 0.0f && best[index] >= 0.62f * second[index]) continue;
-        if (best[index] > 0.50f) continue;
-        ++queryRatio;
-    }
-    std::vector<double> nearest, ratios;
-    int passRatio = 0;
-    const std::size_t step = std::max<std::size_t>(1, rows.size() / 64);
-    for (std::size_t position = 0; position < rows.size(); position += step) {
-        const auto row = rows[position];
-        if (row >= forward.size() || forward[row].size() < 2) continue;
-        nearest.push_back(forward[row][0].distance);
-        if (forward[row][1].distance > 0.0f) ratios.push_back(forward[row][0].distance / forward[row][1].distance);
-        if (forward[row][0].distance >= 0.62f * forward[row][1].distance ||
-            forward[row][0].distance > 0.50f) continue;
-        ++passRatio;
-    }
-    if (nearest.empty()) return "dist=none";
-    const auto middle = [](std::vector<double> values) {
-        std::sort(values.begin(), values.end());
-        return values.empty() ? 0.0 : values[values.size() / 2];
-    };
-    int underCeiling = 0;
-    for (const auto distance : nearest) if (distance <= 0.50) ++underCeiling;
-    return "nearestP50=" + std::to_string(middle(nearest)) +
-        " ratioP50=" + std::to_string(middle(ratios)) +
-        " underCeiling=" + std::to_string(underCeiling) + "/" + std::to_string(nearest.size()) +
-        " rowRatio=" + std::to_string(passRatio) + " queryRatio=" + std::to_string(queryRatio);
-}
-
-// One row per compared search: what the shipped matcher decided, what the copy-free matcher decided on the
-// same query, and how far apart the two positions are. centerDistance is the number that matters - a
-// matcher that finds the same place faster is a candidate; one that finds a different place is not.
-void RecordMatcherComparison(const MapViewportLocalizationResult& shipped,
-    const MapViewportLocalizationResult& exact, double exactMs, std::size_t rows, double shippedMs) {
-    // Capped per session: a search runs about once a second while the map is open, and a flood of lines is
-    // both unreadable and slow enough to distort what is being measured.
-    static std::atomic_int comparisons = 0;
-    if (comparisons.fetch_add(1) >= 200) return;
-    double distance = -1.0;
-    if (shipped.accepted && exact.accepted) distance = std::hypot(shipped.centerMapCoordinate.x - exact.centerMapCoordinate.x,
-        shipped.centerMapCoordinate.y - exact.centerMapCoordinate.y);
-    Diagnostics::Record("matcher-ab", "scene=" + std::to_string(shipped.sceneId) +
-        " rows=" + std::to_string(rows) +
-        " shippedAccepted=" + std::to_string(shipped.accepted ? 1 : 0) +
-        " shippedGood=" + std::to_string(shipped.goodMatchCount) +
-        " shippedInliers=" + std::to_string(shipped.inlierCount) +
-        " shippedMs=" + std::to_string(shippedMs) +
-        " exactAccepted=" + std::to_string(exact.accepted ? 1 : 0) +
-        " exactGood=" + std::to_string(exact.goodMatchCount) +
-        " exactInliers=" + std::to_string(exact.inlierCount) +
-        " exactMs=" + std::to_string(exactMs) +
-        " centerDistance=" + std::to_string(distance));
-}
 
 
 class MapViewportRuntime {
@@ -295,30 +208,6 @@ private:
                     // The comparison runs on the same query and the same tiles, whether or not the shipped
                     // matcher accepted: a rejection the copy-free matcher would have accepted is exactly the
                     // kind of difference this is looking for.
-                    if (matcherAbEnabled) {
-                        const auto abRows = SelectCandidateRows(*resources_, tiles);
-                        MapViewportLocalizationResult exactAttempt;
-                        exactAttempt.accepted = false;
-                        exactAttempt.sceneId = sceneId;
-                        exactAttempt.cropKeypointCount = static_cast<int>(features.imgKeypoints.size());
-                        const auto exactStart = std::chrono::steady_clock::now();
-                        const auto exactPairs = MatchRowsExactly(*resources_, abRows, features.imgDescriptors);
-                        const auto exactGood = DeduplicatePairs(*resources_, abRows, exactPairs);
-                        exactAttempt.accepted = TryMatchRows(features, request.mapCrop, *resources_, abRows,
-                            exactGood, exactAttempt);
-                        const double exactMs = ElapsedMilliseconds(exactStart);
-                        // The raw counts are what diagnoses the copy-free path when it finds nothing while the
-                        // shipped one finds hundreds: whether the pairs never survived the ratio test, or
-                        // survived and were then dropped by the vote-per-point filter.
-                        Diagnostics::Record("matcher-ab-pairs", "candidates=" + std::to_string(cache->candidates.imgKeypoints.size()) +
-                            " rows=" + std::to_string(abRows.size()) +
-                            " queryKeypoints=" + std::to_string(features.imgKeypoints.size()) +
-                            " queryColumns=" + std::to_string(features.imgDescriptors.cols) +
-                            " mapColumns=" + std::to_string(resources_->map.imgDescriptors.cols) +
-                            " exactRaw=" + std::to_string(exactPairs.size()) +
-                            " exactDedup=" + std::to_string(exactGood.size()) + " " + NearestDistanceSummary(*resources_, abRows, features));
-                        RecordMatcherComparison(attempt, exactAttempt, exactMs, abRows.size(), shippedMs);
-                    }
                     if (attempt.accepted) ++acceptedScenes;
                     if (attempt.accepted || (!result.accepted &&
                         (attempt.inlierCount > result.inlierCount ||

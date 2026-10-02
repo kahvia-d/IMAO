@@ -424,7 +424,6 @@ target_link_libraries(IMaoOverlayPresentProbe PRIVATE dcomp.lib dwmapi.lib d3d11
 
 add_executable(IMaoVisualRegression
     IMao-Core/tools/VisualRegression/main.cpp
-    IMao-Core/tools/VisualRegression/MatcherBench.cpp
     IMao-Core/src/Feature/RuntimeFeatureRepository.cpp
     IMao-Core/src/Runtime/ResourceSnapshotContext.cpp
     IMao-Core/src/Runtime/RuntimeStatus.cpp

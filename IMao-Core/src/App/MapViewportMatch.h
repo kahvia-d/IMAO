@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <string>
 #include <vector>
 
 namespace MapViewportMatch {
@@ -99,29 +101,6 @@ inline bool TryMatch(const ImageFeatureData& cropFeatures, const cv::Mat& crop,
     if (result.goodMatchCount < 12) return false;
     std::vector<cv::Point2f> cropPoints, mapPoints;
     CollectPairs(cropFeatures, candidateFeatures, goodMatches, cropPoints, mapPoints);
-    return DecideMatch(cropPoints, mapPoints, crop, result);
-}
-
-// The alternative shape: query features against the resource's own rows, where a match names a row of the
-// row list and the map point has to be looked up through it.
-inline bool TryMatchRows(const ImageFeatureData& cropFeatures, const cv::Mat& crop,
-    const RuntimeFeatureResources& resources, const std::vector<std::uint32_t>& rows,
-    const std::vector<cv::DMatch>& goodMatches, MapViewportLocalizationResult& result) {
-    if (cropFeatures.imgDescriptors.empty() || rows.empty()) return false;
-    result.goodMatchCount = static_cast<int>(goodMatches.size());
-    if (result.goodMatchCount < 12) return false;
-    std::vector<cv::Point2f> cropPoints, mapPoints;
-    cropPoints.reserve(goodMatches.size());
-    mapPoints.reserve(goodMatches.size());
-    for (const auto& match : goodMatches) {
-        if (match.queryIdx < 0 || match.trainIdx < 0 ||
-            match.queryIdx >= static_cast<int>(cropFeatures.imgKeypoints.size()) ||
-            match.trainIdx >= static_cast<int>(rows.size())) continue;
-        const auto row = rows[static_cast<std::size_t>(match.trainIdx)];
-        if (row >= resources.map.imgKeypoints.size()) continue;
-        cropPoints.push_back(cropFeatures.imgKeypoints[match.queryIdx].pt);
-        mapPoints.push_back(resources.map.imgKeypoints[row].pt);
-    }
     return DecideMatch(cropPoints, mapPoints, crop, result);
 }
 
