@@ -274,8 +274,25 @@ private:
             char value[8]{}; std::size_t length = 0;
             return getenv_s(&length, value, sizeof(value), "IMAO_LOCAL_MATCHER_CACHE") == 0 && value[0] == '1';
         }();
-        const std::size_t byteBudget = singleEntry ? 0 : 48 * 1024 * 1024;
-        const std::size_t entryBudget = singleEntry ? 1 : 8;
+        // The budget is the dial between two costs that pull against each other, measured on this machine
+        // (2026-10-02): every search that misses rebuilds a candidate copy and trains a FLANN index over it,
+        // while the shipped knnMatch itself costs 0.1-0.4 ms. A larger budget means fewer rebuilds and more
+        // memory held; a smaller one means the reverse. IMAO_LOCAL_MATCHER_BYTES_MB overrides it, so the
+        // settings can be compared one session each without a rebuild - the choice is seconds of latency
+        // against hundreds of megabytes, and that is not a choice to make by estimate.
+        const std::size_t configuredBudgetMb = [] {
+            char value[16]{}; std::size_t length = 0;
+            if (getenv_s(&length, value, sizeof(value), "IMAO_LOCAL_MATCHER_BYTES_MB") != 0 || value[0] == '\0') return std::size_t{0};
+            return static_cast<std::size_t>(std::strtoul(value, nullptr, 10));
+        }();
+        const std::size_t configuredEntries = [] {
+            char value[16]{}; std::size_t length = 0;
+            if (getenv_s(&length, value, sizeof(value), "IMAO_LOCAL_MATCHER_ENTRIES") != 0 || value[0] == '\0') return std::size_t{0};
+            return static_cast<std::size_t>(std::strtoul(value, nullptr, 10));
+        }();
+        const std::size_t byteBudget = singleEntry ? 0
+            : (configuredBudgetMb > 0 ? configuredBudgetMb * 1024 * 1024 : 48 * 1024 * 1024);
+        const std::size_t entryBudget = singleEntry ? 1 : (configuredEntries > 0 ? configuredEntries : 8);
         LocalMatcherCache cache;
         cache.candidates = SelectSceneCandidates(*resources_, tileIndices);
         if (cache.candidates.imgDescriptors.empty()) return nullptr;
