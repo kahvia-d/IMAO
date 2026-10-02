@@ -104,7 +104,16 @@ public sealed partial class SettingsPage : Page
             RepairUpdateStateButton.IsEnabled = !updates.Busy;
             DownloadProgramButton.Visibility = updates.AppUpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
             DownloadProgramButton.Content = updates.ProgramDownloadText;
-            DownloadProgramButton.IsEnabled = !updates.Busy && !updates.ProgramPending;
+            DownloadProgramButton.IsEnabled = !updates.Busy && !updates.ProgramPending && !updates.ProgramDownloadBlocked;
+            // Disabled rather than turned into "打开程序下载页": under the mirror source the release page is an
+            // address the player chose this source to avoid, so a missing CDK has to be named, not routed around.
+            ToolTipService.SetToolTip(DownloadProgramButton, updates.ProgramDownloadBlocked
+                ? "Mirror酱 下载需要 CDK：请在下面填写，或把下载源改成 GitHub。"
+                : null);
+            // Only ever shown for the one state it resolves: the mirror answered with a version the signed
+            // catalog has already moved past, so there is nothing to download from where the player is.
+            SwitchDownloadSourceButton.Visibility = updates.MirrorBehind ? Visibility.Visible : Visibility.Collapsed;
+            SwitchDownloadSourceButton.IsEnabled = !updates.Busy;
             RestartProgramButton.Visibility = updates.ProgramPending ? Visibility.Visible : Visibility.Collapsed;
             RestartProgramButton.IsEnabled = !updates.Busy;
             RollbackProgramButton.Visibility = updates.CanRollbackProgram ? Visibility.Visible : Visibility.Collapsed;
@@ -127,6 +136,7 @@ public sealed partial class SettingsPage : Page
             ResourceUpdateMessage.Severity = updates.Failed ? InfoBarSeverity.Warning : updates.HasPending ? InfoBarSeverity.Success : InfoBarSeverity.Informational;
             ResourceUpdateMessage.Message = updates.ProgramPending && !updates.Failed ? "程序更新已准备完成，可点击“退出并更新”，也可稍后重新打开。" : updates.HasPending && !updates.Failed ? "资源已准备完成，退出并重新打开软件后生效。" : updates.Message;
             RenderMirrorChyan();
+            RenderDownloadSource();
             RenderConnectivity();
             RenderRegions();
         }
@@ -534,29 +544,60 @@ public sealed partial class SettingsPage : Page
     }
 
     /// <summary>
+    /// Which of the two sources is selected, written into the two radio buttons. Restoring them happens inside
+    /// the render, so the flag stops a redraw from being read back as the player clicking a source - the same
+    /// shape the automatic-check switch uses, and here it also keeps a stored choice from being rewritten on
+    /// every repaint. No summary line: the pair says which one is on, and the CDK line below says whether that
+    /// choice can actually download anything.
+    /// </summary>
+    private void RenderDownloadSource()
+    {
+        SourceGitHubOption.IsEnabled = SourceMirrorOption.IsEnabled = !updates.Busy;
+        SourceGitHubOption.IsChecked = updates.DownloadSource == UpdateDownloadSource.GitHub;
+        SourceMirrorOption.IsChecked = updates.DownloadSource == UpdateDownloadSource.MirrorChyan;
+    }
+
+    private async void DownloadSourceOption_Checked(object sender, RoutedEventArgs e)
+    {
+        if (restoringUpdates || !IsLoaded) return;
+        var source = ReferenceEquals(sender, SourceMirrorOption) ? UpdateDownloadSource.MirrorChyan : UpdateDownloadSource.GitHub;
+        if (source == updates.DownloadSource) return;
+        await updates.SelectDownloadSourceAsync(source);
+        RenderUpdates();
+    }
+
+    private async void SwitchDownloadSource_Click(object sender, RoutedEventArgs e)
+    {
+        await updates.SwitchToGitHubAsync();
+        RenderUpdates();
+    }
+
+    /// <summary>
     /// Renders the download-source chips from the last probe. A chip has three states, which is why a probe's
     /// reachability is nullable: reachable, not reachable, and "the question does not apply yet" - a mirror that
-    /// answers but has no CDK configured is neither a success nor a failure.
+    /// answers but has no CDK configured is neither a success nor a failure. The chip of the source in use is
+    /// outlined, because which one is selected is a different question from whether it answers.
     /// </summary>
     private void RenderConnectivity()
     {
         var probes = updates.Connectivity;
-        RenderProbe(probes.FirstOrDefault(probe => probe.Name == "GitHub"), GitHubSourceChip, GitHubSourceMark, GitHubSourceStatus);
-        RenderProbe(probes.FirstOrDefault(probe => probe.Name == "Mirror酱"), MirrorSourceChip, MirrorSourceMark, MirrorSourceStatus);
+        RenderProbe(probes.FirstOrDefault(probe => probe.Name == "GitHub"), GitHubSourceChip, GitHubSourceMark, GitHubSourceStatus, !updates.UsesMirror);
+        RenderProbe(probes.FirstOrDefault(probe => probe.Name == "Mirror酱"), MirrorSourceChip, MirrorSourceMark, MirrorSourceStatus, updates.UsesMirror);
         RefreshConnectivityButton.IsEnabled = !updates.ProbingConnectivity;
-        ConnectivitySummary.Text = updates.ProbingConnectivity ? "正在检测各下载源的连通性…"
+        ConnectivitySummary.Text = updates.ProbingConnectivity ? "正在测试两个下载源能不能连上…"
             : updates.ConnectivityCheckedAt is { } at
-                ? $"下载源连通性最后检测：{at:HH:mm:ss}　·　只发探测请求，不下载任何内容"
-                : "下载源连通性尚未检测；点右侧的刷新按钮可以随时检测。不会因此下载任何内容。";
+                ? $"连通性检查：{at:HH:mm:ss}　·　只测试连接，不下载内容"
+                : "点右边的刷新按钮可以测试两个下载源能不能连上，不会下载任何内容。";
     }
 
-    private void RenderProbe(SourceProbe? probe, Border chip, FontIcon mark, TextBlock status)
+    private void RenderProbe(SourceProbe? probe, Border chip, FontIcon mark, TextBlock status, bool inUse)
     {
+        chip.BorderBrush = ThemedBrush(inUse ? "IMaoAccentBrush" : "IMaoBorderBrush");
         if (probe is null)
         {
             mark.Visibility = Visibility.Collapsed;
             ApplyChipStatus(status, "未检测", "IMaoSecondaryTextBrush");
-            ToolTipService.SetToolTip(chip, "尚未检测这个来源。");
+            ToolTipService.SetToolTip(chip, (inUse ? "当前下载源。" : "") + "还没有检测过。");
             return;
         }
         if (probe.Reachable is not bool reachable)
@@ -569,9 +610,9 @@ public sealed partial class SettingsPage : Page
             mark.Visibility = Visibility.Visible;
             mark.Glyph = reachable ? "\uE73E" : "\uE711";
             mark.Foreground = ThemedBrush(reachable ? "IMaoSuccessBrush" : "IMaoDangerBrush");
-            ApplyChipStatus(status, reachable ? "可用" : "不可达", reachable ? "IMaoSuccessBrush" : "IMaoDangerBrush");
+            ApplyChipStatus(status, reachable ? "可用" : "连不上", reachable ? "IMaoSuccessBrush" : "IMaoDangerBrush");
         }
-        ToolTipService.SetToolTip(chip, $"{probe.Role}：{probe.Detail}（{probe.Milliseconds} 毫秒）");
+        ToolTipService.SetToolTip(chip, (inUse ? "当前下载源。" : "") + probe.Detail);
     }
 
     private static void ApplyChipStatus(TextBlock status, string text, string brushKey)

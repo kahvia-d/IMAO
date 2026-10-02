@@ -141,7 +141,7 @@ public sealed record ResourceSnapshot
 
 /// <summary>
 /// One progress report. <see cref="Stage"/> says what is happening right now and <see cref="Source"/> names the
-/// transport carrying it - "Mirror酱", "GitHub 分片" or "本机已有文件" - which is empty while that is still being
+/// transport carrying it - "Mirror酱", "GitHub" or "本机已有文件" - which is empty while that is still being
 /// decided, so the interface can show "where from" and "what now" as two lines instead of guessing.
 ///
 /// <c>Total == 0</c> means this stage has no measurable unit yet. The interface renders that as a bar that is
@@ -177,6 +177,57 @@ public interface IProgramFileSupplier
     /// these files - is a normal outcome, not a failure: the caller downloads what is missing.
     /// </summary>
     Task<IReadOnlySet<string>> SupplyAsync(ProgramPackage package, string app, CancellationToken ct);
+}
+
+/// <summary>
+/// Where this installation takes program updates from, as the player chose it under 设置 → 下载源管理.
+///
+/// One choice answers both halves of the question - who says a new version exists, and who carries its bytes -
+/// because to a player they are one question. MirrorChyan is uploaded after the signed catalog is published and
+/// can trail it by a version, so a check answered by GitHub while the download would be served by the mirror is
+/// exactly how someone gets told about an update that cannot be fetched.
+/// </summary>
+public enum UpdateDownloadSource
+{
+    /// <summary>The signed channel: the manifest from GitHub (with its Gitee reachability mirror) and its release assets.</summary>
+    GitHub,
+    /// <summary>MirrorChyan: its own check endpoint decides the version, and its package carries the bytes.</summary>
+    MirrorChyan,
+}
+
+/// <summary>One spelling per source, so a card, a log line and a test all name the same thing.</summary>
+public static class UpdateDownloadSourceText
+{
+    public static string Name(UpdateDownloadSource source) =>
+        source == UpdateDownloadSource.MirrorChyan ? "Mirror酱" : "GitHub";
+
+    /// <summary>
+    /// How the choice is written down. A word rather than an enum number, so update-state.json can be read by
+    /// a person, and parsed leniently, so a value this build does not know falls back to the default instead of
+    /// making the whole state file unreadable - which would switch online updates off over a cosmetic field.
+    /// </summary>
+    public static string Id(UpdateDownloadSource source) =>
+        source == UpdateDownloadSource.MirrorChyan ? "mirrorChyan" : "github";
+
+    public static UpdateDownloadSource? Parse(string? id) => id?.Trim().ToLowerInvariant() switch
+    {
+        "github" => UpdateDownloadSource.GitHub,
+        "mirrorchyan" or "mirror" => UpdateDownloadSource.MirrorChyan,
+        _ => null,
+    };
+}
+
+/// <summary>
+/// A program assembly could not be finished from the sources the selected download source allows: a shard's
+/// files are neither in what the supplier provided nor already on this machine, and fetching them from the
+/// addresses the signed catalog names is not something this selection permits. The caller decides what else
+/// to try - the mirror's own whole archive - or reports it. Deliberately not an <c>IOException</c>-family type:
+/// this is not a transport that failed, it is a source that does not carry the bytes, and the two call for
+/// different next steps.
+/// </summary>
+public sealed class ProgramFilesUnavailableException : Exception
+{
+    public ProgramFilesUnavailableException(string message) : base(message) { }
 }
 
 /// <summary>

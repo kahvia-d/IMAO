@@ -103,6 +103,9 @@ Invoke-WebRequest 'https://mirrorchyan.com/api/resources/March7thAssistant/lates
 
 ## 5. 推荐方案
 
+> ⚠️ **本节是 2026-09-25 的原设计，其中"检测与下载混合、失败回退分片"已被 §12（2026-10-02）取代。**
+> 下面保留原文是为了留住当时的推理；现行规则只看 §12。
+
 ### 5.1 分层设计
 
 ```text
@@ -441,14 +444,15 @@ Mirror酱是**一个 `res_id` 对应一个压缩包**（`uploading-action` 的 `
 | **P2** | 清单国内镜像（§6.1 方案一）：`StableUri` 改有序列表 | 选定镜像宿主 | 检查更新在国内可用，不再依赖代理 |
 | **P2 ✅** | **已完成（2026-09-25）**：清单多来源（GitHub → Gitee 镜像）、发布脚本推送镜像、5 条回归测试 | Gitee 仓库 + 令牌 | **检查更新在国内可用，不再依赖代理**（仍受"下载走 GitHub"限制） |
 | **P3 ✅** | **已完成（2026-09-25）**：CDK 设置项与 DPAPI 存储、整包下载前确认、镜像下载通道（zip 当"文件袋" + 逐文件校验 + 回退分片）、opt-in 真实端到端检查（§5.8） | P0、P2 | 付费玩家一键更新，且全程受签名清单保护 |
+| **P5 ✅** | **已完成（2026-10-02）**：设置里的「下载源管理」显式二选一，检测与下载共用同一个选择；镜像落后不提示更新；镜像模式下不再回退分片（见 §12） | P3 | 不会再"看到更新却下不了"；走哪个源由玩家决定，而不是由可用性猜 |
 | **P4**（可选） | 地区包的独立 `res_id`；日活/来源统计的 `source` 参数铺开 | P3 | 地区包也走国内 CDN |
 
 ## 9. 验收清单（照官方 Skill 的清单，按我们自己的安全模型改写）
 
-- [ ] 不填 CDK：`code == 0`，有 `version_name`，无 `url`，程序正常回退到 GitHub 分片。
+- [ ] 不填 CDK：`code == 0`，有 `version_name`，无 `url`。**（2026-10-02 改：不再"回退 GitHub 分片"，而是检测照报、下载按钮禁用并说明缺 CDK，见 §12.2 第 4 条。）**
 - [ ] 填入错误 CDK：`7002`，界面明确提示，**不崩溃、不影响其他更新源**。
 - [ ] 断网或超时：不阻塞启动、不崩溃，超时与现有下载器一致。
-- [ ] `8001`：提示"当前平台/通道暂无可用更新"，回退 GitHub，不当成严重错误弹窗；日志记录 `os`/`arch`/`channel`。
+- [ ] `8001`：提示"当前平台/通道暂无可用更新"，不当成严重错误弹窗；日志记录 `os`/`arch`/`channel`。**（2026-10-02 改：镜像源下这次检查就是失败本身，`LastError` 点名 Mirror酱，且不会去读签名清单顶替，见 §12.4。）**
 - [ ] `update_type == "full"`：先等待并重问一次；仍为全量则**先弹确认**再下载整包（约 950 MB）。
 - [ ] `update_type == "incremental"`：增量包解压后仍按签名清单逐文件校验，装配结果与全量包逐个文件等价。
 - [ ] 已是最新：不提示更新；`release_note == "placeholder"` 时**不显示**公告。
@@ -542,7 +546,7 @@ _requiresFullPackageConfirmation = true;                                       /
 | 日志里 CDK 掩码，且只记 URL 的 path（`uriPartial: UriPartial.Path`）不记 query | `CheckUpdateByMirrorChyan` |
 | 每个错误码一句玩家看得懂的提示；1001/8001–8004 直接显示服务端 `msg` | `HandleMirrorChyanErrorCode` |
 | 更新源做成用户可见的开关（GitHub / MirrorChyan，默认 GitHub）；选了 MirrorChyan 却没填 CDK 时明确提示 | `UpdateSource`、`MirrorChyanSelectedButNoCdk` |
-| **没填 CDK 但确实有新版本时，照样提示"有新版本 + 可填 CDK 加速"，再回退 GitHub** | `CheckUpdateRetT.NoMirrorChyanCdk` |
+| MAA 的做法：**没填 CDK 但确实有新版本时，照样提示"有新版本 + 可填 CDK 加速"，再回退 GitHub** | `CheckUpdateRetT.NoMirrorChyanCdk`。⚠️ 这是 MAA 的选择；本项目 2026-10-02 起不这样做——回退会让"更新到底从哪来"不可预测，改成镜像模式下禁用下载并提示切源（§12） |
 | 跳转链接带 `source=`：`mirrorchyan.com?source=maawpfgui-settings`、`mirrorchyan.com/zh/projects?rid=MAA&source=maawpfgui-manualupdate` | `MaaUrls` |
 | 发布说明单独用 `MirrorChyan/release-note-action@v1` 推送 | `mirrorchyan_release_note.yml` |
 | 给"首次使用 Mirror酱""CDK 填错"发成就（可选的小彩蛋） | `AchievementIds.MirrorChyanFirstUse` / `MirrorChyanCdkError` |
@@ -560,3 +564,77 @@ _requiresFullPackageConfirmation = true;                                       /
   `Services/PendingUpdateApplier.cs`、`.github/workflows/release-package-distribution.yml`
   （本次为只读调研下载的副本在 `out/maa-study/`，`out/` 已在 `.gitignore` 内）
 - 本项目相关：`Docs/ResourceUpdates.md`、`Docs/ProgramUpdates.md`、`updates/README.md`
+
+## 12. 显式下载源（2026-10-02 改版，取代 §5.1 的混合式）
+
+### 12.1 为什么改
+
+原设计（§5.1）是"检查更新读签名清单，程序包先试 Mirror酱、拿不到再用 GitHub 分片兜底"。它有两个后果：
+
+- **会提示一个下不下来的版本。** 发布顺序是"先推清单、后传镜像"（§7），镜像因此可能落后清单一到若干版本。
+  此时清单说 `app.version = Y` 而镜像只有 `X`，界面就会"发现程序新版本"，点下去只能失败。
+- **同一份更新走两个源。** 玩家以为自己在用镜像（他为此买了 CDK），实际搬字节的是 GitHub 分片——
+  这在流量上是真金白银的差别，也让"我的更新到底走的哪条路"变成只能靠猜。
+
+### 12.2 现在的规则
+
+设置 →「下载源管理」，两个选项二选一，**一个选择同时决定"谁回答有没有新版"和"谁搬字节"**：
+
+| 选择 | 检测更新 | 程序包下载 | 地图资源（地区包） |
+| --- | --- | --- | --- |
+| **GitHub** | 签名清单：GitHub → Gitee 清单镜像（不变） | 只走 GitHub 分片 | 不变：清单 + GitHub |
+| **Mirror酱** | Mirror酱 `latest` API（免费也拿得到版本号）+ 读清单做一致性核对 | 只走 Mirror酱：差量包 + 本机复用，不够时改问整包（约 1 GB，先确认） | 同左；镜像没有地区包，卡片里写明 |
+
+配套规则（每条都有测试钉住，见 §12.4）：
+
+1. **只有镜像版本 == 清单版本（`app.version`）才提供程序更新。** 不一致时 `MirrorBehind = true`、
+   `AppUpdate = null`，界面说清"镜像 X / 清单 Y"，并给出「改用 GitHub 下载源并检查」。
+   **理由**：`stable.json` 只描述最新版，它的逐文件哈希校验不了另一版的包——镜像落后时那份包根本没法安全安装，
+   而"提示了却装不上"正是这次要消灭的东西。
+2. **镜像版本高于清单**（正常不该发生：清单先行、镜像随后）→ 忽略这次答复，不下载。
+3. **镜像模式下没有 GitHub 兜底。** `ProgramUpdateStore.PrepareAsync(catalogDownloadsAllowed: false)`：
+   既不在镜像包里、也不在本机的分片直接报错（`ProgramFilesUnavailableException`），由
+   `UpdateService.PrepareProgramAsync` 改为向镜像要整包（`ResolveMirrorChyanWholePackageAsync`，先确认再下）。
+   本机复用不算下载，照旧生效——这正是差量包能省流量的那一半。
+4. **没填 CDK 也能选 Mirror酱**：检测可用（免费 API 给版本号），下载按钮禁用并说明原因；**绝不悄悄回退 GitHub**。
+5. **默认值跟随 CDK**：从未选过的安装，存了 CDK 就默认 Mirror酱（等于他现在的实际下载路径，升级后无感），
+   没有则 GitHub。显式选择双向优先于默认——选了 GitHub 之后再填 CDK 不会自己改回镜像。
+6. **切换下载源即作废上一次检查结果**，必须重新检查：否则会出现"用 A 源的清单配 B 源的下载"。
+7. **地图资源不受下载源影响。** 地区包只在 GitHub Release 上，签名规则（`UpdateSignature.AllowedHosts`，
+   §3 的同一条）也不允许清单把下载指向 Gitee 或 Mirror酱。当前线上清单（sequence 35 / 2026.10.2.2）里
+   14 个 `*-kurotiles` + `map-data` + `map-icons` 的**每一个文件**都同时是程序分片
+   （`assets-tiles` / `assets-map-data` / `assets-map-icons`）里的文件，所以走镜像更新程序时地图资源一起到；
+   被删区域重新启用仍从清单地址（GitHub）下载。
+   - ⚠️ 发布侧支持"仅资源发布"（`--previous` 且不带 `--program-release`），而 seq 14→35 共 21 次发布
+     **每次都同时升了程序版本**。真做一次"只更资源"的发布时，镜像不会有对应的程序版本，
+     那条资源更新在镜像模式下只能等下次程序发布，或由玩家切回 GitHub。
+
+### 12.3 代码位置
+
+| 位置 | 作用 |
+| --- | --- |
+| `UpdateDownloadSource`、`UpdateDownloadSourceText`（`UpdateContracts.cs`） | 枚举、`update-state.json` 里的写法（`github` / `mirrorChyan`；无法识别时退回默认，而不是让整份状态读不出来）、显示名 |
+| `UpdateService.DownloadSource` / `DownloadSourceChosen` / `SetDownloadSourceAsync` | 选择的读写；切换时清掉 `LastCheckResult` 与 `_checkedEnvelope` |
+| `UpdateService.CheckMirrorAsync` | 镜像模式的检测：问 API → 读清单 → 比对 → 只在相等时提供更新 |
+| `ProgramUpdateStore.PrepareAsync(..., catalogDownloadsAllowed:)` | 镜像模式禁止从清单地址下载分片；`ProgramFilesUnavailableException` 表示"覆盖不全" |
+| `UpdateService.PrepareProgramAsync(..., confirmWholePackage:)` | 覆盖不全时改问整包（先确认），并记录 `LastProgramMirrorRefusal` |
+| `UpdateService.LastPackageRefusal` | 镜像拒绝提供包的原因。以前这类拒绝是静默的（因为它只是"优化"），现在它就是失败的完整解释 |
+| 设置页「下载源管理」卡片（`Views/SettingsPage.xaml`） | 两个单选卡片 + 状态行 + 当前源芯片描边；镜像落后时出现「改用 GitHub 下载源并检查」 |
+
+### 12.4 测试
+
+`Tests/ResourceUpdates`：
+
+- 默认源跟随 CDK；显式选择双向优先；选择会持久化（重启后仍是它）。
+- 切换源作废上一次检查；同一个源重复选择不作废。
+- 镜像模式：版本一致 → 提供更新；落后 → `MirrorBehind` 且不提供；领先 → 忽略。
+- 镜像模式无 CDK：版本照报，消息点名 CDK，`ResolveMirrorChyanPackageAsync` 返回 null 并记录原因。
+- 镜像不可达时检查失败，**且不去读签名清单**（整个检查只有 1 个请求，且指向镜像）。
+
+`Tests/ProgramUpdates`：
+
+- 程序下载：选 GitHub 时调用方传入的镜像计划被忽略、镜像连问都不问；选镜像时没有任何字节来自 GitHub 分片
+  （`LastCatalogDownloadCount == 0`），而清单仍然各读一次（它是逐文件校验的依据）。
+- 差量包覆盖不全 → 向镜像要整包（恰好确认一次）→ 标签是 `Mirror酱（完整程序包）`，
+  装配结果通过 `ValidateInstalledAsync`，且差量包不够用的原因写进了 `LastProgramMirrorRefusal`。
+

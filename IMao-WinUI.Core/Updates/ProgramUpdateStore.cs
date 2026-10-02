@@ -81,13 +81,20 @@ public sealed class ProgramUpdateStore
 
     /// <param name="fallbackSupplier">
     /// Consulted only after a download from the addresses the signed catalog names has already failed, and never
-    /// before: it is the answer for a player who cannot reach those addresses at all - the mirror's whole program
-    /// archive - and it costs about a gigabyte. Paying that to avoid a shard the difference package could not have
-    /// served either would be a worse trade than the shards, so nothing asks for it speculatively.
+    /// before. Used by the GitHub source, where a player who cannot reach those addresses at all has nowhere else
+    /// to go: the mirror's whole program archive, about a gigabyte, is then worth offering. The mirror source
+    /// passes nothing here - it never downloads from those addresses in the first place.
+    /// </param>
+    /// <param name="catalogDownloadsAllowed">
+    /// False when the selected download source forbids fetching a shard from the addresses the signed catalog
+    /// names. A shard the supplier and this machine do not cover between them then ends the attempt with
+    /// <see cref="ProgramFilesUnavailableException"/> instead of turning into a download, which is what keeps an
+    /// explicit source explicit. Reusing verified files from this installation is unaffected: that is not a
+    /// download, and it is how the mirror's difference package covers the rest of the tree.
     /// </param>
     public async Task PrepareAsync(byte[] envelope, Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download,
         IProgress<UpdateProgress>? progress = null, CancellationToken ct = default, IProgramFileSupplier? supplier = null,
-        Func<CancellationToken, Task<IProgramFileSupplier?>>? fallbackSupplier = null)
+        Func<CancellationToken, Task<IProgramFileSupplier?>>? fallbackSupplier = null, bool catalogDownloadsAllowed = true)
     {
         LastCatalogDownloadCount = 0;
         var catalog = UpdateSignature.Verify(envelope, keys, testKeys);
@@ -129,7 +136,7 @@ public sealed class ProgramUpdateStore
             try
             {
             var app = Path.Combine(transaction, "app");
-            await AssembleAsync(package, app, transaction, reuseRoot, installed, download, progress, ct, supplier, fallbackSupplier);
+            await AssembleAsync(package, app, transaction, reuseRoot, installed, download, progress, ct, supplier, fallbackSupplier, catalogDownloadsAllowed);
             // Every file in the tree is hashed here, so this stage reports its own bytes rather than a static line.
             await ProgramPackageValidation.VerifyDirectoryAsync(app, catalog.App, ct, progress);
             progress?.Report(new UpdateProgress("检查新版程序的地图资源", 0, 0));
@@ -218,13 +225,22 @@ public sealed class ProgramUpdateStore
     /// The fallback is the mirror's whole archive, and it exists for one situation: the shards cannot be reached.
     /// It is asked for only after a download has actually failed, and what it provides is held to the same signed
     /// per-file records as everything else, so it can never be a weaker path than the shards - only a larger one.
+    ///
+    /// <paramref name="catalogDownloadsAllowed"/> is the mirror source's rule: the addresses the catalog names are
+    /// not a fallback there, so a shard the supplier and this machine do not cover between them is reported
+    /// rather than fetched. Nothing else changes - local reuse and the supplier's own verification are the same
+    /// code on both sources.
     /// </summary>
     private async Task AssembleAsync(ProgramPackage package, string app, string transaction, string reuseRoot, List<ResourceFile>? prior,
         Func<ProgramDownloadTarget, Stream, CancellationToken, Task> download, IProgress<UpdateProgress>? progress, CancellationToken ct,
-        IProgramFileSupplier? supplier = null, Func<CancellationToken, Task<IProgramFileSupplier?>>? fallbackSupplier = null)
+        IProgramFileSupplier? supplier = null, Func<CancellationToken, Task<IProgramFileSupplier?>>? fallbackSupplier = null,
+        bool catalogDownloadsAllowed = true)
     {
         if (package.Shards.Count == 0)
         {
+            // A release with no shards is a single archive at an address the catalog names, so a source that
+            // forbids those addresses has nothing to install it from.
+            if (!catalogDownloadsAllowed) throw new ProgramFilesUnavailableException(CoverageRefusal("完整程序包"));
             var archive = Path.Combine(transaction, "program.zip");
             await DownloadAsync(download, new ProgramDownloadTarget("完整程序包", package.Url, package.Size, package.Sha256, CatalogSource), archive, ct);
             LastCatalogDownloadCount++;
@@ -251,6 +267,10 @@ public sealed class ProgramUpdateStore
                 index++;
                 if (shard.Files.All(supplied.Contains)) continue;
                 if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, supplied, progress, ct)) continue;
+                // With an explicit mirror source the signed addresses are not an option, so a shard neither the
+                // supplier nor this machine covered ends the attempt here instead of becoming a download. The
+                // caller's next move - the mirror's own whole archive - depends on knowing this.
+                if (!catalogDownloadsAllowed) throw new ProgramFilesUnavailableException(CoverageRefusal(shard.Id + " 分片"));
                 var archive = Path.Combine(transaction, "shards", shard.Id + ".zip");
                 Directory.CreateDirectory(Path.GetDirectoryName(archive)!);
                 var target = new ProgramDownloadTarget($"{shard.Id} 分片 ({index}/{package.Shards.Count})",
@@ -291,11 +311,19 @@ public sealed class ProgramUpdateStore
     private static bool IsTransportFailure(Exception error) =>
         error is HttpRequestException or TimeoutException or IOException or InvalidDataException;
 
+    /// <summary>
+    /// What a source that forbids the signed addresses says when the files are not otherwise available. It names
+    /// the part that could not be covered, because both possible next steps - the mirror's whole archive, or the
+    /// player switching download source - depend on knowing which one it was.
+    /// </summary>
+    private static string CoverageRefusal(string part) =>
+        part + "的文件既不在所选下载源提供的包里，也不在本机，而当前下载源不允许改从 GitHub 补下。";
+
     /// <summary>What the progress display attributes the mirror's whole program archive to.</summary>
     private const string MirrorWholeSource = "Mirror酱（完整程序包）";
 
     /// <summary>What the progress display attributes an archive fetched from the addresses the catalog names to.</summary>
-    private const string CatalogSource = "GitHub 分片";
+    private const string CatalogSource = "GitHub";
 
     /// <summary>What the progress display attributes a file copied from this installation to.</summary>
     private const string LocalSource = "本机已有文件";

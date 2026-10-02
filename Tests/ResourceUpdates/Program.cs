@@ -268,7 +268,7 @@ await Test("an unreachable canonical host falls back to the configured mirror", 
     f.Publish(f.Catalog(4));
     var result = await f.Updates.CheckAsync();
     Equal(4L, result.Catalog!.Sequence);
-    Equal("Gitee 镜像", result.ManifestSource);
+    Equal("Gitee", result.ManifestSource);
     EqualSequence([UpdateService.StableUri.AbsoluteUri, UpdateService.ManifestMirrors[0].AbsoluteUri], f.Network.Requests);
 });
 await Test("a source that answers without verifying is never silently replaced by the next one", async () =>
@@ -536,7 +536,7 @@ await Test("every MirrorChyan failure falls back quietly instead of throwing", a
 await TestPure("a source has a short stable name, and an unknown host keeps its own", () =>
 {
     Equal("GitHub", UpdateService.DescribeManifestSource(UpdateService.StableUri));
-    Equal("Gitee 镜像", UpdateService.DescribeManifestSource(UpdateService.ManifestMirrors[0]));
+    Equal("Gitee", UpdateService.DescribeManifestSource(UpdateService.ManifestMirrors[0]));
     Equal("example.com", UpdateService.DescribeManifestSource(new Uri("https://example.com/stable.json")));
 });
 await Test("a check reports the source that actually answered, fallback included", async () =>
@@ -549,7 +549,7 @@ await Test("a check reports the source that actually answered, fallback included
     f.Network.Unreachable.Add(UpdateService.StableUri.AbsoluteUri);
     f.Publish(f.Catalog(4));
     var fallback = await f.Updates.CheckAsync();
-    Equal("Gitee 镜像", fallback.ManifestSource);
+    Equal("Gitee", fallback.ManifestSource);
     Equal(4L, fallback.Catalog!.Sequence);
 });
 await Test("connectivity probes cover the download sources, and a missing CDK is neither pass nor fail", async () =>
@@ -569,9 +569,9 @@ await Test("connectivity probes cover the download sources, and a missing CDK is
     Equal("Mirror酱", probes[1].Name);
     // The service answered, but without a CDK it cannot serve this installation: neither a tick nor a cross.
     True(probes[1].Reachable is null);
-    True(probes[1].Detail.Contains("未填写 CDK"));
+    True(probes[1].Detail.Contains("还没有 CDK"));
     // Both manifest hosts were tried for the envelope, and the mirror one is not part of the download row.
-    True(probes.All(probe => probe.Name != "Gitee 镜像"));
+    True(probes.All(probe => probe.Name != "Gitee"));
 });
 await Test("a CDK the service rejects is unusable rather than unknown", async () =>
 {
@@ -593,6 +593,122 @@ await Test("an unreachable source is a probe result, never an exception", async 
     Equal(2, probes.Count);
     True(probes.All(probe => probe.Reachable == false));
     True(probes.All(probe => probe.Detail.Length > 0));
+});
+// ---- Explicit download source ----------------------------------------------------------------------
+// One choice decides both halves of updating: who says a new version exists, and who carries its bytes.
+await Test("an installation that never chose follows its CDK, and a choice outranks it", async () =>
+{
+    using var f = New(); await f.Initialize();
+    // No key: the signed channel, which is what an installation without a CDK has always used.
+    using var plainHttp = new HttpClient(f.Network);
+    using var plain = f.NewUpdates(f.Snapshots);
+    Equal(UpdateDownloadSource.GitHub, plain.DownloadSource);
+    False(plain.DownloadSourceChosen);
+    // A stored key is evidence of intent - the only reason to have one is to download through the mirror - so
+    // that installation keeps the mirror without being asked. This is what makes the change invisible to the
+    // players who are already downloading through it.
+    var cdk = "";
+    using var keyedHttp = new HttpClient(f.Network);
+    using var keyed = new UpdateService(f.Build, [f.Key], f.Snapshots, keyedHttp, true, () => f.Now, () => f.FreeBytes, cdkProvider: () => cdk);
+    cdk = "test-cdk";
+    Equal(UpdateDownloadSource.MirrorChyan, keyed.DownloadSource);
+    False(keyed.DownloadSourceChosen);
+    // An explicit choice outranks the default in both directions: adding a key later must not move an
+    // installation that deliberately picked GitHub, and a chosen mirror stays chosen with no key at all.
+    await keyed.SetDownloadSourceAsync(UpdateDownloadSource.GitHub);
+    True(keyed.DownloadSourceChosen);
+    Equal(UpdateDownloadSource.GitHub, keyed.DownloadSource);
+    using var reopenedHttp = new HttpClient(f.Network);
+    using var reopened = new UpdateService(f.Build, [f.Key], f.Snapshots, reopenedHttp, true, () => f.Now, () => f.FreeBytes, cdkProvider: () => cdk);
+    Equal(UpdateDownloadSource.GitHub, reopened.DownloadSource);
+    True(reopened.DownloadSourceChosen);
+    cdk = "";
+    await keyed.SetDownloadSourceAsync(UpdateDownloadSource.MirrorChyan);
+    Equal(UpdateDownloadSource.MirrorChyan, keyed.DownloadSource);
+    // Written down rather than remembered in memory, so it survives a restart and a key that comes back later.
+    using var restartedHttp = new HttpClient(f.Network);
+    using var restarted = new UpdateService(f.Build, [f.Key], f.Snapshots, restartedHttp, true, () => f.Now, () => f.FreeBytes, cdkProvider: () => cdk);
+    Equal(UpdateDownloadSource.MirrorChyan, restarted.DownloadSource);
+    True(restarted.DownloadSourceChosen);
+});
+await Test("switching source drops the check the other source answered", async () =>
+{
+    using var f = New(); await f.Initialize();
+    f.Publish(f.Catalog(3));
+    await f.Updates.CheckAsync();
+    True(f.Updates.LastCheckResult is not null);
+    // That answer came from the source which is no longer selected. Keeping it would pair one source's catalog
+    // with the other source's download, which is the mismatch the whole setting exists to remove.
+    await f.Updates.SetDownloadSourceAsync(UpdateDownloadSource.MirrorChyan);
+    True(f.Updates.LastCheckResult is null, "the previous source's answer does not survive the switch");
+    Equal(UpdateDownloadSource.MirrorChyan, f.Updates.DownloadSource);
+    f.Network.Routes[MirrorChyanChannel.BuildRequestUri(null, "v" + f.Build.AppVersion).AbsoluteUri] = Encoding.UTF8.GetBytes(
+        """{"code":0,"msg":"success","data":{"version_name":"v2026.9.9.1"}}""");
+    True((await f.Updates.CheckAsync()).Catalog is not null, "and the mirror answers the next check itself");
+    // Choosing the same source twice is not a change, so there is nothing to invalidate.
+    await f.Updates.SetDownloadSourceAsync(UpdateDownloadSource.MirrorChyan);
+    True(f.Updates.LastCheckResult is not null, "a repeat of the same choice leaves the answer alone");
+});
+await Test("a mirror check offers a program update only for the version both sources agree on", async () =>
+{
+    using var f = New(); await f.Initialize();
+    // The catalog is a version ahead of the running build, which is what makes an update offerable at all.
+    var newer = f.Catalog() with { App = new ProgramRelease { Version = "2026.9.9.2", Url = "https://github.com/kahvia-d/IMAO/releases/tag/2026.9.9.2" } };
+    f.Publish(newer);
+    var checkUrl = MirrorChyanChannel.BuildRequestUri(null, "v" + f.Build.AppVersion).AbsoluteUri;
+    void Answer(string version) => f.Network.Routes[checkUrl] = Encoding.UTF8.GetBytes(
+        "{\"code\":0,\"msg\":\"success\",\"data\":{\"version_name\":\"v" + version + "\"}}");
+    await f.Updates.SetDownloadSourceAsync(UpdateDownloadSource.MirrorChyan);
+    Answer("2026.9.9.2");
+    var agreed = await f.Updates.CheckAsync();
+    Equal("2026.9.9.2", agreed.MirrorVersion);
+    False(agreed.MirrorBehind);
+    True(agreed.AppUpdate is not null, "the mirror has exactly what the catalog describes, so it can carry it");
+    // The mirror has not caught up. The catalog's version is real, but nothing can be installed from here - its
+    // per-file records describe a different version - so offering it would be the phantom update this exists to
+    // prevent: "有新版本" followed by a download the mirror cannot serve.
+    Answer("2026.9.9.1");
+    var behind = await f.Updates.CheckAsync();
+    True(behind.MirrorBehind);
+    True(behind.AppUpdate is null, "a version the mirror has not synced is not offered");
+    True(behind.Message.Contains("2026.9.9.1") && behind.Message.Contains("2026.9.9.2"), "the message names both versions: " + behind.Message);
+    True(behind.Catalog is not null, "the catalog is still read: it is what resources and the install are held to");
+    // Publishing writes the catalog first and uploads to the mirror second, so a mirror ahead of the catalog is
+    // not a thing that happens - and if it does, it is not believed.
+    Answer("2026.9.9.3");
+    var ahead = await f.Updates.CheckAsync();
+    True(ahead.MirrorBehind && ahead.AppUpdate is null, "a mirror ahead of the signed catalog is ignored: " + ahead.Message);
+});
+await Test("a mirror check without a CDK still answers the version question, and names what is missing", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var newer = f.Catalog() with { App = new ProgramRelease { Version = "2026.9.9.2", Url = "https://github.com/kahvia-d/IMAO/releases/tag/2026.9.9.2" } };
+    f.Publish(newer);
+    await f.Updates.SetDownloadSourceAsync(UpdateDownloadSource.MirrorChyan);
+    // The free answer carries the version and no download URL, which is what a client with no key gets.
+    f.Network.Routes[MirrorChyanChannel.BuildRequestUri(null, "v" + f.Build.AppVersion).AbsoluteUri] = Encoding.UTF8.GetBytes(
+        """{"code":0,"msg":"success","data":{"version_name":"v2026.9.9.2"}}""");
+    var result = await f.Updates.CheckAsync();
+    True(result.AppUpdate is not null, "knowing a version exists has never needed a key");
+    True(result.Message.Contains("CDK"), "and the download does need one, which the message has to say: " + result.Message);
+    // Without a key there is also nothing to hand the download: the resolver refuses, and it says why.
+    True(await f.Updates.ResolveMirrorChyanPackageAsync(result.AppUpdate!) is null);
+    True(f.Updates.LastPackageRefusal.Contains("CDK"), "the refusal is recorded for the interface: " + f.Updates.LastPackageRefusal);
+});
+await Test("a mirror check that cannot reach the mirror fails instead of reading the signed channel", async () =>
+{
+    using var f = New(); await f.Initialize();
+    f.Publish(f.Catalog(3));
+    await f.Updates.SetDownloadSourceAsync(UpdateDownloadSource.MirrorChyan);
+    f.Network.Requests.Clear();
+    f.Network.Unreachable.Add(MirrorChyanChannel.BuildRequestUri(null, "v" + f.Build.AppVersion).AbsoluteUri);
+    await ThrowsAsync<InvalidDataException>(() => f.Updates.CheckAsync());
+    True(f.Updates.LastError.Contains("Mirror酱"), "the failure names the selected source: " + f.Updates.LastError);
+    // The signed channel would have answered, and that is exactly the point: asking it would report an update
+    // this installation cannot download.
+    Equal(1, f.Network.Requests.Count);
+    True(f.Network.Requests[0].StartsWith(MirrorChyanChannel.Endpoint.AbsoluteUri, StringComparison.Ordinal),
+        "the only request was the mirror's own: " + f.Network.Requests[0]);
 });
 await Test("compatible resource choice is independent of program update", async () =>
 {

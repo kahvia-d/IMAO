@@ -49,6 +49,73 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     public bool CanRollbackProgram => programs is not null && programState.Previous is not null && !ProgramPending;
     public bool CanInstallProgram => programs is not null && updater.LastCheckResult?.AppUpdate?.Package?.LauncherProtocol == ProgramPackageValidation.LauncherProtocol;
     public string ProgramDownloadText => CanInstallProgram ? "下载新版程序" : "打开程序下载页";
+
+    /// <summary>
+    /// Where this installation takes program updates from, as the player chose it. Both halves of updating read
+    /// this one value, which is the point: the source that answers "is there a new version" is the source that
+    /// carries it.
+    /// </summary>
+    public UpdateDownloadSource DownloadSource => updater.DownloadSource;
+    public bool UsesMirror => updater.DownloadSource == UpdateDownloadSource.MirrorChyan;
+    public bool UsesMirrorChosen => updater.DownloadSourceChosen;
+
+    /// <summary>
+    /// True when the selected source cannot carry a program update right now, so the button is offered but
+    /// disabled rather than silently turning into "open the release page" - which under the mirror source would
+    /// send a player without a CDK to an address they chose this source to avoid.
+    /// </summary>
+    public bool ProgramDownloadBlocked => UsesMirror && !credentials.HasCredential && AppUpdateAvailable;
+
+    /// <summary>
+    /// The mirror answered with a different version than the signed catalog describes, so no program update is
+    /// offered. The page shows it as it is and offers the one action that resolves it: switch the source.
+    /// </summary>
+    public bool MirrorBehind => updater.LastCheckResult?.MirrorBehind == true;
+
+    public string DownloadSourceName => UpdateDownloadSourceText.Name(updater.DownloadSource);
+
+    /// <summary>
+    /// Records the player's choice and drops the check that answered it. Nothing is re-checked here: the next
+    /// check is one click, and it is the click that decides whether the new source is asked at all.
+    ///
+    /// Deliberately not routed through <see cref="RunAsync"/>: that is the shape of an operation - it raises
+    /// Busy, which puts the card into its busy layout (a progress row and a cancel button) and resets the
+    /// progress lines. A settings change moves no bytes and cannot be cancelled, so borrowing that shape made
+    /// the update card flicker: it grew a row for the length of the click and collapsed again. Nothing here
+    /// touches Busy, so the card keeps exactly the layout it already had.
+    /// </summary>
+    public async Task SelectDownloadSourceAsync(UpdateDownloadSource source)
+    {
+        // A switch takes the same storage lock a running operation holds, and the radios are disabled while one
+        // runs anyway. Refusing (and re-rendering, so the radio snaps back to the source actually in force) is
+        // what keeps the stored choice and the shown choice the same thing.
+        if (Busy) { Changed(); return; }
+        try
+        {
+            await updater.SetDownloadSourceAsync(source);
+            Failed = false;
+            Message = $"下载源已切换为 {UpdateDownloadSourceText.Name(source)}。点“检查更新”重新检查。";
+            Audit("download-source selected=" + UpdateDownloadSourceText.Id(source));
+        }
+        catch (Exception error)
+        {
+            Failed = true;
+            Message = "无法保存下载源设置：" + error.Message;
+            Audit("download-source failed " + error.Message);
+        }
+        Changed();
+    }
+
+    /// <summary>
+    /// The lag message's action: take the signed channel and immediately ask it, because a player who clicked
+    /// this wants the update, not a second click.
+    /// </summary>
+    public async Task SwitchToGitHubAsync()
+    {
+        if (UsesMirror) await SelectDownloadSourceAsync(UpdateDownloadSource.GitHub);
+        await CheckAsync();
+    }
+
     public void AttachProgramUpdater(ProgramUpdateStore store, Func<Task> restart)
     {
         var state = store.ReadState();
@@ -63,48 +130,57 @@ public sealed class UpdateUiController : INotifyPropertyChanged
         return RunAsync(async ct =>
         {
             var progress = Progress();
-            // Two lines from the first second: which transport this is likely to be, and what is happening now.
-            // The mirror has to answer its own question before a byte can move, and that answer takes about ten
-            // seconds while MirrorChyan assembles the difference - a wait the player should be able to read
-            // instead of guessing at a bar that has not started moving yet.
+            var mirror = UsesMirror;
+            // A disabled button is the courtesy; this is the rule. Both are needed: the selection decides the
+            // transport, and a transport with no CDK has nothing to download with.
+            if (mirror && !credentials.HasCredential)
+                throw new InvalidOperationException("当前下载源是 Mirror酱，需要先填写 CDK；也可以把下载源切换为 GitHub。");
+            // Two lines from the first second: which transport this is, and what is happening now. The mirror
+            // has to answer its own question before a byte can move, and that answer takes about ten seconds
+            // while MirrorChyan assembles the difference - a wait the player should be able to read instead of
+            // guessing at a bar that has not started moving yet.
             var preferred = updater.PreferredProgramSource;
             progress.Report(new UpdateProgress(
-                preferred == "Mirror酱" ? "正在向 Mirror酱 确认增量包（首次请求约 10 秒）" : "正在读取更新清单", 0, 0, preferred));
-            // Resolve the source before downloading anything. A CDK that cannot serve this release - expired,
-            // wrong, out of quota, or simply a different version - must cost the player nothing but the
-            // question, and the signed shards then do the work exactly as they always have. The resolver also
-            // waits out MirrorChyan's on-demand packaging here, which is why the stage above is shown first.
+                mirror ? "正在向 Mirror酱 确认更新包（首次请求约 10 秒）" : "正在准备从 GitHub 下载", 0, 0, preferred));
             var release = updater.LastCheckResult?.AppUpdate;
-            var plan = release is null ? null : await updater.ResolveMirrorChyanPackageAsync(release, ct);
+            // On the mirror source the package *is* the transport, so there is no "carry on without it": a
+            // refusal ends the operation with the reason, and the only alternatives named are the ones the
+            // player controls - retry, or switch source.
+            MirrorChyanPackage? plan = null;
+            if (mirror && release is not null)
+            {
+                plan = await updater.ResolveMirrorChyanPackageAsync(release, ct);
+                if (plan is null)
+                    throw new InvalidDataException("Mirror酱 现在没法下载这一版：" + updater.LastPackageRefusal
+                        + " 可以过一会儿再试，或把下载源改成 GitHub。");
+            }
             // One line when the question is answered, before anything is downloaded. Until 2026-10-02 the log
             // held only failures and completed preparations, so a player reporting "it said the incremental was
             // ready and then downloaded from GitHub anyway" left nothing to read: the mirror's answer, the
-            // player's own choice about it and an abandoned attempt were all invisible. Whether the mirror
-            // merely answered or actually carried the update is the whole point of having it.
-            Audit("program-resolve preferred=" + preferred + " answer="
-                + (plan is null ? "none" : plan.IsWholePackage ? "full" : "incremental")
+            // player's own choice about it and an abandoned attempt were all invisible.
+            Audit("program-resolve source=" + UpdateDownloadSourceText.Id(updater.DownloadSource) + " answer="
+                + (mirror ? plan is null ? "none" : plan.IsWholePackage ? "full" : "incremental" : "signed-shards")
                 + (plan?.Size is long planSize and > 0 ? " size=" + planSize : "")
                 + " version=" + (plan?.Version ?? release?.Version ?? ""));
-            var declinedMirrorWholePackage = false;
             if (plan is not null && plan.IsWholePackage && confirmWholePackage is not null &&
-                !await OnUiThreadAsync(() => confirmWholePackage("Mirror酱 目前提供的是完整程序包（约 " + PackageSize(plan) + "），而不是增量包。"
-                    + "这会下载接近 1 GB 的流量。要继续吗？")))
+                !await OnUiThreadAsync(() => confirmWholePackage("Mirror酱 现在只有完整程序包（约 " + PackageSize(plan) + "），"
+                    + "没有体积小得多的更新包。下载它会用掉接近 1 GB 的流量，确定继续吗？")))
             {
-                // The question is about the mirror's whole package, not about updating at all. Declining it used
-                // to end the operation, which left a player with nothing even when the signed shards were far
-                // smaller - a version whose only change is the interface is one 59 MB shard. Dropping the mirror
-                // lets the shards carry the update, and the message below names whatever actually did.
-                plan = null;
-                declinedMirrorWholePackage = true;
-                Message = "已取消从 Mirror酱 下载完整程序包，改用 GitHub 分片。";
+                // The question is about the mirror's whole package, not about updating at all, and saying no is an
+                // answer rather than a failure. The other transport is a different download source, and switching
+                // it is the player's decision rather than something to do behind their back - so this ends here,
+                // with the reason and the two ways forward, instead of turning into a red "更新操作未完成".
+                Message = "已取消，没有下载任何内容。可以过一会儿再试（Mirror酱 可能已经准备好更小的更新包），或把下载源改成 GitHub。";
+                Audit("program-declined source=mirrorChyan whole-package");
+                return;
             }
-            progress.Report(plan is null
-                ? new UpdateProgress(preferred == "Mirror酱" ? "Mirror酱 未能提供文件，改用 GitHub 分片" : "准备从 GitHub 分片下载", 0, 0, "GitHub 分片")
-                : new UpdateProgress(plan.IsWholePackage ? "Mirror酱 提供的是完整程序包" : "Mirror酱 已备好增量包", 0, 0,
-                    plan.IsWholePackage ? "Mirror酱（完整程序包）" : "Mirror酱（增量包）"));
+            progress.Report(mirror
+                ? new UpdateProgress(plan!.IsWholePackage ? "正在下载完整程序包" : "正在下载更新文件", 0, 0,
+                    plan.IsWholePackage ? "Mirror酱（完整程序包）" : "Mirror酱")
+                : new UpdateProgress("准备从 GitHub 下载", 0, 0, "GitHub"));
             try
             {
-                await updater.PrepareProgramAsync(programs!, progress, ct, plan);
+                await updater.PrepareProgramAsync(programs!, progress, ct, plan, confirmWholePackage);
             }
             catch
             {
@@ -112,21 +188,21 @@ public sealed class UpdateUiController : INotifyPropertyChanged
                 // followed by an abandoned download left no line at all, because the completion record below
                 // only runs on success. Logged from what the service knows at this moment, then rethrown so the
                 // caller's own wording, cancellation handling and state are exactly as they were.
-                Audit("program-attempt-abandoned reason=" + (ct.IsCancellationRequested ? "canceled" : "failed")
-                    + (declinedMirrorWholePackage ? " declined-mirror-full" : "")
+                Audit("program-attempt-abandoned source=" + UpdateDownloadSourceText.Id(updater.DownloadSource)
+                    + " reason=" + (ct.IsCancellationRequested ? "canceled" : "failed")
                     + " catalog-downloads=" + (programs?.LastCatalogDownloadCount ?? 0)
                     + (updater.LastProgramMirrorRefusal.Length > 0
                         ? " mirror-refused=" + updater.LastProgramMirrorRefusal : ""));
                 throw;
             }
             programState = programs!.ReadState();
-            // Named from what the transport actually was, not from whether a MirrorChyan plan existed: a plan
-            // whose package turned out unusable leaves the signed shards doing the work.
-            var origin = updater.LastProgramSource.Length > 0 ? updater.LastProgramSource : "GitHub 分片";
+            // Named from what the transport actually was, not from whether a plan existed: with one source
+            // selected the answer is always one of two, and it is read from what happened rather than chosen.
+            var origin = updater.LastProgramSource.Length > 0 ? updater.LastProgramSource : preferred;
             progress.Report(new UpdateProgress("新版程序文件已全部就绪", 0, 0, origin));
             Message = $"新版程序已准备完成（来自 {origin}）。可以继续使用，或点击“退出并更新”。";
-            // One line per preparation. Whether the mirror carried the update or was merely asked is the whole
-            // point of having it, and a mirror that refuses is silent by design, so this is the only place the
+            // One line per preparation. Whether the mirror carried the update or refused it is the whole point
+            // of having it, and since there is no longer a second transport to hide behind, this is where the
             // answer survives the session.
             Audit("program-prepared source=" + origin
                 + (updater.LastProgramMirrorRefusal.Length > 0 ? " mirror-refused=" + updater.LastProgramMirrorRefusal : ""));
@@ -154,9 +230,10 @@ public sealed class UpdateUiController : INotifyPropertyChanged
     public string ProgressText { get; private set; } = "";
 
     /// <summary>
-    /// What the current operation is taking its bytes from, for the line above the progress bar: "Mirror酱（增量
-    /// 包）", "GitHub 分片", "本机已有文件". Empty while nothing is being transferred - a region install names no
-    /// transport, and neither does a check - which the page renders as no line at all rather than an empty label.
+    /// What the current operation is taking its bytes from, for the line above the progress bar: "Mirror酱",
+    /// "Mirror酱（完整程序包）", "GitHub", "本机已有文件". Empty while nothing is being transferred - a region
+    /// install names no transport, and neither does a check - which the page renders as no line at all rather
+    /// than an empty label.
     /// </summary>
     public string ProgressSource { get; private set; } = "";
 
@@ -274,21 +351,42 @@ public sealed class UpdateUiController : INotifyPropertyChanged
 
     public string CdkMasked => MirrorChyanCredentialVault.Mask(credentials.Read());
 
+    /// <summary>
+    /// What the CDK control says: whether a key is stored, and - because the key is only half of the
+    /// arrangement - whether the selected source is the one that uses it. A stored CDK under GitHub is a key
+    /// that is simply not in play, and saying so is what keeps a player from wondering why setting it changed
+    /// nothing. Kept to one short sentence: this is a status line, not an explanation.
+    /// </summary>
     public string CdkStateText => CdkConfigured
-        ? $"已保存 Mirror酱 CDK（{CdkMasked}）。程序更新会先试 Mirror酱，失败再回退 GitHub。"
-        : "未填写 CDK。检查更新不受影响；填写后程序更新可以从 Mirror酱 下载，不必依赖 GitHub。";
+        ? $"已保存 CDK（{CdkMasked}）。" + (UsesMirror ? "下载更新会走 Mirror酱。" : "下载源是 GitHub，暂时用不到它。")
+        : "还没有 CDK。选 Mirror酱 需要先填一个，它只保存在本机。";
 
     public void SaveCdk(string cdk)
     {
-        try { credentials.Save(cdk); Failed = false; Message = "已保存 Mirror酱 CDK（" + MirrorChyanCredentialVault.Mask(cdk) + "）。"; }
+        try
+        {
+            credentials.Save(cdk);
+            Failed = false;
+            Message = $"已保存 CDK（{MirrorChyanCredentialVault.Mask(cdk)}）。"
+                + (UsesMirror ? "下载更新会走 Mirror酱。" : $"下载源是 {DownloadSourceName}，切换到 Mirror酱 才会用到它。");
+        }
         catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or CryptographicException)
-        { Failed = true; Message = "无法保存 Mirror酱 CDK：" + error.Message; }
+        { Failed = true; Message = "无法保存 CDK：" + error.Message; }
         Changed();
     }
 
     public void ClearCdk()
     {
-        try { credentials.Clear(); Failed = false; Message = "已清除 Mirror酱 CDK；程序更新将直接使用 GitHub。"; }
+        try
+        {
+            credentials.Clear();
+            Failed = false;
+            // Read after clearing, because clearing it can itself move the source: an installation that never
+            // chose one follows its CDK, and with the CDK gone that default is GitHub again.
+            Message = UsesMirror
+                ? "已清除 CDK。下载源是 Mirror酱，但下载需要 CDK：请填一个新的，或把下载源改成 GitHub。"
+                : "已清除 CDK。下载更新继续走 " + DownloadSourceName + "。";
+        }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         { Failed = true; Message = "无法清除 Mirror酱 CDK：" + error.Message; }
         Changed();
@@ -303,15 +401,17 @@ public sealed class UpdateUiController : INotifyPropertyChanged
 
     /// <summary>
     /// Which source answered the last check, and which transport prepared the last program update. Both come
-    /// from what actually happened rather than from what is configured: a mirror that handed over nothing
-    /// leaves the signed shards doing the work, and saying otherwise would mislead a player about where their
-    /// bytes came from.
+    /// from what actually happened rather than from what is configured: the check names the host that served the
+    /// envelope, and the preparation names the transport that produced the files - which, now that a source is
+    /// chosen rather than guessed, is one answer per mode instead of a mixture.
     /// </summary>
     public string UpdateSourceText
     {
         get
         {
-            var check = updater.LastCheckResult?.ManifestSource is { Length: > 0 } source ? "更新清单来自 " + source : "";
+            var check = UsesMirror
+                ? updater.LastCheckResult is { MirrorVersion.Length: > 0 } ? "更新信息来自 Mirror酱" : ""
+                : updater.LastCheckResult?.ManifestSource is { Length: > 0 } source ? "更新信息来自 " + source : "";
             var program = updater.LastProgramSource.Length > 0 ? "程序包来自 " + updater.LastProgramSource : "";
             return string.Join("　·　", new[] { check, program }.Where(part => part.Length > 0));
         }

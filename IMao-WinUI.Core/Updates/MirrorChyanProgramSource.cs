@@ -132,10 +132,10 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
     private const string SourceName = "Mirror酱";
 
     /// <summary>
-    /// Says which kind of package is moving: the difference is the normal case, and a whole archive only arrives
-    /// while MirrorChyan is still assembling an incremental one for this version pair.
+    /// Says which kind of download is moving: the small one that carries only what changed is the normal case,
+    /// and a whole program package only arrives while MirrorChyan is still assembling the small one.
     /// </summary>
-    private string DownloadStage => _package.IsWholePackage ? "从 Mirror酱下载完整程序包" : "从 Mirror酱下载增量包";
+    private string DownloadStage => _package.IsWholePackage ? "从 Mirror酱下载完整程序包" : "从 Mirror酱下载更新文件";
 
     private async Task CopyAsync(Stream input, Stream output, long ceiling, long total, CancellationToken ct)
     {

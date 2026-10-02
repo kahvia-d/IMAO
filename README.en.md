@@ -80,6 +80,10 @@ Go to **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** and downl
 - **A signed update chain.** Manifests are ECDSA P-256 signed, every package is SHA-256 verified and
   executables are rejected inside map packages. Updates only touch the program and map data —
   your completion records, routes, filters and personal settings are **never overwritten**.
+- **A choice of download source.** Settings → "Download source" offers **GitHub** (free, but often unreachable
+  from mainland China) or
+  [MirrorChyan](https://mirrorchyan.com/zh/projects?rid=IMAO&source=imao_app_settings) (reachable there, but
+  downloads need a CDK). The choice decides **both the update check and the download**.
 
 <!-- markdownlint-disable -->
 

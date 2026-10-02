@@ -23,6 +23,19 @@ public sealed record UpdateCheckResult
     /// has been told one of them does not work deserves to see which one answered.
     /// </summary>
     public string ManifestSource { get; init; } = "";
+    /// <summary>
+    /// The version MirrorChyan reported during a check that ran on the mirror source, or empty when that
+    /// source was not asked. It is kept beside the catalog's version so the interface can say which of the
+    /// two is ahead when they disagree.
+    /// </summary>
+    public string MirrorVersion { get; init; } = "";
+    /// <summary>
+    /// True when the mirror source was asked and answered with a version other than the signed catalog's.
+    /// Nothing is offered for download in that state: the catalog describes one version, and its per-file
+    /// records cannot validate another one's files. The publish order is catalog first, mirror second, so in
+    /// practice this means the mirror has not caught up yet.
+    /// </summary>
+    public bool MirrorBehind { get; init; }
 }
 
 /// <summary>
@@ -115,15 +128,62 @@ public sealed class UpdateService : IDisposable
     public bool StateConflictDetected { get; private set; }
 
     /// <summary>
+    /// Where this installation takes program updates from. One value drives both halves of updating: the check
+    /// asks this source whether a new version exists, and the download takes its bytes from it. Nothing falls
+    /// back to the other one - a silent fallback is what made "已是最新" and "更新失败" both wrong in turn.
+    /// </summary>
+    public UpdateDownloadSource DownloadSource => UpdateDownloadSourceText.Parse(_state.DownloadSource) ?? DefaultDownloadSource;
+
+    /// <summary>
+    /// True when the player picked a source themselves, false while the installation is still following its
+    /// default. The difference is what the interface tells them, and it decides whether clearing a CDK moves the
+    /// installation back to GitHub on its own.
+    /// </summary>
+    public bool DownloadSourceChosen => UpdateDownloadSourceText.Parse(_state.DownloadSource) is not null;
+
+    /// <summary>
+    /// What an installation that never made this choice uses. A stored MirrorChyan CDK is evidence of intent -
+    /// the only reason to have one is to download through the mirror - so that installation keeps the mirror
+    /// without being asked. Everyone else starts on the signed channel.
+    /// </summary>
+    private UpdateDownloadSource DefaultDownloadSource =>
+        string.IsNullOrWhiteSpace(_cdkProvider?.Invoke()) ? UpdateDownloadSource.GitHub : UpdateDownloadSource.MirrorChyan;
+
+    /// <summary>
+    /// Records the player's choice. The last check is dropped with it: its answer came from the source that is
+    /// no longer selected, and keeping it would pair one source's catalog with the other source's download -
+    /// which is the mismatch this whole setting exists to prevent.
+    /// </summary>
+    public async Task SetDownloadSourceAsync(UpdateDownloadSource source, CancellationToken ct = default)
+    {
+        EnsureAvailable();
+        await using var gate = await UpdateStorage.LockAsync(_snapshots.Root, ct).ConfigureAwait(false);
+        _state = LoadState();
+        if (DownloadSource == source && _state.DownloadSource is not null) return;
+        _state.DownloadSource = UpdateDownloadSourceText.Id(source);
+        await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
+        LastCheckResult = null;
+        _checkedEnvelope = null;
+    }
+
+    /// <summary>
     /// Prepares the newer program for the next launch.
     /// </summary>
     /// <param name="mirror">
-    /// An optional already-resolved MirrorChyan package for the release in the signed catalog. The caller
-    /// resolves it first - that is where a whole-package download gets confirmed with the player - and the
-    /// store consults it as a source of files before downloading shards. It is an optimisation: the signed
-    /// shards remain the transport of record, and the assembled tree must satisfy the catalog either way.
+    /// An already-resolved MirrorChyan package for the release in the signed catalog. It carries the update only
+    /// when Mirror酱 is the selected download source; under GitHub it is ignored, because mixing the two
+    /// transports is what this used to do and what the selection now forbids. The caller resolves it first -
+    /// that is where a whole-package download gets confirmed with the player - and the signed catalog stays the
+    /// authority either way: the package is a bag of bytes, and every file taken from it is checked against the
+    /// catalog's own records before it is written.
     /// </param>
-    public async Task PrepareProgramAsync(ProgramUpdateStore programs, IProgress<UpdateProgress>? progress = null, CancellationToken ct = default, MirrorChyanPackage? mirror = null)
+    /// <param name="confirmWholePackage">
+    /// Asked before the mirror's whole archive is fetched, which happens only when the difference package and
+    /// this machine together did not cover every file. That is about a gigabyte, so it is a question rather than
+    /// a surprise. Never asked when the caller already confirmed one up front; null means the caller cannot ask.
+    /// </param>
+    public async Task PrepareProgramAsync(ProgramUpdateStore programs, IProgress<UpdateProgress>? progress = null, CancellationToken ct = default,
+        MirrorChyanPackage? mirror = null, Func<string, Task<bool>>? confirmWholePackage = null)
     {
         EnsureAvailable();
         if (_checkedEnvelope is null) throw new InvalidOperationException("请先检查更新。");
@@ -134,68 +194,112 @@ public sealed class UpdateService : IDisposable
         AcceptCatalog(catalog, envelope);
         if (UpdateSignature.RequireVersion(catalog.App.Version) <= UpdateSignature.RequireVersion(_build.AppVersion))
             throw new InvalidOperationException("没有比当前程序更新的版本。");
+        // Enforced here rather than trusted from the caller: however this is invoked, the mirror carries a
+        // preparation only on the mirror source and the signed shards only on GitHub. A mode that produced both
+        // in one transfer is the thing the setting exists to remove.
+        var mirrorOnly = DownloadSource == UpdateDownloadSource.MirrorChyan;
+        if (mirrorOnly && mirror is null) throw new InvalidOperationException(MirrorWithoutPackage);
+        if (!mirrorOnly) mirror = null;
         // A preparation that is killed - the player closes the window mid-download - never reaches the supplier's
         // own cleanup, and one of its archives is close to a gigabyte. The install root is locked above, so
         // nothing else can be using this directory right now.
         var scratch = Path.Combine(programs.Root, "staging", "mirror");
         if (mirror is not null) PurgeMirrorScratch(scratch);
-        var mirrorSource = mirror is null ? null : new MirrorChyanProgramSource(mirror, FetchMirrorAsync, scratch, progress);
-        // The whole archive answers exactly one situation: the signed addresses cannot be reached at all. It is
-        // therefore only ever asked for after a download has already failed, and asking is a network call that
-        // costs nothing when it is never made - which is the normal update.
         LastWholePackageRefusal = "";
-        MirrorChyanProgramSource? wholeSource = null;
-        async Task<IProgramFileSupplier?> WholeArchiveAsync(CancellationToken token)
+        MirrorChyanProgramSource? difference = null, whole = null;
+        var differenceFailure = "";
+        Task PrepareOnceAsync(MirrorChyanPackage? package, bool isWhole)
         {
-            var whole = await ResolveMirrorChyanWholePackageAsync(catalog.App, token).ConfigureAwait(false);
-            if (whole is null) return null;
-            PurgeMirrorScratch(scratch);
-            wholeSource = new MirrorChyanProgramSource(whole, FetchMirrorAsync, scratch, progress);
-            return wholeSource;
+            var source = package is null ? null : new MirrorChyanProgramSource(package, FetchMirrorAsync, scratch, progress);
+            if (isWhole) whole = source; else difference = source;
+            // Under the mirror source the signed addresses are not a fallback at all, so the store is told not to
+            // use them: a shard neither the mirror nor this machine covered ends the attempt and is reported.
+            return programs.PrepareAsync(envelope, FetchAsync, progress, ct, source, catalogDownloadsAllowed: !mirrorOnly);
         }
-        await programs.PrepareAsync(envelope, async (target, output, token) =>
+        async Task FetchAsync(ProgramDownloadTarget target, Stream output, CancellationToken token)
         {
             using var response = await GetResponseAsync(new Uri(target.Url), token).ConfigureAwait(false);
             if (response.Content.Headers.ContentLength is long size && size != target.Size) throw new InvalidDataException("程序包下载大小与签名清单不符。");
             await using var input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
             await CopyVerifiedAsync(input, output, target.Size, target.Sha256,
                 n => progress?.Report(new UpdateProgress("从 GitHub 下载 " + Path.GetFileNameWithoutExtension(target.Name), n, target.Size, target.Source)), token).ConfigureAwait(false);
-        }, progress, ct, mirrorSource, WholeArchiveAsync).ConfigureAwait(false);
-        // What the transport actually was, rather than what it was asked to be. Three things are counted, because
-        // any one of them alone lies: how many files the mirror handed over (difference package plus whole archive,
-        // when a shard download failed and the whole one was fetched instead), and how many archives still had to
-        // come from the addresses the signed catalog names.
+        }
+        try
+        {
+            await PrepareOnceAsync(mirror, isWhole: false).ConfigureAwait(false);
+        }
+        catch (ProgramFilesUnavailableException failure) when (mirrorOnly)
+        {
+            // The difference package plus what this machine already had did not cover every file. The whole
+            // archive is still Mirror酱, so it is the only other place this selection may look - and it costs
+            // about a gigabyte, so the player is asked before it is paid for.
+            differenceFailure = difference?.LastRefusal is { Length: > 0 } refusal ? failure.Message + "（" + refusal + "）" : failure.Message;
+            progress?.Report(new UpdateProgress("Mirror酱 的文件不完整，正在改用完整程序包", 0, 0, "Mirror酱（完整程序包）"));
+            var complete = await ResolveMirrorChyanWholePackageAsync(catalog.App, ct).ConfigureAwait(false);
+            if (complete is null) throw new InvalidDataException(differenceFailure + " Mirror酱 的完整程序包也用不了：" + WholePackageRefusal);
+            if (confirmWholePackage is not null &&
+                !await confirmWholePackage($"Mirror酱 这次只能给出完整程序包（约 {PackageSize(complete)}）。"
+                    + "下载它会用掉接近 1 GB 的流量，确定继续吗？").ConfigureAwait(false))
+                throw new InvalidOperationException("已取消，没有下载任何内容。可以过一会儿再试，或把下载源改成 GitHub。");
+            PurgeMirrorScratch(scratch);
+            // The difference attempt's files went away with its staging directory, so it is dropped from the
+            // accounting too: the label afterwards has to describe the transfer that actually produced the tree.
+            difference = null;
+            await PrepareOnceAsync(complete, isWhole: true).ConfigureAwait(false);
+        }
+        // What the transport actually was, rather than what it was asked to be. With an explicit source there is
+        // one answer per mode, which is the point of choosing one: the mirror carried it, or the shards did. The
+        // one distinction kept inside the mirror mode is between bytes the mirror sent and bytes this machine
+        // already had - naming the mirror for both would credit it with a gigabyte it never moved.
         var fetched = programs.LastCatalogDownloadCount;
-        var fromMirror = (mirrorSource?.SuppliedCount ?? 0) + (wholeSource?.SuppliedCount ?? 0);
+        var fromMirror = (difference?.SuppliedCount ?? 0) + (whole?.SuppliedCount ?? 0);
         var declared = catalog.App.Package?.Files.Count ?? 0;
-        LastProgramSource = fromMirror == 0
-            ? fetched > 0 ? "GitHub 分片" : "本机已有文件"
-            : declared > 0 && fromMirror >= declared
-                ? "Mirror酱"
-                : fetched > 0 ? "Mirror酱 + GitHub 分片" : "Mirror酱 + 本机已有文件";
-        LastProgramMirrorRefusal = Refusals(mirrorSource, wholeSource);
+        LastProgramSource = !mirrorOnly
+            ? fetched > 0 ? "GitHub" : "本机已有文件"
+            : whole?.SuppliedCount > 0 ? "Mirror酱（完整程序包）"
+            : fromMirror == 0 ? "本机已有文件"
+            : declared > 0 && fromMirror < declared ? "Mirror酱 + 本机已有文件"
+            : "Mirror酱";
+        LastProgramMirrorRefusal = Refusals(difference, whole, differenceFailure);
     }
+
+    /// <summary>What a mirror-selected installation is told when the mirror has nothing to carry the update with.</summary>
+    private const string MirrorWithoutPackage = "Mirror酱 没有提供这次更新需要的文件。可以过一会儿再试，或把下载源改成 GitHub。";
+
+    /// <summary>The last reason the whole archive was refused, or the reason a successful resolution cleared it.</summary>
+    private string WholePackageRefusal => LastWholePackageRefusal.Length > 0 ? LastWholePackageRefusal : "没有给出原因";
+
+    /// <summary>
+    /// Why the last request for a MirrorChyan package produced nothing, in one line. Unlike the shard transport
+    /// this is not an optional extra any more: on the mirror source a refusal here is the reason the update
+    /// cannot happen, so it is recorded rather than absorbed.
+    /// </summary>
+    public string LastPackageRefusal { get; private set; } = "";
+
+    private static string PackageSize(MirrorChyanPackage package) =>
+        package.Size is long bytes and > 0 ? (bytes / 1048576.0).ToString("F0") + " MB" : "未知大小";
 
     /// <summary>
     /// One line naming everything the mirror refused to do, in the order it was asked. Empty when it delivered.
     /// The update log records it: whether the mirror carried the update or was merely asked is the whole point of
-    /// having it, and a mirror that fails silently leaves nothing to explain a fallback with.
+    /// having it, and a mirror that fails silently leaves nothing to explain why the signed addresses were used.
     /// </summary>
-    private string Refusals(MirrorChyanProgramSource? difference, MirrorChyanProgramSource? whole)
+    private string Refusals(MirrorChyanProgramSource? difference, MirrorChyanProgramSource? whole, string differenceFailure = "")
     {
         var parts = new List<string>(3);
         if (difference?.LastRefusal is { Length: > 0 } first) parts.Add(first);
+        else if (differenceFailure.Length > 0) parts.Add(differenceFailure);
         if (LastWholePackageRefusal.Length > 0) parts.Add("完整程序包：" + LastWholePackageRefusal);
         if (whole?.LastRefusal is { Length: > 0 } second) parts.Add("完整程序包：" + second);
         return string.Join("；", parts);
     }
 
     /// <summary>
-    /// Which transport this installation would try first for a program package, for the progress display. It is
-    /// not a promise: the mirror stays a candidate until it answers, and the label after a preparation is always
-    /// taken from what actually happened rather than from this.
+    /// Which transport this installation would use for a program package, for the progress display. Unlike the
+    /// label after a preparation this one is decided before anything moves, because the selection - not a CDK
+    /// and not a reachability guess - is what decides it.
     /// </summary>
-    public string PreferredProgramSource => string.IsNullOrWhiteSpace(_cdkProvider?.Invoke()) ? "GitHub 分片" : "Mirror酱";
+    public string PreferredProgramSource => UpdateDownloadSourceText.Name(DownloadSource);
 
     /// <summary>
     /// Which transport the last successful program preparation actually used, for the interface to show.
@@ -206,15 +310,15 @@ public sealed class UpdateService : IDisposable
     /// <summary>
     /// Why the MirrorChyan transport handed nothing over during the last preparation, or empty when it delivered
     /// files, was never resolved, or no preparation has run. Every refusal inside that transport is silent by
-    /// design - the signed shards carry the update either way - but silent has to mean "the player is not
-    /// interrupted", not "nobody can ever find out why the mirror did nothing". The update log records this.
+    /// design - there is no second source to fall back to any more, so a refusal the player cannot see would be
+    /// the whole story of a failed update - and the update log records this line.
     /// </summary>
     public string LastProgramMirrorRefusal { get; private set; } = "";
 
     /// <summary>
     /// Why the last request for the mirror's whole program archive produced nothing, in one line. Empty until
-    /// something has actually been forced to ask - which only happens after a download from the signed addresses
-    /// has already failed, and is therefore exactly the moment a player needs an explanation for.
+    /// something has actually asked - which on the mirror source means the difference package did not cover the
+    /// update, and is therefore exactly the moment a player needs an explanation for.
     /// </summary>
     public string LastWholePackageRefusal { get; private set; } = "";
 
@@ -252,22 +356,26 @@ public sealed class UpdateService : IDisposable
     /// Resolves where MirrorChyan would serve <paramref name="release"/>, or null when this channel cannot
     /// serve it.
     ///
-    /// Every refusal is silent and every failure is absorbed, because MirrorChyan is an alternative to the
-    /// signed download and never a requirement for it: no CDK, an expired CDK, a quota, an outage or an
-    /// answer this client cannot read all mean the same thing to the caller - use the signed channel. The
-    /// one thing enforced strictly is identity. The served version must equal the version the signed
-    /// catalog described, because the catalog, not MirrorChyan, is what says a release is real.
+    /// This is the transport of record on the mirror source, so a refusal here is not absorbed the way it used
+    /// to be: the caller has nothing else to try and reports what happened. The one thing still enforced
+    /// strictly is identity - the served version must equal the version the signed catalog described, because
+    /// the catalog, not MirrorChyan, is what says a release is real and which files it contains.
     /// </summary>
     public async Task<MirrorChyanPackage?> ResolveMirrorChyanPackageAsync(ProgramRelease release, CancellationToken ct = default)
     {
         var cdk = _cdkProvider?.Invoke();
-        if (string.IsNullOrWhiteSpace(cdk)) return null;
+        if (string.IsNullOrWhiteSpace(cdk)) { LastPackageRefusal = "没有配置 Mirror酱 CDK。"; return null; }
         // The publishing side uploads the git tag as version_name, so the same spelling is what matches an
         // incremental package to the version this installation is running.
         var request = MirrorChyanChannel.BuildRequestUri(cdk, "v" + _build.AppVersion);
         var result = await QueryMirrorChyanAsync(request, ct).ConfigureAwait(false);
-        if (result.Error != MirrorChyanError.None || string.IsNullOrEmpty(result.DownloadUrl)) return null;
-        if (!string.Equals(result.Version, release.Version, StringComparison.Ordinal)) return null;
+        if (result.Error != MirrorChyanError.None) { LastPackageRefusal = result.Message; return null; }
+        if (string.IsNullOrEmpty(result.DownloadUrl)) { LastPackageRefusal = "Mirror酱 没有给出下载地址。"; return null; }
+        if (!string.Equals(result.Version, release.Version, StringComparison.Ordinal))
+        {
+            LastPackageRefusal = $"Mirror酱 提供的是 {result.Version}，与签名清单的 {release.Version} 不一致。";
+            return null;
+        }
         if (result.ShouldAskAgainForIncremental)
         {
             // MirrorChyan assembles the incremental package on demand, so the first caller for a version pair
@@ -277,8 +385,9 @@ public sealed class UpdateService : IDisposable
             var retried = await QueryMirrorChyanAsync(request, ct).ConfigureAwait(false);
             if (retried.Error == MirrorChyanError.None && !string.IsNullOrEmpty(retried.DownloadUrl) &&
                 string.Equals(retried.Version, release.Version, StringComparison.Ordinal)) result = retried;
-            else if (result.DownloadUrl is null) return null;
+            else if (result.DownloadUrl is null) { LastPackageRefusal = "Mirror酱 没有给出下载地址。"; return null; }
         }
+        LastPackageRefusal = "";
         return new MirrorChyanPackage(result.DownloadUrl!, result.Version, result.UpdateType, result.Size, result.Sha256);
     }
 
@@ -286,9 +395,9 @@ public sealed class UpdateService : IDisposable
     /// Asks MirrorChyan for this release's **whole** program archive instead of the difference.
     ///
     /// Omitting <c>current_version</c> is the whole trick: the client presents itself as a fresh installation,
-    /// which is the one question that can only be answered with the complete archive. This exists for a single
-    /// situation - a player whose machine cannot reach the signed addresses at all - so it is never asked for on
-    /// the normal path, where the difference package is what an update should cost. The archive is about a
+    /// which is the one question that can only be answered with the complete archive. On the mirror source this
+    /// is the second and last attempt - asked for when the difference package plus this machine did not cover
+    /// every file, where the old design would have reached for the signed shards instead. The archive is about a
     /// gigabyte and is held to the same signed per-file records as everything else, so it can only ever be a
     /// larger path, never a weaker one.
     /// </summary>
@@ -376,6 +485,10 @@ public sealed class UpdateService : IDisposable
         await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
         try
         {
+            // The selection decides who answers this question, and it is the same answer the download half
+            // will be held to. A mirror check that quietly consulted GitHub instead is what produced "有新版本"
+            // followed by a download the mirror could not serve.
+            if (DownloadSource == UpdateDownloadSource.MirrorChyan) return LastCheckResult = await CheckMirrorAsync(ct).ConfigureAwait(false);
             var read = await DownloadManifestAsync(ct).ConfigureAwait(false);
             var catalog = UpdateSignature.Verify(read.Bytes, _keys, _allowTestKeys);
             var notice = AcceptCatalog(catalog, read.Bytes);
@@ -390,6 +503,67 @@ public sealed class UpdateService : IDisposable
             await UpdateStorage.WriteAsync(_statePath, _state, CancellationToken.None).ConfigureAwait(false);
             throw;
         }
+    }
+
+    /// <summary>
+    /// The check as the mirror source runs it.
+    ///
+    /// MirrorChyan's own endpoint decides whether a new version exists, because it is the thing that would
+    /// carry the bytes: a player who selected the mirror wants the mirror's answer, and being told about a
+    /// version the mirror does not have yet is the failure this source selection exists to remove.
+    ///
+    /// The signed catalog is read anyway, and not as a second opinion about the version. It is the file-level
+    /// authority every install is held to - the mirror's package is only a bag of bytes, and what belongs in
+    /// the program tree comes from the catalog's per-file records - and it is the only place map resources are
+    /// described. So the two answers are compared, and only an exact match is offered as a program update:
+    /// publishing writes the catalog first and uploads to the mirror second, which is why the mirror can be
+    /// behind the catalog and never ahead of it.
+    /// </summary>
+    private async Task<UpdateCheckResult> CheckMirrorAsync(CancellationToken ct)
+    {
+        var cdk = _cdkProvider?.Invoke();
+        var answer = await QueryMirrorChyanAsync(MirrorChyanChannel.BuildRequestUri(cdk, "v" + _build.AppVersion), ct).ConfigureAwait(false);
+        // A free answer - no CDK - still carries the version, and a CDK problem is reported as itself: both are
+        // answers from the selected source, and neither is a reason to go and ask a different one.
+        if (answer.Error != MirrorChyanError.None) throw new InvalidDataException(answer.Message);
+        var mirror = UpdateSignature.RequireVersion(answer.Version);
+        var read = await DownloadManifestAsync(ct).ConfigureAwait(false);
+        var catalog = UpdateSignature.Verify(read.Bytes, _keys, _allowTestKeys);
+        var notice = AcceptCatalog(catalog, read.Bytes);
+        _checkedEnvelope = read.Bytes;
+        var result = MakeResult(catalog) with
+        {
+            StateNotice = notice ?? "",
+            ManifestSource = DescribeManifestSource(read.Source),
+            MirrorVersion = answer.Version,
+        };
+        var catalogVersion = UpdateSignature.RequireVersion(catalog.App.Version);
+        if (mirror != catalogVersion)
+        {
+            // Nothing installable can be offered: the catalog describes one version, and its file records
+            // cannot validate another one's files, so the mirror's copy of an older version could not be
+            // verified even if it were downloaded. Saying that plainly - instead of offering the update and
+            // failing at the download - is the whole point of choosing a source.
+            result = result with
+            {
+                AppUpdate = null,
+                MirrorBehind = true,
+                Message = (mirror < catalogVersion
+                        ? $"Mirror酱 还没有 {catalog.App.Version} 这一版（它现在最新是 {answer.Version}）。"
+                        : $"Mirror酱 给出的版本 {answer.Version} 比官方发布的 {catalog.App.Version} 还新，这次先忽略。")
+                    + (mirror < catalogVersion ? "想马上更新，把下载源改成 GitHub 再检查一次。" : "")
+                    + (result.RequiresAppUpgrade ? "新地图资源需要新版程序。" : "")
+                    + (result.Resource is not null ? "地图资源更新照常可以安装。" : "")
+            };
+        }
+        else if (result.AppUpdate is not null && string.IsNullOrWhiteSpace(cdk))
+        {
+            // The mirror can serve this version, but only to a CDK: the free answer says what exists, not where
+            // to get it. Saying so here is what keeps the download button from looking broken.
+            result = result with { Message = $"发现新版程序 {catalog.App.Version}。填好 Mirror酱 CDK 就能从这里下载。" };
+        }
+        await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
+        return result;
     }
 
     /// <summary>
@@ -914,7 +1088,7 @@ public sealed class UpdateService : IDisposable
     public static string DescribeManifestSource(Uri source) => source.Host.ToLowerInvariant() switch
     {
         "raw.githubusercontent.com" => "GitHub",
-        "gitee.com" => "Gitee 镜像",
+        "gitee.com" => "Gitee",
         var host => host,
     };
 
@@ -963,8 +1137,8 @@ public sealed class UpdateService : IDisposable
             using var response = await GetResponseAsync(target, UpdateSignature.ValidateResponseUri, SourceProbeTimeout, ct).ConfigureAwait(false);
             clock.Stop();
             var detail = target == StableUri
-                ? $"可以连上 GitHub（以更新清单主机探测，尚未检查更新）HTTP {(int)response.StatusCode}"
-                : $"可以连上本版本的程序包地址（HTTP {(int)response.StatusCode}）";
+                ? "可以连上 GitHub（还没检查更新，检查后才测得到这一版的地址）。"
+                : "可以连上，能下载这一版的更新。";
             return new SourceProbe("GitHub", "程序下载", true, detail, clock.ElapsedMilliseconds);
         }
         catch (Exception ex) when (ex is HttpRequestException or TimeoutException or IOException or InvalidDataException or OperationCanceledException)
@@ -983,9 +1157,9 @@ public sealed class UpdateService : IDisposable
         clock.Stop();
         if (result.Error == MirrorChyanError.None)
         {
-            if (!configured) return new SourceProbe("Mirror酱", "程序下载", null, "可以连上；未填写 CDK，无法从这里下载", clock.ElapsedMilliseconds);
+            if (!configured) return new SourceProbe("Mirror酱", "程序下载", null, "可以连上，但还没有 CDK，不能从这里下载。", clock.ElapsedMilliseconds);
             var expiry = result.CdkExpiresAt is { } until ? $"，到期 {until.ToLocalTime():yyyy-MM-dd}" : "";
-            return new SourceProbe("Mirror酱", "程序下载", true, "可以连上；CDK 有效" + expiry, clock.ElapsedMilliseconds);
+            return new SourceProbe("Mirror酱", "程序下载", true, "可以连上，CDK 有效" + expiry + "。", clock.ElapsedMilliseconds);
         }
         // A CDK the service rejected is an answer from a reachable service, but it still cannot serve this
         // installation, which is what the row is about.
@@ -1111,6 +1285,13 @@ public sealed class UpdateService : IDisposable
     private sealed class UpdaterState
     {
         public bool AutoCheckEnabled { get; set; } = true;
+        /// <summary>
+        /// The source the player picked under 下载源管理, as <see cref="UpdateDownloadSourceText.Id"/>. Absent
+        /// (or unreadable) means they never picked one, which is not the same as having picked GitHub: the
+        /// reader falls back to the transport this installation was already using, so an update to this version
+        /// does not quietly move anyone off the mirror they paid for, while a choice of GitHub stays chosen.
+        /// </summary>
+        public string? DownloadSource { get; set; }
         public DateTimeOffset? LastAttempt { get; set; }
         public string LastError { get; set; } = "";
         // One global record written by clients older than per-channel records. It carries no channel

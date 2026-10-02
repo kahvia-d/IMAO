@@ -15,6 +15,9 @@
                     <Button x:Name="RollbackResourcesButton" Content="回退上一版" Click="RollbackResources_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                     <Button x:Name="RepairUpdateStateButton" Content="修复更新状态" Click="RepairUpdateState_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Visibility="Collapsed" />
                     <Button x:Name="DownloadProgramButton" Content="下载新版程序" Click="DownloadProgram_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    <!-- Shown only when the mirror answered with a version the signed catalog has already moved past:
+                         then there is nothing to download, and the one action that resolves it is switching source. -->
+                    <Button x:Name="SwitchDownloadSourceButton" Content="改用 GitHub 并重新检查" Click="SwitchDownloadSource_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Visibility="Collapsed" />
                     <Button x:Name="RestartProgramButton" Content="退出并更新" Click="RestartProgram_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
                     <Button x:Name="RollbackProgramButton" Content="回退程序版本" Click="RollbackProgram_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                     <Button x:Name="CancelUpdateButton" Content="取消" Click="CancelUpdate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
@@ -38,11 +41,10 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="更新下载源" Style="{StaticResource IMaoSectionTitleStyle}" VerticalAlignment="Center" />
-                    <!-- One chip per place a *program package* can come from, which is what this row is about: the
-                         signed channel's release assets and the mirror. The mark is the standard check or cancel
-                         glyph and the short word beside it says the same thing, because a lone glyph is a guess
-                         and "未填 CDK" is neither of the two. -->
+                    <TextBlock Grid.Column="0" Text="下载源管理" Style="{StaticResource IMaoSectionTitleStyle}" VerticalAlignment="Center" />
+                    <!-- One chip per place a source can live, and the chip of the source in use is outlined in the
+                         accent colour: the selection decides both what the check asks and what the download uses,
+                         so the row answers "which one am I on" and "is it reachable" at the same time. -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <Border x:Name="GitHubSourceChip" CornerRadius="6" Padding="9,4" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -65,7 +67,29 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <TextBlock Text="GitHub 在国内常常连不上。填写 Mirror酱 的 CDK 后，程序更新会先试国内 CDN，失败再自动回退 GitHub；检查更新不受影响，没有 CDK 也能照常使用。CDK 只以加密形式保存在本机，不会写进日志、导出或崩溃报告。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock Text="选定一个后，检查更新和下载更新只走它。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" CornerRadius="10" Padding="14,10" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
+                        <RadioButton x:Name="SourceGitHubOption" GroupName="DownloadSourceOption" MinWidth="0" Margin="0" VerticalAlignment="Top" Checked="DownloadSourceOption_Checked">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="GitHub" FontWeight="SemiBold" />
+                                <TextBlock Text="免费，国内常常连不上。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                            </StackPanel>
+                        </RadioButton>
+                    </Border>
+                    <Border Grid.Column="1" CornerRadius="10" Padding="14,10" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
+                        <RadioButton x:Name="SourceMirrorOption" GroupName="DownloadSourceOption" MinWidth="0" Margin="0" VerticalAlignment="Top" Checked="DownloadSourceOption_Checked">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Mirror酱" FontWeight="SemiBold" />
+                                <TextBlock Text="国内连得上，下载需要 CDK。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                            </StackPanel>
+                        </RadioButton>
+                    </Border>
+                </Grid>
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                     <PasswordBox x:Name="MirrorChyanCdkBox" Width="280" PlaceholderText="粘贴 Mirror酱 CDK" PasswordRevealMode="Peek" />
                     <Button x:Name="SaveCdkButton" Content="保存 CDK" Click="SaveCdk_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />

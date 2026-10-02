@@ -766,51 +766,73 @@ await Test("online program download uses signed catalog and never downloads map 
     Assert(urls.Count(IsManifestUrl) == 1, "exactly one manifest read: " + string.Join(",", urls));
     Assert(urls[^1] == package.Url, "and then the program package: " + string.Join(",", urls));
     Assert(check.ManifestSource.Length > 0, "the check names the source that answered");
-    Assert(updates.LastProgramSource == "GitHub 分片", "a preparation with no mirror is labelled as the shards: " + updates.LastProgramSource);
+    Assert(updates.LastProgramSource == "GitHub", "a preparation with no mirror is labelled as GitHub: " + updates.LastProgramSource);
 });
-await Test("the program source label names what actually carried the bytes", async () =>
+await Test("the selected source decides which transport carries the program", async () =>
 {
-    // A whole tree from the mirror is Mirror酱; a mirror that supplies nothing leaves the signed shards doing
-    // the work, and the label has to say so rather than credit the mirror for bytes it never sent.
+    // One fixture, two services. Under GitHub the mirror package the caller passed is ignored - a stored CDK is
+    // no longer a reason to touch the mirror at all - and under Mirror酱 the mirror is the transport, so both
+    // labels follow from the selection rather than from whichever source happens to answer.
     var tree = ShardTree(shardBuild1, "v1");
     var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
-    var bag = MirrorZip("labelled", tree);
-    const string mirrorUrl = "https://mirrorchyan.com/api/resources/download/labelled";
+    var bag = MirrorZip("selected", tree);
+    const string mirrorUrl = "https://mirrorchyan.com/api/resources/download/selected";
     var signed = Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10));
-    async Task<string> LabelAsync(string? planUrl)
+    var mirrorCheck = MirrorChyanChannel.BuildRequestUri("fixture-cdk", "v2026.9.10.0").AbsoluteUri;
+    var mirrorAnswer = Encoding.UTF8.GetBytes(
+        """{"code":0,"msg":"success","data":{"version_name":"v2026.9.10.1","update_type":"incremental","url":"https://mirrorchyan.com/api/resources/download/selected"}}""");
+    async Task<(string Label, long CatalogDownloads, int ManifestReads, bool MirrorAsked)> PrepareAsync(bool mirrorSource)
     {
         var store = Store();
         var snapshots = new ResourceSnapshotService(Path.Combine(store.InstallRoot, "resource-state"),
             new ResourceSnapshot { SnapshotId = "bundled", Bundled = true, BaselineId = shardBuild1.BaselineId, BaselineRoot = fixture, MapDataRoot = fixture },
             shardBuild1.AppVersion, (_, _) => Task.CompletedTask);
         await snapshots.InitializeAsync();
-        using var network = new FixtureNetwork(request => new HttpResponseMessage(HttpStatusCode.OK)
+        var asked = 0;
+        var manifests = 0;
+        using var network = new FixtureNetwork(request =>
         {
-            Content = new ByteArrayContent(request.RequestUri!.AbsoluteUri switch
+            var url = request.RequestUri!.AbsoluteUri;
+            if (url == mirrorCheck) asked++;
+            if (IsManifestUrl(url)) manifests++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                var url when IsManifestUrl(url) => signed,
-                var url when url == mirrorUrl => File.ReadAllBytes(bag),
-                // The shards really are served for whatever the mirror does not carry, so a missing route never
-                // stands in for the fallback the label is supposed to describe.
-                var url => File.ReadAllBytes(served[url]),
-            })
+                Content = new ByteArrayContent(url switch
+                {
+                    var manifest when IsManifestUrl(manifest) => signed,
+                    var check when check == mirrorCheck => mirrorAnswer,
+                    var download when download == mirrorUrl => File.ReadAllBytes(bag),
+                    // Every shard stays routable: a regression shows up as the wrong label or a stray request
+                    // rather than as a fixture that cannot answer at all.
+                    var shard => File.ReadAllBytes(served[shard]),
+                })
+            };
         });
         using var http = new HttpClient(network);
         // The running build has to look older than the catalog, or preparing the release is refused outright.
-        using var updates = new UpdateService(shardBuild1 with { AppVersion = "2026.9.10.0" }, [key], snapshots, http, true);
-        await updates.CheckAsync();
-        var plan = planUrl is null ? null : new MirrorChyanPackage(planUrl, shardBuild1.AppVersion, "incremental", new FileInfo(bag).Length, null);
+        using var updates = new UpdateService(shardBuild1 with { AppVersion = "2026.9.10.0" }, [key], snapshots, http, true,
+            cdkProvider: mirrorSource ? () => "fixture-cdk" : null);
+        var check = await updates.CheckAsync();
+        Assert(mirrorSource ? check.MirrorVersion == shardBuild1.AppVersion : check.MirrorVersion.Length == 0,
+            "the check names a mirror version only when the mirror was the one asked: " + check.MirrorVersion);
+        var plan = new MirrorChyanPackage(mirrorUrl, shardBuild1.AppVersion, "incremental", new FileInfo(bag).Length, null);
         await updates.PrepareProgramAsync(store, ct: default, mirror: plan);
-        return updates.LastProgramSource;
+        return (updates.LastProgramSource, store.LastCatalogDownloadCount, manifests, asked > 0);
     }
-    Assert(await LabelAsync(mirrorUrl) == "Mirror酱", "a whole tree from the mirror is credited to it");
-    Assert(await LabelAsync(null) == "GitHub 分片", "without a mirror the shards carry the release");
+    var mirror = await PrepareAsync(mirrorSource: true);
+    Assert(mirror.Label == "Mirror酱", "under the mirror source the mirror carries the update: " + mirror.Label);
+    Assert(mirror.CatalogDownloads == 0, "and not one archive is fetched from the addresses the catalog names");
+    Assert(mirror.ManifestReads == 1, "the signed catalog is still read, because it is what the files are checked against");
+    var signedSource = await PrepareAsync(mirrorSource: false);
+    Assert(signedSource.Label == "GitHub", "under GitHub a mirror package is ignored, not used as a fallback: " + signedSource.Label);
+    Assert(!signedSource.MirrorAsked, "and the mirror is not even asked whether it could serve this release");
 });
 await Test("a mirror that saved the transfer is not credited with a download it did not cause", async () =>
 {
-    // The mirror's package covers the changed files and this machine covers the rest, so nothing at all is
-    // fetched. Saying "Mirror酱 + GitHub 分片" here would name a download that never happened - the same error in
-    // the other direction as crediting the mirror for bytes the shards delivered.
+    // The mirror's package covers the changed file and this machine covers the rest, so nothing at all is
+    // fetched - and under the mirror source the signed addresses are not an option anyway. Saying
+    // "GitHub" here would name a download that never happened; saying just "Mirror酱" would credit it with
+    // bytes the local copy supplied.
     var store = Store();
     var treeA = ShardTree(shardBuild1, "v1");
     foreach (var file in treeA)
@@ -823,6 +845,9 @@ await Test("a mirror that saved the transfer is not credited with a download it 
     var signedB = Sign(ShardCatalog(shardBuild2, "v1.0.2", pkgB, 11));
     var bag = MirrorZip("labelled-part", [new KeyValuePair<string, byte[]>("build-info.json", treeB["build-info.json"])]);
     const string mirrorUrl = "https://mirrorchyan.com/api/resources/download/labelled-part";
+    var mirrorCheck = MirrorChyanChannel.BuildRequestUri("fixture-cdk", "v" + shardBuild1.AppVersion).AbsoluteUri;
+    var mirrorAnswer = Encoding.UTF8.GetBytes(
+        """{"code":0,"msg":"success","data":{"version_name":"v2026.9.10.2","update_type":"incremental","url":"https://mirrorchyan.com/api/resources/download/labelled-part"}}""");
     var snapshots = new ResourceSnapshotService(Path.Combine(store.InstallRoot, "resource-state"),
         new ResourceSnapshot { SnapshotId = "bundled", Bundled = true, BaselineId = shardBuild1.BaselineId, BaselineRoot = fixture, MapDataRoot = fixture },
         shardBuild1.AppVersion, (_, _) => Task.CompletedTask);
@@ -832,25 +857,136 @@ await Test("a mirror that saved the transfer is not credited with a download it 
         Content = new ByteArrayContent(request.RequestUri!.AbsoluteUri switch
         {
             var url when IsManifestUrl(url) => signedB,
+            var url when url == mirrorCheck => mirrorAnswer,
             var url when url == mirrorUrl => File.ReadAllBytes(bag),
-            // Every shard is still routable, so a regression here shows up as the wrong label rather than as a
-            // fixture that cannot answer.
             var url => File.ReadAllBytes(servedB[url]),
         })
     });
     using var http = new HttpClient(network);
-    using var updates = new UpdateService(shardBuild1, [key], snapshots, http, true);
+    using var updates = new UpdateService(shardBuild1, [key], snapshots, http, true, cdkProvider: () => "fixture-cdk");
     await updates.CheckAsync();
     await updates.PrepareProgramAsync(store, ct: default,
         mirror: new MirrorChyanPackage(mirrorUrl, shardBuild2.AppVersion, "incremental", new FileInfo(bag).Length, null));
     Assert(updates.LastProgramSource == "Mirror酱 + 本机已有文件", "the label names what actually carried the bytes: " + updates.LastProgramSource);
+    Assert(store.LastCatalogDownloadCount == 0, "the mirror source never reaches for the signed addresses");
     Assert(updates.LastProgramMirrorRefusal.Length == 0, "a package that supplied files has no refusal to report: " + updates.LastProgramMirrorRefusal);
 });
+await Test("neither download source ever reaches for the other one's transport", async () =>
+{
+    // The audit this whole setting exists for, stated as traffic rather than as intent: under GitHub not one
+    // request may go to MirrorChyan, and under Mirror酱 not one signed archive may be fetched. The signed catalog
+    // is read by both modes, and that is the only request they share - it is what every file is checked against,
+    // and reading it downloads nothing a player would notice.
+    var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var bag = MirrorZip("audit", tree);
+    const string mirrorUrl = "https://mirrorchyan.com/api/resources/download/audit";
+    var signed = Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10));
+    var mirrorCheck = MirrorChyanChannel.BuildRequestUri("audit-cdk", "v2026.9.10.0").AbsoluteUri;
+    var mirrorAnswer = Encoding.UTF8.GetBytes(
+        """{"code":0,"msg":"success","data":{"version_name":"v2026.9.10.1","update_type":"incremental","url":"https://mirrorchyan.com/api/resources/download/audit"}}""");
+    async Task<List<string>> TrafficAsync(bool mirrorSource)
+    {
+        var store = Store();
+        var snapshots = new ResourceSnapshotService(Path.Combine(store.InstallRoot, "resource-state"),
+            new ResourceSnapshot { SnapshotId = "bundled", Bundled = true, BaselineId = shardBuild1.BaselineId, BaselineRoot = fixture, MapDataRoot = fixture },
+            shardBuild1.AppVersion, (_, _) => Task.CompletedTask);
+        await snapshots.InitializeAsync();
+        var urls = new List<string>();
+        // Every fixture serves everything both sources could ask for, so a cross-source request shows up as an
+        // extra entry in the record instead of as a fixture that cannot answer.
+        using var network = new FixtureNetwork(request =>
+        {
+            var url = request.RequestUri!.AbsoluteUri;
+            urls.Add(url);
+            var body = url switch
+            {
+                var manifest when IsManifestUrl(manifest) => signed,
+                var check when check == mirrorCheck => mirrorAnswer,
+                var download when download == mirrorUrl => File.ReadAllBytes(bag),
+                var shard when served.ContainsKey(shard) => File.ReadAllBytes(served[shard]),
+                var unknown => throw new InvalidOperationException("unexpected request: " + unknown),
+            };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(body) };
+        });
+        using var http = new HttpClient(network);
+        using var updates = new UpdateService(shardBuild1 with { AppVersion = "2026.9.10.0" }, [key], snapshots, http, true,
+            cdkProvider: mirrorSource ? () => "audit-cdk" : null);
+        await updates.CheckAsync();
+        await updates.PrepareProgramAsync(store, ct: default,
+            mirror: new MirrorChyanPackage(mirrorUrl, shardBuild1.AppVersion, "incremental", new FileInfo(bag).Length, null));
+        return urls;
+    }
+    var gitHub = await TrafficAsync(mirrorSource: false);
+    Assert(!gitHub.Any(url => url.Contains("mirrorchyan.com", StringComparison.OrdinalIgnoreCase)),
+        "under GitHub nothing may reach the mirror: " + string.Join(",", gitHub.Where(url => url.Contains("mirrorchyan"))));
+    Assert(gitHub.Any(served.ContainsKey), "the signed archives are what carried it: " + string.Join(",", gitHub));
+    Assert(gitHub.Count(IsManifestUrl) == 1, "and the catalog was read once: " + string.Join(",", gitHub));
+    var mirror = await TrafficAsync(mirrorSource: true);
+    Assert(!mirror.Any(served.ContainsKey), "under Mirror酱 no signed archive may be fetched: " + string.Join(",", mirror));
+    Assert(mirror.Any(url => url.StartsWith(MirrorChyanChannel.Endpoint.AbsoluteUri, StringComparison.Ordinal)),
+        "the mirror was the one asked: " + string.Join(",", mirror));
+    Assert(mirror.Count(IsManifestUrl) == 1, "and the catalog is still read once on this side too: " + string.Join(",", mirror));
+});
+await Test("a difference package that cannot cover the tree asks the mirror for its whole archive", async () =>
+{
+    // The difference package and this machine together do not cover every file. On the mirror source the signed
+    // addresses are not a fallback, so the only other place to look is the mirror's own whole archive - asked for
+    // only after the player has agreed to the gigabyte, and still held to the same signed per-file records.
+    var store = Store();
+    var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var partial = MirrorZip("partial-coverage", [tree.First(kv => ShardOf(kv.Key) == "core")]);
+    var complete = MirrorZip("whole-coverage", tree);
+    const string partialUrl = "https://mirrorchyan.com/api/resources/download/partial-coverage";
+    const string wholeUrl = "https://mirrorchyan.com/api/resources/download/whole-coverage";
+    var signed = Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 10));
+    var asked = new List<string>();
+    using var network = new FixtureNetwork(request =>
+    {
+        var url = request.RequestUri!.AbsoluteUri;
+        asked.Add(url);
+        var body = url switch
+        {
+            var manifest when IsManifestUrl(manifest) => signed,
+            var check when check.Contains("current_version", StringComparison.Ordinal) =>
+                Encoding.UTF8.GetBytes("""{"code":0,"msg":"success","data":{"version_name":"v2026.9.10.1","update_type":"incremental","url":"https://mirrorchyan.com/api/resources/download/partial-coverage"}}"""),
+            var check when check.Contains("/api/resources/IMAO/latest", StringComparison.Ordinal) =>
+                Encoding.UTF8.GetBytes("""{"code":0,"msg":"success","data":{"version_name":"v2026.9.10.1","update_type":"full","url":"https://mirrorchyan.com/api/resources/download/whole-coverage"}}"""),
+            var url_ when url_ == partialUrl => File.ReadAllBytes(partial),
+            var url_ when url_ == wholeUrl => File.ReadAllBytes(complete),
+            // Nothing may be fetched from the addresses the catalog names while the mirror is the source.
+            var shard when served.ContainsKey(shard) => throw new InvalidOperationException("the mirror source fetched a signed archive: " + shard),
+            var unknown => throw new InvalidOperationException("unexpected request: " + unknown),
+        };
+        return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(body) };
+    });
+    using var http = new HttpClient(network);
+    var snapshots = new ResourceSnapshotService(Path.Combine(store.InstallRoot, "resource-state"),
+        new ResourceSnapshot { SnapshotId = "bundled", Bundled = true, BaselineId = shardBuild1.BaselineId, BaselineRoot = fixture, MapDataRoot = fixture },
+        shardBuild1.AppVersion, (_, _) => Task.CompletedTask);
+    await snapshots.InitializeAsync();
+    using var updates = new UpdateService(shardBuild1 with { AppVersion = "2026.9.10.0" }, [key], snapshots, http, true, cdkProvider: () => "fixture-cdk");
+    var check = await updates.CheckAsync();
+    Assert(check.AppUpdate is not null && check.MirrorBehind == false, "the mirror has the version the signed catalog describes");
+    var confirmations = new List<string>();
+    await updates.PrepareProgramAsync(store, ct: default,
+        mirror: new MirrorChyanPackage(partialUrl, shardBuild1.AppVersion, "incremental", new FileInfo(partial).Length, null),
+        confirmWholePackage: question => { confirmations.Add(question); return Task.FromResult(true); });
+    Assert(confirmations.Count == 1 && confirmations[0].Contains("完整程序包"), "the whole archive is a question, not a surprise: " + string.Join("|", confirmations));
+    Assert(store.LastCatalogDownloadCount == 0, "and it is still the mirror that carried every byte: " + string.Join(",", asked));
+    Assert(updates.LastProgramSource == "Mirror酱（完整程序包）", "the label names the archive that actually produced the tree: " + updates.LastProgramSource);
+    Assert(updates.LastProgramMirrorRefusal.Length > 0, "and why the difference package was not enough is written down: " + updates.LastProgramMirrorRefusal);
+    var pending = store.ReadState().Pending;
+    Assert(pending is not null && await store.ValidateInstalledAsync(pending, default) is not null, "the assembled tree satisfies the signed catalog exactly");
+});
+
 await Test("the whole archive is asked for by naming no version, and an incremental answer is not one", async () =>
 {
     // MirrorChyan answers a whole archive only to a client that does not say which version it runs, so the request
     // must not carry one - and an incremental answer, however good a difference package it is, cannot stand in
-    // for a shard.
+    // for a shard. The check itself asks the version question (that is what the mirror source is for), so the
+    // assertion is about the request that asks for an archive rather than about every request made.
     var store = Store();
     var tree = ShardTree(shardBuild1, "v1");
     var (pkg, _, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
@@ -876,8 +1012,9 @@ await Test("the whole archive is asked for by naming no version, and an incremen
     await updates.CheckAsync();
     var whole = await updates.ResolveMirrorChyanWholePackageAsync(updates.LastCheckResult!.AppUpdate!);
     Assert(whole is null, "an incremental answer is refused as a whole archive");
-    Assert(asked.Count == 1 && !asked[0].Contains("current_version", StringComparison.Ordinal),
+    Assert(asked.Count(url => !url.Contains("current_version", StringComparison.Ordinal)) == 1,
         "the whole archive is asked for by naming no version: " + string.Join(",", asked));
+    Assert(!asked[^1].Contains("current_version", StringComparison.Ordinal), "and it is the last question asked: " + asked[^1]);
     Assert(updates.LastWholePackageRefusal.Length > 0, "and why it was refused is written down: " + updates.LastWholePackageRefusal);
 });
 await Test("the GitHub connectivity probe follows the archive address the catalog names", async () =>
@@ -914,7 +1051,7 @@ await Test("the GitHub connectivity probe follows the archive address the catalo
     var probes = await updates.ProbeSourcesAsync();
     Assert(probes.Count == 2 && probes[0].Name == "GitHub" && probes[1].Name == "Mirror酱", "the row covers the two download sources");
     Assert(probes[0].Reachable == true, "the archive address answers: " + probes[0].Detail);
-    Assert(probes[0].Detail.Contains("程序包地址"), "the detail names what was actually probed: " + probes[0].Detail);
+    Assert(probes[0].Detail.Contains("能下载这一版的更新"), "the detail names what was actually probed: " + probes[0].Detail);
     Assert(probes[1].Reachable is null, "no CDK is neither a pass nor a fail");
 });
 await Test("launcher crash terminates both application and its native-style descendant", async () =>
