@@ -302,7 +302,6 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 ApplyLegacyFeatureExclusions(*loaded, kuro.directoryPath / "manifest.json", sourceImfSha, baselineRows);
                 mapFeatureAdditions.push_back(&kuro.featureData);
                 mergedFeatureRows += static_cast<std::uint32_t>(kuro.featureData.imgKeypoints.size());
-                CandidateFeaturePack::AppendFeatures(loaded->kuroTileFeatures, kuro.featureData);
                 Diagnostics::Record("kuro-tile-feature-index", "id=" + kuro.packId +
                     " durationMs=" + std::to_string(ElapsedMilliseconds(kuroMergeStart)) +
                     " visualIndexReady=" + std::to_string(shardReady) +

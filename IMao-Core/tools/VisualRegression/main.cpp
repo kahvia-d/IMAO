@@ -1,4 +1,4 @@
-﻿#include "Feature/LegacyFeatureExclusions.h"
+#include "Feature/LegacyFeatureExclusions.h"
 #include "../../tests/MultiSceneViewportTests.h"
 #include "Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
 #include "Coordinate/VisualLocalization/RecoveryPolicy.h"
@@ -115,7 +115,6 @@ std::shared_ptr<const RuntimeFeatureResources> LoadResources(
             kuro.sceneId, firstShardTile, static_cast<std::uint32_t>(shard.tiles.size()) });
         ApplyLegacyFeatureExclusions(*resources, kuro.directoryPath / "manifest.json", sourceHash, baselineRows);
         CandidateFeaturePack::AppendFeatures(resources->map, kuro.featureData);
-        CandidateFeaturePack::AppendFeatures(resources->kuroTileFeatures, kuro.featureData);
     }
     const auto candidates = CandidateFeaturePack::LoadRegisteredCandidates(featureRoot.string());
     for (const auto& candidate : candidates) {

@@ -29,9 +29,16 @@ struct RuntimeFeatureResources {
     }
     // Optional Kuro feature packs are kept separate so an image-only fallback
     // can verify one map package at a time without cross-region false matches.
+    // The separation is expressed by row ranges, not by a second copy of the
+    // descriptors: kuroVisualShards says which rows of the merged map belong to
+    // which pack, and the feature rows themselves are read through the index.
     std::vector<VisualFeatureShardRange> kuroVisualShards;
     bool visualIndexReady = false;
-    ImageFeatureData kuroTileFeatures;
+    // There used to be an `ImageFeatureData kuroTileFeatures` here. Every tile pack was appended to it
+    // after being merged into `map` above, so it held a second full copy of the same descriptors -
+    // ~630 MB resident at 1.18 M keypoints - and nothing had read it since the per-region path moved to
+    // kuroVisualShards. Removed 2026-10-02 after the memory audit measured the copy; a future consumer
+    // that needs one region's rows should slice `map` with the shard range instead of materialising them.
     ImageFeatureData curatedCandidates;
     ImageFeatureData iconTask;
     ImageFeatureData wavePlateCrystal;
