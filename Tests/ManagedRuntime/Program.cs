@@ -15,6 +15,47 @@ static void Check(bool passed, string message)
     Console.WriteLine("PASS " + message);
 }
 
+// Memory audit: start the real host through the real service, hold the session open, and sample what it
+// costs. OCR preload is deferred until the application reports ready, so a host started by hand - or sampled
+// without a session - never shows the recognizer's share at all.
+if (args.FirstOrDefault() == "hold")
+{
+    string assetRoot = Path.GetFullPath(args[1]);
+    int holdSeconds = args.Length > 2 ? int.Parse(args[2]) : 180;
+    string label = args.Length > 3 ? args[3] : "hold";
+    string holdRoot = Path.Combine(assetRoot, "mem-audit-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(holdRoot);
+    var samples = new List<object>();
+    await using var service = new CoreHostService(assetRoot,
+        new RuntimeConfigurationStore(Path.Combine(holdRoot, "runtime.json")),
+        new LocalItemFilter(Path.Combine(holdRoot, "host-filters.json"), Path.Combine(holdRoot, "legacy.json")));
+    var started = Stopwatch.StartNew();
+    await service.EnsureStartedAsync();
+    Console.WriteLine($"connected={service.IsConnected} fault={service.LastFault}");
+    var process = Process.GetProcessesByName("IMao-CoreHost").OrderByDescending(p => p.StartTime).FirstOrDefault();
+    if (process is null) throw new Exception("CoreHost is not running after EnsureStartedAsync.");
+    Console.WriteLine($"corehost pid={process.Id}");
+    for (int index = 0; index < holdSeconds * 4; index++)
+    {
+        await Task.Delay(250);
+        process.Refresh();
+        samples.Add(new
+        {
+            seconds = Math.Round(started.Elapsed.TotalSeconds, 2),
+            workingSetMB = Math.Round(process.WorkingSet64 / 1048576.0, 1),
+            privateMB = Math.Round(process.PrivateMemorySize64 / 1048576.0, 1),
+            pagedMB = Math.Round(process.PagedMemorySize64 / 1048576.0, 1),
+            threads = process.Threads.Count,
+            handles = process.HandleCount
+        });
+    }
+    await service.ShutdownAsync();
+    await File.WriteAllTextAsync(Path.Combine(assetRoot, "mem-audit-" + label + ".json"),
+        JsonSerializer.Serialize(samples, new JsonSerializerOptions { WriteIndented = true }));
+    Console.WriteLine($"samples={samples.Count}");
+    return;
+}
+
 string root = Path.Combine(Path.GetTempPath(), "imao-managed-test-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 try
