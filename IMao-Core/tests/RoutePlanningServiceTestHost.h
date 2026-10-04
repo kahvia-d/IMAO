@@ -33,6 +33,11 @@ struct DrawItemBase {
         return {{"accepted",true},{"data",{{"changed",1},{"point",{{"profileId",profile},{"stateId",item.layer.stateId},{"pointId",item.itemId},{"routeId",item.freeRouteId},{"stopKind","free"},{"completed",value}}}}}};
     }
     static void PublishMarkerEvent(Json) { RoutePlanningService::OnMarkerChanged(); }
+    static void RemoveFreePointCompletions(const std::string& profile,const std::string& routeId) {
+        if(profile!=markerProfile)throw std::runtime_error("profile-mismatch");
+        std::scoped_lock lock(mutex);const auto prefix="free-route:"+routeId+":";
+        std::erase_if(completed,[&](const auto& key){const auto colon=key.find(':');return colon!=std::string::npos&&key.compare(colon+1,prefix.size(),prefix)==0;});
+    }
     static bool IsRefreshablePoint(const std::string& nameId){return refreshableCategories.contains(nameId);}
     static bool IsRefreshablePointId(const std::string& pointId){return refreshablePointIds.contains(pointId);}
     // The isolated harness has no icon package. An empty path is also what the real one returns for

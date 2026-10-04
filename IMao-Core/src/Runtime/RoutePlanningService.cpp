@@ -62,6 +62,7 @@ struct Runtime {
     int scene=0,observedScene=0;
     bool mapSuspended=false;
     std::string profile,tool="pan",message;
+    bool deletionRecoveryPending=false;
     std::map<int,Draft> drafts;
     std::unordered_map<int,std::unordered_map<std::string,ItemDatas>> catalog;
     std::unordered_map<std::string,std::string> names;
@@ -224,6 +225,13 @@ std::string CollectionNameLocked(const std::string& id){
 // Everything that has to happen once a route file is gone, in one place: the navigation it was
 // running and the preview that was standing in for it. Deleting one route and deleting a whole
 // collection must not drift apart on this.
+void DeleteRouteLocked(const std::string& routeId) {
+    auto& r=R();
+    auto canonical=routeId;
+    for(const auto& row:r.saved)if(AutoRoute::SameRouteId(row.value("id",std::string{}),routeId)) {canonical=row.at("id").get<std::string>();break;}
+    r.deletionRecoveryPending=true;
+    r.store->Delete(r.profile,canonical,[&]{DrawItemBase::RemoveFreePointCompletions(r.profile,canonical);});
+}
 void ForgetDeletedRouteLocked(const std::string& routeId){
     auto& r=R();
     if(r.active&&AutoRoute::SameRouteId(r.active->id,routeId))StopNavigationLocked();
@@ -559,19 +567,28 @@ void Emit(){
     callback({{"type","routePlanningChanged"},{"data",std::move(state)}});
 }
 void SyncProfileLocked(){
-    auto& r=R();const auto profile=DrawItemBase::MarkerProfile();if(profile==r.profile)return;
+    auto& r=R();const auto profile=DrawItemBase::MarkerProfile();
+    if(profile==r.profile) {
+        if(r.deletionRecoveryPending) {
+            try {r.store->RecoverDeletions(profile,[&](const auto& id){DrawItemBase::RemoveFreePointCompletions(profile,id);});r.deletionRecoveryPending=false;ReloadSavedLocked();RefreshCompletedLocked();}
+            catch(const std::exception& e){r.message=std::string("自由点删除清理待重试：")+e.what();}
+        }
+        return;
+    }
     InvalidateLocked();r.profile=profile;r.enabled=false;r.pendingNew=false;r.drafts.clear();r.active.reset();r.skipHistory.clear();
     InvalidateAutoLocked(true);r.stablePlayer.Reset();r.hasAutoPosition=false;
     r.farmMode=false;r.farmConfirmation.Reset();r.farmNotice.clear();
     // The other profile's collections must not survive the switch even if reading the new index
     // fails below: a list built from the wrong profile's collections would look like data loss.
-    r.collections={};r.currentCollection=AutoRoute::DefaultCollectionId;
+    r.collections={};r.currentCollection=AutoRoute::DefaultCollectionId;r.saved=Json::array();r.deletionRecoveryPending=true;
     // A package inspected under one profile must never be applied under another.
     r.transfer=nullptr;
     r.handDraft.Cancel();r.handTypeChoosing=false;
     r.mapSuspended=false;
     r.runRequested=false;r.completed.clear();r.message.clear();r.tool="pan";
-    try {ReloadCollectionsLocked();ReloadSavedLocked();r.active=r.store->LoadActive(profile,ResolveLocked);
+    try {ReloadCollectionsLocked();ReloadSavedLocked();
+        r.store->RecoverDeletions(profile,[&](const auto& id){DrawItemBase::RemoveFreePointCompletions(profile,id);});r.deletionRecoveryPending=false;
+        r.active=r.store->LoadActive(profile,ResolveLocked);
         if(r.active){ValidateTypedRoute(*r.active);r.skipHistory=r.active->skipHistory;r.message="已恢复自动路线，点击继续导航";
             // A restored route carries its own farming setting; it stays off until the player
             // resumes, because the mode itself only acts while the navigation is running.
@@ -1207,14 +1224,15 @@ Json RoutePlanningService::Command(const Json& command){
         }else if(action=="delete"){
             const auto id=command.at("routeId").get<std::string>();
             const bool removingActive=r.active&&AutoRoute::SameRouteId(r.active->id,id);
-            try {r.store->Delete(r.profile,id);}
+            try {DeleteRouteLocked(id);}
             catch(const AutoRoute::DeleteRollbackFailure&){
                 if(removingActive)StopNavigationLocked();
+                ReloadSavedLocked();RefreshCompletedLocked();
                 throw;
             }
             ForgetDeletedRouteLocked(id);
             RefreshCompletedLocked();ReloadSavedLocked();
-            r.message=removingActive?"路线已删除并退出导航，点位完成记录保留":"路线已删除，点位完成记录保留";
+            r.message=removingActive?"路线已删除并退出导航，自由点完成记录已清理，官方点位记录保留":"路线已删除，自由点完成记录已清理，官方点位记录保留";
         }else if(action=="collectionNew"){
             const auto name=AutoRoute::RouteCollections::TrimName(command.value("name",std::string{}));
             if(!AutoRoute::RouteCollections::IsValidName(name))
@@ -1269,9 +1287,10 @@ Json RoutePlanningService::Command(const Json& command){
                 [&](const std::string& routeId){return AutoRoute::SameRouteId(r.active->id,routeId);});
             std::size_t removed=0;std::string failure;
             for(const auto& routeId:doomed){
-                try {r.store->Delete(r.profile,routeId);++removed;}
+                try {DeleteRouteLocked(routeId);ForgetDeletedRouteLocked(routeId);++removed;}
                 catch(const AutoRoute::DeleteRollbackFailure&){
-                    if(removingActive)StopNavigationLocked();
+                    if(r.active&&AutoRoute::SameRouteId(r.active->id,routeId))StopNavigationLocked();
+                    ReloadSavedLocked();RefreshCompletedLocked();
                     throw;
                 }catch(const std::exception& error){if(failure.empty())failure=error.what();}
             }
@@ -1290,7 +1309,7 @@ Json RoutePlanningService::Command(const Json& command){
             SaveCollectionsLocked();
             ReloadSavedLocked();
             RefreshCompletedLocked();
-            r.message="已删除合集「"+name+"」和它里面的 "+std::to_string(removed)+" 条路线，点位完成记录保留";
+            r.message="已删除合集「"+name+"」和它里面的 "+std::to_string(removed)+" 条路线，自由点完成记录已清理，官方点位记录保留";
             StructuredLogger::Record("info","routes","collection-deleted",
                 "collectionId="+collectionId+" name="+name+" routes="+std::to_string(removed));
         }else if(action=="collectionCurrent"){
@@ -1434,7 +1453,9 @@ Json RoutePlanningService::Command(const Json& command){
                 for(const auto& row:r.saved){
                     if(!AutoRoute::SameRouteId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}),target))continue;
                     const auto removed=row.value("id",std::string{});
-                    r.store->Delete(r.profile,removed);
+                    try {DeleteRouteLocked(removed);}
+                    catch(const AutoRoute::DeleteRollbackFailure&){if(r.active&&AutoRoute::SameRouteId(r.active->id,removed))StopNavigationLocked();ReloadSavedLocked();RefreshCompletedLocked();throw;}
+                    catch(...){ReloadSavedLocked();RefreshCompletedLocked();throw;}
                     if(r.active&&AutoRoute::SameRouteId(r.active->id,removed)) {
                         InvalidateLocked();InvalidateAutoLocked(true);r.active.reset();r.runRequested=false;
                         r.completed.clear();r.skipHistory.clear();r.farmMode=false;r.farmConfirmation.Reset();

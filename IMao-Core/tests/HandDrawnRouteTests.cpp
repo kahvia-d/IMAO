@@ -249,12 +249,23 @@ void FreeCompletionTests() {
     if(held!=INVALID_HANDLE_VALUE)CloseHandle(held);
     restarted.Set("local",permanent,false);
     Check(!restarted.Completed("local",permanent),"free-point completion can be undone");
+    afterClosedDay.Set("local",daily,true);afterClosedDay.Set("local",permanent,true);
+    afterClosedDay.Set("local",other,true);afterClosedDay.Set("other",daily,true);
+    const auto deletionLock=CreateFileW(heldFile.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+    Rejects([&]{afterClosedDay.RemoveRoute("local","route-a");},"failed deletion cleanup rejects its atomic write");
+    Check(afterClosedDay.Completed("local",daily)&&afterClosedDay.Completed("local",permanent),"failed cleanup preserves both completion tables");
+    if(deletionLock!=INVALID_HANDLE_VALUE)CloseHandle(deletionLock);
+    afterClosedDay.RemoveRoute("local","route-a");
+    FreePointCompletionStore afterDelete(root,[&]{return epoch;});
+    Check(!afterDelete.Completed("local",daily)&&!afterDelete.Completed("local",permanent),"route deletion durably clears daily and permanent records");
+    Check(afterDelete.Completed("local",other)&&afterDelete.Completed("other",daily),"route deletion preserves other routes and profiles");
     const auto file=root/"profiles"/"local.free.json";
     std::ifstream input(file);std::string bytes((std::istreambuf_iterator<char>(input)),{});
     Check(bytes.find("outbox")==std::string::npos&&bytes.find("pending")==std::string::npos,"local free progress has no synchronization records");
     // The test owns only this unique temp directory.
     input.close();
     std::error_code error;std::filesystem::remove(file,error);
+    std::filesystem::remove(root/"profiles"/"other.free.json",error);
     std::filesystem::remove(root/"profiles",error);std::filesystem::remove(root,error);
 }
 void BadgeRenderingTests() {

@@ -45,6 +45,7 @@ public:
     static bool IsRefreshablePoint(const std::string& nameId);
     static bool IsCollectiblePoint(const std::string& nameId);
     static nlohmann::json SetFreePointCompletion(const std::string& profile, const ItemDatas& item, bool completed);
+    static void RemoveFreePointCompletions(const std::string& profile,const std::string& routeId);
     static bool IsRefreshablePointId(const std::string& pointId);
     // Reports the daily 04:00 reset of the farming ledger exactly once per boundary, and says
     // whether it just happened so the caller can refresh whatever cached the old completions.

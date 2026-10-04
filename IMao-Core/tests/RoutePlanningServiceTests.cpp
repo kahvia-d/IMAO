@@ -1197,7 +1197,13 @@ void VerifyCollections(){
     Command({{"action","resume"}});
     Check(RoutePlanningService::View().active&&RoutePlanningService::View().active->id=="keep-b",
         "fixture must be following a route inside the collection that is about to be deleted");
+    const auto completionState=template_.stops.front().layer.stateId;
+    const auto deletedFree=std::to_string(completionState)+":free-route:keep-b:free:1";
+    const auto retainedFree=std::to_string(completionState)+":free-route:ghost-route:free:1";
+    const auto official=AutoRoute::Key(template_.stops.front());
+    {std::scoped_lock lock(DrawItemBase::mutex);DrawItemBase::completed.insert(deletedFree);DrawItemBase::completed.insert(retainedFree);DrawItemBase::completed.insert(official);}
     Command({{"action","collectionDelete"},{"collectionId",chestId}});
+    {std::scoped_lock lock(DrawItemBase::mutex);Check(!DrawItemBase::completed.contains(deletedFree)&&DrawItemBase::completed.contains(retainedFree)&&DrawItemBase::completed.contains(official),"collection deletion clears scoped free progress but preserves other routes and official points");}
     Check(!std::filesystem::exists(routePath("keep-b"))&&!std::filesystem::exists(routePath("keep-a")),
         "deleting a collection deletes the routes that were filed in it");
     Check(rowCollection("ghost-route")==AutoRoute::DefaultCollectionId,

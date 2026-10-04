@@ -255,6 +255,20 @@ void StoreTests() {
     store.Save(second, true);
     Expect(store.LoadActive("local", resolver)->id == "route-2", "explicit make-active changes active pointer");
     Expect(store.List("local").size() == 2, "listing excludes active pointer");
+    RejectsAny([&]{store.Delete("local","route-2",[]{throw std::runtime_error("ledger locked");});},"ledger cleanup failure rejects route deletion");
+    Expect(store.List("local").size()==2&&store.LoadActive("local",resolver)->id=="route-2","cleanup failure restores both route and active pointer");
+    bool cleanupCalled=false;
+    RejectsAny([&]{store.Delete("local","missing-route",[&]{cleanupCalled=true;});},"missing route deletion is rejected");
+    Expect(!cleanupCalled,"failed route deletion never removes completion records");
+    const auto interrupted=planPath;auto tombstone=planPath;tombstone+=L".deleting";
+    std::filesystem::rename(interrupted,tombstone);
+    RejectsAny([&]{store.Save(plan,false);},"pending deletion identity cannot be reused before recovery completes");
+    RejectsAny([&]{store.RecoverDeletions("local",[](const auto&){throw std::runtime_error("ledger locked");});},"interrupted cleanup remains retryable when the ledger is locked");
+    Expect(std::filesystem::exists(tombstone),"failed recovery retains durable deletion intent");
+    std::string recoveredId;
+    store.RecoverDeletions("local",[&](const auto& id){recoveredId=id;});
+    Expect(recoveredId=="route-1"&&!std::filesystem::exists(tombstone),"restart replays interrupted route cleanup before removing its tombstone");
+    store.Save(plan,false);
 
     const auto before = read(planPath);
     HANDLE locked = CreateFileW(planPath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);

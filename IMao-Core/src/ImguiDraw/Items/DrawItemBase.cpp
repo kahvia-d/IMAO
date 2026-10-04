@@ -648,6 +648,10 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
 bool DrawItemBase::IsCollectiblePoint(const std::string& nameId) {
     return refreshableCategories.IsCollectible(nameId);
 }
+void DrawItemBase::RemoveFreePointCompletions(const std::string& profile,const std::string& routeId) {
+    if(!freeStore||profile!=MarkerProfile())throw std::runtime_error("自由点记录本不可用或已变化");
+    freeStore->RemoveRoute(profile,routeId);
+}
 json DrawItemBase::SetFreePointCompletion(const std::string& profile,const ItemDatas& item,bool value) {
     if(!freeStore || profile!=MarkerProfile())return {{"accepted",false},{"message","档案已变化"}};
     try {

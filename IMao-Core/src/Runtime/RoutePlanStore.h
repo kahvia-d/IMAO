@@ -92,6 +92,9 @@ public:
             {"collection",NormalizeCollectionId(plan.collection)}};
     }
     void Save(const Plan& plan,bool makeActive=false) const {
+        // Never reuse an identity while its deletion still needs durable cleanup.
+        for(const bool handDrawn:{false,true})if(std::filesystem::exists(DeletingPath(Path(plan.profileId,plan.id,handDrawn))))
+            throw std::runtime_error("路线删除清理尚未完成，请重试后再保存");
         WriteTextAtomically(Path(plan.profileId,plan.id,plan.handDrawn),Document(plan).dump(2));
         if(makeActive)WriteTextAtomically(ActivePath(plan.profileId),
             Json({{"formatVersion",1},{"routeId",plan.id},{"handDrawn",plan.handDrawn}}).dump(2));
@@ -124,9 +127,28 @@ public:
     }
     // Deletes from whichever folder holds the id. Returns whether the route was hand-drawn, so
     // a caller can report which list the row disappeared from.
-    bool Delete(const std::string& profile,const std::string& id) const {
-        if(std::filesystem::is_regular_file(Path(profile,id,true)))return DeleteIn(profile,id,true);
-        return DeleteIn(profile,id,false);
+    bool Delete(const std::string& profile,const std::string& id,const std::function<void()>& cleanup = {}) const {
+        if(std::filesystem::is_regular_file(Path(profile,id,true)))return DeleteIn(profile,id,true,cleanup);
+        return DeleteIn(profile,id,false,cleanup);
+    }
+    void RecoverDeletions(const std::string& profile,const std::function<void(const std::string&)>& cleanup) const {
+        for(const bool handDrawn:{false,true}) {
+            const auto folder=Root(profile,handDrawn);if(!std::filesystem::exists(folder))continue;
+            for(const auto& entry:std::filesystem::directory_iterator(folder)) {
+                if(!entry.is_regular_file()||entry.path().extension()!=L".deleting")continue;
+                const auto original=entry.path().stem();if(original.extension()!=L".json")continue;
+                const auto id=original.stem().string();ValidateRouteComponent(id);
+                if(std::filesystem::exists(folder/original))throw std::runtime_error("路线删除事务冲突，请恢复本地备份");
+                bool active=false;
+                if(std::filesystem::exists(ActivePath(profile))) {
+                    try {const auto pointer=Read(ActivePath(profile));active=pointer.contains("routeId")&&pointer.at("routeId").is_string()&&SameRouteId(pointer.at("routeId").get<std::string>(),id);}
+                    catch(const Json::exception&){}
+                }
+                if(active)ClearActive(profile);
+                cleanup(id); // Idempotent; retain the tombstone until the ledger is durable.
+                std::filesystem::remove(entry.path());
+            }
+        }
     }
     Json List(const std::string& profile) const {
         Json rows=Json::array();
@@ -263,16 +285,17 @@ private:
     Plan LoadFolder(const std::string& profile,const std::string& id,const std::filesystem::path& folder,const Resolver& resolve) const {
         return Parse(Read(folder/(id+".json")),profile,id,resolve);
     }
-    bool DeleteIn(const std::string& profile,const std::string& id,bool handDrawn) const {
+    bool DeleteIn(const std::string& profile,const std::string& id,bool handDrawn,const std::function<void()>& cleanup) const {
         const auto routePath=Path(profile,id,handDrawn),pendingPath=DeletingPath(routePath);
         if(!std::filesystem::is_regular_file(routePath))throw std::runtime_error("要删除的自动路线不存在");
         bool wasActive=false;
+        std::optional<Json> previousActive;
         const auto activePath=ActivePath(profile);
         if(std::filesystem::exists(activePath)){
             // A damaged active pointer must not prevent removing a damaged
             // saved route. Normal pointers still receive a durable clear.
             try {const auto doc=Read(activePath);wasActive=doc.contains("routeId")&&doc.at("routeId").is_string()&&
-                SameRouteId(doc.at("routeId").get<std::string>(),id);}
+                SameRouteId(doc.at("routeId").get<std::string>(),id);if(wasActive)previousActive=doc;}
             catch(const Json::exception&){}
         }
         if(!MoveFileExW(routePath.c_str(),pendingPath.c_str(),MOVEFILE_WRITE_THROUGH))
@@ -281,6 +304,16 @@ private:
         catch(...){
             if(!MoveFileExW(pendingPath.c_str(),routePath.c_str(),MOVEFILE_WRITE_THROUGH))
                 throw DeleteRollbackFailure();
+            throw;
+        }
+        try {if(cleanup)cleanup();}
+        catch(...) {
+            // Cleanup is an atomic ledger write: rejection leaves its records intact.
+            // Restore the pointer before exposing the route again; a failed rollback
+            // keeps the tombstone authoritative and the caller stops navigation.
+            try {if(previousActive)WriteTextAtomically(activePath,previousActive->dump(2));}
+            catch(...){throw DeleteRollbackFailure();}
+            if(!MoveFileExW(pendingPath.c_str(),routePath.c_str(),MOVEFILE_WRITE_THROUGH))throw DeleteRollbackFailure();
             throw;
         }
         // The rename is the deletion commit. A leftover tombstone is excluded

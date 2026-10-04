@@ -25,6 +25,22 @@ public:
         std::scoped_lock lock(mutex_);Select(profile);Expire();
         return std::exchange(expired_,false);
     }
+    void RemoveRoute(const std::string& profile,const std::string& routeId) {
+        if(routeId.empty()||!std::all_of(routeId.begin(),routeId.end(),[](unsigned char c){return std::isalnum(c)||c=='-'||c=='_';}))
+            throw std::invalid_argument("invalid-route");
+        std::scoped_lock lock(mutex_);Select(profile);
+        auto next=document_;const auto prefix="free-route:"+routeId+":";
+        for(const auto* name:{"permanent","daily"}) {
+            auto& table=next[name];
+            for(auto it=table.begin();it!=table.end();) {
+                const auto separator=it.key().find(':');
+                if(separator!=std::string::npos&&it.key().compare(separator+1,prefix.size(),prefix)==0)it=table.erase(it);
+                else ++it;
+            }
+        }
+        if(next==document_)return;
+        WriteTextAtomically(Path(),next.dump(2));document_=std::move(next);
+    }
 private:
     std::filesystem::path root_;
     FarmCompletionStore::EpochSource epoch_;
