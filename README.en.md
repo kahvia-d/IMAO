@@ -346,6 +346,16 @@ does not automatically grant permission to use them.
 
 Thanks to everyone who developed, tested and reported issues — you are what makes this tool better! (\*´▽｀)ノノ
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=kahvia-d%2FIMAO&amp;type=date&amp;legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=kahvia-d/IMAO&amp;type=date&amp;theme=dark&amp;legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=kahvia-d/IMAO&amp;type=date&amp;legend=top-left" />
+    <img alt="IMAO Star History Chart" src="https://api.star-history.com/chart?repos=kahvia-d/IMAO&amp;type=date&amp;legend=top-left" />
+  </picture>
+</a>
+
 ## Community
 
 **User QQ group: `1109700733`**
