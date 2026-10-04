@@ -140,7 +140,8 @@ public sealed class CoreHostService : INotifyPropertyChanged
     {
         type = "markerSelected", profileId = point.ProfileId, sceneName = point.Scene, nameId = point.NameId,
         pointId = point.PointId, stateId = point.StateId, countryId = point.CountryId, floorId = point.FloorId,
-        level = point.Level, completed = point.Completed, screenX = point.ScreenX, screenY = point.ScreenY
+        level = point.Level, completed = point.Completed, screenX = point.ScreenX, screenY = point.ScreenY,
+        stopKind=point.StopKind,routeId=point.RouteId,freeCategory=point.FreeCategory,freeIcon=point.FreeIcon,localName=point.LocalName
     };
     internal static JsonElement Empty() => JsonSerializer.SerializeToElement(new { });
 }

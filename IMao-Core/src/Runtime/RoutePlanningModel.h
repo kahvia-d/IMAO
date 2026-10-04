@@ -85,12 +85,12 @@ struct SolveResult {
     double initialLength = 0, planarLength = 0;
     bool cancelled = false;
 };
-inline std::vector<FreeRouteMarker> FreeMarkers(const Plan& plan,const std::unordered_set<std::string>& completed,int current,std::uint64_t revision) {
+inline std::vector<FreeRouteMarker> FreeMarkers(const Plan& plan,const std::unordered_set<std::string>& completed,int current,std::uint64_t revision,bool navigationOnly=false) {
     std::vector<FreeRouteMarker> markers;
     for(std::size_t i=0;i<plan.stops.size();++i){
         const auto& point=plan.stops[i];const auto key=Key(point);
-        if(!IsFreeStop(point)||completed.contains(key)||plan.skipped.contains(key))continue;
-        auto markerPoint=point;markerPoint.freeDisplayOrder=static_cast<int>(i+1);
+        if(!IsFreeStop(point)||(navigationOnly&&(completed.contains(key)||plan.skipped.contains(key))))continue;
+        auto markerPoint=point;markerPoint.freeDisplayOrder=static_cast<int>(i+1);markerPoint.isSaved=completed.contains(key);
         markers.push_back({markerPoint,static_cast<int>(i+1),static_cast<int>(i)==current,plan.profileId,plan.id,revision});
     }
     return markers;

@@ -17,7 +17,7 @@ public:
     /// official map shows. Callers suppress it once the player is standing in that layer,
     /// where the marker is no longer a hint.
     static void DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted,
-        bool completed, std::size_t count = 1, bool layeredBadge = true);
+        bool completed, std::size_t count = 1, bool layeredBadge = true, bool current = false);
     /// Installs or removes the system mouse hook according to whether the map is interactive.
     static void SyncMouseHook();
     /// "mouse=on/off keyboard=on/off", for the overlay diagnostics.

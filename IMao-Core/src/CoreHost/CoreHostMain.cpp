@@ -361,7 +361,7 @@ json CursorSelection(const GamepadCursorTargets::View& view, const GamepadCursor
     return {{"type", "markerSelected"}, {"profileId", view.binding.context.profileId},
         {"sceneName", view.binding.context.sceneName}, {"nameId", item.nameId}, {"pointId", item.itemId}, {"stopKind", item.layer.stopKind == StopKind::Free ? "free" : "catalog"}, {"routeId", item.freeRouteId}, {"freeCategory", AutoRoute::CategoryId(item.freeCategory)}, {"freeIcon", AutoRoute::IconId(item.freeIcon)}, {"localName", AutoRoute::FreePointName(item)},
         {"stateId", item.layer.stateId}, {"countryId", item.layer.countryId}, {"floorId", item.layer.floorId},
-        {"level", item.layer.level}, {"completed", false},
+        {"level", item.layer.level}, {"completed", DrawItemBase::IsPointCompleted(view.binding.context.sceneName,item)},
         {"screenX", static_cast<int>(std::lround(view.binding.origin.x + candidate.position.x))},
         {"screenY", static_cast<int>(std::lround(view.binding.origin.y + candidate.position.y))}};
 }
@@ -391,13 +391,11 @@ json ResolveGamepadCursorCandidate(const json& command) {
     auto candidate = GamepadCursorTargets::Resolve(snapshot, revision, profile, generation, scene, static_cast<int>(state), point, command.value("routeId",std::string{}),
         command.value("stopKind",std::string{})=="free"?StopKind::Free:StopKind::Catalog);
     if (!candidate) throw std::invalid_argument("圆环下点位或地图视图已变化，请返回大地图重新读取");
-    if (DrawItemBase::IsPointCompleted(scene, candidate->item))
-        throw std::invalid_argument("该点位已经完成，请重新读取圆环候选");
     // A late response cannot switch to another item or another assistant window.
     snapshot = ReadCursorTargets(ReadGamepadContext());
     candidate = GamepadCursorTargets::Resolve(snapshot, revision, profile, generation, scene, static_cast<int>(state), point, command.value("routeId",std::string{}),
         command.value("stopKind",std::string{})=="free"?StopKind::Free:StopKind::Catalog);
-    if (!candidate || !validAssistant() || DrawItemBase::IsPointCompleted(scene, candidate->item))
+    if (!candidate || !validAssistant())
         throw std::invalid_argument("读取点位期间画面或助手窗口已变化，操作已取消");
     return {{"accepted", true}, {"data", {{"selection", CursorSelection(snapshot, *candidate)},
         {"cursorRevision", revision}, {"assistantHwnd", assistant}, {"assistantGeneration", assistantGeneration}}}};
@@ -438,8 +436,7 @@ json GamepadTargets(const json& command) {
     data["cursorRevision"] = cursorTargets.revision;
     data["cursorCandidates"] = json::array();
     if (cursorTargets.available) for (const auto& candidate : cursorTargets.candidates)
-        if (!DrawItemBase::IsPointCompleted(cursorTargets.binding.context.sceneName, candidate.item))
-            data["cursorCandidates"].push_back(CursorSelection(cursorTargets, candidate));
+        data["cursorCandidates"].push_back(CursorSelection(cursorTargets, candidate));
     return {{"accepted", true}, {"data", std::move(data)}};
 }
 

@@ -390,7 +390,12 @@ add_test(NAME IMaoRoutePlanningTests COMMAND IMaoRoutePlanningTests)
 
 # The hand-drawn draft and the legacy-route import are pure logic: no map data, no marker store,
 # no IPC. Kept as its own binary so the feature's rules can be read and run on their own.
-add_executable(IMaoHandDrawnRouteTests IMao-Core/tests/HandDrawnRouteTests.cpp)
+add_executable(IMaoHandDrawnRouteTests IMao-Core/tests/HandDrawnRouteTests.cpp
+    # CPU-only draw data verifies badge bounds and completion opacity without a game or GPU.
+    IMao-Core/src/Base/imgui_dx11/imgui.cpp
+    IMao-Core/src/Base/imgui_dx11/imgui_draw.cpp
+    IMao-Core/src/Base/imgui_dx11/imgui_tables.cpp
+    IMao-Core/src/Base/imgui_dx11/imgui_widgets.cpp)
 target_include_directories(IMaoHandDrawnRouteTests PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)

@@ -5,6 +5,7 @@
 #include "Runtime/LegacyHandRouteImport.h"
 #include "Runtime/FreePointCompletionStore.h"
 #include "Runtime/RouteGeometry.h"
+#include "ImguiDraw/Routes/DrawFreePointBadge.h"
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -256,6 +257,25 @@ void FreeCompletionTests() {
     std::error_code error;std::filesystem::remove(file,error);
     std::filesystem::remove(root/"profiles",error);std::filesystem::remove(root,error);
 }
+void BadgeRenderingTests() {
+    ImGui::CreateContext();auto& io=ImGui::GetIO();io.IniFilename=nullptr;
+    io.DisplaySize={200,200};io.DeltaTime=1.0f/60;
+    unsigned char* pixels=nullptr;int width=0,height=0;io.Fonts->GetTexDataAsRGBA32(&pixels,&width,&height);
+    ImGui::NewFrame();
+    for(const auto* label:{"1","123","1C","3C"}) {
+        ImDrawList draw(ImGui::GetDrawListSharedData());draw._ResetForNewFrame();
+        draw.PushTextureID(io.Fonts->TexID);draw.PushClipRectFullScreen();
+        DrawFreePointBadge(&draw,{100,100},label,false,true,false,12);
+        Check(!draw.VtxBuffer.empty(),"completed free badges keep rendered geometry and their text");
+        for(const auto& vertex:draw.VtxBuffer) {
+            Check(std::hypot(vertex.pos.x-100,vertex.pos.y-100)<=13.05,
+                "number and text icons fit the standard map marker and controller footprint");
+            Check((vertex.col>>24)<=115,"completed circle and glyph vertices share the standard dimmed alpha");
+        }
+    }
+    ImGui::EndFrame();ImGui::DestroyContext();
+}
+
 void FreeMarkerTests() {
     const std::array<AutoRoute::CircleClipVertex,3> edge={AutoRoute::CircleClipVertex{{90,-12},{0,0},{255,255,255,255}},
         AutoRoute::CircleClipVertex{{110,0},{1,0},{255,255,255,255}},AutoRoute::CircleClipVertex{{90,12},{0,1},{255,255,255,255}}};
@@ -267,13 +287,17 @@ void FreeMarkerTests() {
     AutoRoute::HandDrawnDraft draft;draft.Start(Scene1,StateIdFor(Scene1));
     draft.Add(Blank(1,2,StateIdFor(Scene1)));draft.Add(Blank(3,4,StateIdFor(Scene1)));
     const auto plan=draft.Commit("marker-route","x","local");
-    const auto remaining=AutoRoute::FreeMarkers(plan,{AutoRoute::Key(plan.stops[0])},1,7);
+    const auto remaining=AutoRoute::FreeMarkers(plan,{AutoRoute::Key(plan.stops[0])},1,7,true);
     Check(remaining.size()==1,"the last free target has its own marker snapshot independent of segments");
     if(!remaining.empty())Check(remaining[0].order==2&&remaining[0].current&&remaining[0].orderRevision==7,
         "a marker retains original order, target emphasis and revision");
     auto skipped=plan;skipped.skipped.insert(AutoRoute::Key(skipped.stops[1]));
-    Check(AutoRoute::FreeMarkers(skipped,{AutoRoute::Key(plan.stops[0])},-1,8).empty(),
+    Check(AutoRoute::FreeMarkers(skipped,{AutoRoute::Key(plan.stops[0])},-1,8,true).empty(),
         "completed and skipped free stops produce no minimap markers");
+    const auto mapMarkers=AutoRoute::FreeMarkers(skipped,{AutoRoute::Key(plan.stops[0])},-1,8);
+    Check(mapMarkers.size()==2,"big-map free markers retain completed and skipped points for standard point operations");
+    if(mapMarkers.size()==2)Check(mapMarkers[0].point.isSaved&&!mapMarkers[1].point.isSaved,
+        "retained map markers carry completion separately from skipping");
 }
 } // namespace
 
@@ -285,7 +309,7 @@ int main() {
         Check(!AutoRoute::HandDrawingInputAllowed(true,1,2,true,true),"a different map cannot claim the retained drawing's input");
         Check(!AutoRoute::HandDrawingInputAllowed(false,1,1,true,true),"an inactive drawing does not own the keyboard");
         Check(!AutoRoute::HandDrawingInputAllowed(true,0,0,true,true),"an unknown map cannot claim the keyboard");
-        DraftTests(); ImportTests(); FreeIdentityTests(); FreeIconAndMigrationTests(); FreeCompletionTests(); FreeMarkerTests();
+        DraftTests(); ImportTests(); FreeIdentityTests(); FreeIconAndMigrationTests(); FreeCompletionTests(); FreeMarkerTests(); BadgeRenderingTests();
     }
     catch (const std::exception& error) { ++failures; std::cerr << "UNEXPECTED: " << error.what() << '\n'; }
     if (failures) { std::cerr << failures << " hand-drawn route test(s) failed\n"; return 1; }

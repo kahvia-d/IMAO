@@ -379,9 +379,6 @@ internal sealed class MapToolsWindow : Window
             routesHandButtons.Children.Add(MakeButton("绘制非收集物路线", "handStart:daily"));
         }
         routes.Children.Add(routesHandButtons);
-        if(next.Active is { } active)
-            foreach(var stop in active.Stops.Where(stop=>stop.IsFree && stop.Completed))
-                routes.Children.Add(MakeButton($"取消完成 · {stop.DisplayName}", "freeUndo:" + stop.Key));
         RebuildNavigation();
     }
 

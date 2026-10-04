@@ -26,6 +26,21 @@ internal static class GuideWindowTests
     public static async Task RunAsync(Action<string> log)
     {
         PlacementTests(log);
+        foreach (var point in new[] { A, A with { NameId = "", PointId = "free:1", StopKind = "free", RouteId = "test-route", LocalName = "自由点 · 第 1 个点" } })
+            await CaseAsync("completed map point uses the same controller undo action: " + point.StopKind, async f =>
+            {
+                await f.Coordinator.ShowAsync(point with { Completed = true });
+                await UntilAsync(() => Visible(f), "completed map point opens its standard detail window");
+                f.Window!.SetGamepadMode(true);
+                Check(f.Window.CanCompleteGamepad && Read<Button>(f.Window, "completion")!.IsEnabled,
+                    "completed official and free points expose the standard controller toggle");
+                await f.Window.CompleteCurrentAsync();
+                var saved = f.Core.Commands.Last(c => c.Operation == "markerSetCompletion").Arguments;
+                Check(!saved.GetProperty("completed").GetBoolean() && saved.GetProperty("pointId").GetString() == point.PointId &&
+                    saved.GetProperty("stopKind").GetString() == point.StopKind && saved.GetProperty("routeId").GetString() == point.RouteId,
+                    "controller undo sends the original point identity and false completion");
+            }, log);
+
         await CaseAsync("guide skip needs the current navigation target and a real 0.6 second hold", async f =>
         {
             // 路线正在导航、当前目标是 A：只有 A 的攻略可以跳过。

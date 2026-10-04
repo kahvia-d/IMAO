@@ -2861,7 +2861,7 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
     RoutePlanningService::SetPlayerAvailable(frame.minimapVisible && frame.minimapMotion.reliable && frame.focused);
     const auto routeView = RoutePlanningService::View();
     if(routeView.active && frame.minimapVisible && routeView.navigating && routeView.active->sceneId==frame.playerScene) {
-        frame.minimapFreeMarkers=AutoRoute::FreeMarkers(*routeView.active,routeView.completed,routeView.currentTargetIndex,routeView.orderRevision);
+        frame.minimapFreeMarkers=AutoRoute::FreeMarkers(*routeView.active,routeView.completed,routeView.currentTargetIndex,routeView.orderRevision,true);
         const auto center=RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate,playerCurrentSceneId);
         for(auto& marker:frame.minimapFreeMarkers) {
             marker.point.screenCoordiante=ScreenCoordinate::ItemScreenCoordinateOnMinMap(captured.clientRect,marker.point.itemMapROC,center,minimapTerrainScale);

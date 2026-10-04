@@ -107,11 +107,26 @@ public partial class App : Application
                     key is not ("back" or "close") && b.Visibility == Visibility.Visible).ToArray();
                 await Click(window, "routes");
                 await Until(() => window.Page == "routes", "saved routes page");
+                var originalRouteState=core.RoutePlanning;
+                core.Seed(originalRouteState with { Active=originalRouteState.Active! with { Stops=[new() {
+                    Key="8:free-route:route-fixture:free:1", StateId=8,PointId="free:1",StopKind="free",RouteId="route-fixture",Completed=true,Order=1
+                }] } });
+                await Until(()=>GetField<RoutePlanningState>(window,"state")?.Active?.Stops.Any(p=>p.IsFree&&p.Completed)==true,
+                    "completed free point is displayed in the route snapshot");
+                Check(!Descendants((DependencyObject)window.Content).OfType<Button>().Any(b=>b.Tag is string key&&key.StartsWith("freeUndo:",StringComparison.Ordinal)),
+                    "route library has no separate per-free-point undo buttons");
+                core.Seed(originalRouteState);
+                await Until(()=>ReferenceEquals(GetField<RoutePlanningState>(window,"state"),originalRouteState),"original route snapshot restored");
                 var handEntries = Descendants((DependencyObject)window.Content).OfType<Button>().ToArray();
-                Check(handEntries.Any(b => Equals(b.Tag,"handStart:collectible") && Equals(b.Content,"绘制收集物路线")) &&
-                    handEntries.Any(b => Equals(b.Tag,"handStart:daily") && Equals(b.Content,"绘制非收集物路线")),
-                    "hand drawing offers explicit collectible and daily entries");
+                Check(originalRouteState.HandDrawnActive ? handEntries.Any(b=>Equals(b.Tag,"handFinish")) :
+                    originalRouteState.HandDrawnPending ? handEntries.Any(b=>Equals(b.Tag,"handStart")&&Equals(b.Content,"继续绘制")) :
+                    handEntries.Any(b=>Equals(b.Tag,"handStart:collectible")&&Equals(b.Content,"绘制收集物路线"))&&
+                    handEntries.Any(b=>Equals(b.Tag,"handStart:daily")&&Equals(b.Content,"绘制非收集物路线")),
+                    "hand drawing preserves retained draft controls or offers both typed new-route entries");
                 await Click(window, "page:route");await Until(() => window.Page == "route", "return route page");
+                // State updates rebuild these buttons; use the live tree after returning from the library.
+                routeActions=Descendants((DependencyObject)window.Content).OfType<Button>().Where(b=>b.Tag is string key&&
+                    key is not ("back" or "close")&&b.Visibility==Visibility.Visible).ToArray();
                 Check(routeActions.Any(button => Equals(button.Tag, "tool:point") && Equals(button.Content, "单点选择")),
                     "the route toolbox exposes a separately selectable single-point mode for controller input");
                 foreach (var button in routeActions)

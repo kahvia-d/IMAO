@@ -27,6 +27,27 @@ internal static class CursorCandidateTests
 
     internal static async Task RunAsync(Action<string> log)
     {
+        foreach (var point in new[] { First, First with { NameId = "", PointId = "free:1", StopKind = "free", RouteId = "test-route", LocalName = "自由点 · 第 1 个点" } })
+            await CaseAsync("completed cursor point can be undone with the standard controller hold: " + point.StopKind, async f =>
+            {
+                var completed=point with { Completed=true };
+                f.SetTargets([completed]);
+                f.Core.CursorResponder=(_,command)=>Resolved(command,completed);
+                await f.OpenAsync();
+                Check(f.Entries.Count==1 && f.Entries[0].Selection?.Completed==true,
+                    "the circle list retains the completed point without a route-specific undo row");
+                await f.Coordinator.HandleGamepadAsync(GamepadAction.Accept);
+                await f.WaitDetailAsync(completed);
+                await f.HoldCompletionAsync(500);
+                Check(f.Count("markerSetCompletion")==0,"a short hold never cancels completion");
+                await f.HoldCompletionAsync(750);
+                var command=f.Core.Commands.Last(c=>c.Operation=="markerSetCompletion").Arguments;
+                Check(!command.GetProperty("completed").GetBoolean() && command.GetProperty("pointId").GetString()==point.PointId &&
+                    command.GetProperty("stopKind").GetString()==point.StopKind && command.GetProperty("routeId").GetString()==point.RouteId,
+                    "the same controller hold cancels the exact official or scoped free point");
+                Check(f.Guide?.Selection?.Completed==false,"the retained detail reflects successful cancellation");
+            },log);
+
         await CaseAsync("RB opens a cursor-only real assistant and A resolves its exact point", async f =>
         {
             f.SetTargets([First]);
@@ -52,7 +73,7 @@ internal static class CursorCandidateTests
             f.CheckResolveIdentity(First);
         }, log);
 
-        await CaseAsync("overlapping cursor points require an explicit choice and long X completes only that ID", async f =>
+        await CaseAsync("overlapping cursor points require an explicit choice and long A completes only that ID", async f =>
         {
             f.SetTargets([First, Second]);
             await f.OpenAsync();
@@ -62,15 +83,15 @@ internal static class CursorCandidateTests
             await f.Coordinator.HandleGamepadAsync(GamepadAction.Accept);
             await f.WaitDetailAsync(Second);
             f.CheckResolveIdentity(Second);
-            await f.HoldXAsync(500);
-            Check(f.Count("markerSetCompletion") == 0, "short X cannot complete the chosen cursor point");
-            await f.HoldXAsync(750);
+            await f.HoldCompletionAsync(500);
+            Check(f.Count("markerSetCompletion") == 0, "short A cannot complete the chosen cursor point");
+            await f.HoldCompletionAsync(750);
             await f.WaitListAsync();
             var saved = f.Core.Commands.Where(command => command.Operation == "markerSetCompletion").ToArray();
             Check(saved.Length == 1 && saved[0].Arguments.GetProperty("pointId").GetString() == Second.PointId &&
                 saved[0].Arguments.GetProperty("stateId").GetInt32() == Second.StateId &&
                 saved[0].Arguments.GetProperty("profileId").GetString() == Second.ProfileId,
-                "long X emits one completion with the selected opaque ID, state and profile");
+                "long A emits one completion with the selected opaque ID, state and profile");
             Check(f.Entries.Any(entry => entry.Selection?.PointId == First.PointId) &&
                 f.Entries.All(entry => entry.Selection?.PointId != Second.PointId), "completed cursor point is removed while its overlapping neighbor remains");
         }, log);
@@ -84,7 +105,8 @@ internal static class CursorCandidateTests
             await f.Coordinator.HandleGamepadAsync(GamepadAction.Down);
             await f.Coordinator.HandleGamepadAsync(GamepadAction.Accept);
             await f.WaitDetailAsync(First);
-            Check(f.Count(ResolveOperation) == 1 && f.Count("markerGetRouteGuide") == 0, "a cursor point duplicated by the route still uses the cursor resolver");
+            Check(f.Count(ResolveOperation) == 1 && f.Count("markerGetRouteGuide") == 1,
+                "a cursor point uses its resolver; the route read only checks current-target skip eligibility");
             f.CheckResolveIdentity(First);
         }, log);
 
@@ -162,7 +184,7 @@ internal static class CursorCandidateTests
                     f.Count(ResolveOperation) == 0, "old frozen candidates never reach a visible or selectable assistant");
             }, log);
 
-        log("ALL 11 CURSOR CANDIDATE SCENARIOS PASSED");
+        log("ALL 13 CURSOR CANDIDATE SCENARIOS PASSED");
     }
 
     private static JsonElement Targets(MarkerSelection[] cursor, MarkerSelection[] nearby, MarkerSelection? route,
@@ -233,13 +255,13 @@ internal static class CursorCandidateTests
                 command.GetProperty("assistantHwnd").GetInt64() == WinRT.Interop.WindowNative.GetWindowHandle(Assistant!).ToInt64() &&
                 command.GetProperty("assistantGeneration").GetInt64() > 0, "resolver carries exact native candidate and active assistant identity without rounding uint64");
         }
-        public async Task HoldXAsync(int duration)
+        public async Task HoldCompletionAsync(int duration)
         {
             var interpreter = new GamepadInputInterpreter();
             long now = 0;
             await SampleAsync(GamepadButtons.None);
-            await SampleAsync(GamepadButtons.X);
-            for (int elapsed = 0; elapsed < duration; elapsed += 50) await SampleAsync(GamepadButtons.X);
+            await SampleAsync(GamepadButtons.A);
+            for (int elapsed = 0; elapsed < duration; elapsed += 50) await SampleAsync(GamepadButtons.A);
             await SampleAsync(GamepadButtons.None);
             async Task SampleAsync(GamepadButtons buttons)
             {

@@ -104,7 +104,7 @@ public sealed class MarkerGuideWindow : Window
     internal bool IsPictureAvailable => enlarge.IsEnabled;
     /// <summary>Raised when the enlarged picture opens or closes, so the core can follow the front window.</summary>
     internal Action<Window, GuideImageStage>? ImageWindowChanged { get; set; }
-    internal bool CanCompleteGamepad => gamepadMode && IsGuideVisible && !imageVisible && selected?.Completed == false && !completing;
+    internal bool CanCompleteGamepad => gamepadMode && IsGuideVisible && !imageVisible && selected is not null && !completing;
     /// <summary>
     /// 跳过资格：只表示"这个点位就是当前导航目标"，不等于"现在可以按"。
     /// 前台判定属于各输入通道自己的事 —— 手柄 Y 由输入服务按自己的上下文分发，
@@ -266,7 +266,7 @@ public sealed class MarkerGuideWindow : Window
         previous.Click += async (_, _) => await ChangePictureAsync(-1);
         next.Click += async (_, _) => await ChangePictureAsync(1);
         enlarge.Click += async (_, _) => await ShowEnlargedAsync();
-        completion.Click += async (_, _) => await SaveCompletionAsync(gamepadMode || selected?.Completed != true);
+        completion.Click += async (_, _) => await SaveCompletionAsync(selected?.Completed != true);
         refresh.Click += async (_, _) => { if (selected is { } selection) await LoadOnlineAsync(selection, true); };
         sourceLink.Click += async (_, _) => await OpenLinkAsync(currentDetail?.SourceUrl);
         guideLink.Click += async (_, _) => await OpenLinkAsync(currentDetail?.GuideUrl);
@@ -536,7 +536,7 @@ public sealed class MarkerGuideWindow : Window
         // LS 切换聚焦也写在这里：手柄呼出的攻略默认把聚焦留给游戏，玩家得知道怎么切过来。
         // B 与 LS 同义（退出攻略聚焦、回到游戏），收起整份攻略是 LB+X——这三条都要写清楚，
         // 否则玩家在攻略窗口上按 B 会以为攻略坏了（它只是把聚焦还给了游戏）。
-        gamepadHint.Text = "LS / B 退出聚焦回到游戏 · A 确认 · X 放大图片 · LB/RB 翻图 · LB+X 收起攻略 · 长按 A 完成 · 长按 Y 跳过当前目标";
+        gamepadHint.Text = "LS / B 退出聚焦回到游戏 · A 确认 · X 放大图片 · LB/RB 翻图 · LB+X 收起攻略 · 长按 A 完成／取消完成 · 长按 Y 跳过当前目标";
         if (!enabled && imageVisible) CloseImageWindow();
         SetGamepadHoldProgress(0);
         UpdateCompletionButton();
@@ -759,7 +759,7 @@ public sealed class MarkerGuideWindow : Window
             Math.Clamp(target.VerticalOffset + dy, 0, target.ScrollableHeight), null, true);
     }
 
-    internal Task CompleteCurrentAsync() => SaveCompletionAsync(true);
+    internal Task CompleteCurrentAsync() => SaveCompletionAsync(selected?.Completed != true);
 
     private async Task SaveCompletionAsync(bool target)
     {
@@ -791,8 +791,8 @@ public sealed class MarkerGuideWindow : Window
 
     private void UpdateCompletionButton()
     {
-        completion.Content = completing ? "正在保存…" : selected?.Completed == true ? gamepadMode ? "已完成" : "已完成 · 撤销标记" : "标记完成";
-        completion.IsEnabled = selected is not null && !completing && (!gamepadMode || !selected.Completed);
+        completion.Content = completing ? "正在保存…" : selected?.Completed == true ? "已完成 · 撤销标记" : "标记完成";
+        completion.IsEnabled = selected is not null && !completing;
     }
 
     private static string LayerText(MarkerDetail detail)

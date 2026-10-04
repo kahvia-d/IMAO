@@ -592,11 +592,11 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
     return CallNextHookEx(mouseHook, code, message, value);
 }
 
-std::string PointKey(const ItemDatas& point) { return std::to_string(point.layer.stateId) + ":" + point.itemId; }
+std::string PointKey(const ItemDatas& point) { return PointIdentityKey(point); }
 // The point id behind a hit region key. A hit is "p:<pointId>" for a single marker and
 // "g:<pointId>" for a pile that shares one spot; the anchor's id is the one every member of that
 // pile agrees on, so both forms name a point the route can connect to.
-std::string RouteHandDrawnPointId(const std::string& hit) {
+std::string RouteHandDrawnPointKey(const std::string& hit) {
     if (hit.starts_with("p:")) return hit.substr(2);
     if (hit.starts_with("g:")) return hit.substr(2);
     return {};
@@ -1312,7 +1312,7 @@ void DrawMarkerInteraction::DrawMapToolsLauncher(const RECT& rect, HWND gameWind
 
 std::uint64_t DrawMarkerInteraction::IconTextureLookupMicros() { return iconTextureLookupMicros; }
 
-void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted, bool completed, std::size_t count, bool layeredBadge) {
+void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, float radius, bool highlighted, bool completed, std::size_t count, bool layeredBadge, bool current) {
     // Inside a layer the surface collectibles are not drawn at all, and a collectible on
     // another floor of the same layered map is dimmed and marked with a direction. Deciding
     // here covers the large map and the minimap at once; callers additionally skip Hidden
@@ -1349,7 +1349,10 @@ void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, flo
     // 45% is the same dimming completed markers already use: "present, but not where you are".
     const float opacity = otherFloor ? 0.45f : (completed ? 0.45f : 0.95f);
     if (texture) DrawItemBase::RenderPointCircle(reinterpret_cast<ImTextureID>(texture.Get()), position, radius, opacity, color);
-    else {
+    else if (AutoRoute::IsFreeStop(item)) {
+        DrawFreePointBadge(draw,position,AutoRoute::FreePointLabel(item.freeIcon,item.freeDisplayOrder),
+            current&&!completed,completed,highlighted,radius);
+    } else {
         draw->AddCircleFilled(position, radius, IM_COL32(33, 39, 48, otherFloor ? 120 : 220));
         draw->AddCircle(position, radius, color, 0, 2);
     }
@@ -1466,16 +1469,31 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     if (planning.handDraft && planning.handDrawnSceneId == sceneId)
         for (const auto& item : planning.handDraft->stops)
             if (!AutoRoute::IsFreeStop(item) && !item.itemId.empty()) planningBinding.selectedKeys.insert(AutoRoute::Key(item));
+    // Saved free points join the same layout, hit regions and controller geometry as catalog points.
+    auto mapItems=frame.markers;
+    std::string currentFreeKey;
+    if(planningBinding.valid&&planning.active&&planning.active->profileId==frame.profileId&&planning.active->sceneId==sceneId) {
+        const auto* scene=Scene::Find(sceneId);
+        if(scene) for(const auto& marker:AutoRoute::FreeMarkers(*planning.active,planning.completed,
+                planning.currentTargetIndex,planning.orderRevision)) {
+            auto item=marker.point;
+            const auto position=MapImageToScreen(planningBinding,{scene->originX+item.itemMapROC.x,scene->originY-item.itemMapROC.y});
+            // The saved route is projected with the presented map transform already applied.
+            item.screenCoordiante=position;
+            mapItems.push_back(std::move(item));
+            if(marker.current)currentFreeKey=AutoRoute::Key(marker.point);
+        }
+    }
     std::vector<MarkerLayoutPoint> points;
     std::unordered_map<std::string, std::size_t> visible;
-    for (std::size_t index = 0; index < frame.markers.size(); ++index) {
-        const auto& item = frame.markers[index];
+    for (std::size_t index = 0; index < mapItems.size(); ++index) {
+        const auto& item = mapItems[index];
         if ((planning.enabled || !showCompleted) && DrawItemBase::IsPointCompleted(frame.sceneName, item)) continue;
         // Hidden markers must not reach the layout either: a marker that is not drawn must
         // not stay hoverable, selectable or counted in a group.
         const auto role = LayeredMap::RoleFor(item);
         if (role == LayeredMap::MarkerRole::Hidden) continue;
-        const auto position = motion.Apply(item.screenCoordiante);
+        const auto position = AutoRoute::IsFreeStop(item)?item.screenCoordiante:motion.Apply(item.screenCoordiante);
         if (position.x < -radius || position.y < -radius || position.x > rect.right + radius || position.y > rect.bottom + radius) continue;
         if (planningPanel.Contains(position.x, position.y)) continue;
         const auto key = PointKey(item);
@@ -1539,7 +1557,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         for (const auto& member : group.members) if (expandedSet.contains(member.key)) containsExpanded = true;
         if (containsExpanded && !foundExpanded) { expandedAnchor = ImVec2(static_cast<float>(group.anchor.x), static_cast<float>(group.anchor.y)); foundExpanded = true; }
         const ImVec2 anchor(static_cast<float>(group.anchor.x), static_cast<float>(group.anchor.y));
-        const auto& item = frame.markers[group.anchor.sourceIndex];
+        const auto& item = mapItems[group.anchor.sourceIndex];
         const auto key = group.members.size() > 1 ? groupKey : "p:" + group.anchor.key;
         const bool hover = std::hypot(group.anchor.x - mouseX, group.anchor.y - mouseY) <= radius + 4;
         if (hover && group.members.size() > 1) hovered = groupKey;
@@ -1547,12 +1565,12 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             return planningBinding.selectedKeys.contains(member.key);
         });
         DrawIcon(item, anchor, radius, hover || (planning.enabled ? selectedCount > 0 : selected == group.anchor.key),
-            DrawItemBase::IsPointCompleted(frame.sceneName, item), group.members.size());
+            DrawItemBase::IsPointCompleted(frame.sceneName, item), group.members.size(),true,AutoRoute::Key(item)==currentFreeKey);
         GamepadCursorGeometry::Footprint groupFootprint;
         groupFootprint.position = {anchor.x,anchor.y}; groupFootprint.radius = radius;
         for (const auto& member : group.members) {
-            const auto& grouped = frame.markers[member.sourceIndex];
-            if (!DrawItemBase::IsPointCompleted(frame.sceneName,grouped)) groupFootprint.members.push_back(grouped);
+            const auto& grouped = mapItems[member.sourceIndex];
+            groupFootprint.members.push_back(grouped);
         }
         cursorGeometry.footprints.push_back(std::move(groupFootprint));
         if ((planning.enabled || drafting) && selectedCount > 0) {
@@ -1576,7 +1594,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     std::vector<std::string> handNearby;
     if (drawing && planningBinding.valid) {
         for (const auto& [key, index] : visible) {
-            const auto position = motion.Apply(frame.markers[index].screenCoordiante);
+            const auto position = AutoRoute::IsFreeStop(mapItems[index])?mapItems[index].screenCoordiante:motion.Apply(mapItems[index].screenCoordiante);
             if (std::hypot(position.x - mouseX, position.y - mouseY) <= radius + 8) handNearby.push_back(key);
         }
     }
@@ -1595,7 +1613,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     }
     // A pile owns its own anchor (the point the icons are drawn on). The hand picker keeps the cursor.
     if (expanded.substr(0, 5) != "hand:" && !expandedMembers.empty() && visible.contains(expandedMembers.front())) {
-        const auto anchor = motion.Apply(frame.markers[visible.at(expandedMembers.front())].screenCoordiante);
+        const auto anchor = AutoRoute::IsFreeStop(mapItems[visible.at(expandedMembers.front())])?mapItems[visible.at(expandedMembers.front())].screenCoordiante:motion.Apply(mapItems[visible.at(expandedMembers.front())].screenCoordiante);
         expandedAnchor = ImVec2(static_cast<float>(anchor.x), static_cast<float>(anchor.y));
         foundExpanded = true;
     }
@@ -1623,8 +1641,8 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             const auto& id = expandedMembers[index];
             const auto found = visible.find(id);
             if (found == visible.end()) continue;
-            const auto& item = frame.markers[found->second];
-            const auto truePosition = motion.Apply(item.screenCoordiante);
+            const auto& item = mapItems[found->second];
+            const auto truePosition = AutoRoute::IsFreeStop(item)?item.screenCoordiante:motion.Apply(item.screenCoordiante);
             const float angle = -1.5707963f + static_cast<float>(index) * 6.2831853f / static_cast<float>(expandedMembers.size());
             ImVec2 position = list ? ImVec2(left + radius + 8, top + 20 + static_cast<float>(index - begin) * 35) :
                 ImVec2(orbitCenter.x + std::cos(angle) * orbit, orbitCenter.y + std::sin(angle) * orbit);
@@ -1632,12 +1650,12 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             const bool memberHover = list ? mouseX >= left && mouseX <= left + 240 && std::abs(mouseY - position.y) <= 16 :
                 std::hypot(mouseX - position.x, mouseY - position.y) <= radius + 3;
             DrawIcon(item, position, radius, memberHover || (planning.enabled ? planningBinding.selectedKeys.contains(id) : selected == id),
-                DrawItemBase::IsPointCompleted(frame.sceneName, item));
+                DrawItemBase::IsPointCompleted(frame.sceneName, item),1,true,AutoRoute::Key(item)==currentFreeKey);
             GamepadCursorGeometry::Footprint memberFootprint;
             memberFootprint.position={position.x,position.y}; memberFootprint.radius=radius;
             memberFootprint.rectangle=list; memberFootprint.left=left+3; memberFootprint.right=left+237;
             memberFootprint.top=position.y-16; memberFootprint.bottom=position.y+16;
-            if (!DrawItemBase::IsPointCompleted(frame.sceneName,item)) memberFootprint.members.push_back(item);
+            memberFootprint.members.push_back(item);
             cursorGeometry.footprints.push_back(std::move(memberFootprint));
             displayed[id] = position;
             if (list) {
@@ -1711,6 +1729,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             std::unordered_map<std::string, std::size_t> badgesAtPosition;
             for (std::size_t index = 0; index < plan->stops.size(); ++index) {
                 const auto& stop = plan->stops[index];
+                if (AutoRoute::IsFreeStop(stop)&&!drafting&&!previewing) continue;
                 if (!drafting && (plan->skipped.contains(AutoRoute::Key(stop)) || planning.completed.contains(AutoRoute::Key(stop)))) continue;
                 const auto position = MapImageToScreen(planningBinding, {scene->originX + stop.itemMapROC.x, scene->originY - stop.itemMapROC.y});
                 if (position.x < 0 || position.y < 0 || position.x > rect.right || position.y > rect.bottom) continue;
@@ -1728,12 +1747,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
                 const float y = static_cast<float>(position.y);
                 const bool current = !previewing && !drafting && static_cast<int>(index) == planning.currentTargetIndex;
                 DrawFreePointBadge(draw,ImVec2(x,y),label,current);
-                if(freeStop&&!drafting&&!previewing) {
-                    AddRegion(x,y,FreePointBadgeRadius(label),FreePointBadgeRadius(label),origin,"route:free:"+AutoRoute::Key(stop));
-                    GamepadCursorGeometry::Footprint freeFootprint;
-                    freeFootprint.position={x,y};freeFootprint.radius=FreePointBadgeRadius(label);auto freeSelection=stop;freeSelection.freeDisplayOrder=static_cast<int>(index+1);freeFootprint.members.push_back(std::move(freeSelection));
-                    cursorGeometry.footprints.push_back(std::move(freeFootprint));
-                }
+
             }
         }
     }
@@ -1783,10 +1797,9 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     // the hit regions are rebuilt because it asks the *same* question the click asks — "which region
     // is under the cursor" — so the preview and the result can never disagree.
     if (handDrawMode && !Hit(mouseX+origin.x,mouseY+origin.y).starts_with("route:hand:") && mouseX >= 0 && mouseY >= 0 && mouseX <= rect.right && mouseY <= rect.bottom) {
-        const auto hoveredId=RouteHandDrawnPointId(Hit(mouseX+origin.x,mouseY+origin.y));
+        const auto hoveredId=RouteHandDrawnPointKey(Hit(mouseX+origin.x,mouseY+origin.y));
         const auto roc=RelativeCoordinates::ImgMapCoordToROC(ScreenToMapImage(planningBinding,{mouseX,mouseY}),planning.sceneId);
-        const auto hoverItem=RoutePlanningService::HandPointCandidate(planning.sceneId,roc,hoveredId.empty()?std::string{}:
-            std::to_string(Scene::Find(planning.sceneId)->kuroStateId)+":"+hoveredId);
+        const auto hoverItem=RoutePlanningService::HandPointCandidate(planning.sceneId,roc,hoveredId);
         const bool onPoint=hoverItem.has_value();
         const bool incompatible=onPoint&&!RoutePlanningService::HandPointAllowed(*hoverItem,planning.handCategory);
         auto* draw = ImGui::GetForegroundDrawList();
@@ -1834,32 +1847,19 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             // The point under the click is already known: the hook only records this click because a
             // hit region matched, and that region's key names the point. Passing it along means the
             // core does not have to guess the marker back from the cursor with a distance tolerance.
-            const auto pointId = RouteHandDrawnPointId(click.routeTarget);
+            const auto pointId = RouteHandDrawnPointKey(click.routeTarget);
             const Coordinate roc = RelativeCoordinates::ImgMapCoordToROC(ScreenToMapImage(planningBinding, local), view.sceneId);
             if (!std::isfinite(roc.x) || !std::isfinite(roc.y)) continue;
             nlohmann::json command = {{"action", "handPoint"}, {"profileId", click.profile},
                 {"sceneId", view.sceneId}, {"x", roc.x}, {"y", roc.y},
                 {"expectedSceneId", click.scene}, {"expectedGeneration", click.generation},
-                {"key", pointId.empty() ? std::string{} :
-                    std::to_string(Scene::Find(view.sceneId)->kuroStateId) + ":" + pointId}};
+                {"key", pointId}};
             StructuredLogger::Record("info", "routes", "hand-drawn-click",
                 "region=" + click.target + " pointId=" + (pointId.empty() ? std::string("<empty-ground>") : pointId));
             PlanningResult(RoutePlanningService::Command(command));
             continue;
         }
         if (click.target.starts_with("route:")) {
-            if(click.target.starts_with("route:free:")) {
-                if(!planning.active||click.routeId!=planning.active->id)continue;
-                const auto key=click.target.substr(std::string("route:free:").size());
-                const auto found=std::find_if(planning.active->stops.begin(),planning.active->stops.end(),[&](const auto& stop){return AutoRoute::Key(stop)==key;});
-                if(found==planning.active->stops.end())continue;
-                if(click.right) PlanningResult(DrawItemBase::HandleMarkerCommand({{"type","markerSetCompletion"},{"profileId",click.profile},
-                    {"stopKind","free"},{"routeId",planning.active->id},{"stateId",found->layer.stateId},{"pointId",found->itemId},
-                    {"completed",!DrawItemBase::IsPointCompleted(frame.sceneName,*found)}}));
-                else {auto selected=*found;selected.freeDisplayOrder=static_cast<int>(std::distance(planning.active->stops.begin(),found))+1;
-                    DrawItemBase::SelectMarker(frame.sceneName,selected,click.position,click.profile);}
-                continue;
-            }
             if (click.right || click.target == "route:panel" || click.target == "route:disabled" || click.target=="route:hand:panel") continue;
             CancelGesture();
             if(click.target.starts_with("route:hand:type:")||click.target.starts_with("route:hand:icon:")) {
@@ -1887,7 +1887,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
                 std::vector<ItemDatas> additions;
                 for (const auto& key : expandedMembers) {
                     const auto found = visible.find(key);
-                    if (found != visible.end()) additions.push_back(frame.markers[found->second]);
+                    if (found != visible.end()) additions.push_back(mapItems[found->second]);
                 }
                 PlanningResult(RoutePlanningService::AddPoints(additions, PlanningContext(click)));
             } else if (click.target.starts_with("route:tool:")) {
@@ -1915,7 +1915,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             const auto point = visible.find(id);
             if (point == visible.end()) continue;
             selected = id;
-            const auto& item = frame.markers[point->second];
+            const auto& item = mapItems[point->second];
             if (click.planning || RoutePlanningService::PlanningMode()) {
                 // Both mouse buttons stay out of guide/completion commands in
                 // planning mode. Selection remains a separate reversible set.
@@ -1932,7 +1932,8 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             } else if (click.right) {
                 const auto result = DrawItemBase::HandleMarkerCommand({{"type", "markerSetCompletion"}, {"profileId", click.profile},
                     {"sceneName", frame.sceneName}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
-                    {"pointId", item.itemId}, {"completed", !DrawItemBase::IsPointCompleted(frame.sceneName, item)}});
+                    {"pointId", item.itemId}, {"stopKind",AutoRoute::IsFreeStop(item)?"free":"catalog"}, {"routeId",item.freeRouteId},
+                    {"completed", !DrawItemBase::IsPointCompleted(frame.sceneName, item)}});
                 if (!result.value("accepted", false)) StructuredLogger::Record("error", "markers", "completion-save-failed", result.value("message", ""));
             } else DrawItemBase::SelectMarker(frame.sceneName, item, click.position, click.profile);
         }

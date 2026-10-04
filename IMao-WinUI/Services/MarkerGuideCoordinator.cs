@@ -227,7 +227,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             if (gamepadCursorAvailable && targets.TryGetProperty("cursorCandidates", out var cursorCandidates) && cursorCandidates.ValueKind == JsonValueKind.Array)
             {
                 foreach (var candidate in cursorCandidates.EnumerateArray().Select(ReadSelection))
-                    if (ValidGamepadSelection(candidate) && candidate.Scene == gamepadScene && !candidate.Completed &&
+                    if (ValidGamepadSelection(candidate) && candidate.Scene == gamepadScene &&
                         !gamepadCursor.Any(p => SamePoint(p, candidate))) gamepadCursor.Add(candidate);
             }
             core.ReportGamepadDiagnostic("map-cursor-targets", $"available={gamepadCursorAvailable} count={gamepadCursor.Count} revision={gamepadCursorRevision} context={contextGeneration}");
@@ -637,7 +637,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             ? $"{prefix}{name}\n{LayerLabel(point.Level)}点位 {point.PointId[^Math.Min(6, point.PointId.Length)..]}"
             : GamepadPointLabel(point, prefix);
         foreach (var point in gamepadCursor)
-            if (!point.Completed) entries.Add(new(Label(point, "光标圈内 · "), point));
+            entries.Add(new(Label(point,point.Completed?"光标圈内 · 已完成 · ":"光标圈内 · "), point));
         if (gamepadRouteTarget is { Completed: false } target && !gamepadCursor.Any(p => SamePoint(p, target)))
             entries.Add(new(Label(target, "路线当前目标 · "), target));
         if (gamepadNearbyAvailable)
@@ -646,8 +646,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
                     entries.Add(new(Label(point, "附近 · "), point));
         if (entries.Count == 0) entries.Add(new("当前没有可查看的点位", Enabled: false));
         string notice = gamepadCursorAvailable
-            ? gamepadCursor.Count > 0 ? $"光标圈内 {gamepadCursor.Count} 个点位。选择后按 A 查看攻略，详情页按住 X 0.6 秒完成当前点。"
-                : "光标圈内没有当前筛选下的未完成标记。返回地图对准标记后，再按 RB。"
+            ? gamepadCursor.Count > 0 ? $"光标圈内 {gamepadCursor.Count} 个点位。选择后按 A 查看攻略，详情页按住 A 0.6 秒标记完成或取消完成。"
+                : "光标圈内没有当前筛选下的标记。返回地图对准标记后，再按 RB。"
             : !string.IsNullOrWhiteSpace(gamepadCursorMessage) ? gamepadCursorMessage : "未识别到可用的游戏手柄光标，请返回大地图对准标记后再按 RB。";
         if (gamepadNearbyAvailable && gamepadNearby.Count > 0) notice += "\n附近列表依据开图前的玩家位置，独立于光标圈选。";
         if (!gamepadCursorAvailable && !string.IsNullOrWhiteSpace(gamepadMessage)) notice += "\n" + gamepadMessage;
@@ -690,7 +690,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
 
     private async Task OpenGamepadSelectionAsync(MarkerSelection selection)
     {
-        if (!ValidGamepadSelection(selection) || selection.Completed) return;
+        if (!ValidGamepadSelection(selection)) return;
         bool fromCursor = gamepadCursor.Any(p => SamePoint(p, selection));
         if ((gamepadRouteTarget is null || !SamePoint(selection, gamepadRouteTarget)) &&
             !gamepadNearby.Any(p => SamePoint(p, selection)) && !fromCursor) { RenderGamepadList(); return; }
@@ -719,7 +719,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                     !resolved.TryGetProperty("selection", out var payload) || payload.ValueKind != JsonValueKind.Object)
                     throw new InvalidOperationException("光标点位确认已失效，请返回地图后重新选择。");
                 var confirmed = ReadSelection(payload);
-                if (!ValidGamepadSelection(confirmed) || confirmed.Completed || confirmed.Scene != gamepadScene ||
+                if (!ValidGamepadSelection(confirmed) || confirmed.Scene != gamepadScene ||
                     !SamePoint(selection, confirmed))
                     throw new InvalidOperationException("光标点位已变化，未打开其他点，请返回地图后重新选择。");
                 selection = confirmed;
@@ -1677,8 +1677,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
         if (!session.IsCurrent(generation) || guide is null || session.Selection is not { } current ||
             !SamePoint(current, selection)) return false;
         bool gamepadOwned = IsGamepadSessionOpen && gamepadGuideGeneration == generation;
-        if (standaloneGamepadGeneration == generation && (!completed || GetGamepadInputContext().Mode != GamepadInputMode.Detail)) return false;
-        if (gamepadOwned && (!completed || GetGamepadInputContext().Mode != GamepadInputMode.Detail ||
+        if (standaloneGamepadGeneration == generation && GetGamepadInputContext().Mode != GamepadInputMode.Detail) return false;
+        if (gamepadOwned && (GetGamepadInputContext().Mode != GamepadInputMode.Detail ||
             selection.ProfileId != gamepadProfile || gamepadGuideRouteId is not null && core.RoutePlanning.Active?.Id != gamepadGuideRouteId)) return false;
         long hwnd = WindowHandle(guide);
         try

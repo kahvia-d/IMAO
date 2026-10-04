@@ -5,15 +5,21 @@
 #include <cmath>
 #include "../../Runtime/RouteGeometry.h"
 
-inline float FreePointBadgeRadius(const std::string& label) {
+inline float FreePointBadgeRadius(const std::string& label,float minimumRadius=0) {
     const auto size=ImGui::CalcTextSize(label.c_str());
-    return std::max({10.0f,size.x/2+4,size.y/2+3});
+    // Saved map points use exactly the standard marker radius for layout and hit testing.
+    return minimumRadius>0?minimumRadius:std::max({10.0f,size.x/2+4,size.y/2+3});
 }
-inline void DrawFreePointBadge(ImDrawList* draw,ImVec2 center,const std::string& label,bool current) {
-    const auto size=ImGui::CalcTextSize(label.c_str());const auto radius=FreePointBadgeRadius(label);
-    draw->AddCircleFilled(center,radius,current?IM_COL32(233,165,57,255):IM_COL32(31,114,151,245));
-    if(current)draw->AddCircle(center,radius+2,IM_COL32(110,250,190,255),0,1.5f);
-    draw->AddText(ImVec2(center.x-size.x/2,center.y-size.y/2),IM_COL32_WHITE,label.c_str());
+inline void DrawFreePointBadge(ImDrawList* draw,ImVec2 center,const std::string& label,bool current,
+    bool completed=false,bool highlighted=false,float minimumRadius=0) {
+    const auto size=ImGui::CalcTextSize(label.c_str());const auto radius=FreePointBadgeRadius(label,minimumRadius);
+    // Match the standard marker's 45% completed opacity, including text and focus ring.
+    const auto alpha=[&](int value){return completed?static_cast<int>(value*0.45f):value;};
+    draw->AddCircleFilled(center,radius,current?IM_COL32(233,165,57,alpha(255)):IM_COL32(31,114,151,alpha(245)));
+    if(current||highlighted)draw->AddCircle(center,radius+2,IM_COL32(110,250,190,alpha(255)),0,1.5f);
+    const float textScale=std::min({1.0f,(radius*2-6)/std::max(1.0f,size.x),(radius*2-6)/std::max(1.0f,size.y)});
+    draw->AddText(ImGui::GetFont(),ImGui::GetFontSize()*textScale,
+        ImVec2(center.x-size.x*textScale/2,center.y-size.y*textScale/2),IM_COL32(255,255,255,alpha(255)),label.c_str());
 }
 
 inline void DrawFreePointBadgeClipped(ImDrawList* draw,ImVec2 position,const std::string& label,bool current,Coordinate center,double radius) {
