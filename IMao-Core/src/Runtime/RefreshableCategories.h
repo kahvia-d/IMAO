@@ -44,11 +44,11 @@ public:
                 for (const auto& category : document) {
                     if (!category.is_object()) continue;
                     const auto name = category.value("name", std::string{});
-                    if (name != Harvest && name != Enemy) continue;
+                    if (name != Harvest && name != Enemy && name != "收集物") continue;
                     for (const auto& leaf : category.value("children", nlohmann::json::array())) {
                         if (!leaf.is_object()) continue;
                         const auto id = Normalize(leaf.value("id", std::string{}));
-                        if (!id.empty()) table.ids_.insert(id);
+                        if (!id.empty()) (name=="收集物"?table.collectibles_:table.ids_).insert(id);
                     }
                 }
             } catch (const std::exception&) { ++table.unreadable_; }
@@ -59,6 +59,7 @@ public:
     }
 
     bool Contains(const std::string& categoryId) const { return ids_.contains(categoryId); }
+    bool IsCollectible(const std::string& categoryId) const { return collectibles_.contains(categoryId); }
     bool Empty() const { return ids_.empty(); }
     std::size_t Size() const { return ids_.size(); }
     std::size_t UnreadableFiles() const { return unreadable_; }
@@ -80,6 +81,7 @@ public:
 
 private:
     std::set<std::string> ids_;
+    std::set<std::string> collectibles_;
     std::size_t unreadable_ = 0;
     std::string diagnostic_;
 };

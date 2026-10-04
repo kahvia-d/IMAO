@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <optional>
 #include <utility>
+#include <array>
+#include <vector>
 
 namespace AutoRoute {
 using ClippedSegment = std::optional<std::pair<Coordinate, Coordinate>>;
@@ -74,5 +76,37 @@ inline ClippedSegment ClipCircle(Coordinate a, Coordinate b, Coordinate center, 
     const double enter = std::max(0.0, (-bb - root) / aa), leave = std::min(1.0, (-bb + root) / aa);
     if (enter > leave) return std::nullopt;
     return std::pair{Coordinate(a.x + enter * dx, a.y + enter * dy), Coordinate(a.x + leave * dx, a.y + leave * dy)};
+}
+// Clip textured triangles to an inscribed 128-sided circle. Position, texture UV and
+// vertex color interpolate together, so glyphs and antialias fringes stay inside the HUD.
+struct CircleClipVertex {
+    Coordinate position,uv;
+    std::array<double,4> color{};
+};
+inline std::vector<CircleClipVertex> ClipTriangleCircle(const std::array<CircleClipVertex,3>& triangle,Coordinate center,double radius) {
+    if(!GeometryDetail::Finite(center)||!std::isfinite(radius)||radius<=0)return {};
+    for(const auto& vertex:triangle)if(!GeometryDetail::Finite(vertex.position))return {};
+    std::vector<CircleClipVertex> polygon(triangle.begin(),triangle.end());
+    if(std::all_of(polygon.begin(),polygon.end(),[&](const auto& v){return std::hypot(v.position.x-center.x,v.position.y-center.y)<=radius;}))return polygon;
+    constexpr int sides=128;constexpr double pi=3.14159265358979323846;
+    const double edge=radius*std::cos(pi/sides);
+    for(int side=0;side<sides&&!polygon.empty();++side) {
+        const double angle=(side+.5)*2*pi/sides,nx=std::cos(angle),ny=std::sin(angle);
+        const auto distance=[&](const auto& v){return edge-(v.position.x-center.x)*nx-(v.position.y-center.y)*ny;};
+        std::vector<CircleClipVertex> clipped;auto a=polygon.back();double da=distance(a);
+        for(const auto& b:polygon) {
+            const double db=distance(b);
+            if((da>=0)!=(db>=0)) {
+                const double t=da/(da-db);CircleClipVertex v;
+                v.position={a.position.x+(b.position.x-a.position.x)*t,a.position.y+(b.position.y-a.position.y)*t};
+                v.uv={a.uv.x+(b.uv.x-a.uv.x)*t,a.uv.y+(b.uv.y-a.uv.y)*t};
+                for(int c=0;c<4;++c)v.color[c]=a.color[c]+(b.color[c]-a.color[c])*t;
+                clipped.push_back(v);
+            }
+            if(db>=0)clipped.push_back(b);a=b;da=db;
+        }
+        polygon=std::move(clipped);
+    }
+    return polygon;
 }
 } // namespace AutoRoute

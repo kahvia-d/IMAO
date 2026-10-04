@@ -463,16 +463,27 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
                 Report(core.RoutePlanning.Message);
                 return;
             }
+            if(action.StartsWith("freeUndo:",StringComparison.Ordinal))
+            {
+                var stop=core.RoutePlanning.Active?.Stops.FirstOrDefault(p=>p.Key==action["freeUndo:".Length..] && p.IsFree);
+                if(stop is null)return;
+                await core.ExecuteConnectedMarkerAsync("markerSetCompletion",new {profileId=profile,routeId=stop.RouteId,
+                    stateId=stop.StateId,pointId=stop.PointId,stopKind="free",completed=false},sessionCancellation?.Token ?? default);
+                return;
+            }
+            string? handCategory=null;
+            if(action.StartsWith("handStart:",StringComparison.Ordinal)){handCategory=action["handStart:".Length..];action="handStart";}
             if (action is "handStart" or "handUndo" or "handCancel" or "handCommit" or "handFinish" or "handDiscard")
             {
                 var name = string.IsNullOrWhiteSpace(window.HandRouteName) ? "我的路线" : window.HandRouteName.Trim();
-                await core.ExecuteRoutePlanningAsync(action,
-                    new Dictionary<string, object?>
+                var handArguments = new Dictionary<string, object?>
                     {
                         ["profileId"] = profile,
                         ["sceneId"] = core.RoutePlanning.SceneId,
                         ["name"] = name
-                    }, sessionCancellation?.Token ?? default);
+                    };
+                if(handCategory is not null)handArguments["category"]=handCategory;
+                await core.ExecuteRoutePlanningAsync(action,handArguments,sessionCancellation?.Token ?? default);
                 await core.ExecuteRoutePlanningAsync("list", new Dictionary<string, object?> { ["profileId"] = profile },
                     sessionCancellation?.Token ?? default);
                 window.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);

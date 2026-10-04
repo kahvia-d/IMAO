@@ -63,7 +63,8 @@ public:
     // The document a route is stored as. It is public because the export bundle has to hold exactly
     // this: one schema written by one function, so a route that survives being saved always survives
     // being carried to another machine.
-    static Json Document(const Plan& plan) {
+    static Json Document(Plan plan) {
+        ScopeFreePoints(plan,plan.id);
         Validate(plan);
         Json stops=Json::array();
         for(const auto& p:plan.stops) stops.push_back({{"stateId",p.layer.stateId},{"pointId",p.itemId},
@@ -71,14 +72,16 @@ public:
             {"floorId",p.layer.floorId},{"level",p.layer.level},{"skipped",plan.skipped.contains(Key(p))},
             // Written for every stop, including official ones: the reader must never have to
             // guess whether an empty nameId means "a new kind of stop" or "a corrupt file".
-            {"kind",p.layer.stopKind==StopKind::Free?"free":"catalog"}});
-        return {{"formatVersion",1},{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},
+            {"kind",p.layer.stopKind==StopKind::Free?"free":"catalog"},
+            {"freeCategory",CategoryId(p.freeCategory)},{"freeIcon",IconId(p.freeIcon)}});
+        return {{"formatVersion",2},{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},
             {"sceneId",plan.sceneId},{"start",StartJson(plan.start)},{"stops",std::move(stops)},{"skipHistory",plan.skipHistory},
             // A missing field on an older file means "not a farming route", which is the only
             // safe reading: turning the mode on by default would auto-mark points on routes the
             // player never asked to farm.
             {"farmMode",plan.farmMode},
             {"handDrawn",plan.handDrawn},
+            {"routeCategory",CategoryId(plan.routeCategory)},{"legacyHandDrawn",plan.legacyHandDrawn},
             // Absent on older files means "on": that is what the player asked for when they
             // applied a route, and it is also the only reading that cannot silently change what
             // an existing route does.
@@ -127,7 +130,7 @@ public:
     }
     Json List(const std::string& profile) const {
         Json rows=Json::array();
-        struct Row { std::string id,name,sceneName,collection=DefaultCollectionId; int sceneId=0,stopCount=0; bool handDrawn=false; std::vector<std::string> kinds; bool corrupt=false; };
+        struct Row { std::string id,name,sceneName,collection=DefaultCollectionId; int sceneId=0,stopCount=0; bool handDrawn=false,legacy=true; std::string category="daily",freeSummary; std::vector<std::string> kinds; bool corrupt=false; };
         std::vector<Row> found;
         for(const bool handDrawn:{false,true}){
             const auto folder=Root(profile,handDrawn);
@@ -137,16 +140,25 @@ public:
                 Row row;row.id=entry.path().stem().string();row.handDrawn=handDrawn;
                 try {
                     const auto doc=Read(entry.path());
+                    if(doc.value("formatVersion",0)!=1&&doc.value("formatVersion",0)!=2)throw std::runtime_error("unsupported-route-version");
+                    row.category=doc.value("routeCategory",std::string{"daily"});row.legacy=doc.value("legacyHandDrawn",true);
+                    std::vector<std::string> freeIcons;
                     row.name=doc.value("name",row.id);
                     row.sceneId=doc.value("sceneId",0);
                     row.sceneName=Scene::SceneIdToName(row.sceneId);
                     row.collection=NormalizeCollectionId(doc.value("collection",std::string{DefaultCollectionId}));
                     if(doc.contains("stops")&&doc.at("stops").is_array())for(const auto& stop:doc.at("stops")){
                         ++row.stopCount;
+                        if(stop.value("kind",std::string{})=="free") {
+                            const auto icon=ParseIcon(stop.value("freeIcon",std::string{"number"}));
+                            const auto text=icon==FreePointIcon::Number?std::string("数"):FreePointLabel(icon,0);
+                            if(std::find(freeIcons.begin(),freeIcons.end(),text)==freeIcons.end())freeIcons.push_back(text);
+                        }
                         const auto nameId=stop.value("nameId",std::string{});
                         if(stop.value("kind",std::string{"catalog"})!="free"&&!nameId.empty()&&
                             std::find(row.kinds.begin(),row.kinds.end(),nameId)==row.kinds.end())row.kinds.push_back(nameId);
                     }
+                    for(const auto& text:freeIcons){if(!row.freeSummary.empty())row.freeSummary+="、";row.freeSummary+=text;}
                 } catch(const std::exception&){
                     row.name=row.id+"（文件损坏）";row.sceneId=0;row.sceneName.clear();row.corrupt=true;
                 }
@@ -158,6 +170,7 @@ public:
             Json kinds=Json::array();for(const auto& kind:row.kinds)kinds.push_back({{"nameId",kind},{"name",kind}});
             rows.push_back({{"id",row.id},{"name",row.name},{"sceneId",row.sceneId},{"sceneName",row.sceneName},
                 {"stopCount",row.stopCount},{"kinds",std::move(kinds)},{"handDrawn",row.handDrawn},
+                {"routeCategory",row.category},{"legacyHandDrawn",row.legacy},{"freePointSummary",row.freeSummary},
                 {"corrupt",row.corrupt},{"collection",row.collection}});
         }
         return rows;
@@ -166,7 +179,8 @@ public:
     // same documents: an import has to run them through exactly this validation, or a route could
     // arrive by file transfer that could never have been saved locally in the first place.
     static Plan Parse(const Json& doc,const std::string& profile,const std::string& id,const Resolver& resolve) {
-        if(doc.value("formatVersion",0)!=1||doc.value("profileId","")!=profile||doc.value("id","")!=id)
+        const int version=doc.value("formatVersion",0);
+        if((version!=1&&version!=2)||doc.value("profileId","")!=profile||doc.value("id","")!=id)
             throw std::runtime_error("自动路线文件版本或档案不匹配");
         Plan plan;plan.id=id;plan.profileId=profile;plan.name=doc.at("name").get<std::string>();
         plan.sceneId=doc.at("sceneId").get<int>();
@@ -193,6 +207,11 @@ public:
                 free.layer.floorId=saved.value("floorId",std::string{});
                 free.layer.level=saved.value("level",std::string{});
                 free.layer.stopKind=StopKind::Free;
+                if(version==2){
+                    free.freeRouteId=id;
+                    free.freeCategory=ParseCategory(saved.at("freeCategory").get<std::string>());
+                    free.freeIcon=ParseIcon(saved.at("freeIcon").get<std::string>());
+                }
                 plan.stops.push_back(std::move(free));
             }else{
                 const auto found=resolve(plan.sceneId,key);
@@ -202,12 +221,15 @@ public:
                     throw std::runtime_error("点位资源已变化，请重新规划："+key);
                 plan.stops.push_back(*found);
             }
-            if(saved.value("skipped",false))plan.skipped.insert(key);
+            if(saved.value("skipped",false))plan.skipped.insert(Key(plan.stops.back()));
         }
         if(doc.contains("skipHistory"))plan.skipHistory=doc.at("skipHistory").get<std::vector<std::string>>();
         else for(const auto& item:plan.stops)if(plan.skipped.contains(Key(item)))plan.skipHistory.push_back(Key(item));
         plan.farmMode=doc.value("farmMode",false);
         plan.handDrawn=doc.value("handDrawn",false);
+        plan.routeCategory=version==2?ParseCategory(doc.at("routeCategory").get<std::string>()):FreePointCategory::Daily;
+        plan.legacyHandDrawn=version==1||doc.value("legacyHandDrawn",false);
+        ScopeFreePoints(plan,id);
         plan.filterByRoute=doc.value("filterByRoute",true);
         plan.collection=NormalizeCollectionId(doc.value("collection",std::string{DefaultCollectionId}));
         Validate(plan);return plan;
@@ -278,6 +300,12 @@ private:
             throw std::invalid_argument("自动路线目标无效或重复");
         for(const auto& item:p.stops)if(IsFreeStop(item)&&!item.nameId.empty())
             throw std::invalid_argument("自由点不能带有点位类型");
+        for(const auto& item:p.stops)if(IsFreeStop(item)) {
+            if(item.freeCategory==FreePointCategory::Collectible&&item.freeIcon!=FreePointIcon::Number)
+                throw std::invalid_argument("收集物自由点只能使用数字图标");
+            if(p.handDrawn&&!p.legacyHandDrawn&&item.freeCategory!=p.routeCategory)
+                throw std::invalid_argument("自由点类型与路线不一致");
+        }
         for(const auto& skipped:p.skipped)if(!ids.contains(skipped))throw std::invalid_argument("跳过记录不属于路线");
         std::unordered_set<std::string> history;
         for(const auto& key:p.skipHistory)if(!p.skipped.contains(key)||!history.insert(key).second)

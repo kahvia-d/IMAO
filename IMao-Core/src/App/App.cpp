@@ -2858,6 +2858,16 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
         }
     }
     frame.mapMarkers = DrawItemOnGameMap::Snapshot(); frame.minimapMarkers = DrawItemOnMinMap::Snapshot();
+    RoutePlanningService::SetPlayerAvailable(frame.minimapVisible && frame.minimapMotion.reliable && frame.focused);
+    const auto routeView = RoutePlanningService::View();
+    if(routeView.active && frame.minimapVisible && routeView.navigating && routeView.active->sceneId==frame.playerScene) {
+        frame.minimapFreeMarkers=AutoRoute::FreeMarkers(*routeView.active,routeView.completed,routeView.currentTargetIndex,routeView.orderRevision);
+        const auto center=RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate,playerCurrentSceneId);
+        for(auto& marker:frame.minimapFreeMarkers) {
+            marker.point.screenCoordiante=ScreenCoordinate::ItemScreenCoordinateOnMinMap(captured.clientRect,marker.point.itemMapROC,center,minimapTerrainScale);
+            frame.minimapMarkers.markers.push_back(marker.point);
+        }
+    }
     const auto gamepadProfile = DrawItemBase::MarkerProfile();
     if (frame.minimapVisible && frame.minimapMotion.reliable && frame.focused && frame.Fresh() &&
         overlayVisibility.Read()->AllowsMinimap(frame.frameId) && playerLocationLock.valid &&
@@ -2875,8 +2885,6 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
             Scene::SceneIdToName(frame.viewportScene), frame.capturedAt);
     // The frame carries its own route segments now: they are projected from the route plans just
     // below, so there is no cached list to seed from and nothing that can outlive the frame.
-    RoutePlanningService::SetPlayerAvailable(frame.minimapVisible && frame.minimapMotion.reliable && frame.focused);
-    const auto routeView = RoutePlanningService::View();
     const auto appendRoute = [&](const AutoRoute::Plan& plan, bool preview, bool handDrawn = false) {
         const bool onMap = frame.mapVisible && plan.sceneId == frame.viewportScene;
         const bool onMini = !preview && frame.minimapVisible && plan.sceneId == frame.playerScene && routeView.navigating;

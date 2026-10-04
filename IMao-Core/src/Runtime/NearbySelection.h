@@ -56,7 +56,7 @@ struct Observation {
     // Drawn marker radius of the observed frame; zero when it was never drawn.
     double markerRadius = 0;
 };
-inline std::string Key(const ItemDatas& item) { return std::to_string(item.layer.stateId) + ":" + item.itemId; }
+inline std::string Key(const ItemDatas& item) { return PointIdentityKey(item); }
 inline bool Includes(const Candidate& item, Intent intent) {
     // A marker the display is hiding must not be reachable by a key press either. Standing in a
     // layered map hides every surface point, and without this the completion key would still tick

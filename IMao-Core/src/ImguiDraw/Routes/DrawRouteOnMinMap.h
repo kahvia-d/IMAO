@@ -14,4 +14,6 @@
 class DrawRouteOnMinMap{
 public:
 	static void DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion = {}, Coordinate clipCenter = {}, double clipRadius = 0.0);
+    static void DrawFreeMarkers(const std::vector<FreeRouteMarker>& markers,int sceneId,
+        const OverlayScreenTransform& motion,Coordinate clipCenter,double clipRadius);
 };

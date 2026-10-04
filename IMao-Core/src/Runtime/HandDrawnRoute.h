@@ -17,8 +17,7 @@ inline bool HandDrawingInputAllowed(bool active, int draftScene, int displayedSc
 // a planned one and inherits the list, switching, completion and farming behaviour for free.
 //
 // A stop is either a point that already exists on the map (the player connected to it) or a free
-// point the player dropped on empty space. The latter has no type and therefore no icon, which is
-// why it is drawn as a numbered dot instead.
+// point the player dropped on empty space. Free stops carry local categories, text icons and progress.
 //
 // Two ids must not be confused here: `scene` is the runtime scene the route belongs to (what a
 // route file and the map filter use), while `stateId` is Kuro's top-level state that identifies
@@ -26,14 +25,24 @@ inline bool HandDrawingInputAllowed(bool active, int draftScene, int displayedSc
 // carry the state id; they are different numbers for the same place.
 class HandDrawnDraft {
 public:
+    bool CategoryLocked() const { return categoryLocked; }
     bool Active() const { return active; }
     // A drawing that has been finished but not yet saved. Holding points without being active is a
     // real state: leaving the drawing (Escape) must keep what was drawn so the player can go and
     // save it, and the toolbar cannot be opened while the drawing still owns the map.
-    bool Pending() const { return !active && !points.empty(); }
+    bool Pending() const { return !active && (categoryLocked || !points.empty()); }
     int SceneId() const { return scene; }
     const std::vector<ItemDatas>& Points() const { return points; }
     std::size_t Size() const { return points.size(); }
+    const std::string& RouteId() const { return routeId; }
+    FreePointCategory Category() const { return category; }
+    FreePointIcon Icon() const { return icon; }
+    void SelectIcon(FreePointIcon value) {
+        if(!active) throw std::runtime_error("请先开始手绘路线");
+        if(category==FreePointCategory::Collectible && value!=FreePointIcon::Number)
+            throw std::invalid_argument("收集物路线只能使用数字图标");
+        icon=value;
+    }
 
     // Begins a drawing on one map. A session belongs to a single map because a route names one map:
     // the start, the projection and the map filter all key off it.
@@ -41,9 +50,13 @@ public:
     // Calling this while a finished drawing is still waiting to be saved resumes that drawing rather
     // than starting an empty one. Resuming is what "keep drawing" means, and wiping the points here
     // would throw away work the player explicitly asked to come back to.
-    void Start(int sceneId, int stateId) {
+    void Start(int sceneId, int stateId, FreePointCategory value=FreePointCategory::Daily, std::string id={}) {
         if (!Scene::IsKnown(sceneId)) throw std::invalid_argument("请先在游戏大地图上打开要绘制的区域");
         if (stateId <= 0) throw std::invalid_argument("当前地图没有点位数据，无法手绘");
+        if(active && categoryLocked) {
+            if(value!=category)throw std::invalid_argument("已经开始加点，路线类型不能更改");
+            return;
+        }
         if (Pending()) {
             if (scene != sceneId)
                 throw std::invalid_argument("已有一条未保存的手绘路线属于别的地图，请先在路线列表里保存或放弃它");
@@ -54,6 +67,7 @@ public:
         active = true;
         scene = sceneId;
         state = stateId;
+        category=value;icon=FreePointIcon::Number;routeId=std::move(id);categoryLocked=false;
         points.clear();
         freeCount = 0;
     }
@@ -76,8 +90,9 @@ public:
             stop.itemMapROC = point.itemMapROC;
             stop.layer.stateId = state;
             stop.layer.stopKind = StopKind::Free;
+            stop.freeRouteId=routeId;stop.freeCategory=category;stop.freeIcon=icon;
         }
-        points.push_back(std::move(stop));
+        points.push_back(std::move(stop));categoryLocked=true;
         return points.back();
     }
 
@@ -87,10 +102,7 @@ public:
         // the points rather than about the drawing being in progress.
         if (points.empty()) return false;
         points.pop_back();
-        // Free numbering restarts from what is left, so the visible badges stay 1..n with no gap.
-        std::size_t remaining = 0;
-        for (const auto& point : points) if (IsFreeStop(point)) ++remaining;
-        freeCount = remaining;
+        // Identity numbers are never reused. The renderer supplies the visible order.
         return true;
     }
 
@@ -99,7 +111,7 @@ public:
     bool Finish() {
         if (!active) return false;
         active = false;
-        return !points.empty();
+        return Pending();
     }
 
     // Throws the drawing away, including one that was finished but not saved yet.
@@ -109,6 +121,7 @@ public:
         state = 0;
         points.clear();
         freeCount = 0;
+        routeId.clear();categoryLocked=false;
     }
 
     // A finished drawing. The first stop is the start and the last is the end: the player drew an
@@ -122,6 +135,7 @@ public:
         plan.profileId = profileId;
         plan.sceneId = scene;
         plan.handDrawn = true;
+        plan.routeCategory=category;plan.legacyHandDrawn=false;
         // A drawing has never been written, so it has not chosen a collection: it belongs to
         // whichever one the player is in when they save it. Empty is how a plan says "not decided
         // yet" — the model's own default is what an already-stored route would have.
@@ -131,14 +145,18 @@ public:
         plan.start.source = "manual";
         plan.start.valid = true;
         plan.stops = points;
+        ScopeFreePoints(plan,id);
         return plan;
     }
 
 private:
-    bool active = false;
+    bool active = false, categoryLocked = false;
     int scene = 0;
     int state = 0;
     std::size_t freeCount = 0;
+    std::string routeId;
+    FreePointCategory category=FreePointCategory::Daily;
+    FreePointIcon icon=FreePointIcon::Number;
     std::vector<ItemDatas> points;
 };
 } // namespace AutoRoute

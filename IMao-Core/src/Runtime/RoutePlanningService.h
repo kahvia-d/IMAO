@@ -44,6 +44,9 @@ struct RoutePlanningView {
     // it, which is why leaving must not throw it away.
     bool handDrawnPending = false;
     std::size_t handDrawnCount = 0;
+    bool handDrawnTypeChoosing = false;
+    FreePointCategory handCategory = FreePointCategory::Daily;
+    FreePointIcon handIcon = FreePointIcon::Number;
 };
 
 // Core owns selection, solver jobs and progress. UI/renderers consume snapshots.
@@ -54,6 +57,9 @@ public:
     static void SetEventCallback(std::function<void(const nlohmann::json&)> callback);
     static nlohmann::json Command(const nlohmann::json& command);
     static nlohmann::json GuideTarget(const nlohmann::json& command);
+    static bool HandPointAllowed(const ItemDatas& point, FreePointCategory category);
+    static std::optional<ItemDatas> HandPointCandidate(int sceneId, const Coordinate& roc, const std::string& key = {});
+    static nlohmann::json CompleteFreePoint(const nlohmann::json& command);
     static nlohmann::json Snapshot();
     static RoutePlanningView View();
     static AutoRoute::DrawVisibility DrawingVisibility();

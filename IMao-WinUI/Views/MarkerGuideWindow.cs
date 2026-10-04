@@ -306,7 +306,7 @@ public sealed class MarkerGuideWindow : Window
         picture.Source = null;
         imagePanel.Visibility = Visibility.Collapsed;
         guideLink.Visibility = Visibility.Collapsed;
-        name.Text = "收集物攻略";
+        name.Text = selection.IsFree?"本地自由点":"收集物攻略";
         description.Text = "正在读取点位说明…";
         metadata.Text = string.Empty;
         status.Text = "正在加载";
@@ -324,8 +324,8 @@ public sealed class MarkerGuideWindow : Window
             var local = await details.GetLocalAsync(selection, token);
             if (!IsCurrent(selection, token)) return;
             ApplyDetail(local);
-            status.Text = "本地说明已就绪，正在加载图文攻略…";
-            await LoadOnlineAsync(selection, false);
+            if(selection.IsFree){status.Text="本地自由点";refresh.IsEnabled=sourceLink.IsEnabled=false;}
+            else {status.Text = "本地说明已就绪，正在加载图文攻略…";await LoadOnlineAsync(selection, false);}
         }
         catch (OperationCanceledException) { }
         catch (Exception)

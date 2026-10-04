@@ -17,7 +17,7 @@ namespace IMao_WinUI.Helpers;
 /// <list type="bullet">
 /// <item><c>ConverterParameter=icon</c>：一个类型 → 它的图标（拿不到就是路径文字）。</item>
 /// <item><c>ConverterParameter=text</c>：一个类型的名字（图标旁边那行字）。</item>
-/// <item><c>ConverterParameter=empty</c>：整张类型表 → 空表时那句「自由点（无类型）」，否则空串。</item>
+/// <item><c>ConverterParameter=empty</c>：整张类型表 → 空表时那句「自由点（本地标记）」，否则空串。</item>
 /// <item><c>ConverterParameter=none</c>：整张类型表 → 空表时显示占位行，否则**收起来**。</item>
 /// <item><c>ConverterParameter=any</c>：整张类型表 → 有类型时显示徽标行，否则收起来。</item>
 /// </list>
@@ -44,7 +44,7 @@ public sealed class RouteKindIconConverter : IValueConverter
         {
             "icon" => value is string path && path.Length > 0 ? (object?)Load(path) ?? path : "",
             "text" => value is RouteKindSummary kind ? kind.Label : "",
-            "empty" => Whole(value) is { Count: 0 } ? "自由点（无类型）" : "",
+            "empty" => Whole(value) is { Count: 0 } ? "自由点（本地标记）" : "",
             // The placeholder and the badges are alternatives, never both: an empty TextBlock still
             // occupies a whole line, which is what put a blank row inside every route that has kinds.
             "none" => Whole(value) is { Count: 0 } ? Visibility.Visible : Visibility.Collapsed,

@@ -40,7 +40,7 @@ inline std::string Utf8Text(const std::filesystem::path& value) {
 class RouteBundle {
 public:
     using Json = nlohmann::json;
-    static constexpr int FormatVersion = 1;
+    static constexpr int FormatVersion = 2;
     static constexpr const char* App = "IMao";
     // A bundle holds many routes where a route file holds one, so it is allowed to be bigger — but
     // not unbounded: a file this size that is still not a bundle is the wrong file, and reading it
@@ -79,7 +79,7 @@ public:
         if (!document.is_object()) throw std::invalid_argument("这不是 IMao 路线包");
         // A newer bundle is not guessed at, exactly like a newer route file: the version is how the
         // format says it changed, so ignoring it is how a field gets silently dropped.
-        if (document.value("formatVersion", 0) != FormatVersion)
+        if (document.value("formatVersion", 0) != 1 && document.value("formatVersion", 0) != FormatVersion)
             throw std::invalid_argument("路线包的版本不受支持，请用更新的 IMao 打开");
         const auto kind = document.value("kind", std::string{});
         if (kind != "routes" && kind != "collection") throw std::invalid_argument("路线包的类型无法识别");

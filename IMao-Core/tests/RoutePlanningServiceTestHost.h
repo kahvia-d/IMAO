@@ -26,6 +26,13 @@ struct DrawItemBase {
     inline static std::string markerProfile="local";
     static std::string MarkerProfile(){return markerProfile;}
     static bool IsPointCompleted(const std::string&,const ItemDatas& item){std::scoped_lock lock(mutex);return completed.contains(AutoRoute::Key(item));}
+    static bool IsCollectiblePoint(const std::string& nameId){return nameId=="chest";}
+    static Json SetFreePointCompletion(const std::string& profile,const ItemDatas& item,bool value){
+        if(profile!=markerProfile)return {{"accepted",false}};
+        {std::scoped_lock lock(mutex);if(value)completed.insert(AutoRoute::Key(item));else completed.erase(AutoRoute::Key(item));}
+        return {{"accepted",true},{"data",{{"changed",1},{"point",{{"profileId",profile},{"stateId",item.layer.stateId},{"pointId",item.itemId},{"routeId",item.freeRouteId},{"stopKind","free"},{"completed",value}}}}}};
+    }
+    static void PublishMarkerEvent(Json) { RoutePlanningService::OnMarkerChanged(); }
     static bool IsRefreshablePoint(const std::string& nameId){return refreshableCategories.contains(nameId);}
     static bool IsRefreshablePointId(const std::string& pointId){return refreshablePointIds.contains(pointId);}
     // The isolated harness has no icon package. An empty path is also what the real one returns for

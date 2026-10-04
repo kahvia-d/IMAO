@@ -3,8 +3,23 @@
 #include "../../Runtime/RouteGeometry.h"
 #include "../../Runtime/RoutePlanningService.h"
 #include "../Items/DrawItemBase.h"
+#include "DrawFreePointBadge.h"
 using namespace std;
 using namespace cv;
+void DrawRouteOnMinMap::DrawFreeMarkers(const std::vector<FreeRouteMarker>& markers,int sceneId,
+    const OverlayScreenTransform& motion,Coordinate center,double clipRadius) {
+    const auto* scene=Scene::Find(sceneId);if(!scene||clipRadius<=0)return;
+    const auto visibility=RoutePlanningService::DrawingVisibility();
+    for(const auto& marker:markers) {
+        if(marker.profileId!=DrawItemBase::MarkerProfile()||marker.point.layer.stateId!=scene->kuroStateId)continue;
+        RouteDatas identity("",sceneId);identity.routePlanId=marker.routeId;identity.profileId=marker.profileId;
+        identity.orderRevision=marker.orderRevision;if(!visibility.Allows(identity,true))continue;
+        if(LayeredMap::RoleFor(marker.point)==LayeredMap::MarkerRole::Hidden)continue;
+        const auto position=motion.Apply(marker.point.screenCoordiante);
+        const auto label=AutoRoute::FreePointLabel(marker.point.freeIcon,marker.order);
+        DrawFreePointBadgeClipped(ImGui::GetBackgroundDrawList(),{static_cast<float>(position.x),static_cast<float>(position.y)},label,marker.current,center,clipRadius);
+    }
+}
 
 void DrawRouteOnMinMap::DrawRoute(const std::vector<RouteDatas>& frame, int sceneId, const OverlayScreenTransform& motion, Coordinate clipCenter, double clipRadius) {
 

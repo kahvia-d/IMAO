@@ -6,8 +6,10 @@
 
 // Official points come from the upstream catalogue and are identified by a point id. A route
 // drawn by hand may also drop a "free" point on empty map space; it exists only inside that one
-// route, so it has no catalogue entry, no type and no icon.
+// route and carries its own local category, text icon and completion identity.
 enum class StopKind { Catalog, Free };
+enum class FreePointCategory { Collectible, Daily };
+enum class FreePointIcon { Number, Monster, Monster1C, Monster3C, Plant, Ore };
 
 // Official data identity is retained independently of projected screen coordinates.
 struct MapLayerIdentity {
@@ -26,11 +28,28 @@ struct ItemDatas {
 	Coordinate itemMapROC;
 	bool isSaved = false;
     MapLayerIdentity layer;
+    // Free identities are scoped to a saved route; their visible order is independent.
+    std::string freeRouteId;
+    FreePointCategory freeCategory = FreePointCategory::Daily;
+    FreePointIcon freeIcon = FreePointIcon::Number;
+    int freeDisplayOrder = 0; // Transient route order for local guide labels, never an identity.
 };
+
+inline std::string PointIdentityKey(const ItemDatas& item) {
+    return std::to_string(item.layer.stateId) + ":" +
+        (item.layer.stopKind == StopKind::Free && !item.freeRouteId.empty() ? "free-route:" + item.freeRouteId + ":" : "") + item.itemId;
+}
 
 struct ItemsDatas {
 	std::string nameId;
 	std::vector<ItemDatas> itemsDatas;
+};
+struct FreeRouteMarker {
+    ItemDatas point;
+    int order=0;
+    bool current=false;
+    std::string profileId,routeId;
+    std::uint64_t orderRevision=0;
 };
 
 struct RouteDatas

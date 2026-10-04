@@ -40,6 +40,12 @@ internal static class MarkerDetailTests
             return JsonResponse(payload);
         }));
         using var service = new MarkerDetailService(map, cache, client);
+        var free = new MarkerSelection { ProfileId = "local", StateId = 8, PointId = "free:1", StopKind = "free",
+            RouteId = "free-route", FreeCategory = "collectible", FreeIcon = "number", LocalName = "自由点 · 数字 · 第 1 个点" };
+        var freeDetail = await service.GetLocalAsync(free);
+        var freeOnline = await service.GetOnlineAsync(free, freeDetail);
+        check(calls == 0 && freeDetail.Name == free.LocalName && freeDetail.SourceUrl.Length == 0 &&
+            freeOnline.Detail.Description.Contains("收集物"), "free guides use local metadata without querying or linking upstream points");
         MarkerDetail local = await service.GetLocalAsync(selection);
         check(local.Description == "本地提示：在桥下" && local.PointId == selection.PointId && local.FloorId == "16" && local.Level == "-2/16",
             "marker details preserve exact official ID and offline text/layer metadata");

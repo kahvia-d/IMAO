@@ -355,10 +355,27 @@ internal static class RoutePlanningTests
                 check(state.Active.Stops.Length == 3 && state.Active.Stops[0].PointId == "free:1",
                     "the hand-drawn route keeps its free points and their drawing order across the round trip");
 
+                var freeTarget = state.CurrentTarget!;
+                check(freeTarget.IsFree && freeTarget.RouteId == handId && freeTarget.FreeCategory == "daily" &&
+                    freeTarget.Key.Contains(":free-route:" + handId + ":") && freeTarget.Description.Contains("04:00"), "v1 free points acquire a scoped local identity and refresh description at real IPC load");
+                state = await core.ExecuteRoutePlanningAsync("complete", new { profileId = "local", routeId = handId, key = freeTarget.Key });
+                check(state.Active!.Stops[0].Completed && state.CurrentTarget?.PointId == "free:2", "real IPC completion persists a free point and advances navigation");
+                bool staleFree = await RejectedAsync(async () => { await core.ExecuteMarkerAsync("markerSetCompletion", new {
+                    profileId = "local", routeId = "stale-route", stopKind = "free", pointId = freeTarget.PointId,
+                    stateId = freeTarget.StateId, completed = true }); return core.RoutePlanning; });
+                check(staleFree, "a stale free-point request cannot write to the active route");
+                await core.ExecuteMarkerAsync("markerSetCompletion", new { profileId = "local", routeId = handId,
+                    stopKind = "free", pointId = freeTarget.PointId, stateId = freeTarget.StateId, completed = false });
+                state = await core.ExecuteRoutePlanningAsync("state");
+                check(!state.Active!.Stops[0].Completed && state.CurrentTarget?.Key == freeTarget.Key, "real IPC cancellation restores the original free target");
+                await core.ExecuteRoutePlanningAsync("complete", new { profileId = "local", routeId = handId, key = freeTarget.Key });
+
                 // The active pointer has to remember which folder the route lives in, or a restart
                 // would look for it under Auto and quietly lose it.
                 await core.RestartAsync();
                 var afterRestart = await core.ExecuteRoutePlanningAsync("state");
+                check(afterRestart.Active?.Stops[0].Completed == true && afterRestart.CurrentTarget?.PointId == "free:2",
+                    "local free-point completion survives a real host restart");
                 check(afterRestart.Active?.Id == handId && afterRestart.NavigationStatus == "paused",
                     "a restart restores the hand-drawn route from the active pointer under the hand folder");
             }

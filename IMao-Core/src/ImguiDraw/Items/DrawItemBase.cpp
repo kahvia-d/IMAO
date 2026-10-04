@@ -14,6 +14,7 @@
 #include "../../Runtime/AtomicFile.h"
 #include "../../Runtime/MarkerCompletionStore.h"
 #include "../../Runtime/FarmCompletionStore.h"
+#include "../../Runtime/FreePointCompletionStore.h"
 #include "../../Runtime/RefreshableCategories.h"
 #include "../../Runtime/RoutePlanningService.h"
 #include "../../Runtime/MarkerGuideProtocol.h"
@@ -48,6 +49,7 @@ static std::unique_ptr<MarkerCompletionStore> markerStore;
 // The daily-refresh ledger and the category table that decides what belongs in it. Both
 // exist so the farming mode's completions can never enter the synchronized document.
 static std::unique_ptr<FarmCompletionStore> farmStore;
+static std::unique_ptr<FreePointCompletionStore> freeStore;
 static RefreshableCategories refreshableCategories;
 // Every point id whose category is a daily-refresh one. Point ids are unique across all
 // scenes and categories in the shipped data, so one flat set answers the question for a
@@ -110,6 +112,7 @@ void DrawItemBase::Initi() {
     refreshableCategories = RefreshableCategories::Load(ResourceSnapshotContext::MapDataRoot());
     markerStore = std::make_unique<MarkerCompletionStore>(directory);
     farmStore = std::make_unique<FarmCompletionStore>(directory);
+    freeStore = std::make_unique<FreePointCompletionStore>(directory);
     markerIdentities.clear();
     refreshablePointIds.clear();
     for (const auto sceneId : Scene::sceneIds) {
@@ -146,7 +149,7 @@ void DrawItemBase::Shutdown() {
     SetMarkerEventCallback({});
     SetGuideWindow(nullptr);
     markerStore.reset();
-    farmStore.reset();
+    farmStore.reset();freeStore.reset();
     refreshablePointIds.clear();
     refreshableCategories = RefreshableCategories{};
 }
@@ -379,6 +382,10 @@ vector<string> DrawItemBase::GetFilteredPoints(string scene, string nameId) {
 }
 
 bool DrawItemBase::IsPointCompleted(const string& scene, const ItemDatas& item) {
+    if(AutoRoute::IsFreeStop(item)) {
+        try{return freeStore && freeStore->Completed(MarkerProfile(),item);}
+        catch(const std::exception&){return false;}
+    }
     if (!markerStore) return false;
     const int state = item.layer.stateId > 0 ? item.layer.stateId : MarkerCompletionStore::SceneState(scene);
     // A daily-refresh point reads its own ledger and nothing else: a leftover record in the
@@ -431,7 +438,7 @@ json DrawItemBase::CompleteNearbySingle(const NearbySelection::Observation& init
     const auto& item = target.candidate.item;
     return HandleMarkerCommand({{"type", "markerSetCompletion"}, {"profileId", target.profileId},
         {"sceneName", target.sceneName}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
-        {"pointId", item.itemId}, {"completed", true}});
+        {"pointId", item.itemId}, {"stopKind", item.layer.stopKind == StopKind::Free ? "free" : "catalog"}, {"routeId", item.freeRouteId}, {"freeCategory", AutoRoute::CategoryId(item.freeCategory)}, {"freeIcon", AutoRoute::IconId(item.freeIcon)}, {"localName", AutoRoute::FreePointName(item)}, {"completed", true}});
 }
 
 // A guide writes nothing, so the resolved identity is returned to its caller in the
@@ -446,7 +453,7 @@ json DrawItemBase::ResolveNearbyGuide(const NearbySelection::Observation& initia
     const auto& item = target.candidate.item;
     return {{"profileId", target.profileId}, {"sceneName", target.sceneName}, {"intent", "guide"},
         {"selection", {{"profileId", target.profileId}, {"sceneName", target.sceneName}, {"nameId", item.nameId},
-            {"pointId", item.itemId}, {"stateId", item.layer.stateId}, {"countryId", item.layer.countryId},
+            {"pointId", item.itemId}, {"stopKind", item.layer.stopKind == StopKind::Free ? "free" : "catalog"}, {"routeId", item.freeRouteId}, {"freeCategory", AutoRoute::CategoryId(item.freeCategory)}, {"freeIcon", AutoRoute::IconId(item.freeIcon)}, {"localName", AutoRoute::FreePointName(item)}, {"stateId", item.layer.stateId}, {"countryId", item.layer.countryId},
             {"floorId", item.layer.floorId}, {"level", item.layer.level}, {"completed", false}}}};
 }
 
@@ -506,7 +513,7 @@ static json HandleNearbyCommand(const json& command) {
             }
             json candidatePoint{{"type", "markerSetCompletion"}, {"profileId", profile}, {"sceneName", current.sceneName},
                 {"nameId", candidate.item.nameId}, {"stateId", candidate.item.layer.stateId},
-                {"pointId", candidate.item.itemId}, {"completed", true}};
+                {"pointId", candidate.item.itemId}, {"stopKind", candidate.item.layer.stopKind == StopKind::Free ? "free" : "catalog"}, {"routeId", candidate.item.freeRouteId}, {"freeCategory", AutoRoute::CategoryId(candidate.item.freeCategory)}, {"freeIcon", AutoRoute::IconId(candidate.item.freeIcon)}, {"localName", AutoRoute::FreePointName(candidate.item)}, {"completed", true}};
             const auto candidateResult = DrawItemBase::HandleMarkerCommand(candidatePoint);
             if (!candidateResult.value("accepted", false)) { failed.push_back(candidateKey); continue; }
             completed.push_back(candidateKey);
@@ -517,7 +524,8 @@ static json HandleNearbyCommand(const json& command) {
             " failed=" + std::to_string(failed.size()));
         return {{"accepted", true}, {"message", ""}, {"data", {{"completed", completed}, {"skipped", skipped}, {"failed", failed}}}};
     }
-    const auto key = std::to_string(command.at("stateId").get<int>()) + ":" + command.at("pointId").get<std::string>();
+    const auto key = std::to_string(command.at("stateId").get<int>()) + ":" +
+        (command.value("stopKind",std::string{}) == "free" ? "free-route:" + command.value("routeId",std::string{}) + ":" : "") + command.at("pointId").get<std::string>();
     // A response may be lost after persistence. Repeating the exact same request returns
     // its saved response; a different point is a new request, because the list stays open
     // so the player can complete one nearby point after another.
@@ -532,7 +540,7 @@ static json HandleNearbyCommand(const json& command) {
     if (GetForegroundWindow() != window) return reject("nearby-window-changed");
     const auto& item = candidate->item;
     json point{{"profileId", profile}, {"sceneName", current.sceneName}, {"nameId", item.nameId},
-        {"pointId", item.itemId}, {"stateId", item.layer.stateId}, {"countryId", item.layer.countryId},
+        {"pointId", item.itemId}, {"stopKind", item.layer.stopKind == StopKind::Free ? "free" : "catalog"}, {"routeId", item.freeRouteId}, {"freeCategory", AutoRoute::CategoryId(item.freeCategory)}, {"freeIcon", AutoRoute::IconId(item.freeIcon)}, {"localName", AutoRoute::FreePointName(item)}, {"stateId", item.layer.stateId}, {"countryId", item.layer.countryId},
         {"floorId", item.layer.floorId}, {"level", item.layer.level}, {"completed", false}};
     json result;
     if (intent == NearbySelection::Intent::Guide) result = {{"accepted", true}, {"data", {{"selection", point}}}};
@@ -554,6 +562,8 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
         nearbyType == "markerCompleteNearbyCandidate" || nearbyType == "markerCompleteNearbyAll") return HandleNearbyCommand(command);
     auto normalized = command;
     const auto type = command.value("type", "");
+    if(type=="markerSetCompletion" && command.value("stopKind",std::string{})=="free")
+        return RoutePlanningService::CompleteFreePoint(command);
     // Validate before saving so a malformed correlation field cannot result in
     // a successful write followed by a failed response.
     const auto guideContext = type == "markerSetCompletion" ? MarkerGuideProtocol::CompletionContext(command) : json::object();
@@ -571,7 +581,8 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
             {"total", markerCandidates.size()}, {"hasMore", offset + page.size() < markerCandidates.size()}}}};
     }
     if (type == "markerSetCompletion" && command.contains("stateId") && command.contains("pointId")) {
-        const auto key = std::to_string(command.at("stateId").get<int>()) + ":" + command.at("pointId").get<std::string>();
+        const auto key = std::to_string(command.at("stateId").get<int>()) + ":" +
+        (command.value("stopKind",std::string{}) == "free" ? "free-route:" + command.value("routeId",std::string{}) + ":" : "") + command.at("pointId").get<std::string>();
         const auto identity = markerIdentities.find(key);
         if (identity == markerIdentities.end()) return {{"accepted", false}, {"message", "unknown-public-point"}, {"data", json::object()}};
         for (const auto& [name, value] : identity->second.items()) normalized[name] = value;
@@ -632,6 +643,19 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
             type == "markerCopyLocalProgress" || type == "markerImportLegacyProgress") MoveRefreshableToFarmLedger();
     }
     return result;
+}
+
+bool DrawItemBase::IsCollectiblePoint(const std::string& nameId) {
+    return refreshableCategories.IsCollectible(nameId);
+}
+json DrawItemBase::SetFreePointCompletion(const std::string& profile,const ItemDatas& item,bool value) {
+    if(!freeStore || profile!=MarkerProfile())return {{"accepted",false},{"message","档案已变化"}};
+    try {
+        freeStore->Set(profile,item,value);
+        json point={{"profileId",profile},{"stateId",item.layer.stateId},{"pointId",item.itemId},
+            {"routeId",item.freeRouteId},{"stopKind","free"},{"completed",value},{"pending",false}};
+        return {{"accepted",true},{"data",{{"point",point},{"changed",1}}}};
+    }catch(const std::exception& error){return {{"accepted",false},{"message",error.what()}};}
 }
 
 bool DrawItemBase::IsRefreshablePoint(const std::string& nameId) {
@@ -702,7 +726,9 @@ json DrawItemBase::HandleFarmBatchCompletion(const json& command) {
 // service — its own `completed` set is a snapshot that would otherwise stay stale until the
 // next marker event, leaving the route pointing at yesterday's "next target".
 bool DrawItemBase::ReportFarmLedgerExpiry() {
-    if (!farmStore || !farmStore->TakeExpired()) return false;
+    bool freeExpired=false;
+    try {freeExpired=freeStore&&freeStore->TakeExpired(MarkerProfile());}catch(const std::exception&){}
+    if (!farmStore || !farmStore->TakeExpired()) return freeExpired;
     StructuredLogger::Record("info", "farm", "ledger-expired",
         "epoch=" + std::to_string(farmStore->Epoch()) + " (the game refilled every 采集物 and 敌人; this ledger was cleared)");
     return true;
@@ -719,7 +745,7 @@ void DrawItemBase::PublishMarkerEvent(json event) {
     // A farming completion changes which route targets are left just like an ordinary one,
     // and the move that takes a whole class of records out of the synchronized document can
     // change the visible state too, so both have to refresh the route.
-    if (type == "markerCompletionChanged" || type == "markerFarmCompletionChanged" ||
+    if (type == "markerCompletionChanged" || type == "markerFreeCompletionChanged" || type == "markerFarmCompletionChanged" ||
         type == "markerFarmLedgerMoved" || type == "markerProfileChanged") RoutePlanningService::OnMarkerChanged();
     std::function<void(const json&)> callback;
     { std::scoped_lock lock(markerEventMutex); callback = markerEventCallback; }
@@ -752,7 +778,7 @@ json DrawItemBase::PublishNearbyCandidates(NearbySelection::Observation observat
             if (!NearbySelection::Includes(candidate, intent)) continue;
             const auto& item = candidate.item;
             markerCandidates.push_back({{"profileId", observation.profileId}, {"sceneName", observation.sceneName},
-                {"nameId", item.nameId}, {"pointId", item.itemId}, {"stateId", item.layer.stateId},
+                {"nameId", item.nameId}, {"pointId", item.itemId}, {"stopKind", item.layer.stopKind == StopKind::Free ? "free" : "catalog"}, {"routeId", item.freeRouteId}, {"freeCategory", AutoRoute::CategoryId(item.freeCategory)}, {"freeIcon", AutoRoute::IconId(item.freeIcon)}, {"localName", AutoRoute::FreePointName(item)}, {"stateId", item.layer.stateId},
                 {"countryId", item.layer.countryId}, {"floorId", item.layer.floorId}, {"level", item.layer.level},
                 {"completed", false}, {"screenX", cursor.x}, {"screenY", cursor.y}});
         }
@@ -799,7 +825,10 @@ void DrawItemBase::UpdateMarkerContext(const std::string& sceneName) {
 void DrawItemBase::SelectMarker(const std::string& scene, const ItemDatas& item, POINT desktopPosition, const std::string& profileId) {
     const auto profile = profileId.empty() ? MarkerProfile() : profileId;
     if (profile != MarkerProfile()) return;
-    PublishMarkerEvent({{"type", "markerSelected"}, {"profileId", profile}, {"sceneName", scene},
+    PublishMarkerEvent({{"type", "markerSelected"}, {"profileId", profile},
+        {"stopKind",AutoRoute::IsFreeStop(item)?"free":"catalog"},{"routeId",item.freeRouteId},
+        {"freeIcon",AutoRoute::IconId(item.freeIcon)},{"freeCategory",AutoRoute::CategoryId(item.freeCategory)},
+        {"localName",AutoRoute::IsFreeStop(item)?AutoRoute::FreePointName(item):std::string{}}, {"sceneName", scene},
         {"pointId", item.itemId}, {"nameId", item.nameId}, {"stateId", item.layer.stateId},
         {"countryId", item.layer.countryId}, {"floorId", item.layer.floorId}, {"level", item.layer.level},
         {"completed", IsPointCompleted(scene, item)}, {"screenX", desktopPosition.x}, {"screenY", desktopPosition.y}});

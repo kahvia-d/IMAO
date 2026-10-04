@@ -51,7 +51,7 @@ public:
         return std::hypot(cursor.center.x - std::clamp(cursor.center.x, left, right),
             cursor.center.y - std::clamp(cursor.center.y, top, bottom)) <= cursor.radius;
     }
-    static std::string Key(const ItemDatas& item) { return std::to_string(item.layer.stateId) + ":" + item.itemId; }
+    static std::string Key(const ItemDatas& item) { return PointIdentityKey(item); }
 
     void Publish(Publication value, Clock::time_point now = Clock::now()) {
         std::scoped_lock lock(mutex_);
@@ -65,7 +65,8 @@ public:
         if (!value.cursorVisible) { InvalidateLocked("未识别到可信的手柄地图圆环光标"); return; }
         std::map<std::string, Candidate> unique;
         for (auto& candidate : value.candidates) {
-            if (candidate.item.layer.stateId <= 0 || candidate.item.itemId.empty() || candidate.item.nameId.empty() ||
+            if (candidate.item.layer.stateId <= 0 || candidate.item.itemId.empty() || (candidate.item.nameId.empty() &&
+                (candidate.item.layer.stopKind!=StopKind::Free || candidate.item.freeRouteId.empty())) ||
                 !std::isfinite(candidate.position.x) || !std::isfinite(candidate.position.y)) continue;
             auto [at, inserted] = unique.emplace(Key(candidate.item), candidate);
             if (!inserted && !SameItem(at->second.item, candidate.item)) {
@@ -105,11 +106,12 @@ public:
         return view_;
     }
     static std::optional<Candidate> Resolve(const View& view, std::uint64_t revision,
-        const std::string& profile, std::uint64_t generation, const std::string& scene, int stateId, const std::string& pointId) {
+        const std::string& profile, std::uint64_t generation, const std::string& scene, int stateId, const std::string& pointId, const std::string& routeId = {}, StopKind kind = StopKind::Catalog) {
         if (!view.available || view.revision != revision || view.binding.context.profileId != profile ||
             view.binding.context.generation != generation || view.binding.context.sceneName != scene || stateId <= 0 || pointId.empty()) return std::nullopt;
         const auto found = std::find_if(view.candidates.begin(), view.candidates.end(), [&](const Candidate& item) {
-            return item.item.layer.stateId == stateId && item.item.itemId == pointId;
+            return item.item.layer.stateId == stateId && item.item.itemId == pointId && item.item.layer.stopKind==kind &&
+                (kind!=StopKind::Free || item.item.freeRouteId==routeId);
         });
         return found == view.candidates.end() ? std::nullopt : std::optional<Candidate>(*found);
     }
@@ -139,7 +141,8 @@ private:
     }
     static bool SameItem(const ItemDatas& a, const ItemDatas& b) {
         return a.itemId == b.itemId && a.nameId == b.nameId && a.layer == b.layer &&
-            a.itemMapROC.x == b.itemMapROC.x && a.itemMapROC.y == b.itemMapROC.y;
+            a.itemMapROC.x == b.itemMapROC.x && a.itemMapROC.y == b.itemMapROC.y &&
+            a.freeRouteId==b.freeRouteId && a.freeCategory==b.freeCategory && a.freeIcon==b.freeIcon;
     }
     void InvalidateLocked(const std::string& message) {
         if (view_.available) ++view_.revision;

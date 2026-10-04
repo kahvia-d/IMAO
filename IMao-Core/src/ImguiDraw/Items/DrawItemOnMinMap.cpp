@@ -276,6 +276,7 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
         // in the same capture iteration that publishes this frame, so the frozen value is the current
         // one. Querying the store here instead took its mutex once per marker per rendered frame, and
         // that mutex is also held while a profile write goes to disk.
+        if (item.layer.stopKind == StopKind::Free) continue;
         if (item.isSaved) { ++markerRenderStats.skippedCompleted; continue; }
         // Standing on a floor of a layered map hides everything that is not part of it, and
         // skipping here keeps hidden markers out of the layout (so they stay unclickable).

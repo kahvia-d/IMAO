@@ -1,7 +1,10 @@
 // Tests for drawing a route by hand: the ordered draft the picker collects, and the plan it
 // commits. These are pure logic and need no map data, no marker store and no IPC.
 #include "Runtime/HandDrawnRoute.h"
+#include "Runtime/RoutePlanStore.h"
 #include "Runtime/LegacyHandRouteImport.h"
+#include "Runtime/FreePointCompletionStore.h"
+#include "Runtime/RouteGeometry.h"
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -65,13 +68,14 @@ void DraftTests() {
 
     Check(draft.Undo() && draft.Size() == 2, "undo removes the last stop");
     const auto afterUndo = draft.Add(Blank(70, 80, StateIdFor(Scene1)));
-    Check(afterUndo.itemId == "free:2",
-        "the number freed by undo is reused so the badges stay 1..n with no gap");
+    Check(afterUndo.itemId == "free:3",
+        "undo must not reuse a deleted point's completion identity; visible order is separate");
     Check(draft.Undo() && draft.Undo() && draft.Undo() && !draft.Undo() && draft.Size() == 0,
         "undo empties the draft and then reports there is nothing left");
 
     // The first stop is the start and the last is the end: the player drew an ordered path, so
     // nothing here may reorder it.
+    draft.Cancel();
     draft.Start(Scene1, StateIdFor(Scene1));
     draft.Add(Blank(1, 1, StateIdFor(Scene1)));
     draft.Add(Official("chest-a", 30, 40, StateIdFor(Scene1)));
@@ -87,12 +91,14 @@ void DraftTests() {
     Check(plan.start.source == "manual", "a hand-drawn start is recorded as manual, not as a player snapshot");
 
     // One point is not a route: there would be no line to draw and no end.
+    draft.Cancel();
     draft.Start(Scene1, StateIdFor(Scene1));
     draft.Add(Blank(1, 1, StateIdFor(Scene1)));
     Rejects([&] { draft.Commit("route-2", "x", "local"); }, "a drawing with a single point cannot be committed");
 
     // Leaving the drawing keeps it. The player cannot reach the toolbar while the drawing still owns
     // the map, so discarding on the way out would destroy work they never had a chance to save.
+    draft.Cancel();
     draft.Start(Scene1, StateIdFor(Scene1));
     draft.Add(Blank(1, 1, StateIdFor(Scene1)));
     draft.Add(Blank(2, 2, StateIdFor(Scene1)));
@@ -177,6 +183,98 @@ void ImportTests() {
         Check(!AutoRoute::LegacyDocument::Import(rejected, "x", "local", lookupScene, noPoints).rejected.empty(),
             "a legacy file that cannot be understood is refused rather than guessed at");
 }
+void FreeIdentityTests() {
+    AutoRoute::HandDrawnDraft a, b;
+    a.Start(Scene1, StateIdFor(Scene1)); b.Start(Scene1, StateIdFor(Scene1));
+    for (auto* draft : {&a, &b}) {
+        draft->Add(Blank(1, 2, StateIdFor(Scene1)));
+        draft->Add(Blank(3, 4, StateIdFor(Scene1)));
+    }
+    const auto first = a.Commit("route-a", "A", "local");
+    const auto second = b.Commit("route-b", "B", "local");
+    Check(AutoRoute::Key(first.stops[0]) != AutoRoute::Key(second.stops[0]),
+        "two routes' first free stops must have different completion identities");
+}
+void FreeIconAndMigrationTests() {
+    AutoRoute::HandDrawnDraft draft;draft.Start(Scene1,StateIdFor(Scene1),FreePointCategory::Daily,"icons");
+    std::vector<FreePointIcon> icons={FreePointIcon::Number,FreePointIcon::Monster,FreePointIcon::Monster1C,
+        FreePointIcon::Monster3C,FreePointIcon::Plant,FreePointIcon::Ore};
+    for(auto icon:icons){draft.SelectIcon(icon);draft.Add(Blank(10+draft.Size(),20,StateIdFor(Scene1)));}
+    auto plan=draft.Commit("icons","icons","local");
+    plan.skipped.insert(AutoRoute::Key(plan.stops.front()));plan.skipHistory.push_back(AutoRoute::Key(plan.stops.front()));
+    auto document=AutoRoute::RoutePlanStore::Document(plan);
+    const auto none=[](int,const std::string&)->std::optional<ItemDatas>{return {};};
+    const auto parsed=AutoRoute::RoutePlanStore::Parse(document,"local","icons",none);
+    Check(parsed.skipped==plan.skipped&&parsed.skipHistory==plan.skipHistory,"v2 skipped free points reload with their scoped identity and history");
+    for(std::size_t i=0;i<icons.size();++i)Check(parsed.stops[i].freeIcon==icons[i],"switching icons affects only subsequent points and all six survive a v2 round trip");
+    const auto firstKey=AutoRoute::Key(plan.stops.front());draft.Undo();draft.SelectIcon(FreePointIcon::Ore);draft.Add(Blank(50,60,StateIdFor(Scene1)));
+    Check(AutoRoute::Key(draft.Commit("icons","icons","local").stops.front())==firstKey,"undo and new drawing never change surviving identities");
+    document["formatVersion"]=1;document.erase("routeCategory");document.erase("legacyHandDrawn");
+    document["stops"][0]["skipped"]=true;
+    document["skipHistory"]=nlohmann::json::array({std::to_string(StateIdFor(Scene1))+":free:1"});
+    const auto legacy=AutoRoute::RoutePlanStore::Parse(document,"local","icons",none);
+    Check(legacy.legacyHandDrawn&&legacy.skipHistory.front()==firstKey&&legacy.skipped.contains(firstKey),"v1 migration rewrites skipped identity and its undo history deterministically");
+    Check(legacy.stops[3].freeIcon==FreePointIcon::Number&&legacy.stops[3].freeCategory==FreePointCategory::Daily,"old free points retain daily numbered behavior");
+    Check(AutoRoute::RoutePlanStore::Parse(AutoRoute::RoutePlanStore::Document(legacy),"local","icons",none).skipHistory==legacy.skipHistory,"migration is stable when saved and read again");
+    draft.Cancel();draft.Start(Scene1,StateIdFor(Scene1),FreePointCategory::Collectible,"collect");
+    draft.Add(Blank(10,20,StateIdFor(Scene1)));draft.Undo();
+    Rejects([&]{draft.Start(Scene1,StateIdFor(Scene1),FreePointCategory::Daily,"other");},"undoing every point does not unlock the chosen route type");
+    Check(draft.Finish()&&draft.Pending(),"an emptied but locked draft can be resumed or discarded");
+    draft.Start(Scene1,StateIdFor(Scene1),FreePointCategory::Collectible,"ignored");
+    Rejects([&]{draft.SelectIcon(FreePointIcon::Monster);},"collectible routes reject non-number icons");
+}
+void FreeCompletionTests() {
+    const auto root=std::filesystem::temp_directory_path()/std::to_string(GetTickCount64());
+    std::int64_t epoch=100;
+    ItemDatas daily=Blank(1,2,StateIdFor(Scene1));daily.itemId="free:1";
+    daily.layer.stopKind=StopKind::Free;daily.freeRouteId="route-a";
+    auto permanent=daily;permanent.itemId="free:2";permanent.freeCategory=FreePointCategory::Collectible;
+    FreePointCompletionStore store(root,[&]{return epoch;});
+    store.Set("local",daily,true);store.Set("local",permanent,true);
+    Check(store.Completed("local",daily)&&store.Completed("local",permanent),"both free-point classes can be marked complete");
+    auto other=daily;other.freeRouteId="route-b";
+    Check(!store.Completed("local",other)&&!store.Completed("other",daily),"free completion is isolated by route and profile");
+    ++epoch;
+    Check(!store.Completed("local",daily)&&store.Completed("local",permanent),"daily expiry never erases collectible free-point completion");
+    FreePointCompletionStore restarted(root,[&]{return epoch;});
+    Check(restarted.Completed("local",permanent),"collectible free-point completion survives process restart");
+    restarted.Set("local",daily,true);++epoch;
+    FreePointCompletionStore afterClosedDay(root,[&]{return epoch;});
+    Check(!afterClosedDay.Completed("local",daily)&&afterClosedDay.Completed("local",permanent),"daily completion resets even when the process was closed across the boundary");
+    const auto heldFile=root/"profiles"/"local.free.json";
+    const auto held=CreateFileW(heldFile.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+    Rejects([&]{afterClosedDay.Set("local",daily,true);},"a failed atomic write refuses the completion");
+    Check(!afterClosedDay.Completed("local",daily),"a failed write never advances in-memory completion");
+    if(held!=INVALID_HANDLE_VALUE)CloseHandle(held);
+    restarted.Set("local",permanent,false);
+    Check(!restarted.Completed("local",permanent),"free-point completion can be undone");
+    const auto file=root/"profiles"/"local.free.json";
+    std::ifstream input(file);std::string bytes((std::istreambuf_iterator<char>(input)),{});
+    Check(bytes.find("outbox")==std::string::npos&&bytes.find("pending")==std::string::npos,"local free progress has no synchronization records");
+    // The test owns only this unique temp directory.
+    input.close();
+    std::error_code error;std::filesystem::remove(file,error);
+    std::filesystem::remove(root/"profiles",error);std::filesystem::remove(root,error);
+}
+void FreeMarkerTests() {
+    const std::array<AutoRoute::CircleClipVertex,3> edge={AutoRoute::CircleClipVertex{{90,-12},{0,0},{255,255,255,255}},
+        AutoRoute::CircleClipVertex{{110,0},{1,0},{255,255,255,255}},AutoRoute::CircleClipVertex{{90,12},{0,1},{255,255,255,255}}};
+    const auto clipped=AutoRoute::ClipTriangleCircle(edge,{0,0},100);
+    Check(clipped.size()>=3,"edge badge triangles retain their visible portion");
+    for(const auto& v:clipped)Check(std::hypot(v.position.x,v.position.y)<=100.00001&&v.uv.x>=0&&v.uv.x<=1&&v.uv.y>=0&&v.uv.y<=1,
+        "circle clipping contains glyph vertices and interpolates texture coordinates");
+
+    AutoRoute::HandDrawnDraft draft;draft.Start(Scene1,StateIdFor(Scene1));
+    draft.Add(Blank(1,2,StateIdFor(Scene1)));draft.Add(Blank(3,4,StateIdFor(Scene1)));
+    const auto plan=draft.Commit("marker-route","x","local");
+    const auto remaining=AutoRoute::FreeMarkers(plan,{AutoRoute::Key(plan.stops[0])},1,7);
+    Check(remaining.size()==1,"the last free target has its own marker snapshot independent of segments");
+    if(!remaining.empty())Check(remaining[0].order==2&&remaining[0].current&&remaining[0].orderRevision==7,
+        "a marker retains original order, target emphasis and revision");
+    auto skipped=plan;skipped.skipped.insert(AutoRoute::Key(skipped.stops[1]));
+    Check(AutoRoute::FreeMarkers(skipped,{AutoRoute::Key(plan.stops[0])},-1,8).empty(),
+        "completed and skipped free stops produce no minimap markers");
+}
 } // namespace
 
 int main() {
@@ -187,7 +285,7 @@ int main() {
         Check(!AutoRoute::HandDrawingInputAllowed(true,1,2,true,true),"a different map cannot claim the retained drawing's input");
         Check(!AutoRoute::HandDrawingInputAllowed(false,1,1,true,true),"an inactive drawing does not own the keyboard");
         Check(!AutoRoute::HandDrawingInputAllowed(true,0,0,true,true),"an unknown map cannot claim the keyboard");
-        DraftTests(); ImportTests();
+        DraftTests(); ImportTests(); FreeIdentityTests(); FreeIconAndMigrationTests(); FreeCompletionTests(); FreeMarkerTests();
     }
     catch (const std::exception& error) { ++failures; std::cerr << "UNEXPECTED: " << error.what() << '\n'; }
     if (failures) { std::cerr << failures << " hand-drawn route test(s) failed\n"; return 1; }

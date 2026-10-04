@@ -858,6 +858,8 @@ int ImGuiOverWindows::start()
                         DrawRouteOnMinMap::DrawRoute(frame->minimapRoutes, frame->playerScene, useMotion,
                             frame->minimapMarkers.center, frame->minimapMarkers.radius);
                         DrawItemOnMinMap::DrawItemsOnMinMap(GameRect, frame->minimapMarkers, useMotion);
+                        DrawRouteOnMinMap::DrawFreeMarkers(frame->minimapFreeMarkers,frame->playerScene,useMotion,
+                            frame->minimapMarkers.center,frame->minimapMarkers.radius);
                         drewMinimap = true;
                         presented.motion = useMotion;
                         if (attached) {

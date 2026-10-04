@@ -50,6 +50,9 @@ public sealed record RoutePlanningState
     public bool HandDrawnPending { get; init; }
     /// <summary>How many points the hand-drawn drawing holds so far.</summary>
     public int HandDrawnCount { get; init; }
+    public bool HandDrawnTypeChoosing { get; init; }
+    public string HandCategory { get; init; } = "daily";
+    public string HandIcon { get; init; } = "number";
     /// <summary>
     /// Which collection a newly saved route will be filed under, and the collections that exist for
     /// this record book. Both come from the core, which owns the index: the default collection is
@@ -113,6 +116,11 @@ public sealed record RouteStart
 
 public sealed record RouteStop
 {
+    public string StopKind { get; init; } = "catalog";
+    public string RouteId { get; init; } = "";
+    public string FreeCategory { get; init; } = "daily";
+    public string FreeIcon { get; init; } = "number";
+    public bool IsFree => StopKind == "free";
     public string Key { get; init; } = "";
     public int StateId { get; init; }
     public string PointId { get; init; } = "";
@@ -129,13 +137,16 @@ public sealed record RouteStop
 
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? (string.IsNullOrWhiteSpace(NameId) ? PointId : NameId) : Name;
     public string FloorLabel => string.IsNullOrWhiteSpace(Level) ? "未知" : Level;
-    public string Description => $"{DisplayName} · 楼层：{FloorLabel} · ID {PointId}";
+    public string Description => IsFree ? $"{DisplayName} · {(FreeCategory == "collectible" ? "一次性收集，完成长期保留" : "每日凌晨 04:00 刷新")}" :
+        $"{DisplayName} · 楼层：{FloorLabel} · ID {PointId}";
     public string StatusLabel => Completed ? "已完成" : Skipped ? "已跳过" : "待访问";
     public string ListLabel => $"{(Order > 0 ? $"{Order}. " : "")}{Description} · {StatusLabel}";
 }
 
 public sealed record AutomaticRoute
 {
+    public string RouteCategory { get; init; } = "daily";
+    public bool LegacyHandDrawn { get; init; }
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
     public int SceneId { get; init; }
@@ -179,6 +190,9 @@ public sealed record RouteKindSummary
 
 public sealed record SavedAutomaticRoute
 {
+    public string RouteCategory { get; init; } = "daily";
+    public bool LegacyHandDrawn { get; init; }
+    public string FreePointSummary { get; init; } = "";
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
     public int SceneId { get; init; }
@@ -212,7 +226,7 @@ public sealed record SavedAutomaticRoute
     public string KindLabel => Kinds.Length == 0 ? (HandDrawn ? "自由点" : "无点位类型")
         : string.Join("、", Kinds.Select(kind => kind.Label));
     public string DetailLabel => $"{StopCount} 个点 · {(string.IsNullOrWhiteSpace(SceneName) ? "未知地图" : SceneName)} · " +
-        (HandDrawn ? "手绘" : "自动") + (Corrupt ? " · 文件损坏" : "");
+        (HandDrawn ? "手绘 · " + (LegacyHandDrawn ? "旧版兼容" : RouteCategory=="collectible" ? "收集物" : "非收集物") + (FreePointSummary.Length>0 ? " · " + FreePointSummary : "") : "自动") + (Corrupt ? " · 文件损坏" : "");
 }
 
 /// <summary>

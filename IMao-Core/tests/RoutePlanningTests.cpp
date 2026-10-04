@@ -203,6 +203,7 @@ void StoreTests() {
         restored.stops[0].layer.floorId == "floor-a" && Near(restored.stops[0].itemMapROC, {1, 2}), "store roundtrip preserves start and target metadata");
     const auto planPath = folder / "SavedRoutes" / "Auto" / "local" / "route-1.json";
     const auto document = Json::parse(read(planPath));
+    Expect(document.at("formatVersion") == 2, "routes must write v2 to protect typed free-point metadata");
     Expect(!document.contains("completed") && !document.at("stops")[0].contains("completed") && !document.at("stops")[0].contains("isSaved") &&
         document.at("stops")[1].at("skipped").get<bool>(), "stored skips are independent of authoritative marker completion");
     Expect(document.at("farmMode").get<bool>(), "the farming setting is written to the route file, not to a global setting");
@@ -492,6 +493,7 @@ void HandDrawnStoreTests() {
     hand.start = Origin();
     hand.handDrawn = true;
     hand.stops = {FreeTarget("free:1", 10, 20, state), Target("chest", 30, 40, state), FreeTarget("free:2", 50, 60, state)};
+    AutoRoute::ScopeFreePoints(hand,hand.id);
     // The resolver reports the live catalogue: the one official point of this route, and nothing
     // for the two free points, because a free point must never be looked up.
     const auto officialStop = Target("chest", 30, 40, state);

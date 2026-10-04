@@ -139,4 +139,15 @@ template<class Expect> void TestGamepadCursorTargets(Expect expect) {
     expect(frozen->evidence.captureFrameId==20 && mailbox.Read()->evidence.captureFrameId==99,
         "render publication keeps the reader's exact image and geometry snapshot immutable");
     mailbox.Clear(); expect(!mailbox.Read(),"map disappearance revokes pending geometry mailbox");
+    auto freeFrame=frame;auto freePoint=first;freePoint.itemId="free:1";freePoint.nameId.clear();
+    freePoint.layer.stopKind=StopKind::Free;freePoint.freeRouteId="route-a";
+    freeFrame.candidates={{freePoint,{400,300}}};targets.Publish(freeFrame,now);
+    auto freeView=read(now);
+    expect(freeView.candidates.size()==1,"local free badges do not require catalogue nameIds for controller selection");
+    expect(Targets::Resolve(freeView,freeView.revision,"profile",12,"world",1,"free:1","route-a",StopKind::Free).has_value() &&
+        !Targets::Resolve(freeView,freeView.revision,"profile",12,"world",1,"free:1","route-b",StopKind::Free),
+        "controller resolution requires the free point's route owner");
+    freeFrame.candidates[0].item.freeRouteId="route-b";targets.Publish(freeFrame,now);
+    expect(read(now).revision!=freeView.revision,"switching a free badge owner invalidates in-flight cursor requests");
+
 }

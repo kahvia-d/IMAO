@@ -105,6 +105,13 @@ public partial class App : Application
                 var routeScroll = GetField<ScrollViewer>(window, "routeScroll")!;
                 var routeActions = Descendants((DependencyObject)window.Content).OfType<Button>().Where(b => b.Tag is string key &&
                     key is not ("back" or "close") && b.Visibility == Visibility.Visible).ToArray();
+                await Click(window, "routes");
+                await Until(() => window.Page == "routes", "saved routes page");
+                var handEntries = Descendants((DependencyObject)window.Content).OfType<Button>().ToArray();
+                Check(handEntries.Any(b => Equals(b.Tag,"handStart:collectible") && Equals(b.Content,"绘制收集物路线")) &&
+                    handEntries.Any(b => Equals(b.Tag,"handStart:daily") && Equals(b.Content,"绘制非收集物路线")),
+                    "hand drawing offers explicit collectible and daily entries");
+                await Click(window, "page:route");await Until(() => window.Page == "route", "return route page");
                 Check(routeActions.Any(button => Equals(button.Tag, "tool:point") && Equals(button.Content, "单点选择")),
                     "the route toolbox exposes a separately selectable single-point mode for controller input");
                 foreach (var button in routeActions)

@@ -1,11 +1,13 @@
 #pragma once
 #include "../Domain/MapData.h"
+#include "FreeRoutePoint.h"
 #include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <numeric>
 #include <stdexcept>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace AutoRoute {
 inline constexpr std::size_t MaxTargets = 500;
@@ -15,7 +17,7 @@ inline bool IsSurfaceTarget(const ItemDatas& item) { return item.layer.floorId.e
 // type, because only they have no point in the upstream catalogue to take one from.
 inline bool IsFreeStop(const ItemDatas& item) { return item.layer.stopKind == StopKind::Free; }
 inline std::string Key(const ItemDatas& item) {
-    return std::to_string(item.layer.stateId) + ":" + item.itemId;
+    return PointIdentityKey(item);
 }
 // The distinct point types a route visits, in first-seen order. Free points carry no type and
 // contribute nothing: the route filter has no icon or filter row to switch on for them.
@@ -51,6 +53,8 @@ struct Plan {
     // the completion rules are the same for both — and exists so the route list can label a row
     // and so the two are stored in separate folders.
     bool handDrawn = false;
+    FreePointCategory routeCategory = FreePointCategory::Daily;
+    bool legacyHandDrawn = true;
     // A drawing that has not been saved yet. It is never written to disk; it exists so the renderer
     // can tell "the path I am still building" apart from "a planned route awaiting confirmation".
     bool handDraft = false;
@@ -65,11 +69,32 @@ struct Plan {
     // file written before collections existed already belongs to the default collection.
     std::string collection = "default";
 };
+// Scope identities and remap every reference together, including imported route copies.
+inline void ScopeFreePoints(Plan& plan, const std::string& routeId) {
+    std::unordered_map<std::string,std::string> keys;
+    for(auto& item : plan.stops) if(IsFreeStop(item)) {
+        const auto before=Key(item); item.freeRouteId=routeId; keys[before]=Key(item);
+    }
+    std::unordered_set<std::string> skipped;
+    for(const auto& key : plan.skipped) skipped.insert(keys.contains(key)?keys.at(key):key);
+    plan.skipped=std::move(skipped);
+    for(auto& key : plan.skipHistory) if(keys.contains(key)) key=keys.at(key);
+}
 struct SolveResult {
     std::vector<ItemDatas> stops;
     double initialLength = 0, planarLength = 0;
     bool cancelled = false;
 };
+inline std::vector<FreeRouteMarker> FreeMarkers(const Plan& plan,const std::unordered_set<std::string>& completed,int current,std::uint64_t revision) {
+    std::vector<FreeRouteMarker> markers;
+    for(std::size_t i=0;i<plan.stops.size();++i){
+        const auto& point=plan.stops[i];const auto key=Key(point);
+        if(!IsFreeStop(point)||completed.contains(key)||plan.skipped.contains(key))continue;
+        auto markerPoint=point;markerPoint.freeDisplayOrder=static_cast<int>(i+1);
+        markers.push_back({markerPoint,static_cast<int>(i+1),static_cast<int>(i)==current,plan.profileId,plan.id,revision});
+    }
+    return markers;
+}
 struct DrawVisibility {
     std::string profileId, activeId, previewId;
     bool navigating = false;

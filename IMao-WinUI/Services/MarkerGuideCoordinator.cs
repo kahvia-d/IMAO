@@ -519,7 +519,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private bool GamepadCurrent(long generation) => !disposed && gamepadSessionOpen && generation == gamepadGeneration;
     private bool ValidGamepadSelection(MarkerSelection selection) => selection.ProfileId == gamepadProfile &&
         selection.Scene.Length > 0 && selection.StateId > 0 && selection.PointId.Length > 0;
-    private static bool SamePoint(MarkerSelection a, MarkerSelection b) => a.ProfileId == b.ProfileId && a.StateId == b.StateId && a.PointId == b.PointId;
+    private static bool SamePoint(MarkerSelection a, MarkerSelection b) => a.ProfileId == b.ProfileId && a.StateId == b.StateId && a.PointId == b.PointId && a.StopKind == b.StopKind && (!a.IsFree || a.RouteId == b.RouteId);
     private static bool Flag(JsonElement value, string key) => value.TryGetProperty(key, out var p) && p.ValueKind == JsonValueKind.True;
     /// <summary>
     /// 「这份答复说路线正在指引吗」。打开攻略与刷新跳过资格**共用这一条**：两处曾各写一份判据，
@@ -710,7 +710,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 var resolved = await core.ExecuteMarkerAsync("markerResolveGamepadCursorCandidate", new
                 {
                     profileId = gamepadProfile, contextGeneration = gamepadContextGeneration,
-                    cursorRevision, sceneName = selection.Scene, stateId = selection.StateId, pointId = selection.PointId,
+                    cursorRevision, sceneName = selection.Scene, stateId = selection.StateId, pointId = selection.PointId, stopKind = selection.StopKind, routeId = selection.RouteId,
                     assistantHwnd = WindowHandle(assistant), assistantGeneration = operation
                 }, requests.Token);
                 if (!StillCurrent()) return;
@@ -910,6 +910,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                 case "markerGuidePageRequested":
                     if (IsCurrentGuideEvent(value)) await guide!.ChangePictureAsync(Integer(value, "direction"));
                     break;
+                case "markerFreeCompletionChanged":
                 case "markerCompletionChanged":
                     long completionVersion = ++completionGeneration;
                     var point = value.TryGetProperty("point", out var nested) ? nested : value;
@@ -919,7 +920,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                     {
                         long generation = session.Generation;
                         var snapshot = await core.ExecuteMarkerAsync("markerGetSnapshot", new
-                        { profileId = selection.ProfileId, stateId = selection.StateId, pointId = selection.PointId, limit = 1 }, connectionRequests.Token);
+                        { profileId = selection.ProfileId, stateId = selection.StateId, pointId = selection.PointId, stopKind = selection.StopKind, routeId = selection.RouteId, limit = 1 }, connectionRequests.Token);
                         if (disposed || !session.IsCurrent(generation) || completionVersion != completionGeneration) break;
                         bool nowCompleted = snapshot.GetProperty("points").EnumerateArray()
                             .Any(p => p.GetProperty("completed").GetBoolean());
@@ -950,6 +951,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
     {
         ProfileId = value.TryGetProperty("profileId", out var profile) ? profile.GetString() ?? "local" : "local",
         Scene = Text(value, "sceneName"), NameId = Text(value, "nameId"), PointId = Text(value, "pointId"),
+        StopKind=Text(value,"stopKind"), RouteId=Text(value,"routeId"), LocalName=Text(value,"localName"),
+        FreeCategory=Text(value,"freeCategory"), FreeIcon=Text(value,"freeIcon"),
         StateId = Integer(value, "stateId"), CountryId = Integer(value, "countryId"),
         FloorId = Text(value, "floorId"), Level = Text(value, "level"),
         Completed = value.TryGetProperty("completed", out var completed) && completed.GetBoolean(),
@@ -1656,6 +1659,12 @@ public sealed class MarkerGuideCoordinator : IDisposable
 
     private void ApplyCompletionEvent(JsonElement value, int stateId, string pointId, bool completed)
     {
+        if (session.Selection is { } selected)
+        {
+            var point = value.TryGetProperty("point", out var eventPoint) ? eventPoint : value;
+            if (selected.IsFree != (Text(point, "stopKind") == "free") ||
+                selected.IsFree && selected.RouteId != Text(point, "routeId")) return;
+        }
         bool close = Text(value, "source") == "local";
         if (value.TryGetProperty("guideSelectionGeneration", out _))
             close &= session.IsCurrent(Long(value, "guideSelectionGeneration")) && guide is not null &&
@@ -1666,7 +1675,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private async Task<bool> SetCompletionAsync(MarkerSelection selection, bool completed, long generation)
     {
         if (!session.IsCurrent(generation) || guide is null || session.Selection is not { } current ||
-            current.ProfileId != selection.ProfileId || current.StateId != selection.StateId || current.PointId != selection.PointId) return false;
+            !SamePoint(current, selection)) return false;
         bool gamepadOwned = IsGamepadSessionOpen && gamepadGuideGeneration == generation;
         if (standaloneGamepadGeneration == generation && (!completed || GetGamepadInputContext().Mode != GamepadInputMode.Detail)) return false;
         if (gamepadOwned && (!completed || GetGamepadInputContext().Mode != GamepadInputMode.Detail ||
@@ -1677,7 +1686,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             await core.ExecuteMarkerAsync("markerSetCompletion", new
             {
                 profileId = selection.ProfileId, sceneName = selection.Scene, nameId = selection.NameId, pointId = selection.PointId,
-                stateId = selection.StateId, completed, guideSelectionGeneration = generation, guideWindowHwnd = hwnd
+                stateId = selection.StateId, stopKind=selection.StopKind, routeId=selection.RouteId, completed, guideSelectionGeneration = generation, guideWindowHwnd = hwnd
             }, gamepadOwned && gamepadRequests is { } requests ? requests.Token : connectionRequests.Token);
             ApplyCompletion(generation, selection.ProfileId, selection.StateId, selection.PointId, completed, true);
             return true;
@@ -1739,7 +1748,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
         // nearby point after another, which means every row remembers its own state.
         var rowSelections = new Dictionary<Button, MarkerSelection>();
         var completedKeys = new HashSet<string>(StringComparer.Ordinal);
-        static string Key(MarkerSelection value) => $"{value.StateId}:{value.PointId}";
+        static string Key(MarkerSelection value) => value.IsFree ? $"{value.StateId}:free-route:{value.RouteId}:{value.PointId}" : $"{value.StateId}:{value.PointId}";
         var collect = new Button { Content = "一键收集本组全部点位", HorizontalAlignment = HorizontalAlignment.Stretch,
             Visibility = Visibility.Collapsed };
         var collectHint = new TextBlock { Text = "手柄：长按 X 一键收集 · A 完成高亮的点 · B 返回", FontSize = 12, Opacity = 0.75,
@@ -1800,7 +1809,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
                             var result = await core.ExecuteMarkerAsync(complete ? "markerCompleteNearbyCandidate" : "markerResolveNearbyCandidate", new
                             {
                                 profileId, selectionRevision = revision, sceneName = selection.Scene,
-                                stateId = selection.StateId, pointId = selection.PointId,
+                                stateId = selection.StateId, pointId = selection.PointId, stopKind = selection.StopKind, routeId = selection.RouteId,
                                 chooserHwnd = WindowHandle(window), chooserGeneration = generation
                             }, connectionRequests.Token);
                             if (!IsCurrent()) return;

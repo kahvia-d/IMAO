@@ -109,6 +109,7 @@ struct Runtime {
     // The route being drawn by hand. It lives here rather than in a class of its own so the
     // drawing is cancelled and reported by exactly the same events as everything else.
     AutoRoute::HandDrawnDraft handDraft;
+    bool handTypeChoosing=false;
 };
 Runtime& R(){static Runtime state;return state;}
 // The identity a drawing in progress borrows while it is still being drawn. It never reaches
@@ -261,6 +262,14 @@ std::size_t CollectionRouteCountLocked(const std::string& collectionId){
 // the caller decides where the point of no return is, which is what lets an import be inspected and
 // let go of without one byte changing. A route that cannot be turned into a plan is counted and
 // skipped rather than sinking the whole bundle, the way the legacy route import already behaves.
+void ValidateTypedRoute(const AutoRoute::Plan& plan) {
+    if(!plan.handDrawn || plan.legacyHandDrawn)return;
+    for(const auto& item:plan.stops)if(!AutoRoute::IsFreeStop(item)) {
+        const bool allowed=plan.routeCategory==FreePointCategory::Collectible ?
+            DrawItemBase::IsCollectiblePoint(item.nameId) : DrawItemBase::IsRefreshablePoint(item.nameId);
+        if(!allowed)throw std::invalid_argument("官方点位分类与手绘路线类型不匹配");
+    }
+}
 std::vector<AutoRoute::Plan> ParseBundledRoutesLocked(const AutoRoute::RouteBundle::Contents& bundle,std::size_t& skipped){
     const auto& r=R();std::vector<AutoRoute::Plan> plans;
     for(const auto& document:bundle.routes){
@@ -272,7 +281,8 @@ std::vector<AutoRoute::Plan> ParseBundledRoutesLocked(const AutoRoute::RouteBund
             // scene, the points and whether their resources still match.
             if(!entry.contains("id")||!entry.at("id").is_string()||!AutoRoute::IsRouteComponent(entry.at("id").get<std::string>()))
                 entry["id"]=std::string("imported");
-            plans.push_back(AutoRoute::RoutePlanStore::Parse(entry,r.profile,entry.at("id").get<std::string>(),ResolveLocked));
+            auto plan=AutoRoute::RoutePlanStore::Parse(entry,r.profile,entry.at("id").get<std::string>(),ResolveLocked);
+            ValidateTypedRoute(plan);plans.push_back(std::move(plan));
         }catch(const std::exception& error){
             ++skipped;
             StructuredLogger::Record("warn","routes","route-bundle-route-skipped",std::string("reason=")+error.what());
@@ -332,11 +342,22 @@ void HandleHandDrawnLocked(const std::string& action,const Json& command){
     if(!scene||scene->kuroStateId<=0)throw std::runtime_error("当前地图没有点位数据，无法手绘");
     if(r.handDraft.Active()&&r.handDraft.SceneId()!=r.scene)
         throw std::invalid_argument("请返回正在手绘的地图，或先完成、放弃当前路线");
+    if(action=="handChoose"){InvalidateLocked();r.enabled=false;r.tool="pan";r.handTypeChoosing=true;r.message="请选择手绘路线类型";return;}
+    if(action=="handIcon"){r.handDraft.SelectIcon(AutoRoute::ParseIcon(command.at("icon").get<std::string>()));return;}
     if(action=="handStart"){
         // Resuming is deliberate: with a finished drawing still unsaved, starting again continues it
         // rather than silently discarding the points the player came back for.
         const bool resuming=r.handDraft.Pending();
-        r.handDraft.Start(r.scene,scene->kuroStateId);
+        if(r.handDraft.Active() && r.handDraft.CategoryLocked()) {
+            if(command.contains("category")&&AutoRoute::ParseCategory(command.at("category").get<std::string>())!=r.handDraft.Category())
+                throw std::invalid_argument("已经开始加点，路线类型不能更改");
+            return;
+        }
+        if(!resuming&&!command.contains("category")){InvalidateLocked();r.enabled=false;r.tool="pan";r.handTypeChoosing=true;r.message="请选择收集物或非收集物路线";return;}
+        const auto category=resuming?r.handDraft.Category():AutoRoute::ParseCategory(command.at("category").get<std::string>());
+        InvalidateLocked();r.enabled=false;r.tool="pan";
+        r.handDraft.Start(r.scene,scene->kuroStateId,category,resuming?r.handDraft.RouteId():NewId());
+        r.handTypeChoosing=false;
         r.message=resuming ? "已继续手绘：接着画下去，画完按 Esc 结束"
                            : "手绘已开始：点击大地图上的位置记下一个点，按 Esc 结束手绘（已画的点会保留）";
         StructuredLogger::Record("info","routes","hand-drawn-start",
@@ -345,6 +366,7 @@ void HandleHandDrawnLocked(const std::string& action,const Json& command){
         return;
     }
     if(action=="handFinish"){
+        if(r.handTypeChoosing){r.handTypeChoosing=false;r.message="已取消类型选择";return;}
         // Leaving the drawing keeps it. The player cannot reach the toolbar while the drawing still
         // owns the map, so throwing the points away here would destroy work they never got to save.
         if(!r.handDraft.Active())throw std::runtime_error("当前没有正在绘制的手绘路线");
@@ -356,11 +378,11 @@ void HandleHandDrawnLocked(const std::string& action,const Json& command){
         return;
     }
     if(action=="handDiscard"){
-        if(!r.handDraft.Size())throw std::runtime_error("当前没有待保存的手绘路线");
-        r.handDraft.Cancel();r.message="已放弃本次手绘";return;
+        if(!r.handDraft.Pending()&&!r.handDraft.Active())throw std::runtime_error("当前没有待保存的手绘路线");
+        InvalidateLocked();r.handDraft.Cancel();r.handTypeChoosing=false;r.message="已放弃本次手绘";return;
     }
     if(action=="handCancel"){
-        r.handDraft.Cancel();r.message="已放弃本次手绘";return;
+        InvalidateLocked();r.handDraft.Cancel();r.handTypeChoosing=false;r.message="已放弃本次手绘";return;
     }
     if(action=="handUndo"){
         if(!r.handDraft.Size())throw std::runtime_error("当前没有正在绘制的手绘路线");
@@ -391,6 +413,10 @@ void HandleHandDrawnLocked(const std::string& action,const Json& command){
             point.layer.stateId=scene->kuroStateId;
             point.layer.stopKind=StopKind::Free;
         }
+        if(!AutoRoute::IsFreeStop(point)) {
+            const bool allowed=RoutePlanningService::HandPointAllowed(point,r.handDraft.Category());
+            if(!allowed)throw std::invalid_argument("该官方点位与手绘路线类型不匹配，请选择同类型点位");
+        }
         const auto stored=r.handDraft.Add(point);
         r.message=AutoRoute::IsFreeStop(stored)
             ? "已记下第 "+std::to_string(r.handDraft.Size())+" 个点（空地标记）"
@@ -406,12 +432,12 @@ void HandleHandDrawnLocked(const std::string& action,const Json& command){
     if(action=="handCommit"){
         if(!r.handDraft.Size())throw std::runtime_error("当前没有正在绘制的手绘路线");
         const auto name=command.value("name",std::string{"我的路线"});
-        auto plan=r.handDraft.Commit(NewId(),name.empty()?std::string{"我的路线"}:name,r.profile);
+        auto plan=r.handDraft.Commit(r.handDraft.RouteId(),name.empty()?std::string{"我的路线"}:name,r.profile);
         // A drawing is a route that has never been written, so it lands in the collection the
         // player is standing in — the whole point of being able to switch collections.
         plan.collection=NewRouteCollectionLocked(plan);
         r.store->Save(plan,false);
-        r.handDraft.Cancel();
+        InvalidateLocked();r.handDraft.Cancel();r.handTypeChoosing=false;
         // The drawing is saved, not started: the player asked to keep it, and quietly switching
         // what they are following would be a different decision than the one they made.
         ReloadSavedLocked();
@@ -445,8 +471,10 @@ std::string NavigationLocked(){
 Json StopJsonLocked(const ItemDatas& item,int order=0,bool skipped=false){
     const auto found=R().names.find(item.nameId);
     return {{"key",AutoRoute::Key(item)},{"stateId",item.layer.stateId},{"pointId",item.itemId},{"nameId",item.nameId},
-        {"name",found==R().names.end()?item.nameId:found->second},{"x",item.itemMapROC.x},{"y",item.itemMapROC.y},
+        {"name",AutoRoute::IsFreeStop(item)?AutoRoute::FreePointName(item,order):found==R().names.end()?item.nameId:found->second},{"x",item.itemMapROC.x},{"y",item.itemMapROC.y},
         {"countryId",item.layer.countryId},{"floorId",item.layer.floorId},{"level",item.layer.level},
+        {"stopKind",AutoRoute::IsFreeStop(item)?"free":"catalog"},{"routeId",item.freeRouteId},
+        {"freeIcon",AutoRoute::IconId(item.freeIcon)},{"freeCategory",AutoRoute::CategoryId(item.freeCategory)},
         {"completed",R().completed.contains(AutoRoute::Key(item))},{"skipped",skipped},{"order",order}};
 }
 Json PlanJsonLocked(const AutoRoute::Plan& plan){
@@ -458,6 +486,7 @@ Json PlanJsonLocked(const AutoRoute::Plan& plan){
     return {{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},{"sceneId",plan.sceneId},
         {"sceneName",Scene::SceneIdToName(plan.sceneId)},{"start",AutoRoute::StartJson(plan.start)},
         {"stops",std::move(stops)},{"planarLength",length},{"handDrawn",plan.handDrawn},
+        {"routeCategory",AutoRoute::CategoryId(plan.routeCategory)},{"legacyHandDrawn",plan.legacyHandDrawn},
         {"filterByRoute",plan.filterByRoute}};
 }
 // The route the interface shows at the top of the list: the one being followed, or — while nothing
@@ -486,7 +515,7 @@ AutoRoute::Plan HandDraftPlanLocked(){
     const auto& r=R();
     AutoRoute::Plan plan;
     plan.id=HandDraftId;plan.name="手绘路线";plan.profileId=r.profile;plan.sceneId=r.handDraft.SceneId();
-    plan.handDrawn=true;
+    plan.handDrawn=true;plan.routeCategory=r.handDraft.Category();plan.legacyHandDrawn=false;
     // A finished-but-unsaved drawing is a draft too: it is still the thing being edited, drawn as the
     // solid arrowed path rather than as a planned route waiting for confirmation.
     plan.handDraft=true;
@@ -516,7 +545,8 @@ Json SnapshotLocked(){
         {"currentRoute",CurrentRouteLocked(HandDraftId)},
         {"currentRouteIsPreview",CurrentRouteIsPreviewLocked()},
         {"handDrawnActive",r.handDraft.Active()},{"handDrawnPending",r.handDraft.Pending()},
-        {"handDrawnCount",r.handDraft.Size()},
+        {"handDrawnCount",r.handDraft.Size()},{"handDrawnTypeChoosing",r.handTypeChoosing},
+        {"handCategory",AutoRoute::CategoryId(r.handDraft.Category())},{"handIcon",AutoRoute::IconId(r.handDraft.Icon())},
         {"currentCollection",r.currentCollection},{"collections",CollectionsJsonLocked()},
         {"transfer",r.transfer},
         {"savedRoutes",SavedRoutesJsonLocked()}};
@@ -538,11 +568,11 @@ void SyncProfileLocked(){
     r.collections={};r.currentCollection=AutoRoute::DefaultCollectionId;
     // A package inspected under one profile must never be applied under another.
     r.transfer=nullptr;
-    r.handDraft.Cancel();
+    r.handDraft.Cancel();r.handTypeChoosing=false;
     r.mapSuspended=false;
     r.runRequested=false;r.completed.clear();r.message.clear();r.tool="pan";
     try {ReloadCollectionsLocked();ReloadSavedLocked();r.active=r.store->LoadActive(profile,ResolveLocked);
-        if(r.active){r.skipHistory=r.active->skipHistory;r.message="已恢复自动路线，点击继续导航";
+        if(r.active){ValidateTypedRoute(*r.active);r.skipHistory=r.active->skipHistory;r.message="已恢复自动路线，点击继续导航";
             // A restored route carries its own farming setting; it stays off until the player
             // resumes, because the mode itself only acts while the navigation is running.
             r.farmMode=r.active->farmMode;}}
@@ -600,6 +630,7 @@ void Worker(){
                     r.message="目标完成状态已变化，请重新生成路线";
                 else {AutoRoute::Plan plan;plan.id=NewId();plan.name="自动路线";plan.profileId=job.profile;plan.sceneId=job.scene;
                     plan.start=job.start;plan.stops=result.stops;plan.farmMode=job.farmMode;plan.collection=job.collection;
+                    AutoRoute::ScopeFreePoints(plan,plan.id);
                     r.drafts[job.scene].preview=std::move(plan);r.message="路线预览已生成，点击开始导航";}
                 ++r.revision;}
             StructuredLogger::Record("info","routes","auto-route-solved","targets="+std::to_string(job.selected.size())+
@@ -843,12 +874,53 @@ Json RoutePlanningService::GuideTarget(const Json& command){
             const auto& item=r.active->stops[target];
             selection={{"type","markerSelected"},{"profileId",r.profile},{"sceneName",Scene::SceneIdToName(r.active->sceneId)},
                 {"nameId",item.nameId},{"stateId",item.layer.stateId},{"pointId",item.itemId},
+                {"stopKind",AutoRoute::IsFreeStop(item)?"free":"catalog"},{"routeId",item.freeRouteId},
+                {"freeIcon",AutoRoute::IconId(item.freeIcon)},{"freeCategory",AutoRoute::CategoryId(item.freeCategory)},
+                {"localName",AutoRoute::IsFreeStop(item)?AutoRoute::FreePointName(item,target+1):std::string{}},
                 {"countryId",item.layer.countryId},{"floorId",item.layer.floorId},{"level",item.layer.level},
                 {"completed",false},{"screenX",x},{"screenY",y}};
         }
         return {{"accepted",true},{"data",{{"profileId",r.profile},{"routeId",r.active?r.active->id:std::string{}},
             {"revision",r.revision},{"navigationStatus",NavigationLocked()},{"selection",std::move(selection)}}}};
     }catch(const std::exception& e){return {{"accepted",false},{"message",e.what()},{"data",Json::object()}};}
+}
+bool RoutePlanningService::HandPointAllowed(const ItemDatas& point,FreePointCategory category) {
+    return AutoRoute::IsFreeStop(point) || (category==FreePointCategory::Collectible ?
+        DrawItemBase::IsCollectiblePoint(point.nameId) : DrawItemBase::IsRefreshablePoint(point.nameId));
+}
+std::optional<ItemDatas> RoutePlanningService::HandPointCandidate(int scene,const Coordinate& roc,const std::string& key) {
+    auto& r=R();std::scoped_lock lock(r.mutex);
+    if(!r.ready||!Scene::IsKnown(scene)||!Finite(roc))return {};
+    return key.empty()?NearestCatalogPointLocked(scene,roc,HandDrawSnapRoc):ResolveLocked(scene,key);
+}
+nlohmann::json RoutePlanningService::CompleteFreePoint(const Json& command){
+    auto& r=R();
+    try {
+        ItemDatas item;std::string profile;Json result;
+        {
+            std::scoped_lock lock(r.mutex);
+            if(!r.ready||command.value("profileId",std::string{})!=r.profile||!r.active||
+                command.value("routeId",std::string{})!=r.active->id)
+                throw std::runtime_error("路线或档案已变化，请重新选择自由点");
+            const auto found=std::find_if(r.active->stops.begin(),r.active->stops.end(),[&](const auto& stop){
+                return AutoRoute::IsFreeStop(stop)&&stop.itemId==command.value("pointId",std::string{})&&
+                    stop.layer.stateId==command.value("stateId",0);
+            });
+            if(found==r.active->stops.end())throw std::runtime_error("自由点不属于当前路线");
+            if(command.value("automatic",false)&&(!r.runRequested||!r.farmMode||found->freeCategory!=FreePointCategory::Daily))
+                throw std::runtime_error("该自由点不能自动完成");
+            item=*found;profile=r.profile;
+            // Persist while the route lock still owns the validated identity. The notification
+            // is published after unlock because it refreshes this same route state.
+            result=DrawItemBase::SetFreePointCompletion(profile,item,command.value("completed",true));
+        }
+        if(result.value("accepted",false)) {
+            Json event={{"type","markerFreeCompletionChanged"},{"profileId",profile},{"source","local"},{"point",result.at("data").at("point")}};
+            for(const auto* field:{"guideSelectionGeneration","guideWindowHwnd"})if(command.contains(field))event[field]=command.at(field);
+            DrawItemBase::PublishMarkerEvent(std::move(event));
+        }
+        return result;
+    }catch(const std::exception& error){return {{"accepted",false},{"message",error.what()},{"data",Json::object()}};}
 }
 RoutePlanningView RoutePlanningService::View(){
     auto& r=R();std::scoped_lock lock(r.mutex);RoutePlanningView v;
@@ -863,6 +935,7 @@ RoutePlanningView RoutePlanningService::View(){
     if(r.handDraft.Size()){v.handDraftPreview=HandDraftPlanLocked();v.handDraft=v.handDraftPreview;}
     v.handDrawnActive=r.handDraft.Active();v.handDrawnPending=r.handDraft.Pending();
     v.handDrawnSceneId=r.handDraft.SceneId();
+    v.handDrawnTypeChoosing=r.handTypeChoosing;v.handCategory=r.handDraft.Category();v.handIcon=r.handDraft.Icon();
     v.handDrawnCount=r.handDraft.Size();
     return v;
 }
@@ -913,7 +986,7 @@ void RoutePlanningService::SessionStopped(){
         InvalidateAutoLocked(true);r.stablePlayer.Reset();r.hasAutoPosition=false;
         InvalidateLocked();r.playerAvailable=false;r.player={};r.mapStart={};r.observedScene=0;r.visible.clear();r.visibleKeys.clear();
         for(auto& [scene,draft]:r.drafts)if(draft.start.source!="manual"&&!draft.preview)draft.start={};
-        r.handDraft.Cancel();
+        r.handDraft.Cancel();r.handTypeChoosing=false;
         r.mapSuspended=false;
         r.message="游戏定位已停止，路线保留";}Emit();
 }
@@ -1005,7 +1078,8 @@ void RoutePlanningService::ObserveProximity(const AutoRoute::ProximityObservatio
                 const auto found=std::find_if(r.active->stops.begin(),r.active->stops.end(),
                     [&](const ItemDatas& item){return AutoRoute::Key(item)==entry.key;});
                 if(found==r.active->stops.end())continue;
-                if(!DrawItemBase::IsRefreshablePoint(found->nameId)&&!DrawItemBase::IsRefreshablePointId(found->itemId))continue;
+                if(AutoRoute::IsFreeStop(*found)?found->freeCategory!=FreePointCategory::Daily:
+                    !DrawItemBase::IsRefreshablePoint(found->nameId)&&!DrawItemBase::IsRefreshablePointId(found->itemId))continue;
                 if(r.completed.contains(entry.key)||r.active->skipped.contains(entry.key))continue;
                 inRange.push_back(entry.key);
             }
@@ -1022,10 +1096,17 @@ void RoutePlanningService::ObserveProximity(const AutoRoute::ProximityObservatio
         // so the write happens with our lock released — the same shape "complete current
         // target" already uses.
         Json points=Json::array();
-        for(const auto& item:reached)points.push_back({{"stateId",item.layer.stateId},{"pointId",item.itemId},{"nameId",item.nameId}});
+        std::size_t freeCount=0;
+        for(const auto& item:reached) {
+            if(AutoRoute::IsFreeStop(item)) {
+                const auto done=CompleteFreePoint({{"profileId",reachedProfile},{"routeId",item.freeRouteId},
+                    {"stateId",item.layer.stateId},{"pointId",item.itemId},{"completed",true},{"automatic",true}});
+                if(done.value("accepted",false))++freeCount;
+            } else points.push_back({{"stateId",item.layer.stateId},{"pointId",item.itemId},{"nameId",item.nameId}});
+        }
         const auto result=DrawItemBase::HandleMarkerCommand({{"type","markerFarmComplete"},
             {"profileId",reachedProfile},{"points",std::move(points)}});
-        const auto count=result.value("accepted",false)?result.at("data").value("changed",std::size_t{}):std::size_t{};
+        const auto count=freeCount+(result.value("accepted",false)?result.at("data").value("changed",std::size_t{}):std::size_t{});
         {
             std::scoped_lock lock(r.mutex);
             // The route has already refreshed itself through OnMarkerChanged; this only
@@ -1352,7 +1433,13 @@ Json RoutePlanningService::Command(const Json& command){
                 target=clash->id;
                 for(const auto& row:r.saved){
                     if(!AutoRoute::SameRouteId(row.value("collection",std::string{AutoRoute::DefaultCollectionId}),target))continue;
-                    r.store->Delete(r.profile,row.value("id",std::string{}));
+                    const auto removed=row.value("id",std::string{});
+                    r.store->Delete(r.profile,removed);
+                    if(r.active&&AutoRoute::SameRouteId(r.active->id,removed)) {
+                        InvalidateLocked();InvalidateAutoLocked(true);r.active.reset();r.runRequested=false;
+                        r.completed.clear();r.skipHistory.clear();r.farmMode=false;r.farmConfirmation.Reset();
+                    }
+                    for(auto& [scene,draft]:r.drafts)if(draft.preview&&AutoRoute::SameRouteId(draft.preview->id,removed))draft.preview.reset();
                 }
                 // The list still describes the routes that were just deleted; the ids they held have
                 // to be free again before the incoming ones are matched against them, or importing
@@ -1375,6 +1462,13 @@ Json RoutePlanningService::Command(const Json& command){
                     auto replacement=NewId();
                     while(!takenIds.insert(LowerKey(replacement)).second)replacement=NewId();
                     plan.id=replacement;
+                }
+                // An imported copy must never inherit the source or a previously deleted route's local progress.
+                for(auto& stop:plan.stops)if(AutoRoute::IsFreeStop(stop)){
+                    const auto old=AutoRoute::Key(stop);stop.itemId="free:"+NewId();stop.freeRouteId=plan.id;
+                    const auto next=AutoRoute::Key(stop);
+                    if(plan.skipped.erase(old))plan.skipped.insert(next);
+                    for(auto& key:plan.skipHistory)if(key==old)key=next;
                 }
                 plan.name=UniqueRouteNameLocked(plan.name,takenNames);
                 takenNames.insert(LowerKey(plan.name));
@@ -1421,7 +1515,7 @@ Json RoutePlanningService::Command(const Json& command){
                 "刷怪采集模式已关闭：路线目标仍需手动标记完成";
         }else if(action=="guide"){
             const int target=TargetIndexLocked();if(target<0||!r.active)throw std::runtime_error("当前没有可查看攻略的导航目标");
-            const auto item=r.active->stops[target];const auto profile=r.profile;const auto routeId=r.active->id;
+            auto item=r.active->stops[target];item.freeDisplayOrder=target+1;const auto profile=r.profile;const auto routeId=r.active->id;
             const auto scene=Scene::SceneIdToName(r.active->sceneId);POINT cursor{};GetCursorPos(&cursor);
             // This publishes the existing markerSelected event. It never
             // changes completion or advances the route.
@@ -1429,8 +1523,10 @@ Json RoutePlanningService::Command(const Json& command){
             if(r.profile==profile&&r.active&&r.active->id==routeId)r.message="已打开当前目标攻略";
         }else if(action=="complete"){
             const int target=TargetIndexLocked();if(target<0||!r.active)throw std::runtime_error("当前没有待完成目标");
-            const auto item=r.active->stops[target];const auto profile=r.profile;const auto routeId=r.active->id;
-            lock.unlock();const auto completed=DrawItemBase::HandleMarkerCommand({{"type","markerSetCompletion"},{"profileId",profile},
+            auto item=r.active->stops[target];item.freeDisplayOrder=target+1;const auto profile=r.profile;const auto routeId=r.active->id;
+            lock.unlock();const auto completed=AutoRoute::IsFreeStop(item)?CompleteFreePoint({{"profileId",profile},
+                {"routeId",routeId},{"stateId",item.layer.stateId},{"pointId",item.itemId},{"completed",true}}):
+                DrawItemBase::HandleMarkerCommand({{"type","markerSetCompletion"},{"profileId",profile},
                 {"stateId",item.layer.stateId},{"pointId",item.itemId},{"completed",true}});
             if(!completed.value("accepted",false))throw std::runtime_error(completed.value("message","完成状态保存失败"));
             lock.lock();if(r.profile==profile&&r.active&&r.active->id==routeId)r.message="完成状态已保存";
@@ -1447,7 +1543,7 @@ Json RoutePlanningService::Command(const Json& command){
             if(preview)r.drafts[r.scene].preview=plan;else r.active=plan;ReloadSavedLocked();
             r.message=preview?"自动路线已保存到「"+CollectionNameLocked(plan.collection)+"」":"自动路线已保存";
         }else if(action=="load"){
-            const auto next=r.store->Load(r.profile,command.at("routeId").get<std::string>(),ResolveLocked);
+            const auto next=r.store->Load(r.profile,command.at("routeId").get<std::string>(),ResolveLocked);ValidateTypedRoute(next);
             r.store->Save(next,true);InvalidateLocked();r.active=next;r.runRequested=false;r.skipHistory=next.skipHistory;r.enabled=false;r.tool="pan";
             r.farmMode=r.active->farmMode;r.farmConfirmation.Reset();r.farmNotice.clear();
             InvalidateAutoLocked(true);r.hasAutoPosition=false;
@@ -1456,7 +1552,7 @@ Json RoutePlanningService::Command(const Json& command){
         }else if(action=="switch"){
             // Choosing a route out of the list means "follow this one now", which is what separates
             // it from `load`: the caller may still want the load-and-wait behaviour.
-            auto next=r.store->Load(r.profile,command.at("routeId").get<std::string>(),ResolveLocked);
+            auto next=r.store->Load(r.profile,command.at("routeId").get<std::string>(),ResolveLocked);ValidateTypedRoute(next);
             const bool start=command.value("start",true);
             r.store->Save(next,true);InvalidateLocked();
             r.active=next;r.runRequested=start;r.skipHistory=next.skipHistory;r.enabled=false;r.tool="pan";
@@ -1467,7 +1563,7 @@ Json RoutePlanningService::Command(const Json& command){
             r.message=start?"已应用该路线并开始指引":"已应用该路线，点击继续导航";
         }else if(action=="current"){
             // Reading only: the list page asks what the top row should say.
-        }else if(action=="handStart"||action=="handPoint"||action=="handUndo"||action=="handCancel"||action=="handCommit"||action=="handFinish"||action=="handDiscard"){
+        }else if(action=="handStart"||action=="handPoint"||action=="handUndo"||action=="handCancel"||action=="handCommit"||action=="handFinish"||action=="handDiscard"||action=="handIcon"||action=="handChoose"){
             HandleHandDrawnLocked(command.value("action",std::string{}),command);
         }else if(action=="list"){ReloadSavedLocked();}
         else if(action!="state")throw std::invalid_argument("未知的自动路线操作");

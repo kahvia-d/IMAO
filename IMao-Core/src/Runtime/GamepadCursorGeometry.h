@@ -64,7 +64,7 @@ public:
                 std::abs(left.top-right.top)>1 || std::abs(left.bottom-right.bottom)>1 || left.members.size()!=right.members.size()) return false;
             for (std::size_t j=0;j<left.members.size();++j) {
                 const auto& p=left.members[j]; const auto& q=right.members[j];
-                if (p.itemId!=q.itemId || p.nameId!=q.nameId || p.layer!=q.layer || p.itemMapROC.x!=q.itemMapROC.x || p.itemMapROC.y!=q.itemMapROC.y) return false;
+                if (p.itemId!=q.itemId || p.nameId!=q.nameId || p.layer!=q.layer || p.itemMapROC.x!=q.itemMapROC.x || p.itemMapROC.y!=q.itemMapROC.y || p.freeRouteId!=q.freeRouteId || p.freeCategory!=q.freeCategory || p.freeIcon!=q.freeIcon) return false;
             }
         }
         return true;

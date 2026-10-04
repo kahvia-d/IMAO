@@ -30,6 +30,7 @@ struct OverlayFrame {
     cv::Rect motionRegion;
     ItemMarkerFrame mapMarkers, minimapMarkers;
     std::vector<RouteDatas> mapRoutes, minimapRoutes;
+    std::vector<FreeRouteMarker> minimapFreeMarkers;
 
     bool Fresh(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) const {
         return frameId != 0 && now >= capturedAt && now - capturedAt < maximumAge;

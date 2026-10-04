@@ -3,6 +3,12 @@ namespace IMao_WinUI.Models;
 // Point IDs are opaque strings: the official 19-digit IDs exceed JavaScript's safe integer range.
 public sealed record MarkerSelection
 {
+    public string StopKind { get; init; } = "catalog";
+    public string RouteId { get; init; } = "";
+    public string FreeCategory { get; init; } = "daily";
+    public string FreeIcon { get; init; } = "number";
+    public string LocalName { get; init; } = "自由点";
+    public bool IsFree => StopKind == "free";
     public string Scene { get; init; } = string.Empty;
     public string ProfileId { get; init; } = "local";
     public string NameId { get; init; } = string.Empty;

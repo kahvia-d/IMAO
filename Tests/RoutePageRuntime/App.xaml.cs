@@ -125,7 +125,7 @@ public partial class App : Application
                 "位图真的解出了像素，而不是空 Source");
             Check(Descendants(list).OfType<TextBlock>().Any(text => text.Text == "采集物"), "图标旁边带类型名字");
             Check(!Descendants(list).OfType<TextBlock>().Any(text => text.Text == realIcon), "图标可用时不会退化成显示路径");
-            Check(Descendants(list).OfType<TextBlock>().Any(text => text.Text == "自由点（无类型）"), "手绘路线那行说明它是自由点");
+            Check(Descendants(list).OfType<TextBlock>().Any(text => text.Text == "自由点（本地标记）"), "手绘路线那行说明它是自由点");
 
             // 4. 列表上的操作：删除用列表选中项；开始指引**不在这一页**了（玩家在游戏内点一条就开始）。
             var deleteButton = (Button)page.FindName("AutoRouteDelete")!;
@@ -183,7 +183,7 @@ public partial class App : Application
                 "图标路径解码成位图");
             Check(converter.Convert(@"C:\no-such-dir\missing.png", typeof(object), "icon", "") is string badPath && badPath.Contains("missing.png"),
                 "读不到的图标退化成路径文字");
-            Check((string)converter.Convert(new RouteKindSummary[0], typeof(object), "empty", "") == "自由点（无类型）",
+            Check((string)converter.Convert(new RouteKindSummary[0], typeof(object), "empty", "") == "自由点（本地标记）",
                 "空类型表给出自由点占位");
             Check((string)converter.Convert(new[] { new RouteKindSummary { NameId = "x", Name = "宝箱" } }, typeof(object), "empty", "") == "",
                 "有类型时不显示占位");

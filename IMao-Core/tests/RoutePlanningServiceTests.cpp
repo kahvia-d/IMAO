@@ -70,7 +70,7 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
     RoutePlanningService::SetAutoReplanEnabled(false);
     Command({{"action","end"}});
     RoutePlanningService::ObserveMap(1,original.stops);
-    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handStart"},{"sceneId",1},{"category","collectible"}});
     Command({{"action","handPoint"},{"x",100.0},{"y",0.0},{"key",AutoRoute::Key(original.stops.front())}});
     Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
     const auto before=RoutePlanningService::View();
@@ -104,7 +104,7 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
     }
     // Keep testing even on the old implementation after reporting the loss above.
     if(!RoutePlanningService::View().handDrawnActive){
-        Command({{"action","handStart"},{"sceneId",1}});
+        Command({{"action","handStart"},{"sceneId",1},{"category","collectible"}});
         Command({{"action","handPoint"},{"x",100.0},{"y",0.0},{"key",AutoRoute::Key(original.stops.front())}});
         Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
     }
@@ -122,7 +122,7 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
     Check(!RoutePlanningService::View().handDraft,"a preserved draft can still be saved after returning");
 
     for(int count=0;count<=1;++count){
-        Command({{"action","handStart"},{"sceneId",1}});
+        Command({{"action","handStart"},{"sceneId",1},{"category","collectible"}});
         if(count)Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
         RoutePlanningService::MapUnavailable();
         Check(RoutePlanningService::View().handDrawnActive&&RoutePlanningService::View().handDrawnCount==count,
@@ -131,7 +131,7 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
         Command({{"action","handCancel"}});
     }
 
-    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handStart"},{"sceneId",1},{"category","collectible"}});
     Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
     RoutePlanningService::MapUnavailable();
     RoutePlanningService::MapClosed();
@@ -142,7 +142,7 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
     Check(RoutePlanningService::View().revision==closed.revision,"repeated map-closed observations are idempotent");
 
     RoutePlanningService::ObserveMap(1,original.stops);
-    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handStart"},{"sceneId",1},{"category","collectible"}});
     Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
     Command({{"action","handFinish"}});
     RoutePlanningService::MapUnavailable();
@@ -168,7 +168,7 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
     RoutePlanningService::ObserveMap(1,original.stops);
     Command({{"action","end"}});
 
-    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handStart"},{"sceneId",1},{"category","collectible"}});
     Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
     RoutePlanningService::MapUnavailable();
     RoutePlanningService::ObserveMap(2,{});
@@ -183,7 +183,7 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
         "stopping the game session still retires its unsaved active draft");
 
     RoutePlanningService::ObserveMap(1,original.stops);
-    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handStart"},{"sceneId",1},{"category","collectible"}});
     Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
     const auto oldProfileGeneration=RoutePlanningService::View().generation;
     RoutePlanningService::MapUnavailable();
@@ -622,6 +622,62 @@ void VerifyFarmMode(){
 // because a route that survives being saved has to survive being carried; and the file itself says
 // whether it is a whole collection or a handful of routes, so importing never asks the player to
 // classify a file the file already describes.
+void VerifyTypedFreeRoutes(const AutoRoute::Plan& original) {
+    Command({{"action","collectionNew"},{"name","自由点回归测试"}});
+    Command({{"action","handCancel"}});
+    Command({{"action","handStart"}});
+    Check(RoutePlanningService::View().handDrawnTypeChoosing,"a blank shortcut opens the type chooser");
+    Command({{"action","handStart"},{"category","daily"}});
+    Check(!RoutePlanningService::View().enabled,"hand drawing exits the selection tool so clicks belong to the hand draft");
+    const auto rejected=RoutePlanningService::Command({{"action","handPoint"},{"x",100.0},{"y",0.0},{"key",std::to_string(original.stops.front().layer.stateId)+":alpha"}});
+    Check(!rejected.value("accepted",false)&&rejected.value("message",std::string{}).find("不匹配")!=std::string::npos&&RoutePlanningService::View().handDrawnCount==0,"a collectible official point is refused by a daily route without dropping a replacement free point");
+    Command({{"action","handIcon"},{"icon","monster3C"}});
+    Command({{"action","handPoint"},{"x",10000.0},{"y",10000.0}});
+    const auto changedType=RoutePlanningService::Command({{"action","handStart"},{"category","collectible"}});
+    Check(!changedType.value("accepted",false),"route type locks after the first point");
+    Command({{"action","handIcon"},{"icon","plant"}});
+    Command({{"action","handPoint"},{"x",10100.0},{"y",10000.0}});
+    auto draft=RoutePlanningService::View();const auto id=draft.handDraftPreview->stops.front().freeRouteId;
+    Check(draft.handDraftPreview->stops[0].freeIcon==FreePointIcon::Monster3C&&draft.handDraftPreview->stops[1].freeIcon==FreePointIcon::Plant,"icon selection preserves earlier free points");
+    Command({{"action","handFinish"}});Command({{"action","handStart"}});
+    Check(RoutePlanningService::View().handIcon==FreePointIcon::Plant,"resuming preserves the selected icon");
+    Command({{"action","handFinish"}});Command({{"action","handCommit"},{"name","Typed free test"}});
+    Command({{"action","switch"},{"routeId",id}});
+    auto view=RoutePlanningService::View();const auto point=view.active->stops[0];
+    auto done=RoutePlanningService::CompleteFreePoint({{"profileId","local"},{"routeId",id},{"pointId",point.itemId},{"stateId",point.layer.stateId},{"completed",true},{"automatic",true}});
+    Check(!done.value("accepted",false),"automatic free completion stays off until farming is enabled");
+    Command({{"action","complete"},{"routeId",id},{"key",AutoRoute::Key(point)},{"profileId","local"}});
+    Check(RoutePlanningService::View().currentTargetIndex==1,"manual free completion advances to the next target");
+    done=RoutePlanningService::CompleteFreePoint({{"profileId","local"},{"routeId",id},{"pointId",point.itemId},{"stateId",point.layer.stateId},{"completed",false}});
+    Check(done.value("accepted",false)&&RoutePlanningService::View().currentTargetIndex==0,"undo free completion restores the target");
+    done=RoutePlanningService::CompleteFreePoint({{"profileId","local"},{"routeId","old-route"},{"pointId",point.itemId},{"stateId",point.layer.stateId},{"completed",true}});
+    Check(!done.value("accepted",false),"a stale route request cannot complete the new route");
+    Command({{"action","farm"},{"enabled",true}});
+    done=RoutePlanningService::CompleteFreePoint({{"profileId","local"},{"routeId",id},{"pointId",point.itemId},{"stateId",point.layer.stateId},{"completed",true},{"automatic",true}});
+    Check(done.value("accepted",false),"daily free targets participate in opt-in farming");
+    Command({{"action","handStart"},{"category","collectible"}});
+    Check(!RoutePlanningService::Command({{"action","handIcon"},{"icon","ore"}}).value("accepted",false),"collectible drawing only accepts number icons");
+    Command({{"action","handCancel"}});
+    RoutePlanningService::CompleteFreePoint({{"profileId","local"},{"routeId",id},{"pointId",point.itemId},{"stateId",point.layer.stateId},{"completed",false}});
+    Command({{"action","replan"}});
+    const auto deadline=Clock::now()+3s;
+    while(!RoutePlanningService::View().preview&&Clock::now()<deadline)std::this_thread::sleep_for(10ms);
+    Check(RoutePlanningService::View().preview.has_value(),"free-point routes can be manually replanned");
+    Command({{"action","activate"}});
+    const auto replanned=*RoutePlanningService::View().active;
+    Check(replanned.id!=id&&std::all_of(replanned.stops.begin(),replanned.stops.end(),[&](const auto& stop){return stop.freeRouteId==replanned.id;}),"replanning rebinds every live free stop to the new route owner");
+    const auto newPoint=replanned.stops.front();
+    auto completed=RoutePlanningService::CompleteFreePoint({{"profileId","local"},{"routeId",replanned.id},{"pointId",newPoint.itemId},{"stateId",newPoint.layer.stateId},{"completed",true}});
+    Check(completed.value("accepted",false)&&!DrawItemBase::IsPointCompleted("World",point),"completing a replanned free point never completes the original route");
+    const auto exportPath=StructuredLogger::root/"free-overwrite.json";
+    Command({{"action","export"},{"path",AutoRoute::Utf8Text(exportPath)},{"collectionId",replanned.collection}});
+    Command({{"action","importInspect"},{"path",AutoRoute::Utf8Text(exportPath)}});
+    Command({{"action","importApply"},{"path",AutoRoute::Utf8Text(exportPath)},{"mode","collectionOverwrite"}});
+    Check(!RoutePlanningService::View().active,"overwriting the active collection invalidates its removed route and local target");
+    Command({{"action","switch"},{"routeId",replanned.id}});
+    const auto imported=RoutePlanningService::View();
+    Check(imported.completed.empty()&&imported.active->stops.front().itemId!=newPoint.itemId,"overwritten imported free points receive fresh identities and no previous progress");
+}
 void VerifyRouteBundle(){
     // Collections live in memory for the life of the process, so a clean slate is made through the
     // service rather than by rewriting the file behind its back.
@@ -685,7 +741,7 @@ void VerifyRouteBundle(){
     {
         const auto document=exported(collectionPath);
         Check(document.is_object()&&document.value("kind",std::string{})=="collection"&&
-            document.value("formatVersion",0)==1&&document.value("app",std::string{})=="IMao",
+            document.value("formatVersion",0)==2&&document.value("app",std::string{})=="IMao",
             "a collection bundle says what it is and which format it is in");
         Check(document.at("collection").value("name",std::string{})=="待导出",
             "a collection bundle carries the collection's name, which is the only thing that names it on the other side");
@@ -1067,7 +1123,7 @@ void VerifyCollections(){
     // A drawing and a fresh preview both land in the collection the player is in *at save time*,
     // which is the whole reason the collection can be switched at all.
     RoutePlanningService::ObserveMap(1,{});
-    Command({{"action","handStart"}});
+    Command({{"action","handStart"},{"category","collectible"}});
     Command({{"action","handPoint"},{"x",7},{"y",0}});
     Command({{"action","handPoint"},{"x",9},{"y",0}});
     Command({{"action","handCommit"},{"name","手绘进合集"}});
@@ -1261,6 +1317,7 @@ int main(int argc,char** argv){
         VerifyRouteListShape();
         VerifyCollections();
         VerifyRouteBundle();
+        VerifyTypedFreeRoutes(original);
     }catch(const std::exception& e){++failures;std::cerr<<"UNEXPECTED: "<<e.what()<<'\n';}
     RoutePlanningService::Shutdown();
     std::cout<<"RoutePlanningService harness failures="<<failures<<'\n';return failures?1:0;

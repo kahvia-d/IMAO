@@ -355,8 +355,8 @@ internal sealed class MapToolsWindow : Window
             : next.HandDrawnPending
                 ? $"手绘已结束，画好的 {next.HandDrawnCount} 个点还留着，尚未保存：可以「继续绘制」接着画、" +
                   "「保存手绘路线」存下来，或者「放弃这次手绘」。"
-                : $"点「开始手绘」后回到大地图：点击要标记的位置就会加点（也可以按一次 {HotkeyLabel} 进入绘制并加点）。" +
-                  "第一个点是起点、最后一个是终点；点在点位上就连接到那个点位，点在空地上生成带编号的标记。";
+                : $"选择「绘制收集物路线」或「绘制非收集物路线」后回到大地图：点击要标记的位置就会加点（也可以按 {HotkeyLabel} 先选择类型，再进入绘制）。" +
+                  "第一个点是起点、最后一个是终点；点在点位上就连接到那个点位，点在空地上生成所选图标的自由点；非收集物图标在大地图左侧选择。";
         routes.Children.Add(routesHand);
         routes.Children.Add(routesName);
         routesHandButtons.Children.Clear();
@@ -375,9 +375,13 @@ internal sealed class MapToolsWindow : Window
         }
         else
         {
-            routesHandButtons.Children.Add(MakeButton("开始手绘", "handStart"));
+            routesHandButtons.Children.Add(MakeButton("绘制收集物路线", "handStart:collectible"));
+            routesHandButtons.Children.Add(MakeButton("绘制非收集物路线", "handStart:daily"));
         }
         routes.Children.Add(routesHandButtons);
+        if(next.Active is { } active)
+            foreach(var stop in active.Stops.Where(stop=>stop.IsFree && stop.Completed))
+                routes.Children.Add(MakeButton($"取消完成 · {stop.DisplayName}", "freeUndo:" + stop.Key));
         RebuildNavigation();
     }
 
@@ -403,7 +407,7 @@ internal sealed class MapToolsWindow : Window
         var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
         foreach (var kind in saved.Kinds) AddKindBadge(badges, kind);
         if (saved.Kinds.Length == 0)
-            badges.Children.Add(new TextBlock { Text = saved.HandDrawn ? "自由点（无类型）" : "无点位类型", FontSize = 13 });
+            badges.Children.Add(new TextBlock { Text = saved.HandDrawn ? "自由点 · " + (saved.RouteCategory=="collectible"?"收集物":"每日刷新") : "无点位类型", FontSize = 13 });
         stack.Children.Add(badges);
         var row = new Button
         {

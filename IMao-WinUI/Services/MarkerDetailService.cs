@@ -35,6 +35,7 @@ public sealed class MarkerDetailService : IDisposable
 
     public async Task<MarkerDetail> GetLocalAsync(MarkerSelection selection, CancellationToken cancellationToken = default)
     {
+        if(selection.IsFree) return LocalFreeDetail(selection);
         ValidateSelection(selection);
         var index = await localStates.GetOrAdd(selection.StateId, state => new(() => Task.Run(() => LoadLocalState(state))))
             .Value.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -67,6 +68,7 @@ public sealed class MarkerDetailService : IDisposable
     public async Task<MarkerDetailResult> GetOnlineAsync(MarkerSelection selection, MarkerDetail local,
         CancellationToken cancellationToken = default, bool refresh = false)
     {
+        if(selection.IsFree) return new(LocalFreeDetail(selection), "本地自由点", false);
         ValidateSelection(selection);
         var cached = await ReadCacheAsync(selection, local, cancellationToken).ConfigureAwait(false);
         if (!refresh && cached is not null && DateTimeOffset.UtcNow - cached.Value.SavedAt < CacheAge)
@@ -144,8 +146,14 @@ public sealed class MarkerDetailService : IDisposable
         return false;
     }
 
+    private static MarkerDetail LocalFreeDetail(MarkerSelection selection) => new()
+    {
+        PointId=selection.PointId, StateId=selection.StateId, Name=selection.LocalName,
+        FloorId=selection.FloorId, Level=selection.Level,
+        Description=selection.FreeCategory=="collectible" ? "本地收集物自由点：完成后长期保留，可取消完成。" : "本地非收集物自由点：完成记录每日凌晨 04:00 刷新。"
+    };
     public static string BuildSourceUrl(MarkerSelection selection) =>
-        $"https://www.kurobbs.com/mc/map/?state={selection.StateId}&country={selection.CountryId}&typeId={Uri.EscapeDataString(OfficialTypeId(selection.NameId))}&pointId={Uri.EscapeDataString(selection.PointId)}";
+        selection.IsFree ? "" : $"https://www.kurobbs.com/mc/map/?state={selection.StateId}&country={selection.CountryId}&typeId={Uri.EscapeDataString(OfficialTypeId(selection.NameId))}&pointId={Uri.EscapeDataString(selection.PointId)}";
 
     private static string OfficialTypeId(string typeId) => typeId switch { "sx_qq" => "sx·qq", "sx_lgn" => "sx·lgn", _ => typeId };
 

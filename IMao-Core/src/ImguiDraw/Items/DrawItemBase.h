@@ -43,6 +43,8 @@ public:
     // Only these are auto-marked by the farming mode, excluded from synchronization and
     // cleared by the 04:00 reset; everything else keeps needing a deliberate mark.
     static bool IsRefreshablePoint(const std::string& nameId);
+    static bool IsCollectiblePoint(const std::string& nameId);
+    static nlohmann::json SetFreePointCompletion(const std::string& profile, const ItemDatas& item, bool completed);
     static bool IsRefreshablePointId(const std::string& pointId);
     // Reports the daily 04:00 reset of the farming ledger exactly once per boundary, and says
     // whether it just happened so the caller can refresh whatever cached the old completions.
