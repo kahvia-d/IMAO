@@ -6,6 +6,11 @@
 #include <vector>
 
 namespace AutoRoute {
+// A retained draft owns input only on its original, currently displayed map.
+// Focus loss keeps the draft, but must release Escape, undo and mouse clicks.
+inline bool HandDrawingInputAllowed(bool active, int draftScene, int displayedScene, bool focused, bool fresh) {
+    return active && draftScene > 0 && draftScene == displayedScene && focused && fresh;
+}
 // Drawing a route by hand: press the key, click a point on the big map, repeat. Unlike the old
 // tool — which stored pairs of raw coordinates and committed a segment on every second press —
 // this collects an ordered list of real stops, so a hand-drawn route is the same kind of thing as

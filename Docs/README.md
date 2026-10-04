@@ -19,6 +19,8 @@
 
 ## 待办与未完成
 
+最新发行说明：[`Release-2026.10.4.1.md`](Release-2026.10.4.1.md)（切屏与拖动地图时保留手绘状态）。
+
 | 文档 | 内容 |
 |---|---|
 | [`OpenWork.md`](OpenWork.md) | 跨领域未完成项汇总（帧率、识别与资源、工程健壮性、更新系统、代码 TODO），带优先级与出处；每周或每次发布前过一遍 |
@@ -76,6 +78,8 @@
 | 文档 | 内容 |
 |---|---|
 | [`MapTools_20260908.md`](MapTools_20260908.md) | 地图工具台与附近点位操作 |
+| [`OverlayFocusStateFix_20261004.md`](OverlayFocusStateFix_20261004.md) | 切屏保留手绘与规划状态：临时暂停、确认关闭、回归与 map-test 交付 |
+| [`OverlayDragRecovery_20261004.md`](OverlayDragRecovery_20261004.md) | 拖动地图时任务图标误命中导致草稿取消：玩家日志、证据优先级修正与复测 |
 | [`RouteUiTrimAudit_20261001.md`](RouteUiTrimAudit_20261001.md) | **路线功能界面精简**：三个面（桌面页/游戏内工具窗/死掉的 ImGui 工具栏）的边界审计 + 两轮精简的实施记录 |
 | [`AutoRoutePlanningTests_20260908.md`](AutoRoutePlanningTests_20260908.md) | 自动路线规划测试命令 |
 | [`RouteUsability_20260908.md`](RouteUsability_20260908.md) | 路线退出、删除与快捷键指南 |

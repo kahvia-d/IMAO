@@ -39,6 +39,7 @@ struct RoutePlanningView {
     // Drawing by hand is not the selection mode: the player never enters 选点, so the input side
     // asks about it separately.
     bool handDrawnActive = false;
+    int handDrawnSceneId = 0;
     // A drawing that was left with Escape but not saved yet. The toolbar offers to save or discard
     // it, which is why leaving must not throw it away.
     bool handDrawnPending = false;
@@ -59,6 +60,7 @@ public:
     static bool PlanningMode();
     static void ObserveMap(int sceneId, const std::vector<ItemDatas>& visible);
     static void MapUnavailable();
+    static void MapClosed();
     static void SessionStopped();
     static void CaptureMapStart(const AutoRoute::Start& start);
     static void UpdatePlayer(const AutoRoute::Start& position);

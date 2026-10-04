@@ -23,7 +23,8 @@ struct DrawItemBase {
     // tests fill these in; a test that leaves them empty proves the mode marks nothing.
     inline static std::unordered_set<std::string> refreshablePointIds;
     inline static std::unordered_set<std::string> refreshableCategories;
-    static std::string MarkerProfile(){return "local";}
+    inline static std::string markerProfile="local";
+    static std::string MarkerProfile(){return markerProfile;}
     static bool IsPointCompleted(const std::string&,const ItemDatas& item){std::scoped_lock lock(mutex);return completed.contains(AutoRoute::Key(item));}
     static bool IsRefreshablePoint(const std::string& nameId){return refreshableCategories.contains(nameId);}
     static bool IsRefreshablePointId(const std::string& pointId){return refreshablePointIds.contains(pointId);}

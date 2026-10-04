@@ -60,6 +60,7 @@ struct Runtime {
     std::atomic_uint64_t epoch{1};
     std::uint64_t revision=1;
     int scene=0,observedScene=0;
+    bool mapSuspended=false;
     std::string profile,tool="pan",message;
     std::map<int,Draft> drafts;
     std::unordered_map<int,std::unordered_map<std::string,ItemDatas>> catalog;
@@ -329,6 +330,8 @@ void HandleHandDrawnLocked(const std::string& action,const Json& command){
     if(!Scene::IsKnown(r.scene)||!r.observedScene)throw std::runtime_error("请先在游戏大地图上打开要绘制的区域");
     const auto* scene=Scene::Find(r.scene);
     if(!scene||scene->kuroStateId<=0)throw std::runtime_error("当前地图没有点位数据，无法手绘");
+    if(r.handDraft.Active()&&r.handDraft.SceneId()!=r.scene)
+        throw std::invalid_argument("请返回正在手绘的地图，或先完成、放弃当前路线");
     if(action=="handStart"){
         // Resuming is deliberate: with a finished drawing still unsaved, starting again continues it
         // rather than silently discarding the points the player came back for.
@@ -536,6 +539,7 @@ void SyncProfileLocked(){
     // A package inspected under one profile must never be applied under another.
     r.transfer=nullptr;
     r.handDraft.Cancel();
+    r.mapSuspended=false;
     r.runRequested=false;r.completed.clear();r.message.clear();r.tool="pan";
     try {ReloadCollectionsLocked();ReloadSavedLocked();r.active=r.store->LoadActive(profile,ResolveLocked);
         if(r.active){r.skipHistory=r.active->skipHistory;r.message="已恢复自动路线，点击继续导航";
@@ -858,6 +862,7 @@ RoutePlanningView RoutePlanningService::View(){
     const auto it=r.drafts.find(r.scene);if(it!=r.drafts.end()){v.selected=it->second.selected;v.start=it->second.start;v.preview=it->second.preview;}
     if(r.handDraft.Size()){v.handDraftPreview=HandDraftPlanLocked();v.handDraft=v.handDraftPreview;}
     v.handDrawnActive=r.handDraft.Active();v.handDrawnPending=r.handDraft.Pending();
+    v.handDrawnSceneId=r.handDraft.SceneId();
     v.handDrawnCount=r.handDraft.Size();
     return v;
 }
@@ -882,7 +887,14 @@ void RoutePlanningService::ObserveMap(int scene,const std::vector<ItemDatas>& vi
     auto& r=R();bool changed=false;
     {std::scoped_lock lock(r.mutex);if(!r.ready||!Scene::IsKnown(scene))return;
         const auto before=HiddenLocked();
-        if(r.observedScene!=scene){r.observedScene=scene;if(r.scene!=scene){InvalidateLocked();r.scene=scene;r.tool="pan";changed=true;}}
+        if(r.observedScene!=scene){r.observedScene=scene;
+            if(r.mapSuspended){
+                r.mapSuspended=false;changed=true;
+                StructuredLogger::Record("info","routes","map-context-resumed",
+                    "reason=fresh-map scene="+std::to_string(scene)+" draftScene="+std::to_string(r.handDraft.SceneId())+
+                    " points="+std::to_string(r.handDraft.Size()));
+            }
+            if(r.scene!=scene){InvalidateLocked();r.scene=scene;r.tool="pan";changed=true;}}
         std::unordered_set<std::string> keys;for(const auto& p:visible)keys.insert(AutoRoute::Key(p));
         if(keys!=r.visibleKeys){++r.revision;r.visibilityEventPending=true;}
         r.visible=visible;r.visibleKeys=std::move(keys);
@@ -902,15 +914,37 @@ void RoutePlanningService::SessionStopped(){
         InvalidateLocked();r.playerAvailable=false;r.player={};r.mapStart={};r.observedScene=0;r.visible.clear();r.visibleKeys.clear();
         for(auto& [scene,draft]:r.drafts)if(draft.start.source!="manual"&&!draft.preview)draft.start={};
         r.handDraft.Cancel();
+        r.mapSuspended=false;
         r.message="游戏定位已停止，路线保留";}Emit();
 }
 void RoutePlanningService::MapUnavailable(){
-    auto& r=R();bool changed=false;{std::scoped_lock lock(r.mutex);if(r.observedScene){r.observedScene=0;r.visible.clear();r.visibleKeys.clear();
-        if(r.computing)InvalidateLocked();
-        // Drawing needs the map it is drawn on. Keeping half a drawing alive while the player is
-        // back in the world would let the next key press land on a map that is no longer shown.
-        if(r.handDraft.Active()){r.handDraft.Cancel();r.message="已离开大地图，本次手绘已取消";}
-        ++r.revision;changed=true;}}if(changed)Emit();
+    auto& r=R();bool changed=false;{
+        std::scoped_lock lock(r.mutex);if(!r.ready)return;
+        if(r.observedScene){
+            StructuredLogger::Record("info","routes","map-context-suspended",
+                "reason=render-unavailable scene="+std::to_string(r.observedScene)+
+                " points="+std::to_string(r.handDraft.Size()));
+            r.observedScene=0;r.visible.clear();r.visibleKeys.clear();r.mapSuspended=true;
+            // Revoke old input generations and pending work, not the player's draft.
+            InvalidateLocked();changed=true;
+        }
+    }if(changed)Emit();
+}
+void RoutePlanningService::MapClosed(){
+    auto& r=R();bool changed=false;{
+        std::scoped_lock lock(r.mutex);if(!r.ready)return;
+        // Suspension already clears observedScene. A subsequent real closure
+        // must still cancel active drawing, including an empty drawing.
+        if(r.observedScene||r.mapSuspended||r.handDraft.Active()){
+            StructuredLogger::Record("info","routes","map-context-closed",
+                "reason=confirmed-gameplay scene="+std::to_string(r.scene)+
+                " points="+std::to_string(r.handDraft.Size()));
+            r.observedScene=0;r.visible.clear();r.visibleKeys.clear();r.mapSuspended=false;
+            InvalidateLocked();
+            if(r.handDraft.Active()){r.handDraft.Cancel();r.message="已离开大地图，本次手绘已取消";}
+            changed=true;
+        }
+    }if(changed)Emit();
 }
 void RoutePlanningService::CaptureMapStart(const AutoRoute::Start& start){
     auto& r=R();{std::scoped_lock lock(r.mutex);r.mapStart=start;r.playerAvailable=false;

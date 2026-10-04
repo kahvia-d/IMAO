@@ -23,6 +23,12 @@ struct MapUiStateUpdate {
     bool changed = false;
 };
 
+// A render miss, absent capture or focus loss is not evidence that the map was
+// closed. Require the current captured HUD as well as the debounced UI state.
+inline bool ConfirmedMapClosed(MapUiState state, bool minimapVisible, bool displayContext, bool captureFresh) {
+    return state == MapUiState::Gameplay && minimapVisible && displayContext && captureFresh;
+}
+
 // One frame's big-map inputs.  Kept beside the state machine so the rule the detectors feed is written
 // once and can be tested without a live game.
 struct MapFrameEvidence {
@@ -42,6 +48,13 @@ struct MapFrameEvidence {
     // the player never left the map.
     bool anchorFresh = false;
 
+    // Task-icon descriptors can match map labels during a pan. Current,
+    // verified full-screen widgets outweigh that weak HUD hit. An old canvas
+    // anchor must not suppress genuine gameplay after the map actually closes.
+    bool GameplayHudVisible() const {
+        return minimapVisible && !controlsVisible && !compassVerified;
+    }
+
     // A template-verified compass is the widget, and the widget only exists on the full-screen map, so
     // it authorises on its own - that is what keeps the map alive while the zoom strip is hidden and the
     // canvas verification cannot run.  The colour-only probe still needs the structural confirmation,
@@ -54,13 +67,14 @@ struct MapFrameEvidence {
     }
 };
 
-// The state machine requires the minimap HUD to have been missing for its absence interval; the marker
-// policy reacts to the frame in front of it.
+// Colour/anchor candidates require the HUD absence interval; current verified
+// map widgets stand on their own. Marker visibility uses the current surface.
 inline bool BigMapEvidence(const MapFrameEvidence& evidence) {
-    return evidence.minimapAbsentLongEnough && evidence.Probed();
+    return evidence.controlsVisible || evidence.compassVerified ||
+        (evidence.minimapAbsentLongEnough && evidence.Probed());
 }
 inline bool BigMapMarkersVisible(const MapFrameEvidence& evidence) {
-    return !evidence.minimapVisible && evidence.Probed();
+    return !evidence.GameplayHudVisible() && evidence.Probed();
 }
 
 // Keeps UI transitions separate from raw per-frame feature checks. A stable

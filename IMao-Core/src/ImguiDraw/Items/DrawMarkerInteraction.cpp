@@ -5,6 +5,7 @@
 #include "../../Runtime/MarkerLayout.h"
 #include "../../Runtime/StructuredLogger.h"
 #include "../../Runtime/RoutePlanningService.h"
+#include "../../Runtime/HandDrawnRoute.h"
 #include "../../Runtime/RouteGeometry.h"
 #include "../../Runtime/RouteViewportCandidates.h"
 #include "../../Runtime/PlanningEscapeKey.h"
@@ -294,11 +295,16 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
     const bool up = message == WM_KEYUP || message == WM_SYSKEYUP;
     if (!down && !up) return CallNextHookEx(keyboardHook, code, message, value);
     const bool focused = DrawItemBase::IsMarkerGameFocused(game);
+    const auto handView = RoutePlanningService::View();
+    const bool handInput = AutoRoute::HandDrawingInputAllowed(handView.handDrawnActive,
+        handView.handDrawnSceneId, planningBinding.scene, focused,
+        mapInteractive && planningBinding.valid && planningBinding.presented.Fresh() &&
+        planningBinding.profile == handView.profileId && handView.profileId == DrawItemBase::MarkerProfile());
     // While a route is being drawn by hand, Escape belongs to the drawing. It is claimed here, before
     // anything else can decide, because the fallback further down only claims Escape when the
     // planning canvas is interactive — and letting it through closes the game's own big map, which is
     // exactly what "Escape to leave the drawing" must not do.
-    if (info.vkCode == VK_ESCAPE && RoutePlanningService::View().handDrawnActive) {
+    if (info.vkCode == VK_ESCAPE && handInput) {
         if (down) handEscapeRequested = true;
         return 1;
     }
@@ -306,7 +312,7 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
     // running, so it keeps whatever meaning the game gives it in every other state.
     if (down && info.vkCode == 'Z' && (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0) {
         const auto hand = RoutePlanningService::View();
-        if (hand.handDrawnActive && focused) {
+        if (handInput) {
             const auto result = RoutePlanningService::Command({{"action", "handUndo"}, {"profileId", hand.profileId}});
             if (!result.value("accepted", false))
                 StructuredLogger::Record("warn", "routes", "hand-drawn-undo-failed", result.value("message", ""));
@@ -494,6 +500,7 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
         // the tool buttons depend on. It is valid whenever the map was drawn from a frame that is
         // still fresh — the same evidence the planning canvas itself uses.
         const bool handDrawClick = !right && handDrawMode && mapInteractive && planningBinding.presented.Fresh() &&
+            displayedProfile == DrawItemBase::MarkerProfile() &&
             info.pt.x >= planningBinding.origin.x && info.pt.y >= planningBinding.origin.y &&
             info.pt.x <= planningBinding.origin.x + planningBinding.rect.right &&
             info.pt.y <= planningBinding.origin.y + planningBinding.rect.bottom;
@@ -1204,7 +1211,10 @@ void DrawMarkerInteraction::BeginFrame() {
     if (handEscapeRequested) {
         handEscapeRequested = false;
         const auto handView = RoutePlanningService::View();
-        if (handView.handDrawnActive) {
+        if (AutoRoute::HandDrawingInputAllowed(handView.handDrawnActive, handView.handDrawnSceneId,
+                planningBinding.scene, DrawItemBase::IsMarkerGameFocused(game),
+                mapInteractive && planningBinding.valid && planningBinding.presented.Fresh() &&
+                planningBinding.profile == handView.profileId && handView.profileId == DrawItemBase::MarkerProfile())) {
             ClearSelection(); clicks.clear(); leftCapture.cancelled = true; rightCapture.cancelled = true; CancelGesture();
             // Escape ends the drawing; it does not throw it away. The toolbar cannot be opened while
             // the drawing is still taking clicks, so discarding here would destroy work the player
@@ -1252,8 +1262,8 @@ void DrawMarkerInteraction::Clear() {
     routeGamepadSession = 0;
     autoReplanPending.reset();
     mapInteractive = false; regions.clear(); clicks.clear();
-    // No map is being drawn, so nothing may swallow a click or a key: the service cancels the
-    // drawing when the map goes away, and this only makes sure the one-frame window cannot outlive it.
+    // Clear transient input immediately, but keep the service's drawing. Only
+    // fresh gameplay evidence from App can confirm that the map was closed.
     handDrawMode = false; handEscapeRequested = false;
     const auto current = GamepadContextSnapshot::Shared().Read(DrawItemBase::MarkerProfile());
     for (auto* capture : {&leftCapture, &rightCapture})
@@ -1377,12 +1387,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     // A drawing is "shown" from the first recorded point until it is saved or discarded — not only
     // while clicks are still being taken. Leaving the drawing with Escape must not make its start,
     // end, numbered marks and selected points vanish: nothing has been decided about it yet.
-    const bool drafting = previousPlanning.handDraft.has_value();
-    // The member picker is an input aid, so it only belongs to the part where points are being added.
-    const bool drawing = previousPlanning.handDrawnActive && previousPlanning.handDraft.has_value();
-    // The click handler runs on the mouse hook, which cannot read the planning state, so the one
-    // fact it needs is published here where the state is known to be fresh.
-    handDrawMode = previousPlanning.handDrawnActive;
+    const int displayedScene = Scene::SceneNameToId(frame.sceneName);
     if (autoReplanPending) {
         if (*autoReplanPending == previousPlanning.autoReplanEnabled) {
             autoReplanPending.reset(); planningNotice = previousPlanning.autoReplanEnabled ? "实时规划已开启" : "实时规划已关闭";
@@ -1434,6 +1439,13 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     }
     CommitPendingGesture();
     planning = RoutePlanningService::View();
+    // MapClosed can cancel the draft on the detection thread between service reads.
+    // Derive these flags from the same local snapshot whose draft is rendered below.
+    const bool drafting = planning.handDraft.has_value() && planning.handDrawnSceneId == displayedScene;
+    // The member picker only belongs to the part where points are being added.
+    const bool drawing = planning.handDrawnActive && drafting;
+    // Publish the current input mode for the mouse hook.
+    handDrawMode = planning.handDrawnActive && planning.handDrawnSceneId == displayedScene;
     // The tools window bounds exclude direct canvas input and drawn icons,
     // but do not reduce the map viewport used by bulk route selection.
     const auto planningPanel = observedPanel;
@@ -1444,7 +1456,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     // Points already recorded into a drawing count as selected, so connecting to a marker gives the
     // same "this one is in" feedback the selection tool gives. This has to come *after* the clear
     // above: that line rebuilds the set from the selection tool's own list and would drop these.
-    if (planning.handDraft)
+    if (planning.handDraft && planning.handDrawnSceneId == sceneId)
         for (const auto& item : planning.handDraft->stops)
             if (!AutoRoute::IsFreeStop(item) && !item.itemId.empty()) planningBinding.selectedKeys.insert(AutoRoute::Key(item));
     std::vector<MarkerLayoutPoint> points;
@@ -1716,7 +1728,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     // While a route is being drawn by hand, show what the next click would record. This runs after
     // the hit regions are rebuilt because it asks the *same* question the click asks — "which region
     // is under the cursor" — so the preview and the result can never disagree.
-    if (previousPlanning.handDrawnActive && mouseX >= 0 && mouseY >= 0 && mouseX <= rect.right && mouseY <= rect.bottom) {
+    if (handDrawMode && mouseX >= 0 && mouseY >= 0 && mouseX <= rect.right && mouseY <= rect.bottom) {
         const auto onPoint = !RouteHandDrawnPointId(Hit(mouseX, mouseY)).empty();
         auto* draw = ImGui::GetForegroundDrawList();
         const ImU32 colour = onPoint ? IM_COL32(110, 250, 190, 255) : IM_COL32(233, 165, 57, 255);
@@ -1754,7 +1766,10 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             // The click was swallowed by the hook while a drawing was running; turn it into a point
             // at the same position the cursor marker promised.
             const auto view = RoutePlanningService::View();
-            if (!view.handDrawnActive) continue;
+            if (!AutoRoute::HandDrawingInputAllowed(view.handDrawnActive, view.handDrawnSceneId,
+                    planningBinding.scene, DrawItemBase::IsMarkerGameFocused(gameWindow),
+                    mapInteractive && planningBinding.valid && planningBinding.presented.Fresh()) ||
+                click.scene != planningBinding.scene || click.generation != view.generation) continue;
             const auto local = Coordinate(click.position.x - planningBinding.origin.x,
                 click.position.y - planningBinding.origin.y);
             // The point under the click is already known: the hook only records this click because a
@@ -1765,6 +1780,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             if (!std::isfinite(roc.x) || !std::isfinite(roc.y)) continue;
             nlohmann::json command = {{"action", "handPoint"}, {"profileId", click.profile},
                 {"sceneId", view.sceneId}, {"x", roc.x}, {"y", roc.y},
+                {"expectedSceneId", click.scene}, {"expectedGeneration", click.generation},
                 {"key", pointId.empty() ? std::string{} :
                     std::to_string(Scene::Find(view.sceneId)->kuroStateId) + ":" + pointId}};
             StructuredLogger::Record("info", "routes", "hand-drawn-click",

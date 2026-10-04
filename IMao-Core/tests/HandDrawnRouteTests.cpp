@@ -180,7 +180,15 @@ void ImportTests() {
 } // namespace
 
 int main() {
-    try { DraftTests(); ImportTests(); }
+    try {
+        Check(AutoRoute::HandDrawingInputAllowed(true,1,1,true,true),"a fresh focused original map owns hand drawing input");
+        Check(!AutoRoute::HandDrawingInputAllowed(true,1,1,false,true),"a suspended drawing cannot swallow another application's Escape or undo");
+        Check(!AutoRoute::HandDrawingInputAllowed(true,1,1,true,false),"an expired map cannot claim hand drawing input");
+        Check(!AutoRoute::HandDrawingInputAllowed(true,1,2,true,true),"a different map cannot claim the retained drawing's input");
+        Check(!AutoRoute::HandDrawingInputAllowed(false,1,1,true,true),"an inactive drawing does not own the keyboard");
+        Check(!AutoRoute::HandDrawingInputAllowed(true,0,0,true,true),"an unknown map cannot claim the keyboard");
+        DraftTests(); ImportTests();
+    }
     catch (const std::exception& error) { ++failures; std::cerr << "UNEXPECTED: " << error.what() << '\n'; }
     if (failures) { std::cerr << failures << " hand-drawn route test(s) failed\n"; return 1; }
     std::cout << "Hand-drawn route tests passed\n";

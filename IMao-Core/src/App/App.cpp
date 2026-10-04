@@ -696,6 +696,7 @@ void App::Thread_DetectGameState() {
         }
     };
     uint64_t lastObservedFrame = 0;
+    bool previousHudConflict = false;
 	while (!allThreadStopFlag) {
 		auto start = std::chrono::high_resolution_clock::now();
 		// This is a background sampling thread.  A transient capture with a
@@ -801,12 +802,20 @@ void App::Thread_DetectGameState() {
 			const auto taskArea = ScreenCoordinate::SpecifyScreenCoordinate(stateRect, hud::kTaskIcon);
 			const cv::Rect taskRegion(static_cast<int>(taskArea.leftPoint.x), static_cast<int>(taskArea.topPoint.y),
 				static_cast<int>(taskArea.rightPoint.x - taskArea.leftPoint.x), static_cast<int>(taskArea.bottomPoint.y - taskArea.topPoint.y));
-			const auto hud = minimapHudEvidence.Observe(stateSnapshot, taskRegion, minimapVisible, focused, mapControlsVisible);
+			const auto hud = minimapHudEvidence.Observe(stateSnapshot, taskRegion, minimapVisible, focused,
+                mapControlsVisible || compassTemplateVerified);
 			minimapVisible = hud.visible;
 			templateHudEvidence = hud.usedTemplate;
-			// The old task-icon SURF probe occasionally matches map labels. Two
-			// independent map controls plus the compass outweigh that single icon.
-			if (mapControlsVisible) minimapVisible = false;
+			// A verified map compass still identifies the current surface when
+            // dragging hides the zoom strip. Do not learn or act on a task-icon
+            // false hit as gameplay, which would destructively close the draft.
+            minimapVisible = frameEvidence().GameplayHudVisible();
+            const bool hudConflict = rawMinimapEvidence && (mapControlsVisible || compassTemplateVerified);
+            if (hudConflict && !previousHudConflict)
+                Diagnostics::Record("map-hud-conflict", "taskMatches=" + std::to_string(minimapMatchCount) +
+                    " compassVerified=" + std::to_string(compassTemplateVerified) +
+                    " controlsVisible=" + std::to_string(mapControlsVisible) + " decision=keep-big-map");
+            previousHudConflict = hudConflict;
 			const auto evidenceNow = std::chrono::steady_clock::now();
 
             // Revoke already-published marker frames before any slower map
@@ -895,6 +904,12 @@ void App::Thread_DetectGameState() {
 		RuntimeStatus::SetGameState(statusGameState, focused);
 
 		const auto now = std::chrono::steady_clock::now();
+        const bool captureStillFresh = captured->frameId != 0 && now >= captured->capturedAt &&
+            now - captured->capturedAt < captured->maximumAge;
+        const bool displayContextNow = DrawItemBase::IsMarkerDisplayContext(hwnd) &&
+            IsWindowVisible(hwnd) && !IsIconic(hwnd);
+        if (ConfirmedMapClosed(update.current, minimapVisible, displayContextNow, captureStillFresh))
+            RoutePlanningService::MapClosed();
 		if (update.changed || now - lastStateReport >= std::chrono::seconds(2)) {
 			Diagnostics::Record("game-state", "state=" + std::string(MapUiStateController::StateName(update.current)) +
 				" observed=" + MapUiStateController::StateName(update.observed) +
@@ -2660,7 +2675,7 @@ void App::PollHandDrawnRoute() {
             Notification::AddError(NotificationDatas(entered.value("message", "无法进入手绘模式"), 5));
         return;
     }
-    if (scene != view.sceneId) return;
+    if (scene != view.sceneId || scene != view.handDrawnSceneId) return;
     const auto result = RoutePlanningService::Command({{"action", "handPoint"}, {"profileId", view.profileId},
         {"sceneId", scene}, {"x", roc.x}, {"y", roc.y},
         {"expectedSceneId", view.sceneId}, {"expectedGeneration", view.generation}});

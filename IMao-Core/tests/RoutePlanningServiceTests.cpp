@@ -17,6 +17,7 @@ using Json=nlohmann::json;
 namespace {
 int failures=0;std::uint64_t sequence=0;
 void VerifyRouteListShape();
+void VerifyMapSuspension(const AutoRoute::Plan& original);
 void Check(bool condition,const char* message){if(!condition){++failures;std::cerr<<"FAIL: "<<message<<'\n';}}
 Json Command(Json command){const auto result=RoutePlanningService::Command(command);
     if(!result.value("accepted",false))throw std::runtime_error(result.value("message","command failed"));return result;}
@@ -63,6 +64,138 @@ std::vector<std::string> SelectionKeys(const std::vector<ItemDatas>& points){
     for(const auto& point:points)result.push_back(AutoRoute::Key(point));
     std::sort(result.begin(),result.end());
     return result;
+}
+
+void VerifyMapSuspension(const AutoRoute::Plan& original){
+    RoutePlanningService::SetAutoReplanEnabled(false);
+    Command({{"action","end"}});
+    RoutePlanningService::ObserveMap(1,original.stops);
+    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handPoint"},{"x",100.0},{"y",0.0},{"key",AutoRoute::Key(original.stops.front())}});
+    Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
+    const auto before=RoutePlanningService::View();
+    const auto points=before.handDraft->stops;
+    const auto samePoints=[&](const RoutePlanningView& view){
+        if(!view.handDraft||view.handDraft->stops.size()!=points.size())return false;
+        for(std::size_t i=0;i<points.size();++i){const auto& p=view.handDraft->stops[i];
+            if(AutoRoute::Key(p)!=AutoRoute::Key(points[i])||p.itemMapROC.x!=points[i].itemMapROC.x||
+                p.itemMapROC.y!=points[i].itemMapROC.y||p.layer.stopKind!=points[i].layer.stopKind)return false;}
+        return true;
+    };
+    for(int cycle=0;cycle<3;++cycle){
+        const auto oldGeneration=RoutePlanningService::View().generation;
+        RoutePlanningService::MapUnavailable();
+        const auto paused=RoutePlanningService::View();
+        Check(paused.handDrawnActive&&paused.handDrawnCount==2&&samePoints(paused),
+            "temporary map unavailability preserves an active mixed hand draft and its exact ordered points");
+        Check(paused.active.has_value()==before.active.has_value()&&
+            (!before.active||AutoRoute::SameOrder(paused.active->stops,before.active->stops)),
+            "temporary map unavailability preserves the active saved route");
+        Check(!RoutePlanningService::Command({{"action","handPoint"},{"x",999.0},{"y",999.0}}).value("accepted",false),
+            "a suspended map refuses hand points even when the caller omits context");
+        RoutePlanningService::MapUnavailable();
+        Check(samePoints(RoutePlanningService::View()),"repeated blank render frames cannot clear the draft");
+        RoutePlanningService::ObserveMap(1,original.stops);
+        Check(RoutePlanningService::View().handDrawnActive&&samePoints(RoutePlanningService::View()),
+            "observing the original map resumes drawing without a handStart command");
+        Check(!RoutePlanningService::Command({{"action","handPoint"},{"x",999.0},{"y",999.0},
+            {"expectedGeneration",oldGeneration}}).value("accepted",false),
+            "a click captured before suspension cannot be replayed after the map returns");
+    }
+    // Keep testing even on the old implementation after reporting the loss above.
+    if(!RoutePlanningService::View().handDrawnActive){
+        Command({{"action","handStart"},{"sceneId",1}});
+        Command({{"action","handPoint"},{"x",100.0},{"y",0.0},{"key",AutoRoute::Key(original.stops.front())}});
+        Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
+    }
+    Command({{"action","handPoint"},{"x",1357.0},{"y",2468.0}});
+    Check(RoutePlanningService::View().handDraft->stops.back().itemId=="free:2",
+        "continuing after suspension retains free-point numbering");
+    Command({{"action","handUndo"}});
+    Check(samePoints(RoutePlanningService::View()),"undo after resuming returns to the exact original points");
+    Command({{"action","handFinish"}});
+    RoutePlanningService::MapUnavailable();
+    Check(RoutePlanningService::View().handDrawnPending&&samePoints(RoutePlanningService::View()),
+        "temporary map unavailability preserves a finished unsaved hand draft");
+    RoutePlanningService::ObserveMap(1,original.stops);
+    Command({{"action","handCommit"},{"name","Suspension regression"}});
+    Check(!RoutePlanningService::View().handDraft,"a preserved draft can still be saved after returning");
+
+    for(int count=0;count<=1;++count){
+        Command({{"action","handStart"},{"sceneId",1}});
+        if(count)Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
+        RoutePlanningService::MapUnavailable();
+        Check(RoutePlanningService::View().handDrawnActive&&RoutePlanningService::View().handDrawnCount==count,
+            "empty and single-point hand drawings survive a temporary interruption");
+        RoutePlanningService::ObserveMap(1,original.stops);
+        Command({{"action","handCancel"}});
+    }
+
+    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
+    RoutePlanningService::MapUnavailable();
+    RoutePlanningService::MapClosed();
+    const auto closed=RoutePlanningService::View();
+    Check(!closed.handDrawnActive&&closed.handDrawnCount==0,
+        "confirmed map closure cancels an active drawing even after suspension cleared observedScene");
+    RoutePlanningService::MapClosed();
+    Check(RoutePlanningService::View().revision==closed.revision,"repeated map-closed observations are idempotent");
+
+    RoutePlanningService::ObserveMap(1,original.stops);
+    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
+    Command({{"action","handFinish"}});
+    RoutePlanningService::MapUnavailable();
+    RoutePlanningService::MapClosed();
+    Check(RoutePlanningService::View().handDrawnPending&&RoutePlanningService::View().handDrawnCount==1,
+        "confirmed map closure retains a draft explicitly finished before closing");
+    RoutePlanningService::ObserveMap(1,original.stops);
+    Command({{"action","handDiscard"}});
+
+    Command({{"action","new"},{"sceneId",1}});
+    Command({{"action","setStart"},{"sceneId",1},{"x",100.0},{"y",0.0}});
+    Command({{"action","add"},{"keys",Json::array({AutoRoute::Key(original.stops.back())})}});
+    Command({{"action","generate"}});
+    const auto deadline=Clock::now()+3s;
+    while(!RoutePlanningService::View().preview&&Clock::now()<deadline)std::this_thread::sleep_for(10ms);
+    const auto planning=RoutePlanningService::View();
+    Check(planning.preview.has_value(),"selection suspension fixture has a generated preview");
+    RoutePlanningService::MapUnavailable();
+    const auto pausedPlanning=RoutePlanningService::View();
+    Check(pausedPlanning.enabled&&SelectionKeys(pausedPlanning.selected)==SelectionKeys(planning.selected)&&
+        pausedPlanning.preview&&planning.preview&&AutoRoute::SameOrder(pausedPlanning.preview->stops,planning.preview->stops),
+        "temporary unavailability preserves selection mode, selected points and generated preview");
+    RoutePlanningService::ObserveMap(1,original.stops);
+    Command({{"action","end"}});
+
+    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
+    RoutePlanningService::MapUnavailable();
+    RoutePlanningService::ObserveMap(2,{});
+    Check(!RoutePlanningService::Command({{"action","handPoint"},{"x",10.0},{"y",20.0}}).value("accepted",false)&&
+        RoutePlanningService::View().handDrawnCount==1,"a different map cannot append points to a retained draft");
+    RoutePlanningService::ObserveMap(1,original.stops);
+    Check(RoutePlanningService::View().handDrawnActive&&RoutePlanningService::View().handDrawnCount==1,
+        "returning from another map preserves the original draft");
+    RoutePlanningService::MapUnavailable();
+    RoutePlanningService::SessionStopped();
+    Check(!RoutePlanningService::View().handDrawnActive&&RoutePlanningService::View().handDrawnCount==0,
+        "stopping the game session still retires its unsaved active draft");
+
+    RoutePlanningService::ObserveMap(1,original.stops);
+    Command({{"action","handStart"},{"sceneId",1}});
+    Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
+    const auto oldProfileGeneration=RoutePlanningService::View().generation;
+    RoutePlanningService::MapUnavailable();
+    DrawItemBase::markerProfile="focus-other-profile";
+    Command({{"action","state"}});
+    Check(!RoutePlanningService::View().handDrawnActive&&RoutePlanningService::View().handDrawnCount==0,
+        "switching profile while suspended clears the previous profile's unsaved drawing");
+    Check(!RoutePlanningService::Command({{"action","handPoint"},{"profileId","local"},{"x",1.0},{"y",2.0},
+        {"expectedGeneration",oldProfileGeneration}}).value("accepted",false),
+        "input from the old profile is rejected after a suspended profile switch");
+    DrawItemBase::markerProfile="local";
+    Command({{"action","state"}});
 }
 
 void VerifyViewportSelection(const AutoRoute::Plan& source){
@@ -1062,6 +1195,11 @@ int main(int argc,char** argv){
     const bool failSave=argc>2&&std::string(argv[2])=="save-failure";
     try{
         const auto original=Prepare();const auto originalIds=Ids(original);const auto oldKey=AutoRoute::Key(original.stops.front());
+        if(argc>2&&std::string(argv[2])=="map-suspension"){
+            VerifyMapSuspension(original);
+            RoutePlanningService::Shutdown();
+            std::cout<<"Map suspension harness failures="<<failures<<'\n';return failures?1:0;
+        }
         Pump([]{return false;},400ms);
         Check(AutoRoute::Key(RoutePlanningService::View().active->stops.front())==oldKey,"default-off service never reorders from observations");
         HANDLE held=INVALID_HANDLE_VALUE;

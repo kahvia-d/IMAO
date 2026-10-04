@@ -277,6 +277,52 @@ void TestMinimapResumePolicy() {
 }
 
 void TestMapUiStateController() {
+    // Player log 2026-10-04 14:33:59: dragging hides the zoom strip, the
+    // verified map compass remains, and the task-icon probe falsely hits 6.
+    MapUiStateController dragging;
+    dragging.Update({true, false});
+    dragging.Update({true, false});
+    MapFrameEvidence conflict;
+    conflict.compassVisible = true;
+    conflict.compassVerified = true;
+    conflict.minimapVisible = true;
+    conflict.minimapAbsentLongEnough = false;
+    Expect(BigMapEvidence(conflict), "verified map compass outweighs a task-icon false positive during dragging");
+    Expect(BigMapMarkersVisible(conflict), "task-icon false positive must not suppress a verified map surface");
+    Expect(!conflict.GameplayHudVisible(), "verified map widgets prevent false gameplay HUD evidence");
+    for (int frame=0; frame<4; ++frame) {
+        const auto dragState=dragging.Update({BigMapEvidence(conflict), conflict.GameplayHudVisible()});
+        Expect(dragState.current==MapUiState::BigMap, "conflicting map probes must not enter gameplay while dragging");
+        Expect(!ConfirmedMapClosed(dragState.current, conflict.GameplayHudVisible(), true, true),
+            "dragging probe conflict must not cancel the active hand drawing");
+    }
+    auto controlsConflict=conflict;
+    controlsConflict.compassVerified=false;
+    controlsConflict.controlsVisible=true;
+    Expect(!controlsConflict.GameplayHudVisible() && BigMapEvidence(controlsConflict),
+        "current map controls also outweigh the weak task-icon hit");
+    auto closedMap=conflict;
+    closedMap.compassVerified=false;
+    closedMap.anchorFresh=true;
+    Expect(closedMap.GameplayHudVisible(), "old viewport anchor and colour alone cannot hide genuine gameplay HUD");
+    // Missing registration and widgets is unknown, never a closure signal.
+    for (int frame=0; frame<12; ++frame) {
+        const auto lost=dragging.Update({false, false});
+        Expect(!ConfirmedMapClosed(lost.current,false,true,true), "lost map registration must preserve the draft");
+    }
+    dragging.Update({true,false});
+    Expect(dragging.Update({true,false}).current==MapUiState::BigMap,
+        "map detection recovers after the temporary recognition gap");
+    dragging.Update({false,true});
+    Expect(ConfirmedMapClosed(dragging.Update({false,true}).current,true,true,true),
+        "actual gameplay without verified map widgets still confirms closure");
+    Expect(ConfirmedMapClosed(MapUiState::Gameplay,true,true,true),
+        "fresh gameplay evidence in the display context confirms map closure");
+    for(const auto state : {MapUiState::Unknown,MapUiState::BigMap,MapUiState::EnteringBigMap,MapUiState::LeavingBigMap})
+        Expect(!ConfirmedMapClosed(state,true,true,true),"an unconfirmed UI transition cannot close a drawing session");
+    Expect(!ConfirmedMapClosed(MapUiState::Gameplay,false,true,true),"missing HUD evidence cannot cancel a draft");
+    Expect(!ConfirmedMapClosed(MapUiState::Gameplay,true,false,true),"a background game frame cannot cancel a draft");
+    Expect(!ConfirmedMapClosed(MapUiState::Gameplay,true,true,false),"stale capture evidence cannot cancel a draft");
     MapUiStateController controller;
     auto update = controller.Update({ false, true });
     Expect(update.current == MapUiState::Unknown,
