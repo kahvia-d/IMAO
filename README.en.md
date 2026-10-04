@@ -23,6 +23,8 @@
 
 **The KuroBBS interactive map, overlaid right on top of your game window.**
 
+IMAO is a free and open-source unofficial community map tool for Wuthering Waves.
+
 Markers, routes and collection progress are drawn inside the game, so you no longer
 <kbd>Alt</kbd>+<kbd>Tab</kbd> back and forth while exploring.
 
@@ -39,6 +41,14 @@ Go to **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** and downl
 
 > In that list, anything starting with `ext-` is the **KuroBBS sync browser extension**, not the
 > program. The program package is `IMao-v…-windows-x64.zip`.
+
+### Download channels
+
+- **[GitHub Releases](https://github.com/kahvia-d/IMAO/releases/latest)** is this project's official release page. Complete installation packages are free to download, and GitHub is also an in-app update source.
+- **QQ group files** in the user group **`1109700733`** offer complete installation packages for free, primarily as a backup channel for users in mainland China. These packages are downloaded manually; the group is not an in-app automatic update source.
+- **[MirrorChyan](https://mirrorchyan.com/zh/projects?rid=IMAO&source=imao_app_settings)** is an optional third-party high-speed download and update service that requires a MirrorChyan CDK. It is also an optional in-app update source.
+
+IMAO itself is permanently free, with no paid edition, membership tier or feature unlocks. MirrorChyan charges for network distribution and update services and **does not unlock any additional IMAO features**. Using IMAO without MirrorChyan does not affect its normal functionality; you can still get the software free from GitHub Releases or QQ group files.
 
 | Item | Requirement |
 | :--- | :--- |
@@ -76,14 +86,14 @@ Go to **[Releases](https://github.com/kahvia-d/IMAO/releases/latest)** and downl
 - **Xbox gamepad support.** Open the tool palette, the marker assistant, complete nearby markers,
   collect a whole group and zoom guide images — all without touching the keyboard.
 - **KuroBBS progress sync.** With the [companion browser extension](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg),
-  local completion records and your KuroBBS account are merged both ways (union only — nothing is ever un-checked).
+  local records and your own KuroBBS account sync both ways: the initial merge takes the union, while later syncs also reflect user cancellations.
 - **A signed update chain.** Manifests are ECDSA P-256 signed, every package is SHA-256 verified and
   executables are rejected inside map packages. Updates only touch the program and map data —
   your completion records, routes, filters and personal settings are **never overwritten**.
 - **A choice of download source.** Settings → "Download source" offers **GitHub** (free, but often unreachable
   from mainland China) or
-  [MirrorChyan](https://mirrorchyan.com/zh/projects?rid=IMAO&source=imao_app_settings) (reachable there, but
-  downloads need a CDK). The choice decides **both the update check and the download**.
+  [MirrorChyan](https://mirrorchyan.com/zh/projects?rid=IMAO&source=imao_app_settings) (an optional third-party high-speed download and update service
+  requiring a MirrorChyan CDK, with no additional feature unlocks). The choice decides **both the update check and the download**.
 
 <!-- markdownlint-disable -->
 
@@ -167,9 +177,15 @@ input, so the game's own action for the same button may fire at the same time.
 
 ### KuroBBS progress sync extension
 
-The tool can merge its progress with your [KuroBBS map](https://www.kurobbs.com/mc/map/) account:
-markers completed only on KuroBBS are pulled into the local profile, markers completed only locally are
-pushed back. It is a **union** — nothing is ever un-checked on either side.
+The tool can **sync progress both ways** with your [KuroBBS map](https://www.kurobbs.com/mc/map/) account.
+The initial merge takes the union of completed markers. Local completions the cloud has never recorded
+are kept and uploaded. Later, if you cancel a cloud completion recorded in the sync baseline, that
+cancellation is reflected locally. With automatic sync enabled, local completion and cancellation
+changes are also uploaded to your own KuroBBS account.
+
+IMAO does not modify or fabricate public KuroBBS maps, markers or other shared content. Account progress
+sync only takes place after you actively sign in to and connect your own KuroBBS account, using your own
+login session to synchronise only your own marker completion status.
 
 **Edge Add-ons (recommended): [IMao KuroBBS Progress Sync](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg)**
 
@@ -182,7 +198,7 @@ Once installed:
 1. In the tool, open **Settings → KuroBBS marker progress sync** and click "Register/repair browser bridge".
 2. Open and sign in to the KuroBBS map, click the extension icon, then "Connect desktop app".
 3. Back in the tool, "Preview sync" to see the difference, then "Apply sync". With automatic sync on,
-   completing a marker in game is pushed immediately and everything is reconciled every 10 minutes.
+   local completion or cancellation changes are pushed immediately and everything is reconciled every 10 minutes.
 
 Credentials travel only over the browser's official Native Messaging channel to the local program, which
 stores them encrypted with **DPAPI** under the current Windows user. The extension **does not read
@@ -191,26 +207,31 @@ session the KuroBBS map page already holds.
 
 ### Supported regions
 
-**13 regions, 51 sub-regions, about 23,800 markers** (527 icon types). Regions are grouped by country in
+**14 regions, 52 sub-regions, about 24,000 markers** (539 icon types). Regions are grouped by country in
 Settings and can be disabled, deleted and re-downloaded (**changes apply after a full restart**).
 
-One further map is archived but **not open yet**: **Mengshu Tianluo (梦枢天罗)**, an independent sub-world
-under Huanglong (Kuro state 912, 20 item types / 231 markers). Its points, catalog, icons and tiles are in
-the repository, its map pack was built from a measured tile footprint and passes its reference check
-(2.7 px), and its four-point calibration was fitted from four in-game captures on 2026-09-30 (0.53 px
-maximum error); only the in-game release review is left, so it stays out of filters, marker labels and
-visual localization. See [the calibration samples guide](Docs/KuroSceneCalibrationSamples.md).
+**Mengshu Tianluo (梦枢天罗) is open and supported**, an independent sub-world
+under Huanglong (Kuro state 912, 24 item types / 243 markers). Its marker data, region metadata, icons,
+visual localisation features, calibration data and upstream imagery coverage/hash records are in the repository.
+Its regional visual feature pack was generated from measured upstream imagery coverage and passes its
+in-game minimap reference check (2.7 px); original map imagery is not committed.
+Its four-point calibration was fitted from four in-game captures on 2026-09-30 (0.53 px
+maximum error). It has passed local in-game trial approval and supports filters, marker labels and
+visual localisation; the full four-check verification and baseline regression are still ongoing.
+See [the calibration samples guide](Docs/KuroSceneCalibrationSamples.md).
 
 | Country | Regions |
 | :--- | :--- |
-| Huanglong (瑝珑) | Jinzhou (今州), Mengzhou (梦州) (+ Mengshu Tianluo, not open yet) |
+| Huanglong (瑝珑) | Jinzhou (今州), Mengzhou (梦州), Mengshu Tianluo (梦枢天罗) |
 | Black Shores (黑海岸) | Black Shores Archipelago (黑海岸群岛), Tethys' Deep (泰缇斯之底), Time Rift Ruins (时隙废都) |
 | Rinascita (黎那汐塔) | Ragunna (拉古那), Septimont (七丘), Lower Vault (下层金库), Avinoleum (阿维纽林), Fabricatorium (隐海试验场) |
 | Roy's Icefield (罗伊冰原) | Icefield Surface (冰原地表), Lahai-Roi (拉海洛), Darkplain (黯原) |
 
-A single region pack ranges from about 3 MB (Time Rift Ruins) to about 211 MB (Lahai-Roi). Regions that
-ship with the program cost no extra download. Mengshu Tianluo is 12 tiles (about 9 MB), the same order of
-magnitude as Tethys' Deep and Time Rift Ruins.
+Current regional visual localisation resource packs occupy about 3.3 MiB (Time Rift Ruins) to 270 MiB
+(Lahai-Roi) on disk, including floor features. These are final visual resource sizes, not upstream imagery
+sizes or compressed download sizes. Regions bundled with the program need no separate download.
+Mengshu Tianluo's upstream imagery was confirmed at 12 tile positions and used to generate and validate
+localisation features; those original PNGs are not distributed with the program.
 
 ### FAQ and known limits
 
@@ -229,7 +250,7 @@ magnitude as Tethys' Deep and Time Rift Ruins.
 - **Some places cannot be located from the minimap.**
   Dark, fine-contour art styles, large water surfaces and sparse reefs (parts of Chengxiao Mountain and
   Tethys, for example) have too few features and matching is conservatively rejected there.
-  **Opening the big map once solves it** — big-map rendering matches the tiles the tool uses, so it
+  **Opening the big map once solves it** — the in-game big map matches the imagery used to build localisation features, so it
   localises very reliably.
 - **Does the game have to be 16:9?**
   No. The game scales its HUD by `min(width/1600, height/900)` and anchors each widget to the screen
@@ -241,19 +262,21 @@ magnitude as Tethys' Deep and Time Rift Ruins.
   The program treats them all as the current location instead of guessing one and mislabelling it as
   upstairs or downstairs.
 - **When will new regions be available?**
-  A new region needs four-point calibration, its own tile feature pack and in-game validation.
+  A new region needs four-point calibration, its own visual localisation feature pack and in-game validation.
   Lower Vault, Darkplain and Time Rift Ruins are calibrated from local captures and usable today, while
   the full four-check verification and the 113-sample regression are still outstanding. Mengshu Tianluo
-  (archived 2026-09-30) has its pack and calibration in place and is waiting for the in-game release review.
+  (archived 2026-09-30) has its regional feature pack and calibration in place and has passed local in-game
+  trial approval, so it is usable; the full four-check verification and baseline regression are still ongoing.
 - **Does it cost frame rate?**
   The overlay only paints the minimap and status-bar area (about **3.3%** of a 2560×1440 screen), and
   screen capture is limited to the regions exploration needs — measured capture cost dropped from about
   13 ms to about 6 ms. If display or frame rate looks wrong, switch the overlay presentation mode or
   adjust the refresh interval in Settings.
 - **Is it safe for my account?**
-  The tool **only captures the visible game window and runs image matching**. It **does not read or write
-  game memory and does not send any input to the game.** It cannot and does not claim anything about
-  third-party anti-cheat behaviour — please judge for yourself before using it.
+  IMAO's positioning and overlays use **visible game-screen capture, image feature matching and coordinate
+  recognition**. It does not read or modify game process memory, inject code or send automated gameplay
+  input. Route planning and completion marking do not perform automatic navigation, combat or collection
+  in the game. It cannot guarantee how third-party anti-cheat systems judge the tool — please assess this before using it.
 
 </details>
 
@@ -304,10 +327,22 @@ This project continues the work of
 - WinUI components: [CommunityToolkit/Windows](https://github.com/CommunityToolkit/Windows),
   [microsoft-ui-xaml](https://github.com/microsoft/microsoft-ui-xaml), [WinUIEx](https://github.com/dongle-the-gadget/WinUIEx)
 
-### Data sources
+### Data and localisation resource sources
 
-- Map and marker data: [KuroBBS Wuthering Waves map](https://www.kurobbs.com/mc/map/)
-- Tile imagery: KuroBBS public map endpoints
+- **Markers, categories and related map information:** from publicly accessible [KuroBBS Wuthering Waves map data](https://www.kurobbs.com/mc/map/).
+- **Visual localisation features:** build tools read publicly accessible 1024×1024 KuroBBS map imagery, convert it to greyscale, extract SURF keypoints and descriptors, and transform them into IMAO's map/world coordinates to generate localisation resources.
+- **Original map imagery:** build-time input only, archived in local directories such as `map-regions/tiles/...`. Original tiles and layered imagery are excluded by `.gitignore`; only manifest/hash records are committed. **Original map tiles are not included in the repository or release packages.**
+- **In-game validation references:** some regional feature packs include `reference-minimap.png` screenshots captured by maintainers from visible gameplay, solely for localisation calibration and validation. These are not original KuroBBS map tiles.
+
+Build pipeline: `publicly accessible map imagery → greyscale → SURF feature extraction → coordinate conversion → IMF feature data → IMX visual index`.
+Regional localisation resources in release packages (internally named `KuroTilePacks`) primarily contain
+keypoints, descriptors, spatial coordinates, `.imf` feature data, `.imx` visual search/index data and
+manifests — **not original KuroBBS map imagery**.
+
+The map-data and visual localisation build workflows use data and map resources normally made publicly
+accessible to ordinary KuroBBS map web users. They do not rely on cracking, decryption or bypassing
+authentication, paywalls or technical access controls to obtain these resources; public accessibility
+does not automatically grant permission to use them.
 
 Thanks to everyone who developed, tested and reported issues — you are what makes this tool better! (\*´▽｀)ノノ
 
@@ -322,11 +357,12 @@ If this tool helped you, **please give it a Star** — it is the biggest support
 
 ## Disclaimer
 
-- This software is released under the [GNU General Public License v3.0](LICENSE) and is **free of charge**.
-- It is open source and free, for learning and exchange only. If you run into a vendor charging for
-  power-levelling with this software, the problems and consequences that arise are unrelated to this project.
-- This project is not affiliated with, authorised, sponsored or endorsed by Kuro Games. Rights to game
-  assets and map data belong to their respective owners.
-- Map and marker data comes from public KuroBBS data. Please keep complying with the applicable terms of
-  the upstream site and the game before redistributing or long-term hosting it.
-- Any consequences of using this software are borne by the user.
+- IMAO is a free and open-source unofficial community map tool for Wuthering Waves. Its software code is provided under the [GNU General Public License v3.0](LICENSE), with no additional restrictions on its uses.
+- GPL-3.0 applies to software code and project-owned content that this project has the right to license. Names, trademarks, images, icons, guides and other materials involving Wuthering Waves, KuroBBS or other third parties remain subject to the rights of their respective rights holders or content authors.
+- IMAO is not affiliated with, authorised, sponsored, or endorsed by Kuro Games or KuroBBS. Rights to Wuthering Waves, KuroBBS, related names, trademarks, maps, images, icons, game assets and other third-party content belong to their respective rights holders.
+- Markers, categories and related map information come from publicly accessible [KuroBBS Wuthering Waves map data](https://www.kurobbs.com/mc/map/). Build tools extract SURF features from publicly accessible map imagery, convert their coordinates and generate visual indices to produce localisation resources.
+- **Original KuroBBS map tiles are not included in the Git repository or release packages.** Distributed regional localisation resources contain machine-vision features and index data, not original map imagery; the few in-game minimap reference screenshots are solely for localisation calibration and validation.
+- IMAO does not modify or fabricate public KuroBBS maps, markers or other shared content. Account progress sync only takes place after users actively sign in to and connect their own KuroBBS accounts, using their own login sessions to synchronise their own marker completion status.
+- Game positioning and overlays use visible-screen capture, image feature matching and coordinate recognition. IMAO does not read or modify game process memory, inject code, send automated gameplay input or perform automatic navigation, combat or collection in the game.
+- IMAO itself is permanently free, with no paid edition, membership tier or feature unlocks. GitHub Releases and QQ group files both provide free access. MirrorChyan is only an optional third-party high-speed download and update service requiring a MirrorChyan CDK; it unlocks no additional IMAO features, and not using it does not affect normal functionality.
+- This project cannot guarantee how third-party platforms or anti-cheat systems will judge the tool; please assess this yourself before using it. Rights holders or content authors with concerns about a specific item's source, attribution or use are welcome to contact the maintainers through [GitHub Issues](https://github.com/kahvia-d/IMAO/issues). We will review the specific content and correct it, add attribution, adjust it or remove it as appropriate.
