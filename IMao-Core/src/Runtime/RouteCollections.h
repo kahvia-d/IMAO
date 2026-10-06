@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace AutoRoute {
 // The name the default collection always carries. It lives here because the core is the only side
@@ -38,6 +39,10 @@ public:
     struct Index {
         std::string current = DefaultCollectionId;
         std::vector<Collection> collections;
+        std::map<std::string,std::vector<std::string>> orders;
+        std::map<std::string,bool> autoRotate;
+        std::uint64_t orderRevision=0;
+        bool writable=true; // Unreadable/future indexes remain recoverable on disk.
     };
 
     explicit RouteCollections(std::filesystem::path directory) : root(ResolveSavedRoutesRoot(std::move(directory))) {}
@@ -51,13 +56,29 @@ public:
         const auto path = Path(profile);
         std::error_code error;
         if (!std::filesystem::exists(path, error)) return Index{};
+        const auto unreadable=[] { Index value;value.writable=false;return value; };
         Index index;
         try {
-            if (std::filesystem::file_size(path, error) > 2 * 1024 * 1024) return Index{};
+            if (std::filesystem::file_size(path, error) > 2 * 1024 * 1024) return unreadable();
             std::ifstream input(path, std::ios::binary);
-            if (!input) return Index{};
+            if (!input) return unreadable();
             const auto document = Json::parse(input);
-            if (document.value("formatVersion", 0) != 1) return Index{};
+            const int version=document.value("formatVersion",0);
+            if(version!=1&&version!=2)return unreadable();
+            if(version==2){
+                index.orderRevision=document.value("orderRevision",std::uint64_t{});
+                const auto orders=document.value("orders",Json::object());
+                for(const auto& [id,order]:orders.items()){
+                    if(!IsRouteComponent(id)||!order.is_array())continue;
+                    auto& ids=index.orders[id];for(const auto& value:order){
+                        if(!value.is_string())continue;const auto route=value.get<std::string>();
+                        if(IsRouteComponent(route)&&std::none_of(ids.begin(),ids.end(),[&](const auto& existing){return SameRouteId(existing,route);}))ids.push_back(route);
+                    }
+                }
+                const auto rotations=document.value("autoRotate",Json::object());
+                for(const auto& [id,enabled]:rotations.items())
+                    if(IsRouteComponent(id)&&enabled.is_boolean())index.autoRotate[id]=enabled.get<bool>();
+            }
             index.current = NormalizeCollectionId(document.value("current", std::string{DefaultCollectionId}));
             if (document.contains("collections") && document.at("collections").is_array())
                 for (const auto& item : document.at("collections")) {
@@ -76,12 +97,13 @@ public:
                     index.collections.push_back(std::move(collection));
                 }
         } catch (const std::exception&) {
-            return Index{};
+            return unreadable();
         }
         return Normalized(std::move(index));
     }
 
     void Save(const std::string& profile, const Index& value) const {
+        if(!value.writable)throw std::runtime_error("合集索引无法读取，原文件已保留，请修复后重试");
         const auto index = Normalized(value);
         Json items = Json::array();
         for (const auto& collection : index.collections) {
@@ -91,8 +113,8 @@ public:
             items.push_back({{"id", collection.id}, {"name", collection.name},
                 {"createdUnixMs", collection.createdUnixMs}});
         }
-        WriteTextAtomically(Path(profile), Json{{"formatVersion", 1}, {"current", index.current},
-            {"collections", std::move(items)}}.dump(2));
+        WriteTextAtomically(Path(profile), Json{{"formatVersion", 2}, {"current", index.current},
+            {"collections", std::move(items)},{"orders",index.orders},{"autoRotate",index.autoRotate},{"orderRevision",index.orderRevision}}.dump(2));
     }
 
     /// <summary>A collection the player created, or null. The default collection is not in the list.</summary>
@@ -157,6 +179,9 @@ public:
     /// </summary>
     static Index Normalized(Index index) {
         if (!Exists(index, index.current)) index.current = DefaultCollectionId;
+        std::erase_if(index.orders,[&](const auto& item){return !Exists(index,item.first);});
+        std::erase_if(index.autoRotate,[&](const auto& item){return !Exists(index,item.first);});
+        for(const auto& [collection,ids]:index.orders){ValidateRouteComponent(collection);for(const auto& id:ids)ValidateRouteComponent(id);}
         return index;
     }
 private:

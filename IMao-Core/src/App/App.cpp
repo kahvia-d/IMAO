@@ -15,6 +15,7 @@
 #include "..\ImguiDraw\InteractiveInterface\Notification.h"
 #include "../ImguiDraw/Routes/DrawRouteOnMap.h"
 #include "../ImguiDraw/Routes/DrawRouteOnMinMap.h"
+#include "../ImguiDraw/Items/DrawMarkerInteraction.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/FramePacer.h"
@@ -2676,11 +2677,7 @@ void App::PollHandDrawnRoute() {
         return;
     }
     if (scene != view.sceneId || scene != view.handDrawnSceneId) return;
-    const auto result = RoutePlanningService::Command({{"action", "handPoint"}, {"profileId", view.profileId},
-        {"sceneId", scene}, {"x", roc.x}, {"y", roc.y},
-        {"expectedSceneId", view.sceneId}, {"expectedGeneration", view.generation}});
-    if (!result.value("accepted", false))
-        Notification::AddError(NotificationDatas(result.value("message", "手绘取点失败"), 5));
+    DrawMarkerInteraction::QueueHandPointAtCursor();
 }
 
 void App::Thread_KeyMonitoring_SavePlayerNearItemPoint() {
@@ -2932,7 +2929,6 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
     // the renderer draws it as the solid, arrowed path the player is building. That covers a drawing
     // in progress and one that was finished but not saved yet — it stays on the map until the player
     // decides to keep or discard it.
-    if (routeView.handDraftPreview && routeView.handDraftPreview->stops.size())
-        appendRoute(*routeView.handDraftPreview, true, routeView.handDraftPreview->handDraft);
+
     overlayFrames.Publish(std::move(frame));
 }

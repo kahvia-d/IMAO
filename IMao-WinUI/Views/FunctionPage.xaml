@@ -16,7 +16,7 @@
                     <TextBlock Text="选点：单点选择 · 矩形框选 · 自由套索 · 加入当前视野 · 指定起点。框选和套索用鼠标拖动画，Shift + 左键拖拽是临时框选，Esc 取消还没提交的选区；最多 500 个目标，点过的点再点一次就移除。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                     <TextBlock Text="成线：生成预览看清访问顺序，再点开始指引。按平面距离排列，不代表可通行路径，也不含爬升或绕行距离；新预览不会顶掉正在走的路线。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                     <TextBlock Text="导航：程序画实线指向当前目标；到了就确认完成，不想去就跳过（可撤销）。偏离路线后可以重新规划或让实时规划自己重排。走怪点/采集物路线时，打开「刷怪采集」就能在目标附近自动标记，这个开关记在路线自己身上。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                    <TextBlock Text="手绘：在大地图上点一下记一个点，第一个点是起点、最后一个是终点；点在点位上就连到那个点位，点在空地上生成带编号的标记。Esc 结束，画好的点会留着等你保存。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <TextBlock Text="手绘：单击空白新增自由点，点击可见点位加入画布；从一个点按住左键拖到另一个点建立或修改路线方向。悬停点位后连续按两次退格键可移除，Ctrl+Z 撤销，Esc 结束编辑并保留待保存草稿。已有手绘路线可在游戏内路线列表选中后点击顶部「修改路线」。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                     <TextBlock Text="暂停只停指引，退出导航才结束这次活动路线；删除路线不影响点位的完成记录。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
@@ -45,7 +45,10 @@
                             <Button Grid.Column="4" Content="退出批量" Click="RouteBatchExit_Click" />
                         </Grid>
                     </StackPanel>
+                    <Grid x:Name="RouteSortSurface">
                     <ListView x:Name="AutoRouteSavedRoutes" MaxHeight="420" SelectionMode="Single" HorizontalContentAlignment="Stretch">
+                        <ListView.ItemContainerTransitions><TransitionCollection /></ListView.ItemContainerTransitions>
+                        <ListView.ItemsPanel><ItemsPanelTemplate><StackPanel /></ItemsPanelTemplate></ListView.ItemsPanel>
                         <ListView.ItemTemplate><DataTemplate>
                             <StackPanel Spacing="4" Padding="0,4">
                                 <CheckBox Content="{Binding DisplayLabel}" IsChecked="{Binding Selected, Mode=TwoWay}" Click="RouteRowCheck_Click" FontSize="17" FontWeight="SemiBold" Visibility="{Binding Batch, Converter={StaticResource FlagToVisibility}}" />
@@ -64,6 +67,14 @@
                             </StackPanel>
                         </DataTemplate></ListView.ItemTemplate>
                     </ListView>
+                    <Canvas IsHitTestVisible="False">
+                        <Border x:Name="RouteDragHighlight" Background="#285FD3E5" BorderBrush="#FF5FD3E5" BorderThickness="2" CornerRadius="8" Visibility="Collapsed" />
+                        <Border x:Name="RouteDragInsertion" Background="#FFF7FEFF" Height="4" CornerRadius="2" Visibility="Collapsed" />
+                        <Border x:Name="RouteDragHint" Background="#F0101B25" BorderBrush="#FF5FD3E5" BorderThickness="1" CornerRadius="6" Padding="10,4" Visibility="Collapsed">
+                            <TextBlock x:Name="RouteDragHintText" Foreground="#FF8DE3EE" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        </Border>
+                    </Canvas>
+                    </Grid>
                     <TextBlock x:Name="AutoRouteEmptyHint" Text="还没有保存的路线。选好点生成预览后，在游戏内工具台里保存；也可以直接在大地图上手绘一条。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" Visibility="Collapsed" />
                     <Grid x:Name="RouteActions" ColumnSpacing="8" HorizontalAlignment="Left">
                         <Grid.ColumnDefinitions>

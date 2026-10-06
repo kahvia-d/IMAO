@@ -23,7 +23,12 @@ namespace RoutePageRuntime
 // 这样这台机器上不需要游戏、不需要原生核心，也能看这一页真实渲染出来的样子。
 public partial class App : Application
 {
-    public App() => InitializeComponent();
+    public App()
+    {
+        InitializeComponent();
+        UnhandledException += (_, e) => File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "unhandled.log"),
+            DateTimeOffset.Now + " " + e.Message + "\n" + e.Exception + "\n");
+    }
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
@@ -111,6 +116,185 @@ public partial class App : Application
             log.WriteLine("METRIC active page=" + page.ActualHeight.ToString("F0"));
 
             var list = (ListView)page.FindName("AutoRouteSavedRoutes")!;
+            var originalRouteList = core.RoutePlanning;
+            Check(!list.CanDragItems&&!list.CanReorderItems&&!list.AllowDrop,"路线排序不调用管理员进程不支持的系统拖放");
+            list.SelectedItem=list.Items[1];
+            Check((bool)typeof(FunctionPage).GetMethod("BeginRouteDrag",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(page,null)!,"单合集允许开始排序");
+            Check(page.FindName("RouteDragHighlight") is Border { Visibility: Visibility.Visible } &&
+                page.FindName("RouteDragInsertion") is Border { Visibility: Visibility.Visible }, "拖动开始时显示源路线高亮及落点插入线");
+            var dragHighlight = (Border)page.FindName("RouteDragHighlight")!;
+            var dragLine = (Border)page.FindName("RouteDragInsertion")!;
+            var dragHint = (TextBlock)page.FindName("RouteDragHintText")!;
+            Check(dragHint.Text.Contains("手绘的一条") && dragHint.Text.Contains("第 2 / 3 位"), "提示指出源路线名字和当前排序位置");
+            Check(dragHighlight.Parent is Canvas { IsHitTestVisible: false }, "拖动反馈不阻挡鼠标输入");
+            await Task.Delay(80);host.UpdateLayout();
+            await Capture((FrameworkElement)page.FindName("RouteSortSurface")!, "route-drag-start.png");
+            var dragRows = list.ItemsSource;
+            core.PublishRoute(core.RoutePlanning with { Message = "拖动期间的导航状态更新" });
+            Check(ReferenceEquals(dragRows, list.ItemsSource), "拖动期间状态推送不替换路线容器或丢失本地顺序");
+            typeof(FunctionPage).GetMethod("SetRouteInsertionSlot", BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(page, new object[]{0});
+            Check(list.Items[0] is SavedAutomaticRoute { Id: "route-9" } && list.Items[1] is SavedAutomaticRoute { Id:"route-10" },
+                "悬停目标位置时源路线及其他路线留在原位，松开前不重排");
+            await Task.Delay(80);host.UpdateLayout();
+            Check(dragHint.Text.Contains("第 1 / 3 位") && dragHighlight.Width > 100 && dragHighlight.Height > 30,
+                "源路线仍高亮在原位，位置提示单独更新");
+            var sourceRow = (FrameworkElement)list.ContainerFromIndex(0);
+            double sourceTop = sourceRow.TransformToVisual(list).TransformPoint(new Windows.Foundation.Point(0,0)).Y;
+            Check(Math.Abs(Canvas.GetTop(dragLine) - Math.Max(0, sourceTop)) < 1,
+                "插入线位于拖动路线即将保存的位置");
+            var sourceRowAtOrigin = (FrameworkElement)list.ContainerFromIndex(1);
+            Check(Canvas.GetTop(dragHighlight) > Canvas.GetTop(dragLine), "源路线高亮与顶端插入位置分别显示");
+            int SlotAt(double y) => (int)typeof(FunctionPage).GetMethod("RouteInsertionSlotAt",BindingFlags.Instance|BindingFlags.NonPublic)!
+                .Invoke(page,new object[]{new Windows.Foundation.Point(8,y)})!;
+            Check(SlotAt(0)==0 && SlotAt(list.ActualHeight-1)==3, "鼠标在列表顶端或底端能选择首尾边界");
+            double middle = sourceRowAtOrigin.TransformToVisual(list).TransformPoint(new Windows.Foundation.Point(0,sourceRowAtOrigin.ActualHeight)).Y;
+            Check(SlotAt(middle-1)==2 && SlotAt(middle+1)==2, "行间边界两侧吸附到同一个插入位置");
+            await Capture((FrameworkElement)page.FindName("RouteSortSurface")!, "route-drag-moved.png");
+            typeof(FunctionPage).GetMethod("SetRouteInsertionSlot", BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(page, new object[]{3});
+            await Task.Delay(80);host.UpdateLayout();
+            Check(dragHint.Text.Contains("第 3 / 3 位") && Canvas.GetTop(dragLine) > 0,
+                "拖到合集末尾时提示和插入线跟随最后一位");
+            await Capture((FrameworkElement)page.FindName("RouteSortSurface")!, "route-drag-last.png");
+            double previousMaxHeight = list.MaxHeight;
+            var iconLastRow = (FrameworkElement)list.ContainerFromIndex(2);
+            double iconBottom = iconLastRow.TransformToVisual(list).TransformPoint(new Windows.Foundation.Point(0,iconLastRow.ActualHeight)).Y;
+            list.MaxHeight = iconBottom - 8;host.UpdateLayout();
+            typeof(FunctionPage).GetMethod("SetRouteInsertionSlot", BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(page, new object[]{3});
+            Check(dragLine.Visibility == Visibility.Visible && Canvas.GetTop(dragLine) + dragLine.Height <= list.ActualHeight + 0.1,
+                "末尾带图标的行被视口部分裁切时，末尾插入线仍在可见范围内");
+            await Capture((FrameworkElement)page.FindName("RouteSortSurface")!, "route-icon-bottom-insertion.png");
+            list.MaxHeight=previousMaxHeight;host.UpdateLayout();
+            typeof(FunctionPage).GetMethod("SetRouteInsertionSlot", BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(page, new object[]{0});
+            Check(!core.RouteCommands.Any(c=>c.Action=="collectionReorder"), "松开鼠标前不持久化预览顺序");
+            var beforeDropRows = list.ItemsSource;
+            var beforeDropRecords = list.Items.Cast<SavedAutomaticRoute>().ToDictionary(route=>route.Id);
+            var beforeDropContainers = list.Items.Cast<SavedAutomaticRoute>().Select((route,index)=>(route.Id,Container:list.ContainerFromIndex(index)))
+                .ToDictionary(entry=>entry.Id,entry=>entry.Container);
+            bool captureAnimation = Environment.GetCommandLineArgs().Contains("--animation-frames");
+            nint captureWindow = WinRT.Interop.WindowNative.GetWindowHandle(window);
+            async Task Frame(string name)
+            {
+                if(MapToolsRuntime.Native.Foreground != captureWindow) throw new InvalidOperationException("动画截帧需要测试窗口保持前台");
+                await MapToolsRuntime.Native.CaptureAsync(captureWindow,Path.Combine(AppContext.BaseDirectory,name));
+            }
+            if(captureAnimation)
+            {
+                // Move only the fixture page so the actual list fits in this test window.
+                page.RenderTransform=new TranslateTransform { Y=-400 };host.UpdateLayout();await Task.Delay(100);
+                await Frame("route-motion-before.png");
+            }
+            var animationClock=System.Diagnostics.Stopwatch.StartNew();
+            var drop = (Task)typeof(FunctionPage).GetMethod("CompleteRouteDragAsync",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(page,new object[]{true})!;
+            bool animationInProgress = !drop.IsCompleted;
+            Check(animationInProgress ? list.Items[0] is SavedAutomaticRoute { Id:"route-9" } : list.Items[0] is SavedAutomaticRoute { Id:"route-10" },
+                "松开后先在原布局上滑动，动画结束才提交最终顺序");
+            Check(ReferenceEquals(beforeDropRows,list.ItemsSource) && list.Items.Cast<SavedAutomaticRoute>().All(route=>ReferenceEquals(route,beforeDropRecords[route.Id])),
+                "松开重排通过原集合移动原路线，不替换ItemsSource或路线记录");
+            Check(!animationInProgress || list.Items.Cast<SavedAutomaticRoute>().Select((route,index)=>ReferenceEquals(beforeDropContainers[route.Id],list.ContainerFromIndex(index))).All(same=>same),
+                "滑动期间保留每条路线的原行容器，不先重建最终布局");
+            Check(!new Windows.UI.ViewManagement.UISettings().AnimationsEnabled || !drop.IsCompleted,
+                "开启系统动画时松开后有过渡过程而非立即跳变");
+            var animatedRows = list.ItemsSource;
+            Check(!animationInProgress || Canvas.GetZIndex((FrameworkElement)list.ContainerFromIndex(1)) >
+                Canvas.GetZIndex((FrameworkElement)list.ContainerFromIndex(0)), "被移动路线在过渡时显示于补位路线之上");
+            RoutePlanningState FreshRows(RoutePlanningState state) => state with {
+                SavedRoutes = state.SavedRoutes.Select(route => route with {
+                    Kinds = route.Kinds.Select(kind => kind with { }).ToArray()
+                }).ToArray()
+            };
+            core.PublishRoute(FreshRows(core.RoutePlanning) with { Message="过渡期间收到的新状态" });
+            Check(!animationInProgress || ReferenceEquals(animatedRows,list.ItemsSource), "过渡期间状态更新不重建容器或打断动画");
+            if(animationInProgress)
+            {
+                await Task.Delay(80);
+                Check(!drop.IsCompleted && list.Items[0] is SavedAutomaticRoute { Id:"route-9" } &&
+                    list.Items.Cast<SavedAutomaticRoute>().Select((route,index)=>ReferenceEquals(beforeDropContainers[route.Id],list.ContainerFromIndex(index))).All(same=>same),
+                    "动画中途仍在移动原容器，没有先刷新到最终顺序");
+                if(captureAnimation) await Frame("route-motion-middle.png");
+            }
+            await drop;
+            Check(!animationInProgress || animationClock.ElapsedMilliseconds>=200, "最终顺序在合成器完成滑动后提交，不提前截断动画");
+            if(captureAnimation) { await Frame("route-motion-after.png");page.RenderTransform=null; }
+            Check(ReferenceEquals(animatedRows,list.ItemsSource) && list.Items.Cast<SavedAutomaticRoute>().All(route=>ReferenceEquals(route,beforeDropRecords[route.Id])),
+                "动画结束在原集合提交移动，不替换整份列表或路线记录");
+            var animatedContainer = list.ContainerFromIndex(0);
+            Check(((InfoBar)page.FindName("AutoRouteMessage")!).Message.Contains("过渡期间收到的新状态"), "动画结束显示期间收到的最新状态");
+            var collectionChip = ((Panel)page.FindName("RouteCollectionChips")!).Children[0];
+            core.PublishRoute(FreshRows(core.RoutePlanning) with { Message="排序完成后的导航状态" });
+            Check(ReferenceEquals(animatedRows,list.ItemsSource) && ReferenceEquals(animatedContainer,list.ContainerFromIndex(0)),
+                "内容相同的新快照只更新状态提示，不刷新路线行");
+            Check(ReferenceEquals(collectionChip,((Panel)page.FindName("RouteCollectionChips")!).Children[0]),
+                "状态推送不重建未改变的合集按钮");
+            Check(((InfoBar)page.FindName("AutoRouteMessage")!).Message.Contains("排序完成后的导航状态"), "动画结束后显示最新状态");
+            Check(list.Items[1] is SavedAutomaticRoute { Id:"route-9" } && list.Items[2] is SavedAutomaticRoute { Id:"route-11" },
+                "插入后其他路线填补空位且保持相对顺序");
+            var reorder=core.RouteCommands.Last(c=>c.Action=="collectionReorder");
+            var reorderJson=System.Text.Json.JsonSerializer.SerializeToElement(reorder.Arguments);
+            Check(reorderJson.GetProperty("routeIds")[0].GetString()=="route-10"&&reorderJson.GetProperty("routeIds").GetArrayLength()==3,"拖拽提交完整合集顺序");
+            Check(reorderJson.GetProperty("profileId").GetString()=="fixture"&&reorderJson.GetProperty("collectionId").GetString()=="default"&&reorderJson.TryGetProperty("expectedOrderRevision",out _),"排序携带档案合集及冲突版本");
+            Check(list.SelectedItem is SavedAutomaticRoute { Id:"route-10" },"排序刷新保留选中路线");
+            Check(dragHighlight.Visibility == Visibility.Collapsed && dragLine.Visibility == Visibility.Collapsed &&
+                ((Border)page.FindName("RouteDragHint")!).Visibility == Visibility.Collapsed, "松开保存后清除拖动反馈");
+            var sortedState = core.RoutePlanning;
+            core.PublishRoute(sortedState with { SavedRoutes=sortedState.SavedRoutes.Select(route => route.Id=="route-10"
+                ? route with { Name="修改后的路线", StopCount=17, Kinds=[new RouteKindSummary { NameId="updated", Name="更新类型" }] } : route).ToArray() });
+            Check(list.Items[0] is SavedAutomaticRoute { Name:"修改后的路线", StopCount:17, KindLabel:"更新类型" } &&
+                list.SelectedItem is SavedAutomaticRoute { Id:"route-10" }, "实际路线内容改变仍更新列表且保留选中项");
+            core.PublishRoute(sortedState with { ProfileId="same-ids-in-other-profile" });
+            Check(!ReferenceEquals(animatedRows,list.ItemsSource) && list.SelectedItem is null,
+                "不同档案即使路线相同也刷新并清除旧档案选择");
+            core.PublishRoute(sortedState);
+            bool BeginDrag() => (bool)typeof(FunctionPage).GetMethod("BeginRouteDrag",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(page,null)!;
+            void MoveDrag(int index) => typeof(FunctionPage).GetMethod("SetRouteInsertionSlot",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(page,new object[]{index});
+            Task EndDrag(bool accepted) => (Task)typeof(FunctionPage).GetMethod("CompleteRouteDragAsync",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(page,new object[]{accepted})!;
+            core.PublishRoute(originalRouteList);list.SelectedItem=list.Items[0];
+            Check(BeginDrag(), "中间位置插入开始拖动");MoveDrag(2);
+            Check(list.Items[0] is SavedAutomaticRoute { Id:"route-9" }, "选择中间边界时原路线仍不移动");
+            await EndDrag(true);
+            Check(list.Items[0] is SavedAutomaticRoute { Id:"route-10" } && list.Items[1] is SavedAutomaticRoute { Id:"route-9" },
+                "向下插入中间边界正确扣除被移出的源路线");
+            core.PublishRoute(originalRouteList);list.SelectedItem=list.Items[0];
+            Check(BeginDrag(), "首条移动到末尾开始拖动");MoveDrag(3);await EndDrag(true);
+            Check(list.Items[2] is SavedAutomaticRoute { Id:"route-9" } && list.Items[0] is SavedAutomaticRoute { Id:"route-10" },
+                "释放到末尾正确追加且补齐首条空位");
+            core.PublishRoute(originalRouteList);list.SelectedItem=list.Items[1];
+            int saves = core.RouteCommands.Count(c=>c.Action=="collectionReorder");
+            Check(BeginDrag(), "排序完成后可以继续拖动");
+            MoveDrag(0);
+            await EndDrag(false);
+            Check(core.RouteCommands.Count(c=>c.Action=="collectionReorder")==saves && list.Items[0] is SavedAutomaticRoute { Id:"route-9" }, "取消或移出列表释放恢复权威顺序且不保存");
+            Check(dragHighlight.Visibility == Visibility.Collapsed && dragLine.Visibility == Visibility.Collapsed,
+                "取消后不残留高亮或插入线");
+            Check(BeginDrag(), "取消后允许重新拖动");
+            MoveDrag(-1);MoveDrag(99);
+            await EndDrag(true);
+            Check(core.RouteCommands.Count(c=>c.Action=="collectionReorder")==saves, "无效位置及未改变顺序不写入");
+            Check(BeginDrag(), "档案切换回归开始拖动");
+            MoveDrag(0);
+            var originalProfile = core.RoutePlanning;
+            core.PublishRoute(originalProfile with { ProfileId="other-profile" });
+            await EndDrag(true);
+            Check(core.RouteCommands.Count(c=>c.Action=="collectionReorder")==saves && list.Items[0] is SavedAutomaticRoute { Id:"route-9" }, "拖动期间切换档案不提交旧档案顺序");
+            core.PublishRoute(originalProfile);
+            list.SelectedItem=list.Items[1];
+            Check(BeginDrag(), "排序拒绝回归开始拖动");
+            MoveDrag(0);core.RejectReorder=true;
+            await EndDrag(true);core.RejectReorder=false;
+            Check(list.Items[0] is SavedAutomaticRoute { Id:"route-9" } && list.SelectedItem is SavedAutomaticRoute { Id:"route-10" }, "排序保存失败恢复权威顺序并保留选中路线");
+            Check(((InfoBar)page.FindName("AutoRouteMessage")!).IsOpen &&
+                ((InfoBar)page.FindName("AutoRouteMessage")!).Message.Contains("测试排序冲突"), "刷新权威列表后仍显示排序失败原因");
+            Check(BeginDrag(), "保存失败后允许再次拖动");
+            await EndDrag(false);
+            list.SelectedItem=list.Items[1];Check(BeginDrag(), "慢速排序回包开始拖动");MoveDrag(0);
+            core.ReorderGate=new TaskCompletionSource();
+            var slowDrop=EndDrag(true);
+            Check(!slowDrop.IsCompleted && ((ContentControl)page.FindName("AutoRouteActions")!).IsEnabled && list.IsEnabled,
+                "等待真实异步排序回包期间列表不切换到灰色禁用视觉");
+            Check(Descendants((Grid)page.FindName("RouteActions")!).OfType<Button>().All(button=>!button.IsEnabled), "等待排序保存期间阻止冲突的操作按钮");
+            core.ReorderGate.SetResult();await slowDrop;core.ReorderGate=null;
+            Check(Descendants((Grid)page.FindName("RouteActions")!).OfType<Button>().All(button=>button.IsEnabled), "排序完成恢复操作按钮");
+            core.PublishRoute(originalRouteList);
+            await Task.Delay(200);host.UpdateLayout();
             Check(list.Items.Count == 3, "三条保存路线都进了列表");
             Check(list.Items[0] is SavedAutomaticRoute { DisplayLabel: "● 测试路线 · 北岸" }, "当前在走的那条带圆点标记");
             Check(list.Items[1] is SavedAutomaticRoute { DisplayLabel: "手绘的一条" }, "非当前路线不带圆点");
@@ -214,6 +398,8 @@ public partial class App : Application
             Invoke(page, "CollectionChip_Click", allChip);
             await Task.Delay(150);
             Check(core.RouteCommands.Count == 0, "「全部」只是把列表铺开，不改变当前合集，也不发命令");
+            Check(!list.CanDragItems&&!list.CanReorderItems,"全部视图禁用排序");
+            Check(!BeginDrag(), "全部视图也禁止窗口内指针排序");
             Check(list.Items.Count == 4, "「全部」把四个合集里的路线都列出来");
             // 默认合集是系统的：不能改名，也不能删。
             Check(!((Button)page.FindName("RouteCollectionRename")!).IsEnabled &&
@@ -225,6 +411,8 @@ public partial class App : Application
             Check(batchBar.Visibility == Visibility.Collapsed, "平时没有批量工具条");
             Invoke(page, "RouteBatchEnter_Click", (Button)page.FindName("RouteCollectionNew")!);
             await Task.Delay(150);
+            Check(!list.CanReorderItems,"批量操作禁用排序");
+            Check(!BeginDrag(), "批量操作也禁止窗口内指针排序");
             Check(batchBar.Visibility == Visibility.Visible, "点「批量…」后批量工具条出现");
             Check(Descendants(list).OfType<CheckBox>().Count() == 4, "批量模式下每一行前面都有勾选框");
             Check(!((Button)page.FindName("AutoRouteDelete")!).IsEnabled,
@@ -237,6 +425,32 @@ public partial class App : Application
             Invoke(page, "RouteRowCheck_Click", boxes[0]);
             await Task.Delay(100);
             Check(((TextBlock)page.FindName("RouteBatchSummary")!).Text.Contains("已选 2 条"), "勾选数写在工具条上");
+
+            string? suggestedExportName = null;
+            FunctionPage.SaveBundlePath = suggestion => { suggestedExportName=suggestion; return null; };
+            boxes[1].IsChecked=false;
+            core.RouteCommands.Clear();Invoke(page,"RouteBatchExport_Click",boxes[0]);await Task.Delay(50);
+            Check(suggestedExportName=="测试路线 · 北岸.json", "只导出一条时默认文件名使用路线原名，不带当前路线圆点或日期");
+            Check(!core.RouteCommands.Any(entry=>entry.Action=="export") && batchBar.Visibility==Visibility.Visible,
+                "取消命名对话框不导出且保留批量选择");
+            boxes[1].IsChecked=true;
+            Invoke(page,"RouteBatchExport_Click",boxes[0]);await Task.Delay(50);
+            Check(suggestedExportName=="测试路线 · 北岸（2条路线）.json", "多条路线包按首条路线名加实际导出数量命名");
+            Check(FunctionPage.SuggestedRouteBundleFileName([new SavedAutomaticRoute { Id="fallback-id", Name="" }])=="fallback-id.json",
+                "未命名路线使用路线ID作为导出名");
+            Check(FunctionPage.SuggestedRouteBundleFileName([new SavedAutomaticRoute { Name=" 北岸:采集/怪物?*\"<>|\\. " }])=="北岸_采集_怪物_______.json",
+                "非法文件字符替换且移除末尾空格和句点");
+            Check(FunctionPage.SuggestedRouteBundleFileName([new SavedAutomaticRoute { Name="CON" }])=="_CON.json" &&
+                FunctionPage.SuggestedRouteBundleFileName([new SavedAutomaticRoute { Name="lpt1.txt" }])=="_lpt1.txt.json",
+                "Windows保留设备名称不会让保存对话框拒绝默认名");
+            boxes[0].IsChecked=boxes[1].IsChecked=false;boxes[2].IsChecked=boxes[3].IsChecked=true;
+            Invoke(page,"RouteBatchExport_Click",boxes[2]);await Task.Delay(50);
+            Check(suggestedExportName=="宝箱巡游.json", "命名及数量排除不能导出的损坏路线");
+            boxes[3].IsChecked=false;suggestedExportName=null;
+            Invoke(page,"RouteBatchExport_Click",boxes[2]);await Task.Delay(50);
+            Check(suggestedExportName is null && !core.RouteCommands.Any(entry=>entry.Action=="export"),
+                "全是损坏路线时不打开保存对话框或发起空导出");
+            boxes[2].IsChecked=false;boxes[0].IsChecked=boxes[1].IsChecked=true;
 
             FunctionPage.SaveBundlePath = _ => @"C:\fixture\selected.json";
             core.RouteCommands.Clear();
@@ -402,6 +616,8 @@ namespace IMao_WinUI.Services
         public List<FixtureRouteCommand> RouteCommands { get; } = [];
         public string LastFault { get; private set; } = "";
         public bool RejectConfigure { get; set; }
+        public bool RejectReorder { get; set; }
+        public TaskCompletionSource? ReorderGate { get; set; }
 
         public void PublishRoute(RoutePlanningState value)
         {
@@ -409,10 +625,23 @@ namespace IMao_WinUI.Services
             RoutePlanningChanged?.Invoke(this, value);
         }
 
-        public Task<RoutePlanningState> ExecuteRoutePlanningAsync(string action, object? arguments = null, CancellationToken cancellationToken = default)
+        public async Task<RoutePlanningState> ExecuteRoutePlanningAsync(string action, object? arguments = null, CancellationToken cancellationToken = default)
         {
             RouteCommands.Add(new(action, arguments));
-            return Task.FromResult(RoutePlanning);
+            if (RejectReorder && action == "collectionReorder") throw new InvalidOperationException("测试排序冲突");
+            if (action == "collectionReorder")
+            {
+                if(ReorderGate is { } gate) await gate.Task.WaitAsync(cancellationToken);
+                var command = System.Text.Json.JsonSerializer.SerializeToElement(arguments);
+                var ids = command.GetProperty("routeIds").EnumerateArray().Select(id=>id.GetString()!).ToArray();
+                var collection = command.GetProperty("collectionId").GetString();
+                PublishRoute(RoutePlanning with {
+                    SavedRoutes = ids.Select(id=>RoutePlanning.SavedRoutes.Single(route=>route.Id==id))
+                        .Concat(RoutePlanning.SavedRoutes.Where(route=>route.Collection!=collection)).ToArray(),
+                    CollectionOrderRevision = RoutePlanning.CollectionOrderRevision + 1
+                });
+            }
+            return RoutePlanning;
         }
 
         public Task<bool> ConfigureAsync(bool? autoReplanEnabled = null, CancellationToken cancellationToken = default)

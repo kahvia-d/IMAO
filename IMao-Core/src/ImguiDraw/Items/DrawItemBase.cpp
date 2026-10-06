@@ -648,6 +648,10 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
 bool DrawItemBase::IsCollectiblePoint(const std::string& nameId) {
     return refreshableCategories.IsCollectible(nameId);
 }
+void DrawItemBase::PruneFreePointCompletions(const std::string& profile,const std::string& routeId,const std::unordered_set<std::string>& retained) {
+    if(!freeStore||profile!=MarkerProfile())throw std::runtime_error("自由点记录本不可用或已变化");
+    freeStore->PruneRoute(profile,routeId,retained);
+}
 void DrawItemBase::RemoveFreePointCompletions(const std::string& profile,const std::string& routeId) {
     if(!freeStore||profile!=MarkerProfile())throw std::runtime_error("自由点记录本不可用或已变化");
     freeStore->RemoveRoute(profile,routeId);
@@ -668,6 +672,13 @@ bool DrawItemBase::IsRefreshablePoint(const std::string& nameId) {
 
 bool DrawItemBase::IsRefreshablePointId(const std::string& pointId) {
     return !pointId.empty() && refreshablePointIds.contains(pointId);
+}
+
+json DrawItemBase::SetFarmPointCompletion(const std::string& profile,const ItemDatas& item) {
+    if(!farmStore||profile!=MarkerProfile()||(!IsRefreshablePoint(item.nameId)&&!IsRefreshablePointId(item.itemId)))
+        return {{"accepted",false},{"message","目标或档案已变化"}};
+    farmStore->SetForProfile(profile,item.layer.stateId,item.itemId,true);
+    return {{"accepted",true},{"data",{{"point",{{"stateId",item.layer.stateId},{"pointId",item.itemId},{"completed",true},{"dailyRefresh",true}}}}}};
 }
 
 // A completion of a daily-refresh point, written to its own ledger. The request is answered

@@ -25,7 +25,23 @@ $env:LOCALAPPDATA   = "$env:USERPROFILE\AppData\Local"
 Run `out/route-page-runtime/RoutePageRuntime.exe`. It shows its own window briefly, writes
 `out/route-page-runtime/route-page-tests.log` and exits with the assertion count.
 
-What it pins (104 assertions):
+What it pins (149 assertions):
+
+- Sorting uses an in-window pointer gesture rather than WinUI system drag/drop, which throws
+  `Drag start failed` in the elevated production app. The fixture pins system drag/drop off,
+  stationary source rows, insertion-boundary preview, deferred state pushes, release-only persistence, cancellation, profile
+  changes, save rejection recovery and selection preservation. All-collections and batch modes
+  also refuse the internal gesture. These checks invoke the production gesture helpers; physical
+  mouse capture and elevated in-game operation still need a manual test.
+- Drag feedback highlights the source route, marks its insertion position, and shows its name
+  and ordinal. The overlay follows first/last positions, does not intercept pointer input, and
+  disappears after save or cancellation. Real-control PNGs `route-drag-start.png`,
+  `route-drag-moved.png`, and `route-drag-last.png` cover its rendering.
+- Release inserts the source into the chosen boundary, preserving other rows' relative order.
+  Intermediate/end insertions account for removing the source. Composition transitions move the
+  source and displaced rows over 240 ms, with the source above the other rows; runtime checks
+  verify the transition stays active and state pushes cannot rebuild containers mid-animation.
+  The system animation preference is respected.
 
 - The page is only the operation guide plus the route list: every game-only entry is gone (the selection
   tools, 加入可见点, hand-drawing, save/load, and now also complete/skip/pause/stop, generate/activate and
@@ -67,6 +83,22 @@ What it pins (104 assertions):
 - The page renders at the 800×500 minimum window size.
 
 Screenshots: `route-empty.png`, `route-active.png` (the route list with icons and the ● row), `route-800.png`.
+
+Sorting regressions check that the original containers slide before committing order, then update
+the same ItemsSource with Move without replacing route records. Subsequent equivalent snapshots
+retain the committed row containers. Snapshots allocate fresh records and icon arrays, matching IPC.
+The fixture also covers an icon-bearing last row clipped by the viewport and delayed reorder replies
+without disabling the list. Real metadata changes still render, and profile changes reset selection.
+
+Run with `--animation-frames` to capture the fixture window before, during and after the compositor
+animation (`route-motion-before/middle/after.png`). This opt-in mode checks that its own window is
+foreground before capturing; the page is shifted only in the fixture to fit the list into the window.
+These captures include compositor motion, unlike the usual RenderTargetBitmap layout screenshots.
+
+Batch export naming checks the actual save-dialog suggestion: a single route uses its name;
+multiple routes use the first exportable name plus a count suffix. Cancellation preserves selection,
+unnamed routes use their IDs, invalid Windows filename characters and device names are made safe,
+and corrupt routes do not contribute to the name/count. The user's chosen final path still wins.
 
 It is a page-wiring and layout fixture. It does not replace native runtime, real persistence, real-game
 controller or physical DPI testing, and it does not exercise the other five pages. The two file dialogs are

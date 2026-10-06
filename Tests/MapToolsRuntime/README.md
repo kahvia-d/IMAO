@@ -57,3 +57,9 @@ and a physical XInput device are separate integration checks. Screen scale is th
 current desktop DPI, not a simulated claim of testing every DPI. Small windows
 use real scroll viewports; a passing test means every tested action can be brought
 fully into view, not that all actions fit on the first screen.
+
+## Route controls and rotation filters
+
+`./Tests/MapToolsRuntime/Run.ps1 -RouteControls` runs the production route list controls and controller filter events without requiring foreground acquisition. It checks hand-only edit entry/actions, persisted collection rotation display, disconnected save rejection, draft protection, original-name preservation, undo after removing the last node, checkbox navigation, and filter changes/restoration across catalog, free-only and unfiltered successors. Evidence is written under `out/map-tools-runtime/route-controls-*` using isolated filter-loan storage.
+
+This mode supplements the full foreground-transfer harness; it does not verify physical game input or replace foreground-transfer coverage.

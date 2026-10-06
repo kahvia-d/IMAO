@@ -1,162 +1,133 @@
 #pragma once
-#include "RoutePlanningModel.h"
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <vector>
+#include "HandRouteEditor.h"
+#include <deque>
 
 namespace AutoRoute {
-// A retained draft owns input only on its original, currently displayed map.
-// Focus loss keeps the draft, but must release Escape, undo and mouse clicks.
-inline bool HandDrawingInputAllowed(bool active, int draftScene, int displayedScene, bool focused, bool fresh) {
-    return active && draftScene > 0 && draftScene == displayedScene && focused && fresh;
+inline bool HandDrawingInputAllowed(bool active,int draftScene,int displayedScene,bool focused,bool fresh) {
+    return active&&draftScene>0&&draftScene==displayedScene&&focused&&fresh;
 }
-// Drawing a route by hand: press the key, click a point on the big map, repeat. Unlike the old
-// tool — which stored pairs of raw coordinates and committed a segment on every second press —
-// this collects an ordered list of real stops, so a hand-drawn route is the same kind of thing as
-// a planned one and inherits the list, switching, completion and farming behaviour for free.
-//
-// A stop is either a point that already exists on the map (the player connected to it) or a free
-// point the player dropped on empty space. Free stops carry local categories, text icons and progress.
-//
-// Two ids must not be confused here: `scene` is the runtime scene the route belongs to (what a
-// route file and the map filter use), while `stateId` is Kuro's top-level state that identifies
-// which point catalogue the route's points come from. A route stores the scene and its points
-// carry the state id; they are different numbers for the same place.
+// One editor is shared by new and saved hand routes. Nodes are independent of
+// their navigation order; only explicit edges produce navigation stops.
 class HandDrawnDraft {
 public:
     bool CategoryLocked() const { return categoryLocked; }
     bool Active() const { return active; }
-    // A drawing that has been finished but not yet saved. Holding points without being active is a
-    // real state: leaving the drawing (Escape) must keep what was drawn so the player can go and
-    // save it, and the toolbar cannot be opened while the drawing still owns the map.
-    bool Pending() const { return !active && (categoryLocked || !points.empty()); }
+    bool Pending() const { return !active&&(categoryLocked||!editor.nodes.empty()); }
     int SceneId() const { return scene; }
     const std::vector<ItemDatas>& Points() const { return points; }
-    std::size_t Size() const { return points.size(); }
+    const HandRouteEditor& Editor() const { return editor; }
+    std::size_t Size() const { return editor.nodes.size(); }
     const std::string& RouteId() const { return routeId; }
     FreePointCategory Category() const { return category; }
     FreePointIcon Icon() const { return icon; }
+    bool EditingSaved() const { return original.has_value(); }
+    const std::optional<Plan>& Original() const { return original; }
+    std::vector<ItemDatas> OrderedPoints() const { return HandRouteStops(editor); }
+    bool CanUndo() const { return !history.empty(); }
+    bool CanCommit() const { return OrderedPoints().size()>=2; }
+    std::string NodeForKey(const std::string& key) const {
+        for(const auto& node:editor.nodes)if(Key(node.point)==key)return node.id;
+        return {};
+    }
     void SelectIcon(FreePointIcon value) {
-        if(!active) throw std::runtime_error("请先开始手绘路线");
-        if(category==FreePointCategory::Collectible && value!=FreePointIcon::Number)
+        RequireActive();
+        if(category==FreePointCategory::Collectible&&value!=FreePointIcon::Number)
             throw std::invalid_argument("收集物路线只能使用数字图标");
         icon=value;
     }
-
-    // Begins a drawing on one map. A session belongs to a single map because a route names one map:
-    // the start, the projection and the map filter all key off it.
-    //
-    // Calling this while a finished drawing is still waiting to be saved resumes that drawing rather
-    // than starting an empty one. Resuming is what "keep drawing" means, and wiping the points here
-    // would throw away work the player explicitly asked to come back to.
-    void Start(int sceneId, int stateId, FreePointCategory value=FreePointCategory::Daily, std::string id={}) {
-        if (!Scene::IsKnown(sceneId)) throw std::invalid_argument("请先在游戏大地图上打开要绘制的区域");
-        if (stateId <= 0) throw std::invalid_argument("当前地图没有点位数据，无法手绘");
-        if(active && categoryLocked) {
-            if(value!=category)throw std::invalid_argument("已经开始加点，路线类型不能更改");
-            return;
-        }
-        if (Pending()) {
-            if (scene != sceneId)
-                throw std::invalid_argument("已有一条未保存的手绘路线属于别的地图，请先在路线列表里保存或放弃它");
-            state = stateId;
-            active = true;
-            return;
-        }
-        active = true;
-        scene = sceneId;
-        state = stateId;
-        category=value;icon=FreePointIcon::Number;routeId=std::move(id);categoryLocked=false;
-        points.clear();
-        freeCount = 0;
+    void Start(int sceneId,int stateId,FreePointCategory value=FreePointCategory::Daily,std::string id={}) {
+        if(!Scene::IsKnown(sceneId))throw std::invalid_argument("请先在游戏大地图上打开要绘制的区域");
+        if(stateId<=0)throw std::invalid_argument("当前地图没有点位数据，无法手绘");
+        if((active||Pending())&&scene!=sceneId)
+            throw std::invalid_argument("请先保存或放弃另一张地图的手绘路线");
+        if(active&&categoryLocked){if(value!=category)throw std::invalid_argument("已经开始加点，路线类型不能更改");return;}
+        if(Pending()){active=true;return;}
+        Cancel();active=true;scene=sceneId;state=stateId;category=value;routeId=std::move(id);
     }
-
-    // Adds the next stop in drawing order. Returns what it stored, so the caller can report the
-    // point's name or its number.
+    void Edit(const Plan& plan) {
+        if(active||Pending())throw std::invalid_argument("请先保存或放弃当前手绘草稿");
+        if(!plan.handDrawn)throw std::invalid_argument("只能修改手绘路线");
+        auto next=EditorFromPlan(plan);HandRouteOrder(next);
+        Cancel();editor=std::move(next);original=plan;scene=plan.sceneId;
+        state=Scene::Find(scene)->kuroStateId;routeId=plan.id;category=plan.routeCategory;
+        active=true;categoryLocked=true;RefreshPoints();
+    }
     ItemDatas Add(const ItemDatas& point) {
-        if (!active) throw std::runtime_error("请先开始手绘路线");
-        if (point.layer.stateId != state)
-            throw std::invalid_argument("手绘路线只能在同一张地图上，请先完成或放弃当前路线");
-        if (points.size() >= MaxTargets) throw std::invalid_argument("单条路线最多 500 点");
-        ItemDatas stop = point;
-        if (IsFreeStop(point) || point.itemId.empty()) {
-            if (!std::isfinite(point.itemMapROC.x) || !std::isfinite(point.itemMapROC.y))
-                throw std::invalid_argument("手绘点位坐标无效");
-            // A free point is invented here, so its identity and its lack of a type are both set
-            // here; everything downstream only ever reads them.
-            stop = ItemDatas{};
-            stop.itemId = "free:" + std::to_string(++freeCount);
-            stop.itemMapROC = point.itemMapROC;
-            stop.layer.stateId = state;
-            stop.layer.stopKind = StopKind::Free;
+        RequireActive();
+        if(point.layer.stateId!=state)throw std::invalid_argument("手绘路线只能在同一张地图上");
+        if(!IsFreeStop(point)&&!point.itemId.empty())
+            for(const auto& node:editor.nodes)if(Key(node.point)==Key(point))return node.point;
+        if(Size()>=MaxTargets)throw std::invalid_argument("单条路线最多 500 点");
+        if(!std::isfinite(point.itemMapROC.x)||!std::isfinite(point.itemMapROC.y))throw std::invalid_argument("手绘点位坐标无效");
+        auto stop=point;
+        if(IsFreeStop(point)||point.itemId.empty()) {
+            stop=ItemDatas{};stop.itemId="free:"+std::to_string(editor.nextFreeId++);
+            stop.itemMapROC=point.itemMapROC;stop.layer.stateId=state;stop.layer.stopKind=StopKind::Free;
             stop.freeRouteId=routeId;stop.freeCategory=category;stop.freeIcon=icon;
         }
-        points.push_back(std::move(stop));categoryLocked=true;
-        return points.back();
+        Remember();editor.nodes.push_back({"n"+std::to_string(editor.nextNodeId++),stop});
+        categoryLocked=true;RefreshPoints();return stop;
     }
-
-    // Removes the most recently added stop.
+    void Connect(const std::string& from,const std::string& to) {
+        RequireActive();
+        if(from==to||!FindHandNode(editor,from)||!FindHandNode(editor,to))throw std::invalid_argument("请选择两个不同的路线点位");
+        auto next=editor;
+        std::erase_if(next.edges,[&](const auto& edge){return edge.from==from||edge.to==to||(edge.from==to&&edge.to==from);});
+        next.edges.push_back({from,to});HandRouteOrder(next);
+        if(next.edges==editor.edges)return;
+        Remember();editor=std::move(next);
+    }
+    void Remove(const std::string& id) {
+        RequireActive();if(!FindHandNode(editor,id))throw std::invalid_argument("点位已不在编辑路线中");
+        auto next=editor;std::string before,after;
+        for(const auto& edge:next.edges){if(edge.to==id)before=edge.from;if(edge.from==id)after=edge.to;}
+        std::erase_if(next.edges,[&](const auto& e){return e.from==id||e.to==id;});
+        std::erase_if(next.nodes,[&](const auto& n){return n.id==id;});
+        if(!before.empty()&&!after.empty())next.edges.push_back({before,after});
+        HandRouteOrder(next);Remember();editor=std::move(next);RefreshPoints();
+    }
+    void ConnectPoint(const std::string& from,const ItemDatas& point) {
+        auto next=*this;next.history.clear();
+        const auto stored=next.Add(point);next.Connect(from,next.NodeForKey(Key(stored)));
+        Remember();editor=std::move(next.editor);categoryLocked=true;RefreshPoints();
+    }
     bool Undo() {
-        // A finished drawing can still be edited until it is saved or discarded, so this asks about
-        // the points rather than about the drawing being in progress.
-        if (points.empty()) return false;
-        points.pop_back();
-        // Identity numbers are never reused. The renderer supplies the visible order.
-        return true;
+        if(history.empty())return false;
+        const auto nodeCounter=editor.nextNodeId,freeCounter=editor.nextFreeId;
+        editor=std::move(history.back());history.pop_back();
+        editor.nextNodeId=std::max(editor.nextNodeId,nodeCounter);editor.nextFreeId=std::max(editor.nextFreeId,freeCounter);
+        RefreshPoints();return true;
     }
-
-    // Stops drawing but keeps what was drawn, so it can still be saved. This is what leaving the
-    // drawing means: the player cannot reach the toolbar while the drawing is still taking clicks.
-    bool Finish() {
-        if (!active) return false;
-        active = false;
-        return Pending();
-    }
-
-    // Throws the drawing away, including one that was finished but not saved yet.
+    bool Finish() { if(!active)return false;active=false;return Pending(); }
     void Cancel() {
-        active = false;
-        scene = 0;
-        state = 0;
-        points.clear();
-        freeCount = 0;
-        routeId.clear();categoryLocked=false;
+        active=false;categoryLocked=false;scene=state=0;routeId.clear();
+        editor={};points.clear();history.clear();original.reset();icon=FreePointIcon::Number;
     }
-
-    // A finished drawing. The first stop is the start and the last is the end: the player drew an
-    // ordered path, and reordering it would be "planning", which is the other feature.
-    Plan Commit(const std::string& id, const std::string& name, const std::string& profileId) const {
-        if (points.empty()) throw std::runtime_error("当前没有正在绘制的手绘路线");
-        if (points.size() < 2) throw std::runtime_error("手绘路线至少需要两个点");
-        Plan plan;
-        plan.id = id;
-        plan.name = name;
-        plan.profileId = profileId;
-        plan.sceneId = scene;
-        plan.handDrawn = true;
-        plan.routeCategory=category;plan.legacyHandDrawn=false;
-        // A drawing has never been written, so it has not chosen a collection: it belongs to
-        // whichever one the player is in when they save it. Empty is how a plan says "not decided
-        // yet" — the model's own default is what an already-stored route would have.
-        plan.collection.clear();
-        plan.start.sceneId = scene;
-        plan.start.roc = points.front().itemMapROC;
-        plan.start.source = "manual";
-        plan.start.valid = true;
-        plan.stops = points;
-        ScopeFreePoints(plan,id);
-        return plan;
+    Plan Commit(const std::string& id,const std::string& name,const std::string& profile) const {
+        const auto ordered=OrderedPoints();
+        if(ordered.size()<2)throw std::runtime_error("请连接成唯一一条至少两个点的路线后再保存");
+        Plan plan=original.value_or(Plan{});
+        plan.id=id;plan.name=EditingSaved()?original->name:name;plan.profileId=profile;plan.sceneId=scene;
+        plan.handDrawn=true;plan.routeCategory=category;
+        if(!EditingSaved()){plan.legacyHandDrawn=false;plan.collection.clear();}
+        plan.start={scene,ordered.front().itemMapROC,"manual",0,0,true};plan.stops=ordered;plan.handEditor=editor;
+        std::unordered_set<std::string> surviving;for(const auto& stop:plan.stops)surviving.insert(Key(stop));
+        std::erase_if(plan.skipped,[&](const auto& key){return !surviving.contains(key);});
+        std::erase_if(plan.skipHistory,[&](const auto& key){return !plan.skipped.contains(key);});
+        ScopeFreePoints(plan,id);return plan;
     }
-
 private:
-    bool active = false, categoryLocked = false;
-    int scene = 0;
-    int state = 0;
-    std::size_t freeCount = 0;
+    bool active=false,categoryLocked=false;
+    int scene=0,state=0;
     std::string routeId;
     FreePointCategory category=FreePointCategory::Daily;
     FreePointIcon icon=FreePointIcon::Number;
+    HandRouteEditor editor;
     std::vector<ItemDatas> points;
+    std::deque<HandRouteEditor> history;
+    std::optional<Plan> original;
+    void RequireActive() const { if(!active)throw std::runtime_error("请先开始手绘路线"); }
+    void Remember(){if(history.size()==100)history.pop_front();history.push_back(editor);}
+    void RefreshPoints(){points.clear();for(const auto& node:editor.nodes)points.push_back(node.point);}
 };
 } // namespace AutoRoute

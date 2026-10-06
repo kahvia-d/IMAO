@@ -4,7 +4,14 @@ using IMao_WinUI.Models;
 using IMao_WinUI.Services;
 using IMao_WinUI.ViewModels;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Windows.Foundation;
 using System.Text.Json;
+using System.Collections.ObjectModel;
+using System.Numerics;
+using Microsoft.UI.Xaml.Hosting;
 
 namespace IMao_WinUI.Views;
 
@@ -21,7 +28,21 @@ public sealed partial class FunctionPage : Page
     private readonly CoreHostService coreHost;
     private CancellationTokenSource? routePageLifetime;
     private RoutePlanningState renderedRouteState = new();
+    private string displayedRouteProfile = "";
+    private RouteCollection[] displayedCollections = [];
+    private string displayedCollectionProfile = "", displayedCollectionBrowse = "";
+    private int displayedCollectionRouteCount = -1;
     private bool deletingRoute;
+    private bool sortingRoutes;
+    private (string Profile,string Collection,ulong Revision,string[] Ids,string? Selected)? draggedRoutes;
+    private Pointer? routeDragPointer;
+    private Point routeDragStart;
+    private string? routeDragSourceId;
+    private bool routeDragCaptured;
+    private bool routeDragOutside;
+    private bool routeDragFeedbackQueued;
+    private int routeInsertionSlot = -1;
+    private bool CanSortRoutes => !BatchMode && browseCollection != AllCollections && !sortingRoutes;
     // 列表当前按哪个合集显示："all" 是只读浏览，不改变"当前合集"，所以它不会把之后保存的路线
     // 带去别处。其余值就是合集 id，而点合集名同时也切换当前合集。
     private string browseCollection = "default";
@@ -34,6 +55,14 @@ public sealed partial class FunctionPage : Page
         ViewModel = App.GetService<FunctionViewModel>();
         coreHost = App.GetService<CoreHostService>();
         InitializeComponent();
+        // WinUI's system drag/drop fails in the elevated process the game overlay requires.
+        // Capture a pointer inside this list instead; no OLE drag session is started.
+        AutoRouteSavedRoutes.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(RoutePointerPressed), true);
+        AutoRouteSavedRoutes.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler(RoutePointerMoved), true);
+        AutoRouteSavedRoutes.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler(RoutePointerReleased), true);
+        AutoRouteSavedRoutes.PointerCaptureLost += RoutePointerCaptureLost;
+        AutoRouteSavedRoutes.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(RouteDragKeyDown), true);
+        AutoRouteSavedRoutes.LayoutUpdated += (_, _) => QueueRouteDragFeedback();
         Loaded += FunctionPage_Loaded;
         Unloaded += FunctionPage_Unloaded;
     }
@@ -54,6 +83,9 @@ public sealed partial class FunctionPage : Page
 
     private void FunctionPage_Unloaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
+        ResetRoutePointer();
+        draggedRoutes = null;
+        ClearRouteDragFeedback();
         coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
         routePageLifetime?.Cancel();
         routePageLifetime?.Dispose();
@@ -62,9 +94,12 @@ public sealed partial class FunctionPage : Page
 
     private void CoreHost_RoutePlanningChanged(object? sender, RoutePlanningState state) => RenderRouteState(state);
 
-    private void RenderRouteState(RoutePlanningState state)
+    private void RenderRouteState(RoutePlanningState state, bool applySortedRows = false)
     {
         renderedRouteState = state;
+        // Status pushes may arrive during a gesture. Keep its row containers and local preview
+        // intact until release; save uses the original revision and refreshes authoritative rows.
+        if (draggedRoutes is not null || (sortingRoutes && !applySortedRows)) return;
         AutoRouteMessage.Severity = InfoBarSeverity.Informational;
         AutoRouteMessage.Message = state.Message;
         AutoRouteMessage.IsOpen = !string.IsNullOrWhiteSpace(state.Message);
@@ -87,10 +122,351 @@ public sealed partial class FunctionPage : Page
             .Where(saved => browseCollection == AllCollections || saved.Collection == browseCollection)
             .Select(saved => saved with { Current = currentId.Length > 0 && saved.Id == currentId, Batch = BatchMode })
             .ToArray();
-        AutoRouteSavedRoutes.ItemsSource = rows;
-        AutoRouteSavedRoutes.SelectedItem = rows.FirstOrDefault(row => row.Id == selectedId);
+        // Native snapshots deserialize fresh records and icon arrays even when only navigation
+        // status changed. Rebinding identical rows after the composition animation restarts
+        // their selection/template visuals and produces a visible flash.
+        var previousRows = Rows();
+        bool sameRows = !BatchMode && displayedRouteProfile == state.ProfileId && previousRows.Count == rows.Length &&
+            rows.Select((row, index) => previousRows[index] == (row with { Kinds = previousRows[index].Kinds }) &&
+                previousRows[index].Kinds.SequenceEqual(row.Kinds)).All(equal => equal);
+        if (!sameRows)
+        {
+            if (!BatchMode && displayedRouteProfile == state.ProfileId &&
+                AutoRouteSavedRoutes.ItemsSource is ObservableCollection<SavedAutomaticRoute> existing)
+            {
+                var wanted = rows.Select(row => row.Id).ToHashSet();
+                for (int index = existing.Count - 1; index >= 0; --index)
+                    if (!wanted.Contains(existing[index].Id)) existing.RemoveAt(index);
+                for (int index = 0; index < rows.Length; ++index)
+                {
+                    var desired = rows[index];
+                    int oldIndex = index;
+                    while (oldIndex < existing.Count && existing[oldIndex].Id != desired.Id) ++oldIndex;
+                    if (oldIndex == existing.Count) existing.Insert(index, desired);
+                    else
+                    {
+                        if (oldIndex != index) existing.Move(oldIndex, index);
+                        var current = existing[index];
+                        if (current != (desired with { Kinds = current.Kinds }) || !current.Kinds.SequenceEqual(desired.Kinds))
+                            existing[index] = desired;
+                    }
+                }
+            }
+            else AutoRouteSavedRoutes.ItemsSource = new ObservableCollection<SavedAutomaticRoute>(rows);
+            AutoRouteSavedRoutes.SelectedItem = displayedRouteProfile == state.ProfileId
+                ? Rows().FirstOrDefault(row => row.Id == selectedId) : null;
+        }
+        displayedRouteProfile = state.ProfileId;
+        AutoRouteSavedRoutes.CanDragItems = AutoRouteSavedRoutes.CanReorderItems = AutoRouteSavedRoutes.AllowDrop = false;
         AutoRouteEmptyHint.Visibility = rows.Length == 0 ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
         UpdateBatchSummary();
+    }
+
+    private void RoutePointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (!CanSortRoutes || routeDragPointer is not null ||
+            e.Pointer.PointerDeviceType != Microsoft.UI.Input.PointerDeviceType.Mouse) return;
+        var point = e.GetCurrentPoint(AutoRouteSavedRoutes);
+        if (!point.Properties.IsLeftButtonPressed) return;
+        var index = RouteIndexAt(point.Position);
+        if (index < 0) return;
+        routeDragPointer = e.Pointer;
+        routeDragStart = point.Position;
+        routeDragSourceId = ((SavedAutomaticRoute)AutoRouteSavedRoutes.Items[index]).Id;
+    }
+    private void RoutePointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (routeDragPointer?.PointerId != e.Pointer.PointerId) return;
+        var point = e.GetCurrentPoint(AutoRouteSavedRoutes);
+        if (!point.Properties.IsLeftButtonPressed) return;
+        if (!routeDragCaptured)
+        {
+            if (Math.Sqrt(Math.Pow(point.Position.X - routeDragStart.X, 2) + Math.Pow(point.Position.Y - routeDragStart.Y, 2)) < 6) return;
+            var row = Rows().FirstOrDefault(row => row.Id == routeDragSourceId);
+            if (row is null || !CanSortRoutes) { ResetRoutePointer(); return; }
+            AutoRouteSavedRoutes.SelectedItem = row;
+            if (!AutoRouteSavedRoutes.CapturePointer(e.Pointer)) { ResetRoutePointer(); return; }
+            routeDragCaptured = true;
+            if (!BeginRouteDrag()) { ResetRoutePointer(); return; }
+            AutoRouteSavedRoutes.Focus(FocusState.Programmatic);
+        }
+        e.Handled = true;
+        routeDragOutside = !RoutePointerInside(point.Position);
+        if (routeDragOutside) { UpdateRouteDragFeedback(); return; }
+        var scroll = FindRouteScrollViewer(AutoRouteSavedRoutes);
+        if (scroll is not null && (point.Position.Y < 24 || point.Position.Y > AutoRouteSavedRoutes.ActualHeight - 24))
+            scroll.ChangeView(null, Math.Clamp(scroll.VerticalOffset + (point.Position.Y < 24 ? -20 : 20), 0, scroll.ScrollableHeight), null, true);
+        SetRouteInsertionSlot(RouteInsertionSlotAt(point.Position));
+    }
+    private async void RoutePointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (routeDragPointer?.PointerId != e.Pointer.PointerId) return;
+        bool moved = routeDragCaptured && RoutePointerInside(e.GetCurrentPoint(AutoRouteSavedRoutes).Position);
+        if (moved) SetRouteInsertionSlot(RouteInsertionSlotAt(e.GetCurrentPoint(AutoRouteSavedRoutes).Position));
+        e.Handled = routeDragCaptured;
+        ResetRoutePointer();
+        await CompleteRouteDragAsync(moved);
+    }
+    private async void RoutePointerCaptureLost(object sender, PointerRoutedEventArgs e)
+    {
+        if (!routeDragCaptured || routeDragPointer?.PointerId != e.Pointer.PointerId) return;
+        ResetRoutePointer();
+        await CompleteRouteDragAsync(false);
+    }
+    private async void RouteDragKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Escape || draggedRoutes is null) return;
+        e.Handled = true;
+        ResetRoutePointer();
+        await CompleteRouteDragAsync(false);
+    }
+    private void ResetRoutePointer()
+    {
+        var pointer = routeDragPointer;
+        routeDragPointer = null;
+        routeDragSourceId = null;
+        routeDragCaptured = false;
+        if (pointer is not null) AutoRouteSavedRoutes.ReleasePointerCapture(pointer);
+    }
+    private bool RoutePointerInside(Point point) => point.X >= 0 && point.X <= AutoRouteSavedRoutes.ActualWidth &&
+        point.Y >= 0 && point.Y <= AutoRouteSavedRoutes.ActualHeight;
+    private int RouteIndexAt(Point point)
+    {
+        if (!RoutePointerInside(point)) return -1;
+        for (int i = 0; i < AutoRouteSavedRoutes.Items.Count; ++i)
+            if (AutoRouteSavedRoutes.ContainerFromIndex(i) is FrameworkElement row &&
+                row.TransformToVisual(AutoRouteSavedRoutes).TransformBounds(new Rect(0, 0, row.ActualWidth, row.ActualHeight)).Contains(point)) return i;
+        return -1;
+    }
+    private static ScrollViewer? FindRouteScrollViewer(DependencyObject parent)
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); ++i)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is ScrollViewer scroll) return scroll;
+            if (FindRouteScrollViewer(child) is { } found) return found;
+        }
+        return null;
+    }
+    private int RouteInsertionSlotAt(Point point)
+    {
+        if (!RoutePointerInside(point)) return -1;
+        int last = -1;
+        for (int i = 0; i < AutoRouteSavedRoutes.Items.Count; ++i)
+            if (AutoRouteSavedRoutes.ContainerFromIndex(i) is FrameworkElement row)
+            {
+                var bounds = row.TransformToVisual(AutoRouteSavedRoutes).TransformBounds(new Rect(0, 0, row.ActualWidth, row.ActualHeight));
+                if (point.Y < bounds.Top + bounds.Height / 2) return i;
+                last = i;
+            }
+        return last < 0 ? -1 : last + 1;
+    }
+    private void SetRouteInsertionSlot(int slot)
+    {
+        if (draggedRoutes is null || slot < 0 || slot > AutoRouteSavedRoutes.Items.Count) return;
+        routeInsertionSlot = slot;
+        UpdateRouteDragFeedback();
+    }
+    private void UpdateRouteDragFeedback()
+    {
+        if (draggedRoutes is not { } drag) return;
+        var rows = Rows();
+        int index = rows.FindIndex(row => row.Id == drag.Selected);
+        if (index < 0) { ClearRouteDragFeedback(); return; }
+        string name = string.IsNullOrWhiteSpace(rows[index].Name) ? rows[index].Id : rows[index].Name;
+        int destination = routeInsertionSlot - (routeInsertionSlot > index ? 1 : 0);
+        string hint = routeDragOutside ? $"正在拖动「{name}」 · 松开将取消排序" :
+            $"正在拖动「{name}」 · 放到第 {destination + 1} / {rows.Count} 位 · 松开移动";
+        if (RouteDragHintText.Text != hint) RouteDragHintText.Text = hint;
+        RouteDragHint.Visibility = Visibility.Visible;
+        double hintWidth = Math.Max(0, AutoRouteSavedRoutes.ActualWidth - 16);
+        if (RouteDragHint.MaxWidth != hintWidth) RouteDragHint.MaxWidth = hintWidth;
+        if (AutoRouteSavedRoutes.ContainerFromIndex(index) is not FrameworkElement row)
+        {
+            RouteDragHighlight.Visibility = Visibility.Collapsed;
+            PositionRouteDragFeedback(RouteDragHint, 8, 8);
+            UpdateRouteInsertionLine();
+            return;
+        }
+        var bounds = row.TransformToVisual(AutoRouteSavedRoutes).TransformBounds(new Rect(0, 0, row.ActualWidth, row.ActualHeight));
+        double left = Math.Max(0, bounds.Left), top = Math.Max(0, bounds.Top);
+        double right = Math.Min(AutoRouteSavedRoutes.ActualWidth, bounds.Right), bottom = Math.Min(AutoRouteSavedRoutes.ActualHeight, bounds.Bottom);
+        double width = Math.Max(0, right - left), height = Math.Max(0, bottom - top);
+        if (RouteDragHighlight.Width != width) RouteDragHighlight.Width = width;
+        if (RouteDragHighlight.Height != height) RouteDragHighlight.Height = height;
+        RouteDragHighlight.Visibility = bottom > top ? Visibility.Visible : Visibility.Collapsed;
+        PositionRouteDragFeedback(RouteDragHighlight, left, top);
+        UpdateRouteInsertionLine();
+        // Keep the source name and its preview position visible without covering the row's title.
+        PositionRouteDragFeedback(RouteDragHint, 8, Math.Max(0, Math.Min(bottom - RouteDragHint.ActualHeight - 6,
+            AutoRouteSavedRoutes.ActualHeight - RouteDragHint.ActualHeight)));
+    }
+    private void UpdateRouteInsertionLine()
+    {
+        int index = routeInsertionSlot < AutoRouteSavedRoutes.Items.Count ? routeInsertionSlot : routeInsertionSlot - 1;
+        if (routeDragOutside || index < 0 || AutoRouteSavedRoutes.ContainerFromIndex(index) is not FrameworkElement row)
+        { RouteDragInsertion.Visibility = Visibility.Collapsed; return; }
+        var bounds = row.TransformToVisual(AutoRouteSavedRoutes).TransformBounds(new Rect(0, 0, row.ActualWidth, row.ActualHeight));
+        double boundary = routeInsertionSlot < AutoRouteSavedRoutes.Items.Count ? bounds.Top : bounds.Bottom;
+        // A taller icon row can straddle the viewport edge. Its insertion boundary still
+        // belongs to the visible row; pin the marker to that edge instead of hiding it.
+        if (bounds.Bottom < 0 || bounds.Top > AutoRouteSavedRoutes.ActualHeight)
+        { RouteDragInsertion.Visibility = Visibility.Collapsed; return; }
+        double width = Math.Max(0, AutoRouteSavedRoutes.ActualWidth - 8);
+        if (RouteDragInsertion.Width != width) RouteDragInsertion.Width = width;
+        RouteDragInsertion.Visibility = Visibility.Visible;
+        PositionRouteDragFeedback(RouteDragInsertion, 4, Math.Clamp(boundary - 2, 0, Math.Max(0, AutoRouteSavedRoutes.ActualHeight - 4)));
+    }
+    private static void PositionRouteDragFeedback(FrameworkElement element, double left, double top)
+    {
+        if (Canvas.GetLeft(element) != left) Canvas.SetLeft(element, left);
+        if (Canvas.GetTop(element) != top) Canvas.SetTop(element, top);
+    }
+    private void QueueRouteDragFeedback()
+    {
+        if (draggedRoutes is null || routeDragFeedbackQueued) return;
+        routeDragFeedbackQueued = true;
+        // Updating overlays inside LayoutUpdated re-enters XAML layout. Queue once after that
+        // pass, then only change properties whose measured geometry actually changed.
+        if (!DispatcherQueue.TryEnqueue(() =>
+        {
+            routeDragFeedbackQueued = false;
+            if (draggedRoutes is not null) UpdateRouteDragFeedback();
+        })) routeDragFeedbackQueued = false;
+    }
+    private void ClearRouteDragFeedback()
+    {
+        routeDragOutside = false;
+        routeInsertionSlot = -1;
+        RouteDragHighlight.Visibility = RouteDragInsertion.Visibility = RouteDragHint.Visibility = Visibility.Collapsed;
+        RouteDragHintText.Text = "";
+    }
+    private bool BeginRouteDrag()
+    {
+        if(!CanSortRoutes || draggedRoutes is not null || AutoRouteSavedRoutes.SelectedItem is not SavedAutomaticRoute)return false;
+        draggedRoutes=(renderedRouteState.ProfileId,browseCollection,renderedRouteState.CollectionOrderRevision,
+            Rows().Select(row=>row.Id).ToArray(),(AutoRouteSavedRoutes.SelectedItem as SavedAutomaticRoute)?.Id);
+        routeInsertionSlot = Rows().FindIndex(row => row.Id == draggedRoutes.Value.Selected);
+        UpdateRouteDragFeedback();
+        return true;
+    }
+    private async Task CompleteRouteDragAsync(bool moved)
+    {
+        var drag=draggedRoutes;
+        int slot=routeInsertionSlot;
+        draggedRoutes=null;ClearRouteDragFeedback();if(drag is null)return;
+        if(!moved){RenderRouteState(renderedRouteState);RestoreRouteDragSelection(drag.Value);return;}
+        var order=drag.Value.Ids.ToList();
+        int source=order.FindIndex(id=>id==drag.Value.Selected);
+        if (source < 0 || slot < 0 || slot > order.Count) { RenderRouteState(renderedRouteState); return; }
+        int destination=slot-(slot>source?1:0);
+        order.RemoveAt(source);order.Insert(destination,drag.Value.Selected!);
+        var ids=order.ToArray();
+        if(ids.SequenceEqual(drag.Value.Ids)){RenderRouteState(renderedRouteState);RestoreRouteDragSelection(drag.Value);return;}
+        sortingRoutes=true;
+        var actionButtons = RouteButtons(AutoRouteActions).ToDictionary(button => button, button => button.IsEnabled);
+        foreach (var button in actionButtons.Keys) button.IsEnabled = false;
+        string? failure = null;
+        try {
+            if(renderedRouteState.ProfileId!=drag.Value.Profile||browseCollection!=drag.Value.Collection)return;
+            await RouteCommandAsync("collectionReorder",new { collectionId=drag.Value.Collection,routeIds=ids,expectedOrderRevision=drag.Value.Revision,profileId=drag.Value.Profile });
+        }catch(Exception error){ failure = error.Message; }
+        finally {
+            try{await RouteCommandAsync("list");}catch(Exception error){ failure ??= error.Message; }
+            try {
+                if (routePageLifetime is not null && failure is null && renderedRouteState.ProfileId == drag.Value.Profile && browseCollection == drag.Value.Collection)
+                    await AnimateRouteReorderAsync(RowsForCurrentCollection().Select(row=>row.Id).ToArray(), drag.Value.Selected);
+            } finally {
+                sortingRoutes=false;
+                foreach (var button in RouteButtons(AutoRouteActions))
+                    button.IsEnabled = actionButtons.TryGetValue(button, out bool enabled) ? enabled : true;
+                if (routePageLifetime is not null) { RenderRouteState(renderedRouteState); RestoreRouteDragSelection(drag.Value); }
+            }
+            if (failure is not null && renderedRouteState.ProfileId == drag.Value.Profile && browseCollection == drag.Value.Collection)
+                Report("路线排序未保存：" + failure, InfoBarSeverity.Error);
+        }
+    }
+    private Dictionary<string,double> CaptureRoutePositions()
+    {
+        var positions = new Dictionary<string,double>();
+        for (int i = 0; i < AutoRouteSavedRoutes.Items.Count; ++i)
+            if (AutoRouteSavedRoutes.Items[i] is SavedAutomaticRoute route && AutoRouteSavedRoutes.ContainerFromIndex(i) is FrameworkElement row)
+                positions[route.Id] = row.TransformToVisual(AutoRouteSavedRoutes).TransformPoint(new Point(0,0)).Y;
+        return positions;
+    }
+    private static IEnumerable<Button> RouteButtons(DependencyObject parent)
+    {
+        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(parent); ++index)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is Button button) yield return button;
+            foreach (var nested in RouteButtons(child)) yield return nested;
+        }
+    }
+    private IEnumerable<SavedAutomaticRoute> RowsForCurrentCollection() => renderedRouteState.SavedRoutes
+        .Where(route=>browseCollection == AllCollections || route.Collection == browseCollection);
+    private async Task AnimateRouteReorderAsync(string[] order, string? draggedId)
+    {
+        if (!new Windows.UI.ViewManagement.UISettings().AnimationsEnabled) return;
+        AutoRouteSavedRoutes.UpdateLayout();
+        var rows = Rows();
+        var positions = CaptureRoutePositions();
+        // Animate the old containers first. WinUI recreates a moved item's container even for
+        // ObservableCollection.Move, so committing the order before animation causes a flash.
+        if (rows.Count != order.Length || order.Distinct().Count() != order.Length ||
+            rows.Any(row=>!positions.ContainsKey(row.Id)) || rows.Any(row=>!order.Contains(row.Id))) return;
+        var heights = new Dictionary<string,double>();
+        for (int index=0; index<rows.Count; ++index)
+            heights[rows[index].Id] = index+1<rows.Count ? positions[rows[index+1].Id]-positions[rows[index].Id] :
+                ((FrameworkElement)AutoRouteSavedRoutes.ContainerFromIndex(index)).ActualHeight;
+        var targets = new Dictionary<string,double>();
+        double top = positions[rows[0].Id];
+        foreach (string id in order) { targets[id]=top; top+=heights[id]; }
+        var visuals = new List<(Microsoft.UI.Composition.Visual Visual, FrameworkElement Row, int ZIndex, Panel? Content, Brush? Background)>();
+        using var batch = ElementCompositionPreview.GetElementVisual(AutoRouteSavedRoutes).Compositor
+            .CreateScopedBatch(Microsoft.UI.Composition.CompositionBatchTypes.Animation);
+        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        batch.Completed += (_, _) => completed.TrySetResult();
+        for (int i = 0; i < AutoRouteSavedRoutes.Items.Count; ++i)
+        {
+            if (AutoRouteSavedRoutes.Items[i] is not SavedAutomaticRoute route || !positions.TryGetValue(route.Id, out double oldTop) ||
+                AutoRouteSavedRoutes.ContainerFromIndex(i) is not FrameworkElement row) continue;
+            float distance = (float)(targets[route.Id] - oldTop);
+            if (Math.Abs(distance) < 0.5) continue;
+            ElementCompositionPreview.SetIsTranslationEnabled(row, true);
+            var visual = ElementCompositionPreview.GetElementVisual(row);
+            int zIndex = Canvas.GetZIndex(row);
+            if (route.Id == draggedId) Canvas.SetZIndex(row, zIndex + 10);
+            var content = route.Id == draggedId ? (row as ListViewItem)?.ContentTemplateRoot as Panel : null;
+            var background = content?.Background;
+            if (content is not null) content.Background = (Brush)Application.Current.Resources["IMaoRaisedSurfaceBrush"];
+            float depth = route.Id == draggedId ? 1 : 0;
+            var animation = visual.Compositor.CreateVector3KeyFrameAnimation();
+            animation.Duration = TimeSpan.FromMilliseconds(240);
+            animation.InsertKeyFrame(0, new Vector3(0,0,depth));
+            animation.InsertKeyFrame(1, new Vector3(0,distance,depth), visual.Compositor.CreateCubicBezierEasingFunction(new Vector2(0.2f,0), new Vector2(0.2f,1)));
+            visual.StartAnimation("Translation", animation);
+            visuals.Add((visual, row, zIndex, content, background));
+        }
+        batch.End();
+        try { if (visuals.Count > 0) await completed.Task.WaitAsync(routePageLifetime?.Token ?? CancellationToken.None); }
+        catch (OperationCanceledException) { }
+        finally {
+            // Commit the logical order and clear the old visual offsets in the same UI pass,
+            // after the original rows have arrived. No frame shows an intermediate layout.
+            if (routePageLifetime is not null) RenderRouteState(renderedRouteState, true);
+            foreach (var entry in visuals) {
+                entry.Visual.StopAnimation("Translation");
+                entry.Visual.Properties.InsertVector3("Translation",Vector3.Zero);
+                Canvas.SetZIndex(entry.Row,entry.ZIndex);
+                if (entry.Content is not null) entry.Content.Background = entry.Background;
+            }
+        }
+    }
+    private void RestoreRouteDragSelection((string Profile,string Collection,ulong Revision,string[] Ids,string? Selected) drag)
+    {
+        if (renderedRouteState.ProfileId == drag.Profile && browseCollection == drag.Collection)
+            AutoRouteSavedRoutes.SelectedItem = Rows().FirstOrDefault(row => row.Id == drag.Selected);
     }
 
     private const string AllCollections = "all";
@@ -101,6 +477,12 @@ public sealed partial class FunctionPage : Page
     /// </summary>
     private void RenderCollections(RoutePlanningState state)
     {
+        if (displayedCollectionProfile == state.ProfileId && displayedCollectionBrowse == browseCollection &&
+            displayedCollectionRouteCount == state.SavedRoutes.Length && displayedCollections.SequenceEqual(state.Collections)) return;
+        displayedCollectionProfile = state.ProfileId;
+        displayedCollectionBrowse = browseCollection;
+        displayedCollectionRouteCount = state.SavedRoutes.Length;
+        displayedCollections = state.Collections;
         RouteCollectionChips.Children.Clear();
         foreach (var collection in state.Collections)
         {
@@ -116,6 +498,7 @@ public sealed partial class FunctionPage : Page
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(chip,
                 $"{collection.Name}，{collection.RouteCount} 条路线{(collection.Current ? "，当前合集" : "")}");
             chip.Click += CollectionChip_Click;
+            chip.IsEnabled = !sortingRoutes;
             RouteCollectionChips.Children.Add(chip);
         }
         var all = new Button
@@ -126,6 +509,7 @@ public sealed partial class FunctionPage : Page
         if (browseCollection == AllCollections) all.Style = (Microsoft.UI.Xaml.Style)Microsoft.UI.Xaml.Application.Current.Resources["IMaoPrimaryButtonStyle"];
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(all, "显示全部合集里的路线，不改变当前合集");
         all.Click += CollectionChip_Click;
+        all.IsEnabled = !sortingRoutes;
         RouteCollectionChips.Children.Add(all);
 
         var browsed = state.Collections.FirstOrDefault(collection => collection.Id == browseCollection);
@@ -249,18 +633,35 @@ public sealed partial class FunctionPage : Page
     {
         var picked = CheckedRows();
         if (picked.Count == 0) { Report("请先勾选要导出的路线。", InfoBarSeverity.Informational); return; }
-        var path = PickSavePath($"路线-{DateTime.Now:yyyyMMdd}.json");
+        var exportable = picked.Where(row => !row.Corrupt).ToArray();
+        if (exportable.Length == 0) { Report("选中的路线都无法读取，无法导出。", InfoBarSeverity.Informational); return; }
+        var path = PickSavePath(SuggestedRouteBundleFileName(exportable));
         if (path is null) return;
         try
         {
             await RouteCommandAsync("export", new
             {
                 path,
-                routeIds = picked.Where(row => !row.Corrupt).Select(row => row.Id).ToArray()
+                routeIds = exportable.Select(row => row.Id).ToArray()
             });
         }
         catch (Exception) { /* already reported on the message bar */ return; }
         ExitBatch();
+    }
+
+    internal static string SuggestedRouteBundleFileName(IReadOnlyList<SavedAutomaticRoute> routes)
+    {
+        var first = routes[0];
+        string name = string.IsNullOrWhiteSpace(first.Name) ? first.Id : first.Name;
+        var invalid = Path.GetInvalidFileNameChars();
+        name = new string(name.Trim().Select(character => invalid.Contains(character) ? '_' : character).ToArray()).TrimEnd(' ', '.');
+        if (name.Length == 0) name = "路线";
+        // Windows device names remain reserved when followed by a file extension.
+        string device = name.Split('.')[0].ToUpperInvariant();
+        if (device is "CON" or "PRN" or "AUX" or "NUL" ||
+            (device.Length == 4 && (device.StartsWith("COM") || device.StartsWith("LPT")) && "123456789¹²³".Contains(device[3])))
+            name = "_" + name;
+        return name + (routes.Count > 1 ? $"（{routes.Count}条路线）" : "") + ".json";
     }
 
     private async void RouteExportCollection_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -443,7 +844,10 @@ public sealed partial class FunctionPage : Page
     {
         var lifetime = routePageLifetime;
         if (lifetime is null || lifetime.IsCancellationRequested) return;
-        AutoRouteActions.IsEnabled = false;
+        // Sorting locks action buttons once for the whole save/animation. Disabling the
+        // entire page for each IPC request would flash the list's disabled visual state.
+        bool disableActions = !sortingRoutes;
+        if (disableActions) AutoRouteActions.IsEnabled = false;
         try
         {
             // Service applies only session-fenced snapshots; don't render this return value again.
@@ -464,7 +868,7 @@ public sealed partial class FunctionPage : Page
         }
         finally
         {
-            if (ReferenceEquals(routePageLifetime, lifetime)) AutoRouteActions.IsEnabled = true;
+            if (disableActions && ReferenceEquals(routePageLifetime, lifetime)) AutoRouteActions.IsEnabled = true;
         }
     }
 

@@ -59,6 +59,7 @@ public sealed record RuntimeConfiguration
     // cluster is several icons wide, and the mode is meant to mark the whole cluster as the
     // player arrives. Same unit, so the player tunes it the same way.
     public int FarmRangePixels { get; init; } = 30;
+    public int MarkerMergeOverlapPercent { get; init; } = 50;
 
     /// <summary>
     /// 参与冲突校验的全部快捷键。校验、界面保存与"新增绑定"的迁移都读这一份列表，
@@ -72,6 +73,8 @@ public sealed record RuntimeConfiguration
 
     public void Validate()
     {
+        if (MarkerMergeOverlapPercent is < 1 or > 100)
+            throw new ArgumentException("图标合并重叠阈值必须在 1–100 之间");
         if (CaptureWay is < 0 or > 1) throw new ArgumentException("截图方式无效");
         if (OverlayPresentMode is < 0 or > 1) throw new ArgumentException("叠加层呈现方式无效");
         if (MapUpdateCycle is < 16 or > 1000 || MinMapUpdateCycle is < 16 or > 1000)
@@ -118,6 +121,7 @@ public sealed record RuntimeConfiguration
         ["guidePreviousImageKey"] = GuidePreviousImageKey, ["guideNextImageKey"] = GuideNextImageKey,
         ["toggleEnabledKey"] = ToggleEnabledKey,
         ["completionRangePixels"] = CompletionRangePixels, ["guideRangePixels"] = GuideRangePixels,
-        ["farmRangePixels"] = FarmRangePixels
+        ["farmRangePixels"] = FarmRangePixels,
+        ["markerMergeOverlapPercent"] = MarkerMergeOverlapPercent
     };
 }

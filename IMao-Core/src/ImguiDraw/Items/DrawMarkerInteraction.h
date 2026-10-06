@@ -8,6 +8,7 @@ public:
     static void Initialize(HWND gameWindow);
     static void Shutdown();
     static void BeginFrame();
+    static bool QueueHandPointAtCursor();
     static void Clear();
     static void DrawMapToolsLauncher(const RECT& rect, HWND gameWindow);
     static void DrawMap(const RECT& rect, HWND gameWindow, const ItemMarkerFrame& frame,

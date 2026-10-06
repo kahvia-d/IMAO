@@ -33,6 +33,7 @@ internal sealed class MapToolsWindow : Window
     private readonly TextBlock routesCurrentKinds = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel routesCurrentKindsIcons = new() { Orientation = Orientation.Horizontal, Spacing = 10 };
     private readonly WrapPanel routesHeader = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
+    private readonly CheckBox routesAutoRotate = new() { Content="自动轮换（完成后导航下一条路线）", Tag="autoRotate" };
     private readonly WrapPanel routesCollections = new() { HorizontalSpacing = 8, VerticalSpacing = 8 };
     private readonly TextBlock routesEmpty = new() { FontSize = 15, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock routesFilter = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
@@ -73,6 +74,7 @@ internal sealed class MapToolsWindow : Window
         this.filters = filters;
         this.core = core;
         this.command = command;
+        routesAutoRotate.Click += async (_,_)=>await command("autoRotate");
         Title = "地图工具 · IMao";
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         chrome = new GamepadWindowChrome(this);
@@ -289,6 +291,11 @@ internal sealed class MapToolsWindow : Window
         }
         routesHeader.Children.Add(MakeButton("刷新列表", "list"));
         routesHeader.Children.Add(MakeButton("返回路线规划", "page:route"));
+        var editable = !next.CurrentRouteIsPreview && current is not null &&
+            next.SavedRoutes.Any(saved => saved.Id == current.Id && saved.HandDrawn && !saved.Corrupt) &&
+            !next.HandDrawnActive && !next.HandDrawnPending;
+        routesHeader.Children.Add(MakeButton("修改路线", "edit:" + (current?.Id ?? ""),
+            "修改当前选中的手绘路线", editable));
 
         routes.Children.Add(routesCurrent);
         if (routeFilterActive)
@@ -330,6 +337,8 @@ internal sealed class MapToolsWindow : Window
             routesCollections.Children.Add(chip);
         }
         routes.Children.Add(routesCollections);
+        routesAutoRotate.IsChecked=next.Collections.FirstOrDefault(c=>c.Id==next.CurrentCollection)?.AutoRotate??false;
+        routes.Children.Add(routesAutoRotate);
         var mine = next.SavedRoutes.Where(saved => saved.Collection == next.CurrentCollection).ToArray();
         var elsewhere = next.SavedRoutes.Length - mine.Length;
         separator.Text = $"「{CurrentCollectionName(next)}」里的路线（{mine.Length} 条）" +
@@ -350,19 +359,20 @@ internal sealed class MapToolsWindow : Window
         // to record a point.
         routes.Children.Add(new TextBlock { Text = "手绘路线", FontSize = 16, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
         routesHand.Text = next.HandDrawnActive
-            ? $"正在手绘：已记 {next.HandDrawnCount} 个点。回到大地图后点击要标记的位置（或按一次 {HotkeyLabel}）继续加点；" +
-              "Ctrl+Z 撤销上一个点，Esc 结束手绘（已画的点会保留，可以回来保存）。"
+            ? $"正在{(next.HandEditingRouteId.Length>0?"修改路线":"手绘")}：画布有 {next.HandDrawnCount} 个点。点击创建或选择点位，按住点位拖到另一点连接；" +
+              "Ctrl+Z 撤销编辑；悬停点位并按两次 Backspace 删除；Esc 结束编辑，保留草稿。"
             : next.HandDrawnPending
-                ? $"手绘已结束，画好的 {next.HandDrawnCount} 个点还留着，尚未保存：可以「继续绘制」接着画、" +
-                  "「保存手绘路线」存下来，或者「放弃这次手绘」。"
-                : $"选择「绘制收集物路线」或「绘制非收集物路线」后回到大地图：点击要标记的位置就会加点（也可以按 {HotkeyLabel} 先选择类型，再进入绘制）。" +
-                  "第一个点是起点、最后一个是终点；点在点位上就连接到那个点位，点在空地上生成所选图标的自由点；非收集物图标在大地图左侧选择。";
+                ? $"编辑草稿有 {next.HandDrawnCount} 个点：可以继续编辑、保存或放弃。未连接的点会保留，不参与导航。"
+                : $"选择路线类型后回到大地图：点击创建点位，按住点位拖拽产生带方向的连线；也可以按 {HotkeyLabel} 加点。" +
+                  "数字随连接顺序实时更新，非收集物图标在大地图左侧选择。";
+        routesName.IsReadOnly=next.HandEditingRouteId.Length>0;
+        if(routesName.IsReadOnly)routesName.Text=next.HandEditingRouteName;
         routes.Children.Add(routesHand);
         routes.Children.Add(routesName);
         routesHandButtons.Children.Clear();
         if (next.HandDrawnActive)
         {
-            routesHandButtons.Children.Add(MakeButton("撤销上一个点", "handUndo", null, next.HandDrawnCount > 0));
+            routesHandButtons.Children.Add(MakeButton("撤销最近编辑", "handUndo", null, next.HandCanUndo));
             routesHandButtons.Children.Add(MakeButton("结束手绘", "handFinish"));
         }
         else if (next.HandDrawnPending)
@@ -370,8 +380,8 @@ internal sealed class MapToolsWindow : Window
             routesHandButtons.Children.Add(MakeButton("继续绘制", "handStart"));
             // The button says where the drawing will land: "保存到当前合集" is only true if the player
             // can see which collection that is at the moment they press it.
-            routesHandButtons.Children.Add(MakeButton($"保存到「{CurrentCollectionName(next)}」", "handCommit", null, next.HandDrawnCount >= 2));
-            routesHandButtons.Children.Add(MakeButton("放弃这次手绘", "handDiscard"));
+            routesHandButtons.Children.Add(MakeButton(next.HandEditingRouteId.Length>0?"保存修改":$"保存到「{CurrentCollectionName(next)}」", "handCommit", null, next.HandCanCommit));
+            routesHandButtons.Children.Add(MakeButton(next.HandEditingRouteId.Length>0?"放弃修改":"放弃这次手绘", "handDiscard"));
         }
         else
         {
@@ -484,13 +494,13 @@ internal sealed class MapToolsWindow : Window
         {
             // Navigate by visual row where possible; retain deterministic fallback before layout.
             // 选择规则本身放在 GamepadDirectionSelection 里（纯函数，有单测），这里只负责测量几何。
-            var current = (Button)navigation.CurrentControl!;
+            var current = (Control)navigation.CurrentControl!;
             var origin = current.TransformToVisual(root).TransformPoint(new(0, 0));
             double cx = origin.X + current.ActualWidth / 2, cy = origin.Y + current.ActualHeight / 2;
             var offsets = new List<(double X, double Y)>();
             for (int i = 0; i < navigation.Count; i++)
             {
-                var button = (Button)navigation[i].Control;
+                var button = (Control)navigation[i].Control;
                 var point = button.TransformToVisual(root).TransformPoint(new(0, 0));
                 offsets.Add((point.X + button.ActualWidth / 2 - cx, point.Y + button.ActualHeight / 2 - cy));
             }
@@ -509,7 +519,7 @@ internal sealed class MapToolsWindow : Window
         }
     }
 
-    private static string Label(object? control) => control is Button button ? button.Content?.ToString() ?? "" : "";
+    private static string Label(object? control) => control is ContentControl button ? button.Content?.ToString() ?? "" : "";
 
     private void RebuildNavigation()
     {
@@ -527,11 +537,13 @@ internal sealed class MapToolsWindow : Window
             entries.Add(new(button, (string)button.Tag));
         if (Page == "routes")
         {
+            entries.Add(new(routesAutoRotate,"autoRotate"));
             // The collection chips take part in the ring too: choosing a collection is the one thing
             // on this page that changes what the next save does.
             foreach (var button in routesCollections.Children.OfType<Button>()
                          .Where(b => b.IsEnabled && b.Visibility == Visibility.Visible))
                 entries.Add(new(button, (string)button.Tag));
+            foreach (var button in routesHandButtons.Children.OfType<Button>().Where(b=>b.IsEnabled))entries.Add(new(button,(string)button.Tag));
             foreach (var button in SavedRowButtons.Where(b => b.IsEnabled && b.Visibility == Visibility.Visible))
                 entries.Add(new(button, (string)button.Tag));
         }
@@ -546,13 +558,13 @@ internal sealed class MapToolsWindow : Window
         RebuildNavigation();
         for (int i = 0; i < navigation.Count; i++)
         {
-            var button = (Button)navigation[i].Control;
+            var button = (Control)navigation[i].Control;
             button.BorderThickness = new Thickness(i == navigation.Index ? 2 : 1);
             button.BorderBrush = GamepadWindowChrome.Brush(i == navigation.Index ? "IMaoAccentBrush" : "IMaoBorderBrush", i == navigation.Index ? 0x63D8E8u : 0x304052u);
         }
         if (navigation.Count > 0)
         {
-            var button = (Button)navigation.CurrentControl!;
+            var button = (Control)navigation.CurrentControl!;
             button.Focus(FocusState.Programmatic); button.StartBringIntoView();
         }
     }

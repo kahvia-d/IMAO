@@ -85,17 +85,12 @@ public:
     std::size_t SetMany(const std::vector<Entry>& entries) {
         std::scoped_lock lock(mutex_);
         ExpireLocked();
-        auto& points = document_["points"];
-        std::size_t changed = 0;
-        for (const auto& entry : entries) {
-            if (entry.stateId <= 0 || entry.pointId.empty()) continue;
-            const auto key = Identity(entry.stateId, entry.pointId);
-            if (entry.completed) {
-                if (!points.contains(key)) { points[key] = true; ++changed; }
-            } else if (points.erase(key) != 0) ++changed;
-        }
-        if (changed) CommitLocked();
-        return changed;
+        return SetManyLocked(entries);
+    }
+    void SetForProfile(const std::string& expected,int state,const std::string& point,bool completed){
+        std::scoped_lock lock(mutex_);
+        if(profile_!=expected)throw std::runtime_error("profile-mismatch");
+        ExpireLocked();SetManyLocked({{state,point,completed}});
     }
 
     // Moves pre-existing completions out of the synchronized ledger on the first run of
@@ -146,6 +141,16 @@ private:
     Json document_;
     bool expired_ = false;
 
+    std::size_t SetManyLocked(const std::vector<Entry>& entries){
+        auto next=document_;auto& points=next["points"];std::size_t changed=0;
+        for(const auto& entry:entries){
+            if(entry.stateId<=0||entry.pointId.empty())continue;const auto key=Identity(entry.stateId,entry.pointId);
+            if(entry.completed){if(!points.contains(key)){points[key]=true;++changed;}}
+            else if(points.erase(key))++changed;
+        }
+        if(changed){WriteTextAtomically(Path(profile_),next.dump(2));document_=std::move(next);}
+        return changed;
+    }
     static std::string Identity(int stateId, const std::string& pointId) {
         return std::to_string(stateId) + ":" + pointId;
     }

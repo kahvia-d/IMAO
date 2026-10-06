@@ -68,6 +68,20 @@ internal static class RoutePlanningTests
                 StatusBarEnabled: false, MapUpdateCycle: 95 } && store.LoadError.Length == 0,
                 "legacy configuration supplies Z/Q/F8/PageUp/PageDown and the F9 tool switch without resetting existing preferences");
             var payload = store.Read().ToPayload();
+            check(payload.TryGetValue("markerMergeOverlapPercent", out var overlap) && overlap is 50,
+                "legacy configuration supplies and sends the default 50-percent marker overlap threshold");
+            var customOverlap = store.Update(old => old with { MarkerMergeOverlapPercent = 75 });
+            check(new RuntimeConfigurationStore(path).Read().MarkerMergeOverlapPercent == 75 &&
+                customOverlap.ToPayload()["markerMergeOverlapPercent"] is 75,
+                "custom overlap threshold persists and reaches the canonical native payload");
+            foreach (int invalid in new[] { 0, 101 })
+            {
+                bool refused = false;
+                try { store.Update(old => old with { MarkerMergeOverlapPercent = invalid }); } catch (ArgumentException) { refused = true; }
+                check(refused && store.Read().MarkerMergeOverlapPercent == 75 &&
+                    new RuntimeConfigurationStore(path).Read().MarkerMergeOverlapPercent == 75,
+                    "out-of-range overlap preference cannot replace the saved or live value");
+            }
             check(payload["guidePreviousImageKey"] is 33 && payload["guideNextImageKey"] is 34 &&
                 payload["toggleEnabledKey"] is 120 && RuntimeConfiguration.HotkeyName(120) == "F9" &&
                 RuntimeConfiguration.HotkeyName(33) == "PageUp" && RuntimeConfiguration.HotkeyName(34) == "PageDown",
@@ -738,6 +752,13 @@ internal static class RoutePlanningTests
                 "native host accepts valid raw hotkey configuration independently of managed validation");
             check(await ConfigureAsync(new() { ["completionRangePixels"] = 40, ["guideRangePixels"] = 25 }),
                 "native host accepts a player-chosen nearby trigger range for each key");
+            foreach (int percent in new[] { 1, 50, 75, 100 })
+                check(await ConfigureAsync(new() { ["markerMergeOverlapPercent"] = percent }),
+                    "native host accepts the supported overlap threshold including both endpoints");
+            check(!await ConfigureAsync(new() { ["markerMergeOverlapPercent"] = 0 }) &&
+                !await ConfigureAsync(new() { ["markerMergeOverlapPercent"] = 101 }) &&
+                !await ConfigureAsync(new() { ["markerMergeOverlapPercent"] = 50.5 }),
+                "native host refuses invalid overlap percentages independently of managed validation");
             check(!await ConfigureAsync(new() { ["completionRangePixels"] = 4 }) &&
                 !await ConfigureAsync(new() { ["guideRangePixels"] = 121 }) &&
                 !await ConfigureAsync(new() { ["completionRangePixels"] = 15.5 }),

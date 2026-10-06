@@ -1,5 +1,5 @@
 #pragma once
-#include "RoutePlanningModel.h"
+#include "HandRouteEditor.h"
 #include "AtomicFile.h"
 #include <cctype>
 #include <fstream>
@@ -74,7 +74,7 @@ public:
             // guess whether an empty nameId means "a new kind of stop" or "a corrupt file".
             {"kind",p.layer.stopKind==StopKind::Free?"free":"catalog"},
             {"freeCategory",CategoryId(p.freeCategory)},{"freeIcon",IconId(p.freeIcon)}});
-        return {{"formatVersion",2},{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},
+        Json result={{"formatVersion",plan.handEditor?3:2},{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},
             {"sceneId",plan.sceneId},{"start",StartJson(plan.start)},{"stops",std::move(stops)},{"skipHistory",plan.skipHistory},
             // A missing field on an older file means "not a farming route", which is the only
             // safe reading: turning the mode on by default would auto-mark points on routes the
@@ -90,6 +90,19 @@ public:
             // routes have always been shown. Written for every route so the reader never has to
             // guess, the same way `kind` is written for every stop.
             {"collection",NormalizeCollectionId(plan.collection)}};
+        if(plan.handEditor) {
+            Json nodes=Json::array(),edges=Json::array();
+            for(const auto& node:plan.handEditor->nodes) {
+                auto pointPlan=plan;pointPlan.handEditor.reset();pointPlan.stops={node.point};
+                pointPlan.skipped.clear();pointPlan.skipHistory.clear();
+                // Serialize with the same point fields; editor-only points are not navigation targets.
+                auto point=Document(pointPlan).at("stops").front();point["nodeId"]=node.id;nodes.push_back(std::move(point));
+            }
+            for(const auto& edge:plan.handEditor->edges)edges.push_back({{"from",edge.from},{"to",edge.to}});
+            result["handEditor"]={{"nodes",std::move(nodes)},{"edges",std::move(edges)},
+                {"nextNodeId",plan.handEditor->nextNodeId},{"nextFreeId",plan.handEditor->nextFreeId}};
+        }
+        return result;
     }
     void Save(const Plan& plan,bool makeActive=false) const {
         // Never reuse an identity while its deletion still needs durable cleanup.
@@ -162,7 +175,7 @@ public:
                 Row row;row.id=entry.path().stem().string();row.handDrawn=handDrawn;
                 try {
                     const auto doc=Read(entry.path());
-                    if(doc.value("formatVersion",0)!=1&&doc.value("formatVersion",0)!=2)throw std::runtime_error("unsupported-route-version");
+                    if(doc.value("formatVersion",0)!=1&&doc.value("formatVersion",0)!=2&&doc.value("formatVersion",0)!=3)throw std::runtime_error("unsupported-route-version");
                     row.category=doc.value("routeCategory",std::string{"daily"});row.legacy=doc.value("legacyHandDrawn",true);
                     std::vector<std::string> freeIcons;
                     row.name=doc.value("name",row.id);
@@ -202,7 +215,7 @@ public:
     // arrive by file transfer that could never have been saved locally in the first place.
     static Plan Parse(const Json& doc,const std::string& profile,const std::string& id,const Resolver& resolve) {
         const int version=doc.value("formatVersion",0);
-        if((version!=1&&version!=2)||doc.value("profileId","")!=profile||doc.value("id","")!=id)
+        if((version!=1&&version!=2&&version!=3)||doc.value("profileId","")!=profile||doc.value("id","")!=id)
             throw std::runtime_error("自动路线文件版本或档案不匹配");
         Plan plan;plan.id=id;plan.profileId=profile;plan.name=doc.at("name").get<std::string>();
         plan.sceneId=doc.at("sceneId").get<int>();
@@ -229,7 +242,7 @@ public:
                 free.layer.floorId=saved.value("floorId",std::string{});
                 free.layer.level=saved.value("level",std::string{});
                 free.layer.stopKind=StopKind::Free;
-                if(version==2){
+                if(version>=2){
                     free.freeRouteId=id;
                     free.freeCategory=ParseCategory(saved.at("freeCategory").get<std::string>());
                     free.freeIcon=ParseIcon(saved.at("freeIcon").get<std::string>());
@@ -249,8 +262,24 @@ public:
         else for(const auto& item:plan.stops)if(plan.skipped.contains(Key(item)))plan.skipHistory.push_back(Key(item));
         plan.farmMode=doc.value("farmMode",false);
         plan.handDrawn=doc.value("handDrawn",false);
-        plan.routeCategory=version==2?ParseCategory(doc.at("routeCategory").get<std::string>()):FreePointCategory::Daily;
+        plan.routeCategory=version>=2?ParseCategory(doc.at("routeCategory").get<std::string>()):FreePointCategory::Daily;
         plan.legacyHandDrawn=version==1||doc.value("legacyHandDrawn",false);
+        if(version==3) {
+            if(!plan.handDrawn||!doc.contains("handEditor"))throw std::invalid_argument("编辑路线内容缺失");
+            const auto& savedEditor=doc.at("handEditor");HandRouteEditor editor;
+            if(!savedEditor.at("nodes").is_array()||savedEditor.at("nodes").size()>MaxTargets||
+                !savedEditor.at("edges").is_array()||savedEditor.at("edges").size()>MaxTargets)
+                throw std::invalid_argument("编辑路线点位或连线数量无效");
+            editor.nextNodeId=savedEditor.at("nextNodeId").get<std::size_t>();
+            editor.nextFreeId=savedEditor.at("nextFreeId").get<std::size_t>();
+            for(const auto& saved:savedEditor.at("nodes")) {
+                auto single=doc;single["formatVersion"]=2;single.erase("handEditor");
+                auto point=saved;point["skipped"]=false;single["stops"]=Json::array({point});single["skipHistory"]=Json::array();
+                editor.nodes.push_back({saved.at("nodeId").get<std::string>(),Parse(single,profile,id,resolve).stops.front()});
+            }
+            for(const auto& edge:savedEditor.at("edges"))editor.edges.push_back({edge.at("from").get<std::string>(),edge.at("to").get<std::string>()});
+            plan.handEditor=std::move(editor);
+        }
         ScopeFreePoints(plan,id);
         plan.filterByRoute=doc.value("filterByRoute",true);
         plan.collection=NormalizeCollectionId(doc.value("collection",std::string{DefaultCollectionId}));
@@ -338,6 +367,31 @@ private:
                 throw std::invalid_argument("收集物自由点只能使用数字图标");
             if(p.handDrawn&&!p.legacyHandDrawn&&item.freeCategory!=p.routeCategory)
                 throw std::invalid_argument("自由点类型与路线不一致");
+        }
+        if(p.handEditor) {
+            if(!p.handDrawn)throw std::invalid_argument("自动路线不能带手绘编辑数据");
+            const auto stops=HandRouteStops(*p.handEditor);
+            if(stops.size()<2||stops.size()!=p.stops.size())throw std::invalid_argument("请连接成唯一一条至少两个点的路线");
+            for(std::size_t i=0;i<stops.size();++i) {
+                const auto& a=stops[i];const auto& b=p.stops[i];
+                if(Key(a)!=Key(b)||a.nameId!=b.nameId||a.itemMapROC.x!=b.itemMapROC.x||a.itemMapROC.y!=b.itemMapROC.y||
+                    a.layer!=b.layer||a.freeCategory!=b.freeCategory||a.freeIcon!=b.freeIcon)
+                    throw std::invalid_argument("编辑连线与导航顺序不一致");
+            }
+            if(p.start.roc.x!=stops.front().itemMapROC.x||p.start.roc.y!=stops.front().itemMapROC.y)
+                throw std::invalid_argument("编辑路线起点不一致");
+            if(!p.handEditor->nextNodeId||!p.handEditor->nextFreeId)
+                throw std::invalid_argument("编辑点位身份计数无效");
+            for(const auto& node:p.handEditor->nodes) {
+                auto single=p;single.handEditor.reset();single.stops={node.point};single.skipped.clear();single.skipHistory.clear();Validate(single);
+                if(node.id.size()<2||node.id.front()!='n'||!std::all_of(node.id.begin()+1,node.id.end(),[](unsigned char c){return std::isdigit(c);})||
+                    std::stoull(node.id.substr(1))>=p.handEditor->nextNodeId)
+                    throw std::invalid_argument("编辑节点身份计数无效");
+                if(IsFreeStop(node.point)&&node.point.itemId.starts_with("free:")&&node.point.itemId.size()>5&&
+                    std::all_of(node.point.itemId.begin()+5,node.point.itemId.end(),[](unsigned char c){return std::isdigit(c);})&&
+                    std::stoull(node.point.itemId.substr(5))>=p.handEditor->nextFreeId)
+                    throw std::invalid_argument("自由点身份计数无效");
+            }
         }
         for(const auto& skipped:p.skipped)if(!ids.contains(skipped))throw std::invalid_argument("跳过记录不属于路线");
         std::unordered_set<std::string> history;

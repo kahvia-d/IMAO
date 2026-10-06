@@ -107,8 +107,8 @@ internal static class RouteFilterPlanTests
             // A second route must not overwrite the memory: the loan still belongs to the player's
             // original map, not to the first route's.
             RouteFilterSnapshot.Begin("route-b", new Dictionary<string, bool>(StringComparer.Ordinal) { ["boss"] = false });
-            check(RouteFilterSnapshot.Load() is { } second && second.RouteId == "route-a" && second.Enabled.Count == 3,
-                "a second route reuses the loan instead of replacing the remembered map");
+            check(RouteFilterSnapshot.Load() is { } second && second.RouteId == "route-b" && second.Enabled.Count == 3,
+                "a second route updates loan ownership while preserving the original map");
 
             RouteFilterSnapshot.End();
             check(RouteFilterSnapshot.Load() is null, "ending the loan clears it, so nothing is restored twice");

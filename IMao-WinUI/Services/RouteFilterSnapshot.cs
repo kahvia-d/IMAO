@@ -36,7 +36,7 @@ public static class RouteFilterSnapshot
     /// </summary>
     public static void Begin(string routeId, IReadOnlyDictionary<string, bool> enabled)
     {
-        if (Load() is not null) return;
+        if (Load() is { } existing) { Write(new Document { RouteId=routeId,Enabled=new Dictionary<string,bool>(existing.Enabled,StringComparer.Ordinal) });return; }
         Write(new Document { RouteId = routeId, Enabled = new Dictionary<string, bool>(enabled, StringComparer.Ordinal) });
     }
 

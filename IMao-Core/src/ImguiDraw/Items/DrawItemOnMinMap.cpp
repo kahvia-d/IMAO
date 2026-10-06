@@ -290,7 +290,7 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
         points.push_back({std::to_string(item.layer.stateId) + ":" + item.itemId, position.x, position.y, index, priority});
     }
     const auto layoutStarted = std::chrono::steady_clock::now();
-    auto groups = BuildMarkerLayout(std::move(points), radius * 2 + 2);
+    auto groups = BuildMarkerLayout(std::move(points), radius * 2, MarkerLayoutSettings::OverlapPercent());
     markerRenderStats.layoutMs += ElapsedMs(layoutStarted);
     markerRenderStats.drawnIcons += groups.size();
     for (const auto& group : groups)

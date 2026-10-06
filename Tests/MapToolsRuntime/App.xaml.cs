@@ -1,3 +1,4 @@
+using CommunityToolkit.WinUI.Controls;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
 using IMao_WinUI.Views;
@@ -24,6 +25,7 @@ public partial class App : Application
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         var arguments = Environment.GetCommandLineArgs();
+        if(arguments.Contains("--route-controls")){await RunRouteControlsAsync();return;}
         int source = Array.IndexOf(arguments, "--source");
         if (source >= 0) { SourceFixture.RunChild(arguments[source + 1], int.Parse(arguments[source + 2]), int.Parse(arguments[source + 3])); return; }
         keeper = new Window { Content = new Grid { Background = new SolidColorBrush(Microsoft.UI.Colors.Black),
@@ -183,13 +185,14 @@ public partial class App : Application
                     Collections = [ new RouteCollection { Id = "default", Name = "默认合集", RouteCount = 2, Current = true, System = true },
                                     new RouteCollection { Id = "chest", Name = "宝箱路线", RouteCount = 1 } ],
                     SavedRoutes = [ new SavedAutomaticRoute { Id = "r-1", Name = "北岸", SceneName = "瑝珑", StopCount = 3, Collection = "default" },
-                                    new SavedAutomaticRoute { Id = "r-2", Name = "南岸", SceneName = "瑝珑", StopCount = 4, Collection = "default" },
+                                    new SavedAutomaticRoute { Id = "r-2", Name = "南岸", SceneName = "瑝珑", StopCount = 4, Collection = "default", HandDrawn = true },
                                     new SavedAutomaticRoute { Id = "r-3", Name = "宝箱巡游", SceneName = "瑝珑", StopCount = 5, Collection = "chest" } ],
-                    HandDrawnPending = true, HandDrawnCount = 3
+                    HandDrawnPending = true, HandDrawnCount = 3, HandCanCommit = true
                 });
                 await Click(window, "routes"); await Until(() => window.Page == "routes", "routes page");
                 await Task.Delay(150);
                 var listButtons = Descendants((DependencyObject)window.Content).OfType<Button>().ToArray();
+                Check(Descendants((DependencyObject)window.Content).OfType<CheckBox>().Any(b=>Equals(b.Tag,"autoRotate")),"game route list exposes collection auto rotation checkbox");
                 Check(listButtons.Any(b => Equals(b.Tag, "collection:default") && Equals(b.Tag, "collection:chest") == false),
                     "the in-game list offers the default collection");
                 Check(listButtons.Any(b => Equals(b.Tag, "collection:chest") && ((string)b.Content).Contains("宝箱路线")),
@@ -200,6 +203,10 @@ public partial class App : Application
                     "a route from another collection is not in this list, because saving goes to the current one");
                 Check(listButtons.Any(b => b.Content is string text && text.Contains("保存到「默认合集」")),
                     "the hand-drawing save button says which collection it will save into");
+                Check(listButtons.Count(b => Equals(b.Content,"修改路线"))==1&&listButtons.Single(b=>Equals(b.Content,"修改路线")).IsEnabled==false,
+                    "one header editor remains disabled without a selected saved hand route");
+                await (Task)typeof(MapToolsController).GetMethod("CommandAsync",Private)!.Invoke(controller,new object[]{"autoRotate"})!;
+                Check(core.Commands.Any(c=>c.Type=="route:collectionAutoRotate"&&c.Data.GetProperty("collectionId").GetString()=="default"&&c.Data.GetProperty("enabled").GetBoolean()),"checkbox writes rotation preference for the displayed collection");
                 await Capture(folder, $"{width}-routes-collections", window, game.Handle, Check);
                 core.Commands.Clear();
                 await Click(window, "collection:chest"); await Until(() => core.RoutePlanning.CurrentCollection == "chest", "collection switch");
@@ -296,6 +303,64 @@ public partial class App : Application
         }
         catch (Exception error) { log.WriteLine("FAIL " + error); Environment.ExitCode = 1; }
         finally { keeper.Close(); Exit(); }
+    }
+    private async Task RunRouteControlsAsync()
+    {
+        string folder=Path.Combine(AppContext.BaseDirectory,"route-controls-"+DateTime.Now.ToString("yyyyMMdd-HHmmss"));Directory.CreateDirectory(folder);
+        using var log=new StreamWriter(Path.Combine(folder,"results.log")){AutoFlush=true};int checks=0;MapToolsWindow? view=null;
+        void Check(bool condition,string message){if(!condition)throw new Exception(message);++checks;log.WriteLine("PASS "+message);}
+        try {
+            RouteFilterSnapshot.Path=Path.Combine(folder,"loan.json");
+            var catalog=MapFilterCatalog.Load(new[]{new MapFilterSourceItem("a","A","collect"),new("b","B","collect"),new("c","C","collect")},folder);
+            var saved=new Dictionary<string,bool>{{"a",true},{"b",false},{"c",true}};
+            using var filters=new FilterSelectionService(catalog,saved,(ids,enabled)=>{foreach(var id in ids)saved[id]=enabled;return (true,"");},(_,_)=>Task.FromResult(true));filters.SetConnected(true);
+            var core=new CoreHostService();using var controller=new MapToolsController(core,new MarkerGuideCoordinator(),filters);
+            var state=new RoutePlanningState { ProfileId="fixture",NavigationStatus="navigating",Active=new(){Id="a-route",Name="A",Stops=[new(){NameId="a"}]} };
+            core.Seed(state);Check(saved["a"]&&!saved["b"]&&!saved["c"],"route event narrows filters without opening game tools");
+            core.Seed(state with { Active=state.Active! with {Id="b-route",Stops=[new(){NameId="b"}]} });
+            Check(!saved["a"]&&saved["b"]&&!saved["c"],"rotation event updates route filter");
+            Check(RouteFilterSnapshot.Load() is { } loan&&loan.RouteId=="b-route"&&loan.Enabled["a"]&&loan.Enabled["c"]&&!loan.Enabled["b"],"rotation preserves original filter snapshot and updates ownership");
+            core.Seed(state with { Active=state.Active! with {Id="free-route",Stops=[new(){StopKind="free"}]} });
+            Check(saved["a"]&&!saved["b"]&&saved["c"]&&controller.RouteFilterActive,"free-only successor restores original map while retaining session snapshot");
+            core.Seed(state with { Active=state.Active! with {Id="unfiltered-route",FilterByRoute=false} });
+            Check(saved["a"]&&!saved["b"]&&saved["c"],"route filter setting is respected during rotation");
+            core.Seed(state with {NavigationStatus="finished"});Check(RouteFilterSnapshot.Load() is null&&!controller.RouteFilterActive&&saved["a"]&&saved["c"],"natural route end restores and retires original filter loan");
+            var commands=new List<string>();view=new MapToolsWindow(filters,core,key=>{commands.Add(key);return Task.CompletedTask;},"routes");view.AppWindow.Resize(new SizeInt32(800,900));view.Activate();
+            state=new() {ProfileId="fixture",CurrentCollection="default",Collections=[new(){Id="default",Current=true,AutoRotate=true}],SavedRoutes=[new(){Id="hand",HandDrawn=true},new(){Id="auto"}]};
+            view.RenderRoutes(state);await Task.Delay(150);
+            var buttons=Descendants((DependencyObject)view.Content).OfType<Button>().ToArray();
+            var edit=buttons.Single(b=>Equals(b.Content,"修改路线"));
+            Check(!edit.IsEnabled,"header editor is disabled without a selected route");
+            var header=GetField<WrapPanel>(view,"routesHeader")!;
+            Check(header.Children.Contains(edit)&&header.Children.IndexOf(edit)==header.Children.IndexOf(header.Children.OfType<Button>().Single(b=>Equals(b.Tag,"page:route")))+1,"editor sits immediately after return-to-planning in the header");
+            view.RenderRoutes(state with {CurrentRoute=new(){Id="auto"}});
+            Check(!Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"修改路线")).IsEnabled,"selected automatic route cannot be edited");
+            view.RenderRoutes(state with {CurrentRoute=new(){Id="hand"},CurrentRouteIsPreview=true});
+            Check(!Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"修改路线")).IsEnabled,"preview route cannot be edited");
+            state=state with {CurrentRoute=new(){Id="hand"}};
+            view.RenderRoutes(state);await Task.Delay(50);
+            edit=Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"修改路线"));
+            Check(edit.IsEnabled&&Equals(edit.Tag,"edit:hand"),"selected saved hand route enables header editor");
+            Check(GetField<WrapPanel>(view,"routesHeader")!.Children.Contains(edit)&&GetField<List<(Button Row,SavedAutomaticRoute Route)>>(view,"savedRows")!.Count==2,"saved rows contain no individual edit buttons");
+            ((IInvokeProvider)new ButtonAutomationPeer(edit).GetPattern(PatternInterface.Invoke)).Invoke();await Task.Delay(50);
+            Check(commands.Contains("edit:hand"),"header editor invokes the selected route action");
+            view.RenderRoutes(state with {CurrentRoute=new(){Id="other-hand"},SavedRoutes=[..state.SavedRoutes,new(){Id="other-hand",HandDrawn=true}]});
+            edit=Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"修改路线"));
+            ((IInvokeProvider)new ButtonAutomationPeer(edit).GetPattern(PatternInterface.Invoke)).Invoke();await Task.Delay(50);
+            Check(commands.Contains("edit:other-hand"),"header editor follows changes to the current route");
+            view.RenderRoutes(state with {SavedRoutes=[new(){Id="hand",HandDrawn=true,Corrupt=true}]});
+            Check(!Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"修改路线")).IsEnabled,"corrupt current route cannot be edited");
+            var rotate=Descendants((DependencyObject)view.Content).OfType<CheckBox>().Single(b=>Equals(b.Tag,"autoRotate"));Check(rotate.IsChecked==true,"auto rotation checkbox renders persisted collection setting");
+            view.RenderRoutes(state with {HandDrawnPending=true,HandEditingRouteId="hand",HandEditingRouteName="Original",HandCanCommit=false});
+            buttons=Descendants((DependencyObject)view.Content).OfType<Button>().ToArray();Check(buttons.Single(b=>Equals(b.Tag,"handCommit")).IsEnabled==false,"disconnected editor cannot save from route list");
+            Check(buttons.Single(b=>Equals(b.Tag,"edit:hand")).IsEnabled==false,"existing draft prevents overwriting with another editor");
+            Check(GetField<TextBox>(view,"routesName") is {IsReadOnly:true,Text:"Original"},"editing preserves original saved route name");
+            view.RenderRoutes(state with {HandDrawnActive=true,HandCanUndo=true,HandDrawnCount=0});
+            Check(Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Tag,"handUndo")).IsEnabled,"undo remains available after removing the last canvas node");
+            view.FocusCurrent();Check(true,"checkbox participates in navigation without button casts");
+            log.WriteLine($"ALL {checks} ROUTE CONTROL CHECKS PASSED");Environment.ExitCode=0;
+        }catch(Exception error){log.WriteLine("FAIL "+error);Environment.ExitCode=1;}
+        finally{view?.Close();Exit();}
     }
     private static MapToolsWindow? GetWindow(MapToolsController controller) => GetField<MapToolsWindow>(controller, "window");
     private static T? GetField<T>(object source, string name) where T : class => source.GetType().GetField(name, Private)?.GetValue(source) as T;

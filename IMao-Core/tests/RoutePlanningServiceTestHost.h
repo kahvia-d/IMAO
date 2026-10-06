@@ -32,11 +32,17 @@ struct DrawItemBase {
         {std::scoped_lock lock(mutex);if(value)completed.insert(AutoRoute::Key(item));else completed.erase(AutoRoute::Key(item));}
         return {{"accepted",true},{"data",{{"changed",1},{"point",{{"profileId",profile},{"stateId",item.layer.stateId},{"pointId",item.itemId},{"routeId",item.freeRouteId},{"stopKind","free"},{"completed",value}}}}}};
     }
+    static Json SetFarmPointCompletion(const std::string& profile,const ItemDatas& item){return SetFreePointCompletion(profile,item,true);}
     static void PublishMarkerEvent(Json) { RoutePlanningService::OnMarkerChanged(); }
     static void RemoveFreePointCompletions(const std::string& profile,const std::string& routeId) {
         if(profile!=markerProfile)throw std::runtime_error("profile-mismatch");
         std::scoped_lock lock(mutex);const auto prefix="free-route:"+routeId+":";
         std::erase_if(completed,[&](const auto& key){const auto colon=key.find(':');return colon!=std::string::npos&&key.compare(colon+1,prefix.size(),prefix)==0;});
+    }
+    static void PruneFreePointCompletions(const std::string& profile,const std::string& routeId,const std::unordered_set<std::string>& retained) {
+        if(profile!=markerProfile)throw std::runtime_error("profile-mismatch");
+        std::scoped_lock lock(mutex);const auto prefix="free-route:"+routeId+":";
+        std::erase_if(completed,[&](const auto& key){const auto colon=key.find(':');return colon!=std::string::npos&&key.compare(colon+1,prefix.size(),prefix)==0&&!retained.contains(key);});
     }
     static bool IsRefreshablePoint(const std::string& nameId){return refreshableCategories.contains(nameId);}
     static bool IsRefreshablePointId(const std::string& pointId){return refreshablePointIds.contains(pointId);}

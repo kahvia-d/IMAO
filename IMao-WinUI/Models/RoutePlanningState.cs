@@ -50,6 +50,12 @@ public sealed record RoutePlanningState
     public bool HandDrawnPending { get; init; }
     /// <summary>How many points the hand-drawn drawing holds so far.</summary>
     public int HandDrawnCount { get; init; }
+    public ulong HandRevision { get; init; }
+    public bool HandCanUndo { get; init; }
+    public bool HandCanCommit { get; init; }
+    public string HandEditingRouteId { get; init; } = "";
+    public string HandEditingRouteName { get; init; } = "";
+    public HandRouteEditorState HandEditor { get; init; } = new();
     public bool HandDrawnTypeChoosing { get; init; }
     public string HandCategory { get; init; } = "daily";
     public string HandIcon { get; init; } = "number";
@@ -58,6 +64,7 @@ public sealed record RoutePlanningState
     /// this record book. Both come from the core, which owns the index: the default collection is
     /// emitted like any other row so nothing on this side has to know how it is special.
     /// </summary>
+    public ulong CollectionOrderRevision { get; init; }
     public string CurrentCollection { get; init; } = "default";
     public RouteCollection[] Collections { get; init; } = [];
     /// <summary>
@@ -145,6 +152,9 @@ public sealed record RouteStop
 
 public sealed record AutomaticRoute
 {
+    public bool FilterByRoute { get; init; } = true;
+    public bool HandDrawn { get; init; }
+    public string Collection { get; init; } = "default";
     public string RouteCategory { get; init; } = "daily";
     public bool LegacyHandDrawn { get; init; }
     public string Id { get; init; } = "";
@@ -235,6 +245,8 @@ public sealed record SavedAutomaticRoute
 /// </summary>
 public sealed record RouteCollection
 {
+    public bool AutoRotate { get; init; }
+    public ulong OrderRevision { get; init; }
     public string Id { get; init; } = "default";
     public string Name { get; init; } = "";
     public int RouteCount { get; init; }
@@ -278,4 +290,20 @@ public sealed record RouteBundleTransfer
     /// <summary>The name the package would arrive under, for the sentence the player is shown.</summary>
     public string PackageLabel => IsCollection && CollectionName.Length > 0 ? $"合集「{CollectionName}」" : "路线包";
     public string SkippedLabel => Skipped > 0 ? $"（另有 {Skipped} 条读不出来，会跳过）" : "";
+}
+
+public sealed record HandRouteNodeState
+{
+    public string Id { get; init; } = "";
+    public RouteStop Point { get; init; } = new();
+}
+public sealed record HandRouteEdgeState
+{
+    public string From { get; init; } = "";
+    public string To { get; init; } = "";
+}
+public sealed record HandRouteEditorState
+{
+    public HandRouteNodeState[] Nodes { get; init; } = [];
+    public HandRouteEdgeState[] Edges { get; init; } = [];
 }

@@ -1,5 +1,6 @@
 #include "RoutePlanningServiceTestHost.h"
 #include "Runtime/RoutePlanStore.h"
+#include "Runtime/HandDrawnRoute.h"
 #include "Runtime/RouteCollections.h"
 #include "Runtime/RouteBundle.h"
 #include "Runtime/RouteViewportCandidates.h"
@@ -23,6 +24,93 @@ Json Command(Json command){const auto result=RoutePlanningService::Command(comma
     if(!result.value("accepted",false))throw std::runtime_error(result.value("message","command failed"));return result;}
 void Complete(const ItemDatas& point,bool value){DrawItemBase::HandleMarkerCommand({{"stateId",point.layer.stateId},{"pointId",point.itemId},{"completed",value}});}
 std::vector<std::string> Ids(const AutoRoute::Plan& plan){std::vector<std::string> result;for(const auto& p:plan.stops)result.push_back(AutoRoute::Key(p));std::sort(result.begin(),result.end());return result;}
+void ConnectHandPoints() {
+    const auto view=RoutePlanningService::View();
+    if(!view.handDraft||!view.handDraft->handEditor)throw std::runtime_error("missing hand editor");
+    const auto nodes=view.handDraft->handEditor->nodes;
+    for(std::size_t i=1;i<nodes.size();++i)Command({{"action","handConnect"},{"fromNodeId",nodes[i-1].id},{"toNodeId",nodes[i].id}});
+}
+void VerifyHandEditing(const AutoRoute::Plan& original) {
+    RoutePlanningService::SetAutoReplanEnabled(false);Command({{"action","stop"}});
+    RoutePlanningService::ObserveMap(1,{});
+    Command({{"action","handStart"},{"category","collectible"}});
+    Command({{"action","handPoint"},{"x",100.0},{"y",0.0}});
+    const auto blank=RoutePlanningService::View();
+    Check(blank.handDraft&&blank.handDraft->handEditor&&AutoRoute::IsFreeStop(blank.handDraft->handEditor->nodes.front().point),"hidden official point coordinates still create a free point");
+    Check(!RoutePlanningService::HandPointCandidate(1,{100,0}),"empty hit cannot snap through the filter");
+    Check(!RoutePlanningService::Command({{"action","handPoint"},{"x",100.0},{"y",0.0},{"key",AutoRoute::Key(original.stops.front())}}).value("accepted",false),"a hidden catalog key is refused by the core");
+    Command({{"action","handPoint"},{"x",2000.0},{"y",1000.0}});
+    Command({{"action","handPoint"},{"x",3000.0},{"y",1000.0}});
+    Command({{"action","handConnect"},{"fromNodeId","n1"},{"toNodeId","n2"}});
+    Command({{"action","handCommit"},{"name","Edit service regression"}});
+    const auto rows=RoutePlanningService::Snapshot().at("savedRoutes");std::string id;
+    for(const auto& row:rows)if(row.at("name")=="Edit service regression")id=row.at("id").get<std::string>();
+    Check(!id.empty(),"a connected route and its orphan are saved");
+    Command({{"action","switch"},{"routeId",id}});
+    auto active=*RoutePlanningService::View().active;const auto survivor=active.stops.front();
+    RoutePlanningService::CompleteFreePoint({{"profileId","local"},{"routeId",id},{"stateId",survivor.layer.stateId},{"pointId",survivor.itemId},{"completed",true}});
+    Command({{"action","handEdit"},{"routeId",id}});
+    Check(RoutePlanningService::View().navigationStatus=="paused"&&RoutePlanningService::View().handDrawnCount==3,"editing an active saved route pauses navigation and restores orphan nodes");
+    Command({{"action","handConnect"},{"fromNodeId","n2"},{"toNodeId","n3"}});
+    const auto routePath=StructuredLogger::root/"SavedRoutes"/"Hand"/"local"/(id+".json");
+    const auto held=CreateFileW(routePath.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+    Check(!RoutePlanningService::Command({{"action","handCommit"}}).value("accepted",false),"locked original route rejects a save");
+    Check(RoutePlanningService::View().handDrawnCount==3&&RoutePlanningService::View().active->stops.size()==2,"failed save retains the complete draft and original route");
+    if(held!=INVALID_HANDLE_VALUE)CloseHandle(held);
+    Command({{"action","handCommit"}});
+    active=*RoutePlanningService::View().active;
+    Check(active.id==id&&active.name=="Edit service regression"&&active.stops.size()==3&&RoutePlanningService::View().completed.contains(AutoRoute::Key(survivor)),"overwrite preserves identity, name and surviving completion");
+    RouteDatas cachedOriginal("Saved hand route",1);cachedOriginal.profileId="local";cachedOriginal.routePlanId=id;
+    cachedOriginal.orderRevision=RoutePlanningService::View().orderRevision;
+    Check(RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),"saved route path is visible before editing");
+    Command({{"action","handEdit"},{"routeId",id}});
+    Check(!RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),"editing immediately hides cached saved-route lines on the big map");
+    Command({{"action","handConnect"},{"fromNodeId","n1"},{"toNodeId","n3"}});
+    auto rewired=RoutePlanningService::View();
+    Check(rewired.handDraft&&rewired.handDraft->handEditor->edges==std::vector<AutoRoute::HandRouteEdge>{{"n1","n3"}}&&rewired.handDraft->stops.size()==2&&rewired.handDrawnCount==3,
+        "A-B-C rewires to only A-C while B remains an unnumbered canvas node");
+    Check(!RoutePlanningService::DrawingVisibility().Allows(cachedOriginal)&&rewired.active->stops.size()==3,
+        "draft draws the rewired path while the saved original stays intact and hidden");
+    Command({{"action","handUndo"}});
+    Check(RoutePlanningService::View().handDraft->handEditor->edges.size()==2&&!RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),
+        "undo restores draft edges without exposing the saved path underneath");
+    Command({{"action","handFinish"}});
+    Check(!RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),"pending editor keeps the saved path hidden until save or discard");
+    Command({{"action","handStart"}});
+    for(const auto* node:{"n1","n2","n3"})Command({{"action","handRemove"},{"nodeId",node}});
+    Check(!RoutePlanningService::View().handDraft&&!RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),
+        "an empty editor cannot bring back cached original route lines");
+    Command({{"action","handUndo"}});Command({{"action","handDiscard"}});
+    Check(RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),"discard restores visibility of the original saved route");
+    Command({{"action","handStart"},{"category","collectible"}});Command({{"action","handPoint"},{"x",7000.0},{"y",7000.0}});
+    Check(RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),"drawing a new unrelated route leaves the active saved route visible");
+    Command({{"action","handDiscard"}});
+    Command({{"action","handEdit"},{"routeId",id}});Command({{"action","handRemove"},{"nodeId","n1"}});Command({{"action","handCommit"}});
+    Check(!RoutePlanningService::View().completed.contains(AutoRoute::Key(survivor)),"deleted free point progress is cleaned only after save");
+    Command({{"action","handEdit"},{"routeId",id}});Command({{"action","handRemove"},{"nodeId","n2"}});Command({{"action","handDiscard"}});
+    Check(RoutePlanningService::View().active->stops.size()==2,"discard keeps the original saved path");
+    RoutePlanningService::ObserveMap(1,original.stops);
+    Command({{"action","handEdit"},{"routeId",id}});
+    Command({{"action","handConnect"},{"fromNodeId","n3"},{"targetKey",AutoRoute::Key(original.stops.front())}});
+    Check(RoutePlanningService::View().handDrawnCount==3,"dragging to a visible upstream point adds and connects it");
+    Command({{"action","handUndo"}});
+    Check(RoutePlanningService::View().handDrawnCount==2&&RoutePlanningService::View().handDraft->stops.size()==2,"one undo reverses the whole add-and-connect gesture");
+    Command({{"action","handDiscard"}});
+    Command({{"action","handEdit"},{"routeId",id}});
+    Command({{"action","collectionNew"},{"name","Moved while editing"}});const auto target=RoutePlanningService::Snapshot().at("currentCollection").get<std::string>();
+    Command({{"action","routeCollection"},{"routeIds",Json::array({id})},{"collectionId",target}});
+    Command({{"action","farm"},{"enabled",true}});Command({{"action","handCommit"}});
+    Check(RoutePlanningService::View().active->collection==target&&RoutePlanningService::View().active->farmMode,"saved editor preserves metadata changed while editing");
+    Command({{"action","handEdit"},{"routeId",id}});Command({{"action","delete"},{"routeId",id}});
+    Check(!RoutePlanningService::View().handDraft,"deletion invalidates a saved editor");
+    Check(!RoutePlanningService::Command({{"action","handCommit"}}).value("accepted",false),"a deleted editor cannot resurrect its route");
+    Command({{"action","handStart"},{"category","collectible"}});Command({{"action","handPoint"},{"x",10},{"y",20}});Command({{"action","handPoint"},{"x",20},{"y",20}});ConnectHandPoints();
+    AutoRoute::RouteCollections index(StructuredLogger::root/"SavedRoutes");const auto heldIndex=CreateFileW(index.Path("local").c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+    Check(!RoutePlanningService::Command({{"action","handCommit"}}).value("accepted",false),"collection index failure refuses a new hand route save");
+    Check(RoutePlanningService::View().handDrawnCount==2,"index write failure preserves complete hand draft");
+    if(heldIndex!=INVALID_HANDLE_VALUE)CloseHandle(heldIndex);Command({{"action","handCommit"}});
+    Command({{"action","stop"}});
+}
 void Observe(double x=20){
     const auto now=Clock::now();const auto seq=++sequence;
     RoutePlanningService::UpdatePlayer({1,{x,0},"playerSnapshot",0,1,true});
@@ -59,6 +147,58 @@ AutoRoute::Plan Prepare(){
     return plan;
 }
 
+void VerifyOrderAndRotation(const AutoRoute::Plan& original){
+    RoutePlanningService::UpdatePlayer({1,{0,0},"test",0,1,true});RoutePlanningService::SetPlayerAvailable(true);
+    Command({{"action","stop"}});RoutePlanningService::SetAutoReplanEnabled(false);
+    AutoRoute::RoutePlanStore store(StructuredLogger::root/"SavedRoutes"/"Auto");
+    std::vector<std::string> ids;
+    for(std::size_t i=0;i<3;++i){auto plan=original;plan.id="rotation-"+std::to_string(i);plan.name=plan.id;plan.collection="default";
+        plan.stops={original.stops[i]};plan.skipped.clear();plan.skipHistory.clear();store.Save(plan,false);ids.push_back(plan.id);}
+    auto snapshot=Command({{"action","list"}}).at("data");
+    std::vector<std::string> order;for(const auto& row:snapshot.at("savedRoutes"))if(row.at("collection")=="default")order.push_back(row.at("id").get<std::string>());
+    std::erase_if(order,[&](const auto& id){return std::find(ids.begin(),ids.end(),id)!=ids.end();});
+    order.insert(order.end(),{ids[2],ids[0],ids[1]});
+    const auto revision=snapshot.at("collectionOrderRevision");
+    Command({{"action","collectionReorder"},{"collectionId","default"},{"routeIds",order},{"expectedOrderRevision",revision}});
+    Check(!RoutePlanningService::Command({{"action","collectionReorder"},{"collectionId","default"},{"routeIds",order},{"expectedOrderRevision",revision}}).value("accepted",false),"stale reorder is rejected");
+    Command({{"action","collectionAutoRotate"},{"collectionId","default"},{"enabled",true}});
+    Command({{"action","switch"},{"routeId",ids[2]}});
+    Command({{"action","skip"}});Check(RoutePlanningService::View().active->id==ids[2],"skip does not rotate");
+    Command({{"action","undoSkip"}});Command({{"action","pause"}});Complete(original.stops[2],true);
+    Check(RoutePlanningService::View().active->id==ids[2],"paused completion does not rotate");
+    Complete(original.stops[2],false);Command({{"action","resume"}});Complete(original.stops[2],true);
+    Check(RoutePlanningService::View().active->id==ids[0],"completion follows persisted collection order");
+    Complete(original.stops[0],true);
+    Check(RoutePlanningService::View().active->id==ids[0]&&RoutePlanningService::View().navigationStatus=="finished","completed successor is skipped and collection end stops");
+    RoutePlanningService::OnMarkerChanged();Check(RoutePlanningService::View().active->id==ids[0],"duplicate completion event cannot rotate again");
+    AutoRoute::RouteCollections index(StructuredLogger::root/"SavedRoutes");
+    Check(index.Load("local").orders.at("default")==order&&index.Load("local").autoRotate.at("default"),"order and rotation preference persist");
+    const auto held=CreateFileW(index.Path("local").c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+    auto reversed=order;std::reverse(reversed.begin(),reversed.end());
+    Check(!RoutePlanningService::Command({{"action","collectionReorder"},{"collectionId","default"},{"routeIds",reversed},{"expectedOrderRevision",index.Load("local").orderRevision}}).value("accepted",false),"index write failure refuses sorting");
+    if(held!=INVALID_HANDLE_VALUE)CloseHandle(held);Check(index.Load("local").orders.at("default")==order,"failed sorting preserves authority order");
+    Command({{"action","collectionNew"},{"name","Move order regression"}});const auto destination=RoutePlanningService::Snapshot().at("currentCollection").get<std::string>();
+    Command({{"action","routeCollection"},{"routeIds",Json::array({ids[2],ids[0]})},{"collectionId",destination}});
+    Check(index.Load("local").orders.at(destination)==std::vector<std::string>{ids[2],ids[0]},"batch move appends source sequence rather than sorting IDs");
+    // A distinct free target lets the next route wait for another map without sharing completion identities.
+    AutoRoute::HandDrawnDraft cross;cross.Start(2,Scene::Find(2)->kuroStateId,FreePointCategory::Daily,"rotation-cross");
+    for(int i=0;i<2;++i){ItemDatas point;point.layer.stateId=Scene::Find(2)->kuroStateId;point.itemMapROC={double(i*100),0};cross.Add(point);}cross.Connect("n1","n2");
+    auto crossPlan=cross.Commit("rotation-cross","Cross map","local");crossPlan.collection=destination;store.Save(crossPlan,false);
+    const auto badPath=StructuredLogger::root/"SavedRoutes"/"Auto"/"local"/"rotation-broken.json";auto bad=AutoRoute::RoutePlanStore::Document(original);bad["id"]="rotation-broken";bad["collection"]=destination;bad["stops"]=Json::array();WriteTextAtomically(badPath,bad.dump());
+    Command({{"action","list"}});
+    const auto newOrder=std::vector<std::string>{ids[2],"rotation-broken",ids[0],"rotation-cross"};
+    Command({{"action","collectionReorder"},{"collectionId",destination},{"routeIds",newOrder},{"expectedOrderRevision",index.Load("local").orderRevision}});
+    Command({{"action","collectionAutoRotate"},{"collectionId",destination},{"enabled",true}});
+    Complete(original.stops[2],false);Command({{"action","switch"},{"routeId",ids[2]}});
+    Command({{"action","collectionCurrent"},{"collectionId","default"}});
+    RoutePlanningService::SetPlayerAvailable(false);Complete(original.stops[2],true);
+    Check(RoutePlanningService::View().active->id==ids[2],"location invalid completion does not rotate");
+    Complete(original.stops[2],false);RoutePlanningService::SetPlayerAvailable(true);Complete(original.stops[2],true);
+    Check(RoutePlanningService::View().active->id=="rotation-cross"&&RoutePlanningService::View().navigationStatus=="waitingForLocation","rotation uses active collection, skips broken/done routes and waits across maps");
+    Check(RoutePlanningService::Snapshot().at("message").get<std::string>().find("无法加载")!=std::string::npos,"broken successor produces a visible skip notice");
+
+}
+
 std::vector<std::string> SelectionKeys(const std::vector<ItemDatas>& points){
     std::vector<std::string> result;
     for(const auto& point:points)result.push_back(AutoRoute::Key(point));
@@ -74,10 +214,10 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
     Command({{"action","handPoint"},{"x",100.0},{"y",0.0},{"key",AutoRoute::Key(original.stops.front())}});
     Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
     const auto before=RoutePlanningService::View();
-    const auto points=before.handDraft->stops;
+    std::vector<ItemDatas> points;for(const auto& n:before.handDraft->handEditor->nodes)points.push_back(n.point);
     const auto samePoints=[&](const RoutePlanningView& view){
-        if(!view.handDraft||view.handDraft->stops.size()!=points.size())return false;
-        for(std::size_t i=0;i<points.size();++i){const auto& p=view.handDraft->stops[i];
+        if(!view.handDraft||view.handDraft->handEditor->nodes.size()!=points.size())return false;
+        for(std::size_t i=0;i<points.size();++i){const auto& p=view.handDraft->handEditor->nodes[i].point;
             if(AutoRoute::Key(p)!=AutoRoute::Key(points[i])||p.itemMapROC.x!=points[i].itemMapROC.x||
                 p.itemMapROC.y!=points[i].itemMapROC.y||p.layer.stopKind!=points[i].layer.stopKind)return false;}
         return true;
@@ -109,11 +249,11 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
         Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
     }
     Command({{"action","handPoint"},{"x",1357.0},{"y",2468.0}});
-    Check(RoutePlanningService::View().handDraft->stops.back().itemId=="free:2",
+    Check(RoutePlanningService::View().handDraft->handEditor->nodes.back().point.itemId=="free:2",
         "continuing after suspension retains free-point numbering");
     Command({{"action","handUndo"}});
     Check(samePoints(RoutePlanningService::View()),"undo after resuming returns to the exact original points");
-    Command({{"action","handFinish"}});
+    ConnectHandPoints();Command({{"action","handFinish"}});
     RoutePlanningService::MapUnavailable();
     Check(RoutePlanningService::View().handDrawnPending&&samePoints(RoutePlanningService::View()),
         "temporary map unavailability preserves a finished unsaved hand draft");
@@ -136,12 +276,13 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
     RoutePlanningService::MapUnavailable();
     RoutePlanningService::MapClosed();
     const auto closed=RoutePlanningService::View();
-    Check(!closed.handDrawnActive&&closed.handDrawnCount==0,
-        "confirmed map closure cancels an active drawing even after suspension cleared observedScene");
+    Check(!closed.handDrawnActive&&closed.handDrawnPending&&closed.handDrawnCount==1,
+        "confirmed map closure retains confirmed edits even after suspension cleared observedScene");
     RoutePlanningService::MapClosed();
     Check(RoutePlanningService::View().revision==closed.revision,"repeated map-closed observations are idempotent");
 
     RoutePlanningService::ObserveMap(1,original.stops);
+    Command({{"action","handDiscard"}});
     Command({{"action","handStart"},{"sceneId",1},{"category","collectible"}});
     Command({{"action","handPoint"},{"x",1234.0},{"y",5678.0}});
     Command({{"action","handFinish"}});
@@ -179,8 +320,9 @@ void VerifyMapSuspension(const AutoRoute::Plan& original){
         "returning from another map preserves the original draft");
     RoutePlanningService::MapUnavailable();
     RoutePlanningService::SessionStopped();
-    Check(!RoutePlanningService::View().handDrawnActive&&RoutePlanningService::View().handDrawnCount==0,
-        "stopping the game session still retires its unsaved active draft");
+    Check(!RoutePlanningService::View().handDrawnActive&&RoutePlanningService::View().handDrawnPending&&RoutePlanningService::View().handDrawnCount==1,
+        "stopping the game session preserves confirmed edits as a pending draft");
+    Command({{"action","handDiscard"}});
 
     RoutePlanningService::ObserveMap(1,original.stops);
     Command({{"action","handStart"},{"sceneId",1},{"category","collectible"}});
@@ -538,13 +680,16 @@ void VerifyFarmMode(){
     // A sustained dwell marks the refreshable targets of the cluster, and only those.
     dwell(100,700ms);
     const auto after=RoutePlanningService::View();
-    Check(after.completed.contains(keyOf("near-a"))&&after.completed.contains(keyOf("near-b")),
-        "a dwell in range must mark every daily-refresh target of the cluster in one batch");
+    Check(after.completed.contains(keyOf("near-a"))&&!after.completed.contains(keyOf("near-b")),
+        "a dwell marks only the current target; the successor starts its own dwell");
     Check(!after.completed.contains(keyOf("chest")),
         "a target that is not a daily-refresh point must never be auto-marked");
     Check(!after.completed.contains(keyOf("far")),"a target out of range must not be marked");
-    Check(after.farmNotice=="刷怪采集模式自动标记 2 个","the toolbar must report the batch it just marked");
+    Check(after.farmNotice=="刷怪采集模式自动标记 1 个","the toolbar must report the batch it just marked");
     Check(after.farmNoticeSerial!=serialBefore,"a new batch must be distinguishable from the last one shown");
+
+    dwell(110,700ms);
+    Check(RoutePlanningService::View().completed.contains(keyOf("near-b")),"the successor completes after its own dwell");
 
     // The remaining target is the one-off collectible, so nothing further happens even though
     // the player is standing inside its range.
@@ -623,6 +768,7 @@ void VerifyFarmMode(){
 // whether it is a whole collection or a handful of routes, so importing never asks the player to
 // classify a file the file already describes.
 void VerifyTypedFreeRoutes(const AutoRoute::Plan& original) {
+    auto official=original.stops.front();official.itemId="alpha";RoutePlanningService::ObserveMap(1,{official});
     Command({{"action","collectionNew"},{"name","自由点回归测试"}});
     Command({{"action","handCancel"}});
     Command({{"action","handStart"}});
@@ -637,11 +783,11 @@ void VerifyTypedFreeRoutes(const AutoRoute::Plan& original) {
     Check(!changedType.value("accepted",false),"route type locks after the first point");
     Command({{"action","handIcon"},{"icon","plant"}});
     Command({{"action","handPoint"},{"x",10100.0},{"y",10000.0}});
-    auto draft=RoutePlanningService::View();const auto id=draft.handDraftPreview->stops.front().freeRouteId;
-    Check(draft.handDraftPreview->stops[0].freeIcon==FreePointIcon::Monster3C&&draft.handDraftPreview->stops[1].freeIcon==FreePointIcon::Plant,"icon selection preserves earlier free points");
+    auto draft=RoutePlanningService::View();const auto id=draft.handDraftPreview->handEditor->nodes.front().point.freeRouteId;
+    Check(draft.handDraftPreview->handEditor->nodes[0].point.freeIcon==FreePointIcon::Monster3C&&draft.handDraftPreview->handEditor->nodes[1].point.freeIcon==FreePointIcon::Plant,"icon selection preserves earlier free points");
     Command({{"action","handFinish"}});Command({{"action","handStart"}});
     Check(RoutePlanningService::View().handIcon==FreePointIcon::Plant,"resuming preserves the selected icon");
-    Command({{"action","handFinish"}});Command({{"action","handCommit"},{"name","Typed free test"}});
+    ConnectHandPoints();Command({{"action","handFinish"}});Command({{"action","handCommit"},{"name","Typed free test"}});
     Command({{"action","switch"},{"routeId",id}});
     auto view=RoutePlanningService::View();const auto point=view.active->stops[0];
     auto done=RoutePlanningService::CompleteFreePoint({{"profileId","local"},{"routeId",id},{"pointId",point.itemId},{"stateId",point.layer.stateId},{"completed",true},{"automatic",true}});
@@ -1126,7 +1272,7 @@ void VerifyCollections(){
     Command({{"action","handStart"},{"category","collectible"}});
     Command({{"action","handPoint"},{"x",7},{"y",0}});
     Command({{"action","handPoint"},{"x",9},{"y",0}});
-    Command({{"action","handCommit"},{"name","手绘进合集"}});
+    ConnectHandPoints();Command({{"action","handCommit"},{"name","手绘进合集"}});
     const auto handId=savedIdByName("手绘进合集");
     Check(!handId.empty()&&rowCollection(handId)==chestId,
         "a hand-drawn route is saved into the collection the player is currently in");
@@ -1257,6 +1403,13 @@ int main(int argc,char** argv){
     const bool failSave=argc>2&&std::string(argv[2])=="save-failure";
     try{
         const auto original=Prepare();const auto originalIds=Ids(original);const auto oldKey=AutoRoute::Key(original.stops.front());
+        if(argc>2&&std::string(argv[2])=="order-rotation") {
+            VerifyOrderAndRotation(original);RoutePlanningService::Shutdown();std::cout<<"Order rotation failures="<<failures<<"\n";return failures?1:0;
+        }
+        if(argc>2&&std::string(argv[2])=="hand-editing") {
+            VerifyHandEditing(original);RoutePlanningService::Shutdown();
+            std::cout<<"Hand editing harness failures="<<failures<<'\n';return failures?1:0;
+        }
         if(argc>2&&std::string(argv[2])=="map-suspension"){
             VerifyMapSuspension(original);
             RoutePlanningService::Shutdown();

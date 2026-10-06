@@ -44,6 +44,8 @@ struct RoutePlanningView {
     // it, which is why leaving must not throw it away.
     bool handDrawnPending = false;
     std::size_t handDrawnCount = 0;
+    std::uint64_t handRevision = 0;
+    bool handCanCommit = false;
     bool handDrawnTypeChoosing = false;
     FreePointCategory handCategory = FreePointCategory::Daily;
     FreePointIcon handIcon = FreePointIcon::Number;

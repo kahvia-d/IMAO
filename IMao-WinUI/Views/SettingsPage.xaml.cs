@@ -799,6 +799,7 @@ public sealed partial class SettingsPage : Page
         CompletionRangePixels.Value = value.CompletionRangePixels;
         GuideRangePixels.Value = value.GuideRangePixels;
         FarmRangePixels.Value = value.FarmRangePixels;
+        MarkerMergeOverlapPercent.Value = value.MarkerMergeOverlapPercent;
         restoringRuntime = false;
     }
     private async Task SaveRuntimeAsync(Func<Task<bool>> update)
@@ -829,6 +830,8 @@ public sealed partial class SettingsPage : Page
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 5 and <= 120) await SaveRangeAsync(() => coreHost.ConfigureAsync(guideRangePixels: (int)e.NewValue)); }
     private async void FarmRange_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 5 and <= 120) await SaveRangeAsync(() => coreHost.ConfigureAsync(farmRangePixels: (int)e.NewValue)); }
+    private async void MarkerMergeOverlap_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
+    { if (double.IsFinite(e.NewValue) && e.NewValue is >= 1 and <= 100) await SaveRangeAsync(() => coreHost.ConfigureAsync(markerMergeOverlapPercent: (int)e.NewValue)); }
 
     /// <summary>
     /// Saves one trigger range and reports the result in the 操作优化 card. The range is
@@ -839,19 +842,19 @@ public sealed partial class SettingsPage : Page
     {
         if (restoringRuntime || savingRange || !IsLoaded) return;
         savingRange = true;
-        CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = FarmRangePixels.IsEnabled = false;
+        CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = FarmRangePixels.IsEnabled = MarkerMergeOverlapPercent.IsEnabled = false;
         try
         {
             bool applied = await update();
             RangeMessage.Severity = applied ? InfoBarSeverity.Success : InfoBarSeverity.Warning;
-            RangeMessage.Message = applied ? "触发范围已保存并立即生效。" : "触发范围未应用：" + coreHost.LastFault;
+            RangeMessage.Message = applied ? "设置已保存并立即生效。" : "设置未应用：" + coreHost.LastFault;
             RangeMessage.IsOpen = !applied;
         }
         catch (Exception error) { RangeMessage.Severity = InfoBarSeverity.Error; RangeMessage.Message = error.Message; RangeMessage.IsOpen = true; }
         finally
         {
             savingRange = false;
-            CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = FarmRangePixels.IsEnabled = true;
+            CompletionRangePixels.IsEnabled = GuideRangePixels.IsEnabled = FarmRangePixels.IsEnabled = MarkerMergeOverlapPercent.IsEnabled = true;
             RestoreRuntime();
         }
     }

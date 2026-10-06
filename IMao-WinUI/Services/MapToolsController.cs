@@ -97,8 +97,33 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
 
     private void OnRouteChanged(object? sender, RoutePlanningState value)
     {
+        SynchronizeRouteFilter(value);
         window?.RenderRoute(value);
         window?.RenderRoutes(value, RouteFilterActive, FilteredRouteName, FilteredKindCount);
+    }
+    private string filterProfile = "";
+    private string appliedFilterSignature = "";
+    private void SynchronizeRouteFilter(RoutePlanningState value)
+    {
+        if(filterProfile.Length>0&&filterProfile!=value.ProfileId){EndRouteFilterLoan("档案已变化，恢复点位筛选");appliedFilterSignature="";}
+        filterProfile=value.ProfileId;
+        var active=value.Active;
+        if(active is null||value.NavigationStatus=="finished"){
+            EndRouteFilterLoan("路线导航已结束，恢复了导航前的点位筛选");appliedFilterSignature="";return;
+        }
+        if(value.NavigationStatus=="paused")return;
+        var kinds=active.FilterByRoute?active.Stops.Where(p=>p.StopKind!="free"&&!string.IsNullOrWhiteSpace(p.NameId)).Select(p=>p.NameId).Distinct().ToArray():[];
+        var signature=active.Id+"|"+string.Join("|",kinds);
+        if(signature==appliedFilterSignature)return;
+        if(kinds.Length==0){
+            // Keep the first loan across a free-only route; show the original map until the next route.
+            if(RouteFilterSnapshot.Load() is { } loan){
+                var current=filters.Rows.ToDictionary(r=>r.Id,r=>r.IsEnabled,StringComparer.Ordinal);
+                foreach(var (id,enabled) in RouteFilterPlan.Restore(loan.Enabled,current))filters.SetEnabled([id],enabled);
+                RouteFilterSnapshot.Begin(active.Id,loan.Enabled);loanedRouteId=active.Id;FilteredRouteName="";FilteredKindCount=0;
+            }
+        }else _=ApplyRouteFilterAsync(active.Id,active.Name,kinds);
+        appliedFilterSignature=signature;
     }
     private void OnCoreChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -430,6 +455,12 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
                 Report(core.RoutePlanning.Message);
                 return;
             }
+            if(action=="autoRotate") {
+                var collection=core.RoutePlanning.Collections.FirstOrDefault(c=>c.Id==core.RoutePlanning.CurrentCollection);
+                await core.ExecuteRoutePlanningAsync("collectionAutoRotate",new Dictionary<string,object?> {
+                    ["profileId"]=profile,["collectionId"]=core.RoutePlanning.CurrentCollection,["enabled"]=!(collection?.AutoRotate??false)
+                },sessionCancellation?.Token??default);Report(core.RoutePlanning.Message);return;
+            }
             if (action.StartsWith("collection:", StringComparison.Ordinal))
             {
                 // Entering a collection from the in-game list. It is the same command the desktop page
@@ -455,13 +486,20 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
                     sessionCancellation?.Token ?? default);
                 // Borrow the filter for this navigation. A route with no catalogue points (a drawing made
                 // only of free points) has nothing to narrow to, so it leaves the map as it is.
-                if (core.RoutePlanning.Active?.Id == routeId && row is not null && row.Kinds.Length > 0)
-                    await ApplyRouteFilterAsync(routeId, row.Name, row.Kinds.Select(kind => kind.NameId).ToArray());
+                SynchronizeRouteFilter(core.RoutePlanning);
                 await core.ExecuteRoutePlanningAsync("list", new Dictionary<string, object?> { ["profileId"] = profile },
                     sessionCancellation?.Token ?? default);
                 window.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);
                 Report(core.RoutePlanning.Message);
                 return;
+            }
+            if(action.StartsWith("edit:",StringComparison.Ordinal)) {
+                await core.ExecuteRoutePlanningAsync("handEdit",new Dictionary<string,object?> {
+                    ["profileId"]=profile,["routeId"]=action["edit:".Length..],
+                    ["expectedSceneId"]=core.RoutePlanning.SceneId,["expectedGeneration"]=core.RoutePlanning.Generation
+                },sessionCancellation?.Token??default);
+                window.RenderRoutes(core.RoutePlanning,RouteFilterActive,FilteredRouteName,FilteredKindCount);
+                Report(core.RoutePlanning.Message);return;
             }
             string? handCategory=null;
             if(action.StartsWith("handStart:",StringComparison.Ordinal)){handCategory=action["handStart:".Length..];action="handStart";}
@@ -620,7 +658,7 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
     {
         if (loanedRouteId.Length == 0) return;
         var active = core.RoutePlanning.Active;
-        if (active is not null && active.Id == loanedRouteId) return;
+        if (active is not null && core.RoutePlanning.NavigationStatus != "finished") return;
         EndRouteFilterLoan("已退出路线导航，恢复了导航前的点位筛选");
     }
     public GamepadHandoffLease? AcquireHandoff(nint source)

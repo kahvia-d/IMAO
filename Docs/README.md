@@ -19,7 +19,7 @@
 
 ## 待办与未完成
 
-最新发行说明：[`Release-2026.10.4.2.md`](Release-2026.10.4.2.md)（完善手绘自由点显示、完成操作与记录清理）。
+最新发行说明：[`Release-2026.10.6.1.md`](Release-2026.10.6.1.md)（手绘路线编辑、路线排序与自动轮换）。
 
 | 文档 | 内容 |
 |---|---|
@@ -70,6 +70,7 @@
 | [`LayeredMapFalsePositive_Hukou_20260926.md`](LayeredMapFalsePositive_Hukou_20260926.md) | 虎口山脉"地表帧被当成层内"的根因与判定修正 |
 | [`LayeredFloorRetention_20261001.md`](LayeredFloorRetention_20261001.md) | 天槎空间站"走出洞穴后层不解除"：`盲望之塌` 是地表而非楼层，保留判据从足迹改为影像（同前一条的另一半） |
 | [`RouteLibraryAndHandDrawn_20260928.md`](RouteLibraryAndHandDrawn_20260928.md) | **路线列表、手绘路线重做、旧手绘数据导入、按路线筛选（借出/归还）**：规格 + 实施记录 + 五轮实机反馈的真因 |
+| [`HandRouteEditing_20261005.md`](HandRouteEditing_20261005.md) | 手绘路线编辑、合集排序、自动轮换及图标合并阈值的实现与回归记录 |
 | [`RouteCollectionsAndTransfer_20261001.md`](RouteCollectionsAndTransfer_20261001.md) | **路线合集 + 路线包导入导出**：方案（现行，未实施）——合集落盘、9 个新命令、路线包格式、两步导入、界面分工、8 个实施阶段 |
 | [`NativeRoutePlanningMap_20260928.md`](NativeRoutePlanningMap_20260928.md) | 原生路线规划逐行证据地图（命令协议、落盘 schema、命中与筛选机制） |
 
@@ -124,6 +125,7 @@
 | [`Release-2026.10.2.1.md`](Release-2026.10.2.1.md) | 2026.10.2.1（地区重新启用修复、内存优化、梦枢天罗点位、默认筛选） |
 | [`Release-2026.10.2.2.md`](Release-2026.10.2.2.md) | 2026.10.2.2（更新尝试记录、改用分片发布） |
 | [`Release-2026.10.4.2.md`](Release-2026.10.4.2.md) | 2026.10.4.2（手绘自由点、小地图标记与本地进度） |
+| [`Release-2026.10.6.1.md`](Release-2026.10.6.1.md) | 2026.10.6.1（手绘路线编辑、路线排序与自动轮换） |
 | [`HandDrawnFreePoints_20261004.md`](HandDrawnFreePoints_20261004.md) | 自由点实现、交互一致性和删除清理验证记录 |
 | [`ReleaseAssets_v1.0.2.md`](ReleaseAssets_v1.0.2.md) | v1.0.2 发行资源归档 |
 | [`ReleaseAssets_v1.0.2.sha256`](ReleaseAssets_v1.0.2.sha256) | — |

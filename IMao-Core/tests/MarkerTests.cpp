@@ -319,6 +319,37 @@ int main() {
             Require(damaged.Size() == 3 && damaged.UnreadableFiles() == 1,
                 "one unreadable catalog must not discard the categories the others supplied");
         }
+        Require(BuildMarkerLayout({{"a", 0, 0, 0}, {"b", 29, 0, 1}}, 30).size() == 2,
+            "default grouping must not merge icons with only a sliver of overlap");
+        for (const double diameter : {16.0, 30.0, 60.0}) {
+            const auto pairCount = [&](double fraction, int percent) {
+                return BuildMarkerLayout({{"a", 0, 0, 0}, {"b", diameter * fraction, 0, 1}}, diameter, percent).size();
+            };
+            Require(pairCount(0.40, 50) == 1 && pairCount(0.41, 50) == 2,
+                "half-area overlap threshold must scale with the rendered icon diameter");
+            Require(pairCount(0.19, 75) == 1 && pairCount(0.22, 75) == 2,
+                "custom overlap must measure circular intersection area rather than linear penetration");
+            Require(pairCount(1.0, 1) == 1 && pairCount(1.001, 1) == 2,
+                "contact setting must merge touching icons but not icons separated by a gap");
+            Require(pairCount(0, 100) == 1 && pairCount(0.000001, 100) == 2,
+                "100 percent must merge only fully coincident icons");
+            for (const int percent : {1, 50, 100}) {
+                auto independent = BuildMarkerLayout({{"free-a", 0, 0, 0, 1, false},
+                    {"free-b", 0, 0, 1, 1, false}, {"normal-a", 0, 0, 2}, {"normal-b", 0, 0, 3}}, diameter, percent);
+                Require(independent.size() == 3 && independent[0].members.size() == 1 &&
+                    independent[1].members.size() == 1 && independent[2].members.size() == 2,
+                    "free points must not merge with each other or absorb catalog points at identical coordinates");
+            }
+        }
+        Require(MarkerLayoutSettings::OverlapPercent() == 50, "native merge preference defaults to 50");
+        MarkerLayoutSettings::Apply(75);
+        Require(MarkerLayoutSettings::OverlapPercent() == 75, "native merge preference changes immediately");
+        for (const int percent : {0, 101}) {
+            bool refused = false;
+            try { MarkerLayoutSettings::Apply(percent); } catch (const std::invalid_argument&) { refused = true; }
+            Require(refused && MarkerLayoutSettings::OverlapPercent() == 75, "invalid merge preference must not change live state");
+        }
+        MarkerLayoutSettings::Apply(50);
         std::vector<MarkerLayoutPoint> points = {{"a", 5, 5, 0}, {"b", 6, 6, 1}, {"c", 150, 150, 2}};
         auto groups = BuildMarkerLayout(points, 30);
         Require(groups.size() == 2 && groups[0].members.size() == 2, "screen overlap grouping failed");

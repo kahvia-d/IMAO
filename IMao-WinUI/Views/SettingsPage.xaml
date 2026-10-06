@@ -189,7 +189,9 @@
                     <NumberBox x:Name="CompletionRangePixels" Header="完成点位触发范围 · 像素" Minimum="5" Maximum="120" SmallChange="5" ValueChanged="CompletionRange_ValueChanged" SpinButtonPlacementMode="Compact" Width="215" />
                     <NumberBox x:Name="GuideRangePixels" Header="查看攻略触发范围 · 像素" Minimum="5" Maximum="120" SmallChange="5" ValueChanged="GuideRange_ValueChanged" SpinButtonPlacementMode="Compact" Width="215" />
                     <NumberBox x:Name="FarmRangePixels" Header="刷怪采集自动标记范围 · 像素" Minimum="5" Maximum="120" SmallChange="5" ValueChanged="FarmRange_ValueChanged" SpinButtonPlacementMode="Compact" Width="215" />
+                    <NumberBox x:Name="MarkerMergeOverlapPercent" Header="图标合并重叠阈值 · %" Minimum="1" Maximum="100" SmallChange="1" LargeChange="10" ValueChanged="MarkerMergeOverlap_ValueChanged" SpinButtonPlacementMode="Compact" Width="215" />
                 </controls:WrapPanel>
+                <TextBlock Text="大小地图共用图标合并阈值。1：接触即合并；50：重叠面积达到一半；100：完全重叠。自由点始终单独显示。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <InfoBar x:Name="RangeMessage" IsOpen="False" IsClosable="True" />
                 <TextBlock Text="范围内有两个以上点位、且它们的图标在小地图上互相压住时，会先列出这些点让你选一个；图标没有压在一起时直接用最近的那个，不再多问一步。查看攻略只是打开窗口，不会改动任何进度。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <TextBlock Text="「刷怪采集自动标记范围」只在路线工具栏打开「刷怪采集」后生效：走到目标这么近的地方停留约半秒，程序就把采集物和敌人替你标成已完成（默认 30）。它会一次标记范围内当前路线的所有目标，收集物永远不受影响，这些标记每天凌晨四点自动清空，也不会同步到库街区。" Style="{StaticResource IMaoSecondaryTextStyle}" />

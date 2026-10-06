@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <numeric>
+#include <optional>
 #include <stdexcept>
 #include <unordered_set>
 #include <unordered_map>
@@ -37,11 +38,23 @@ struct Start {
     std::uint64_t generation = 0;
     bool valid = false;
 };
+struct HandRouteNode { std::string id; ItemDatas point; };
+struct HandRouteEdge {
+    std::string from, to;
+    bool operator==(const HandRouteEdge&) const = default;
+};
+struct HandRouteEditor {
+    std::vector<HandRouteNode> nodes;
+    std::vector<HandRouteEdge> edges;
+    // Counters survive deletion, undo and reload; identities are never recycled.
+    std::size_t nextNodeId = 1, nextFreeId = 1;
+};
 struct Plan {
     std::string id, name, profileId;
     int sceneId = 0;
     Start start;
     std::vector<ItemDatas> stops;
+    std::optional<HandRouteEditor> handEditor;
     std::unordered_set<std::string> skipped;
     std::vector<std::string> skipHistory;
     // Whether this route was saved as a farming route: "刷怪采集" belongs to the route, not to
@@ -75,6 +88,8 @@ inline void ScopeFreePoints(Plan& plan, const std::string& routeId) {
     for(auto& item : plan.stops) if(IsFreeStop(item)) {
         const auto before=Key(item); item.freeRouteId=routeId; keys[before]=Key(item);
     }
+    if(plan.handEditor)for(auto& node:plan.handEditor->nodes)if(IsFreeStop(node.point))
+        node.point.freeRouteId=routeId;
     std::unordered_set<std::string> skipped;
     for(const auto& key : plan.skipped) skipped.insert(keys.contains(key)?keys.at(key):key);
     plan.skipped=std::move(skipped);

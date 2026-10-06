@@ -281,7 +281,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         bool? gamepadEnabled = null, int? gamepadControllerIndex = null,
         GamepadButtons? gamepadEntryButton = null, bool? autoReplanEnabled = null,
         bool? expectedAutoReplanEnabled = null, string? expectedAutoReplanProfile = null,
-        int? completionRangePixels = null, int? guideRangePixels = null, int? farmRangePixels = null)
+        int? completionRangePixels = null, int? guideRangePixels = null, int? farmRangePixels = null,
+        int? markerMergeOverlapPercent = null)
     {
         await lifecycleLock.WaitAsync(cancellationToken);
         try
@@ -320,7 +321,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     GamepadEntryButton = gamepadEntryButton ?? old.GamepadEntryButton,
                     CompletionRangePixels = completionRangePixels ?? old.CompletionRangePixels,
                     GuideRangePixels = guideRangePixels ?? old.GuideRangePixels,
-                    FarmRangePixels = farmRangePixels ?? old.FarmRangePixels
+                    FarmRangePixels = farmRangePixels ?? old.FarmRangePixels,
+                    MarkerMergeOverlapPercent = markerMergeOverlapPercent ?? old.MarkerMergeOverlapPercent
                 });
                 OnUi(() => OnPropertyChanged(nameof(Configuration)));
             }

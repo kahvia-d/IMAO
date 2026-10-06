@@ -249,6 +249,10 @@ try
         await using var core = new CoreHostService(Path.GetFullPath(args[0]), new RuntimeConfigurationStore(Path.Combine(root, "runtime.json")), new LocalItemFilter(Path.Combine(root, "host-filters.json"), legacy));
         await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => core.EnsureStartedAsync()));
         Check(core.IsConnected, "concurrent startup connects one session");
+        Check(await core.ConfigureAsync(markerMergeOverlapPercent: 75) && core.Configuration.MarkerMergeOverlapPercent == 75,
+            "merge threshold is acknowledged by the native core and saved by the service");
+        Check(!await core.ConfigureAsync(markerMergeOverlapPercent: 0) && core.Configuration.MarkerMergeOverlapPercent == 75,
+            "service rejects invalid overlap without losing the persisted preference");
         await core.ConfigureAsync(mapUpdateCycle: 0);
         Check(core.LastFault.Length > 0 && core.Status.CoreState != "faulted", "rejected command is visible without faulting runtime");
         await core.ConfigureAsync(mapUpdateCycle: 95, mapEnabled: false, statusBarEnabled: false);
@@ -283,6 +287,9 @@ try
         await Task.WhenAll(core.RestartAsync(), core.ConfigureAsync(minMapUpdateCycle: 90));
         Check(!core.Configuration.MapEnabled && core.Configuration.MapUpdateCycle == 95 && core.Configuration.MinMapUpdateCycle == 90, "restart preserves and merges configuration");
         Check(core.IsConnected, "restart and configuration are serialized");
+        Check(core.Configuration.MarkerMergeOverlapPercent == 75 &&
+            new RuntimeConfigurationStore(Path.Combine(root, "runtime.json")).Read().MarkerMergeOverlapPercent == 75,
+            "merge threshold survives core restart and unrelated configuration updates");
         Check(core.Configuration.AutoReplanEnabled && (await core.ExecuteRoutePlanningAsync("state")).AutoReplanEnabled,
             "real-time preference survives core restart and configuration merge");
         await Task.WhenAll(core.ShutdownAsync(), core.ShutdownAsync());
