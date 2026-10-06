@@ -36,7 +36,13 @@ static partial class Publisher
         var catalogFile = Path.Combine(request, "catalog-payload.json"); var catalogBytes = File.ReadAllBytes(catalogFile);
         File.AppendAllText(catalogFile, " "); Reject("payload bytes replaced", () => SignRequest(sign)); File.WriteAllBytes(catalogFile, catalogBytes);
         var previousActions = Environment.GetEnvironmentVariable("GITHUB_ACTIONS"); Environment.SetEnvironmentVariable("GITHUB_ACTIONS", "true");
-        sign["test"] = "false"; Reject("signing disabled inside Actions", () => SignRequest(sign)); sign["test"] = "true"; Environment.SetEnvironmentVariable("GITHUB_ACTIONS", previousActions);
+        sign["test"] = "false"; Reject("signing disabled inside Actions", () => SignRequest(sign)); sign["test"] = "true";
+        // A fixture relabelled as non-test must be rejected before DPAPI, even with --test true.
+        var nonTestFile = Path.Combine(root, "non-test-labelled-fixture.json");
+        var nonTest = JsonNode.Parse(File.ReadAllBytes(sign["private-key"]))!; nonTest["testOnly"] = false;
+        File.WriteAllBytes(nonTestFile, JsonSerializer.SerializeToUtf8Bytes(nonTest, Json));
+        Reject("production-labelled key cannot bypass Actions through --test", () => SignRequest(new(sign) { ["private-key"] = nonTestFile, ["output"] = Path.Combine(root, "forbidden-response.json") }));
+        Environment.SetEnvironmentVariable("GITHUB_ACTIONS", previousActions);
         SignRequest(sign);
         var finish = new Dictionary<string, string>(sign) { ["input"] = bulk, ["request"] = request, ["response"] = response }; finish.Remove("private-key"); finish.Remove("output");
         var manual = Directory.GetFiles(Path.Combine(bulk, "manual"))[0]; var manualBytes = File.ReadAllBytes(manual);

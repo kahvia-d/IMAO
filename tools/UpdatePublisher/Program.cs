@@ -111,6 +111,7 @@ static partial class Publisher
     {
         if (production && Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true") throw new InvalidOperationException("Actions cannot load production private keys.");
         var stored = Read<PrivateKey>(path);
+        if (!stored.TestOnly && Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true") throw new InvalidOperationException("Actions can load disposable TestOnly keys only, regardless of command flags.");
         if (production && stored.TestOnly) throw new InvalidOperationException("Production preparation rejects a test signing key.");
         keyId = Id(stored.KeyId);
         var plain = Dpapi.Unprotect(Convert.FromBase64String(stored.ProtectedPkcs8));

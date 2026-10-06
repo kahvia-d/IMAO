@@ -990,7 +990,8 @@ void VerifyRouteBundle(){
     };
     const auto savedIds=[&](){
         std::set<std::string> ids;
-        for(const auto& row:state_().at("savedRoutes"))ids.insert(row.value("id",std::string{}));
+        const auto rows=state_().at("savedRoutes");
+        for(const auto& row:rows)ids.insert(row.value("id",std::string{}));
         return ids;
     };
     // A bundle whose routes carry ids that are free here, so what the import does *with* an id can be
