@@ -1,0 +1,31 @@
+{
+  "formatVersion": 1,
+  "dotnetSdk": "8.0.424",
+  "windowsSdk": "10.0.26100.0",
+  "msvc": "14.44",
+  "dependencies": [
+    {
+      "name": "paddle",
+      "version": "3.0.0",
+      "url": "https://paddle-inference-lib.bj.bcebos.com/3.0.0/cxx_c/Windows/CPU/x86-64_avx-mkl-vs2019/paddle_inference.zip",
+      "sha256": "01a03d1b4e994f193151975f8bd71954ed9df8ad1ae4fa186371d54f85ccdc26",
+      "size": 83959479
+    },
+    {
+      "name": "opencv",
+      "version": "4.11.0",
+      "url": "https://codeload.github.com/opencv/opencv/zip/refs/tags/4.11.0",
+      "sha256": "11dbd2c8d248fa97ac7d20f33c4bab8559ef32835d1c9274009150bb2cf5218a",
+      "size": 99954853
+    },
+    {
+      "name": "opencv_contrib",
+      "version": "4.11.0",
+      "url": "https://codeload.github.com/opencv/opencv_contrib/zip/refs/tags/4.11.0",
+      "sha256": "3e4eb8b19ed38089296943bdd7690d85198d0bfd1e5d211a2892264bc67b2176",
+      "size": 57794409
+    }
+  ],
+  "opencvPatchSha256": "26efae4f981b9cac5cab9222d47b05a81e04150f51ed5a0b9137178155eda911",
+  "publisherRuntime": "8.0.30"
+}

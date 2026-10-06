@@ -38,16 +38,16 @@ if ($LASTEXITCODE -ne 0) {
 $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
 if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Visual Studio Installer (vswhere) was not found.' }
 
-$cmake = & $vswhere -latest -products * -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' | Select-Object -First 1
-$ninja = & $vswhere -latest -products * -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe' | Select-Object -First 1
-$vcvars = & $vswhere -latest -products * -find 'VC\Auxiliary\Build\vcvars64.bat' | Select-Object -First 1
+$cmake = & $vswhere -latest -products * -version '[17.0,18.0)' -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' | Select-Object -First 1
+$ninja = & $vswhere -latest -products * -version '[17.0,18.0)' -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe' | Select-Object -First 1
+$vcvars = & $vswhere -latest -products * -version '[17.0,18.0)' -find 'VC\Auxiliary\Build\vcvars64.bat' | Select-Object -First 1
 if ([string]::IsNullOrWhiteSpace($cmake) -or [string]::IsNullOrWhiteSpace($ninja) -or [string]::IsNullOrWhiteSpace($vcvars)) {
     throw 'Visual Studio CMake, Ninja, or the x64 developer environment is missing.'
 }
 
 function Invoke-VisualStudioCommand([string]$CommandLine) {
     $logPath = Join-Path $env:TEMP ("imao-opencv-" + [guid]::NewGuid().ToString() + '.log')
-    $cmdCommand = 'call "' + $vcvars + '" >nul && (' + $CommandLine + ') > "' + $logPath + '" 2>&1'
+    $cmdCommand = 'call "' + $vcvars + '" -vcvars_ver=14.44 >nul && (' + $CommandLine + ') > "' + $logPath + '" 2>&1'
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.UseShellExecute = $false
 
@@ -73,7 +73,7 @@ function Invoke-VisualStudioCommand([string]$CommandLine) {
 }
 
 $configure = '"' + $cmake + '" -S "' + $Source + '" -B "' + $BuildDirectory + '" -G Ninja ' +
-    '-DCMAKE_BUILD_TYPE=Release -DOPENCV_SKIP_SYSTEM_PROCESSOR_DETECTION=ON -DX86_64=ON -DOPENCV_EXTRA_MODULES_PATH="' + (Join-Path $Contrib 'modules') + '" ' +
+    '-DCMAKE_C_FLAGS=/Brepro -DCMAKE_CXX_FLAGS=/Brepro -DCMAKE_SHARED_LINKER_FLAGS=/Brepro -DCMAKE_EXE_LINKER_FLAGS=/Brepro -DCMAKE_BUILD_TYPE=Release -DOPENCV_SKIP_SYSTEM_PROCESSOR_DETECTION=ON -DX86_64=ON -DOPENCV_EXTRA_MODULES_PATH="' + (Join-Path $Contrib 'modules') + '" ' +
     '-DBUILD_SHARED_LIBS=ON -DBUILD_opencv_world=ON -DOPENCV_ENABLE_NONFREE=ON ' +
     '-DBUILD_LIST=core,imgproc,imgcodecs,features2d,flann,calib3d,xfeatures2d ' +
     '-DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_opencv_apps=OFF -DBUILD_opencv_highgui=OFF -DBUILD_opencv_videoio=OFF -DOPENCV_PYTHON_SKIP_DETECTION=ON -DOPENCV_SKIP_FEATURES2D_DOWNLOADING=ON ' +

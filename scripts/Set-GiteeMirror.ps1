@@ -29,10 +29,13 @@ $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer is required.' }
 if ($MirrorUrl -notmatch '^https://gitee\.com/(?<owner>[^/]+)/(?<repo>[^/]+)/raw/(?<branch>[^/]+)/(?<path>.+)$') { throw "Cannot parse the Gitee mirror URL: $MirrorUrl" }
 $owner = $Matches.owner; $repo = $Matches.repo; $branch = $Matches.branch; $path = $Matches.path
-if (-not $TokenFile) { $TokenFile = Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/gitee-token.txt' }
-if (-not (Test-Path -LiteralPath $TokenFile)) { throw "No Gitee token at $TokenFile. Create a personal access token with the projects scope and save it there; the token must stay outside the repository." }
-$token = (Get-Content -LiteralPath $TokenFile -Raw).Trim()
-if (-not $token) { throw "The Gitee token file is empty: $TokenFile" }
+$token = $env:IMAO_GITEE_TOKEN
+if (-not $token) {
+    if (-not $TokenFile) { $TokenFile = Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/gitee-token.txt' }
+    if (-not (Test-Path -LiteralPath $TokenFile)) { throw 'No Gitee token configured.' }
+    $token = (Get-Content -LiteralPath $TokenFile -Raw).Trim()
+}
+if (-not $token) { throw 'Gitee token is empty.' }
 $Manifest = [IO.Path]::GetFullPath($Manifest)
 if (-not (Test-Path -LiteralPath $Manifest)) { throw "No manifest at $Manifest" }
 $bytes = [IO.File]::ReadAllBytes($Manifest)
@@ -51,7 +54,8 @@ $body = [ordered]@{
     branch       = $branch
 }
 if ($existingSha) { $body.sha = $existingSha; $method = 'Put' } else { $method = 'Post' }
-$null = Invoke-RestMethod -Uri $api -Method $method -ContentType 'application/json;charset=UTF-8' -Body ([Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json -Depth 5))) -TimeoutSec 300
+try { $null = Invoke-RestMethod -Uri $api -Method $method -ContentType 'application/json;charset=UTF-8' -Body ([Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json -Depth 5))) -TimeoutSec 300 } catch { throw 'Gitee update failed; response body suppressed to protect credentials.' }
+$token=$null; $body.access_token=$null
 
 # Read the mirrored bytes back and compare, the same way the GitHub promotion is verified. Reading it
 # back through the API (rather than the raw URL) keeps Gitee's CDN cache out of the verification.

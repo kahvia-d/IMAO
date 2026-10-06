@@ -15,7 +15,7 @@ $taskInfo.WorkingDirectory = $taskRoot
 [void]$taskInfo.EnvironmentVariables.Remove('Path')
 [void]$taskInfo.EnvironmentVariables.Remove('PATH')
 $taskInfo.EnvironmentVariables['PATH'] = [Environment]::GetEnvironmentVariable('Path', 'Process')
-foreach ($taskArgument in @('build', 'Tests/ResourceUpdates/ResourceUpdates.csproj', '-c', 'Release', '--output', (Join-Path $taskOutput 'bin'), '--source', $env:NUGET_PACKAGES, '-p:NuGetAudit=false')) { $taskInfo.ArgumentList.Add($taskArgument) }
+foreach ($taskArgument in @('build', 'Tests/ResourceUpdates/ResourceUpdates.csproj', '-c', 'Release', '--output', (Join-Path $taskOutput 'bin'), '--source', $env:IMAO_NUGET_SOURCE, '-p:NuGetAudit=false')) { $taskInfo.ArgumentList.Add($taskArgument) }
 $taskProcess = [Diagnostics.Process]::Start($taskInfo)
 $taskStdout = $taskProcess.StandardOutput.ReadToEndAsync()
 $taskStderr = $taskProcess.StandardError.ReadToEndAsync()
@@ -70,7 +70,7 @@ if (Test-Path -LiteralPath (Join-Path $taskStagedTree 'IMao-CoreHost.exe')) {
 }
 
 $taskInfo.ArgumentList.Clear()
-foreach ($taskArgument in @('build', 'tools/UpdatePublisher/UpdatePublisher.csproj', '-c', 'Release', '--output', (Join-Path $taskOutput 'publisher-bin'), '--source', $env:NUGET_PACKAGES, '-p:NuGetAudit=false')) { $taskInfo.ArgumentList.Add($taskArgument) }
+foreach ($taskArgument in @('build', 'tools/UpdatePublisher/UpdatePublisher.csproj', '-c', 'Release', '--output', (Join-Path $taskOutput 'publisher-bin'), '--source', $env:IMAO_NUGET_SOURCE, '-p:NuGetAudit=false')) { $taskInfo.ArgumentList.Add($taskArgument) }
 $taskProcess = [Diagnostics.Process]::Start($taskInfo)
 $taskStdout = $taskProcess.StandardOutput.ReadToEndAsync()
 $taskStderr = $taskProcess.StandardError.ReadToEndAsync()

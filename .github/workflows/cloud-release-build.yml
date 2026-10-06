@@ -1,0 +1,176 @@
+name: Cloud release build
+on:
+  pull_request:
+    paths: ['.github/**', 'scripts/**', 'tools/**', 'Tests/**', 'Version.props', 'global.json', 'IMao-*/**', 'Assets/**', 'CMakeLists.txt', 'cmake/**', 'patches/**', 'Docs/**', '.gitattributes', '.gitignore', 'LICENSE']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Reserve a formal release after a successful cloud build
+        type: boolean
+        default: false
+      confirm_version:
+        description: Exact Version.props version (required for formal release)
+        type: string
+        default: ''
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: pwsh
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      artifact_id: ${{ steps.bulk.outputs.artifact-id }}
+      artifact_digest: ${{ steps.bulk.outputs.artifact-digest }}
+      version: ${{ steps.package.outputs.version }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          lfs: true
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 8.0.424
+      - name: Validate formal inputs
+        env:
+          FORMAL: ${{ inputs.publish || false }}
+          CONFIRM_VERSION: ${{ inputs.confirm_version }}
+          GH_TOKEN: ${{ github.token }}
+          REHEARSAL_RUN_ID: ${{ vars.CLOUD_RELEASE_REHEARSAL_RUN_ID }}
+        run: |
+          if ($env:FORMAL -eq 'true') {
+            . ./scripts/CiReleaseMetadata.ps1
+            Assert-CiRehearsal $env:REHEARSAL_RUN_ID $env:GITHUB_SHA
+            [xml]$v=Get-Content Version.props -Raw
+            if ($env:GITHUB_REF -ne 'refs/heads/main' -or $env:CONFIRM_VERSION -cne [string]$v.Project.PropertyGroup.IMaoVersion) { throw 'Formal build requires main and exact confirm_version.' }
+          }
+      - uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        id: archives
+        with:
+          path: third_party/downloads
+          key: dependency-archives-${{ hashFiles('.github/dependencies.lock.json') }}
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: third_party/nuget-packages
+          key: nuget-dotnet80424-${{ hashFiles('**/*.csproj') }}
+      - name: Bootstrap locked native dependencies
+        run: ./scripts/Initialize-CiDependencies.ps1
+      - name: Save verified archives independently of later build failures
+        if: steps.archives.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: third_party/downloads
+          key: ${{ steps.archives.outputs.cache-primary-key }}
+      - name: Build, test, package and shard
+        id: package
+        env:
+          FORMAL: ${{ inputs.publish || false }}
+        run: |
+          ./scripts/New-CiReleaseArtifacts.ps1 -SourceCommit $env:GITHUB_SHA -OutputRoot "$env:GITHUB_WORKSPACE/out/ci-release" -Rehearsal ($env:FORMAL -ne 'true')
+      - name: Diagnose cloud build failure
+        if: failure()
+        run: |
+          git status --porcelain=v1 --untracked-files=all
+          Get-ChildItem out/ci-release -Filter '*.log' -File -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name; Get-Content $_.FullName -Tail 30 }
+      - name: Freeze unsigned release build
+        id: bulk
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-build
+          path: |
+            out/ci-release/prepared/catalog-draft.json
+            out/ci-release/prepared/release-report.json
+            out/ci-release/prepared/packages
+            out/ci-release/prepared/program
+            out/ci-release/prepared/manual
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Full-artifact disposable-key rehearsal
+        if: ${{ !inputs.publish }}
+        run: |
+          ./scripts/Test-CiReleaseArtifacts.ps1 -PreparedRoot out/ci-release/prepared -ArtifactId ${{ steps.bulk.outputs.artifact-id }} -ArtifactDigest '${{ steps.bulk.outputs.artifact-digest }}' -BuildRunId ${{ github.run_id }}
+      - name: Save bounded rehearsal evidence
+        if: ${{ !inputs.publish }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-rehearsal-evidence
+          path: |
+            out/ci-release/rehearsal/rehearsal-report.json
+            out/ci-release/publisher-tests/cloud-self-test-report.json
+          retention-days: 30
+          if-no-files-found: error
+  prepare:
+    needs: build
+    if: ${{ inputs.publish && github.ref == 'refs/heads/main' && github.repository == 'kahvia-d/IMAO' }}
+    runs-on: windows-2022
+    timeout-minutes: 45
+    environment: production
+    concurrency:
+      group: imao-production-release
+      queue: max
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.424
+      - name: Verify and retrieve the frozen build in cloud
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+          ARTIFACT_DIGEST: ${{ needs.build.outputs.artifact_digest }}
+        run: |
+          . ./scripts/CiReleaseMetadata.ps1
+          [IO.Directory]::CreateDirectory('out/prepare') | Out-Null
+          $a=Get-CiBuildArtifact $env:GITHUB_RUN_ID $env:ARTIFACT_ID $env:GITHUB_SHA -AllowRehearsal
+          if ($a.digest -cne 'sha256:'+$env:ARTIFACT_DIGEST) { throw 'Frozen artifact digest differs.' }
+          Save-CiArtifactArchive $a.id 'out/prepare/build.zip'
+          Assert-CiArtifactDigest 'out/prepare/build.zip' $a.digest
+          Expand-Archive out/prepare/build.zip out/prepare/prepared
+          Remove-Item out/prepare/build.zip
+          dotnet build tools/UpdatePublisher/UpdatePublisher.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Publisher build failed.' }
+      - name: Reserve sequence under the publish lock and create request
+        id: reserve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIRM_VERSION: ${{ inputs.confirm_version }}
+          ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+          ARTIFACT_DIGEST: ${{ needs.build.outputs.artifact_digest }}
+        run: |
+          ./scripts/Publish-ResourceUpdate.ps1 -Phase reserve -Publish $true -ConfirmVersion $env:CONFIRM_VERSION -PreparedRoot out/prepare/prepared -RequestRoot out/prepare/request -ArtifactId $env:ARTIFACT_ID -ArtifactDigest $env:ARTIFACT_DIGEST -BuildRunId $env:GITHUB_RUN_ID -Dotnet (Get-Command dotnet).Source
+      - name: Reuse the original request after an interrupted job
+        id: original
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/Reuse-CiSigningRequest.ps1 -RequestRoot out/prepare/request
+      - name: Save ONLY the bounded signing request
+        if: steps.original.outputs.reused != 'true'
+        id: request
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-signing-request
+          path: out/prepare/request
+          retention-days: 30
+          if-no-files-found: error
+      - name: Register exact request artifact for the local signer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIRM_VERSION: ${{ inputs.confirm_version }}
+          TRANSACTION_ID: ${{ steps.reserve.outputs.transaction_id }}
+          REQUEST_ID: ${{ steps.original.outputs.artifact_id || steps.request.outputs.artifact-id }}
+          REQUEST_DIGEST: ${{ steps.original.outputs.artifact_digest || steps.request.outputs.artifact-digest }}
+        run: |
+          ./scripts/Publish-ResourceUpdate.ps1 -Phase register-request -Publish $true -ConfirmVersion $env:CONFIRM_VERSION -PreparedRoot out/prepare/prepared -RequestRoot out/prepare/request -TransactionId $env:TRANSACTION_ID -RequestArtifactId $env:REQUEST_ID -RequestArtifactDigest $env:REQUEST_DIGEST -Dotnet (Get-Command dotnet).Source

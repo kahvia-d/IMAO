@@ -9,7 +9,7 @@ using IMao_WinUI.Core.Updates;
 
 return await Publisher.Run(args);
 
-static class Publisher
+static partial class Publisher
 {
     static readonly JsonSerializerOptions Json = UpdateJson.Options;
     static readonly DateTimeOffset ZipEpoch = new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
@@ -23,12 +23,19 @@ static class Publisher
     {
         try
         {
-            if (args.Length == 0) throw new ArgumentException("Commands: init-key, prepare, verify, shard-map, self-test. See Docs/ResourceUpdates.md.");
+            if (args.Length == 0) throw new ArgumentException("Commands: init-key, prepare, prepare-artifacts, create-signing-request, sign-request, finalize, verify-authorization, verify-install-authorization, verify, verify-manifest, shard-map, self-test, cloud-self-test. See Docs/CloudRelease.md.");
             var options = Parse(args.Skip(1).ToArray());
             switch (args[0])
             {
                 case "init-key": InitKey(options); break;
                 case "prepare": await Prepare(options); break;
+                case "prepare-artifacts": options["unsigned"] = "true"; await Prepare(options); break;
+                case "create-signing-request": CreateSigningRequest(options); break;
+                case "sign-request": SignRequest(options); break;
+                case "finalize": await FinalizeRelease(options); break;
+                case "verify-authorization": VerifyReleaseAuthorization(options); break;
+                case "verify-install-authorization": VerifyInstallAuthorization(options); break;
+                case "cloud-self-test": await CloudSelfTest(Required(options, "output")); break;
                 case "verify": Verify(options); break;
                 case "shard-map": ShardMapReport(options); break;
                 case "verify-manifest":
@@ -102,7 +109,9 @@ static class Publisher
     }
     static ECDsa LoadPrivate(string path, bool production, out string keyId)
     {
+        if (production && Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true") throw new InvalidOperationException("Actions cannot load production private keys.");
         var stored = Read<PrivateKey>(path);
+        if (!stored.TestOnly && Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true") throw new InvalidOperationException("Actions can load disposable TestOnly keys only, regardless of command flags.");
         if (production && stored.TestOnly) throw new InvalidOperationException("Production preparation rejects a test signing key.");
         keyId = Id(stored.KeyId);
         var plain = Dpapi.Unprotect(Convert.FromBase64String(stored.ProtectedPkcs8));
@@ -237,13 +246,17 @@ static class Publisher
         var sourceDirty = !provenance.RootElement.TryGetProperty("sourceDirty", out var dirty) || dirty.GetBoolean();
         var sourceTreeSha256 = provenance.RootElement.TryGetProperty("sourceTreeSha256", out var treeHash) ? treeHash.GetString() : null;
         if (!Regex.IsMatch(build.SourceCommit, "^[a-f0-9]{40}$") || build.BaselineId != snapshot.BaselineId) throw new InvalidDataException("Build metadata must have a real source SHA and matching baseline.");
-        var production = o.GetValueOrDefault("test") != "true";
+        var production = o.GetValueOrDefault("test") != "true" && o.GetValueOrDefault("rehearsal") != "true";
         if (o.GetValueOrDefault("program-shards") == "true" && o.GetValueOrDefault("program-release") != "true")
             throw new ArgumentException("--program-shards only applies to a program release; pass --program-release true as well.");
-        using var key = LoadPrivate(Required(o, "private-key"), production, out var keyId);
+        var unsigned = o.GetValueOrDefault("unsigned") == "true";
+        var keyId = "";
+        using var key = unsigned ? null : LoadPrivate(Required(o, "private-key"), production, out keyId);
         var keys = Read<TrustedUpdateKeys>(Required(o, "public-key"));
-        var trusted = keys.Keys.Single(k => k.KeyId == keyId);
-        if (!CryptographicOperations.FixedTimeEquals(key.ExportSubjectPublicKeyInfo(), Convert.FromBase64String(trusted.PublicKey))) throw new CryptographicException("Signing key does not match public registry.");
+        if (!unsigned) {
+            var trusted = keys.Keys.Single(k => k.KeyId == keyId);
+            if (!CryptographicOperations.FixedTimeEquals(key!.ExportSubjectPublicKeyInfo(), Convert.FromBase64String(trusted.PublicKey))) throw new CryptographicException("Signing key does not match public registry.");
+        }
         var sequence = long.Parse(Required(o, "sequence"));
         var version = Id(Required(o, "resource-version"));
         var tag = Id(Required(o, "tag"));
@@ -327,7 +340,7 @@ static class Publisher
             }
             else if (production) throw new InvalidDataException("Program releases require --program-zip with the complete tested application archive, or --program-shards true with --app-root.");
             // A published program version is immutable: the same version may not describe different bytes.
-            if (program is not null && previous?.App.Version == build.AppVersion && previous.App.Package is not null && !SameProgramContent(previous.App.Package, program))
+            if (!(unsigned && o.GetValueOrDefault("rehearsal") == "true") && program is not null && previous?.App.Version == build.AppVersion && previous.App.Package is not null && !SameProgramContent(previous.App.Package, program))
                 throw new InvalidDataException("The published program version is immutable. Increment the version before rebuilding.");
             app = new() { Version = build.AppVersion, Url = $"https://github.com/{RepoSlug}/releases/tag/" + tag, Notes = release.Notes, Package = program };
             programPrepared = program is not null;
@@ -335,8 +348,8 @@ static class Publisher
         var catalog = new UpdateCatalog { Sequence = sequence, App = app, Resources = resources };
         ValidateCatalog(catalog);
         var signedFile = Path.Combine(output, "update.json");
-        WriteNew(signedFile, Sign(catalog, key, keyId));
-        VerifyEnvelope(signedFile, keys, production);
+        if (unsigned) WriteNew(Path.Combine(output, "catalog-draft.json"), catalog);
+        else { WriteNew(signedFile, Sign(catalog, key!, keyId)); VerifyEnvelope(signedFile, keys, production); }
         foreach (var p in packages) VerifyPackage(Path.Combine(output, "packages", $"{p.Id}-{p.Version}.zip"), p);
         // Validate source snapshot using the same native parser used by installed clients. The bundled
         // descriptor is relative on purpose, so every root it names has to be made absolute here; the
@@ -371,7 +384,7 @@ static class Publisher
         // when the resource set actually changed, or when the caller asks for it explicitly.
         var offlineNeeded = o.GetValueOrDefault("with-offline") == "true" || resourceChanged;
         var offline = Path.Combine(output, $"resources-{version}-offline.zip");
-        if (offlineNeeded)
+        if (offlineNeeded && !unsigned)
         {
             using (var zip = new ZipArchive(new FileStream(offline, FileMode.CreateNew), ZipArchiveMode.Create))
             {
@@ -386,15 +399,16 @@ static class Publisher
         }
         if (packages.Any(p => p.Size >= 2L * 1024 * 1024 * 1024))
             throw new InvalidOperationException("A GitHub Releases attachment must be smaller than 2 GiB. Split the resource distribution before publishing this release.");
-        WriteNew(Path.Combine(output, "release-report.json"), new { formatVersion = 1, production, sourceCommit = build.SourceCommit, sourceDirty, sourceTreeSha256, appVersion = build.AppVersion, baselineId = build.BaselineId,
-            tag, sequence, snapshotId = release.SnapshotId, nativePassed, programPrepared, signedManifestSha256 = Hash(signedFile),
+        WriteNew(Path.Combine(output, "release-report.json"), new { formatVersion = 1, production, publisherRuntime = RuntimeInformation.FrameworkDescription, offlineRecipe = "imao-offline-zip-v1-dotnet8.0.30", sourceCommit = build.SourceCommit, sourceDirty, sourceTreeSha256, appVersion = build.AppVersion, baselineId = build.BaselineId,
+            tag, sequence, snapshotId = release.SnapshotId, nativePassed, programPrepared, signedManifestSha256 = unsigned ? null : Hash(signedFile),
+            previousStableSha256 = o.TryGetValue("previous", out var priorFile) ? Hash(priorFile) : null, offlineNeeded,
             assets = packages.Select(p => new { name = $"{p.Id}-{p.Version}.zip", sha256 = p.Sha256, size = p.Size, url = p.Url }).ToArray(),
             // A shard release publishes several attachments plus a descriptor; the release script binds each
             // one to the identity the signed catalog names, exactly as it does for resource packages.
             program = app.Package is null ? null : new { url = app.Package.Url, name = Path.GetFileName(new Uri(app.Package.Url).AbsolutePath), size = app.Package.Size, sha256 = app.Package.Sha256,
                 files = app.Package.Files.Count, shards = app.Package.Shards.Select(s => new { id = s.Id, name = Path.GetFileName(new Uri(s.Url).AbsolutePath), url = s.Url, size = s.Size, sha256 = s.Sha256, files = s.Files.Count }).ToArray() },
-            offline = offlineNeeded ? new { name = Path.GetFileName(offline), size = new FileInfo(offline).Length, sha256 = Hash(offline) } : null });
-        Console.WriteLine($"Prepared {packages.Count} signed resource packages{(offlineNeeded ? ", offline archive" : "")} and validation report. No remote publication occurred.");
+            offline = offlineNeeded && !unsigned ? new { name = Path.GetFileName(offline), size = new FileInfo(offline).Length, sha256 = Hash(offline) } : null });
+        Console.WriteLine($"Prepared {packages.Count} {(unsigned ? "unsigned" : "signed")} resource packages{(offlineNeeded ? ", offline archive" : "")} and validation report. No remote publication occurred.");
     }
     static bool FileListsEqual(List<ResourceFile> a, List<ResourceFile> b) => a.Count == b.Count && a.OrderBy(x => x.Path, StringComparer.Ordinal).SequenceEqual(b.OrderBy(x => x.Path, StringComparer.Ordinal));
     /// <summary>

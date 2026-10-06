@@ -81,17 +81,20 @@ if (-not @($keys.keys | Where-Object { -not $_.testOnly }).Count -or @($keys.key
 Copy-Item -LiteralPath (Join-Path $SourceRoot 'LICENSE') -Destination $package
 $noticeRoot = Join-Path $package 'Licenses'
 [IO.Directory]::CreateDirectory($noticeRoot) | Out-Null
+$runtimeConfig = Get-Content -LiteralPath (Join-Path $PublishRoot 'IMao-WinUI.runtimeconfig.json') -Raw | ConvertFrom-Json
+$runtimeVersion = @($runtimeConfig.runtimeOptions.includedFrameworks | Where-Object name -EQ 'Microsoft.NETCore.App')[0].version
+if (-not $runtimeVersion) { throw 'Cannot determine the packaged .NET runtime license version.' }
 $notices = @{
-    'DotNet-LICENSE.txt'='third_party/nuget-packages/microsoft.netcore.app.runtime.win-x64/8.0.30/LICENSE.TXT';
-    'DotNet-THIRD-PARTY-NOTICES.txt'='third_party/nuget-packages/microsoft.netcore.app.runtime.win-x64/8.0.30/THIRD-PARTY-NOTICES.TXT';
-    'WindowsAppSDK-LICENSE.txt'='third_party/nuget-packages/microsoft.windowsappsdk/1.7.250606001/license.txt';
-    'WindowsAppSDK-NOTICE.txt'='third_party/nuget-packages/microsoft.windowsappsdk/1.7.250606001/NOTICE.txt';
+    'DotNet-LICENSE.txt'=(Join-Path $env:NUGET_PACKAGES "microsoft.netcore.app.runtime.win-x64/$runtimeVersion/LICENSE.TXT");
+    'DotNet-THIRD-PARTY-NOTICES.txt'=(Join-Path $env:NUGET_PACKAGES "microsoft.netcore.app.runtime.win-x64/$runtimeVersion/THIRD-PARTY-NOTICES.TXT");
+    'WindowsAppSDK-LICENSE.txt'=(Join-Path $env:NUGET_PACKAGES 'microsoft.windowsappsdk/1.7.250606001/license.txt');
+    'WindowsAppSDK-NOTICE.txt'=(Join-Path $env:NUGET_PACKAGES 'microsoft.windowsappsdk/1.7.250606001/NOTICE.txt');
     'OpenCV-LICENSE.txt'='third_party/src/opencv-4.11.0/LICENSE';
     'OpenCV-LICENSE-BSD.txt'='third_party/src/opencv-4.11.0/doc/LICENSE_BSD.txt';
     'Upstream-ReleaseAssets-v1.0.2.md'='Docs/ReleaseAssets_v1.0.2.md';
     'ReleaseAssets_v1.0.2.sha256'='Docs/ReleaseAssets_v1.0.2.sha256'
 }
-foreach ($entry in $notices.GetEnumerator()) { Copy-Item -LiteralPath (Join-Path $SourceRoot $entry.Value) -Destination (Join-Path $noticeRoot $entry.Key) }
+foreach ($entry in $notices.GetEnumerator()) { $noticePath = if ([IO.Path]::IsPathRooted($entry.Value)) { $entry.Value } else { Join-Path $SourceRoot $entry.Value }; Copy-Item -LiteralPath $noticePath -Destination (Join-Path $noticeRoot $entry.Key) }
 Copy-Item -LiteralPath (Join-Path $SourceRoot 'Docs/ResourceUpdates.md') -Destination (Join-Path $package 'README-Updates.md')
 Copy-Item -LiteralPath (Join-Path $SourceRoot 'Docs/ProgramUpdates.md') -Destination (Join-Path $package 'ProgramUpdates.md')
 $unwanted = @(Get-ChildItem -LiteralPath $package -Recurse -File | Where-Object {
@@ -114,7 +117,17 @@ if (-not $runtime.runtimeOptions.includedFrameworks -or $runtime.runtimeOptions.
 if (-not $?) { throw 'Program package probe failed.' }
 $archive = "$package.zip"
 if (Test-Path -LiteralPath $archive) { throw 'Archive already exists.' }
-[IO.Compression.ZipFile]::CreateFromDirectory($package,$archive,[IO.Compression.CompressionLevel]::Optimal,$false)
+$zip=[IO.Compression.ZipArchive]::new([IO.File]::Open($archive,[IO.FileMode]::CreateNew),[IO.Compression.ZipArchiveMode]::Create)
+try {
+    $entries=@(Get-ChildItem -LiteralPath $package -Recurse -File | ForEach-Object { [pscustomobject]@{path=$_.FullName;name=[IO.Path]::GetRelativePath($package,$_.FullName).Replace('\','/')} })
+    $sorted=[Collections.Generic.List[string]]::new(); foreach ($entry in $entries) { $sorted.Add($entry.name) }; $sorted.Sort([StringComparer]::Ordinal)
+    foreach ($relative in $sorted) {
+        $entry=$zip.CreateEntry($relative,[IO.Compression.CompressionLevel]::Optimal)
+        $entry.LastWriteTime=[DateTimeOffset]::new(2020,1,1,0,0,0,[TimeSpan]::Zero)
+        $inputStream=[IO.File]::OpenRead((Join-Path $package $relative)); $outputStream=$entry.Open()
+        try { $inputStream.CopyTo($outputStream) } finally { $inputStream.Dispose(); $outputStream.Dispose() }
+    }
+} finally { $zip.Dispose() }
 $sha = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
 $report = [ordered]@{passed=$true;version=$version;sourceCommit=$SourceCommit;sourceDirty=($build.sourceDirty -ne $false -or $stagedBuild.sourceDirty -ne $false);sourceTreeSha256=$stagedBuild.sourceTreeSha256;managedSourceTreeSha256=$build.sourceTreeSha256;nativeBuildReceipt=$nativeReceipt;baselineId=$build.baselineId;sha256=$sha;size=(Get-Item -LiteralPath $archive).Length;files=@(Get-ChildItem -LiteralPath $package -Recurse -File).Count}
 [IO.File]::WriteAllText([IO.Path]::ChangeExtension($archive,'.report.json'),($report | ConvertTo-Json),[Text.UTF8Encoding]::new($false))
