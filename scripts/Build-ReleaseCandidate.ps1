@@ -33,6 +33,7 @@ $taskPaddle = Get-NativeConfiguration 'PADDLE_LIB'
 $taskOpenCv = Get-NativeConfiguration 'OPENCV_DIR'
 $taskCmake = Get-NativeConfiguration 'CMAKE_COMMAND'
 $taskCxxFlags = Get-NativeConfiguration 'CMAKE_CXX_FLAGS'
+$taskWindowsSdk = Get-NativeConfiguration 'CMAKE_SYSTEM_VERSION'
 $taskNativeOutput = Join-Path $taskRepo 'x64/Release'
 foreach ($taskRunning in @(Get-Process -Name 'IMao-CoreHost','IMao-WinUI' -ErrorAction SilentlyContinue)) {
     try { $taskRunningPath = $taskRunning.Path } catch { throw 'Cannot verify the running application path. Close IMao before rebuilding native output.' }
@@ -79,7 +80,7 @@ $taskNativeBuild = Join-Path $OutputRoot 'native-build'
 # MSBuild's project parallelism does not parallelize C++ files within CoreHost.
 # Preserve the configured flags and give MSVC the same explicit worker limit.
 Invoke-CandidateProcess $taskCmake @('-S',$taskRepo,'-B',$taskNativeBuild,'-G',$taskGenerator,'-A','x64','-T',$taskToolset,
-    "-DCMAKE_GENERATOR_INSTANCE=$taskInstance","-DPADDLE_LIB=$taskPaddle","-DOPENCV_DIR=$taskOpenCv",
+    "-DCMAKE_GENERATOR_INSTANCE=$taskInstance","-DCMAKE_SYSTEM_VERSION=$taskWindowsSdk","-DPADDLE_LIB=$taskPaddle","-DOPENCV_DIR=$taskOpenCv",
     "-DCMAKE_CXX_FLAGS=$taskCxxFlags /MP$Parallel",
     '-DIMAO_ENABLE_DIAGNOSTICS=OFF','-DIMAO_ALLOW_XML_FEATURE_FALLBACK=OFF') 'native-configure.log'
 Invoke-CandidateProcess $taskCmake @('--build',$taskNativeBuild,'--config','Release','--target','IMao-CoreHost','IMaoOptimizationTests',
@@ -109,14 +110,14 @@ $taskPublish = Join-Path $OutputRoot 'publish'
 $taskManagedBuild = (Join-Path $OutputRoot 'managed-build') + [IO.Path]::DirectorySeparatorChar
 $taskManagedArguments = @('IMao-WinUI/IMao-WinUI.csproj','-c','Release','-r','win-x64','--self-contained','true',
     '-p:Platform=x64','-p:WindowsPackageType=None','-p:GenerateAppxPackageOnBuild=false','-p:AppxPackageSigningEnabled=false',
-    '-p:NuGetAudit=false',"-p:BaseOutputPath=$taskManagedBuild",'--source',$env:NUGET_PACKAGES)
+    '-p:NuGetAudit=false',"-p:BaseOutputPath=$taskManagedBuild",'--source',$env:IMAO_NUGET_SOURCE)
 Invoke-CandidateProcess $env:IMAO_DOTNET (@('build') + $taskManagedArguments + @('-t:Rebuild')) 'managed-rebuild.log'
 # WinUI's publish build targets generate and collect resources.pri. Skipping
 # that build drops the application's resource index even after Rebuild.
 Invoke-CandidateProcess $env:IMAO_DOTNET (@('publish') + $taskManagedArguments + @('--no-restore','-o',$taskPublish)) 'managed-publish.log'
 $taskLauncher = Join-Path $OutputRoot 'launcher'
 Invoke-CandidateProcess $env:IMAO_DOTNET @('publish','tools/ProgramLauncher/ProgramLauncher.csproj','-c','Release','-r','win-x64',
-    '--self-contained','true','-o',$taskLauncher,'--source',$env:NUGET_PACKAGES,'-p:NuGetAudit=false') 'launcher-publish.log'
+    '--self-contained','true','-o',$taskLauncher,'--source',$env:IMAO_NUGET_SOURCE,'-p:NuGetAudit=false') 'launcher-publish.log'
 $taskLauncherReceipt = Get-Content -LiteralPath (Join-Path $taskPublish 'build-info.json') -Raw | ConvertFrom-Json
 $taskLauncherReceipt | Add-Member -NotePropertyName launcherSha256 -NotePropertyValue ((Get-FileHash -LiteralPath (Join-Path $taskLauncher 'IMao-Launcher.exe') -Algorithm SHA256).Hash.ToLowerInvariant())
 [IO.File]::WriteAllText((Join-Path $taskLauncher 'launcher-build-info.json'), ($taskLauncherReceipt | ConvertTo-Json), [Text.UTF8Encoding]::new($false))

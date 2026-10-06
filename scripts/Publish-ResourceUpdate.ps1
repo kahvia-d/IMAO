@@ -2,7 +2,19 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$PreparedRoot,
-    [Parameter(Mandatory)][string]$NotesFile,
+    [string]$NotesFile,
+    [ValidateSet('reserve','register-request','publish','abandon')][string]$Phase = 'publish',
+    [bool]$Publish = $false,
+    [string]$ConfirmVersion,
+    [string]$RequestRoot,
+    [string]$ResponseFile,
+    [long]$ArtifactId,
+    [long]$BuildRunId,
+    [string]$ArtifactDigest,
+    [long]$RequestArtifactId,
+    [string]$RequestArtifactDigest,
+    [string]$TransactionId,
+    [switch]$SkipGitee,
     [string]$Dotnet,
     [string]$PublicKey,
     [string]$PublisherDll,
@@ -17,24 +29,101 @@ if ($ProgramZip -and $ManualInstallZip) { throw 'Pass -ProgramZip for a whole-ar
 $sourceRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'ResourceUpdateCatalog.ps1')
 . (Join-Path $PSScriptRoot 'ResourceUpdateAssets.ps1')
+. (Join-Path $PSScriptRoot 'ReleaseTransactions.ps1')
 if (-not $Dotnet) { $Dotnet = Join-Path $sourceRoot 'tools/dotnet-sdk-8.0.424/dotnet.exe' }
 if (-not $PublicKey) { $PublicKey = Join-Path $sourceRoot 'Assets/Updates/trusted-keys.json' }
 if (-not $PublisherDll) { $PublisherDll = Join-Path $sourceRoot 'tools/UpdatePublisher/bin/Release/net8.0/UpdatePublisher.dll' }
 $PreparedRoot = [IO.Path]::GetFullPath($PreparedRoot)
 $repo = 'kahvia-d/IMAO'
-$report = Get-Content -LiteralPath (Join-Path $PreparedRoot 'release-report.json') -Raw | ConvertFrom-Json
-if (-not $report.production -or -not $report.nativePassed) { throw 'Only production-signed, native-verified artifacts may be published.' }
-if ($report.sourceDirty -ne $false -or $report.sourceTreeSha256 -notmatch '^[a-f0-9]{64}$') { throw 'A working-tree QA build cannot be published. Commit the reviewed source and rebuild from that exact clean commit.' }
-$manifest = Join-Path $PreparedRoot 'update.json'
-if ((Get-FileHash -LiteralPath $manifest -Algorithm SHA256).Hash -ne $report.signedManifestSha256) { throw 'Manifest differs from reviewed release report.' }
-& $Dotnet $PublisherDll verify --input $PreparedRoot --public-key $PublicKey --snapshot-id $report.snapshotId
-if ($LASTEXITCODE -ne 0) { throw 'Prepared artifacts failed verification.' }
 function Invoke-Gh([string[]]$Arguments) {
     $result = & gh @Arguments
     if ($LASTEXITCODE -ne 0) { throw ('GitHub operation failed: gh ' + ($Arguments -join ' ') + '; stable channel has not been advanced by this failed operation.') }
     return $result
 }
+if (-not $Publish) { throw 'Remote release mutation requires explicit -Publish $true. Use the build workflow for a side-effect-free rehearsal.' }
+[xml]$versionProps = Get-Content -LiteralPath (Join-Path $sourceRoot 'Version.props') -Raw
+if ($Phase -ne 'abandon' -and $ConfirmVersion -cne [string]$versionProps.Project.PropertyGroup.IMaoVersion) { throw 'confirm_version must exactly match Version.props.' }
+if ($env:GITHUB_ACTIONS -eq 'true' -and $env:GITHUB_REF -ne 'refs/heads/main') { throw 'Production workflows must run from main.' }
+$scratch = Join-Path $PreparedRoot ('transaction-' + [guid]::NewGuid().ToString('N'))
+[IO.Directory]::CreateDirectory($scratch) | Out-Null
+$snapshot = Get-ReleaseSnapshot $repo
+if ($Phase -eq 'abandon') {
+    if ($snapshot.state.active.id -cne $TransactionId -or $snapshot.state.active.version -cne $ConfirmVersion) { throw 'Explicit transaction identity required.' }
+    if ($snapshot.state.active.status -ne 'awaiting-signature' -or $snapshot.state.active.releaseId) { throw 'Publishing has begun; resume instead of abandoning.' }
+    $snapshot.state.completed += @(@{id=$TransactionId;sequence=$snapshot.state.active.sequence;status='abandoned'})
+    $snapshot.state.active=$null
+    Save-ReleaseState $repo $snapshot $scratch "Abandon release reservation $TransactionId"
+    exit 0
+}
+if ($Phase -eq 'register-request') {
+    $index = Get-Content (Join-Path $RequestRoot 'request.json') -Raw | ConvertFrom-Json
+    if ($snapshot.state.active.id -cne $TransactionId -or $snapshot.state.active.version -cne $ConfirmVersion -or $RequestArtifactId -le 0 -or $RequestArtifactDigest -notmatch '^(sha256:)?[a-f0-9]{64}$') { throw 'Request registration does not match the reservation.' }
+    if ($snapshot.state.active.requestId -and $snapshot.state.active.requestId -cne $index.requestId) { throw 'Reservation already has a different signing request.' }
+    $snapshot.state.active.requestId = $index.requestId
+    $snapshot.state.active.requestArtifactId = $RequestArtifactId
+    $snapshot.state.active.requestArtifactDigest = $RequestArtifactDigest -replace '^sha256:', ''
+    Save-ReleaseState $repo $snapshot $scratch "Register signing request $TransactionId"
+    exit 0
+}
+$report = Get-Content -LiteralPath (Join-Path $PreparedRoot 'release-report.json') -Raw | ConvertFrom-Json
+if (-not $report.production -or -not $report.nativePassed) { throw 'Only production-signed, native-verified artifacts may be published.' }
+if ($report.sourceDirty -ne $false -or $report.sourceTreeSha256 -notmatch '^[a-f0-9]{64}$') { throw 'A working-tree QA build cannot be published. Commit the reviewed source and rebuild from that exact clean commit.' }
+if ($report.appVersion -cne $ConfirmVersion) { throw 'Prepared version differs from confirm_version.' }
+if ($Phase -eq 'reserve') {
+    if (-not $RequestRoot -or $ArtifactId -le 0 -or $BuildRunId -le 0 -or $ArtifactDigest -notmatch '^(sha256:)?[a-f0-9]{64}$') { throw 'Frozen build artifact and new request destination required.' }
+    $ArtifactDigest = $ArtifactDigest -replace '^sha256:', ''
+    $stableFile = Join-Path $scratch 'previous-stable.json'
+    [IO.File]::WriteAllBytes($stableFile, $snapshot.files['updates/stable.json'])
+    $verified = & $Dotnet $PublisherDll verify-manifest --input $stableFile --public-key $PublicKey
+    if ($LASTEXITCODE -ne 0) { throw 'Current stable signature cannot be verified.' }
+    $stableSequence = [long]($verified | ConvertFrom-Json).sequence
+    if ($report.previousStableSha256 -cne $snapshot.stableHash) { throw 'Stable changed after cloud build; rebuild from the new baseline.' }
+    if ($snapshot.state.active) {
+        $active=$snapshot.state.active
+        if ($active.artifactId -ne $ArtifactId -or $active.artifactDigest -cne $ArtifactDigest -or $active.buildRunId -ne $BuildRunId -or $active.sourceCommit -cne $report.sourceCommit -or $active.version -cne $ConfirmVersion) { throw 'Another transaction is waiting. Resume or abandon it.' }
+        if ($active.previousStableSha256 -cne $snapshot.stableHash -or $active.previousChannelSequence -ne $snapshot.channel.maxSequence) { throw 'Reserved channel baseline changed.' }
+    } else {
+        $sequence = Get-NextReleaseSequence $snapshot.state $stableSequence ([long]$snapshot.channel.maxSequence)
+        $snapshot.state.highestAllocatedSequence = $sequence
+        $snapshot.state.active = @{id=[guid]::NewGuid().ToString('N');sequence=$sequence;version=$ConfirmVersion;tag=$report.tag;
+            sourceCommit=$report.sourceCommit;artifactId=$ArtifactId;artifactDigest=$ArtifactDigest;buildRunId=$BuildRunId;
+            previousStableSha256=$snapshot.stableHash;previousChannelSequence=[long]$snapshot.channel.maxSequence;status='awaiting-signature';releaseId=$null}
+        Save-ReleaseState $repo $snapshot $scratch "Reserve release sequence $sequence"
+    }
+    $active=$snapshot.state.active
+    & $Dotnet $PublisherDll create-signing-request --input $PreparedRoot --output $RequestRoot --previous $stableFile --public-key $PublicKey --sequence $active.sequence --transaction-id $active.id --build-run-id $BuildRunId --artifact-id $ArtifactId --artifact-digest $ArtifactDigest
+    if ($LASTEXITCODE -ne 0) { throw 'Signing request preparation failed; reservation remains resumable.' }
+    if ($env:GITHUB_OUTPUT) { "transaction_id=$($active.id)" >> $env:GITHUB_OUTPUT }
+    exit 0
+}
+if (-not $NotesFile -or -not $RequestRoot -or -not $ResponseFile) { throw 'Publishing requires notes, original request and original signature response.' }
+$approval=Get-Content (Join-Path $RequestRoot 'approval-payload.json') -Raw | ConvertFrom-Json
+& $Dotnet $PublisherDll verify-authorization --input $PreparedRoot --request $RequestRoot --response $ResponseFile --public-key $PublicKey --expected-source-commit $report.sourceCommit --confirm-version $ConfirmVersion
+if ($LASTEXITCODE -ne 0) { throw 'Detached production release authorization failed.' }
+if (-not $snapshot.state.active) {
+    $done=@($snapshot.state.completed | Where-Object { $_.id -ceq $approval.transactionId -and $_.status -ceq 'completed' -and $_.manifestSha256 -ceq $report.signedManifestSha256 })
+    if ($done.Count -eq 1 -and $snapshot.stableHash -ceq $report.signedManifestSha256 -and $snapshot.channel.maxSequence -eq $report.sequence) { Write-Host 'This exact transaction is already stable.'; exit 0 }
+}
+Assert-ReleaseTransaction $snapshot.state $approval $snapshot.stableHash ([long]$snapshot.channel.maxSequence)
+
+$report=Get-Content (Join-Path $PreparedRoot 'release-report.json') -Raw | ConvertFrom-Json
+$requestIndex=Get-Content (Join-Path $RequestRoot 'request.json') -Raw | ConvertFrom-Json
+if ($snapshot.state.active.requestId -cne $requestIndex.requestId) { throw 'Signing request was not registered in the durable transaction.' }
+$responseHash=(Get-FileHash $ResponseFile -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($snapshot.state.active.responseSha256 -and $snapshot.state.active.responseSha256 -cne $responseHash) { throw 'Use the original response when resuming; do not re-sign.' }
+$snapshot.state.active.responseSha256=$responseHash
+$snapshot.state.active.response=[Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($ResponseFile))
+$snapshot.state.active.status='publishing'
+Save-ReleaseState $repo $snapshot $scratch "Accept detached signature for $($approval.transactionId)"
+$manifest = Join-Path $PreparedRoot 'update.json'
+if ((Get-FileHash -LiteralPath $manifest -Algorithm SHA256).Hash -ne $report.signedManifestSha256) { throw 'Manifest differs from reviewed release report.' }
+& $Dotnet $PublisherDll verify --input $PreparedRoot --public-key $PublicKey --snapshot-id $report.snapshotId
+if ($LASTEXITCODE -ne 0) { throw 'Prepared artifacts failed verification.' }
 $tag = [string]$report.tag
+$signedCatalogBytes=[Convert]::FromBase64String((Get-Content (Join-Path $PreparedRoot 'update.json') -Raw | ConvertFrom-Json).payload)
+$signedNotes=([Text.Encoding]::UTF8.GetString($signedCatalogBytes) | ConvertFrom-Json).app.notes
+$NotesFile=Join-Path $scratch 'authorized-notes.md'
+[IO.File]::WriteAllText($NotesFile,$signedNotes,[Text.UTF8Encoding]::new($false))
 $envelope = Get-Content -LiteralPath $manifest -Raw -Encoding UTF8 | ConvertFrom-Json
 $catalog = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($envelope.payload)) | ConvertFrom-Json
 $shardRelease = $null -ne $catalog.app.package -and @($catalog.app.package.shards).Count -gt 0
@@ -87,6 +176,17 @@ if ($ManualInstallZip) {
     $assets.Add([pscustomobject]@{ path = $manual.path; name = $manual.name; sha256 = $manual.sha256 })
     Write-Host ("first-install archive: {0} ({1:N1} MB)" -f $manual.name, ([IO.FileInfo]::new($manual.path).Length / 1MB))
 }
+$approvedInventory=Get-Content (Join-Path $RequestRoot 'asset-inventory.json') -Raw | ConvertFrom-Json
+foreach ($audit in @($approvedInventory | Where-Object { $_.path -like 'manual/*.report.json' })) {
+    $assets.Add([pscustomobject]@{path=(Join-Path $PreparedRoot $audit.path);name=$audit.name;sha256=$audit.sha256})
+}
+$authorizationFile=Join-Path $PreparedRoot 'release-authorization.json'
+$assets.Add([pscustomobject]@{path=$authorizationFile;name='release-authorization.json';sha256=(Get-FileHash $authorizationFile -Algorithm SHA256).Hash.ToLowerInvariant()})
+foreach ($name in @('release-signing-request.zip','release-report.json')) {
+    $path=Join-Path $PreparedRoot $name
+    $assets.Add([pscustomobject]@{path=$path;name=$name;sha256=(Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()})
+}
+
 foreach ($asset in $assets) {
     if ((Get-Item -LiteralPath $asset.path).Length -ge 2GB) { throw "GitHub release attachments must be smaller than 2 GiB: $($asset.name)" }
     if ((Get-FileHash -LiteralPath $asset.path -Algorithm SHA256).Hash -ne $asset.sha256) { throw "Asset changed after preparation: $($asset.name)" }
@@ -132,6 +232,8 @@ if ($LASTEXITCODE -eq 0) {
     if ($tree.truncated -or @($tree.tree | Where-Object path -EQ 'updates/stable.json').Count) { throw 'Unable to safely determine current stable channel.' }
 }
 Assert-ChannelSequenceAdvance @{maxSequence = $publishedFloor} $catalog
+$immutability=Invoke-Gh @('api',"repos/$repo/immutable-releases") | ConvertFrom-Json
+if (-not $immutability.enabled) { throw 'Enable repository release immutability before uploading a formal release.' }
 $releaseOutput = & gh api "repos/$repo/releases/tags/$tag" 2>$null
 if ($LASTEXITCODE -ne 0) {
     # Drafts without a created Git tag can be absent from the by-tag endpoint.
@@ -155,6 +257,12 @@ if ($LASTEXITCODE -ne 0) {
 }
 $release = (Invoke-Gh @('api',"repos/$repo/releases/$($release.id)")) | ConvertFrom-Json
 if ($release.tag_name -ne $tag) { throw 'Release identity changed during lookup.' }
+$snapshot=Get-ReleaseSnapshot $repo
+Assert-ReleaseTransaction $snapshot.state $approval $snapshot.stableHash ([long]$snapshot.channel.maxSequence)
+if ($snapshot.state.active.releaseId -and $snapshot.state.active.releaseId -ne $release.id) { throw 'Reserved release ID differs; never create a replacement release.' }
+$snapshot.state.active.releaseId=$release.id
+Save-ReleaseState $repo $snapshot $scratch "Record release ID $($release.id)"
+
 $tagCommit = [string](& gh api "repos/$repo/commits/$tag" --jq '.sha' 2>$null)
 if ($LASTEXITCODE -eq 0) {
     if ($tagCommit.Trim() -ne $report.sourceCommit) { throw 'Release tag does not reference the reviewed source commit.' }
@@ -247,33 +355,31 @@ try {
     }
     Write-Host ("public reachability confirmed for {0} assets by HEAD" -f $publicChecks.Count)
 } finally { $client.Dispose(); $handler.Dispose() }
-# Burn the sequence number before the stable channel moves, so a failed promotion can never free the
-# number for reuse. After a failed promotion the reviewed artifacts must be re-prepared with a higher
-# --sequence instead of retrying the same number.
-$channelPromotion = [ordered]@{message="Record published sequence $($report.sequence)";branch='main';content=[Convert]::ToBase64String([Text.UTF8Encoding]::new($false).GetBytes(([ordered]@{maxSequence=[long]$report.sequence} | ConvertTo-Json)))}
-if ($channelSha) { $channelPromotion.sha = $channelSha }
-$channelPromotionFile = Join-Path $verification 'channel-state-promotion.json'
-[IO.File]::WriteAllText($channelPromotionFile,($channelPromotion | ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
-Invoke-Gh @('api',"repos/$repo/contents/updates/channel-state.json",'--method','PUT','--input',$channelPromotionFile) | Out-Null
-$channelAfter = (Invoke-Gh @('api',"repos/$repo/contents/updates/channel-state.json?ref=main")) | ConvertFrom-Json
-$channelAfterState = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($channelAfter.content -replace '\s',''))) | ConvertFrom-Json
-if ([long]$channelAfterState.maxSequence -ne [long]$report.sequence) { throw 'Channel sequence record verification failed. Stable channel remains unchanged.' }
-$promotion = [ordered]@{message="Publish verified resource update $($report.snapshotId)";branch='main';content=[Convert]::ToBase64String([IO.File]::ReadAllBytes($manifest))}
-if ($stableSha) { $promotion.sha = $stableSha }
-$promotionFile = Join-Path $verification 'stable-promotion.json'
-[IO.File]::WriteAllText($promotionFile,($promotion | ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
-Invoke-Gh @('api',"repos/$repo/contents/updates/stable.json",'--method','PUT','--input',$promotionFile) | Out-Null
-$after = (Invoke-Gh @('api',"repos/$repo/contents/updates/stable.json?ref=main")) | ConvertFrom-Json
-$remoteBytes = [Convert]::FromBase64String(($after.content -replace '\s',''))
-if ([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($remoteBytes)) -ne $report.signedManifestSha256) { throw 'Stable channel verification failed after promotion.' }
+# The reservation already burned the sequence. Promotion writes stable, floor and completed transaction together.
+$promoted=$false
+for ($retry=0; $retry -lt 5 -and -not $promoted; $retry++) {
+    $snapshot=Get-ReleaseSnapshot $repo
+    if (-not $snapshot.state.active -and $snapshot.stableHash -eq $report.signedManifestSha256 -and $snapshot.channel.maxSequence -eq $report.sequence) { $promoted=$true; break }
+    Assert-ReleaseTransaction $snapshot.state $approval $snapshot.stableHash ([long]$snapshot.channel.maxSequence)
+    $completed=@{id=$approval.transactionId;sequence=[long]$report.sequence;status='completed';releaseId=$release.id;requestId=$requestIndex.requestId;manifestSha256=$report.signedManifestSha256;version=$approval.version;tag=$approval.tag;sourceCommit=$approval.sourceCommit;artifactId=$approval.artifactId;artifactDigest=$approval.artifactDigest;buildRunId=$approval.buildRunId;requestArtifactId=$snapshot.state.active.requestArtifactId;requestArtifactDigest=$snapshot.state.active.requestArtifactDigest;responseSha256=$snapshot.state.active.responseSha256}
+    $snapshot.state.completed += @($completed)
+    $snapshot.state.active=$null
+    $files=@{'updates/stable.json'=[IO.File]::ReadAllBytes($manifest);'updates/channel-state.json'=(ConvertTo-ReleaseBytes @{maxSequence=[long]$report.sequence});'updates/release-state.json'=(ConvertTo-ReleaseBytes $snapshot.state)}
+    try { Write-ReleaseCommit $repo $snapshot $files "Publish verified stable sequence $($report.sequence)" $scratch | Out-Null } catch { if ($retry -eq 4) { throw }; continue }
+    $after=Get-ReleaseSnapshot $repo
+    $promoted=(-not $after.state.active -and $after.stableHash -eq $report.signedManifestSha256 -and $after.channel.maxSequence -eq $report.sequence)
+}
+if (-not $promoted) { throw 'Atomic promotion not confirmed; resume the original transaction.' }
 Write-Host "Verified release https://github.com/$repo/releases/tag/$tag and promoted stable sequence $($report.sequence)."
 
 # ---------------------------------------------------------------- Gitee mirror of the stable channel
 # See scripts/Set-GiteeMirror.ps1 for what the mirror is and why it is never authority. It runs strictly
 # after the canonical channel advanced, so the mirror can never lead it, and a failure is reported as a
 # warning: GitHub is already live, and a release must not fail because a convenience copy did not.
-try {
+if (-not $SkipGitee) { try {
     & (Join-Path $PSScriptRoot 'Set-GiteeMirror.ps1') -Manifest $manifest -ExpectedSha256 $report.signedManifestSha256
 } catch {
     Write-Warning "Gitee mirror update failed and does not affect this release: $($_.Exception.Message)"
+}
+
 }

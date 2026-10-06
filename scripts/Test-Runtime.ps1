@@ -33,7 +33,7 @@ function Invoke-TestCommand([string]$Command, [string]$LogName) {
 }
 if (-not $SkipBuild) {
     Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests IMaoRoutePlanningTests IMaoHandDrawnRouteTests IMaoRoutePlanningServiceTests IMaoVisualRegression IMaoResourceSnapshotTests IMaoLayeredMapTests --parallel ' + $Parallel) 'native-build.log'
-    Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" build Tests\ManagedRuntime\ManagedRuntime.csproj -c Release --output "' + $taskManagedOutput + '" --source "' + $env:NUGET_PACKAGES + '" -p:NuGetAudit=false') 'managed-build.log'
+    Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" build Tests\ManagedRuntime\ManagedRuntime.csproj -c Release --output "' + $taskManagedOutput + '" --source "' + $env:IMAO_NUGET_SOURCE + '" -p:NuGetAudit=false') 'managed-build.log'
 }
 Invoke-TestCommand 'x64\Release\IMaoOptimizationTests.exe' 'native-tests.log'
 Invoke-TestCommand 'x64\Release\IMaoMarkerTests.exe' 'marker-tests.log'

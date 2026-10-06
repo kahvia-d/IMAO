@@ -1,0 +1,125 @@
+name: Publish locally signed cloud release
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+        description: Explicit production release authorization
+      confirm_version:
+        type: string
+        required: true
+      expected_source_commit:
+        type: string
+        required: true
+      build_run_id:
+        type: string
+        required: true
+      request_artifact_id:
+        type: string
+        required: true
+      signature_response:
+        type: string
+        required: true
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: pwsh
+jobs:
+  publish:
+    if: ${{ inputs.publish && github.ref == 'refs/heads/main' && github.repository == 'kahvia-d/IMAO' }}
+    runs-on: windows-2022
+    timeout-minutes: 90
+    environment: production
+    concurrency:
+      group: imao-production-release
+      queue: max
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      tag: ${{ steps.receive.outputs.tag }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.424
+      - name: Retrieve exact request and frozen build in cloud
+        id: receive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          REQUEST_ARTIFACT_ID: ${{ inputs.request_artifact_id }}
+          SOURCE: ${{ inputs.expected_source_commit }}
+          VERSION: ${{ inputs.confirm_version }}
+          RESPONSE: ${{ inputs.signature_response }}
+        run: |
+          ./scripts/Receive-CiRelease.ps1 -BuildRunId $env:BUILD_RUN_ID -RequestArtifactId $env:REQUEST_ARTIFACT_ID -ExpectedSourceCommit $env:SOURCE -ConfirmVersion $env:VERSION -ResponseJson $env:RESPONSE -OutputRoot out/finalize
+      - name: Public-key verification and finalization
+        if: steps.receive.outputs.already_completed != 'true'
+        env:
+          SOURCE: ${{ inputs.expected_source_commit }}
+          VERSION: ${{ inputs.confirm_version }}
+        run: |
+          dotnet build tools/UpdatePublisher/UpdatePublisher.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Publisher build failed.' }
+          dotnet tools/UpdatePublisher/bin/Release/net8.0/UpdatePublisher.dll finalize --input out/finalize/prepared --request out/finalize/request --response out/finalize/response.json --public-key Assets/Updates/trusted-keys.json --expected-source-commit $env:SOURCE --confirm-version $env:VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'Detached signature or build verification failed.' }
+      - name: Publish through the sole entrypoint and atomically advance stable
+        if: steps.receive.outputs.already_completed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.confirm_version }}
+        run: |
+          ./scripts/Publish-ResourceUpdate.ps1 -Publish $true -ConfirmVersion $env:VERSION -PreparedRoot out/finalize/prepared -RequestRoot out/finalize/request -ResponseFile out/finalize/response.json -NotesFile Docs/CloudReleaseNotes.md -ManualInstallZip "out/finalize/prepared/manual/IMao-v$env:VERSION-windows-x64.zip" -Dotnet (Get-Command dotnet).Source -SkipGitee
+  gitee:
+    needs: publish
+    runs-on: windows-2022
+    environment: gitee
+    concurrency:
+      group: imao-production-release
+      queue: max
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.424
+      - name: Mirror current stable only
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.publish.outputs.tag }}
+          IMAO_GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: ./scripts/Sync-CiGitee.ps1 -Tag $env:TAG
+  mirrorchyan:
+    needs: publish
+    uses: ./.github/workflows/mirrorchyan_release.yml
+    with:
+      tag: ${{ needs.publish.outputs.tag }}
+
+  cleanup:
+    needs: publish
+    runs-on: windows-2022
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Remove only the completed large build artifact
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          REQUEST_ARTIFACT_ID: ${{ inputs.request_artifact_id }}
+        run: ./scripts/Remove-CiPublishedBuildArtifact.ps1 -BuildRunId $env:BUILD_RUN_ID -RequestArtifactId $env:REQUEST_ARTIFACT_ID

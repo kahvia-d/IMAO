@@ -38,16 +38,16 @@ if ($LASTEXITCODE -ne 0) {
 $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
 if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Visual Studio Installer (vswhere) was not found.' }
 
-$cmake = & $vswhere -latest -products * -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' | Select-Object -First 1
-$ninja = & $vswhere -latest -products * -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe' | Select-Object -First 1
-$vcvars = & $vswhere -latest -products * -find 'VC\Auxiliary\Build\vcvars64.bat' | Select-Object -First 1
+$cmake = & $vswhere -latest -products * -version '[17.0,18.0)' -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' | Select-Object -First 1
+$ninja = & $vswhere -latest -products * -version '[17.0,18.0)' -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe' | Select-Object -First 1
+$vcvars = & $vswhere -latest -products * -version '[17.0,18.0)' -find 'VC\Auxiliary\Build\vcvars64.bat' | Select-Object -First 1
 if ([string]::IsNullOrWhiteSpace($cmake) -or [string]::IsNullOrWhiteSpace($ninja) -or [string]::IsNullOrWhiteSpace($vcvars)) {
     throw 'Visual Studio CMake, Ninja, or the x64 developer environment is missing.'
 }
 
 function Invoke-VisualStudioCommand([string]$CommandLine) {
     $logPath = Join-Path $env:TEMP ("imao-opencv-" + [guid]::NewGuid().ToString() + '.log')
-    $cmdCommand = 'call "' + $vcvars + '" >nul && (' + $CommandLine + ') > "' + $logPath + '" 2>&1'
+    $cmdCommand = 'call "' + $vcvars + '" -vcvars_ver=14.44 >nul && (' + $CommandLine + ') > "' + $logPath + '" 2>&1'
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.UseShellExecute = $false
 

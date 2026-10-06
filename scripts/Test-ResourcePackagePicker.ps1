@@ -23,7 +23,7 @@ $taskInfo.WorkingDirectory = $taskRoot
 [void]$taskInfo.EnvironmentVariables.Remove('Path')
 [void]$taskInfo.EnvironmentVariables.Remove('PATH')
 $taskInfo.EnvironmentVariables['PATH'] = [Environment]::GetEnvironmentVariable('Path', 'Process')
-foreach ($taskArgument in @('build', 'Tests/ResourcePackagePicker/ResourcePackagePicker.csproj', '-c', 'Release', '--output', (Join-Path $taskOutput 'bin'), '--source', $env:NUGET_PACKAGES, '-p:NuGetAudit=false')) { $taskInfo.ArgumentList.Add($taskArgument) }
+foreach ($taskArgument in @('build', 'Tests/ResourcePackagePicker/ResourcePackagePicker.csproj', '-c', 'Release', '--output', (Join-Path $taskOutput 'bin'), '--source', $env:IMAO_NUGET_SOURCE, '-p:NuGetAudit=false')) { $taskInfo.ArgumentList.Add($taskArgument) }
 if ($PickerSource) { $taskInfo.ArgumentList.Add('-p:ResourcePackagePickerSource=' + [IO.Path]::GetFullPath($PickerSource, $taskRoot)) }
 $taskProcess = [Diagnostics.Process]::Start($taskInfo)
 $taskStdout = $taskProcess.StandardOutput.ReadToEndAsync()

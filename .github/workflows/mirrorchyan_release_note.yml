@@ -1,27 +1,38 @@
 name: mirrorchyan_release_note
-
 on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
-        tag:
-            default: ''
-            required: false
-  release:
-    types: [edited]
-
+      tag:
+        type: string
+        required: true
+permissions:
+  contents: read
 jobs:
   mirrorchyan:
-    if: ${{ github.repository_owner == 'kahvia-d' }}
-    runs-on: macos-latest
-
+    if: ${{ github.repository == 'kahvia-d/IMAO' && github.ref == 'refs/heads/main' }}
+    runs-on: windows-2022
+    environment: mirrorchyan
+    timeout-minutes: 90
+    concurrency:
+      group: imao-production-release
+      queue: max
+      cancel-in-progress: false
     steps:
-      - id: uploading
-        uses: MirrorChyan/release-note-action@v1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          mirrorchyan_rid: IMAO
-          version_name: ${{ inputs.tag || github.event.release.tag_name }}
-
-          owner: kahvia-d
-          repo: IMAO
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          upload_token: ${{ secrets.MirrorChyanUploadToken }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.424
+      - name: Verify current stable and synchronize
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          MIRRORCHYAN_TOKEN: ${{ secrets.MIRRORCHYANUPLOADTOKEN }}
+        run: ./scripts/Sync-CiMirrorChyan.ps1 -Tag $env:TAG -NotesOnly

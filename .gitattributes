@@ -15,3 +15,6 @@ Assets/FeaturesDatas/KuroTilePacks/**/features.imf filter=lfs diff=lfs merge=lfs
 Assets/FeaturesDatas/KuroTilePacks/**/features.imf.manifest.json filter=lfs diff=lfs merge=lfs -text
 # Candidate index headers hash their source manifest. Keep checkout bytes stable.
 Assets/FeaturesDatas/**/manifest.json text eol=lf
+
+patches/*.patch text eol=lf
+.github/dependencies.lock.json text eol=lf
