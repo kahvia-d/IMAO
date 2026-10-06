@@ -64,6 +64,11 @@ jobs:
           FORMAL: ${{ inputs.publish || false }}
         run: |
           ./scripts/New-CiReleaseArtifacts.ps1 -SourceCommit $env:GITHUB_SHA -OutputRoot "$env:GITHUB_WORKSPACE/out/ci-release" -Rehearsal ($env:FORMAL -ne 'true')
+      - name: Diagnose cloud build failure
+        if: failure()
+        run: |
+          git status --porcelain=v1 --untracked-files=all
+          Get-ChildItem out/ci-release -Filter '*.log' -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name; Get-Content $_.FullName -Tail 30 }
       - name: Freeze unsigned release build
         id: bulk
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

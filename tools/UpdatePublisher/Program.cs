@@ -398,7 +398,7 @@ static partial class Publisher
         }
         if (packages.Any(p => p.Size >= 2L * 1024 * 1024 * 1024))
             throw new InvalidOperationException("A GitHub Releases attachment must be smaller than 2 GiB. Split the resource distribution before publishing this release.");
-        WriteNew(Path.Combine(output, "release-report.json"), new { formatVersion = 1, production, sourceCommit = build.SourceCommit, sourceDirty, sourceTreeSha256, appVersion = build.AppVersion, baselineId = build.BaselineId,
+        WriteNew(Path.Combine(output, "release-report.json"), new { formatVersion = 1, production, publisherRuntime = RuntimeInformation.FrameworkDescription, offlineRecipe = "imao-offline-zip-v1-dotnet8.0.30", sourceCommit = build.SourceCommit, sourceDirty, sourceTreeSha256, appVersion = build.AppVersion, baselineId = build.BaselineId,
             tag, sequence, snapshotId = release.SnapshotId, nativePassed, programPrepared, signedManifestSha256 = unsigned ? null : Hash(signedFile),
             previousStableSha256 = o.TryGetValue("previous", out var priorFile) ? Hash(priorFile) : null, offlineNeeded,
             assets = packages.Select(p => new { name = $"{p.Id}-{p.Version}.zip", sha256 = p.Sha256, size = p.Size, url = p.Url }).ToArray(),

@@ -81,7 +81,8 @@ $taskNativeBuild = Join-Path $OutputRoot 'native-build'
 # Preserve the configured flags and give MSVC the same explicit worker limit.
 Invoke-CandidateProcess $taskCmake @('-S',$taskRepo,'-B',$taskNativeBuild,'-G',$taskGenerator,'-A','x64','-T',$taskToolset,
     "-DCMAKE_GENERATOR_INSTANCE=$taskInstance","-DCMAKE_SYSTEM_VERSION=$taskWindowsSdk","-DPADDLE_LIB=$taskPaddle","-DOPENCV_DIR=$taskOpenCv",
-    "-DCMAKE_CXX_FLAGS=$taskCxxFlags /MP$Parallel",
+    "-DCMAKE_CXX_FLAGS=$taskCxxFlags /MP$Parallel /Brepro",
+    '-DCMAKE_EXE_LINKER_FLAGS=/Brepro','-DCMAKE_SHARED_LINKER_FLAGS=/Brepro',
     '-DIMAO_ENABLE_DIAGNOSTICS=OFF','-DIMAO_ALLOW_XML_FEATURE_FALLBACK=OFF') 'native-configure.log'
 Invoke-CandidateProcess $taskCmake @('--build',$taskNativeBuild,'--config','Release','--target','IMao-CoreHost','IMaoOptimizationTests',
     'IMaoMarkerTests','IMaoRoutePlanningTests','IMaoRoutePlanningServiceTests','IMaoVisualRegression','IMaoResourceSnapshotTests','--parallel',"$Parallel") 'native-build.log'
@@ -110,7 +111,7 @@ $taskPublish = Join-Path $OutputRoot 'publish'
 $taskManagedBuild = (Join-Path $OutputRoot 'managed-build') + [IO.Path]::DirectorySeparatorChar
 $taskManagedArguments = @('IMao-WinUI/IMao-WinUI.csproj','-c','Release','-r','win-x64','--self-contained','true',
     '-p:Platform=x64','-p:WindowsPackageType=None','-p:GenerateAppxPackageOnBuild=false','-p:AppxPackageSigningEnabled=false',
-    '-p:NuGetAudit=false',"-p:BaseOutputPath=$taskManagedBuild",'--source',$env:IMAO_NUGET_SOURCE)
+    '-p:NuGetAudit=false','-p:ContinuousIntegrationBuild=true',"-p:BaseOutputPath=$taskManagedBuild",'--source',$env:IMAO_NUGET_SOURCE)
 Invoke-CandidateProcess $env:IMAO_DOTNET (@('build') + $taskManagedArguments + @('-t:Rebuild')) 'managed-rebuild.log'
 # WinUI's publish build targets generate and collect resources.pri. Skipping
 # that build drops the application's resource index even after Rebuild.

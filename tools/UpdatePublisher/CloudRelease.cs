@@ -13,7 +13,7 @@ static partial class Publisher
     sealed record Approval(string Purpose, string TransactionId, string SourceCommit, string Version, string Tag,
         long Sequence, string BaselineId, long BuildRunId, long ArtifactId, string ArtifactDigest,
         string CatalogSha256, string InventorySha256, string ReportSha256, string PreviousStableSha256,
-        bool OfflineNeeded);
+        bool OfflineNeeded, string OfflineRecipe);
     sealed record RequestIndex(int FormatVersion, string RequestId, string CatalogSha256, string ApprovalSha256);
     sealed record SigningResponse(int FormatVersion, string RequestId, string KeyId, string CatalogSha256,
         string ApprovalSha256, string CatalogSignature, string ApprovalSignature);
@@ -73,7 +73,7 @@ static partial class Publisher
             report["sourceCommit"]!.GetValue<string>(), report["appVersion"]!.GetValue<string>(), report["tag"]!.GetValue<string>(),
             sequence, report["baselineId"]!.GetValue<string>(), long.Parse(Required(o, "build-run-id")), long.Parse(Required(o, "artifact-id")),
             Required(o, "artifact-digest").Replace("sha256:", "", StringComparison.Ordinal), Hash(Path.Combine(output, "catalog-payload.json")),
-            Hash(Path.Combine(output, "asset-inventory.json")), Hash(reportFile), Hash(previous), report["offlineNeeded"]!.GetValue<bool>());
+            Hash(Path.Combine(output, "asset-inventory.json")), Hash(reportFile), Hash(previous), report["offlineNeeded"]!.GetValue<bool>(), report["offlineRecipe"]!.GetValue<string>());
         WriteNew(Path.Combine(output, "approval-payload.json"), approval);
         var approvalHash = Hash(Path.Combine(output, "approval-payload.json"));
         WriteNew(Path.Combine(output, "request.json"), new RequestIndex(1, RequestId(approval.CatalogSha256, approvalHash), approval.CatalogSha256, approvalHash));
@@ -103,7 +103,7 @@ static partial class Publisher
             Hash(Path.Combine(root, "approval-payload.json")) != index.ApprovalSha256 || Hash(Path.Combine(root, "catalog-payload.json")) != a.CatalogSha256 ||
             Hash(Path.Combine(root, "asset-inventory.json")) != a.InventorySha256 || Hash(Path.Combine(root, "preparation-report.json")) != a.ReportSha256 ||
             Hash(Path.Combine(root, "previous-stable.json")) != a.PreviousStableSha256) throw new CryptographicException("Signing request hashes disagree.");
-        if (a.Purpose != "imao-release-approval-v1" || a.SourceCommit != expectedSource || !Regex.IsMatch(expectedSource, "^[a-f0-9]{40}$") || a.Version != expectedVersion || a.ArtifactId < 1 || a.BuildRunId < 1) throw new InvalidDataException("Signing request purpose, source, version or artifact identity differs.");
+        if (a.OfflineRecipe != "imao-offline-zip-v1-dotnet8.0.30" || a.Purpose != "imao-release-approval-v1" || a.SourceCommit != expectedSource || !Regex.IsMatch(expectedSource, "^[a-f0-9]{40}$") || a.Version != expectedVersion || a.ArtifactId < 1 || a.BuildRunId < 1) throw new InvalidDataException("Signing request purpose, source, version or artifact identity differs.");
         Id(a.TransactionId); Id(a.Tag); FourPartVersion(a.Version);
         var c = Read<UpdateCatalog>(Path.Combine(root, "catalog-payload.json")); ValidateCatalog(c);
         var previous = VerifyEnvelope(Path.Combine(root, "previous-stable.json"), keys, production);

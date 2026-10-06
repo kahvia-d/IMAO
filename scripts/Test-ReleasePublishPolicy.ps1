@@ -27,4 +27,9 @@ Reject { Assert-ExactReleaseAssetSet $expected @(@{name=$name},@{name=$name},@{n
 Assert-ExactReleaseAssetSet $expected @(@{name='update.json'},@{name=$name}) $true
 Assert-ReleaseSourceVersion '2026.10.6.2' '2026.10.6.2' # original source Version.props, regardless of newer main
 Reject { Assert-ReleaseSourceVersion '2026.10.6.2' '2026.10.6.3' }
+$retained=@{name='old.zip';size=123;sha256=('a'*64)}
+Assert-RetainedAssetMetadata $retained @(@{name='old.zip';size=123;digest=('sha256:'+('a'*64))}) | Out-Null
+Reject { Assert-RetainedAssetMetadata $retained @(@{name='old.zip';size=123;digest=('sha256:'+('b'*64))}) }
+Reject { Assert-RetainedAssetMetadata $retained @(@{name='old.zip';size=124;digest=('sha256:'+('a'*64))}) }
+if (Assert-RetainedAssetMetadata $retained @(@{name='old.zip';size=123;digest=$null})) { throw 'Missing service digest must trigger byte-download verification.' }
 Write-Host 'PASS authorized installer selection, omitted installer derivation, external/swapped installer rejection, exact draft asset set and frozen source version confirmation.'

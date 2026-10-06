@@ -4,6 +4,8 @@ $ErrorActionPreference='Stop'
 $repoRoot=Split-Path -Parent $PSScriptRoot
 if (-not $LockFile) { $LockFile=Join-Path $repoRoot '.github/dependencies.lock.json' }
 if (-not $ArchiveRoot) { $ArchiveRoot=Join-Path $repoRoot 'third_party/downloads' }
+$env:SOURCE_DATE_EPOCH=[string](& git -C $repoRoot show -s --format=%ct HEAD)
+if ($LASTEXITCODE -ne 0 -or $env:SOURCE_DATE_EPOCH -notmatch '^\d+$') { throw 'Cannot establish reproducible source date.' }
 $lock=Get-Content $LockFile -Raw | ConvertFrom-Json
 if ((& dotnet --version).Trim() -cne $lock.dotnetSdk) { throw 'The locked .NET SDK is not active.' }
 $patch=Join-Path $repoRoot 'patches/opencv_contrib-4.11.0-offline-vgg.patch'
@@ -40,6 +42,7 @@ if (-not (Test-Path "${env:ProgramFiles(x86)}/Windows Kits/10/Include/$($lock.wi
 & cmake -S $repoRoot -B (Join-Path $repoRoot 'out/ci-native-config') -G 'Visual Studio 17 2022' -A x64 -T "v143,version=$($toolset.Name)" "-DCMAKE_GENERATOR_INSTANCE=$vs" "-DCMAKE_SYSTEM_VERSION=$($lock.windowsSdk)" "-DPADDLE_LIB=$env:IMAO_PADDLE_LIB" "-DOPENCV_DIR=$env:IMAO_OPENCV_DIR" '-DIMAO_ENABLE_DIAGNOSTICS=OFF' '-DIMAO_ALLOW_XML_FEATURE_FALLBACK=OFF'
 if ($LASTEXITCODE -ne 0) { throw 'Cloud native configuration failed.' }
 if ($env:GITHUB_ENV) {
+    "SOURCE_DATE_EPOCH=$env:SOURCE_DATE_EPOCH" >> $env:GITHUB_ENV
     "IMAO_DOTNET=$env:IMAO_DOTNET" >> $env:GITHUB_ENV
     "IMAO_PADDLE_LIB=$env:IMAO_PADDLE_LIB" >> $env:GITHUB_ENV
     "IMAO_OPENCV_DIR=$env:IMAO_OPENCV_DIR" >> $env:GITHUB_ENV

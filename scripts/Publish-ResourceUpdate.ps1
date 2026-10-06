@@ -337,6 +337,20 @@ Assert-ExactReleaseAssetSet $assets $release.assets $true
 # first-install archive (-ManualInstallZip is mandatory for a shard release), so pointing new players here
 # is safe. The browser-extension releases keep their own --latest=false in Publish-BrowserExtension.ps1,
 # which is a different reason: an ext-* release must never be what releases/latest opens.
+# Retained URLs are part of the signed catalog too. A HEAD alone cannot prove their bytes.
+$retainedChecks=@($approvedInventory | Where-Object { ([Uri]$_.url).AbsolutePath -notlike "/$repo/releases/download/$tag/*" } | Group-Object url | ForEach-Object { $_.Group[0] })
+$retainedReleases=@{}
+foreach ($asset in $retainedChecks) {
+    $uri=[Uri]$asset.url
+    if ($uri.AbsolutePath -notmatch '^/(kahvia-d/(?:IMAO|WWMAP-TOOLS))/releases/download/([^/]+)/[^/]+$') { throw 'Retained URL is outside approved repositories.' }
+    $oldRepo=$Matches[1]; $oldTag=$Matches[2]; $identity="$oldRepo/$oldTag"
+    if (-not $retainedReleases.ContainsKey($identity)) { $retainedReleases[$identity]=Invoke-Gh @('api',"repos/$oldRepo/releases/tags/$oldTag") | ConvertFrom-Json }
+    if (-not (Assert-RetainedAssetMetadata $asset $retainedReleases[$identity].assets)) {
+        $oldRoot=Join-Path $verification ('retained-'+[guid]::NewGuid().ToString('N')); [IO.Directory]::CreateDirectory($oldRoot) | Out-Null
+        Invoke-Gh @('release','download',$oldTag,'--repo',$oldRepo,'--pattern',$asset.name,'--dir',$oldRoot) | Out-Null
+        if ((Get-FileHash (Join-Path $oldRoot $asset.name) -Algorithm SHA256).Hash.ToLowerInvariant() -cne $asset.sha256) { throw 'Retained attachment bytes differ from signed inventory.' }
+    }
+}
 $beforePublish=Get-ReleaseSnapshot $repo
 Assert-ReleaseTransaction $beforePublish.state $approval $beforePublish.stableHash ([long]$beforePublish.channel.maxSequence)
 if ($release.draft) { Invoke-Gh @('release','edit',$tag,'--repo',$repo,'--draft=false','--latest=true') | Out-Null }

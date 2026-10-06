@@ -20,3 +20,11 @@ function Assert-ExactReleaseAssetSet([object[]]$Expected,[object[]]$Remote,[bool
 function Assert-ReleaseSourceVersion([string]$Confirmation,[string]$ApprovedSourceVersion) {
     if ($Confirmation -cne $ApprovedSourceVersion) { throw 'confirm_version must exactly match Version.props at the approved source SHA.' }
 }
+function Assert-RetainedAssetMetadata($Expected,[object[]]$RemoteAssets) {
+    $remote=@($RemoteAssets | Where-Object name -CEQ $Expected.name)
+    if ($remote.Count -ne 1 -or $remote[0].size -ne $Expected.size) { throw 'Retained asset is missing, ambiguous or has an unexpected size.' }
+    $digest=[string]$remote[0].digest -replace '^sha256:',''
+    if (-not $digest) { return $false }
+    if ($digest -cne $Expected.sha256) { throw 'Retained release attachment changed after approval.' }
+    return $true
+}
