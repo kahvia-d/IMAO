@@ -71,6 +71,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
     /// The input service installs it with the same reader it polls, so both always look at one device.
     /// </summary>
     internal Func<int, GamepadSample>? ReadGamepadSample { get; set; }
+    internal Func<string, string> FormatGamepadButtons { get; set; } = text => text;
     /// <summary>Which XInput device the input service is using; -1 before one is selected.</summary>
     internal int GamepadDevice { get; set; } = -1;
     private readonly GuideFocusHandoff pendingFocusHandoff = new();
@@ -244,7 +245,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             if (gamepadRouteTarget is { } target && (!ValidGamepadSelection(target) || target.Completed)) gamepadRouteTarget = null;
             gamepadSessionOpen = true;
             gamepadPageGeneration++;
-            var assistant = new GamepadAssistantWindow(HandleGamepadAsync, ExitGamepadToGameAsync);
+            var assistant = new GamepadAssistantWindow(HandleGamepadAsync, ExitGamepadToGameAsync) { FormatGamepadButtons = FormatGamepadButtons };
             gamepadAssistant = assistant;
             assistant.Closed += (_, _) => { if (ReferenceEquals(gamepadAssistant, assistant)) SuspendGamepad("手柄助手已关闭"); };
             assistant.PlaceNearGame(gameWindow);
@@ -1325,6 +1326,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             };
         }
         var current = guide;
+        current.FormatGamepadButtons = FormatGamepadButtons;
         current.SetGamepadMode(IsGamepadSessionOpen && gamepadGuideGeneration == generation || standaloneGamepadGeneration == generation);
         // A recycled window must never keep the previous point's skip button.
         current.SetSkipAvailability(false, "recycled-window");
@@ -1751,7 +1753,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
         static string Key(MarkerSelection value) => value.IsFree ? $"{value.StateId}:free-route:{value.RouteId}:{value.PointId}" : $"{value.StateId}:{value.PointId}";
         var collect = new Button { Content = "一键收集本组全部点位", HorizontalAlignment = HorizontalAlignment.Stretch,
             Visibility = Visibility.Collapsed };
-        var collectHint = new TextBlock { Text = "手柄：长按 X 一键收集 · A 完成高亮的点 · B 返回", FontSize = 12, Opacity = 0.75,
+        var collectHint = new TextBlock { Text = FormatGamepadButtons("手柄：长按 X 一键收集 · A 完成高亮的点 · B 返回"), FontSize = 12, Opacity = 0.75,
             TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
         var hold = new ProgressBar { Minimum = 0, Maximum = 1, Height = 5, Visibility = Visibility.Collapsed };
         chooserHold = hold;

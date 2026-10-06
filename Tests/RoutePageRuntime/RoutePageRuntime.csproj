@@ -45,4 +45,5 @@
     <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
     <Page Include="../../IMao-WinUI/Styles/Thickness.xaml" Link="Styles/Thickness.xaml" />
   </ItemGroup>
+  <ItemGroup><Compile Include="../../IMao-WinUI/Models/GamepadDevices.cs" Link="Production/GamepadDevices.cs" /></ItemGroup>
 </Project>

@@ -368,6 +368,10 @@
       "zh-CN": "辉光奇藏箱",
       "en-US": "qzx_04"
     },
+    "wzdly": {
+      "zh-CN": "无主的梁鸢",
+      "en-US": "wzdly"
+    },
     "zscj": {
       "zh-CN": "终声残卷",
       "en-US": "zscj"
@@ -389,6 +393,10 @@
     "qzk": {
       "zh-CN": "奇绽傀",
       "en-US": "qzk"
+    },
+    "xxqw": {
+      "zh-CN": "巡霄枪卫",
+      "en-US": "xxqw"
     }
   }
 }

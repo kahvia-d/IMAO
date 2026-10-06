@@ -67,6 +67,7 @@ try
     KuroSyncTests.Run(root, Check);
     RoutePlanningTests.Run(Check);
     RouteFilterPlanTests.Run(Check);
+    PlayStationInputTests.Run(Check);
     GamepadInputTests.Run(root, Check);
     GuideSkipHoldGestureTests.Run(Check);
     GuideFocusLatchTests.Run(Check);

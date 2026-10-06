@@ -12,6 +12,7 @@ $patch=Join-Path $repoRoot 'patches/opencv_contrib-4.11.0-offline-vgg.patch'
 if ((Get-FileHash $patch -Algorithm SHA256).Hash.ToLowerInvariant() -cne $lock.opencvPatchSha256) { throw 'OpenCV patch differs from dependency lock.' }
 [IO.Directory]::CreateDirectory($ArchiveRoot) | Out-Null
 foreach ($dep in $lock.dependencies) {
+    if ($dep.name -eq 'sdl3') { continue }
     $archive=Join-Path $ArchiveRoot "$($dep.name)-$($dep.version).zip"
     if (-not (Test-Path $archive)) { Invoke-WebRequest -Uri $dep.url -OutFile $archive -TimeoutSec 600 }
     if ((Get-Item $archive).Length -ne $dep.size -or (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -cne $dep.sha256) { throw "Dependency hash/size mismatch: $($dep.name). Cached bytes were not trusted." }
@@ -19,6 +20,7 @@ foreach ($dep in $lock.dependencies) {
     [IO.Directory]::CreateDirectory($destination) | Out-Null
     Expand-Archive -LiteralPath $archive -DestinationPath $destination -Force
 }
+& (Join-Path $PSScriptRoot 'Initialize-GamepadDependency.ps1') -SourceRoot $repoRoot -ArchiveRoot $ArchiveRoot
 $env:IMAO_DOTNET=(Get-Command dotnet).Source
 $env:IMAO_PADDLE_LIB=Join-Path $repoRoot 'third_party/paddle-inference-3.0.0/paddle_inference'
 if (-not (Test-Path (Join-Path $env:IMAO_PADDLE_LIB 'paddle/include/paddle_inference_api.h'))) { $env:IMAO_PADDLE_LIB=Split-Path $env:IMAO_PADDLE_LIB }

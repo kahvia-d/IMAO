@@ -57,7 +57,13 @@ function Invoke-KuroDownload([string]$Url, [string]$Destination) {
     Assert-KuroUri $Url @($kuroStaticHost)
     # --retry covers the transport failures only (timeouts, resets, 5xx). A 404 is a
     # real answer here and must still fail the run, which --retry-all-errors would hide.
-    & curl.exe --fail --silent --show-error --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 45 --retry 3 --retry-delay 2 $Url --output $Destination
+    # Schannel handshake failures (35) are not included in curl's normal retry
+    # policy. Retry only that transport error; a genuine HTTP error stays fatal.
+    for ($handshakeAttempt = 0; $handshakeAttempt -lt 5; $handshakeAttempt++) {
+        & curl.exe --fail --silent --show-error --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 45 --retry 3 --retry-delay 2 $Url --output $Destination
+        if ($LASTEXITCODE -ne 35) { break }
+        if ($handshakeAttempt -lt 4) { Start-Sleep -Seconds 2 }
+    }
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $Destination)) {
         throw "Download failed: $Url"
     }

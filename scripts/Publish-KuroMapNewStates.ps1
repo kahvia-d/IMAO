@@ -22,7 +22,7 @@ $routes = [ordered]@{
     '902' = [ordered]@{ scene = 'LowerVault';     itemTypes = 37; points = 238 }
     '909' = [ordered]@{ scene = 'Darkplain';      itemTypes = 44; points = 702 }
     '910' = [ordered]@{ scene = 'TimeRiftRuins';  itemTypes = 9;  points = 59 }
-    '912' = [ordered]@{ scene = 'MengshuTianluo'; itemTypes = 24; points = 243 }
+    '912' = [ordered]@{ scene = 'MengshuTianluo'; itemTypes = 26; points = 274 }
 }
 $middleDot = [char]0x00B7
 $idAliases = @{ ("sx${middleDot}qq") = 'sx_qq'; ("sx${middleDot}lgn") = 'sx_lgn' }

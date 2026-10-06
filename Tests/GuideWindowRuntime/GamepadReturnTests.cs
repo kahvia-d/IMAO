@@ -125,7 +125,7 @@ internal static class GamepadReturnTests
             f.NoMain();
         }, log);
 
-        await Case("real service timer preserves leased host through delayed guide registration and activation", async f =>
+        await Case("real service timer preserves leased host, opens passive guide, and transfers focus only on L3", async f =>
         {
             var registration = f.Core.DeferNext("markerSetGuideWindow");
             await f.OpenService(); f.Observe();
@@ -138,16 +138,21 @@ internal static class GamepadReturnTests
             Check(IsWindow(f.Host) && f.InputCount == sent && !f.Controller.IsOpen,
                 "lease stops semantic samples while preserving source during an IPC await");
             registration.Reply.SetResult(CoreHostService.Empty());
-            await Until(() => f.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail && !f.Controller.HasHost,
-                "full service timer permits two activation confirmations before host retirement");
-            Check(f.Guide is { } guide && NativeForeground.Get() == Handle(guide) &&
-                f.Core.GamepadDiagnostics.Any(s => s.StartsWith("guide-activation:") && s.Contains("Success = True")) &&
-                !f.Core.GamepadDiagnostics.Any(s => s.Contains("Reason = window-changed")), "source survives the entire guide activation");
+            await Until(() => f.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive && !f.Controller.HasHost,
+                "host survives registration and confirmed return to game before retirement");
+            Check(f.Guide is { IsGuideVisible: true } && NativeForeground.Get() == f.Game &&
+                f.Core.GamepadDiagnostics.Any(s => s.StartsWith("guide-focus:") && s.Contains("opened-passive")) &&
+                !f.Core.GamepadDiagnostics.Any(s => s.Contains("Reason = window-changed")), "passive guide preserves game foreground");
+            await Task.Delay(90);
+            f.Sample = f.Sample with { Buttons = GamepadButtons.L3 }; await Task.Delay(90);
+            f.Sample = f.Sample with { Buttons = GamepadButtons.None };
+            await Until(() => f.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.Detail &&
+                f.Guide is { } guide && NativeForeground.Get() == Handle(guide), "fresh L3 explicitly activates guide");
             await Task.Delay(90);
             f.Sample = f.Sample with { Buttons = GamepadButtons.B }; await Task.Delay(90);
             f.Sample = f.Sample with { Buttons = GamepadButtons.None };
-            await Until(() => !f.Coordinator.IsStandaloneGamepadGuideOpen && !f.Coordinator.IsGamepadReturnPending,
-                "standalone B also confirms return before hiding guide");
+            await Until(() => f.Coordinator.GetGamepadInputContext().Mode == GamepadInputMode.GuidePassive && !f.Coordinator.IsGamepadReturnPending,
+                "standalone B confirms return and leaves guide visible in passive mode");
             Check(NativeForeground.Get() == f.Game && !f.Core.Commands.Any(c => c.Operation == "markerSetCompletion"), "guide returns to original game without writes");
             f.NoMain();
         }, log);
@@ -200,7 +205,7 @@ internal static class GamepadReturnTests
         {
             Coordinator = new(Core, new MarkerDetailService()); Controller = new(Core);
             Coordinator.AcquireGamepadHandoff = Controller.AcquireHandoff;
-            Core.RoutePlanning = new() { ProfileId = "local", Revision = 1, Active = new AutomaticRoute { Id = "test-route", SceneName = "World", SceneId = 1 },
+            Core.RoutePlanning = new() { ProfileId = "local", Revision = 1, NavigationStatus = "navigating", Active = new AutomaticRoute { Id = "test-route", SceneName = "World", SceneId = 1 },
                 CurrentTarget = new RouteStop { Key = "8:" + Point.PointId, StateId = 8, PointId = Point.PointId, NameId = Point.NameId } };
             Core.RouteGamepadResponder = (operation, arguments) =>
             {

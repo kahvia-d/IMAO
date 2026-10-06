@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "generatedAtUtc": "2026-10-02T11:30:52.0980161Z",
+  "generatedAtUtc": "2026-10-06T14:18:48.8850310Z",
   "resourceVersion": "C9D8F32B5FC7430A808FFCFCBE0ED9F8",
   "source": {
     "api": "https://api.kurobbs.com",
@@ -18,8 +18,8 @@
     ]
   },
   "aliases": {
-    "sx·qq": "sx_qq",
-    "sx·lgn": "sx_lgn"
+    "sx·lgn": "sx_lgn",
+    "sx·qq": "sx_qq"
   },
   "states": [
     {
@@ -99,11 +99,11 @@
       "runtime": "MengshuTianluo",
       "supported": false,
       "reason": "运行时点位由 Publish-KuroMapNewStates.ps1 单独发布；本表只归档上游快照。",
-      "itemTypes": 24,
-      "points": 243,
-      "sha256": "2eb410907bc0a2570e26132aeaf6bbced5dab842714c754a3e8863c6ca49f011"
+      "itemTypes": 26,
+      "points": 274,
+      "sha256": "93dcdb4fb3f83cabaaea7b2c5b6aef3ce3adf18780dcc21a3c2683b0e7b9375b"
     }
   ],
-  "iconCount": 539,
+  "iconCount": 540,
   "runtimeFilterItemCount": 506
 }

@@ -13,6 +13,14 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
     private readonly RouteGamepadController toolbar;
     private readonly IMapToolsController? mapTools;
     private readonly Func<int, GamepadSample> readController;
+    private readonly IGamepadDeviceSource devices;
+    private readonly GamepadDeviceSelection selection = new();
+    private string configuredId = "";
+    private GamepadButtonLayout configuredLayout;
+    public IReadOnlyList<GamepadDeviceInfo> GetDevices() => devices.GetDevices();
+    public GamepadButtonLayout ButtonLayout => configuredLayout == GamepadButtonLayout.Auto
+        ? selection.Device?.Layout ?? GamepadButtonLayout.Xbox : configuredLayout;
+    public string FormatButtons(string text) => GamepadLabels.Format(text, ButtonLayout);
     private readonly GamepadInputInterpreter input = new();
     private readonly DispatcherQueueTimer timer;
     private readonly CancellationTokenSource lifetime = new();
@@ -50,10 +58,10 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
     internal int SelectedDevice => selectedDevice;
 
     public GamepadInputService(CoreHostService core, MarkerGuideCoordinator guides)
-        : this(core, guides, new XInputControllerReader().Read) { }
+        : this(core, guides, new ControllerDeviceSource(), null) { }
 
     public GamepadInputService(CoreHostService core, MarkerGuideCoordinator guides, IMapToolsController mapTools)
-        : this(core, guides, new XInputControllerReader().Read, mapTools) { }
+        : this(core, guides, new ControllerDeviceSource(), mapTools) { }
 
     internal GamepadInputService(CoreHostService core, MarkerGuideCoordinator guides,
         Func<int, GamepadSample> readController)
@@ -61,6 +69,10 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
 
     internal GamepadInputService(CoreHostService core, MarkerGuideCoordinator guides,
         Func<int, GamepadSample> readController, IMapToolsController? mapTools)
+        : this(core, guides, new DelegateControllerDeviceSource(readController), mapTools) { }
+
+    internal GamepadInputService(CoreHostService core, MarkerGuideCoordinator guides,
+        IGamepadDeviceSource devices, IMapToolsController? mapTools)
     {
         this.core = core; this.guides = guides;
         this.mapTools = mapTools;
@@ -69,9 +81,11 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
         toolbar.Ended += input.Reset;
         guides.AcquireGamepadHandoff = source => mapTools?.AcquireHandoff(source) ?? toolbar.AcquireHandoff(source);
         if (mapTools is not null) { mapTools.StatusChanged += SetMessage; mapTools.Ended += input.Reset; }
-        this.readController = readController ?? throw new ArgumentNullException(nameof(readController));
+        this.devices = devices ?? throw new ArgumentNullException(nameof(devices));
+        this.readController = devices.Read;
         // 协调器用同一个读取器判断"手柄是不是已经全部松开"，再决定什么时候把前台交还游戏。
-        guides.ReadGamepadSample = index => readController(index);
+        guides.ReadGamepadSample = index => this.readController(index);
+        guides.FormatGamepadButtons = FormatButtons;
         guides.GamepadDevice = selectedDevice < 0 ? 0 : selectedDevice;
         timer = DispatcherQueue.GetForCurrentThread().CreateTimer();
         timer.Interval = TimeSpan.FromMilliseconds(16);
@@ -92,6 +106,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
 
     private void SetMessage(string value)
     {
+        value = FormatButtons(value);
         if (message == value) return;
         message = value; PropertyChanged?.Invoke(this, new(nameof(StatusMessage)));
     }
@@ -111,15 +126,18 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
     {
         var c = core.Configuration;
         bool requestedEnabled = c.GamepadEnabled && !configurationPending;
-        if (enabled == requestedEnabled && configuredDevice == c.GamepadControllerIndex && timer.IsRunning) return;
+        if (enabled == requestedEnabled && configuredDevice == c.GamepadControllerIndex &&
+            configuredId == c.GamepadDeviceId && configuredLayout == c.GamepadButtonLayout && timer.IsRunning) return;
         enabled = requestedEnabled; configuredDevice = c.GamepadControllerIndex;
+        configuredId = c.GamepadDeviceId; configuredLayout = c.GamepadButtonLayout;
+        selection.Configure(configuredId, configuredDevice);
         configurationGeneration++;
-        selectedDevice = configuredDevice; searchAt = 0; runtime = default; runtimeAt = pollAt = 0;
+        selectedDevice = -1; searchAt = 0; runtime = default; runtimeAt = pollAt = 0;
         input.Reset(); toolbar.Stop("手柄配置已更改", restoreGame: true); guides.SuspendGamepad("手柄配置已更改");
         mapTools?.Feed(new(false, selectedDevice, GamepadButtons.None), Now);
         core.ReportGamepadDiagnostic("configuration", $"enabled={enabled} pending={configurationPending} device={configuredDevice} map=LB:tools,RB:assistant world=LB+B:complete,LB+X:guide");
         lastDiagnosticState = ""; diagnosticAt = lastTickAt = 0;
-        if (enabled) { timer.Start(); SetMessage("正在检测 Xbox 兼容手柄…"); }
+        if (enabled) { timer.Start(); SetMessage("正在检测 Xbox / PlayStation 手柄…"); }
         else { timer.Stop(); SetMessage("手柄适配已关闭"); }
     }
 
@@ -131,18 +149,11 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
 
     private GamepadSample Sample(long now)
     {
-        // Auto-select once, then retain that slot even if it disconnects. A second
-        // controller cannot take over a held confirmation after a disconnect.
-        if (selectedDevice < 0 && now >= searchAt)
-        {
-            searchAt = now + 1500;
-            for (int i = 0; i < 4; i++)
-            {
-                var candidate = readController(i);
-                if (candidate.Connected) { selectedDevice = i; input.Reset(); return candidate; }
-            }
-        }
-        return selectedDevice < 0 ? new(false, -1, GamepadButtons.None) : readController(selectedDevice);
+        if (selectedDevice < 0 && now < searchAt) return new(false, -1, GamepadButtons.None);
+        searchAt = now + 1500;
+        var sample = selection.Read(devices);
+        if (selectedDevice != selection.Handle) { selectedDevice = selection.Handle; input.Reset(); }
+        return sample;
     }
 
     /// <summary>
@@ -203,7 +214,10 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                 input.Reset(); guides.SuspendGamepad("手柄连接已断开");
                 toolbar.Stop("手柄连接已断开", restoreGame: true);
                 mapTools?.Feed(sample, now);
-                SetMessage(selectedDevice < 0 ? "未检测到 Xbox 兼容手柄" : $"手柄 {selectedDevice + 1} 已断开，等待重新连接");
+                SetMessage((selectedDevice < 0 ? "未检测到所选 Xbox / PlayStation 手柄" :
+                    selection.WaitingForNeutral && readController(selectedDevice).Connected ? "请先松开按键、扳机并回正摇杆" :
+                    $"{selection.Device?.Name ?? "手柄"} 已断开，等待重新连接") +
+                    (devices.Diagnostic.Length == 0 ? "" : " · " + devices.Diagnostic));
                 return;
             }
             if (core.IsConnected && !toolbar.IsOpen && now >= pollAt && !querying)
@@ -322,7 +336,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                 SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" : "点位助手 · A 确认 / B 返回 / X 放大图片 / 长按 A 完成当前点");
             else if (context.Mode == GamepadInputMode.Map)
                 SetMessage(update.WaitingForRelease ? "请先松开按键、扳机并回正摇杆" :
-                    $"手柄 {selectedDevice + 1} 已连接 · LB 地图工具台 / RB 点位助手");
+                    $"{selection.Device?.Name ?? "手柄"} 已连接 · LB 地图工具台 / RB 点位助手");
             else if (context.Mode == GamepadInputMode.Gameplay)
                 SetMessage(update.WaitingForRelease ? "请先松开按键和扳机" :
                     "大世界 · LB＋B 完成附近点位 / LB＋X 附近或当前路线目标攻略");
@@ -404,5 +418,7 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
         lifetime.Cancel(); lifetime.Dispose(); guides.AcquireGamepadHandoff = null;
         if (mapTools is not null) { mapTools.StatusChanged -= SetMessage; mapTools.Ended -= input.Reset; }
         toolbar.Dispose(); input.Reset(); guides.SuspendGamepad("手柄输入已停止");
+        guides.FormatGamepadButtons = text => text;
+        devices.Dispose();
     }
 }

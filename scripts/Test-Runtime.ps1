@@ -62,6 +62,8 @@ Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" "' + (Join-Path $taskManagedOutp
 & (Join-Path $PSScriptRoot 'Test-ResourceUpdateStaging.ps1') -OutputRoot (Join-Path $taskOutput ('resource-staging-' + [guid]::NewGuid().ToString('N')))
 & (Join-Path $PSScriptRoot 'Test-ResourceCatalogTransition.ps1') -OutputRoot (Join-Path $taskOutput ('resource-catalog-' + [guid]::NewGuid().ToString('N')))
 & (Join-Path $PSScriptRoot 'Test-ProgramShardReleaseAssets.ps1') -OutputRoot (Join-Path $taskOutput ('program-shard-assets-' + [guid]::NewGuid().ToString('N')))
+& (Join-Path $PSScriptRoot 'Initialize-GamepadDependency.ps1')
+Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" run --project Tests\ControllerRuntime -c Release') 'controller-tests.log'
 Write-Host "Runtime tests passed. Evidence: $taskOutput" -ForegroundColor Green
 # Negative-path subprocess tests intentionally return nonzero before asserting rejection.
 # Do not leak their expected exit status to automation after all suites have passed.

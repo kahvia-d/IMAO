@@ -654,7 +654,16 @@ public sealed partial class SettingsPage : Page
     private async void RollbackProgram_Click(object sender, RoutedEventArgs e) => await updates.RollbackProgramAsync();
     private void CancelUpdate_Click(object sender, RoutedEventArgs e) => updates.Cancel();
 
-    private void Gamepad_PropertyChanged(object? sender, PropertyChangedEventArgs e) => GamepadStatus.Text = gamepad.StatusMessage;
+    private GamepadButtonLayout displayedGamepadLayout;
+    private void Gamepad_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        GamepadStatus.Text = gamepad.StatusMessage;
+        if (displayedGamepadLayout != gamepad.ButtonLayout && !savingGamepad) RestoreGamepad();
+    }
+
+    private void RefreshGamepads_Click(object sender, RoutedEventArgs e) => RestoreGamepad();
+    private async void GamepadLayout_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    { if (IsLoaded && !restoringGamepad && GamepadLayout.SelectedIndex >= 0) await SaveGamepadAsync(); }
 
     private void RestoreGamepad()
     {
@@ -662,12 +671,26 @@ public sealed partial class SettingsPage : Page
         try
         {
             GamepadEnabled.IsOn = coreHost.Configuration.GamepadEnabled;
-            GamepadDevice.SelectedIndex = coreHost.Configuration.GamepadControllerIndex + 1;
+            var devices = gamepad.GetDevices();
+            GamepadDevice.Items.Clear();
+            GamepadDevice.Items.Add(new ComboBoxItem { Content = "自动选择（优先 XInput，再选择原生 PS）", Tag = "" });
+            for (int index = 0; index < 4; index++)
+                GamepadDevice.Items.Add(new ComboBoxItem { Content = devices.FirstOrDefault(d => d.Handle == index)?.Name ?? $"Xbox / XInput {index + 1}（未连接）", Tag = "" });
+            foreach (var device in devices.Where(d => d.Handle >= 4))
+                GamepadDevice.Items.Add(new ComboBoxItem { Content = device.Name, Tag = device.Id });
+            string selectedId = coreHost.Configuration.GamepadDeviceId;
+            if (selectedId.Length > 0 && !devices.Any(d => d.Id == selectedId))
+                GamepadDevice.Items.Add(new ComboBoxItem { Content = "已选择的 PS 手柄（未连接）", Tag = selectedId });
+            GamepadDevice.SelectedIndex = selectedId.Length == 0 ? coreHost.Configuration.GamepadControllerIndex + 1 :
+                Enumerable.Range(5, GamepadDevice.Items.Count - 5).First(i => (string)((ComboBoxItem)GamepadDevice.Items[i]).Tag == selectedId);
+            GamepadLayout.SelectedIndex = (int)coreHost.Configuration.GamepadButtonLayout;
             GamepadInstructions.Text = "大地图：点按 LB 打开地图工具台，RB 打开点位助手。左摇杆或方向键选择，A 确认，B 逐级返回，根层返回游戏。" +
                 "将游戏白色光标圈对准标记后按 RB，圈内点优先列出；A 查看详情，按住 X 0.6 秒完成所选点。重叠多个点时先选一个。" +
                 "选择框选或套索后，左摇杆移动光标，按住 A 拖动，松开 A 完成选择并返回工具栏。\n" +
                 "大世界：先按 LB，再按 B 完成附近点；先按 LB，再按 X 打开附近攻略。全部松开后执行一次；多个完成候选始终先选择，A 只完成所选点。" +
-                "攻略只查当前筛选中的附近未完成点。攻略内 LB/RB 翻图，右摇杆滚动，A 放大图片，B 返回；按住 X 0.6 秒只完成当前点。筛选搜索文字使用键盘。";
+                "攻略只查当前筛选中的附近未完成点。攻略内 LB/RB 翻图，右摇杆滚动，X 放大图片，B 返回游戏聚焦；按住 A 0.6 秒完成当前点，按住 Y 跳过当前目标，LS 切换游戏与攻略聚焦。筛选搜索文字使用键盘。";
+            GamepadInstructions.Text = gamepad.FormatButtons(GamepadInstructions.Text);
+            displayedGamepadLayout = gamepad.ButtonLayout;
             GamepadStatus.Text = gamepad.StatusMessage;
         }
         finally { restoringGamepad = false; }
@@ -686,16 +709,19 @@ public sealed partial class SettingsPage : Page
     private async Task SaveGamepadAsync()
     {
         if (savingGamepad) return;
-        savingGamepad = true; GamepadEnabled.IsEnabled = GamepadDevice.IsEnabled = false;
+        savingGamepad = true; GamepadEnabled.IsEnabled = GamepadDevice.IsEnabled = GamepadLayout.IsEnabled = false;
         gamepad.SetConfigurationPending(true);
         try
         {
             bool requestedEnabled = GamepadEnabled.IsOn;
-            int requestedDevice = GamepadDevice.SelectedIndex - 1;
+            int requestedDevice = GamepadDevice.SelectedIndex < 5 ? GamepadDevice.SelectedIndex - 1 : -1;
+            string requestedId = (GamepadDevice.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
+            var requestedLayout = (GamepadButtonLayout)Math.Max(0, GamepadLayout.SelectedIndex);
             bool ok = await coreHost.ConfigureAsync(gamepadEnabled: requestedEnabled,
-                gamepadControllerIndex: requestedDevice);
+                gamepadControllerIndex: requestedDevice, gamepadDeviceId: requestedId, gamepadButtonLayout: requestedLayout);
             bool saved = coreHost.Configuration.GamepadEnabled == requestedEnabled &&
-                coreHost.Configuration.GamepadControllerIndex == requestedDevice;
+                coreHost.Configuration.GamepadControllerIndex == requestedDevice &&
+                coreHost.Configuration.GamepadDeviceId == requestedId && coreHost.Configuration.GamepadButtonLayout == requestedLayout;
             GamepadMessage.Severity = ok ? InfoBarSeverity.Success : InfoBarSeverity.Warning;
             GamepadMessage.Message = ok ? "手柄设置已保存。打开游戏大地图后可体验。" :
                 saved ? "设置已保存，核心连接状态请查看概览。" : "手柄设置未能保存：" + coreHost.LastFault;
@@ -703,7 +729,7 @@ public sealed partial class SettingsPage : Page
         }
         catch (Exception ex)
         { GamepadMessage.Severity = InfoBarSeverity.Error; GamepadMessage.Message = ex.Message; GamepadMessage.IsOpen = true; }
-        finally { gamepad.SetConfigurationPending(false); savingGamepad = false; GamepadEnabled.IsEnabled = GamepadDevice.IsEnabled = true; RestoreGamepad(); }
+        finally { gamepad.SetConfigurationPending(false); savingGamepad = false; GamepadEnabled.IsEnabled = GamepadDevice.IsEnabled = GamepadLayout.IsEnabled = true; RestoreGamepad(); }
     }
 
     private void RestoreBindings()
@@ -727,7 +753,7 @@ public sealed partial class SettingsPage : Page
             $"手绘端点 {RuntimeConfiguration.HotkeyName(configuration.ManualRouteKey)}；攻略浮窗开关 {RuntimeConfiguration.HotkeyName(configuration.CurrentTargetGuideKey)}；" +
             $"攻略内长按跳过 {RuntimeConfiguration.HotkeyName(configuration.GuideSkipKey)}；" +
             $"攻略上一张 {RuntimeConfiguration.HotkeyName(configuration.GuidePreviousImageKey)}；下一张 {RuntimeConfiguration.HotkeyName(configuration.GuideNextImageKey)}；" +
-            $"开始/停止探索 {RuntimeConfiguration.HotkeyName(configuration.ToggleEnabledKey)}（手柄：LB+Start）。";
+            gamepad.FormatButtons($"开始/停止探索 {RuntimeConfiguration.HotkeyName(configuration.ToggleEnabledKey)}（手柄：LB+Start）。");
 
     }
 

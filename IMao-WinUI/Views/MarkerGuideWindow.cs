@@ -399,7 +399,7 @@ public sealed class MarkerGuideWindow : Window
     {
         string previousLabel = RuntimeConfiguration.HotkeyName(previousKey);
         string nextLabel = RuntimeConfiguration.HotkeyName(nextKey);
-        pagingHint.Text = gamepadMode ? "LB 上一张 · RB 下一张" : $"上一张：{previousLabel} · 下一张：{nextLabel}";
+        pagingHint.Text = gamepadMode ? FormatGamepadButtons("LB 上一张 · RB 下一张") : $"上一张：{previousLabel} · 下一张：{nextLabel}";
         ToolTipService.SetToolTip(previous, $"上一张（{previousLabel}）");
         ToolTipService.SetToolTip(next, $"下一张（{nextLabel}）");
     }
@@ -525,6 +525,8 @@ public sealed class MarkerGuideWindow : Window
         CloseImageWindow(destroy: false);
     }
 
+    internal Func<string, string> FormatGamepadButtons { get; set; } = text => text;
+
     internal void SetGamepadMode(bool enabled)
     {
         ResetSkipInputs();
@@ -536,7 +538,7 @@ public sealed class MarkerGuideWindow : Window
         // LS 切换聚焦也写在这里：手柄呼出的攻略默认把聚焦留给游戏，玩家得知道怎么切过来。
         // B 与 LS 同义（退出攻略聚焦、回到游戏），收起整份攻略是 LB+X——这三条都要写清楚，
         // 否则玩家在攻略窗口上按 B 会以为攻略坏了（它只是把聚焦还给了游戏）。
-        gamepadHint.Text = "LS / B 退出聚焦回到游戏 · A 确认 · X 放大图片 · LB/RB 翻图 · LB+X 收起攻略 · 长按 A 完成／取消完成 · 长按 Y 跳过当前目标";
+        gamepadHint.Text = FormatGamepadButtons("LS / B 退出聚焦回到游戏 · A 确认 · X 放大图片 · LB/RB 翻图 · LB+X 收起攻略 · 长按 A 完成／取消完成 · 长按 Y 跳过当前目标");
         if (!enabled && imageVisible) CloseImageWindow();
         SetGamepadHoldProgress(0);
         UpdateCompletionButton();

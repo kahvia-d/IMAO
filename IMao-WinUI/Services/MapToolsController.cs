@@ -158,7 +158,7 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
         var cancellation = new CancellationTokenSource(); sessionCancellation = cancellation;
         try
         {
-            window = new MapToolsWindow(filters, core, CommandAsync, lastPage);
+            window = new MapToolsWindow(filters, core, CommandAsync, lastPage, guides.FormatGamepadButtons);
             var created = window;
             // 方向导航的几何候选写进 gamepad 日志：实机报告"左右换不了选项"时，这是唯一能区分
             // "那个方向本来没有相邻按钮"和"方向没被识别"的证据。

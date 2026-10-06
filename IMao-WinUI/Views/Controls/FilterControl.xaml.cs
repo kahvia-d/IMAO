@@ -276,5 +276,7 @@ public sealed partial class FilterControl : UserControl
         GamepadHint.Text = gamepadInGrid && focusedPointId is not null
             ? L($"点位 {pointIndex + 1} / {visibleRows.Count} · 方向键移动，A 勾选，↑ 返回工具，B 返回", $"Point {pointIndex + 1}/{visibleRows.Count} · Move, A toggle, Up to tools, B back")
             : L("←→ 切换工具 · ↓ 进入点位 · A 确认 · B 关闭下拉或返回；搜索支持键盘和输入法", "Left/right tools · Down points · A confirm · B close dropdown or back; search uses keyboard/IME");
+        GamepadHint.Text = FormatGamepadButtons(GamepadHint.Text);
     }
+    internal Func<string, string> FormatGamepadButtons { get; set; } = text => text;
 }

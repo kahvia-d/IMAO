@@ -168,4 +168,12 @@
 
   <RemoveDir Directories="@(UnsupportedFolders)" Condition="Exists('%(FullPath)')" ContinueOnError="true" />
 </Target>
+<Target Name="InitializeGamepadDependency" BeforeTargets="PrepareForBuild">
+  <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\Initialize-GamepadDependency.ps1&quot;" />
+</Target>
+<ItemGroup>
+  <Content Include="..\third_party\sdl3-3.4.18\SDL3.dll" Link="SDL3.dll" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
+  <Content Include="..\third_party\sdl3-3.4.18\LICENSE.txt" Link="SDL3-LICENSE.txt" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
+  <Content Include="..\third_party\sdl3-3.4.18\build-receipt.json" Link="SDL3-BUILD.json" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
+</ItemGroup>
 </Project>

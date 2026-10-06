@@ -49,6 +49,7 @@ internal sealed class MapToolsWindow : Window
     private readonly FilterSelectionService filters;
     private readonly CoreHostService core;
     private readonly Func<string, Task> command;
+    private readonly Func<string, string> formatButtons;
     private readonly GamepadNavigationList navigation = new();
     private readonly Button back, close;
     private readonly GamepadWindowChrome chrome;
@@ -69,11 +70,12 @@ internal sealed class MapToolsWindow : Window
     internal Action<string>? DirectionDiagnostic { get; set; }
 
     public MapToolsWindow(FilterSelectionService filters, CoreHostService core, Func<string, Task> command,
-        string initialPage = "home")
+        string initialPage = "home", Func<string, string>? formatButtons = null)
     {
         this.filters = filters;
         this.core = core;
         this.command = command;
+        this.formatButtons = formatButtons ?? (text => text);
         routesAutoRotate.Click += async (_,_)=>await command("autoRotate");
         Title = "地图工具 · IMao";
         Handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -101,7 +103,7 @@ internal sealed class MapToolsWindow : Window
         Grid.SetRow(bodyHost, 1); root.Children.Add(bodyHost);
         Grid.SetRow(notice, 2); root.Children.Add(notice);
         notice.Foreground = GamepadWindowChrome.Brush("IMaoMutedBrush", 0xA4B8C8);
-        filter = new FilterControl(filters) { CompactMode = true };
+        filter = new FilterControl(filters) { CompactMode = true, FormatGamepadButtons = this.formatButtons };
         route.Children.Add(summary); route.Children.Add(routeStatus); route.Children.Add(routeButtons);
         homeScroll.Content = home; routeScroll.Content = route; routesScroll.Content = routes;
         var routeCard = MakeButton("路径自动规划", "page:route");
@@ -161,6 +163,7 @@ internal sealed class MapToolsWindow : Window
             "routes" => "选择一条路线应用 · A 确认 · B 返回",
             _ => "选择一个工具 · 左摇杆选择 · A 确认 · B 返回游戏"
         };
+        notice.Text = formatButtons(notice.Text);
         if (Page == "filter") body.Children.Add(filter);
         else body.Children.Add(Page switch { "home" => homeScroll, "routes" => routesScroll, _ => routeScroll });
         RenderRoute(state);
@@ -179,6 +182,7 @@ internal sealed class MapToolsWindow : Window
             ? "左摇杆移动光标 · A 切换点位 · B 返回路线工具栏"
             : "左摇杆移动光标 · 按住 A 绘制，松开提交\n也可直接用鼠标拖动地图选区 · B 取消";
         if (tool == "pan") RenderRoute(state);
+        routeStatus.Text = formatButtons(routeStatus.Text);
         LayoutForGame();
     }
 
@@ -255,6 +259,7 @@ internal sealed class MapToolsWindow : Window
         if (!failedReturn) notice.Text = next.Computing ? "正在计算路线，请稍候…" :
             !string.IsNullOrWhiteSpace(next.Message) ? next.Message : "左摇杆选择 · A 确认 · B 返回上一级";
         RebuildNavigation();
+        notice.Text = formatButtons(notice.Text);
     }
 
     /// <summary>
@@ -329,7 +334,7 @@ internal sealed class MapToolsWindow : Window
         {
             var chip = MakeButton(collection.Name + (collection.RouteCount > 0 ? $"（{collection.RouteCount}）" : ""),
                 "collection:" + collection.Id, $"{collection.Name}，{collection.RouteCount} 条路线" +
-                (collection.Current ? "，当前合集" : "，按 A 进入"));
+                (collection.Current ? "，当前合集" : formatButtons("，按 A 进入")));
             chip.Background = GamepadWindowChrome.Brush(collection.Current ? "IMaoAccentBrush" : "IMaoSurfaceBrush",
                 collection.Current ? 0x63D8E8u : 0x19222Eu);
             chip.Foreground = GamepadWindowChrome.Brush(collection.Current ? "IMaoCanvasBrush" : "IMaoTextBrush",

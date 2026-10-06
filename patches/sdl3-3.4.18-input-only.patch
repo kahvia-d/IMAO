@@ -1,0 +1,78 @@
+--- a/src/joystick/hidapi/SDL_hidapi_ps4.c
++++ b/src/joystick/hidapi/SDL_hidapi_ps4.c
+@@ -695,6 +695,11 @@
+ 
+ static void HIDAPI_DriverPS4_TickleBluetooth(SDL_HIDAPI_Device *device)
+ {
++    /* IMAO: enhanced-reports OFF is strictly input-only, including USB. */
++    if (!SDL_GetHintBoolean(SDL_HINT_JOYSTICK_ENHANCED_REPORTS, true)) {
++        return;
++    }
++
+     SDL_DriverPS4_Context *ctx = (SDL_DriverPS4_Context *)device->context;
+ 
+     if (ctx->enhanced_reports) {
+@@ -796,6 +801,12 @@
+ static void SDLCALL SDL_PS4EnhancedReportsChanged(void *userdata, const char *name, const char *oldValue, const char *hint)
+ {
+     SDL_DriverPS4_Context *ctx = (SDL_DriverPS4_Context *)userdata;
++
++    /* IMAO: honor OFF before USB/dongle transport defaults enable effects. */
++    if (!SDL_GetStringBoolean(hint, true)) {
++        HIDAPI_DriverPS4_SetEnhancedReportHint(ctx, PS4_ENHANCED_REPORT_HINT_OFF);
++        return;
++    }
+ 
+     if (ctx->device->is_bluetooth) {
+         if (hint && SDL_strcasecmp(hint, "auto") == 0) {
+@@ -943,6 +954,11 @@
+ 
+ static bool HIDAPI_DriverPS4_InternalSendJoystickEffect(SDL_DriverPS4_Context *ctx, const void *effect, int size, EPS4Effect mask, bool application_usage)
+ {
++    /* IMAO: enhanced-reports OFF is strictly input-only, including USB. */
++    if (!SDL_GetHintBoolean(SDL_HINT_JOYSTICK_ENHANCED_REPORTS, true)) {
++        return SDL_Unsupported();
++    }
++
+     Uint8 data[78];
+     int report_size, offset;
+ 
+--- a/src/joystick/hidapi/SDL_hidapi_ps5.c
++++ b/src/joystick/hidapi/SDL_hidapi_ps5.c
+@@ -813,6 +813,11 @@
+ 
+ static void HIDAPI_DriverPS5_TickleBluetooth(SDL_HIDAPI_Device *device)
+ {
++    /* IMAO: enhanced-reports OFF is strictly input-only, including USB. */
++    if (!SDL_GetHintBoolean(SDL_HINT_JOYSTICK_ENHANCED_REPORTS, true)) {
++        return;
++    }
++
+     SDL_DriverPS5_Context *ctx = (SDL_DriverPS5_Context *)device->context;
+ 
+     if (ctx->enhanced_reports) {
+@@ -924,6 +929,12 @@
+ {
+     SDL_DriverPS5_Context *ctx = (SDL_DriverPS5_Context *)userdata;
+ 
++    /* IMAO: honor OFF before USB/dongle transport defaults enable effects. */
++    if (!SDL_GetStringBoolean(hint, true)) {
++        HIDAPI_DriverPS5_SetEnhancedReportHint(ctx, PS5_ENHANCED_REPORT_HINT_OFF);
++        return;
++    }
++
+     if (ctx->device->is_bluetooth) {
+         if (hint && SDL_strcasecmp(hint, "auto") == 0) {
+             HIDAPI_DriverPS5_SetEnhancedReportHint(ctx, PS5_ENHANCED_REPORT_HINT_AUTO);
+@@ -1069,6 +1080,11 @@
+ 
+ static bool HIDAPI_DriverPS5_InternalSendJoystickEffect(SDL_DriverPS5_Context *ctx, const void *effect, int size, bool application_usage)
+ {
++    /* IMAO: enhanced-reports OFF is strictly input-only, including USB. */
++    if (!SDL_GetHintBoolean(SDL_HINT_JOYSTICK_ENHANCED_REPORTS, true)) {
++        return SDL_Unsupported();
++    }
++
+     Uint8 data[78];
+     int report_size, offset;
+     Uint8 *pending_data;

@@ -282,7 +282,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         GamepadButtons? gamepadEntryButton = null, bool? autoReplanEnabled = null,
         bool? expectedAutoReplanEnabled = null, string? expectedAutoReplanProfile = null,
         int? completionRangePixels = null, int? guideRangePixels = null, int? farmRangePixels = null,
-        int? markerMergeOverlapPercent = null)
+        int? markerMergeOverlapPercent = null, string? gamepadDeviceId = null,
+        GamepadButtonLayout? gamepadButtonLayout = null)
     {
         await lifecycleLock.WaitAsync(cancellationToken);
         try
@@ -318,6 +319,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     ToggleEnabledKey = toggleEnabledKey ?? old.ToggleEnabledKey,
                     GamepadEnabled = gamepadEnabled ?? old.GamepadEnabled,
                     GamepadControllerIndex = gamepadControllerIndex ?? old.GamepadControllerIndex,
+                    GamepadDeviceId = gamepadDeviceId ?? (gamepadControllerIndex.HasValue ? "" : old.GamepadDeviceId),
+                    GamepadButtonLayout = gamepadButtonLayout ?? old.GamepadButtonLayout,
                     GamepadEntryButton = gamepadEntryButton ?? old.GamepadEntryButton,
                     CompletionRangePixels = completionRangePixels ?? old.CompletionRangePixels,
                     GuideRangePixels = guideRangePixels ?? old.GuideRangePixels,

@@ -36,6 +36,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Published baseline cannot be verified.' }
 $sequence=[long]($verified | ConvertFrom-Json).sequence + 1 # provisional, never a formal allocation
 & dotnet $dll prepare-artifacts --app-root $app --output $prepared --previous $previous --public-key (Join-Path $repoRoot 'Assets/Updates/trusted-keys.json') --sequence $sequence --resource-version $version --tag "v$version" --program-release true --program-shards true --core-host (Join-Path $app 'IMao-CoreHost.exe') --rehearsal $Rehearsal.ToString().ToLowerInvariant() --notes-file (Join-Path $repoRoot 'Docs/CloudReleaseNotes.md')
 if ($LASTEXITCODE -ne 0) { throw 'Unsigned preparation failed.' }
+& (Join-Path $PSScriptRoot 'Test-GamepadPackaging.ps1') -AppRoot $app -ManualZip $manual -ShardRoot (Join-Path $prepared 'program')
 [IO.Directory]::CreateDirectory((Join-Path $prepared 'manual')) | Out-Null
 Copy-Item $manual (Join-Path $prepared 'manual')
 Copy-Item ([IO.Path]::ChangeExtension($manual,'.report.json')) (Join-Path $prepared 'manual')

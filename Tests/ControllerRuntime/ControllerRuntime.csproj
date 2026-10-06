@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../IMao-WinUI/Models/GamepadInput.cs" Link="GamepadInput.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GamepadDevices.cs" Link="GamepadDevices.cs" />
+    <Compile Include="../../IMao-WinUI/Services/XInputControllerReader.cs" Link="XInputControllerReader.cs" />
+    <Compile Include="../../IMao-WinUI/Services/ControllerDeviceSource.cs" Link="ControllerDeviceSource.cs" />
+    <None Include="../../third_party/sdl3-3.4.18/SDL3.dll" Link="SDL3.dll" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+</Project>

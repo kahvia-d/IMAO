@@ -17,4 +17,6 @@ Assets/FeaturesDatas/KuroTilePacks/**/features.imf.manifest.json filter=lfs diff
 Assets/FeaturesDatas/**/manifest.json text eol=lf
 
 patches/*.patch text eol=lf
+# Unified patches intentionally prefix empty context lines with one space.
+patches/sdl3-3.4.18-input-only.patch whitespace=-blank-at-eol
 .github/dependencies.lock.json text eol=lf

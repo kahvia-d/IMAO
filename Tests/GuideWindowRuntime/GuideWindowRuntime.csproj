@@ -34,6 +34,8 @@
     <Compile Include="../../IMao-WinUI/Views/GamepadAssistantWindow.cs" Link="Production/GamepadAssistantWindow.cs" />
     <Compile Include="$(GamepadSourceRoot)/MarkerGuideCoordinator.cs" Link="Production/MarkerGuideCoordinator.cs" />
     <Compile Include="../../IMao-WinUI/Services/XInputControllerReader.cs" Link="Production/XInputControllerReader.cs" />
+    <Compile Include="../../IMao-WinUI/Services/ControllerDeviceSource.cs" Link="Production/ControllerDeviceSource.cs" />
+    <Compile Include="../../IMao-WinUI/Models/GamepadDevices.cs" Link="Production/GamepadDevices.cs" />
     <Compile Include="$(GamepadSourceRoot)/GamepadInputService.cs" Link="Production/GamepadInputService.cs" />
     <Compile Include="../../IMao-WinUI/Services/IMapToolsController.cs" Link="Production/IMapToolsController.cs" Condition="Exists('../../IMao-WinUI/Services/IMapToolsController.cs')" />
     <Compile Include="../../IMao-WinUI/Services/GamepadHandoffLease.cs" Link="Production/GamepadHandoffLease.cs" Condition="Exists('../../IMao-WinUI/Services/GamepadHandoffLease.cs')" />

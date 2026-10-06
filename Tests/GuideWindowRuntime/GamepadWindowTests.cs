@@ -114,6 +114,31 @@ internal static class GamepadWindowTests
 
     internal static async Task RunServiceAsync(Action<string> log)
     {
+        await CaseAsync("PS input opens the real assistant with physical button hints", async fixture =>
+        {
+            fixture.Core.GamepadContext = fixture.Context;
+            fixture.Core.Configuration = fixture.Core.Configuration with { GamepadDeviceId = "ps:fixture" };
+            var sample = new GamepadSample(true, 4, GamepadButtons.RB);
+            using var service = new GamepadInputService(fixture.Core, fixture.Coordinator, new PsSource(() => sample), null);
+            await Task.Delay(120);
+            Check(!fixture.Coordinator.IsGamepadSessionOpen, "held R1 on initial connection cannot open a window");
+            sample = sample with { Buttons = GamepadButtons.None };
+            await UntilAsync(() => fixture.Core.GamepadDiagnostics.Any(value => value.Contains("state=map-ready/ready")), "PS neutral barrier opens");
+            sample = sample with { Buttons = GamepadButtons.RB };
+            await Task.Delay(100);
+            sample = sample with { Buttons = GamepadButtons.None };
+            await UntilAsync(() => fixture.Coordinator.IsGamepadSessionOpen, "PS R1 release opens assistant");
+            await Task.Delay(100);
+            Check(service.SelectedDevice == 4 && service.ButtonLayout == GamepadButtonLayout.PlayStation &&
+                fixture.Coordinator.ReadGamepadSample?.Invoke(4).DeviceId == 4,
+                "service and focus handoff read the same PS device");
+            Check(HasPsHint((Microsoft.UI.Xaml.DependencyObject)fixture.Assistant!.Content), "real assistant renders circle/cross hints");
+            sample = new(false, 4, GamepadButtons.None);
+            await UntilAsync(() => !fixture.Coordinator.IsGamepadSessionOpen, "PS disconnect closes active session");
+            sample = new(true, 4, GamepadButtons.RB);
+            await Task.Delay(160);
+            Check(!fixture.Coordinator.IsGamepadSessionOpen, "held R1 reconnect cannot reopen assistant");
+        }, log);
         await CaseAsync("real gamepad service timer opens a real assistant on fresh RB release", async fixture =>
         {
             fixture.Core.GamepadContext = fixture.Context;
@@ -146,6 +171,24 @@ internal static class GamepadWindowTests
                 foreach (string diagnostic in fixture.Core.GamepadDiagnostics) log("SERVICE " + diagnostic);
             }
         }, log);
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr window, int command);
+
+    private static bool HasPsHint(Microsoft.UI.Xaml.DependencyObject value)
+    {
+        if (value is Microsoft.UI.Xaml.Controls.TextBlock text && text.Text.Contains("×") && text.Text.Contains("○")) return true;
+        for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(value); i++)
+            if (HasPsHint(Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(value, i))) return true;
+        return false;
+    }
+    private sealed class PsSource(Func<GamepadSample> sample) : IGamepadDeviceSource
+    {
+        public string Diagnostic => "";
+        public IReadOnlyList<GamepadDeviceInfo> GetDevices() => new[] { new GamepadDeviceInfo(4, "ps:fixture", "DualSense fixture", GamepadButtonLayout.PlayStation) };
+        public GamepadSample Read(int handle) => handle == 4 ? sample() : new(false, handle, GamepadButtons.None);
+        public void Dispose() { }
     }
 
     private static async Task CaseAsync(string name, Func<Fixture, Task> run, Action<string> log)
@@ -183,7 +226,9 @@ internal static class GamepadWindowTests
         }
         public async Task FocusGameAsync()
         {
-            game.Activate();
+            var result = await GamepadWindowActivation.TryActivateAsync(Handle(game), GetForegroundWindow(),
+                () => { game.Activate(); ShowWindow(Handle(game), 5); }, requireVisibleContent: false);
+            Check(result.Success, "controlled test game activation: " + result.Reason);
             await UntilAsync(() => GetForegroundWindow() == Handle(game), "controlled game window is foreground");
         }
         public async Task OpenAsync()

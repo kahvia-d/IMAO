@@ -22,6 +22,7 @@ $guideInfo.WorkingDirectory = $guideRepo
 [void]$guideInfo.EnvironmentVariables.Remove('PATH')
 $guideInfo.EnvironmentVariables['PATH'] = [Environment]::GetEnvironmentVariable('Path', 'Process')
 $guideInfo.EnvironmentVariables['USERPROFILE'] = Join-Path $guideRepo 'third_party\dotnet-user-profile'
+$guideInfo.EnvironmentVariables['NuGetPackageRoot'] = Join-Path $guideRepo 'third_party\nuget-packages'
 $guideInfo.EnvironmentVariables['APPDATA'] = Join-Path $guideRepo 'third_party\dotnet-user-profile\AppData\Roaming'
 $guideInfo.EnvironmentVariables['LOCALAPPDATA'] = Join-Path $guideRepo 'third_party\dotnet-user-profile\AppData\Local'
 $guideInfo.EnvironmentVariables['MSBuildSDKsPath'] = $guideSdkDirectory

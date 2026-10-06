@@ -147,11 +147,15 @@
         <InfoBar x:Name="RuntimeMessage" IsOpen="False" IsClosable="True" />
         <Border Style="{StaticResource IMaoCardStyle}">
             <StackPanel Spacing="16">
-                <TextBlock Text="Xbox 手柄" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <TextBlock Text="Xbox / PlayStation 手柄" Style="{StaticResource IMaoSectionTitleStyle}" />
                 <ToggleSwitch x:Name="GamepadEnabled" Header="启用手柄操作" OnContent="已启用" OffContent="已关闭" Toggled="GamepadEnabled_Toggled" />
                 <ComboBox x:Name="GamepadDevice" Header="使用的手柄" HorizontalAlignment="Stretch" SelectionChanged="GamepadDevice_SelectionChanged">
                     <x:String>自动选择首个连接的手柄</x:String><x:String>手柄 1</x:String><x:String>手柄 2</x:String><x:String>手柄 3</x:String><x:String>手柄 4</x:String>
                 </ComboBox>
+                <ComboBox x:Name="GamepadLayout" Header="按键提示布局" HorizontalAlignment="Stretch" SelectionChanged="GamepadLayout_SelectionChanged">
+                    <x:String>自动识别</x:String><x:String>Xbox</x:String><x:String>PlayStation</x:String>
+                </ComboBox>
+                <Button Content="刷新手柄列表" Click="RefreshGamepads_Click" />
                 <TextBlock x:Name="GamepadStatus" Style="{StaticResource IMaoBodyTextStyle}" />
                 <TextBlock x:Name="GamepadInstructions" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <InfoBar x:Name="GamepadMessage" IsOpen="False" IsClosable="True" />
@@ -172,7 +176,7 @@
                 </controls:WrapPanel>
                 <ComboBox x:Name="ToggleEnabledKey" Header="开始/停止探索" HorizontalAlignment="Stretch" />
                 <TextBlock Style="{StaticResource IMaoSecondaryTextStyle}"
-                           Text="手柄：按住 LB 再按一下 Start 键。键盘：这里选的键，默认 F9。两者都等同于首页的「开始探索 / 停止探索」按钮：既能开始探索，也能停止探索。" />
+                           Text="手柄：Xbox 按住 LB 再按 Start；PlayStation 按住 L1 再按 Options。键盘：这里选的键，默认 F9。两者都等同于首页的「开始探索 / 停止探索」按钮。" />
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                     <Button x:Name="SaveShortcuts" Content="保存快捷键" Click="SaveShortcuts_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
                     <Button x:Name="ResetShortcuts" Content="恢复默认" Click="ResetShortcuts_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />

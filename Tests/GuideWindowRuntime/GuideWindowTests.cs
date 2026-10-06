@@ -283,7 +283,7 @@ internal static class GuideWindowTests
             var window = f.Window!;
             // 实机报告：只有先用鼠标点一下攻略窗口，Z 才生效。这里把前台交还给"游戏"，
             // 攻略窗口仍然可见——正是那个状态。原生钩子在"攻略窗口可见 + 有前台窗口"时发送事件。
-            f.Game.Activate();
+            await f.FocusGameAsync();
             await UntilAsync(() => GetForegroundWindow() == f.GameHandle && GetForegroundWindow() != Handle(window),
                 "the controlled game holds the foreground while the guide stays visible");
             var request = f.Core.DeferNext("markerSetCompletion");
@@ -303,7 +303,7 @@ internal static class GuideWindowTests
             await UntilAsync(() => f.Window is { IsGuideVisible: true, SkipButtonVisible: true } && f.Coordinator.HasGuideSkipAuthorization,
                 "the navigation target guide offers its skip");
             var window = f.Window!;
-            f.Game.Activate();
+            await f.FocusGameAsync();
             await UntilAsync(() => GetForegroundWindow() == f.GameHandle && GetForegroundWindow() != Handle(window),
                 "the controlled game holds the foreground while the guide stays visible");
             var pending = f.Core.DeferNext("routePlanning:skip");
@@ -684,6 +684,12 @@ internal static class GuideWindowTests
         /// <summary>受控"游戏"窗口：用来把前台从攻略窗口拿走，复现"玩家在游戏里按键"的状态。</summary>
         internal Window Game { get; } = new() { Title = "Guide hotkey controlled game", Content = new TextBlock { Text = "Controlled source; no user data" } };
         internal nint GameHandle => WinRT.Interop.WindowNative.GetWindowHandle(Game);
+        internal async Task FocusGameAsync()
+        {
+            var result = await GamepadWindowActivation.TryActivateAsync(GameHandle, GetForegroundWindow(),
+                () => { Game.Activate(); ShowWindow(GameHandle, 5); }, requireVisibleContent: false);
+            Check(result.Success, "controlled game foreground: " + result);
+        }
         internal Fixture()
         {
             Core.AuthoritativeTarget = A;
@@ -731,6 +737,8 @@ internal static class GuideWindowTests
         public void Dispose() { Coordinator.Dispose(); Game.Close(); }
     }
     [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShowWindow(nint hwnd, int command);
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
     private static extern nint GetWindowLongPtrW(nint window, int index);

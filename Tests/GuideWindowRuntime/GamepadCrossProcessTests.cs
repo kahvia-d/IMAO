@@ -35,8 +35,9 @@ internal static class GamepadForegroundSource
             foreground = NativeForeground.Get().ToInt64(), locked, lastCommand });
         try
         {
-            window.Activate();
-            NativeForeground.Set(hwnd);
+            // Process startup is hidden; explicitly show only this fixture window.
+            await GamepadWindowActivation.TryActivateAsync(hwnd, NativeForeground.Get(),
+                () => { window.Activate(); ShowWindow(hwnd, 5); }, requireVisibleContent: false);
             await Task.Delay(100);
             if (lockForeground && NativeForeground.Get() == hwnd) locked = LockSetForegroundWindow(1);
             Publish();
@@ -78,6 +79,8 @@ internal static class GamepadForegroundSource
     }
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool LockSetForegroundWindow(uint operation);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShowWindow(nint hwnd, int command);
 }
 
 internal static class NativeForeground
@@ -156,8 +159,10 @@ internal static class GamepadCrossProcessTests
             {
                 other.AppWindow.Show(activateWindow: false);
                 nint otherWindow = WinRT.Interop.WindowNative.GetWindowHandle(other);
-                fixture.Command("foreground:" + otherWindow.ToInt64());
-                await UntilAsync(() => NativeForeground.Get() == otherWindow, "independent source transfers foreground to the unrelated test window");
+                var changed = await GamepadWindowActivation.TryActivateAsync(otherWindow, fixture.SourceWindow,
+                    other.Activate, requireVisibleContent: false);
+                Check(changed.Success && NativeForeground.Get() == otherWindow,
+                    "simulated user selects the unrelated test window");
                 pending.Reply.SetResult(fixture.Core.GamepadTargets);
                 await UntilAsync(() => fixture.Core.GamepadDiagnostics.Any(value => value.StartsWith("entry-result:")),
                     "late target lookup finishes");
@@ -190,7 +195,9 @@ internal static class GamepadCrossProcessTests
             var fixture = new Fixture();
             try
             {
-                var setupActivation = await GamepadWindowActivation.TryActivateAsync(fixture.bootstrap, NativeForeground.Get());
+                var setupActivation = await GamepadWindowActivation.TryActivateAsync(
+                    WinRT.Interop.WindowNative.GetWindowHandle(fixture.bootstrap), NativeForeground.Get(),
+                    () => { fixture.bootstrap.Activate(); fixture.bootstrap.AppWindow.Show(); }, requireVisibleContent: false);
                 log("SETUP " + setupActivation);
                 Check(setupActivation.Success && NativeForeground.Get() == WinRT.Interop.WindowNative.GetWindowHandle(fixture.bootstrap),
                     "bootstrap setup must own foreground before starting a source process");
@@ -217,8 +224,10 @@ internal static class GamepadCrossProcessTests
         }
         public async Task ReleaseEntryAsync()
         {
+            int start = Core.GamepadDiagnostics.Count;
             sample = sample with { Buttons = GamepadButtons.RB };
-            await Task.Delay(100);
+            await UntilAsync(() => Core.GamepadDiagnostics.Skip(start).Any(s => s.Contains("buttons=RB")),
+                "real timer samples the RB press before its release");
             sample = sample with { Buttons = GamepadButtons.None };
         }
         public void Command(string command) => File.WriteAllText(Path.Combine(folder, "command.txt"), command);

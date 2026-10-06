@@ -70,14 +70,15 @@ public sealed class GamepadAssistantWindow : Window
         catch (Exception e) { if (!IsClosed) SetMessage("操作未完成：" + e.Message); }
     }
 
+    internal Func<string, string> FormatGamepadButtons { get; set; } = text => text;
     internal void ShowEntries(string title, string notice, IReadOnlyList<GamepadAssistantEntry> entries, bool menu)
     {
         if (IsClosed) return;
         var previousPoint = SelectedEntry?.Selection;
         heading.Text = title; message.Text = notice;
         route.Visibility = menu ? Visibility.Collapsed : Visibility.Visible;
-        back.Content = menu ? "B · 返回列表" : "B · 退出助手";
-        hint.Text = menu ? "方向键 / 左摇杆选择 · A 确认 · B 返回" : "方向键 / 左摇杆选择 · A 查看攻略 · B 退出 · Y 路线操作";
+        back.Content = FormatGamepadButtons(menu ? "B · 返回列表" : "B · 退出助手");
+        hint.Text = FormatGamepadButtons(menu ? "方向键 / 左摇杆选择 · A 确认 · B 返回" : "方向键 / 左摇杆选择 · A 查看攻略 · B 退出 · Y 路线操作");
         rendering = true;
         try
         {

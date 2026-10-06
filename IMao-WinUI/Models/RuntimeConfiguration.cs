@@ -48,6 +48,8 @@ public sealed record RuntimeConfiguration
     public int ToggleEnabledKey { get; init; } = 120;
     public bool GamepadEnabled { get; init; }
     public int GamepadControllerIndex { get; init; } = -1;
+    public string GamepadDeviceId { get; init; } = "";
+    public GamepadButtonLayout GamepadButtonLayout { get; init; } = GamepadButtonLayout.Auto;
     public GamepadButtons GamepadEntryButton { get; init; } = GamepadButtons.LB;
     // How far from the player arrow (in minimap screen pixels) the completion key and
     // the guide key look for the nearest point they act on. 15 is what the tool always
@@ -79,6 +81,8 @@ public sealed record RuntimeConfiguration
         if (OverlayPresentMode is < 0 or > 1) throw new ArgumentException("叠加层呈现方式无效");
         if (MapUpdateCycle is < 16 or > 1000 || MinMapUpdateCycle is < 16 or > 1000)
             throw new ArgumentException("刷新间隔必须在 16–1000 毫秒之间");
+        if (GamepadDeviceId is null || GamepadDeviceId.Length > 1024 || !Enum.IsDefined(GamepadButtonLayout))
+            throw new ArgumentException("手柄设备或提示布局无效");
         if (GamepadControllerIndex is < -1 or > 3)
             throw new ArgumentException("手柄编号必须为自动选择或 1–4");
         if (CompletionRangePixels is < 5 or > 120 || GuideRangePixels is < 5 or > 120 || FarmRangePixels is < 5 or > 120)

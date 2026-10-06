@@ -5,6 +5,15 @@
   "msvc": "14.44",
   "dependencies": [
     {
+      "name": "sdl3",
+      "version": "3.4.18",
+      "url": "https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-3.4.18.zip",
+      "sha256": "9cd42377704398796071b8597cd7e21da254a43bad98c4199739647adc13fa6f",
+      "size": 17094462,
+      "patchSha256": "54ec890b27dd375df1f019361346f32b0b04a9f6b179542d716653c0b0bba34d",
+      "buildRecipe": "msvc-14.44-sdk-26100-input-only-v1"
+    },
+    {
       "name": "paddle",
       "version": "3.0.0",
       "url": "https://paddle-inference-lib.bj.bcebos.com/3.0.0/cxx_c/Windows/CPU/x86-64_avx-mkl-vs2019/paddle_inference.zip",
