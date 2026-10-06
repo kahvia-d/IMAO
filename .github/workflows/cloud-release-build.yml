@@ -143,7 +143,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: ./scripts/Reuse-CiSigningRequest.ps1 -RequestRoot out/prepare/request
       - name: Save ONLY the bounded signing request
-        if: steps.original.outputs.reused != 'true' 
+        if: steps.original.outputs.reused != 'true'
         id: request
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
