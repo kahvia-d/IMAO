@@ -62,6 +62,8 @@ function Invoke-CandidateProcess([string]$Executable, [string[]]$Arguments, [str
     $start.Environment['USERPROFILE'] = Join-Path $taskRepo 'third_party/dotnet-user-profile'
     $start.Environment['APPDATA'] = Join-Path $taskRepo 'third_party/dotnet-user-profile/AppData/Roaming'
     $start.Environment['LOCALAPPDATA'] = Join-Path $taskRepo 'third_party/dotnet-user-profile/AppData/Local'
+    # Missing known-folder overrides make NuGet fall back to a relative NuGet/Migrations path.
+    foreach ($name in @('USERPROFILE','APPDATA','LOCALAPPDATA')) { [IO.Directory]::CreateDirectory($start.Environment[$name]) | Out-Null }
     foreach ($argument in $Arguments) { $start.ArgumentList.Add($argument) }
     $process = [Diagnostics.Process]::Start($start)
     $stdout = $process.StandardOutput.ReadToEndAsync()
