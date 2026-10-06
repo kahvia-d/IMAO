@@ -15,6 +15,7 @@ foreach ($file in $tracked) {
 & (Join-Path $PSScriptRoot 'Test-ReleaseTransactions.ps1')
 & (Join-Path $PSScriptRoot 'Test-ReleaseGitCas.ps1')
 & (Join-Path $PSScriptRoot 'Test-CiSmallRequest.ps1')
+& (Join-Path $PSScriptRoot 'Test-ReleasePublishPolicy.ps1')
 & dotnet build (Join-Path $repoRoot 'tools/UpdatePublisher/UpdatePublisher.csproj') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'Publisher build failed.' }
 $dll=Join-Path $repoRoot 'tools/UpdatePublisher/bin/Release/net8.0/UpdatePublisher.dll'

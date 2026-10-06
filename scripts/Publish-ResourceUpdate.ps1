@@ -30,6 +30,7 @@ $sourceRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'ResourceUpdateCatalog.ps1')
 . (Join-Path $PSScriptRoot 'ResourceUpdateAssets.ps1')
 . (Join-Path $PSScriptRoot 'ReleaseTransactions.ps1')
+. (Join-Path $PSScriptRoot 'ReleasePublishPolicy.ps1')
 if (-not $Dotnet) { $Dotnet = Join-Path $sourceRoot 'tools/dotnet-sdk-8.0.424/dotnet.exe' }
 if (-not $PublicKey) { $PublicKey = Join-Path $sourceRoot 'Assets/Updates/trusted-keys.json' }
 if (-not $PublisherDll) { $PublisherDll = Join-Path $sourceRoot 'tools/UpdatePublisher/bin/Release/net8.0/UpdatePublisher.dll' }
@@ -42,7 +43,7 @@ function Invoke-Gh([string[]]$Arguments) {
 }
 if (-not $Publish) { throw 'Remote release mutation requires explicit -Publish $true. Use the build workflow for a side-effect-free rehearsal.' }
 [xml]$versionProps = Get-Content -LiteralPath (Join-Path $sourceRoot 'Version.props') -Raw
-if ($Phase -ne 'abandon' -and $ConfirmVersion -cne [string]$versionProps.Project.PropertyGroup.IMaoVersion) { throw 'confirm_version must exactly match Version.props.' }
+if ($Phase -eq 'reserve' -and $ConfirmVersion -cne [string]$versionProps.Project.PropertyGroup.IMaoVersion) { throw 'confirm_version must exactly match Version.props.' }
 if ($env:GITHUB_ACTIONS -eq 'true' -and $env:GITHUB_REF -ne 'refs/heads/main') { throw 'Production workflows must run from main.' }
 $scratch = Join-Path $PreparedRoot ('transaction-' + [guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($scratch) | Out-Null
@@ -69,6 +70,12 @@ $report = Get-Content -LiteralPath (Join-Path $PreparedRoot 'release-report.json
 if (-not $report.production -or -not $report.nativePassed) { throw 'Only production-signed, native-verified artifacts may be published.' }
 if ($report.sourceDirty -ne $false -or $report.sourceTreeSha256 -notmatch '^[a-f0-9]{64}$') { throw 'A working-tree QA build cannot be published. Commit the reviewed source and rebuild from that exact clean commit.' }
 if ($report.appVersion -cne $ConfirmVersion) { throw 'Prepared version differs from confirm_version.' }
+if ($Phase -eq 'publish') {
+    $originalProps=Invoke-Gh @('api',"repos/$repo/contents/Version.props?ref=$($report.sourceCommit)") | ConvertFrom-Json
+    [xml]$sourceVersionProps=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($originalProps.content -replace '\s','')))
+    Assert-ReleaseSourceVersion $ConfirmVersion ([string]$sourceVersionProps.Project.PropertyGroup.IMaoVersion)
+}
+
 if ($Phase -eq 'reserve') {
     if (-not $RequestRoot -or $ArtifactId -le 0 -or $BuildRunId -le 0 -or $ArtifactDigest -notmatch '^(sha256:)?[a-f0-9]{64}$') { throw 'Frozen build artifact and new request destination required.' }
     $ArtifactDigest = $ArtifactDigest -replace '^sha256:', ''
@@ -119,6 +126,9 @@ $manifest = Join-Path $PreparedRoot 'update.json'
 if ((Get-FileHash -LiteralPath $manifest -Algorithm SHA256).Hash -ne $report.signedManifestSha256) { throw 'Manifest differs from reviewed release report.' }
 & $Dotnet $PublisherDll verify --input $PreparedRoot --public-key $PublicKey --snapshot-id $report.snapshotId
 if ($LASTEXITCODE -ne 0) { throw 'Prepared artifacts failed verification.' }
+$approvedInventory=Get-Content (Join-Path $RequestRoot 'asset-inventory.json') -Raw | ConvertFrom-Json
+$authorizedManual=Get-AuthorizedManualInstallArchive $approvedInventory $PreparedRoot $ConfirmVersion $ManualInstallZip
+$ManualInstallZip=$authorizedManual.path
 $tag = [string]$report.tag
 $signedCatalogBytes=[Convert]::FromBase64String((Get-Content (Join-Path $PreparedRoot 'update.json') -Raw | ConvertFrom-Json).payload)
 $signedNotes=([Text.Encoding]::UTF8.GetString($signedCatalogBytes) | ConvertFrom-Json).app.notes
@@ -172,7 +182,7 @@ if ($shardRelease) {
     $assets.Add([pscustomobject]@{path=[IO.Path]::GetFullPath($ProgramZip);name=[IO.Path]::GetFileName($ProgramZip);sha256=$programReport.sha256})
 }
 if ($ManualInstallZip) {
-    $manual = Assert-ManualInstallArchive $ManualInstallZip $report
+    $manual = Get-AuthorizedManualInstallArchive $approvedInventory $PreparedRoot $ConfirmVersion $ManualInstallZip
     $assets.Add([pscustomobject]@{ path = $manual.path; name = $manual.name; sha256 = $manual.sha256 })
     Write-Host ("first-install archive: {0} ({1:N1} MB)" -f $manual.name, ([IO.FileInfo]::new($manual.path).Length / 1MB))
 }
@@ -302,6 +312,7 @@ function Assert-RemoteAssetBytes([object]$asset, [object[]]$remoteAssets) {
     }
 }
 $release = (Invoke-Gh @('api',"repos/$repo/releases/$($release.id)")) | ConvertFrom-Json
+Assert-ExactReleaseAssetSet $assets $release.assets $false
 foreach ($asset in $assets) {
     $existing = @($release.assets | Where-Object name -EQ $asset.name)
     if ($existing.Count) {
@@ -319,13 +330,19 @@ $release = (Invoke-Gh @('api',"repos/$repo/releases/$($release.id)")) | ConvertF
 $missing = @($assets | Where-Object { $name = $_.name; -not ($release.assets | Where-Object name -EQ $name) })
 if ($missing.Count) { throw ('Upload did not produce every expected asset: ' + (($missing | ForEach-Object name) -join ', ')) }
 foreach ($asset in $assets) { Assert-RemoteAssetBytes $asset $release.assets }
+Assert-ExactReleaseAssetSet $assets $release.assets $true
 # This release is the one a new player should land on, so it claims the Latest badge. It used to pass
 # --latest=false, which left /releases/latest pointing at an older version until someone edited it by
 # hand; the badge was on v2026.9.25.1 while 9.26.1 through 9.26.3 shipped. The release always carries a
 # first-install archive (-ManualInstallZip is mandatory for a shard release), so pointing new players here
 # is safe. The browser-extension releases keep their own --latest=false in Publish-BrowserExtension.ps1,
 # which is a different reason: an ext-* release must never be what releases/latest opens.
+$beforePublish=Get-ReleaseSnapshot $repo
+Assert-ReleaseTransaction $beforePublish.state $approval $beforePublish.stableHash ([long]$beforePublish.channel.maxSequence)
 if ($release.draft) { Invoke-Gh @('release','edit',$tag,'--repo',$repo,'--draft=false','--latest=true') | Out-Null }
+$release=(Invoke-Gh @('api',"repos/$repo/releases/$($release.id)")) | ConvertFrom-Json
+Assert-ExactReleaseAssetSet $assets $release.assets $true
+foreach ($asset in $assets) { Assert-RemoteAssetBytes $asset $release.assets }
 $publishedCommit = [string](Invoke-Gh @('api',"repos/$repo/commits/$tag",'--jq','.sha'))
 if ($publishedCommit.Trim() -ne $report.sourceCommit) { throw 'Published tag does not match the reviewed source commit. Stable channel remains unchanged.' }
 # Ask each published URL for its headers instead of its body. The bytes were already confirmed against

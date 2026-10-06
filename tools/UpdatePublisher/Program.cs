@@ -23,7 +23,7 @@ static partial class Publisher
     {
         try
         {
-            if (args.Length == 0) throw new ArgumentException("Commands: init-key, prepare, verify, shard-map, self-test. See Docs/ResourceUpdates.md.");
+            if (args.Length == 0) throw new ArgumentException("Commands: init-key, prepare, prepare-artifacts, create-signing-request, sign-request, finalize, verify-authorization, verify-install-authorization, verify, verify-manifest, shard-map, self-test, cloud-self-test. See Docs/CloudRelease.md.");
             var options = Parse(args.Skip(1).ToArray());
             switch (args[0])
             {

@@ -27,6 +27,8 @@ SDK 由 global.json 固定；.github/dependencies.lock.json 固定官方 Paddle/
 
 构建失败重跑构建，不消耗 sequence。prepare 中断只重跑失败 Job（不要重跑已经冻结的 Build），相同 artifact 和已预留 sequence 自动恢复；已上传小请求按 ID/digest 复用。
 
+正式发布和恢复的 confirm_version 对照已批准源码 SHA 中的 Version.props；等待期间 main 版本前进不会改变原事务。draft 额外附件或不同安装 ZIP 会在上传/公开前拒绝，未给安装包参数时自动选择已签名批准的唯一安装包。
+
 本地 `response.json` 保存在 `%LOCALAPPDATA%/WWMAP-TOOLS-Publisher/ci/<RunID>/<RequestArtifactID>/`，重试助手会复用该响应，不能重新签名。发布中断重跑失败发布 Job 或重新 dispatch 相同字段；事务记录响应摘要、Release ID，已存在附件按远程 hash 复用，冲突停止且不会覆盖。已完成事务直接返回，不再建 Release 或分配 sequence。
 
 等待签名可显式 `Publish-ResourceUpdate.ps1 -Phase abandon -Publish $true -ConfirmVersion <预留版本> -TransactionId <ID> -PreparedRoot <新的空工作目录>` 放弃；highestAllocatedSequence 不回退。发布已经开始只能恢复，不能自动超时释放。其他正式发布会等待/拒绝已有持久事务。
