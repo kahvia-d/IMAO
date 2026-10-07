@@ -685,10 +685,10 @@ public sealed partial class SettingsPage : Page
                 Enumerable.Range(5, GamepadDevice.Items.Count - 5).First(i => (string)((ComboBoxItem)GamepadDevice.Items[i]).Tag == selectedId);
             GamepadLayout.SelectedIndex = (int)coreHost.Configuration.GamepadButtonLayout;
             GamepadInstructions.Text = "大地图：点按 LB 打开地图工具台，RB 打开点位助手。左摇杆或方向键选择，A 确认，B 逐级返回，根层返回游戏。" +
-                "将游戏白色光标圈对准标记后按 RB，圈内点优先列出；A 查看详情，按住 X 0.6 秒完成所选点。重叠多个点时先选一个。" +
+                "将游戏白色光标圈对准标记后按 RB，圈内点优先列出；A 查看详情，按住 A 0.6 秒完成所选点。重叠多个点时先选一个。" +
                 "选择框选或套索后，左摇杆移动光标，按住 A 拖动，松开 A 完成选择并返回工具栏。\n" +
                 "大世界：先按 LB，再按 B 完成附近点；先按 LB，再按 X 打开附近攻略。全部松开后执行一次；多个完成候选始终先选择，A 只完成所选点。" +
-                "攻略只查当前筛选中的附近未完成点。攻略内 LB/RB 翻图，右摇杆滚动，X 放大图片，B 返回游戏聚焦；按住 A 0.6 秒完成当前点，按住 Y 跳过当前目标，LS 切换游戏与攻略聚焦。筛选搜索文字使用键盘。";
+                "攻略只查当前筛选中的附近未完成点。独立攻略内 LB/RB 翻图，右摇杆滚动，X 放大图片，B 返回游戏聚焦；按住 A 0.6 秒完成当前点，按住 Y 跳过当前目标，LS 切换游戏与攻略聚焦。助手详情 B 返回列表。筛选搜索文字使用键盘。";
             GamepadInstructions.Text = gamepad.FormatButtons(GamepadInstructions.Text);
             displayedGamepadLayout = gamepad.ButtonLayout;
             GamepadStatus.Text = gamepad.StatusMessage;

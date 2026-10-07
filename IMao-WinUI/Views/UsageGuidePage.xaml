@@ -10,10 +10,11 @@
    <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10"><Button Content="前往路线" Click="OpenFunctions_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" /><Button Content="操作设置" Click="OpenSettings_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" /></controls:WrapPanel>
   </StackPanel></Border>
   <Expander Header="手柄速查" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12">
+   <TextBlock Text="Xbox / PlayStation 按键位置：A / B / X / Y 对应 × / ○ / □ / △；LB / RB 对应 L1 / R1；LT / RT 对应 L2 / R2；LS / RS 对应 L3 / R3；Start / Back 对应 Options / Share 或 Create。" Style="{StaticResource IMaoSecondaryTextStyle}" />
    <TextBlock Text="游戏大地图" Style="{StaticResource IMaoSectionTitleStyle}" />
-   <TextBlock Text="LB · 地图工具台     RB · 点位助手&#x0a;将游戏白色光标圈对准标记后按 RB；圈内点优先显示，A 查看详情，详情页按住 X 0.6 秒完成所选点。&#x0a;左摇杆 / 方向键 · 选择     A · 确认     B · 逐级返回，根层返回游戏&#x0a;框选或套索：左摇杆移动光标，按住 A 拖动，松开提交。筛选搜索文字使用键盘输入。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="LB · 地图工具台     RB · 点位助手&#x0a;将游戏白色光标圈对准标记后按 RB；圈内点优先显示，A 查看详情，详情页按住 A 0.6 秒完成所选点。&#x0a;左摇杆 / 方向键 · 选择     A · 确认     B · 逐级返回，根层返回游戏&#x0a;框选或套索：左摇杆移动光标，按住 A 拖动，松开提交。筛选搜索文字使用键盘输入。" Style="{StaticResource IMaoBodyTextStyle}" />
    <TextBlock Text="普通探索与攻略" Style="{StaticResource IMaoSectionTitleStyle}" />
-   <TextBlock Text="先按 LB，再按 B · 完成附近点     先按 LB，再按 X · 打开附近攻略&#x0a;组合键全部松开后执行一次；完成范围内有多个点时，先选择，再按 A 完成所选点。附近攻略只查询当前筛选中的未完成点；附近范围内没有点位、而路线正在导航时，改为打开当前路线目标的攻略。&#x0a;攻略内 LB / RB · 翻图     右摇杆 · 滚动     A · 放大     B · 返回&#x0a;详情页按住 X 0.6 秒，只完成当前展示的点。" Style="{StaticResource IMaoBodyTextStyle}" />
+   <TextBlock Text="先按 LB，再按 B · 完成附近点     先按 LB，再按 X · 打开附近攻略&#x0a;组合键全部松开后执行一次；完成范围内有多个点时，先选择，再按 A 完成所选点。附近攻略只查询当前筛选中的未完成点；附近范围内没有点位、而路线正在导航时，改为打开当前路线目标的攻略。&#x0a;攻略内 LB / RB · 翻图     右摇杆 · 滚动     X · 放大     B · 返回游戏焦点&#x0a;详情页按住 A / × 0.6 秒，只完成当前展示的点；当前路线目标攻略长按 Y / △ 0.6 秒可跳过。独立攻略打开时仍由游戏聚焦，LS / L3 切换焦点；B / ○ 返回游戏焦点，LB＋X / L1＋□ 关闭攻略。" Style="{StaticResource IMaoBodyTextStyle}" />
    <TextBlock Text="进入工具后先松开按键；断连后需释放再重新操作。组合键是否与游戏其他状态冲突仍以实际游戏响应为准。" Style="{StaticResource IMaoSecondaryTextStyle}" />
   </StackPanel></Expander>
   <Expander Header="攻略与点位完成" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12">

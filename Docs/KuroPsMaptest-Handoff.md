@@ -1,6 +1,6 @@
 # 库街区点位与 PS 手柄测试交付
 
-开发分支：`codex/kuro-points-ps-gamepad`，从 `ad74e0cc70c554eb5edf8b92e48c577cf13b9f79` 创建独立工作树。此阶段只更新本地 maptest；游戏内验收通过前不合并、不创建正式 Release、不推进 stable。测试版本暂沿用 `2026.10.6.1`，不表示该版本已发布这些修改。
+开发分支：`codex/kuro-points-ps-gamepad`，从 `ad74e0cc70c554eb5edf8b92e48c577cf13b9f79` 创建独立工作树。维护者于 2026-10-07 反馈 maptest 游戏测试通过，并授权提交、合并 main 与试用新发布流程。测试树沿用 `2026.10.6.1`，实际交付源码为 `e2fd36fb1c0ac7b1c7ba384f47c1212fce042e5b`；正式版本改为 `2026.10.7.1`。
 
 ## 点位与游戏内验收
 

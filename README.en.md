@@ -83,7 +83,7 @@ IMAO itself is permanently free, with no paid edition, membership tier or featur
 - **Per-region downloads.** Every region is a separate feature pack. Disable it, or delete the local copy
   to free disk space and download it again later. Offline import
   (`resources-<version>-offline.zip`) is supported too.
-- **Xbox gamepad support.** Open the tool palette, the marker assistant, complete nearby markers,
+- **Xbox / PlayStation gamepad support.** Open the tool palette, the marker assistant, complete nearby markers,
   collect a whole group and zoom guide images — all without touching the keyboard.
 - **KuroBBS progress sync.** With the [companion browser extension](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg),
   local records and your own KuroBBS account sync both ways: the initial merge takes the union, while later syncs also reflect user cancellations.
@@ -161,19 +161,39 @@ immediately.
 
 ### Gamepad
 
-Enable it first in **Settings → Xbox gamepad** (off by default). The tool does **not** capture gamepad
-input, so the game's own action for the same button may fire at the same time.
+Enable it first in **Settings → Xbox / PlayStation gamepad** (off by default), then choose a device
+and the Auto / Xbox / PlayStation button layout. Xbox and native DualShock 4 / DualSense USB and
+Bluetooth basic input are supported. Native PS input has automated and virtual-device coverage;
+physical USB / Bluetooth testing is still pending. Please include the device name and connection type in feedback.
+For Steam Input / DS4Windows devices exposed as Xbox input, choose PlayStation hints manually.
+The tool does **not** capture gamepad input, so the game's own action may fire at the same time.
 
-| Context | Input | Action |
-| :--- | :--- | :--- |
-| In-game big map | <kbd>LB</kbd> | Open the map tool palette |
-| In-game big map | <kbd>RB</kbd> | Open the standalone marker assistant |
-| Exploring | <kbd>LB</kbd> → <kbd>B</kbd> | Complete the nearby marker |
-| Exploring | <kbd>LB</kbd> → <kbd>X</kbd> | Open the guide for a nearby marker |
-| Anywhere | <kbd>LB</kbd> + <kbd>Start</kbd> | Start / stop exploring |
-| Marker details | Hold <kbd>A</kbd> for 0.6 s | Complete the current marker |
-| Candidate list | Hold <kbd>X</kbd> for 0.6 s | Collect the whole group |
-| Guide image | <kbd>X</kbd> / <kbd>LT</kbd> / <kbd>RT</kbd> / right stick | Zoom in / out / in / pan |
+Buttons correspond by position: A / B / X / Y = × / ○ / □ / △, LB / RB = L1 / R1,
+LT / RT = L2 / R2, LS / RS = L3 / R3, Start / Back = Options / Share (Create on DualSense).
+
+| Context | Xbox | PlayStation | Action |
+| :--- | :--- | :--- | :--- |
+| In-game big map | LB | L1 | Open the map tool palette |
+| In-game big map | RB | R1 | Open the marker assistant |
+| Exploring | Hold LB, then press B | Hold L1, then press ○ | Complete a nearby marker after releasing the chord; choose first if several |
+| Exploring | Hold LB, then press X | Hold L1, then press □ | Open the nearby marker guide |
+| Anywhere | LB + Start | L1 + Options | Start / stop exploring |
+| Menus / lists | Left stick / D-pad, A, B | Left stick / D-pad, ×, ○ | Select, confirm, go back |
+| Assistant details | Hold A for 0.6 s | Hold × for 0.6 s | Complete the selected marker; X / □ expands the image |
+| Eligible candidate list | Hold X for 0.6 s | Hold □ for 0.6 s | Collect the whole group |
+| Standalone guide | LS | L3 | Switch focus between game and guide |
+| Standalone guide | B | ○ | Return focus to the game while keeping the guide visible |
+| Standalone guide | LB + X | L1 + □ | Close the guide |
+| Standalone guide details | Hold A for 0.6 s | Hold × for 0.6 s | Complete the current marker |
+| Current route target guide | Hold Y for 0.6 s | Hold △ for 0.6 s | Skip this route target without changing marker completion |
+| Guide image | LB / RB, X, right stick | L1 / R1, □, right stick | Previous / next image, expand image, scroll / pan |
+| Expanded guide image | LT / RT | L2 / R2 | Zoom out / in |
+
+Opening a standalone guide keeps the game focused; press LS / L3 to control it. Assistant details
+receive focus directly. Only the selected
+device is processed. Disconnecting never hands control to another controller. Release all buttons
+and centre the sticks after reconnecting, switching devices or returning focus. USB and Bluetooth
+may appear as different devices, so select the device again after changing connection type.
 
 ### KuroBBS progress sync extension
 
@@ -207,11 +227,11 @@ session the KuroBBS map page already holds.
 
 ### Supported regions
 
-**14 regions, 52 sub-regions, about 24,000 markers** (539 icon types). Regions are grouped by country in
+**14 regions, 52 sub-regions**. Regions are grouped by country in
 Settings and can be disabled, deleted and re-downloaded (**changes apply after a full restart**).
 
 **Mengshu Tianluo (梦枢天罗) is open and supported**, an independent sub-world
-under Huanglong (Kuro state 912, 24 item types / 243 markers). Its marker data, region metadata, icons,
+under Huanglong (Kuro state 912). Its marker data, region metadata, icons,
 visual localisation features, calibration data and upstream imagery coverage/hash records are in the repository.
 Its regional visual feature pack was generated from measured upstream imagery coverage and passes its
 in-game minimap reference check (2.7 px); original map imagery is not committed.
