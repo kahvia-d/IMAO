@@ -13,7 +13,10 @@
     "tag": "v2026.10.7.1",
     "sourceCommit": "ef6df8678be9b8d827f60c4da34a2b407c07dfc6",
     "id": "bb3478f2435a4ef0a004c7e11e108b11",
-    "releaseId": null
+    "releaseId": null,
+    "requestId": "8ff123408d7b1a6e19d22b2130de32b7dc8ccae0d9555559529ee10f5c7eabd8",
+    "requestArtifactId": 11462010497,
+    "requestArtifactDigest": "b6b3f59919c1b3fdec8a63cee3ea757607deeb4d7030c013b38381e9a68fef5d"
   },
   "completed": []
 }
