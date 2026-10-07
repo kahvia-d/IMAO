@@ -100,11 +100,35 @@ jobs:
           TAG: ${{ needs.publish.outputs.tag }}
           IMAO_GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: ./scripts/Sync-CiGitee.ps1 -Tag $env:TAG
+  # Inline rather than a reusable-workflow call: a job that uses a reusable workflow cannot declare
+  # the `mirrorchyan` environment, so `secrets: inherit` would hand the callee nothing and the upload
+  # token lives in that environment. This mirrors the gitee job below and keeps the
+  # mirrorchyan_release.yml dispatch path available for a manual recovery.
   mirrorchyan:
     needs: publish
-    uses: ./.github/workflows/mirrorchyan_release.yml
-    with:
-      tag: ${{ needs.publish.outputs.tag }}
+    runs-on: windows-2022
+    environment: mirrorchyan
+    timeout-minutes: 90
+    concurrency:
+      group: imao-production-release
+      queue: max
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.424
+      - name: Verify current stable and synchronize
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.publish.outputs.tag }}
+          MIRRORCHYAN_TOKEN: ${{ secrets.MIRRORCHYANUPLOADTOKEN }}
+        run: ./scripts/Sync-CiMirrorChyan.ps1 -Tag $env:TAG
 
   cleanup:
     needs: publish
