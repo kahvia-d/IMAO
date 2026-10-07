@@ -48,6 +48,17 @@ function Send-MirrorRequest([string]$Step, [string]$Url, [string]$Method, [Net.H
             if ($env:MIRRORCHYAN_TOKEN) { $detail=$detail.Replace($env:MIRRORCHYAN_TOKEN.Trim(),'<token>') }
             $detail=($detail -replace '\s+',' ').Trim()
             if ($detail.Length -gt 300) { $detail=$detail.Substring(0,300) }
+            # Object storage answers with an XML error document whose Code/Message/RequestId identify a
+            # rejected policy, a signature mismatch or a bad form field. Print those as one plain log
+            # line too, because the runner re-wraps exception text and drops the rest of the body.
+            if ($detail -match '<Error>') {
+                $code=if ($detail -match '<Code>(.*?)</Code>') { $Matches[1] } else { '?' }
+                $message=if ($detail -match '<Message>(.*?)</Message>') { $Matches[1] } else { '?' }
+                $requestId=if ($detail -match '<RequestId>(.*?)</RequestId>') { $Matches[1] } else { '?' }
+                Write-Host "MIRROR-STORAGE-ERROR step=$Step status=$([int]$response.StatusCode) code=$code requestId=$requestId message=$message"
+            } else {
+                Write-Host "MIRROR-ERROR step=$Step status=$([int]$response.StatusCode) detail=$detail"
+            }
             throw "MirrorChyan step '$Step' failed with HTTP $([int]$response.StatusCode). $detail"
         }
         $text=$response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
