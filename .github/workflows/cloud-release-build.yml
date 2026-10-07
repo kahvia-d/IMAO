@@ -37,6 +37,57 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 8.0.424
+      # Reproducibility evidence: record every toolchain input that decides the
+      # bytes, so a rehearsal/formal mismatch can be diagnosed from the logs.
+      # Windows SDK servicing keeps the folder name, so record a revision-
+      # sensitive stamp as well.  This step must never fail a release.
+      - name: Record build toolchain
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $lock = Get-Content .github/dependencies.lock.json -Raw | ConvertFrom-Json
+          Write-Host "IMAGE_VERSION=$env:ImageVersion"
+          Write-Host "LOCKED_DOTNET_SDK=$($lock.dotnetSdk) LOCKED_MSVC=$($lock.msvc) LOCKED_WINDOWS_SDK=$($lock.windowsSdk)"
+          $pathCmake = (Get-Command cmake -ErrorAction SilentlyContinue).Source
+          $pathNinja = (Get-Command ninja -ErrorAction SilentlyContinue).Source
+          Write-Host "PATH_CMAKE=$pathCmake"
+          Write-Host "PATH_NINJA=$pathNinja"
+          if ($pathCmake) { Write-Host "PATH_CMAKE_VERSION=$(& $pathCmake --version | Select-Object -First 1)" }
+          if ($pathNinja) { Write-Host "PATH_NINJA_VERSION=$(& $pathNinja --version)" }
+          $dotnetPath = (Get-Command dotnet -ErrorAction SilentlyContinue).Source
+          if ($dotnetPath) { Write-Host "DOTNET_SDK=$(& $dotnetPath --version)" }
+          $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
+          if (-not (Test-Path $vswhere)) { Write-Host 'VSWHERE=missing'; exit 0 }
+          $vsArgs = @('-latest', '-products', '*', '-version', '[17.0,18.0)')
+          $vs = & $vswhere @vsArgs -property installationPath
+          Write-Host "VS=$vs"
+          Write-Host "VS_VERSION=$(& $vswhere @vsArgs -property catalog_productDisplayVersion)"
+          if (-not $vs) { exit 0 }
+          $vsCmake = & $vswhere @vsArgs -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' | Select-Object -First 1
+          $vsNinja = & $vswhere @vsArgs -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe' | Select-Object -First 1
+          Write-Host "VS_CMAKE=$vsCmake"
+          if ($vsCmake) { Write-Host "VS_CMAKE_VERSION=$(& $vsCmake --version | Select-Object -First 1)" }
+          Write-Host "VS_NINJA=$vsNinja"
+          if ($vsNinja) { Write-Host "VS_NINJA_VERSION=$(& $vsNinja --version)" }
+          Write-Host "MSVC_TOOLSETS=$((@(Get-ChildItem (Join-Path $vs 'VC/Tools/MSVC') -Directory | Select-Object -ExpandProperty Name) -join ','))"
+          Write-Host "VC_REDIST=$((@(Get-ChildItem (Join-Path $vs 'VC/Redist/MSVC') -Directory -ErrorAction SilentlyContinue | Where-Object Name -match '^\d+\.\d+\.\d+$' | Select-Object -ExpandProperty Name) -join ','))"
+          $sdkRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10'
+          Write-Host "WINDOWS_SDKS=$((@(Get-ChildItem (Join-Path $sdkRoot 'Include') -Directory -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name) -join ','))"
+          $winnt = Join-Path $sdkRoot "Include/$($lock.windowsSdk)/um/winnt.h"
+          if (Test-Path $winnt) {
+            $stamp = Get-Item $winnt
+            Write-Host "SDK_WINNT_H=$($stamp.Length):$($stamp.LastWriteTimeUtc.ToString('o'))"
+          }
+          $sdkLib = Join-Path $sdkRoot "Lib/$($lock.windowsSdk)/um/x64"
+          $kernel32 = Join-Path $sdkLib 'kernel32.lib'
+          if (Test-Path $sdkLib) {
+            $libs = @(Get-ChildItem $sdkLib -File -Filter '*.lib')
+            Write-Host "SDK_UM_X64_LIBS=$($libs.Count) SDK_UM_X64_BYTES=$(($libs | Measure-Object Length -Sum).Sum)"
+          }
+          if (Test-Path $kernel32) {
+            $lib = Get-Item $kernel32
+            Write-Host "SDK_KERNEL32_STAMP=$($lib.Length):$($lib.LastWriteTimeUtc.ToString('o'))"
+          }
       - name: Validate formal inputs
         env:
           FORMAL: ${{ inputs.publish || false }}

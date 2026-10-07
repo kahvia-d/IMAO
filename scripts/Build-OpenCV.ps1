@@ -38,6 +38,11 @@ if ($LASTEXITCODE -ne 0) {
 $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
 if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Visual Studio Installer (vswhere) was not found.' }
 
+# The dependency lock names one exact MSVC toolset; never let an image roll pick
+# a different compiler behind the release's back.
+$lock = Get-Content (Join-Path $repoRoot '.github/dependencies.lock.json') -Raw | ConvertFrom-Json
+if (-not $lock.msvc) { throw 'The dependency lock does not name an MSVC toolset.' }
+
 $cmake = & $vswhere -latest -products * -version '[17.0,18.0)' -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' | Select-Object -First 1
 $ninja = & $vswhere -latest -products * -version '[17.0,18.0)' -find 'Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe' | Select-Object -First 1
 $vcvars = & $vswhere -latest -products * -version '[17.0,18.0)' -find 'VC\Auxiliary\Build\vcvars64.bat' | Select-Object -First 1
@@ -47,7 +52,7 @@ if ([string]::IsNullOrWhiteSpace($cmake) -or [string]::IsNullOrWhiteSpace($ninja
 
 function Invoke-VisualStudioCommand([string]$CommandLine) {
     $logPath = Join-Path $env:TEMP ("imao-opencv-" + [guid]::NewGuid().ToString() + '.log')
-    $cmdCommand = 'call "' + $vcvars + '" -vcvars_ver=14.44 >nul && (' + $CommandLine + ') > "' + $logPath + '" 2>&1'
+    $cmdCommand = 'call "' + $vcvars + '" ' + $lock.windowsSdk + ' -vcvars_ver=' + $lock.msvc + ' >nul && (' + $CommandLine + ') > "' + $logPath + '" 2>&1'
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.UseShellExecute = $false
 
@@ -72,8 +77,19 @@ function Invoke-VisualStudioCommand([string]$CommandLine) {
     if ($process.ExitCode -ne 0) { throw "Command failed with exit code $($process.ExitCode): $CommandLine" }
 }
 
+$sourcePrefix = $repoRoot.Replace('\','/').TrimEnd('/')
+# /Brepro alone does not remove the absolute build root from MSVC's
+# anonymous-namespace mangling (?A0x<hash>@ is a hash of the source directory),
+# so the dependency would be spelled differently for every checkout root.
+$reproFlags = '/Brepro /d1trimfile:\"' + $sourcePrefix + '\"'
+# -DCMAKE_C_FLAGS/-DCMAKE_CXX_FLAGS replace CMake's MSVC defaults
+# (/DWIN32 /D_WINDOWS /W3 /GR /EHsc) instead of extending them, which silently
+# changes the compiled library. State the defaults explicitly so the recipe no
+# longer depends on the CMake version installed on the runner.
+$msvcCFlags = '/DWIN32 /D_WINDOWS /W3'
+$msvcCxxFlags = '/DWIN32 /D_WINDOWS /W3 /GR /EHsc'
 $configure = '"' + $cmake + '" -S "' + $Source + '" -B "' + $BuildDirectory + '" -G Ninja ' +
-    '-DCMAKE_C_FLAGS=/Brepro -DCMAKE_CXX_FLAGS=/Brepro -DCMAKE_SHARED_LINKER_FLAGS=/Brepro -DCMAKE_EXE_LINKER_FLAGS=/Brepro -DCMAKE_BUILD_TYPE=Release -DOPENCV_SKIP_SYSTEM_PROCESSOR_DETECTION=ON -DX86_64=ON -DOPENCV_EXTRA_MODULES_PATH="' + (Join-Path $Contrib 'modules') + '" ' +
+    '"-DCMAKE_C_FLAGS=' + $msvcCFlags + ' ' + $reproFlags + '" "-DCMAKE_CXX_FLAGS=' + $msvcCxxFlags + ' ' + $reproFlags + '" -DCMAKE_SHARED_LINKER_FLAGS=/Brepro -DCMAKE_EXE_LINKER_FLAGS=/Brepro -DCMAKE_BUILD_TYPE=Release -DOPENCV_SKIP_SYSTEM_PROCESSOR_DETECTION=ON -DX86_64=ON -DOPENCV_EXTRA_MODULES_PATH="' + (Join-Path $Contrib 'modules') + '" ' +
     '-DBUILD_SHARED_LIBS=ON -DBUILD_opencv_world=ON -DOPENCV_ENABLE_NONFREE=ON ' +
     '-DBUILD_LIST=core,imgproc,imgcodecs,features2d,flann,calib3d,xfeatures2d ' +
     '-DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_opencv_apps=OFF -DBUILD_opencv_highgui=OFF -DBUILD_opencv_videoio=OFF -DOPENCV_PYTHON_SKIP_DETECTION=ON -DOPENCV_SKIP_FEATURES2D_DOWNLOADING=ON ' +

@@ -66,6 +66,15 @@ $cmake = & $vswhere -latest -products * -find 'Common7/IDE/CommonExtensions/Micr
 $ninja = & $vswhere -latest -products * -find 'Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe' | Select-Object -First 1
 if (-not $vcvars -or -not $cmake -or -not $ninja) { throw 'Locked SDL build requires Visual Studio CMake/Ninja and C++ tools.' }
 $buildRoot = Join-Path $SourceRoot "third_party/build/sdl3-$($dep.version)-input-only"
+# /Brepro alone does not remove the absolute build root from MSVC's
+# anonymous-namespace mangling (?A0x<hash>@ is a hash of the source directory),
+# so SDL3.dll would be spelled differently for every checkout root.
+# -DCMAKE_C_FLAGS/-DCMAKE_CXX_FLAGS replace CMake's MSVC defaults instead of
+# extending them, so state those defaults explicitly.
+$sourcePrefix = ([IO.Path]::GetFullPath($SourceRoot)).Replace('\','/').TrimEnd('/')
+$reproFlags = '/Brepro /d1trimfile:\"' + $sourcePrefix + '\"'
+$sdlCflags = '/DWIN32 /D_WINDOWS /W3 ' + $reproFlags
+$sdlCxxFlags = '/DWIN32 /D_WINDOWS /W3 /GR /EHsc ' + $reproFlags
 function Invoke-SdlBuild([string]$Command) {
     [IO.Directory]::CreateDirectory($buildRoot) | Out-Null
     $commandFile = Join-Path $buildRoot 'invoke-build.cmd'
@@ -87,7 +96,7 @@ function Invoke-SdlBuild([string]$Command) {
     }
     finally { $child.Dispose() }
 }
-Invoke-SdlBuild ('"' + $cmake + '" -S "' + $source + '" -B "' + $buildRoot + '" -G Ninja "-DCMAKE_MAKE_PROGRAM=' + $ninja + '" "-DCMAKE_C_FLAGS=/Brepro" "-DCMAKE_CXX_FLAGS=/Brepro" "-DCMAKE_SHARED_LINKER_FLAGS=/Brepro" "-DCMAKE_EXE_LINKER_FLAGS=/Brepro" -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF')
+Invoke-SdlBuild ('"' + $cmake + '" -S "' + $source + '" -B "' + $buildRoot + '" -G Ninja "-DCMAKE_MAKE_PROGRAM=' + $ninja + '" "-DCMAKE_C_FLAGS=' + $sdlCflags + '" "-DCMAKE_CXX_FLAGS=' + $sdlCxxFlags + '" "-DCMAKE_SHARED_LINKER_FLAGS=/Brepro" "-DCMAKE_EXE_LINKER_FLAGS=/Brepro" -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF')
 Invoke-SdlBuild ('"' + $cmake + '" --build "' + $buildRoot + '" --target SDL3-shared --parallel 4')
 $dll = Join-Path $buildRoot 'SDL3.dll'
 if (-not (Test-Path -LiteralPath $dll)) { throw 'SDL build did not produce SDL3.dll.' }

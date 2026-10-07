@@ -38,8 +38,20 @@ foreach ($name in @('opencv','opencv_contrib')) {
 $vswhere='C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe'
 $vs=& $vswhere -latest -products * -version '[17.0,18.0)' -property installationPath
 if (-not $vs) { throw 'Visual Studio 2022 is required.' }
-$toolset=@(Get-ChildItem (Join-Path $vs 'VC/Tools/MSVC') -Directory | Where-Object Name -Like "$($lock.msvc).*" | Sort-Object Name -Descending)[0]
-if (-not $toolset) { throw 'Locked MSVC 14.44 toolset missing.' }
+# The lock names one exact toolset: a runner image that adds a newer patch of the
+# same minor version must not silently change the compiler that produces bytes
+# the rehearsal and the formal build have to agree on.
+$toolsetRoot=Join-Path $vs 'VC/Tools/MSVC'
+$toolset=@(Get-ChildItem $toolsetRoot -Directory | Where-Object Name -CEQ $lock.msvc)[0]
+if (-not $toolset -and $lock.msvc -match '^\d+\.\d+$') {
+    $toolset=@(Get-ChildItem $toolsetRoot -Directory | Where-Object Name -Like "$($lock.msvc).*" | Sort-Object Name -Descending)[0]
+}
+if (-not $toolset) { throw "Locked MSVC toolset $($lock.msvc) is missing from $toolsetRoot." }
+if (Test-Path (Join-Path $vs 'VC/Redist/MSVC')) {
+    $redist=@(Get-ChildItem (Join-Path $vs 'VC/Redist/MSVC') -Directory | Where-Object Name -match '^\d+\.\d+\.\d+$' | Sort-Object { [version]$_.Name } -Descending |
+        Select-Object -First 1)
+    if ($redist) { Write-Host "Visual C++ redistributable selected for packaging: $($redist.Name)" }
+}
 if (-not (Test-Path "${env:ProgramFiles(x86)}/Windows Kits/10/Include/$($lock.windowsSdk)/um/Windows.h")) { throw 'Locked Windows SDK missing.' }
 & cmake -S $repoRoot -B (Join-Path $repoRoot 'out/ci-native-config') -G 'Visual Studio 17 2022' -A x64 -T "v143,version=$($toolset.Name)" "-DCMAKE_GENERATOR_INSTANCE=$vs" "-DCMAKE_SYSTEM_VERSION=$($lock.windowsSdk)" "-DPADDLE_LIB=$env:IMAO_PADDLE_LIB" "-DOPENCV_DIR=$env:IMAO_OPENCV_DIR" '-DIMAO_ENABLE_DIAGNOSTICS=OFF' '-DIMAO_ALLOW_XML_FEATURE_FALLBACK=OFF'
 if ($LASTEXITCODE -ne 0) { throw 'Cloud native configuration failed.' }

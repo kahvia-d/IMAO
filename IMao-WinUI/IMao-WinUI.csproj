@@ -13,6 +13,9 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <UseWinUI>true</UseWinUI>
+    <!-- This is a JIT deployment. CsWinRT 2.2's optional AOT optimizer emits
+         vtables in process-random hash order (microsoft/CsWinRT#2562). -->
+    <CsWinRTAotOptimizerEnabled>false</CsWinRTAotOptimizerEnabled>
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>

@@ -77,13 +77,17 @@ function Invoke-CandidateProcess([string]$Executable, [string[]]$Arguments, [str
     } finally { $process.Dispose() }
 }
 $taskNativeBuild = Join-Path $OutputRoot 'native-build'
+$taskSourcePrefix = $taskRepo.Replace('\','/').TrimEnd('/')
 # A fresh CMake build directory has no prior objects to reuse. Dependency and
 # toolset paths come from the validated local configuration, not PATH guesses.
 # MSBuild's project parallelism does not parallelize C++ files within CoreHost.
 # Preserve the configured flags and give MSVC the same explicit worker limit.
+# /d1trimfile keeps the absolute checkout root out of MSVC's anonymous-namespace
+# mangling (?A0x<hash>@ hashes the source directory); the quotes must reach
+# MSBuild as real quotes, which CMake strips when writing the project file.
 Invoke-CandidateProcess $taskCmake @('-S',$taskRepo,'-B',$taskNativeBuild,'-G',$taskGenerator,'-A','x64','-T',$taskToolset,
     "-DCMAKE_GENERATOR_INSTANCE=$taskInstance","-DCMAKE_SYSTEM_VERSION=$taskWindowsSdk","-DPADDLE_LIB=$taskPaddle","-DOPENCV_DIR=$taskOpenCv",
-    "-DCMAKE_CXX_FLAGS=$taskCxxFlags /MP$Parallel /Brepro",
+    "-DCMAKE_CXX_FLAGS=$taskCxxFlags /MP$Parallel /Brepro /d1trimfile:`"$taskSourcePrefix`"",
     '-DCMAKE_EXE_LINKER_FLAGS=/Brepro','-DCMAKE_SHARED_LINKER_FLAGS=/Brepro',
     '-DIMAO_ENABLE_DIAGNOSTICS=OFF','-DIMAO_ALLOW_XML_FEATURE_FALLBACK=OFF') 'native-configure.log'
 Invoke-CandidateProcess $taskCmake @('--build',$taskNativeBuild,'--config','Release','--target','IMao-CoreHost','IMaoOptimizationTests',
