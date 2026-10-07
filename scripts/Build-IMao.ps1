@@ -104,11 +104,12 @@ try {
     }
 
     Invoke-VisualStudioCommand ('"' + $cmake + '" --build --preset windows-x64-release-core --parallel ' + $Parallel)
-    Invoke-VisualStudioCommand ('"' + $Dotnet + '" build "IMao-WinUI\IMao-WinUI.csproj" --configuration Release -p:Platform=x64 --packages "' + $nugetPackages + '"')
+    Invoke-VisualStudioCommand ('"' + $Dotnet + '" build "IMao-WinUI\IMao-WinUI.csproj" --configuration Release -r win-x64 --self-contained true -p:Platform=x64 -p:WindowsPackageType=None -p:GenerateAppxPackageOnBuild=false -p:AppxPackageSigningEnabled=false -p:NuGetAudit=false --packages "' + $nugetPackages + '"')
     & (Join-Path $PSScriptRoot 'Test-WinUINavigation.ps1') -Platform x64 -Configuration Release
 
 
     $outputDirectory = Join-Path $repoRoot 'x64\Release'
+    & (Join-Path $PSScriptRoot 'Assert-SelfContainedRuntime.ps1') -AppRoot $outputDirectory
     if (-not (Test-Path -LiteralPath $outputDirectory)) {
         throw "Expected build output directory was not created: $outputDirectory"
     }

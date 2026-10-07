@@ -5,8 +5,8 @@ $ErrorActionPreference = 'Stop'
 if (Test-Path -LiteralPath $OutputRoot) { throw 'Use a fresh test output directory.' }
 $badBuild = Join-Path $OutputRoot 'bad-build'
 [IO.Directory]::CreateDirectory($badBuild) | Out-Null
-foreach ($name in @('IMao-WinUI.exe','IMao-WinUI.dll','SDL3.dll','SDL3-LICENSE.txt','SDL3-BUILD.json','build-info.json')) {
-    Copy-Item -LiteralPath (Join-Path $BinaryRoot $name) -Destination (Join-Path $badBuild $name)
+foreach ($file in Get-ChildItem -LiteralPath $BinaryRoot -File | Where-Object Name -ne 'IMao-CoreHost.exe') {
+    New-Item -ItemType HardLink -Path (Join-Path $badBuild $file.Name) -Target $file.FullName | Out-Null
 }
 # Deliberate post-mutation executable failure; only the disposable fixture is touched.
 [IO.File]::WriteAllText((Join-Path $badBuild 'IMao-CoreHost.exe'), 'invalid executable rollback fixture')

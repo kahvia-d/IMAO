@@ -6,6 +6,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'Use PowerShell 7.' }
 $RunRoot = [IO.Path]::GetFullPath($RunRoot).TrimEnd('\')
 $BinaryRoot = [IO.Path]::GetFullPath($BinaryRoot).TrimEnd('\')
 $EvidenceRoot = [IO.Path]::GetFullPath($EvidenceRoot).TrimEnd('\')
+& (Join-Path $PSScriptRoot 'Assert-SelfContainedRuntime.ps1') -AppRoot $BinaryRoot
 if ($RunRoot -eq $BinaryRoot -or $EvidenceRoot.StartsWith($RunRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
     throw 'Test tree, build and backup must be separate directories.'
 }
@@ -128,6 +129,7 @@ $snapshotPath = Join-Path $assets 'Updates/bundled-snapshot.json'
 $snapshot | ConvertTo-Json -Depth 100 | Set-Content $snapshotPath -Encoding UTF8
 & (Join-Path $RunRoot 'IMao-CoreHost.exe') --check-resource-snapshot $snapshotPath
 if ($LASTEXITCODE -ne 0) { throw 'Updated maptest snapshot failed native validation. Backup retained; do not launch.' }
+& (Join-Path $PSScriptRoot 'Assert-SelfContainedRuntime.ps1') -AppRoot $RunRoot
 $receipt = [ordered]@{ sourceCommit = $build.sourceCommit; sourceDirty = $build.sourceDirty; version = $build.appVersion;
     completedAtUtc = [DateTime]::UtcNow.ToString('o'); runRoot = $RunRoot; backup = $EvidenceRoot;
     snapshotSha256 = (Get-FileHash $snapshotPath -Algorithm SHA256).Hash.ToLowerInvariant(); changedBinaries = $changes;

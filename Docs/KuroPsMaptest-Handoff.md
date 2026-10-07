@@ -39,6 +39,10 @@
 
 `scripts/Update-MapTestBuild.ps1` 更新已有测试树，预备份受影响程序和 KuroMap/KuroMapIcons/Updates 及目录链接信息，只替换必要程序与点位资源，随后按实际保留文件生成快照并调用原生验证。替换前 unlink 硬链接，避免改动正式构建源；保留 SavedPoints、SavedRoutes、ProgramUpdates、地图包及模型。
 
+**2026-10-07 交付纠正：**首次刷新遗漏了 memory 明确要求的 .NET 自包含构建，初始提交 be67735 的交付可启动性检查不足。`Build-IMao.ps1` 现在显式使用 `-r win-x64 --self-contained true`。刷新前、刷新后及构建输出都调用 `Assert-SelfContainedRuntime.ps1`：要求 runtimeconfig 为 `includedFrameworks` 且没有外部 `framework/frameworks`，检查 hostpolicy/hostfxr/coreclr/CoreLib、WindowsAppSDK bootstrap、Microsoft.UI.Xaml/Microsoft.WindowsAppRuntime/DWriteCore 和 deps 中 win-x64 runtime/native 文件。任何写入 x64/Release 的外壳构建都必须自包含，不能以“仅编译检查”为由省略。
+
+`Test-SelfContainedDeployment.ps1` 验证正确构建，以及依赖外部 .NET、遗漏 WinUI SDK、遗漏 .NET 程序集三类错误输出被拒绝；刷新入口已验证在错误 runtimeconfig 下零备份、零复制。修复后重新验证更新失败回滚，再生成 clean SHA 的自包含构建用于交付。
+
 更新异常会逐项恢复资源、程序和原收据；若恢复某项失败，会继续恢复其他项并明确报告 `INCOMPLETE`，此时不要启动。备份中的 `original-links.json`、`binary-changes.json` 与 `backup` 可用于人工恢复。运行中断若没有成功收据，也应先按备份恢复，不继续使用混合测试树。
 
 本次故障注入测试使用破损 CoreHost 可执行文件，使临时测试树在替换完成后的原生验证阶段失败；已确认快照、核心程序及资源目录所有权恢复。该测试未模拟恢复过程中发生文件锁或断电。
