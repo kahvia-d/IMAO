@@ -13,7 +13,10 @@
     "status": "awaiting-signature",
     "id": "251822e671a348eba89f92f89a184d9f",
     "artifactDigest": "a7cc80b8bdff809cf608d88e7152116cae7ff2f9cf68299c43ac0c23da1b1c70",
-    "sequence": 42
+    "sequence": 42,
+    "requestId": "db4c02725ea20d6be23abafe9ebc6c7e8085befbe3856c00f12e03c663e62348",
+    "requestArtifactId": 11485327146,
+    "requestArtifactDigest": "f7f275310b4fc72cbd81a16ce11a8b4233911d2b729f5af5a6b2b8caa2e66062"
   },
   "completed": [
     {
