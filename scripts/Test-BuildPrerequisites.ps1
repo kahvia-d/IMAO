@@ -67,10 +67,10 @@ if (-not [string]::IsNullOrWhiteSpace($OpenCvDir)) {
     Test-Requirement (Test-Path -LiteralPath (Join-Path $OpenCvDir 'OpenCVConfig.cmake')) 'OPENCV_DIR does not contain OpenCVConfig.cmake.'
 }
 
-Test-Requirement (Test-Path -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.yml')) 'Missing archived runtime assets. Run Git LFS pull or restore Assets/.'
-# The base map features are being retired: every region pack now carries its own calibrated features and the
-# runtime tolerates the base set being absent. A checkout that still has them keeps using them, so they are
-# only required to be a matching pair — both present (still shipping them) or both absent (retired).
+# The retired base pack's XML source is gone: every region now carries its own calibrated features and
+# the runtime tolerates the base set being absent. A checkout that still has the archived base files
+# keeps using them, so they are only required to be a matching pair - both present (still shipping
+# them) or both absent (retired).
 $baseFeatureBinary = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.imf'
 $baseVisualIndex = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_visual_index.imx'
 Test-Requirement ((Test-Path -LiteralPath $baseFeatureBinary) -eq (Test-Path -LiteralPath $baseVisualIndex)) 'Map_features.imf and Map_visual_index.imx must both be present or both be absent.'

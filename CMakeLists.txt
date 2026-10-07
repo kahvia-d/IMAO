@@ -42,7 +42,6 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 SET(PADDLE_LIB "" CACHE PATH "Paddle Inference root (contains paddle/ and third_party/)")
 SET(OPENCV_DIR "" CACHE PATH "Directory containing OpenCVConfig.cmake")
 option(IMAO_ENABLE_DIAGNOSTICS "Write bounded runtime screenshots and event logs for map matching diagnostics" OFF)
-option(IMAO_ALLOW_XML_FEATURE_FALLBACK "Allow development builds to fall back to Map_features.yml" OFF)
 option(IMAO_GENERATE_LINK_MAP "Write a link map for native crash offset diagnosis" OFF)
 
 macro(safe_set_static_flag)

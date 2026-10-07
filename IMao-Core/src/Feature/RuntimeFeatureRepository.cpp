@@ -217,16 +217,13 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         // packs carry their own features and visual index, so a snapshot that selects no
         // map-features package simply runs without the legacy atlas. Keep the error and
         // the zero baseline identity because the exclusion manifests are bound to them.
+        //
+        // There used to be a development-only XML fallback here, reading the retired
+        // base pack's 460 MB Map_features.yml. Its source is gone and the pack it could
+        // rebuild is archived, so the branch was removed rather than left switched off:
+        // a fallback nobody can enable is a liability, not an option.
         if (!sourceImfHashReady) {
-#ifdef IMAO_ALLOW_XML_FEATURE_FALLBACK
-            Diagnostics::Record("resource-load", "stage=map-imf failed fallback=xml error=" + failure);
-            if (!FeatureLoader::loadFeaturesFromXML((mapFeatureRoot / "Map_features.yml").string(), loaded->map)) {
-                Diagnostics::Record("resource-load",
-                    "stage=map-imf absent fallback=failed error=" + failure);
-            }
-#else
             Diagnostics::Record("resource-load", "stage=map-imf absent error=" + failure);
-#endif
         }
         Diagnostics::Record("resource-load", "stage=map-features durationMs=" +
             std::to_string(ElapsedMilliseconds(mapStart)) + " keypoints=" +

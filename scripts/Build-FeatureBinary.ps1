@@ -10,7 +10,14 @@ $xmlPath = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.yml'
 $imfPath = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.imf'
 $manifestPath = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.manifest.json'
 
-if (-not (Test-Path -LiteralPath $xmlPath)) { throw "Missing XML source: $xmlPath" }
+if (-not (Test-Path -LiteralPath $xmlPath)) {
+    # The retired base pack's XML source was deleted once every region shipped as its own pack: it was
+    # 460 MB, it never shipped, and its only job was rebuilding a pack that is now archived. Rebuilding
+    # the base pack therefore starts by restoring that source from history:
+    #   git checkout <commit-before-the-deletion> -- Assets/FeaturesDatas/Map_features.yml
+    # Region packs are built by scripts/Invoke-MapRegionRebuild.ps1 instead.
+    throw "Missing XML source: $xmlPath (retired; restore it from history to rebuild the base pack)"
+}
 if ([string]::IsNullOrWhiteSpace($PaddleLib)) { throw 'Set IMAO_PADDLE_LIB or pass -PaddleLib.' }
 if ([string]::IsNullOrWhiteSpace($OpenCvDir)) { throw 'Set IMAO_OPENCV_DIR or pass -OpenCvDir.' }
 

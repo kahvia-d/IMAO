@@ -118,7 +118,6 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Release asset staging failed.' }
     $coreHost = Join-Path $outputDirectory 'IMao-CoreHost.exe'
     if (-not (Test-Path -LiteralPath $coreHost)) { throw "Missing C++ build output: $coreHost" }
-    $xmlFeatures = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_features.yml'
     # The base map features are retired when the source tree no longer carries them: the region packs provide
     # the features and the runtime tolerates their absence. While they are present, they must arrive staged.
     foreach ($baseName in @('Map_features.imf','Map_visual_index.imx')) {
