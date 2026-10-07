@@ -317,6 +317,22 @@ target_include_directories(IMaoFeatureMigrate PRIVATE
 )
 target_link_libraries(IMaoFeatureMigrate PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib psapi.lib)
 
+# Regenerates a feature binary's sidecar manifest from the binary's own header, so the
+# machine-readable record of a pack cannot drift from the file it describes.
+add_executable(IMaoFeatureSidecar
+    IMao-Core/tools/FeatureSidecar/main.cpp
+    IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
+    IMao-Core/src/Feature/Processing/FeatureProcessing.cpp
+)
+set_target_properties(IMaoFeatureSidecar PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+target_include_directories(IMaoFeatureSidecar PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
+)
+target_link_libraries(IMaoFeatureSidecar PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib psapi.lib)
+
 # Offline calibration probe for the layered-floor ("分层地图") classifier. It reads the
 # per-floor sidecar index a region pack carries and reports which floor a captured minimap
 # votes for, so the thresholds are set from real frames before the runtime depends on them.

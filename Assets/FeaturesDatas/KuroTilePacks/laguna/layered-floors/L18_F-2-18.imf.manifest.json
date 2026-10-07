@@ -1,9 +1,16 @@
 {
   "descriptorColumns": 128,
   "descriptorRows": 335,
+  "descriptorType": "quantized-uint8",
+  "deflated": true,
   "format": "IMAOFT01",
+  "descriptorMaximum": 0.631491899,
+  "descriptorMinimum": -0.569410026,
+  "descriptorOffset": -121,
+  "descriptorScale": 0.00470941933,
+  "quantizationStep": 0.00235941913,
   "keypointCount": 335,
   "payloadSha256": "3eb652ba76b78b7029cb9b0fdfad3c7d5dedd67e55e369ac47eae6b94cd143ff",
   "sourceXmlSha256": "23d128f95798e7fb2f6c324b7c21bd7b1e372524b5ec74f7653400f23762bc30",
-  "version": 1
+  "version": 2
 }

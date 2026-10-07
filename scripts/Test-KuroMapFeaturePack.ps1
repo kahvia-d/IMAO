@@ -67,6 +67,18 @@ if ([string]$binaryManifest.format -ne 'IMAOFT01' -or
     [int]$binaryManifest.keypointCount -lt 12) {
     throw 'Binary feature manifest header is invalid.'
 }
+# A pack must ship the quantized encoding. The float32 encoding costs 540 bytes per keypoint against
+# about 110 for the quantized one, so a pack that regresses to it is several times larger for the same
+# recognized locations - the converter writes the quantized format by default, which is exactly why a
+# silent regression is possible: an old binary or a `--format v1` run would look like a normal pack.
+# Version 1 is still readable at runtime, so nothing else would notice.
+$binaryVersion = if ($null -ne $binaryManifest.PSObject.Properties['version']) { [int]$binaryManifest.version } else { 0 }
+if ($binaryVersion -lt 2 -or [string]$binaryManifest.descriptorType -ne 'quantized-uint8' -or
+    -not [bool]$binaryManifest.deflated) {
+    throw ("Pack $($manifest.packId) ships the legacy float32 feature encoding (version=$binaryVersion " +
+        "descriptorType=$($binaryManifest.descriptorType)). Rebuild it with the current converter, or " +
+        "migrate the existing binary with IMaoFeatureMigrate.")
+}
 # The runtime reads only the binary. The source XML/YAML is a build-time input that is
 # deliberately not shipped (it is ~75% of a pack and CoreHost never opens it), so its
 # provenance is checked through the hash the binary manifest records instead.
