@@ -139,6 +139,25 @@ int main() {
                 "preview must count the identities both sides already agree on");
             Require(steady.at("localCompleted").get<int>() == 1 && steady.at("remoteCompleted").get<int>() == 2,
                 "preview must report both side totals for the comparison header");
+            // A baseline that has fallen behind must not hide a cloud completion. The map draws a
+            // record-less identity as unfinished until this region's recorded baseline holds it, so
+            // the preview has to plan the addition; reading the live cloud set here instead reported
+            // "nothing to pull" for ever, because only an apply rewrites the baseline that would
+            // have caught up. Reported by the player whose Kuro account gained 12 completions in a
+            // region whose baseline still held 54.
+            const Json lateCloud = Json::array({"cloud-only", "unmapped-cloud", "late-cloud"});
+            const Json lateSupplied = Json::array({Point("cloud-only"), Point("local-done"), Point("untouched", false), Point("late-cloud", false)});
+            Require(!preview.Completed("World", "test", "late-cloud"),
+                "a cloud completion outside the recorded baseline must read as unfinished locally");
+            auto late = Send(preview, "markerPreviewSync", {{"stateId", 8}, {"mode", "merge"}, {"remoteIds", lateCloud}, {"points", lateSupplied}});
+            Require(late.at("regions").at(0).at("willAdd").get<int>() == 1 && late.at("regions").at(0).at("willRemove").get<int>() == 0,
+                "a cloud completion missing from the recorded baseline must be planned as an addition");
+            Send(preview, "markerApplyRemote", {{"stateId", 8}, {"mode", "merge"}, {"remoteIds", lateCloud}, {"points", lateSupplied}});
+            Require(preview.Completed("World", "test", "late-cloud"),
+                "applying the plan did not record the late cloud completion");
+            auto settledLate = Send(preview, "markerPreviewSync", {{"stateId", 8}, {"mode", "merge"}, {"remoteIds", lateCloud}, {"points", lateSupplied}});
+            Require(settledLate.at("regions").at(0).at("willAdd").get<int>() == 0,
+                "the refreshed baseline must not keep re-planning the same addition");
         }
         {
             // Docs/LocalAccounts_20260926.md §6.3: an account-era profile can already

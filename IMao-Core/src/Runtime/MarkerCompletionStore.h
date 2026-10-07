@@ -248,9 +248,14 @@ public:
                             return;
                         }
                         // Before initialization the cloud set is not yet a baseline, so an
-                        // absent record means "not completed"; afterwards remote-only ids
-                        // already read as completed through the baseline fallback.
-                        const bool current = record ? local : (initialized && remote);
+                        // absent record means "not completed"; afterwards an absent record
+                        // reads as completed only when this region's recorded baseline holds
+                        // the identity - which is exactly the rule the map draws with. Reading
+                        // the live cloud set here instead made a baseline that had fallen
+                        // behind look "already complete": the preview reported nothing to pull
+                        // while the map drew those points as unfinished, and because only an
+                        // apply rewrites the baseline, the region could never catch up.
+                        const bool current = record ? local : RemoteCompleted(source, state, id);
                         const bool desired = DesiredCompletion(record, local, remote, !initialized, mode);
                         if (desired == current) ++unchanged; else if (desired) ++willAdd; else ++willRemove;
                         // A local-only completion this apply will put into the outbox: a
