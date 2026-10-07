@@ -33,13 +33,23 @@ if (-not $NotesOnly) {
 }
 $handler=[Net.Http.HttpClientHandler]::new(); $handler.AllowAutoRedirect=$false
 $client=[Net.Http.HttpClient]::new($handler); $client.Timeout=[TimeSpan]::FromMinutes(45)
-function Send-MirrorRequest([string]$Url, [string]$Method, [Net.Http.HttpContent]$Content, [bool]$Authorized=$true) {
+function Send-MirrorRequest([string]$Step, [string]$Url, [string]$Method, [Net.Http.HttpContent]$Content, [bool]$Authorized=$true) {
     $request=[Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::new($Method),$Url)
     if ($Authorized) { $request.Headers.TryAddWithoutValidation('Authorization',$env:MIRRORCHYAN_TOKEN.Trim()) | Out-Null }
     $request.Content=$Content; $response=$null
     try {
         $response=$client.SendAsync($request).GetAwaiter().GetResult()
-        if ([int]$response.StatusCode -ne 200) { throw 'MirrorChyan request failed; response body suppressed.' }
+        if ([int]$response.StatusCode -ne 200) {
+            # A bare "request failed" cost a debugging round trip: the step and the status code are
+            # what identify a stale token, a rejected parameter or an already uploaded version. The
+            # body is truncated and has the upload token scrubbed out of it before it is reported.
+            $detail=''
+            try { $detail=$response.Content.ReadAsStringAsync().GetAwaiter().GetResult() } catch { }
+            if ($env:MIRRORCHYAN_TOKEN) { $detail=$detail.Replace($env:MIRRORCHYAN_TOKEN.Trim(),'<token>') }
+            $detail=($detail -replace '\s+',' ').Trim()
+            if ($detail.Length -gt 300) { $detail=$detail.Substring(0,300) }
+            throw "MirrorChyan step '$Step' failed with HTTP $([int]$response.StatusCode). $detail"
+        }
         $text=$response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
         if ($text.StartsWith('{')) { return $text | ConvertFrom-Json }
     } finally { if ($response) { $response.Dispose() }; $request.Dispose() }
@@ -53,7 +63,7 @@ try {
     if (-not $NotesOnly) {
         $downloadName="IMAO-$Tag-win-x64.zip"
         $data=@{name=$Tag;os='win';arch='x64';channel='stable';filename=$downloadName}
-        $reservation=Send-MirrorRequest 'https://mirrorchyan.com/api/resources/IMAO/versions' 'POST' (New-MirrorForm $data)
+        $reservation=Send-MirrorRequest 'reserve version' 'https://mirrorchyan.com/api/resources/IMAO/versions' 'POST' (New-MirrorForm $data)
         $upload=$reservation.data
         $uri=[Uri]$upload.host
         if ($uri.Scheme -cne 'https' -or -not $uri.Host.EndsWith('.aliyuncs.com',[StringComparison]::OrdinalIgnoreCase) -or $uri.UserInfo -or $uri.Query) { throw 'Unexpected MirrorChyan object storage destination.' }
@@ -61,14 +71,14 @@ try {
         $fields=@{success_action_status='200';name=$upload.name;signature=$upload.signature;key=$upload.key;policy=$upload.policy;OSSAccessKeyId=$upload.access_key;'Content-Disposition'="attachment; filename=`"$downloadName`""}
         foreach ($k in $fields.Keys) { $multipart.Add([Net.Http.StringContent]::new([string]$fields[$k]),$k) }
         $multipart.Add([Net.Http.StreamContent]::new([IO.File]::OpenRead($archive)),'file',$name)
-        Send-MirrorRequest $uri.AbsoluteUri 'POST' $multipart $false | Out-Null
+        Send-MirrorRequest 'upload object' $uri.AbsoluteUri 'POST' $multipart $false | Out-Null
         $data.key=$upload.key
-        $callback=Send-MirrorRequest 'https://mirrorchyan.com/api/resources/IMAO/versions/callback' 'POST' (New-MirrorForm $data)
+        $callback=Send-MirrorRequest 'upload callback' 'https://mirrorchyan.com/api/resources/IMAO/versions/callback' 'POST' (New-MirrorForm $data)
         if ($callback.data.status_key) {
             $complete=$false
             for ($i=0; $i -lt 60; $i++) {
                 Start-Sleep -Seconds 5
-                $status=Send-MirrorRequest ("https://mirrorchyan.com/api/resources/IMAO/versions/status?key="+[Uri]::EscapeDataString($callback.data.status_key)) 'GET' $null
+                $status=Send-MirrorRequest 'processing status' ("https://mirrorchyan.com/api/resources/IMAO/versions/status?key="+[Uri]::EscapeDataString($callback.data.status_key)) 'GET' $null
                 if ($status.data.status -eq 2) { $complete=$true; break }
                 if ($status.data.status -ne 1) { throw 'MirrorChyan processing failed.' }
             }
@@ -76,6 +86,6 @@ try {
         }
     }
     $body=@{version_name=$Tag;channel='stable';content=[string]$release.body} | ConvertTo-Json
-    Send-MirrorRequest 'https://mirrorchyan.com/api/resources/IMAO/versions/release-note' 'PUT' ([Net.Http.StringContent]::new($body,[Text.Encoding]::UTF8,'application/json')) | Out-Null
+    Send-MirrorRequest 'release note' 'https://mirrorchyan.com/api/resources/IMAO/versions/release-note' 'PUT' ([Net.Http.StringContent]::new($body,[Text.Encoding]::UTF8,'application/json')) | Out-Null
     Write-Host "MirrorChyan synchronized $Tag."
 } finally { $client.Dispose(); $handler.Dispose() }
