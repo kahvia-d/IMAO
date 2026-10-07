@@ -78,10 +78,23 @@ try {
         $upload=$reservation.data
         $uri=[Uri]$upload.host
         if ($uri.Scheme -cne 'https' -or -not $uri.Host.EndsWith('.aliyuncs.com',[StringComparison]::OrdinalIgnoreCase) -or $uri.UserInfo -or $uri.Query) { throw 'Unexpected MirrorChyan object storage destination.' }
-        $multipart=[Net.Http.MultipartFormDataContent]::new()
+        # Object storage rejected the default .NET form with "The body of your POST request is not
+        # well-formed multipart/form-data": .NET generated a hyphenated GUID boundary and therefore
+        # quoted the Content-Type parameter (boundary="…") while the body used the same value
+        # unquoted, so the parser could not match a single part. Use a token-safe boundary, state the
+        # header explicitly, and give the file part a plain Content-Disposition instead of the
+        # filename* form. The resulting bytes were compared against the official uploader's form.
+        $boundary=[Guid]::NewGuid().ToString('N')
+        $multipart=[Net.Http.MultipartFormDataContent]::new($boundary)
+        $multipart.Headers.ContentType=[Net.Http.Headers.MediaTypeHeaderValue]::Parse("multipart/form-data; boundary=$boundary")
         $fields=@{success_action_status='200';name=$upload.name;signature=$upload.signature;key=$upload.key;policy=$upload.policy;OSSAccessKeyId=$upload.access_key;'Content-Disposition'="attachment; filename=`"$downloadName`""}
         foreach ($k in $fields.Keys) { $multipart.Add([Net.Http.StringContent]::new([string]$fields[$k]),$k) }
-        $multipart.Add([Net.Http.StreamContent]::new([IO.File]::OpenRead($archive)),'file',$name)
+        $filePart=[Net.Http.StreamContent]::new([IO.File]::OpenRead($archive))
+        $fileDisposition=[Net.Http.Headers.ContentDispositionHeaderValue]::new('form-data')
+        $fileDisposition.Name='file'
+        $fileDisposition.FileName='"' + $name + '"'
+        $filePart.Headers.ContentDisposition=$fileDisposition
+        $multipart.Add($filePart)
         Send-MirrorRequest 'upload object' $uri.AbsoluteUri 'POST' $multipart $false | Out-Null
         $data.key=$upload.key
         $callback=Send-MirrorRequest 'upload callback' 'https://mirrorchyan.com/api/resources/IMAO/versions/callback' 'POST' (New-MirrorForm $data)
