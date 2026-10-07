@@ -19,6 +19,7 @@ IMao-WinUI/obj
 IMao-WinUI.Core/obj
 Tests/ProgramUpdates/obj/
 Tests/ControllerRuntime/obj/
+Tests/ResourceBootstrapRuntime/obj/
 tools/ProgramLauncher/obj/
 CMakeFiles/
 1.0.2解压文件/

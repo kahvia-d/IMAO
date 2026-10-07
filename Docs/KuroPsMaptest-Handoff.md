@@ -43,6 +43,8 @@
 
 `Test-SelfContainedDeployment.ps1` 验证正确构建，以及依赖外部 .NET、遗漏 WinUI SDK、遗漏 .NET 程序集三类错误输出被拒绝；刷新入口已验证在错误 runtimeconfig 下零备份、零复制。修复后重新验证更新失败回滚，再生成 clean SHA 的自包含构建用于交付。
 
+**同日启动校验纠正：**旧生成器错误地把 formatVersion=2、bundled=false 的绝对路径候选写入 bundled-snapshot.json；原生候选校验通过并不能证明外壳接受内置清单。现按现有客户端协议写 formatVersion=1、bundled=true、相对路径的内置清单，format-2 候选仅保留在备份证据目录。部署额外执行 `ResourceBootstrapRuntime`，直接运行生产 `ResourceUpdateBootstrap.CreateSnapshots`、`ResourceSnapshotService.InitializeAsync`，再用实际选出的 CurrentPath 做 CoreHost 三项 ready 检查，且拒绝 LastFailure 回退。更新状态写入隔离测试目录，不修改玩家进度或真实更新状态。客户端协议与启动逻辑没有改动。
+
 更新异常会逐项恢复资源、程序和原收据；若恢复某项失败，会继续恢复其他项并明确报告 `INCOMPLETE`，此时不要启动。备份中的 `original-links.json`、`binary-changes.json` 与 `backup` 可用于人工恢复。运行中断若没有成功收据，也应先按备份恢复，不继续使用混合测试树。
 
 本次故障注入测试使用破损 CoreHost 可执行文件，使临时测试树在替换完成后的原生验证阶段失败；已确认快照、核心程序及资源目录所有权恢复。该测试未模拟恢复过程中发生文件锁或断电。

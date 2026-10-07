@@ -31,6 +31,11 @@ $backup = Join-Path $EvidenceRoot 'backup'
 $replacement = Join-Path $EvidenceRoot 'replacement'
 [IO.Directory]::CreateDirectory($backup) | Out-Null
 [IO.Directory]::CreateDirectory($replacement) | Out-Null
+$bootstrapDotnet = Join-Path (Split-Path -Parent $PSScriptRoot) 'tools/dotnet-sdk-8.0.424/dotnet.exe'
+if (-not (Test-Path -LiteralPath $bootstrapDotnet)) { $bootstrapDotnet = (Get-Command dotnet -ErrorAction Stop).Source }
+$bootstrapOutput = Join-Path $EvidenceRoot 'bootstrap-probe'
+& $bootstrapDotnet build (Join-Path $PSScriptRoot '../Tests/ResourceBootstrapRuntime/ResourceBootstrapRuntime.csproj') -c Release -o $bootstrapOutput -p:NuGetAudit=false
+if ($LASTEXITCODE -ne 0) { throw 'Client bootstrap probe build failed before deployment.' }
 $links = @()
 foreach ($name in @('KuroMap','KuroMapIcons','Updates')) {
     $existing = Get-Item -LiteralPath (Join-Path $assets $name)
@@ -126,10 +131,22 @@ $snapshot = [ordered]@{ formatVersion = 2; snapshotId = "maptest-$($build.source
     mapDataRoot = (Join-Path $assets 'KuroMap'); mapIconRoot = (Join-Path $assets 'KuroMapIcons'); mapFeatureRoot = '';
     bundled = $false; packages = $packages }
 $snapshotPath = Join-Path $assets 'Updates/bundled-snapshot.json'
+$candidatePath = Join-Path $EvidenceRoot 'native-candidate.json'
+$snapshot | ConvertTo-Json -Depth 100 | Set-Content $candidatePath -Encoding UTF8
+# The client bootstrap accepts only a relative format-1 bundled descriptor.
+# The absolute format-2 non-bundled candidate is strictly separate native evidence.
+$snapshot.formatVersion = 1
+$snapshot.bundled = $true
+$snapshot.baselineRoot = '.'
+$snapshot.mapDataRoot = 'KuroMap'
+$snapshot.mapIconRoot = 'KuroMapIcons'
+foreach ($package in $packages) { $package.directory = [IO.Path]::GetRelativePath($assets, $package.directory).Replace('\','/') }
 $snapshot | ConvertTo-Json -Depth 100 | Set-Content $snapshotPath -Encoding UTF8
-& (Join-Path $RunRoot 'IMao-CoreHost.exe') --check-resource-snapshot $snapshotPath
+& (Join-Path $RunRoot 'IMao-CoreHost.exe') --check-resource-snapshot $candidatePath
 if ($LASTEXITCODE -ne 0) { throw 'Updated maptest snapshot failed native validation. Backup retained; do not launch.' }
 & (Join-Path $PSScriptRoot 'Assert-SelfContainedRuntime.ps1') -AppRoot $RunRoot
+& $bootstrapDotnet (Join-Path $bootstrapOutput 'ResourceBootstrapRuntime.dll') $RunRoot (Join-Path $EvidenceRoot 'bootstrap-state')
+if ($LASTEXITCODE -ne 0) { throw 'Production client bootstrap rejected updated maptest; restoring previous tree.' }
 $receipt = [ordered]@{ sourceCommit = $build.sourceCommit; sourceDirty = $build.sourceDirty; version = $build.appVersion;
     completedAtUtc = [DateTime]::UtcNow.ToString('o'); runRoot = $RunRoot; backup = $EvidenceRoot;
     snapshotSha256 = (Get-FileHash $snapshotPath -Algorithm SHA256).Hash.ToLowerInvariant(); changedBinaries = $changes;
