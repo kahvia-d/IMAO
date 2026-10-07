@@ -13,7 +13,10 @@
     "artifactId": 11467942668,
     "artifactDigest": "425e5e71e5ed5606ed3c5b2d3b410849b2e7d07be386e925a1a2847617abe601",
     "version": "2026.10.7.1",
-    "sourceCommit": "f51bf527c384661f32b7460579f75f45181cacb6"
+    "sourceCommit": "f51bf527c384661f32b7460579f75f45181cacb6",
+    "requestId": "cdec2da9e7a4f084b248f92cf234b2a0090fa5b8952f32a5c5bcbda34e56e3ee",
+    "requestArtifactId": 11468108206,
+    "requestArtifactDigest": "35c67fdbd8f87079b1ddd67173919d3ec1a2c3a7eb9404c993645dcbcb7c8d32"
   },
   "completed": [
     {
