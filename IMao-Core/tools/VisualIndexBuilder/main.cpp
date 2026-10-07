@@ -142,8 +142,17 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-    if (argc < 3 || argc > 4) {
-        std::cerr << "Usage: IMaoVisualIndexBuilder <Assets directory> <output.imx> [manifest.json]\n";
+    if (argc < 3 || argc > 5) {
+        std::cerr << "Usage: IMaoVisualIndexBuilder <Assets directory> <output.imx> [manifest.json] [--base-only]\n"
+                     "  --base-only rebuilds just the base index and leaves the packs' shards alone.\n";
+        return 2;
+    }
+    // The packs' shards are rebuilt from each pack's own feature source, which is not
+    // always present (feature binaries are shipped without the XML they came from).
+    // This switch exists so the base index can still be rebuilt in that case.
+    const bool baseOnly = argc == 5 && std::string(argv[4]) == "--base-only";
+    if (argc == 5 && !baseOnly) {
+        std::cerr << "Unknown option: " << argv[4] << '\n';
         return 2;
     }
     const std::filesystem::path assetRoot = std::filesystem::absolute(argv[1]);
@@ -199,7 +208,7 @@ int main(int argc, char** argv) {
     nlohmann::json optionalShards = nlohmann::json::array();
     int optionalKuroFeatureCount = 0;
     for (const auto& kuro : kuroPacks) {
-        if (!kuro.loaded) continue;
+        if (!kuro.loaded || baseOnly) continue;
         nlohmann::json shardReport;
         if (!BuildAndInstallShard(kuro.featureData, visualIndex.vocabulary,
             featureRoot / "KuroTilePacks" / kuro.directoryName / "features.yml",
@@ -215,7 +224,7 @@ int main(int argc, char** argv) {
     }
     int optionalCandidateFeatureCount = 0;
     for (const auto& candidate : candidates) {
-        if (!candidate.loaded) continue;
+        if (!candidate.loaded || baseOnly) continue;
         nlohmann::json shardReport;
         if (!BuildAndInstallShard(candidate.featureData, visualIndex.vocabulary,
             featureRoot / candidate.directoryName / "manifest.json",
