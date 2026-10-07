@@ -2,6 +2,8 @@
 #include "../../Runtime/TextEncoding.h"
 
 #include <bcrypt.h>
+#include <zlib.h>
+
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -124,9 +126,17 @@ bool ReadExact(std::ifstream& input, void* destination, std::uint64_t byteCount,
     return true;
 }
 
+// A v2 header is 124 bytes and a v1 header 116; the version field alone tells the
+// reader which one it is looking at, because it is the first field after the magic.
+std::uint32_t HeaderSizeForVersion(std::uint32_t version) {
+    if (version == FeatureBinaryHeader::LegacyVersion) return FeatureBinaryHeader::SerializedSize;
+    if (version == FeatureBinaryHeader::CurrentVersion) return FeatureBinaryHeader::QuantizedSerializedSize;
+    return 0;
+}
+
 std::vector<std::uint8_t> SerializeHeader(const FeatureBinaryHeader& header) {
     std::vector<std::uint8_t> bytes;
-    bytes.reserve(FeatureBinaryHeader::SerializedSize);
+    bytes.reserve(FeatureBinaryHeader::QuantizedSerializedSize);
     bytes.insert(bytes.end(), FeatureBinaryHeader::Magic.begin(), FeatureBinaryHeader::Magic.end());
     AppendLittleEndian(bytes, header.version);
     AppendLittleEndian(bytes, header.headerLength);
@@ -137,13 +147,25 @@ std::vector<std::uint8_t> SerializeHeader(const FeatureBinaryHeader& header) {
     AppendLittleEndian(bytes, header.descriptorType);
     AppendLittleEndian(bytes, header.keypointPayloadLength);
     AppendLittleEndian(bytes, header.descriptorPayloadLength);
+    if (header.version >= FeatureBinaryHeader::CurrentVersion) {
+        AppendFloat32(bytes, header.descriptorScale);
+        AppendFloat32(bytes, header.descriptorMaximum);
+        AppendFloat32(bytes, header.descriptorMinimum);
+        AppendLittleEndian(bytes, header.descriptorOffset);
+        // Padding to the declared header size. A reader locates the hashes at the end
+        // of the header, so the two only have to agree with each other.
+        while (bytes.size() + header.sourceXmlSha256.size() + header.payloadSha256.size() <
+            FeatureBinaryHeader::QuantizedSerializedSize) {
+            bytes.push_back(0);
+        }
+    }
     bytes.insert(bytes.end(), header.sourceXmlSha256.begin(), header.sourceXmlSha256.end());
     bytes.insert(bytes.end(), header.payloadSha256.begin(), header.payloadSha256.end());
     return bytes;
 }
 
 bool DeserializeHeader(const std::vector<std::uint8_t>& bytes, FeatureBinaryHeader& header) {
-    if (bytes.size() != FeatureBinaryHeader::SerializedSize ||
+    if (bytes.size() < FeatureBinaryHeader::SerializedSize ||
         !std::equal(FeatureBinaryHeader::Magic.begin(), FeatureBinaryHeader::Magic.end(), bytes.begin())) return false;
     std::size_t offset = FeatureBinaryHeader::Magic.size();
     if (!ReadLittleEndian(bytes, offset, header.version) ||
@@ -155,10 +177,45 @@ bool DeserializeHeader(const std::vector<std::uint8_t>& bytes, FeatureBinaryHead
         !ReadLittleEndian(bytes, offset, header.descriptorType) ||
         !ReadLittleEndian(bytes, offset, header.keypointPayloadLength) ||
         !ReadLittleEndian(bytes, offset, header.descriptorPayloadLength)) return false;
+    if (header.version >= FeatureBinaryHeader::CurrentVersion) {
+        if (!ReadFloat32(bytes, offset, header.descriptorScale) ||
+            !ReadFloat32(bytes, offset, header.descriptorMaximum) ||
+            !ReadFloat32(bytes, offset, header.descriptorMinimum) ||
+            !ReadLittleEndian(bytes, offset, header.descriptorOffset)) return false;
+    }
+    // The hashes sit at the end of the header, so any bytes between the v2 fields
+    // and them are padding the writer added to reach the declared header size.
+    const auto hashStart = bytes.size() - header.sourceXmlSha256.size() - header.payloadSha256.size();
+    if (hashStart < offset) return false;
+    offset = hashStart;
     std::copy_n(bytes.begin() + offset, header.sourceXmlSha256.size(), header.sourceXmlSha256.begin());
     offset += header.sourceXmlSha256.size();
     std::copy_n(bytes.begin() + offset, header.payloadSha256.size(), header.payloadSha256.begin());
     return true;
+}
+
+// The payloads are tens to hundreds of megabytes and the caller already holds the
+// whole block, so both directions work on one buffer instead of streaming.
+bool Deflate(const std::uint8_t* source, std::size_t sourceBytes, std::vector<std::uint8_t>& output) {
+    if (sourceBytes == 0) {
+        output.clear();
+        return true;
+    }
+    uLongf bound = compressBound(static_cast<uLong>(sourceBytes));
+    output.resize(bound);
+    const auto result = compress2(output.data(), &bound, source, static_cast<uLong>(sourceBytes), 6);
+    if (result != Z_OK) return false;
+    output.resize(bound);
+    return true;
+}
+
+bool Inflate(const std::uint8_t* source, std::size_t sourceBytes, std::size_t expectedBytes,
+    std::vector<std::uint8_t>& output) {
+    output.resize(expectedBytes);
+    if (expectedBytes == 0) return true;
+    uLongf produced = static_cast<uLongf>(expectedBytes);
+    const auto result = uncompress(output.data(), &produced, source, static_cast<uLong>(sourceBytes));
+    return result == Z_OK && produced == expectedBytes;
 }
 
 std::vector<std::uint8_t> SerializeKeypoints(const std::vector<cv::KeyPoint>& keypoints) {
@@ -200,8 +257,32 @@ bool FeatureBinaryCodec::Load(const std::filesystem::path& path, ImageFeatureDat
             return false;
         }
 
-        std::vector<std::uint8_t> headerBytes(FeatureBinaryHeader::SerializedSize);
+        // The version decides how long the header is, so the magic and version are
+        // read as a fixed 12-byte prefix and the remainder follows once it is known.
+        std::vector<std::uint8_t> headerBytes(FeatureBinaryHeader::Magic.size() + sizeof(std::uint32_t));
         if (!ReadExact(input, headerBytes.data(), headerBytes.size())) {
+            error = "feature binary header is truncated";
+            return false;
+        }
+        std::uint32_t declaredVersion = 0;
+        {
+            std::size_t prefixOffset = FeatureBinaryHeader::Magic.size();
+            if (!std::equal(FeatureBinaryHeader::Magic.begin(), FeatureBinaryHeader::Magic.end(),
+                    headerBytes.begin()) ||
+                !ReadLittleEndian(headerBytes, prefixOffset, declaredVersion)) {
+                error = "feature binary magic or header encoding is invalid";
+                return false;
+            }
+        }
+        const auto headerSize = HeaderSizeForVersion(declaredVersion);
+        if (headerSize == 0) {
+            error = "feature binary version is unsupported";
+            return false;
+        }
+        const auto remainingHeaderBytes = static_cast<std::size_t>(headerSize) - headerBytes.size();
+        headerBytes.resize(headerSize);
+        if (!ReadExact(input, headerBytes.data() + FeatureBinaryHeader::Magic.size() + sizeof(std::uint32_t),
+                remainingHeaderBytes)) {
             error = "feature binary header is truncated";
             return false;
         }
@@ -212,16 +293,24 @@ bool FeatureBinaryCodec::Load(const std::filesystem::path& path, ImageFeatureDat
             error = "feature binary magic or header encoding is invalid";
             return false;
         }
-        if (header.version != FeatureBinaryHeader::CurrentVersion ||
-            header.headerLength != FeatureBinaryHeader::SerializedSize ||
-            header.endianMarker != FeatureBinaryHeader::LittleEndianMarker) {
-            error = "feature binary version, header length, or byte order is unsupported";
+        const bool quantized = header.version >= FeatureBinaryHeader::CurrentVersion;
+        const auto expectedDescriptorType = quantized
+            ? FeatureBinaryHeader::QuantizedUint8DescriptorType
+            : FeatureBinaryHeader::Float32DescriptorType;
+        if (header.headerLength != headerSize ||
+            header.endianMarker != FeatureBinaryHeader::LittleEndianMarker ||
+            header.keypointCount == 0 || header.keypointCount > kMaximumKeypointCount ||
+            header.descriptorRows != header.keypointCount || header.descriptorColumns != 128 ||
+            header.descriptorType != expectedDescriptorType) {
+            error = "feature binary counts or descriptor shape are invalid";
             return false;
         }
-        if (header.keypointCount == 0 || header.keypointCount > kMaximumKeypointCount ||
-            header.descriptorRows != header.keypointCount || header.descriptorColumns != 128 ||
-            header.descriptorType != FeatureBinaryHeader::Float32DescriptorType) {
-            error = "feature binary counts or descriptor shape are invalid";
+        if (quantized && (!std::isfinite(header.descriptorScale) || !std::isfinite(header.descriptorMaximum) ||
+            !std::isfinite(header.descriptorMinimum) ||
+            header.descriptorMaximum < header.descriptorMinimum ||
+            header.descriptorScale <= 0.0f ||
+            header.descriptorScale > FeatureBinaryHeader::MaximumQuantizationScale)) {
+            error = "feature binary quantization range is invalid";
             return false;
         }
 
@@ -230,9 +319,24 @@ bool FeatureBinaryCodec::Load(const std::filesystem::path& path, ImageFeatureDat
         std::uint64_t expectedDescriptorBytes = 0;
         if (!CheckedMultiply(header.keypointCount, FeatureBinaryHeader::KeypointSerializedSize, expectedKeypointBytes) ||
             !CheckedMultiply(header.descriptorRows, header.descriptorColumns, expectedDescriptorValues) ||
-            !CheckedMultiply(expectedDescriptorValues, sizeof(float), expectedDescriptorBytes) ||
-            header.keypointPayloadLength != expectedKeypointBytes ||
-            header.descriptorPayloadLength != expectedDescriptorBytes) {
+            !CheckedMultiply(expectedDescriptorValues, sizeof(float), expectedDescriptorBytes)) {
+            error = "feature binary payload lengths overflow";
+            return false;
+        }
+        // v1 stores both payloads raw, so each length is exact. v2 deflates both, so
+        // each stored length only has to be a plausible deflate result for the block
+        // it restores; the deflate bound is what makes that check possible without
+        // trusting the header. The header also cannot claim more rows than a matrix
+        // that large could hold, which bounds the allocation below.
+        const bool keypointLengthValid = quantized
+            ? header.keypointPayloadLength > 0 &&
+                header.keypointPayloadLength <= compressBound(static_cast<uLong>(expectedKeypointBytes))
+            : header.keypointPayloadLength == expectedKeypointBytes;
+        const bool descriptorLengthValid = quantized
+            ? header.descriptorPayloadLength > 0 &&
+                header.descriptorPayloadLength <= compressBound(static_cast<uLong>(expectedDescriptorValues))
+            : header.descriptorPayloadLength == expectedDescriptorBytes;
+        if (!keypointLengthValid || !descriptorLengthValid) {
             error = "feature binary payload lengths overflow or do not match the header";
             return false;
         }
@@ -244,13 +348,28 @@ bool FeatureBinaryCodec::Load(const std::filesystem::path& path, ImageFeatureDat
             return false;
         }
 
+        // The payload hash covers what the file restores - the serialized keypoints
+        // and the uint8 descriptor codes - and not the compressed bytes, because that
+        // is what Save hashed. Each block is therefore hashed after it is inflated.
         Sha256State payloadHash;
-        std::vector<std::uint8_t> keypointBytes(static_cast<std::size_t>(header.keypointPayloadLength));
-        if (!ReadExact(input, keypointBytes.data(), header.keypointPayloadLength, &payloadHash)) {
+        std::vector<std::uint8_t> storedKeypoints(static_cast<std::size_t>(header.keypointPayloadLength));
+        if (!ReadExact(input, storedKeypoints.data(), header.keypointPayloadLength)) {
             error = "feature keypoint payload is truncated";
             return false;
         }
-        fileHash.Update(keypointBytes.data(), keypointBytes.size());
+        fileHash.Update(storedKeypoints.data(), storedKeypoints.size());
+        std::vector<std::uint8_t> keypointBytes;
+        if (quantized) {
+            if (!Inflate(storedKeypoints.data(), storedKeypoints.size(),
+                    static_cast<std::size_t>(expectedKeypointBytes), keypointBytes)) {
+                error = "feature keypoint payload cannot be inflated";
+                return false;
+            }
+        }
+        else {
+            keypointBytes = std::move(storedKeypoints);
+        }
+        payloadHash.Update(keypointBytes.data(), keypointBytes.size());
 
         output.imgKeypoints.reserve(header.keypointCount);
         std::size_t offset = 0;
@@ -279,14 +398,44 @@ bool FeatureBinaryCodec::Load(const std::filesystem::path& path, ImageFeatureDat
 
         output.imgDescriptors.create(static_cast<int>(header.descriptorRows),
             static_cast<int>(header.descriptorColumns), CV_32FC1);
-        if (!output.imgDescriptors.isContinuous() ||
-            !ReadExact(input, output.imgDescriptors.data, header.descriptorPayloadLength, &payloadHash)) {
+        if (!output.imgDescriptors.isContinuous()) {
             output.Release();
-            error = "feature descriptor payload is truncated or non-contiguous";
+            error = "feature descriptor storage is non-contiguous";
             return false;
         }
-        fileHash.Update(output.imgDescriptors.data,
-            static_cast<std::size_t>(header.descriptorPayloadLength));
+        if (!quantized) {
+            if (!ReadExact(input, output.imgDescriptors.data, header.descriptorPayloadLength)) {
+                output.Release();
+                error = "feature descriptor payload is truncated";
+                return false;
+            }
+            fileHash.Update(output.imgDescriptors.data,
+                static_cast<std::size_t>(header.descriptorPayloadLength));
+            payloadHash.Update(output.imgDescriptors.data,
+                static_cast<std::size_t>(header.descriptorPayloadLength));
+        }
+        else {
+            std::vector<std::uint8_t> storedDescriptors(static_cast<std::size_t>(header.descriptorPayloadLength));
+            if (!ReadExact(input, storedDescriptors.data(), header.descriptorPayloadLength)) {
+                output.Release();
+                error = "feature descriptor payload is truncated";
+                return false;
+            }
+            fileHash.Update(storedDescriptors.data(), storedDescriptors.size());
+            std::vector<std::uint8_t> codes;
+            const auto codeBytes = static_cast<std::size_t>(expectedDescriptorValues);
+            if (!Inflate(storedDescriptors.data(), storedDescriptors.size(), codeBytes, codes)) {
+                output.Release();
+                error = "feature descriptor payload cannot be inflated";
+                return false;
+            }
+            payloadHash.Update(codes.data(), codes.size());
+            auto* values = output.imgDescriptors.ptr<float>();
+            const auto offset = static_cast<int>(header.descriptorOffset);
+            for (std::size_t index = 0; index < codeBytes; ++index) {
+                values[index] = static_cast<float>(static_cast<int>(codes[index]) + offset) * header.descriptorScale;
+            }
+        }
         if (payloadHash.Finish() != header.payloadSha256) {
             output.Release();
             error = "feature payload SHA-256 mismatch";
@@ -321,6 +470,130 @@ bool FeatureBinaryCodec::Save(const std::filesystem::path& path, const ImageFeat
             ? input.imgDescriptors
             : input.imgDescriptors.clone();
         const auto keypointBytes = SerializeKeypoints(input.imgKeypoints);
+        const auto valueCount = static_cast<std::size_t>(descriptors.total());
+        const auto* values = descriptors.ptr<float>();
+
+        // One scale for the whole file, taken from the range of values it holds.
+        // Descriptor values are signed, so the range is symmetric about zero and the
+        // code carries an offset: encoding is round(value / scale) + offset, which
+        // keeps the step proportional to the pack's own spread (SURF's extended
+        // descriptors are L2-normalized and land near +/-0.6, SIFT's gradients land
+        // in the hundreds).
+        float largest = 0.0f;
+        float smallest = 0.0f;
+        for (std::size_t index = 0; index < valueCount; ++index) {
+            const auto value = values[index];
+            if (value > largest) largest = value;
+            if (value < smallest) smallest = value;
+        }
+        if (!std::isfinite(largest) || !std::isfinite(smallest)) {
+            error = "input descriptors are not finite";
+            return false;
+        }
+        // Codes run from 0 to MaximumQuantizationOffset, so dividing the span by that
+        // offset (rather than by offset + 1) puts the largest value on the last code
+        // instead of one past it, which is what keeps the half-step bound honest.
+        const auto span = largest - smallest;
+        const auto codeCount = static_cast<float>(FeatureBinaryHeader::MaximumQuantizationOffset);
+        const auto scale = span > 0.0f ? span / codeCount : 0.0f;
+        if (!std::isfinite(scale) || (span > 0.0f && scale > FeatureBinaryHeader::MaximumQuantizationScale)) {
+            error = "input descriptor range is too wide to quantize";
+            return false;
+        }
+        // The offset is the code the smallest value maps to, so that the whole range
+        // lands inside 0..255 instead of being clamped at one end. Storing a value is
+        // then round(value / scale) - offset, and restoring it is
+        // (code + offset) * scale.
+        const auto offsetValue = span > 0.0f
+            ? static_cast<int>(std::lround(static_cast<double>(smallest) / scale))
+            : 0;
+        std::vector<std::uint8_t> codes(valueCount);
+        if (scale > 0.0f) {
+            for (std::size_t index = 0; index < valueCount; ++index) {
+                const auto code = std::lround(static_cast<double>(values[index]) / scale) - offsetValue;
+                codes[index] = static_cast<std::uint8_t>(code < 0 ? 0 : (code > 255 ? 255 : code));
+            }
+        }
+
+        std::vector<std::uint8_t> deflatedKeypoints;
+        std::vector<std::uint8_t> deflatedDescriptors;
+        if (!Deflate(keypointBytes.data(), keypointBytes.size(), deflatedKeypoints) ||
+            !Deflate(codes.data(), codes.size(), deflatedDescriptors)) {
+            error = "feature payload compression failed";
+            return false;
+        }
+
+        // The hash covers the serialized keypoints and the uint8 codes - what the
+        // file restores - rather than the compressed bytes, so the same features
+        // hash the same way whatever the deflate settings produce.
+        Sha256State payloadHash;
+        payloadHash.Update(keypointBytes.data(), keypointBytes.size());
+        payloadHash.Update(codes.data(), codes.size());
+
+        FeatureBinaryHeader header;
+        header.version = FeatureBinaryHeader::CurrentVersion;
+        header.headerLength = FeatureBinaryHeader::QuantizedSerializedSize;
+        header.descriptorType = FeatureBinaryHeader::QuantizedUint8DescriptorType;
+        header.keypointCount = static_cast<std::uint32_t>(input.imgKeypoints.size());
+        header.descriptorRows = static_cast<std::uint32_t>(descriptors.rows);
+        header.descriptorColumns = static_cast<std::uint32_t>(descriptors.cols);
+        header.keypointPayloadLength = deflatedKeypoints.size();
+        header.descriptorPayloadLength = deflatedDescriptors.size();
+        header.descriptorScale = scale;
+        header.descriptorMaximum = largest;
+        header.descriptorMinimum = smallest;
+        header.descriptorOffset = offsetValue;
+        header.sourceXmlSha256 = sourceXmlSha256;
+        header.payloadSha256 = payloadHash.Finish();
+        const auto headerBytes = SerializeHeader(header);
+
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        if (!output || !WriteExact(output, headerBytes.data(), headerBytes.size()) ||
+            !WriteExact(output, deflatedKeypoints.data(), deflatedKeypoints.size()) ||
+            !WriteExact(output, deflatedDescriptors.data(), deflatedDescriptors.size())) {
+            error = "feature binary write failed";
+            return false;
+        }
+        output.flush();
+        if (!output) {
+            error = "feature binary flush failed";
+            return false;
+        }
+
+        if (returnedHeader != nullptr) *returnedHeader = header;
+        error.clear();
+        return true;
+    }
+    catch (const std::exception& exception) {
+        error = exception.what();
+        return false;
+    }
+}
+
+float FeatureBinaryCodec::QuantizationTolerance(const FeatureBinaryHeader& header) {
+    if (header.version < FeatureBinaryHeader::CurrentVersion || header.descriptorScale <= 0.0f) return 0.0f;
+    // Half a code is the bound for reading a value back; the extra part covers the
+    // float rounding in the two divisions that encode and decode it, which for a SIFT
+    // range near 7000 is about a thousandth of a code.
+    return header.descriptorScale * 0.501f;
+}
+
+bool FeatureBinaryCodec::SaveLegacyFloat32(const std::filesystem::path& path, const ImageFeatureData& input,
+    const std::array<std::uint8_t, 32>& sourceXmlSha256, std::string& error,
+    FeatureBinaryHeader* returnedHeader) {
+    try {
+        if (input.imgKeypoints.empty() || input.imgKeypoints.size() > kMaximumKeypointCount ||
+            input.imgDescriptors.empty() || input.imgDescriptors.type() != CV_32FC1 ||
+            input.imgDescriptors.cols != 128 ||
+            input.imgDescriptors.rows != static_cast<int>(input.imgKeypoints.size())) {
+            error = "input feature counts or descriptor shape are invalid";
+            return false;
+        }
+
+        cv::Mat descriptors = input.imgDescriptors.isContinuous()
+            ? input.imgDescriptors
+            : input.imgDescriptors.clone();
+        const auto keypointBytes = SerializeKeypoints(input.imgKeypoints);
         const std::uint64_t descriptorBytes = descriptors.total() * descriptors.elemSize();
 
         Sha256State payloadHash;
@@ -328,6 +601,9 @@ bool FeatureBinaryCodec::Save(const std::filesystem::path& path, const ImageFeat
         payloadHash.Update(descriptors.data, static_cast<std::size_t>(descriptorBytes));
 
         FeatureBinaryHeader header;
+        header.version = FeatureBinaryHeader::LegacyVersion;
+        header.headerLength = FeatureBinaryHeader::SerializedSize;
+        header.descriptorType = FeatureBinaryHeader::Float32DescriptorType;
         header.keypointCount = static_cast<std::uint32_t>(input.imgKeypoints.size());
         header.descriptorRows = static_cast<std::uint32_t>(descriptors.rows);
         header.descriptorColumns = static_cast<std::uint32_t>(descriptors.cols);

@@ -4,13 +4,21 @@
 #include <Windows.h>
 #include <Psapi.h>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <string>
+#include <vector>
 
 namespace {
-bool FeaturesEqual(const ImageFeatureData& expected, const ImageFeatureData& actual, std::string& error) {
+/// Compares a decoded file against the source features. `descriptorTolerance` is
+/// the largest per-value difference the stored format can introduce: zero for the
+/// legacy float32 encoding, one quantization step for the quantized one. Keypoints
+/// are exact in both, because neither format touches them.
+bool FeaturesEqual(const ImageFeatureData& expected, const ImageFeatureData& actual,
+    float descriptorTolerance, std::string& error) {
     if (expected.imgKeypoints.size() != actual.imgKeypoints.size() ||
         expected.imgDescriptors.size() != actual.imgDescriptors.size() ||
         expected.imgDescriptors.type() != actual.imgDescriptors.type()) {
@@ -27,9 +35,25 @@ bool FeaturesEqual(const ImageFeatureData& expected, const ImageFeatureData& act
             return false;
         }
     }
-    const auto byteCount = expected.imgDescriptors.total() * expected.imgDescriptors.elemSize();
-    if (std::memcmp(expected.imgDescriptors.data, actual.imgDescriptors.data, byteCount) != 0) {
-        error = "round-trip descriptor bytes differ";
+    const auto* expectedValues = expected.imgDescriptors.ptr<float>();
+    const auto* actualValues = actual.imgDescriptors.ptr<float>();
+    const auto valueCount = static_cast<std::size_t>(expected.imgDescriptors.total());
+    if (descriptorTolerance <= 0.0f) {
+        if (std::memcmp(expected.imgDescriptors.data, actual.imgDescriptors.data,
+                valueCount * sizeof(float)) != 0) {
+            error = "round-trip descriptor bytes differ";
+            return false;
+        }
+        return true;
+    }
+    float worst = 0.0f;
+    for (std::size_t index = 0; index < valueCount; ++index) {
+        const auto difference = std::fabs(expectedValues[index] - actualValues[index]);
+        if (difference > worst) worst = difference;
+    }
+    if (worst > descriptorTolerance) {
+        error = "round-trip descriptor deviation " + std::to_string(worst) +
+            " exceeds the quantization step " + std::to_string(descriptorTolerance);
         return false;
     }
     return true;
@@ -70,14 +94,33 @@ int wmain(int argumentCount, wchar_t** arguments) {
         std::cout << result.dump() << '\n';
         return 0;
     }
-    if (argumentCount != 4) {
-        std::wcerr << L"Usage: IMaoFeatureConverter <Map_features.yml> <Map_features.imf> <manifest.json>\n"
+    // Arguments: [--format v1|v2] <source.xml> <output.imf> <manifest.json>.
+    // v2 (quantized descriptors, deflated payloads) is the format new packs use;
+    // v1 exists to reproduce a pack an older tool wrote.
+    bool legacyFormat = false;
+    std::vector<std::wstring> positional;
+    for (int index = 1; index < argumentCount; ++index) {
+        const std::wstring argument(arguments[index]);
+        if (argument == L"--format" && index + 1 < argumentCount) {
+            const std::wstring value(arguments[++index]);
+            if (value == L"v1" || value == L"legacy") legacyFormat = true;
+            else if (value == L"v2") legacyFormat = false;
+            else {
+                std::wcerr << L"--format accepts v1 or v2.\n";
+                return 2;
+            }
+            continue;
+        }
+        positional.push_back(argument);
+    }
+    if (positional.size() != 3) {
+        std::wcerr << L"Usage: IMaoFeatureConverter [--format v1|v2] <Map_features.yml> <Map_features.imf> <manifest.json>\n"
                       L"   or: IMaoFeatureConverter --benchmark <Map_features.imf>\n";
         return 2;
     }
-    const std::filesystem::path xmlPath(arguments[1]);
-    const std::filesystem::path outputPath(arguments[2]);
-    const std::filesystem::path manifestPath(arguments[3]);
+    const std::filesystem::path xmlPath(positional[0]);
+    const std::filesystem::path outputPath(positional[1]);
+    const std::filesystem::path manifestPath(positional[2]);
     const auto temporaryOutput = outputPath.wstring() + L".tmp";
     const auto temporaryManifest = manifestPath.wstring() + L".tmp";
 
@@ -95,29 +138,57 @@ int wmain(int argumentCount, wchar_t** arguments) {
     }
 
     FeatureBinaryHeader header;
-    if (!FeatureBinaryCodec::Save(temporaryOutput, xmlFeatures, sourceHash, error, &header)) {
+    const bool saved = legacyFormat
+        ? FeatureBinaryCodec::SaveLegacyFloat32(temporaryOutput, xmlFeatures, sourceHash, error, &header)
+        : FeatureBinaryCodec::Save(temporaryOutput, xmlFeatures, sourceHash, error, &header);
+    if (!saved) {
         std::cerr << error << '\n';
         return 1;
     }
 
     ImageFeatureData roundTrip;
     FeatureBinaryHeader loadedHeader;
-    if (!FeatureBinaryCodec::Load(temporaryOutput, roundTrip, error, &loadedHeader) ||
-        !FeaturesEqual(xmlFeatures, roundTrip, error)) {
+    if (!FeatureBinaryCodec::Load(temporaryOutput, roundTrip, error, &loadedHeader)) {
+        std::filesystem::remove(temporaryOutput);
+        std::cerr << error << '\n';
+        return 1;
+    }
+    // The bound is read from the loaded header, not the one written above: it depends
+    // on the quantization range the file actually carries. For a legacy file it is
+    // zero, which turns the comparison back into an exact byte match.
+    if (!FeaturesEqual(xmlFeatures, roundTrip,
+            FeatureBinaryCodec::QuantizationTolerance(loadedHeader), error)) {
         std::filesystem::remove(temporaryOutput);
         std::cerr << error << '\n';
         return 1;
     }
 
+    std::error_code sizeError;
+    const auto writtenBytes = std::filesystem::file_size(temporaryOutput, sizeError);
+    const auto valueCount = static_cast<std::uint64_t>(xmlFeatures.imgDescriptors.total());
+    const auto legacyBytes = valueCount * sizeof(float) +
+        xmlFeatures.imgKeypoints.size() * FeatureBinaryHeader::KeypointSerializedSize;
+
     nlohmann::json manifest = {
         {"format", "IMAOFT01"},
         {"version", header.version},
+        {"descriptorType", legacyFormat ? "float32" : "quantized-uint8"},
+        {"deflated", !legacyFormat},
         {"keypointCount", header.keypointCount},
         {"descriptorRows", header.descriptorRows},
         {"descriptorColumns", header.descriptorColumns},
+        {"fileBytes", sizeError ? 0 : writtenBytes},
+        {"uncompressedPayloadBytes", legacyBytes},
         {"sourceXmlSha256", FeatureBinaryCodec::Sha256Hex(header.sourceXmlSha256)},
         {"payloadSha256", FeatureBinaryCodec::Sha256Hex(header.payloadSha256)}
     };
+    if (!legacyFormat) {
+        manifest["descriptorScale"] = header.descriptorScale;
+        manifest["descriptorMinimum"] = header.descriptorMinimum;
+        manifest["descriptorMaximum"] = header.descriptorMaximum;
+        manifest["descriptorOffset"] = header.descriptorOffset;
+        manifest["quantizationStep"] = FeatureBinaryCodec::QuantizationTolerance(header);
+    }
     {
         std::ofstream file(temporaryManifest, std::ios::binary | std::ios::trunc);
         file << manifest.dump(2) << '\n';
@@ -137,6 +208,8 @@ int wmain(int argumentCount, wchar_t** arguments) {
     }
 
     std::cout << "Generated " << outputPath.string() << " with " << header.keypointCount
-              << " keypoints and verified an exact round trip.\n";
+              << " keypoints as IMAOFT01 v" << header.version << " ("
+              << (legacyFormat ? "float32, uncompressed" : "quantized uint8, deflated")
+              << "), verified round trip.\n";
     return 0;
 }

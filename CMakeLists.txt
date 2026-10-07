@@ -74,6 +74,33 @@ link_directories("${PADDLE_LIB}/paddle/lib")
 find_package(OpenCV REQUIRED PATHS ${OPENCV_DIR} NO_DEFAULT_PATH)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
+# Feature binaries (IMAOFT01 v2) deflate their payloads. The OpenCV build in this
+# repository already compiles zlib as a third-party dependency, so its static
+# library and header are reused rather than adding a second copy of zlib.
+find_package(ZLIB QUIET)
+if(ZLIB_FOUND)
+    set(IMAO_ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS})
+    set(IMAO_ZLIB_LIBRARIES ${ZLIB_LIBRARIES})
+else()
+    set(_opencvRoot "${CMAKE_SOURCE_DIR}/third_party/build/opencv-4.11.0")
+    # zlib.h is in the OpenCV source tree and zconf.h is generated into the build
+    # tree, so both directories go on the include path in that order.
+    if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/src/opencv-4.11.0/3rdparty/zlib/zlib.h" AND
+       EXISTS "${_opencvRoot}/3rdparty/zlib/zconf.h" AND
+       EXISTS "${_opencvRoot}/3rdparty/lib/zlib.lib")
+        set(IMAO_ZLIB_INCLUDE_DIRS
+            "${CMAKE_SOURCE_DIR}/third_party/src/opencv-4.11.0/3rdparty/zlib"
+            "${_opencvRoot}/3rdparty/zlib")
+        set(IMAO_ZLIB_LIBRARIES "${_opencvRoot}/3rdparty/lib/zlib.lib")
+    endif()
+endif()
+if(NOT IMAO_ZLIB_LIBRARIES OR NOT IMAO_ZLIB_INCLUDE_DIRS)
+    message(FATAL_ERROR
+        "zlib is required for IMAOFT01 v2 feature binaries. Configure with -DZLIB_ROOT, or keep the "
+        "OpenCV build under third_party/build/opencv-4.11.0 that carries 3rdparty/lib/zlib.lib.")
+endif()
+include_directories(${IMAO_ZLIB_INCLUDE_DIRS})
+
 add_definitions("/DGOOGLE_GLOG_DLL_DECL=")
 add_definitions("/DUNICODE" "/D_UNICODE")
 set(FLAG_OPENMP "/openmp")
@@ -254,7 +281,7 @@ set_target_properties(IMaoCaptureAssistant PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
 )
 target_include_directories(IMaoCaptureAssistant PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/IMao-Core/src)
-target_link_libraries(IMaoCaptureAssistant PRIVATE ${OpenCV_LIBS} user32.lib gdi32.lib mfplat.lib mfreadwrite.lib mfuuid.lib)
+target_link_libraries(IMaoCaptureAssistant PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} user32.lib gdi32.lib mfplat.lib mfreadwrite.lib mfuuid.lib)
 
 add_executable(IMaoFeatureConverter
     IMao-Core/tools/FeatureConverter/main.cpp
@@ -268,7 +295,7 @@ target_include_directories(IMaoFeatureConverter PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
 )
-target_link_libraries(IMaoFeatureConverter PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib psapi.lib)
+target_link_libraries(IMaoFeatureConverter PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib psapi.lib)
 
 # Offline calibration probe for the layered-floor ("分层地图") classifier. It reads the
 # per-floor sidecar index a region pack carries and reports which floor a captured minimap
@@ -286,7 +313,7 @@ target_include_directories(IMaoLayeredFloorProbe PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
 )
-target_link_libraries(IMaoLayeredFloorProbe PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib psapi.lib)
+target_link_libraries(IMaoLayeredFloorProbe PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib psapi.lib)
 
 add_executable(IMaoVisualIndexBuilder
     IMao-Core/tools/VisualIndexBuilder/main.cpp
@@ -309,7 +336,7 @@ target_include_directories(IMaoVisualIndexBuilder PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
 )
-target_link_libraries(IMaoVisualIndexBuilder PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
+target_link_libraries(IMaoVisualIndexBuilder PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
 
 add_executable(IMaoOptimizationTests
     IMao-Core/tests/OptimizationTests.cpp
@@ -339,7 +366,7 @@ target_include_directories(IMaoOptimizationTests PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
 target_compile_definitions(IMaoOptimizationTests PRIVATE IMAO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib user32.lib)
+target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib user32.lib)
 
 enable_testing()
 add_test(NAME IMaoOptimizationTests COMMAND IMaoOptimizationTests)
@@ -374,7 +401,7 @@ target_include_directories(IMaoLayeredMapTests PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
 set_target_properties(IMaoLayeredMapTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
-target_link_libraries(IMaoLayeredMapTests PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib psapi.lib)
+target_link_libraries(IMaoLayeredMapTests PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib psapi.lib)
 add_test(NAME IMaoLayeredMapTests COMMAND IMaoLayeredMapTests)
 
 add_executable(IMaoRoutePlanningTests IMao-Core/tests/RoutePlanningTests.cpp)
@@ -455,7 +482,7 @@ target_include_directories(IMaoVisualRegression PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
 )
-target_link_libraries(IMaoVisualRegression PRIVATE ${OpenCV_LIBS} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
+target_link_libraries(IMaoVisualRegression PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
 add_test(NAME IMaoMultiSceneViewportTests COMMAND IMaoVisualRegression --scene-self-test)
 
 add_executable(IMaoCoordinateRegression

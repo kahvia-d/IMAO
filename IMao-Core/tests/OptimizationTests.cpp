@@ -519,12 +519,20 @@ void TestFeatureBinaryCodec() {
     const auto cleanup = wil::scope_exit([&] { std::filesystem::remove_all(testDirectory); });
 
     ImageFeatureData input;
-    input.imgKeypoints = {
-        cv::KeyPoint(1.25f, 2.5f, 3.75f, 4.0f, 5.0f, 6, 7),
-        cv::KeyPoint(-8.0f, 9.5f, 10.0f, 11.0f, 12.0f, -13, 14),
-        cv::KeyPoint(15.0f, -16.0f, 17.0f, 18.0f, 19.0f, 20, -21)
-    };
-    input.imgDescriptors.create(3, 128, CV_32FC1);
+    // Enough keypoints that deflating the keypoint block actually helps: with a
+    // handful of records zlib's own overhead is larger than the raw bytes.
+    std::vector<cv::KeyPoint> keypoints;
+    for (int index = 0; index < 900; ++index) {
+        keypoints.emplace_back(
+            static_cast<float>(index % 61) * 1.5f + 0.25f,
+            static_cast<float>(index % 47) * 2.25f + 0.5f,
+            3.0f + static_cast<float>(index % 7),
+            static_cast<float>(index % 360),
+            5.0f + static_cast<float>(index % 23),
+            index % 9, index % 3);
+    }
+    input.imgKeypoints = keypoints;
+    input.imgDescriptors.create(static_cast<int>(keypoints.size()), 128, CV_32FC1);
     for (int row = 0; row < input.imgDescriptors.rows; ++row) {
         for (int column = 0; column < input.imgDescriptors.cols; ++column) {
             input.imgDescriptors.at<float>(row, column) = static_cast<float>(row * 128 + column) / 17.0f;
@@ -535,23 +543,79 @@ void TestFeatureBinaryCodec() {
     for (std::size_t index = 0; index < sourceHash.size(); ++index) sourceHash[index] = static_cast<std::uint8_t>(index);
     const auto first = testDirectory / "first.imf";
     const auto second = testDirectory / "second.imf";
+    const auto legacy = testDirectory / "legacy.imf";
     std::string error;
-    Expect(FeatureBinaryCodec::Save(first, input, sourceHash, error), "fixture IMF should save: " + error);
-    Expect(FeatureBinaryCodec::Save(second, input, sourceHash, error), "second fixture IMF should save: " + error);
+
+    // The shipping format is v2: quantized descriptors with deflated payloads. It is
+    // checked against a one-step tolerance, because that is all storing a 128-value
+    // float row as 128 bytes costs - and it is the only difference the format makes.
+    FeatureBinaryHeader header;
+    Expect(FeatureBinaryCodec::Save(first, input, sourceHash, error, &header),
+        "fixture IMF should save: " + error);
+    Expect(header.version == FeatureBinaryHeader::CurrentVersion &&
+        header.descriptorType == FeatureBinaryHeader::QuantizedUint8DescriptorType,
+        "the codec should write the quantized format by default");
+    // Load validates the file against these three numbers, so a mismatch here would
+    // make every v2 file unreadable.
+    const auto storedBytes = ReadAll(first);
+    Expect(header.keypointPayloadLength + header.headerLength + header.descriptorPayloadLength ==
+        storedBytes.size(),
+        "the v2 header payload lengths should add up to the file size");
+    Expect(header.keypointPayloadLength < input.imgKeypoints.size() * FeatureBinaryHeader::KeypointSerializedSize &&
+        header.descriptorPayloadLength < input.imgDescriptors.total() * sizeof(float),
+        "both v2 payloads should be stored deflated");
+    Expect(FeatureBinaryCodec::Save(second, input, sourceHash, error),
+        "second fixture IMF should save: " + error);
     Expect(ReadAll(first) == ReadAll(second), "same input should produce deterministic IMF bytes");
 
     ImageFeatureData output;
-    Expect(FeatureBinaryCodec::Load(first, output, error), "fixture IMF should load: " + error);
-    Expect(output.imgKeypoints.size() == input.imgKeypoints.size() &&
-        cv::countNonZero(output.imgDescriptors != input.imgDescriptors) == 0,
-        "fixture round trip should preserve descriptors");
+    FeatureBinaryHeader loadedHeader;
+    Expect(FeatureBinaryCodec::Load(first, output, error, &loadedHeader), "fixture IMF should load: " + error);
+    Expect(output.imgKeypoints.size() == input.imgKeypoints.size(),
+        "quantized round trip should preserve every keypoint");
+    double worstDescriptorDelta = 0.0;
+    for (int row = 0; row < input.imgDescriptors.rows; ++row) {
+        for (int column = 0; column < input.imgDescriptors.cols; ++column) {
+            worstDescriptorDelta = std::max(worstDescriptorDelta, std::fabs(
+                static_cast<double>(input.imgDescriptors.at<float>(row, column)) -
+                static_cast<double>(output.imgDescriptors.at<float>(row, column))));
+        }
+    }
+    // QuantizationTolerance is the per-value bound the format promises.
+    const auto tolerance = static_cast<double>(FeatureBinaryCodec::QuantizationTolerance(loadedHeader));
+    Expect(tolerance > 0.0 && worstDescriptorDelta <= tolerance,
+        "quantized round trip should stay inside the declared quantization bound");
+    // The format exists to be smaller, so the saving itself is part of the contract.
+    const auto legacyBytes = static_cast<std::uint64_t>(input.imgDescriptors.total()) * sizeof(float) +
+        input.imgKeypoints.size() * FeatureBinaryHeader::KeypointSerializedSize;
+    Expect(std::filesystem::file_size(first) < legacyBytes / 2,
+        "the quantized format should be at least twice as small as the float32 one");
 
+    // v1 stays readable and byte-exact: every pack shipped before this change is v1.
+    Expect(FeatureBinaryCodec::SaveLegacyFloat32(legacy, input, sourceHash, error, &header),
+        "legacy fixture IMF should save: " + error);
+    Expect(header.version == FeatureBinaryHeader::LegacyVersion &&
+        header.headerLength == FeatureBinaryHeader::SerializedSize,
+        "the legacy writer should emit a v1 header");
+    ImageFeatureData legacyOutput;
+    Expect(FeatureBinaryCodec::Load(legacy, legacyOutput, error, &header), "legacy IMF should load: " + error);
+    Expect(header.version == FeatureBinaryHeader::LegacyVersion &&
+        legacyOutput.imgKeypoints.size() == input.imgKeypoints.size() &&
+        cv::countNonZero(legacyOutput.imgDescriptors != input.imgDescriptors) == 0,
+        "legacy round trip should preserve descriptors exactly");
+    Expect(std::filesystem::file_size(legacy) == legacyBytes + FeatureBinaryHeader::SerializedSize,
+        "the legacy file should be the raw payload plus a 116-byte header");
+
+    // Corrupting a deflated block is caught by the inflater before the hash is even
+    // reached, so this flips a byte of the descriptor payload and accepts either
+    // rejection - what matters is that the file is refused, not which guard fires.
     auto corrupted = ReadAll(first);
     corrupted.back() ^= 0xff;
     const auto corruptedPath = testDirectory / "corrupted.imf";
     WriteAll(corruptedPath, corrupted);
-    Expect(!FeatureBinaryCodec::Load(corruptedPath, output, error) && error.find("SHA-256") != std::string::npos,
-        "payload corruption should fail its hash");
+    Expect(!FeatureBinaryCodec::Load(corruptedPath, output, error) &&
+        (error.find("SHA-256") != std::string::npos || error.find("inflate") != std::string::npos),
+        "payload corruption should be rejected");
 
     corrupted = ReadAll(first);
     corrupted.resize(corrupted.size() - 1);
@@ -560,7 +624,7 @@ void TestFeatureBinaryCodec() {
     Expect(!FeatureBinaryCodec::Load(truncatedPath, output, error), "truncated IMF should fail safely");
 
     corrupted = ReadAll(first);
-    corrupted[8] = 2;
+    WriteLittleEndian32(corrupted, 8, FeatureBinaryHeader::CurrentVersion + 1);
     const auto versionPath = testDirectory / "version.imf";
     WriteAll(versionPath, corrupted);
     Expect(!FeatureBinaryCodec::Load(versionPath, output, error) && error.find("version") != std::string::npos,
@@ -579,6 +643,15 @@ void TestFeatureBinaryCodec() {
     WriteAll(shapePath, corrupted);
     Expect(!FeatureBinaryCodec::Load(shapePath, output, error),
         "non-128 descriptor width should fail safely");
+
+    // A v1 header spells its payload lengths out, so a wrong one is a structural
+    // error rather than something the inflater would only discover later.
+    corrupted = ReadAll(legacy);
+    WriteLittleEndian32(corrupted, 20, 2);
+    const auto legacyCountPath = testDirectory / "legacy-count.imf";
+    WriteAll(legacyCountPath, corrupted);
+    Expect(!FeatureBinaryCodec::Load(legacyCountPath, output, error),
+        "a v1 keypoint count that disagrees with its payload should fail safely");
 }
 
 MapVisualIndex CreateVisualIndexFixture(const std::array<std::uint8_t, 32>& sourceHash) {
