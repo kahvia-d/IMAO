@@ -4,7 +4,7 @@
 
 实施顺序：拆分准备和签名；加入双签名请求与产物验证；加入 Git 事务及原子 stable 推进；固化构建依赖和权限隔离的工作流；本地助手与恢复文档；测试、独立审查。
 
-构建产物保持在云端。唯一往返数据是独立的小签名请求（展开不超过 16 MiB）以及签名响应（不超过 16 KiB）。请求包含原始 catalog 字节、审批 payload、所有附件的摘要、准备报告和前一 stable。审批签名同时绑定源码、版本、事务、预留 sequence、artifact ID/digest、安装 ZIP 及报告；客户端签名仍是 P-256/SHA-256/P1363。
+构建产物保持在云端。唯一往返数据是独立的小签名请求（展开不超过 16 MiB）、签名响应（不超过 16 KiB），以及云端那份不超过 1 MiB 的预演证据（本地只读它，用来核对要签的正是被预演过的那个冻结产物）。请求包含原始 catalog 字节、审批 payload、所有附件的摘要、准备报告和前一 stable。审批签名同时绑定源码、版本、事务、预留 sequence、artifact ID/digest、安装 ZIP 及报告；客户端签名仍是 P-256/SHA-256/P1363。
 
 正式发布必须显式 publish=true 和 confirm_version，production Environment 限制 main。构建 Job 没有生产凭据；只有 production 审批通过的 prepare Job 才在发布锁内预留 sequence。publish=false 用来在不审批、不预留、不改远端状态的前提下试跑同一条流水线。Gitee 和 Mirror酱使用独立 Environment，只在 GitHub stable 成功后运行。
 
@@ -20,7 +20,7 @@ SDK 由 global.json 固定；.github/dependencies.lock.json 固定官方 Paddle/
 
 1. 提交并审核本次源码，更新 Version.props 和 Docs/CloudReleaseNotes.md。在 main 手动运行一次 **Cloud release build**，显式 `publish=true`、`confirm_version=<Version.props>`。这一个 Run 同时完成预演与正式构建：真实 native/managed 测试、ZIP、分片、资源包，以及临时测试密钥对这个冻结产物的 finalize，都在里面跑完，不分配正式 sequence，也不更改 Release/stable/镜像。整条链绑定 dispatch 时的 SHA，所以派发之后继续往 main 提交（包括改发布脚本）不会让本次发布失效；只有 `updates/stable.json` 被别人推进才会让预留失败。
 2. 构建与临时密钥预演全绿后，Run 停在 production Environment 等审批。先看 Run 摘要里的 version／source commit／artifact digest／provisional sequence，确认就是要发的版本，再批准。审批通过后的 prepare Job 才在发布锁内预留 sequence 并生成小请求，Runner 结束。不想发就取消 Run：不预留 sequence、不动 Release/stable/镜像；只在 GitHub 留下这次运行的大 artifact 与预演证据，按各自 retention 过期（没发布就不会走清理作业）。只想试跑流水线（例如改了发布脚本）时用 `publish=false`。
-3. 在可信 Windows 本机，从审核过的本地源码构建 UpdatePublisher；运行 `pwsh ./scripts/Complete-CiRelease.ps1 -RunId <步骤 1 的 Run ID> -ConfirmVersion <版本> -ExpectedSourceCommit <40位SHA>`。助手会先要求该 Run 带有未过期的临时密钥预演证据。核对展示的安装包摘要与请求后输入版本确认。只下载最多16 MiB请求，只上传不到16 KiB双签名响应。默认密钥仍位于 `%LOCALAPPDATA%/WWMAP-TOOLS-Publisher/release-signing-key.json`；不自动选择 cloud artifact 内的工具或公钥。
+3. 在可信 Windows 本机，从审核过的本地源码构建 UpdatePublisher；运行 `pwsh ./scripts/Complete-CiRelease.ps1 -RunId <步骤 1 的 Run ID> -ConfirmVersion <版本> -ExpectedSourceCommit <40位SHA>`。助手会先读这个 Run 的临时密钥预演证据，核对它绑定的是本次要签的同一个冻结产物（artifact ID/digest、源码、版本）。核对展示的安装包摘要与请求后输入版本确认。只下载最多16 MiB请求，只上传不到16 KiB双签名响应。默认密钥仍位于 `%LOCALAPPDATA%/WWMAP-TOOLS-Publisher/release-signing-key.json`；不自动选择 cloud artifact 内的工具或公钥。
 4. 再确认 production 发布审批。云端核验 artifact service digest、双签名、每个文件摘要、安装 ZIP 与分片的完整同树关系，然后复用/上传 draft、确认远程摘要与公开可达性、发布 immutable Release，最后一个 Git commit 同步 stable/channel-state/事务。Gitee、Mirror酱自动独立同步，随后清理已成功发布的大 artifact；小请求留30天。
 
 ## 恢复
