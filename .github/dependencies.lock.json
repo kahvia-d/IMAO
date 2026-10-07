@@ -11,7 +11,7 @@
       "sha256": "9cd42377704398796071b8597cd7e21da254a43bad98c4199739647adc13fa6f",
       "size": 17094462,
       "patchSha256": "54ec890b27dd375df1f019361346f32b0b04a9f6b179542d716653c0b0bba34d",
-      "buildRecipe": "msvc-14.44-sdk-26100-input-only-v1"
+      "buildRecipe": "msvc-14.44-sdk-26100-input-only-repro-v2"
     },
     {
       "name": "paddle",

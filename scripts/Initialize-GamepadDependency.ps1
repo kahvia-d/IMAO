@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param([string]$SourceRoot, [string]$ArchiveRoot)
 $ErrorActionPreference = 'Stop'
+if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 is required. Run this installer with pwsh.exe.' }
+. (Join-Path $PSScriptRoot 'NativeImageReproducibility.ps1')
 if (-not $SourceRoot) { $SourceRoot = Split-Path -Parent $PSScriptRoot }
 if (-not $ArchiveRoot) { $ArchiveRoot = Join-Path $SourceRoot 'third_party/downloads' }
 $lock = Get-Content (Join-Path $SourceRoot '.github/dependencies.lock.json') -Raw | ConvertFrom-Json
@@ -33,6 +35,7 @@ if (Test-Path -LiteralPath $receiptPath) {
         (Get-SdlHash (Join-Path $destination 'SDL3.dll')) -ceq $receipt.dllSha256 -and
         (Test-Path -LiteralPath (Join-Path $destination 'LICENSE.txt')) -and
         (Get-SdlHash (Join-Path $destination 'LICENSE.txt')) -ceq $receipt.licenseSha256) {
+        Assert-ReproducibleNativeImage (Join-Path $destination 'SDL3.dll')
         Write-Host "Verified cached input-only SDL3 $($dep.version)"; return
     }
 }
@@ -84,10 +87,11 @@ function Invoke-SdlBuild([string]$Command) {
     }
     finally { $child.Dispose() }
 }
-Invoke-SdlBuild ('"' + $cmake + '" -S "' + $source + '" -B "' + $buildRoot + '" -G Ninja "-DCMAKE_MAKE_PROGRAM=' + $ninja + '" -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF')
+Invoke-SdlBuild ('"' + $cmake + '" -S "' + $source + '" -B "' + $buildRoot + '" -G Ninja "-DCMAKE_MAKE_PROGRAM=' + $ninja + '" "-DCMAKE_C_FLAGS=/Brepro" "-DCMAKE_CXX_FLAGS=/Brepro" "-DCMAKE_SHARED_LINKER_FLAGS=/Brepro" "-DCMAKE_EXE_LINKER_FLAGS=/Brepro" -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF')
 Invoke-SdlBuild ('"' + $cmake + '" --build "' + $buildRoot + '" --target SDL3-shared --parallel 4')
 $dll = Join-Path $buildRoot 'SDL3.dll'
 if (-not (Test-Path -LiteralPath $dll)) { throw 'SDL build did not produce SDL3.dll.' }
+Assert-ReproducibleNativeImage $dll
 Copy-Item -LiteralPath $dll -Destination (Join-Path $destination 'SDL3.dll') -Force
 Copy-Item -LiteralPath (Join-Path $source 'LICENSE.txt') -Destination (Join-Path $destination 'LICENSE.txt') -Force
 [ordered]@{ version = $dep.version; recipe = $recipe; sourceSha256 = $dep.sha256; patchSha256 = $dep.patchSha256;

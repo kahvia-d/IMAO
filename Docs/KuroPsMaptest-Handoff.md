@@ -35,6 +35,10 @@
 
 本地验证开发输出和小 ZIP/分片夹具，包括拒绝被替换的 SDL DLL；约 1 GB 的正式安装包及真实分片留待验收后在云端全量预演，不在此次本地交付中上传大文件。
 
+发布前复审补齐 SDL 的 MSVC 编译及链接 `/Brepro`，构建配方升级为 `msvc-14.44-sdk-26100-input-only-repro-v2`，使旧缓存失效。依赖安装器及打包检查验证真实 PE 的 Reproducible 标记，打包同时验证完整配方。两次独立干净构建的 DLL SHA-256 相同，旧的非可复现 DLL 被拒绝；设备虚拟集成检查再次通过。应用的 MSBuild 依赖入口使用 PowerShell 7（`pwsh.exe`），与本地和 CI 构建环境一致。
+
+首个完整云端预演 `37566477011` 在旧源码 `78937e5` 上通过，之后的未签名正式构建 `37568623232` 因上述复审修正而取消，未预留 sequence、未使用生产私钥、未发布 Release。修正提交必须重新完成 `publish=false` 预演，不复用该旧 SHA 的验收。
+
 ## 更新与恢复
 
 `scripts/Update-MapTestBuild.ps1` 更新已有测试树，预备份受影响程序和 KuroMap/KuroMapIcons/Updates 及目录链接信息，只替换必要程序与点位资源，随后按实际保留文件生成快照并调用原生验证。替换前 unlink 硬链接，避免改动正式构建源；保留 SavedPoints、SavedRoutes、ProgramUpdates、地图包及模型。

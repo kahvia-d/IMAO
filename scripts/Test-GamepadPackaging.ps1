@@ -1,10 +1,14 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$AppRoot, [string]$ManualZip, [string]$ShardRoot)
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'NativeImageReproducibility.ps1')
 $repo = Split-Path -Parent $PSScriptRoot
-$dep = (Get-Content (Join-Path $repo '.github/dependencies.lock.json') -Raw | ConvertFrom-Json).dependencies | Where-Object name -eq sdl3
+$lock = Get-Content (Join-Path $repo '.github/dependencies.lock.json') -Raw | ConvertFrom-Json
+$dep = $lock.dependencies | Where-Object name -eq sdl3
 $receipt = Get-Content (Join-Path $AppRoot 'SDL3-BUILD.json') -Raw | ConvertFrom-Json
-if ($receipt.version -cne $dep.version -or $receipt.sourceSha256 -cne $dep.sha256 -or $receipt.patchSha256 -cne $dep.patchSha256) { throw 'Packaged SDL provenance differs from dependency lock.' }
+$recipe = "$($dep.sha256):$($dep.patchSha256):$($dep.buildRecipe):$($lock.msvc):$($lock.windowsSdk)"
+if ($receipt.version -cne $dep.version -or $receipt.sourceSha256 -cne $dep.sha256 -or $receipt.patchSha256 -cne $dep.patchSha256 -or $receipt.recipe -cne $recipe) { throw 'Packaged SDL provenance differs from dependency lock.' }
+Assert-ReproducibleNativeImage (Join-Path $AppRoot 'SDL3.dll')
 $expected = @{
     'SDL3.dll' = $receipt.dllSha256
     'SDL3-LICENSE.txt' = $receipt.licenseSha256

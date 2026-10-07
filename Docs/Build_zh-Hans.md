@@ -9,7 +9,9 @@
 | --- | --- |
 | Visual Studio Build Tools | 2022，含 Desktop development with C++、CMake tools |
 | Windows SDK | 10.0.26100.0 |
-| .NET SDK | 8.x 或更高（运行时不能替代 SDK） |
+| PowerShell | 7 或更高，`pwsh.exe` 在 PATH 中 |
+| .NET SDK | 8.0.424，按 `global.json` 固定（运行时不能替代 SDK） |
+| SDL | 3.4.18，锁定官方源码、输入补丁及 MSVC 可复现构建配方 |
 | OpenCV | 4.11.0 + `opencv_contrib` 4.11.0，启用 `OPENCV_ENABLE_NONFREE=ON` |
 | Paddle Inference | 3.0.0，Windows x64 / CPU / AVX / MKL |
 | Git LFS | 用于 `Map_features.yml`、`Map_features.imf`、基础/可选 `*.imx` 与生成清单 |
