@@ -167,6 +167,9 @@ set(DEPS
 Set(DEPS ${DEPS} ${CMAKE_SOURCE_DIR}/IMao-Core/paddleocr_cpp_infer/lib/ppocr.lib)
 Set(DEPS ${DEPS} Windowscodecs.lib windowsapp.lib dwmapi.lib d3d11.lib shlwapi.lib bcrypt.lib)
 set(DEPS ${DEPS} ${OpenCV_LIBS})
+# The feature binary codec deflates payloads, so every target that links the core
+# library needs zlib as well.
+set(DEPS ${DEPS} ${IMAO_ZLIB_LIBRARIES})
 
 if (EXISTS "${PADDLE_LIB}/third_party/install/snappy/lib")
     set(DEPS ${DEPS} snappy)
