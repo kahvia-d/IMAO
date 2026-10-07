@@ -78,24 +78,40 @@ try {
         $upload=$reservation.data
         $uri=[Uri]$upload.host
         if ($uri.Scheme -cne 'https' -or -not $uri.Host.EndsWith('.aliyuncs.com',[StringComparison]::OrdinalIgnoreCase) -or $uri.UserInfo -or $uri.Query) { throw 'Unexpected MirrorChyan object storage destination.' }
-        # Object storage rejected the default .NET form with "The body of your POST request is not
-        # well-formed multipart/form-data": .NET generated a hyphenated GUID boundary and therefore
-        # quoted the Content-Type parameter (boundary="…") while the body used the same value
-        # unquoted, so the parser could not match a single part. Use a token-safe boundary, state the
-        # header explicitly, and give the file part a plain Content-Disposition instead of the
-        # filename* form. The resulting bytes were compared against the official uploader's form.
+        # Object storage keeps answering "The body of your POST request is not well-formed
+        # multipart/form-data" for whatever .NET's form writer produces (a quoted boundary parameter
+        # was one defect, but not the only one), while the reference uploader - `requests` - works.
+        # So write the body here, byte for byte, in the reference's shape: quoted field names, the
+        # Content-Disposition header first, the file last with its own Content-Type, and a token-safe
+        # unquoted boundary. The skeleton is checked locally before this ever runs.
         $boundary=[Guid]::NewGuid().ToString('N')
-        $multipart=[Net.Http.MultipartFormDataContent]::new($boundary)
-        $multipart.Headers.ContentType=[Net.Http.Headers.MediaTypeHeaderValue]::Parse("multipart/form-data; boundary=$boundary")
-        $fields=@{success_action_status='200';name=$upload.name;signature=$upload.signature;key=$upload.key;policy=$upload.policy;OSSAccessKeyId=$upload.access_key;'Content-Disposition'="attachment; filename=`"$downloadName`""}
-        foreach ($k in $fields.Keys) { $multipart.Add([Net.Http.StringContent]::new([string]$fields[$k]),$k) }
-        $filePart=[Net.Http.StreamContent]::new([IO.File]::OpenRead($archive))
-        $fileDisposition=[Net.Http.Headers.ContentDispositionHeaderValue]::new('form-data')
-        $fileDisposition.Name='file'
-        $fileDisposition.FileName='"' + $name + '"'
-        $filePart.Headers.ContentDisposition=$fileDisposition
-        $multipart.Add($filePart)
-        Send-MirrorRequest 'upload object' $uri.AbsoluteUri 'POST' $multipart $false | Out-Null
+        $bodyPath=Join-Path $root 'upload.multipart'
+        if (Test-Path -LiteralPath $bodyPath) { Remove-Item -LiteralPath $bodyPath -Force }
+        $crlf="`r`n"
+        $writer=[IO.File]::Create($bodyPath)
+        try {
+            function Write-Part([string]$Text) { $bytes=[Text.Encoding]::UTF8.GetBytes($Text); $writer.Write($bytes,0,$bytes.Length) }
+            $fields=[ordered]@{success_action_status='200';name=$upload.name;signature=$upload.signature;key=$upload.key;policy=$upload.policy;OSSAccessKeyId=$upload.access_key;'Content-Disposition'="attachment; filename=`"$downloadName`""}
+            foreach ($k in $fields.Keys) {
+                Write-Part "--$boundary$crlf"
+                Write-Part "Content-Disposition: form-data; name=`"$k`"$crlf$crlf"
+                Write-Part ([string]$fields[$k] + $crlf)
+            }
+            Write-Part "--$boundary$crlf"
+            Write-Part "Content-Disposition: form-data; name=`"file`"; filename=`"$name`"$crlf"
+            Write-Part "Content-Type: application/zip$crlf$crlf"
+            $source=[IO.File]::OpenRead($archive)
+            try { $source.CopyTo($writer) } finally { $source.Dispose() }
+            Write-Part "$crlf--$boundary--$crlf"
+        } finally { $writer.Dispose() }
+        $bodyLength=(Get-Item -LiteralPath $bodyPath).Length
+        $stream=[IO.File]::OpenRead($bodyPath)
+        $content=[Net.Http.StreamContent]::new($stream)
+        $content.Headers.ContentType=[Net.Http.Headers.MediaTypeHeaderValue]::Parse("multipart/form-data; boundary=$boundary")
+        $content.Headers.ContentLength=$bodyLength
+        try {
+            Send-MirrorRequest 'upload object' $uri.AbsoluteUri 'POST' $content $false | Out-Null
+        } finally { $content.Dispose(); Remove-Item -LiteralPath $bodyPath -Force -ErrorAction SilentlyContinue }
         $data.key=$upload.key
         $callback=Send-MirrorRequest 'upload callback' 'https://mirrorchyan.com/api/resources/IMAO/versions/callback' 'POST' (New-MirrorForm $data)
         if ($callback.data.status_key) {
