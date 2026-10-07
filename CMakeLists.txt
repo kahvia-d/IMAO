@@ -359,6 +359,33 @@ target_include_directories(IMaoVisualIndexBuilder PRIVATE
 )
 target_link_libraries(IMaoVisualIndexBuilder PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
 
+# Checks that a layout's registered tile packs load and that their visual shards
+# merge into one vocabulary, without a base world pack. The whole-tree regression
+# tool requires that base pack, which this project retired, so this is the only way
+# to exercise the shipping layout's pack loop offline.
+add_executable(IMaoPackMergeProbe
+    IMao-Core/tools/PackMergeProbe/main.cpp
+    IMao-Core/src/Feature/VisualIndex/MapVisualIndex.cpp
+    IMao-Core/src/Feature/Processing/FeatureBinaryCodec.cpp
+    IMao-Core/src/Feature/Processing/FeatureProcessing.cpp
+    IMao-Core/src/Feature/Match/FeatureMatch.cpp
+    IMao-Core/src/Feature/KuroTileFeaturePack.cpp
+    IMao-Core/src/Feature/CandidateFeaturePack.cpp
+    IMao-Core/src/Coordinate/locationCalculator/MapCoordinate.cpp
+    IMao-Core/src/Coordinate/locationCalculator/RelativeCoordinates.cpp
+    IMao-Core/src/Coordinate/locationCalculator/ScreenCoordinate.cpp
+    IMao-Core/src/ImageProcessing/ImageProcessing.cpp
+    IMao-Core/src/util.cpp
+)
+set_target_properties(IMaoPackMergeProbe PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
+)
+target_include_directories(IMaoPackMergeProbe PRIVATE
+    ${CMAKE_SOURCE_DIR}/IMao-Core/src
+    ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
+)
+target_link_libraries(IMaoPackMergeProbe PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
+
 add_executable(IMaoOptimizationTests
     IMao-Core/tests/OptimizationTests.cpp
     IMao-Core/src/App/ScreenMotionTracker.cpp
