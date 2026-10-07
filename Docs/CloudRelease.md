@@ -19,13 +19,13 @@ SDK 由 global.json 固定；.github/dependencies.lock.json 固定官方 Paddle/
 管理员运行 `pwsh ./scripts/Configure-CiReleaseEnvironments.ps1 -MirrorChyanTokenFile <上传 Token 文件路径>`：production 仅 main、人工 reviewer 为 kahvia-d、允许该维护者确认自己的发布、禁止管理员绕过；gitee 与 mirrorchyan 独立 main Environment。Gitee Token 从本地已有文件迁移；Mirror酱必须提供上传 Token 的文件，不能用消费端 CDK。成功写入 Environment 后才删除旧仓库级 Mirror Secret。生产签名密钥完全不参与此配置。
 
 1. 提交并审核本次源码，更新 Version.props 和 Docs/CloudReleaseNotes.md。在 main 手动运行一次 **Cloud release build**，显式 `publish=true`、`confirm_version=<Version.props>`。这一个 Run 同时完成预演与正式构建：真实 native/managed 测试、ZIP、分片、资源包，以及临时测试密钥对这个冻结产物的 finalize，都在里面跑完，不分配正式 sequence，也不更改 Release/stable/镜像。整条链绑定 dispatch 时的 SHA，所以派发之后继续往 main 提交（包括改发布脚本）不会让本次发布失效；只有 `updates/stable.json` 被别人推进才会让预留失败。
-2. 构建与临时密钥预演全绿后，Run 停在 production Environment 等审批。先看 Run 摘要里的 version／source commit／artifact digest／provisional sequence，确认就是要发的版本，再批准。审批通过后的 prepare Job 才在发布锁内预留 sequence 并生成小请求，Runner 结束。不想发就取消 Run：没有预留，也没有远端改动。只想试跑流水线（例如改了发布脚本）时用 `publish=false`。
+2. 构建与临时密钥预演全绿后，Run 停在 production Environment 等审批。先看 Run 摘要里的 version／source commit／artifact digest／provisional sequence，确认就是要发的版本，再批准。审批通过后的 prepare Job 才在发布锁内预留 sequence 并生成小请求，Runner 结束。不想发就取消 Run：不预留 sequence、不动 Release/stable/镜像；只在 GitHub 留下这次运行的大 artifact 与预演证据，按各自 retention 过期（没发布就不会走清理作业）。只想试跑流水线（例如改了发布脚本）时用 `publish=false`。
 3. 在可信 Windows 本机，从审核过的本地源码构建 UpdatePublisher；运行 `pwsh ./scripts/Complete-CiRelease.ps1 -RunId <步骤 1 的 Run ID> -ConfirmVersion <版本> -ExpectedSourceCommit <40位SHA>`。助手会先要求该 Run 带有未过期的临时密钥预演证据。核对展示的安装包摘要与请求后输入版本确认。只下载最多16 MiB请求，只上传不到16 KiB双签名响应。默认密钥仍位于 `%LOCALAPPDATA%/WWMAP-TOOLS-Publisher/release-signing-key.json`；不自动选择 cloud artifact 内的工具或公钥。
 4. 再确认 production 发布审批。云端核验 artifact service digest、双签名、每个文件摘要、安装 ZIP 与分片的完整同树关系，然后复用/上传 draft、确认远程摘要与公开可达性、发布 immutable Release，最后一个 Git commit 同步 stable/channel-state/事务。Gitee、Mirror酱自动独立同步，随后清理已成功发布的大 artifact；小请求留30天。
 
 ## 恢复
 
-构建失败重跑构建，不消耗 sequence；production 审批前直接取消整个 Run 同样不消耗 sequence、不留远端状态。prepare 中断只重跑失败 Job（不要重跑已经冻结的 Build），相同 artifact 和已预留 sequence 自动恢复；已上传小请求按 ID/digest 复用。
+构建失败重跑构建，不消耗 sequence；production 审批前直接取消整个 Run 同样不消耗 sequence、不改变远端发布状态（只留下按 retention 过期的运行产物）。prepare 中断只重跑失败 Job（不要重跑已经冻结的 Build），相同 artifact 和已预留 sequence 自动恢复；已上传小请求按 ID/digest 复用。
 
 正式发布和恢复的 confirm_version 对照已批准源码 SHA 中的 Version.props；等待期间 main 版本前进不会改变原事务。draft 额外附件或不同安装 ZIP 会在上传/公开前拒绝，未给安装包参数时自动选择已签名批准的唯一安装包。
 

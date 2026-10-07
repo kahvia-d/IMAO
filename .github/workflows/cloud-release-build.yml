@@ -33,7 +33,6 @@ jobs:
     outputs:
       artifact_id: ${{ steps.bulk.outputs.artifact-id }}
       artifact_digest: ${{ steps.bulk.outputs.artifact-digest }}
-      version: ${{ steps.package.outputs.version }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -133,6 +132,17 @@ jobs:
         run: |
           git status --porcelain=v1 --untracked-files=all
           Get-ChildItem out/ci-release -Filter '*.log' -File -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name; Get-Content $_.FullName -Tail 30 }
+      # The rehearsal below finalizes the prepared tree in place - it writes update.json, rebuilds the offline
+      # archive and rewrites release-report.json, which IS part of the frozen artifact.  Assert the invariant
+      # rather than trusting step order: a tree that already carries a finalization must never be published.
+      - name: Assert the frozen tree is unsigned
+        run: |
+          $root='out/ci-release/prepared'
+          foreach ($stray in 'update.json','release-signing-request.zip','release-authorization.json') {
+            if (Test-Path (Join-Path $root $stray)) { throw "Frozen tree already carries $stray; the freeze must precede the rehearsal." }
+          }
+          $report=Get-Content (Join-Path $root 'release-report.json') -Raw | ConvertFrom-Json
+          if ($report.signedManifestSha256 -or $report.requestId -or ($report.offline -and $report.offline.sha256)) { throw 'Frozen tree carries a finalized report; the freeze must precede the rehearsal.' }
       - name: Freeze unsigned release build
         id: bulk
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

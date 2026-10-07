@@ -20,21 +20,24 @@ if ($run.path -cne '.github/workflows/cloud-release-build.yml' -or $run.head_sha
 $artifacts=(Invoke-CiGh @('api',"repos/$repo/actions/runs/$RunId/artifacts?per_page=100") | ConvertFrom-Json).artifacts
 $requests=@($artifacts | Where-Object name -CEQ 'release-signing-request')
 if ($requests.Count -ne 1 -or $requests[0].expired -or $requests[0].size_in_bytes -gt 16MB -or $requests[0].digest -notmatch '^sha256:[a-f0-9]{64}$') { throw 'A unique, bounded, unexpired signing request is required.' }
-# The disposable-key rehearsal runs inside the release run before approval; its evidence is the proof
-# that this frozen artifact was finalized end to end before the production key is asked for anything.
-if (-not @($artifacts | Where-Object { $_.name -ceq 'release-rehearsal-evidence' -and -not $_.expired }).Count) { throw 'The release run has no unexpired disposable-key rehearsal evidence; never sign an unproven build.' }
+# The disposable-key rehearsal ran inside the release run before approval; its binding is re-read below so
+# the signer proves the artifact this approval releases is the one that was finalized end to end.
+$rehearsals=@($artifacts | Where-Object { $_.name -ceq 'release-rehearsal-evidence' -and -not $_.expired })
+if ($rehearsals.Count -ne 1 -or $rehearsals[0].size_in_bytes -gt 1MB -or $rehearsals[0].digest -notmatch '^sha256:[a-f0-9]{64}$') { throw 'A unique, bounded, unexpired disposable-key rehearsal evidence is required; never sign an unproven build.' }
 $root=Join-Path $env:LOCALAPPDATA "WWMAP-TOOLS-Publisher/ci/$RunId/$($requests[0].id)"
 [IO.Directory]::CreateDirectory($root) | Out-Null
 $archive=Join-Path $root 'request.zip'; $request=Join-Path $root 'request'
 if (-not (Test-Path $archive)) {
-    # Exactly one artifact endpoint is downloaded, never release-build or the run's whole artifact set.
+    # At most two bounded endpoints are downloaded, never release-build or the run's whole artifact set.
     Save-CiArtifactArchive $requests[0].id $archive 16MB
 }
 Assert-CiArtifactDigest $archive $requests[0].digest
 if (-not (Test-Path $request)) { Expand-CiSmallRequest $archive $request }
+$rehearsal=Read-CiRehearsalEvidence $rehearsals[0].id $rehearsals[0].digest (Join-Path $root 'evidence.zip')
 $approval=Get-Content (Join-Path $request 'approval-payload.json') -Raw | ConvertFrom-Json
 $artifact=Get-CiBuildArtifact $approval.buildRunId $approval.artifactId $ExpectedSourceCommit
 if ($approval.buildRunId -ne $RunId -or $approval.artifactDigest -cne ($artifact.digest -replace '^sha256:','') -or $approval.version -cne $ConfirmVersion) { throw 'Approval does not bind the selected build or version.' }
+if ($rehearsal.artifactId -ne $approval.artifactId -or $rehearsal.artifactDigest -cne $approval.artifactDigest -or $rehearsal.sourceCommit -cne $ExpectedSourceCommit -or $rehearsal.appVersion -cne $ConfirmVersion) { throw 'Rehearsal evidence does not bind the frozen artifact this approval would release.' }
 $stateFile=Invoke-CiGh @('api',"repos/$repo/contents/updates/release-state.json?ref=main") | ConvertFrom-Json
 $state=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($stateFile.content -replace '\s',''))) | ConvertFrom-Json
 if ($state.active.id -cne $approval.transactionId -or $state.active.requestArtifactId -ne $requests[0].id -or $state.active.requestArtifactDigest -cne ($requests[0].digest -replace '^sha256:','')) { throw 'Request is not the active durable reservation.' }

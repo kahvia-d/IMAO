@@ -45,3 +45,16 @@ function Expand-CiSmallRequest([string]$Archive, [string]$Destination) {
         }
     } finally { $zip.Dispose() }
 }
+# Reads the frozen-artifact binding a rehearsal run writes next to its reports, so the local signer can
+# prove the artifact an approval releases is the one the disposable key actually finalized.
+function Read-CiRehearsalEvidence([long]$ArtifactId, [string]$Digest, [string]$Archive) {
+    Save-CiArtifactArchive $ArtifactId $Archive 1MB
+    Assert-CiArtifactDigest $Archive $Digest
+    $zip=[IO.Compression.ZipFile]::OpenRead($Archive)
+    try {
+        $entries=@($zip.Entries | Where-Object { $_.FullName -ceq 'rehearsal-evidence.json' -or $_.FullName.EndsWith('/rehearsal-evidence.json',[StringComparison]::Ordinal) })
+        if ($entries.Count -ne 1 -or $entries[0].Length -gt 64KB) { throw 'Rehearsal evidence does not carry exactly one bounded frozen-artifact binding.' }
+        $stream=$entries[0].Open()
+        try { $reader=[IO.StreamReader]::new($stream); try { return ($reader.ReadToEnd() | ConvertFrom-Json) } finally { $reader.Dispose() } } finally { $stream.Dispose() }
+    } finally { $zip.Dispose() }
+}
