@@ -24,3 +24,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Cloud full-artifact rehearsal finalization fai
 # The disposable DPAPI key is never included in uploaded evidence.
 Remove-Item -LiteralPath $private
 Copy-Item (Join-Path $PreparedRoot 'release-report.json') (Join-Path $root 'rehearsal-report.json')
+# Bind the disposable-key result to the exact frozen artifact, so a reviewer can confirm that the
+# artifact digest an approval releases is the one that was rehearsed, not merely one that was built.
+$rehearsalReport=Join-Path $root 'rehearsal-report.json'
+$evidence=@{buildRunId=$BuildRunId;artifactId=$ArtifactId;artifactDigest=($ArtifactDigest -replace '^sha256:','')
+    sourceCommit=[string]$report.sourceCommit;appVersion=[string]$report.appVersion;baselineId=[string]$report.baselineId
+    provisionalSequence=[long]$report.sequence
+    rehearsalReportSha256=(Get-FileHash -LiteralPath $rehearsalReport -Algorithm SHA256).Hash.ToLowerInvariant()}
+[IO.File]::WriteAllText((Join-Path $root 'rehearsal-evidence.json'),($evidence | ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))

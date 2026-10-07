@@ -63,6 +63,6 @@ Windows 前台测试夹具改为明确显示自己的隐藏启动窗口、使用
 
 ## 发布验收门槛
 
-游戏测试通过反馈 → 修正与复测 → 合并 → 使用尚未发布的新版本与发布说明 → 在最终 main SHA 运行完整 `publish=false` 云端预演并记录 Run ID。旧版本或旧 SHA 的预演不能代替本次验收。
+游戏测试通过反馈 → 修正与复测 → 合并 → 使用尚未发布的新版本与发布说明 → 在最终 main SHA 运行一次正式发布（同一个 Run 内先用临时密钥对冻结产物做全量预演，再请求 production 审批；见 `Docs/CloudRelease.md`）。旧 SHA 的预演不能代替本次验收。
 
 正式发布显式输入 `publish=true` 和完全匹配 Version.props 的 `confirm_version`，经 production 审批后仅交换小签名请求/响应。本地可信 UpdatePublisher 使用现有 DPAPI 私钥；云端只验证并上传原批次产物，继续使用原事务、原 sequence 和原签名响应恢复。GitHub、stable、Gitee、Mirror酱仍走既有独立发布入口与最小权限流程。

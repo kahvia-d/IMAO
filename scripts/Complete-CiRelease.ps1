@@ -16,10 +16,13 @@ if (-not $PublisherDll) { $PublisherDll=Join-Path $repoRoot 'tools/UpdatePublish
 if (-not (Test-Path $PublisherDll)) { throw 'Build UpdatePublisher from reviewed local source first. Never execute a downloaded signing binary.' }
 $repo='kahvia-d/IMAO'
 $run=Invoke-CiGh @('api',"repos/$repo/actions/runs/$RunId") | ConvertFrom-Json
-if ($run.path -cne '.github/workflows/cloud-release-build.yml' -or $run.head_sha -cne $ExpectedSourceCommit -or $run.head_branch -cne 'main' -or $run.conclusion -cne 'success' -or $run.repository.full_name -cne $repo) { throw 'Expected a completed formal main build at the explicitly approved source SHA.' }
+if ($run.path -cne '.github/workflows/cloud-release-build.yml' -or $run.head_sha -cne $ExpectedSourceCommit -or $run.head_branch -cne 'main' -or $run.conclusion -cne 'success' -or $run.repository.full_name -cne $repo) { throw 'Expected a completed main cloud release run at the explicitly approved source SHA.' }
 $artifacts=(Invoke-CiGh @('api',"repos/$repo/actions/runs/$RunId/artifacts?per_page=100") | ConvertFrom-Json).artifacts
 $requests=@($artifacts | Where-Object name -CEQ 'release-signing-request')
 if ($requests.Count -ne 1 -or $requests[0].expired -or $requests[0].size_in_bytes -gt 16MB -or $requests[0].digest -notmatch '^sha256:[a-f0-9]{64}$') { throw 'A unique, bounded, unexpired signing request is required.' }
+# The disposable-key rehearsal runs inside the release run before approval; its evidence is the proof
+# that this frozen artifact was finalized end to end before the production key is asked for anything.
+if (-not @($artifacts | Where-Object { $_.name -ceq 'release-rehearsal-evidence' -and -not $_.expired }).Count) { throw 'The release run has no unexpired disposable-key rehearsal evidence; never sign an unproven build.' }
 $root=Join-Path $env:LOCALAPPDATA "WWMAP-TOOLS-Publisher/ci/$RunId/$($requests[0].id)"
 [IO.Directory]::CreateDirectory($root) | Out-Null
 $archive=Join-Path $root 'request.zip'; $request=Join-Path $root 'request'

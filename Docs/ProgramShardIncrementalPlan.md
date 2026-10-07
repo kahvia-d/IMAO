@@ -361,6 +361,12 @@ public ProgramPackage { ... 现有字段不变 ...; public List<ProgramShard> Sh
 要再压到 ≈30 MB，需要**构建可复现**：原生侧加 `/Brepro`、去掉嵌入的绝对路径；托管侧固定
 `Deterministic`/MVID 与 `deps.json`。这是构建工程问题，不影响发布流程的正确性。
 
+**2026-10-07 更新：**可复现性已做（native `/d1trimfile:<仓库根>` 取代嵌入的绝对路径并用 `/Brepro`，
+CMake 覆盖时显式带回 MSVC 默认开关，托管关闭 `CsWinRTAotOptimizerEnabled`；见 `Docs/CloudRelease.md`）：
+两次独立云端预演产出同一安装 ZIP `d3586ab0…`。所以上面的 ≈56 MB 地板应降为只下 `ui` ≈30 MB；
+`ui` 每版必变的原因（版本号写进 `build-info.json`、启动器版本资源、`bundled-snapshot.json` 的 snapshotId）
+没有改变。逐片对照留待下一版实测。
+
 **实测发现（阶段 1–2）**：
 
 1. `ui` 片解压 **69.0 MB**、压缩后 **29.8 MB**，其中 `IMao-Launcher.exe` 独占 67.7 MB 解压。

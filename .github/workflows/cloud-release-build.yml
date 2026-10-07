@@ -1,15 +1,20 @@
 name: Cloud release build
+# One cloud build serves one release.  With publish=true this run builds the candidate, freezes it,
+# proves with a disposable key that the frozen tree finalizes end to end, and only then asks for
+# production approval to reserve a sequence.  A release therefore costs a single build, and commits
+# landing on main afterwards cannot invalidate it because the whole chain binds the dispatched SHA.
+# publish=false still exercises the same pipeline without approving, reserving or touching anything.
 on:
   pull_request:
     paths: ['.github/**', 'scripts/**', 'tools/**', 'Tests/**', 'Version.props', 'global.json', 'IMao-*/**', 'Assets/**', 'CMakeLists.txt', 'cmake/**', 'patches/**', 'Docs/**', '.gitattributes', '.gitignore', 'LICENSE']
   workflow_dispatch:
     inputs:
       publish:
-        description: Reserve a formal release after a successful cloud build
+        description: Reserve a formal release from this run after production approval
         type: boolean
         default: false
       confirm_version:
-        description: Exact Version.props version (required for formal release)
+        description: Exact Version.props version (required when publish=true)
         type: string
         default: ''
 permissions:
@@ -21,9 +26,10 @@ jobs:
   build:
     runs-on: windows-2022
     timeout-minutes: 180
+    # Nothing in this job reads the Actions API any more: the frozen artifact and the rehearsal evidence
+    # are uploaded through the runtime token, so checkout is the only scope the build needs.
     permissions:
       contents: read
-      actions: read
     outputs:
       artifact_id: ${{ steps.bulk.outputs.artifact-id }}
       artifact_digest: ${{ steps.bulk.outputs.artifact-digest }}
@@ -88,18 +94,16 @@ jobs:
             $lib = Get-Item $kernel32
             Write-Host "SDK_KERNEL32_STAMP=$($lib.Length):$($lib.LastWriteTimeUtc.ToString('o'))"
           }
+      # A release run no longer waits for an earlier rehearsal of the same SHA: the rehearsal below
+      # runs inside it, on the very artifact the approval would release.
       - name: Validate formal inputs
         env:
           FORMAL: ${{ inputs.publish || false }}
           CONFIRM_VERSION: ${{ inputs.confirm_version }}
-          GH_TOKEN: ${{ github.token }}
-          REHEARSAL_RUN_ID: ${{ vars.CLOUD_RELEASE_REHEARSAL_RUN_ID }}
         run: |
           if ($env:FORMAL -eq 'true') {
-            . ./scripts/CiReleaseMetadata.ps1
-            Assert-CiRehearsal $env:REHEARSAL_RUN_ID $env:GITHUB_SHA
             [xml]$v=Get-Content Version.props -Raw
-            if ($env:GITHUB_REF -ne 'refs/heads/main' -or $env:CONFIRM_VERSION -cne [string]$v.Project.PropertyGroup.IMaoVersion) { throw 'Formal build requires main and exact confirm_version.' }
+            if ($env:GITHUB_REF -ne 'refs/heads/main' -or $env:CONFIRM_VERSION -cne [string]$v.Project.PropertyGroup.IMaoVersion) { throw 'Formal release requires main and exact confirm_version.' }
           }
       - uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         id: archives
@@ -143,20 +147,45 @@ jobs:
           compression-level: 0
           retention-days: 7
           if-no-files-found: error
+      # Both modes rehearse the frozen tree with a disposable key.  This is the evidence that the exact
+      # artifact a release would publish can be finalized and verified end to end, and for a release run
+      # it is produced before the production approval is ever requested.
       - name: Full-artifact disposable-key rehearsal
-        if: ${{ !inputs.publish }}
         run: |
           ./scripts/Test-CiReleaseArtifacts.ps1 -PreparedRoot out/ci-release/prepared -ArtifactId ${{ steps.bulk.outputs.artifact-id }} -ArtifactDigest '${{ steps.bulk.outputs.artifact-digest }}' -BuildRunId ${{ github.run_id }}
       - name: Save bounded rehearsal evidence
-        if: ${{ !inputs.publish }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release-rehearsal-evidence
           path: |
             out/ci-release/rehearsal/rehearsal-report.json
+            out/ci-release/rehearsal/rehearsal-evidence.json
             out/ci-release/publisher-tests/cloud-self-test-report.json
           retention-days: 30
           if-no-files-found: error
+      # Whoever approves the production Environment reads this first: it is the only place the exact
+      # frozen artifact identity is visible before a sequence is reserved.  Cosmetic, so a failure here
+      # must never block a release.
+      - name: Summarise the frozen candidate
+        continue-on-error: true
+        run: |
+          $e=Get-Content out/ci-release/rehearsal/rehearsal-evidence.json -Raw | ConvertFrom-Json
+          $text=@(
+            '### Cloud release candidate'
+            ''
+            '| field | value |'
+            '|---|---|'
+            ('| version | ' + $e.appVersion + ' |')
+            ('| source commit | ' + $e.sourceCommit + ' |')
+            ('| build run | ' + $e.buildRunId + ' |')
+            ('| frozen artifact | ' + $e.artifactId + ' |')
+            ('| artifact digest | sha256:' + $e.artifactDigest + ' |')
+            ('| provisional sequence | ' + $e.provisionalSequence + ' |')
+            ('| publish intent | ' + '${{ inputs.publish }}' + ' |')
+            ''
+            'The disposable-key rehearsal finalized this exact frozen tree. Production approval reserves the real sequence.'
+          ) -join "`n"
+          [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY,$text+"`n",[Text.UTF8Encoding]::new($false))
   prepare:
     needs: build
     if: ${{ inputs.publish && github.ref == 'refs/heads/main' && github.repository == 'kahvia-d/IMAO' }}

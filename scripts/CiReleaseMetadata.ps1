@@ -1,13 +1,5 @@
 # Read-only checks shared by cloud verification and the trusted local signer.
 function Invoke-CiGh([string[]]$Arguments) { $result=& gh @Arguments; if ($LASTEXITCODE -ne 0) { throw 'GitHub metadata operation failed.' }; return $result }
-function Assert-CiRehearsal([long]$RunId, [string]$SourceCommit) {
-    if ($RunId -le 0) { throw 'Set CLOUD_RELEASE_REHEARSAL_RUN_ID only after a green full cloud rehearsal.' }
-    $run=Invoke-CiGh @('api',"repos/kahvia-d/IMAO/actions/runs/$RunId") | ConvertFrom-Json
-    $artifacts=(Invoke-CiGh @('api',"repos/kahvia-d/IMAO/actions/runs/$RunId/artifacts?per_page=100") | ConvertFrom-Json).artifacts
-    if ($run.conclusion -cne 'success' -or $run.head_sha -cne $SourceCommit -or $run.path -cne '.github/workflows/cloud-release-build.yml' -or
-        $run.head_branch -cne 'main' -or $run.event -cne 'workflow_dispatch' -or $run.repository.full_name -cne 'kahvia-d/IMAO' -or
-        -not @($artifacts | Where-Object { $_.name -ceq 'release-rehearsal-evidence' -and -not $_.expired }).Count) { throw 'A green publish=false full rehearsal of this exact main source is required.' }
-}
 function Get-CiBuildArtifact([long]$RunId, [long]$ArtifactId, [string]$ExpectedSourceCommit, [switch]$AllowRehearsal) {
     $repo='kahvia-d/IMAO'
     $run=Invoke-CiGh @('api',"repos/$repo/actions/runs/$RunId") | ConvertFrom-Json

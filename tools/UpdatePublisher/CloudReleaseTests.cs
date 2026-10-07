@@ -31,6 +31,24 @@ static partial class Publisher
             ["private-key"] = Path.Combine(fixtures, "fixture-private.json"), ["expected-source-commit"] = new string('a', 40), ["confirm-version"] = "2026.9.9.8" };
         var passed = new List<string>();
         void Reject(string name, Action action) { try { action(); } catch { passed.Add(name); return; } throw new Exception("Expected rejection: " + name); }
+        // A release run builds a production-labelled tree and rehearses that exact frozen tree with a
+        // disposable key, so the disposable path must accept a report whose production flag is set.
+        var labelled = Path.Combine(root, "production-labelled");
+        foreach (var file in Directory.GetFiles(bulk, "*", SearchOption.AllDirectories))
+        {
+            var target = Path.Combine(labelled, Path.GetRelativePath(bulk, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target);
+        }
+        var labelledReport = Path.Combine(labelled, "release-report.json");
+        var labelledJson = JsonNode.Parse(File.ReadAllBytes(labelledReport))!; labelledJson["production"] = true;
+        File.WriteAllBytes(labelledReport, JsonSerializer.SerializeToUtf8Bytes(labelledJson, Json));
+        var labelledRequest = Path.Combine(root, "labelled-request"); var labelledResponse = Path.Combine(root, "labelled-response.json");
+        CreateSigningRequest(new(create) { ["input"] = labelled, ["output"] = labelledRequest, ["transaction-id"] = "labelled-txn" });
+        var labelledSign = new Dictionary<string, string>(sign) { ["input"] = labelledRequest, ["output"] = labelledResponse };
+        SignRequest(labelledSign);
+        await FinalizeRelease(new(labelledSign) { ["input"] = labelled, ["request"] = labelledRequest, ["response"] = labelledResponse });
+        passed.Add("disposable-key rehearsal accepts a production-labelled frozen tree");
         sign["confirm-version"] = "2026.9.9.9"; Reject("wrong confirmed version", () => SignRequest(sign)); sign["confirm-version"] = "2026.9.9.8";
         sign["expected-source-commit"] = new string('b', 40); Reject("wrong expected source", () => SignRequest(sign)); sign["expected-source-commit"] = new string('a', 40);
         var catalogFile = Path.Combine(request, "catalog-payload.json"); var catalogBytes = File.ReadAllBytes(catalogFile);
