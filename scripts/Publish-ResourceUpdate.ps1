@@ -242,8 +242,18 @@ if ($LASTEXITCODE -eq 0) {
     if ($tree.truncated -or @($tree.tree | Where-Object path -EQ 'updates/stable.json').Count) { throw 'Unable to safely determine current stable channel.' }
 }
 Assert-ChannelSequenceAdvance @{maxSequence = $publishedFloor} $catalog
-$immutability=Invoke-Gh @('api',"repos/$repo/immutable-releases") | ConvertFrom-Json
-if (-not $immutability.enabled) { throw 'Enable repository release immutability before uploading a formal release.' }
+# Reading the repository's immutable-release setting needs administration rights, which the workflow
+# token never has, so the cloud release used to stop here with HTTP 403 before touching anything.
+# Read the setting when the caller can; otherwise verify the published release itself below, because a
+# check that cannot run must be replaced by one that can, not by a silent pass.
+$immutabilityOutput = & gh api "repos/$repo/immutable-releases" 2>$null
+if ($LASTEXITCODE -eq 0) {
+    $immutability = $immutabilityOutput | ConvertFrom-Json
+    if (-not $immutability.enabled) { throw 'Enable repository release immutability before uploading a formal release.' }
+    Write-Host 'Repository release immutability is enabled.'
+} else {
+    Write-Host 'Release immutability is not readable with this token; the published release is asserted instead.' -ForegroundColor Yellow
+}
 $releaseOutput = & gh api "repos/$repo/releases/tags/$tag" 2>$null
 if ($LASTEXITCODE -ne 0) {
     # Drafts without a created Git tag can be absent from the by-tag endpoint.
@@ -355,6 +365,17 @@ $beforePublish=Get-ReleaseSnapshot $repo
 Assert-ReleaseTransaction $beforePublish.state $approval $beforePublish.stableHash ([long]$beforePublish.channel.maxSequence)
 if ($release.draft) { Invoke-Gh @('release','edit',$tag,'--repo',$repo,'--draft=false','--latest=true') | Out-Null }
 $release=(Invoke-Gh @('api',"repos/$repo/releases/$($release.id)")) | ConvertFrom-Json
+# The release is published at this point; its own immutability is the fact that matters, and it is the
+# one signal available to a token without administration rights.
+if (-not $release.draft) {
+    if ($release.PSObject.Properties.Name -notcontains 'immutable') {
+        Write-Host 'The release API does not report immutability for this release.' -ForegroundColor Yellow
+    } elseif (-not $release.immutable) {
+        throw 'Published release is not immutable. Enable repository release immutability and republish; the stable channel was not advanced.'
+    } else {
+        Write-Host 'Published release is immutable.'
+    }
+}
 Assert-ExactReleaseAssetSet $assets $release.assets $true
 foreach ($asset in $assets) { Assert-RemoteAssetBytes $asset $release.assets }
 $publishedCommit = [string](Invoke-Gh @('api',"repos/$repo/commits/$tag",'--jq','.sha'))
