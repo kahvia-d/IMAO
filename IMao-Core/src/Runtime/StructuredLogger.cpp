@@ -1,4 +1,5 @@
 #include "StructuredLogger.h"
+#include "TextEncoding.h"
 
 #include <Windows.h>
 
@@ -114,7 +115,7 @@ void StructuredLogger::Record(std::string severity, std::string category, std::s
         };
         {
             std::ofstream output(LogDirectory() / ("events-" + DateStamp() + ".jsonl"), std::ios::app);
-            if (output) output << record.dump() << '\n';
+            if (output) output << DumpJsonText(record) << '\n';
         }
         // Retention is enforced while the app is running as well, so a very
         // long session cannot grow past the release-log budget.
@@ -135,7 +136,7 @@ std::filesystem::path StructuredLogger::WriteCrashReport(std::string source, std
     };
     std::scoped_lock lock(loggerMutex);
     std::ofstream output(path, std::ios::trunc);
-    if (output) output << report.dump(2) << '\n';
+    if (output) output << DumpJsonText(report, 2) << '\n';
     return path;
 }
 

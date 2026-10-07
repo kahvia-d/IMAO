@@ -1,4 +1,5 @@
 #include "ResourceSnapshotContext.h"
+#include "TextEncoding.h"
 #include "../Coordinate/CoordinateStruct.h"
 #include <bcrypt.h>
 #include <algorithm>
@@ -40,7 +41,7 @@ std::array<int, 4> Version(const std::string& value) {
 }
 json Read(const fs::path& path) {
     std::ifstream input(path);
-    Require(static_cast<bool>(input), "missing resource: " + path.filename().string());
+    Require(static_cast<bool>(input), "missing resource: " + Utf8Text(path.filename()));
     return json::parse(input);
 }
 fs::path Root(const json& document, const char* key) {
@@ -65,7 +66,7 @@ void CheckRegular(const fs::path& root, const fs::path& relative) {
         const auto attributes = GetFileAttributesW(path.c_str());
         Require(attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_REPARSE_POINT), "resource file missing or uses reparse point");
     }
-    Require(fs::is_regular_file(path), "resource reference is not a regular file: " + relative.generic_string());
+    Require(fs::is_regular_file(path), "resource reference is not a regular file: " + Utf8Text(relative));
 }
 const SceneDefinition* Definition(const std::string& name) {
     // Do not call Scene::Find here: that would permanently cache calibration

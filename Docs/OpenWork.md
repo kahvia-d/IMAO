@@ -50,7 +50,25 @@ GPU→CPU 回读**以游戏呈现节奏持续运行且不节流。出处：`Game
 | 3.3 | 中 | 仍有历史坐标原点、比例和屏幕布局常量，无法从当前测试推出所有比例都正确 | 用明确坐标类型与场景标定替代重复换算；分辨率、DPI、UI 缩放与窗口比例分别验收 |
 | 3.4 | 中 | 原生 `PrintWindow` 仍是同步系统调用；游戏挂起可能拖住停止 | 测试游戏挂起/退出/最小化与设备丢失；引入可取消的捕获边界与统一故障状态 |
 | 3.5 | 中 | 多开程序仍可同时写同一账户文件；当前原子写不是跨进程合并协议 | 单实例约束，或按账户建立跨进程锁与事务存储 |
-| 3.6 | 中 | `GetCurrentPath` 等仍依赖 ANSI/MAX_PATH；构建预设与平台声明不完全一致 | 验证非 ASCII/长路径安装；明确只支持的 x64 发布组合 |
+| 3.6 | 中 | `GetCurrentPath` 等仍依赖 ANSI/MAX_PATH；构建预设与平台声明不完全一致 | 明确只支持的 x64 发布组合（非 ASCII 路径的日志/诊断已单独修好，见下） |
+
+**非 ASCII 安装路径（2026-10-07 已修）：**玩家把 IMAO 解压到 `E:\Games\明潮地图工具\` 这类目录时，
+`stage=map-imf absent error=feature binary cannot be opened: <路径>` 里的路径是 `path.string()` 产出的
+ANSI/GBK 字节，`StructuredLogger::Record` 用 nlohmann 的严格序列化写出这行日志时抛 `type_error.316`，
+异常逃出日志函数被资源预加载的 catch-all 接住，于是**一条关于可选文件的告警把整个资源集变成不可用**。
+修法分两层（`IMao-Core/src/Runtime/TextEncoding.h`）：
+
+- 边界转换：所有以文本形式离开进程的路径改用 `Utf8Text()`（`u8string`），涉及 `FeatureBinaryCodec`、
+`MapVisualIndex`、`LayeredFloorIndex`、`RuntimeFeatureRepository`、`CandidateFeaturePack`、`LayeredMapState`、
+`ResourceSnapshotContext`、`Diagnostics::SessionDirectory`。
+- 兜底：`StructuredLogger` 的日志/崩溃报告与 CoreHost 的 IPC/启动 JSON 改用
+`DumpJsonText()`（`error_handler_t::replace`），任何非 UTF-8 字节只会被替换成 U+FFFD，**永远不会再抛**。
+- 文件打开路径**故意保持 `path.string()`**（Windows 窄接口按进程代码页解释，换成 UTF-8 反而打不开）；
+`fs::path` 重载的 `ifstream`/`ofstream` 走宽字符，本来就不受影响。
+
+⚠️ 仍未覆盖：路径里含**代码页之外**的字符（例如中文系统上的日文/emoji 目录）时，OpenCV `imread`、
+ImGui 字体/`imgui.ini` 等窄接口仍会失败或替换成 `?`；超过 `MAX_PATH` 的长路径同样没解决。回归测试在
+`IMao-Core/tests/ResourceSnapshotTests.cpp`（`TestTextEncoding`）。
 
 ## 4. 更新系统（2026-09-20 分片发布后遗留）
 

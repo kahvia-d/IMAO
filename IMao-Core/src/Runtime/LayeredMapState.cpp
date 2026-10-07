@@ -1,4 +1,5 @@
 #include "LayeredMapState.h"
+#include "TextEncoding.h"
 
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/ResourceSnapshotContext.h"
@@ -163,7 +164,7 @@ void Install(const std::filesystem::path& featureDataRoot) {
     const auto packsRoot = featureDataRoot / "KuroTilePacks";
     std::error_code error;
     if (!std::filesystem::is_directory(packsRoot, error)) {
-        Diagnostics::Record("layered-floor-index", "stage=skipped reason=no-packs-dir root=" + packsRoot.string());
+        Diagnostics::Record("layered-floor-index", "stage=skipped reason=no-packs-dir root=" + Utf8Text(packsRoot));
         return;
     }
     // Only the regions the player has switched on. Walking the directory took every pack on disk, so a
@@ -211,7 +212,7 @@ void Install(const std::filesystem::path& featureDataRoot) {
         LayeredFloors::Index index;
         std::string loadError;
         if (!LayeredFloors::Load(packRoot, index, loadError, kFloorDescriptorCap)) {
-            Diagnostics::Record("layered-floor-index", "region=" + directory.path().filename().string() +
+            Diagnostics::Record("layered-floor-index", "region=" + Utf8Text(directory.path().filename()) +
                 " loaded=0 error=" + loadError);
             continue;
         }

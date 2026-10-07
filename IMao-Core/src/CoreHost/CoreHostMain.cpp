@@ -3,6 +3,7 @@
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/ResourceSnapshotContext.h"
 #include "../Runtime/StructuredLogger.h"
+#include "../Runtime/TextEncoding.h"
 #include "../Feature/RuntimeFeatureRepository.h"
 #include "../Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
 #include "../App/MapViewportLocalizer.h"
@@ -95,7 +96,7 @@ public:
     ~PipeConnection() { Close(); }
 
     bool Send(const json& value) {
-        const std::string payload = value.dump() + "\n";
+        const std::string payload = DumpJsonText(value) + "\n";
         std::scoped_lock lock(writeMutex);
         DWORD written = 0;
         return Transfer(true, const_cast<char*>(payload.data()), static_cast<DWORD>(payload.size()), written, 2000) && written == payload.size();
@@ -815,7 +816,7 @@ int wmain(int argc, wchar_t** wideArgv) {
         if (snapshotCheck) {
             json snapshot;
             if (!ResourceSnapshotValidation::ReadAndValidate(assetRoot, snapshot, error)) {
-                std::cout << json({{"resourcesReady", false}, {"visualReady", false}, {"viewportReady", false}, {"error", error}}).dump() << std::endl;
+                std::cout << DumpJsonText(json({{"resourcesReady", false}, {"visualReady", false}, {"viewportReady", false}, {"error", error}})) << std::endl;
                 return 1;
             }
             ResourceSnapshotContext::Initialize(std::move(snapshot));
@@ -826,8 +827,8 @@ int wmain(int argc, wchar_t** wideArgv) {
         const auto resources = repository.AwaitReady(error);
         const bool visualReady = resources && GlobalVisualLocalizer::Initialize(resources, error);
         const bool viewportReady = visualReady && MapViewportLocalizer::Initialize(resources, error);
-        std::cout << json({{"resourcesReady", resources != nullptr}, {"visualReady", visualReady},
-            {"viewportReady", viewportReady}, {"resourceSnapshotId", ResourceSnapshotContext::Id()}, {"error", error}}).dump() << std::endl;
+        std::cout << DumpJsonText(json({{"resourcesReady", resources != nullptr}, {"visualReady", visualReady},
+            {"viewportReady", viewportReady}, {"resourceSnapshotId", ResourceSnapshotContext::Id()}, {"error", error}})) << std::endl;
         MapViewportLocalizer::Shutdown();
         GlobalVisualLocalizer::Shutdown();
         repository.Shutdown();

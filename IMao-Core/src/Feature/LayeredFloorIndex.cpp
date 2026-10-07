@@ -1,6 +1,7 @@
 #include "LayeredFloorIndex.h"
 
 #include "Processing/FeatureBinaryCodec.h"
+#include "../Runtime/TextEncoding.h"
 
 #include <nlohmann/json.hpp>
 
@@ -99,12 +100,12 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
     index.floors.clear();
     const auto indexPath = packDirectory / "layered-floors" / "floor-index.json";
     if (!std::filesystem::exists(indexPath)) {
-        error = "no layered floor index at " + indexPath.string();
+        error = "no layered floor index at " + Utf8Text(indexPath);
         return false;
     }
     std::ifstream input(indexPath);
     if (!input) {
-        error = "cannot open " + indexPath.string();
+        error = "cannot open " + Utf8Text(indexPath);
         return false;
     }
     json parsed;
@@ -112,7 +113,7 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
         input >> parsed;
     }
     catch (const std::exception& exception) {
-        error = "cannot parse " + indexPath.string() + ": " + exception.what();
+        error = "cannot parse " + Utf8Text(indexPath) + ": " + exception.what();
         return false;
     }
     if (parsed.value("formatVersion", 0) != 1) {
@@ -174,7 +175,7 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
         }
         std::string loadError;
         if (!FeatureBinaryCodec::Load(root / file, entry.features, loadError)) {
-            error = "cannot load " + (root / file).string() + ": " + loadError;
+            error = "cannot load " + Utf8Text(root / file) + ": " + loadError;
             return false;
         }
         // The index answers "which floor", never "where exactly" - the pack does that. Keeping a

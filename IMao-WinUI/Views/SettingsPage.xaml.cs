@@ -1235,6 +1235,10 @@ public sealed partial class SettingsPage : Page
             if (plan.ToCancel > 0)
                 ShowKuroSync(InfoBarSeverity.Warning, counts +
                     $"其中 {plan.ToCancel} 个本地完成点在库街区已经取消，点“应用同步”会跟着取消；不想取消就先别应用。");
+            else if (plan.CloudCompleted == 0)
+                ShowKuroSync(InfoBarSeverity.Informational, counts +
+                    "库街区那边还没有任何已完成点位：以前没用过库街区、或者还没在它的点位页标记过点位，都会是这样，不是出错。" +
+                    (plan.LocalCompleted > 0 ? "点“应用同步”可以把本地的已完成点写回库街区。" : "先在库街区的点位页标记几个点位，再回来预览即可。"));
             else
                 ShowKuroSync(InfoBarSeverity.Success, counts);
         }

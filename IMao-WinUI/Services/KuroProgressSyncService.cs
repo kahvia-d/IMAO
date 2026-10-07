@@ -154,7 +154,11 @@ public sealed class KuroProgressSyncService
         progress?.Report(new("正在读取库街区已完成的点位…", 0, 0));
         var completed = await client.GetCompletedIdsAsync(credential.Token, deviceId, cancellationToken);
         var cloudIds = completed.OrderBy(id => id, StringComparer.Ordinal).ToArray();
-        if (cloudIds.Length == 0) throw new InvalidOperationException("库街区没有返回任何已完成点位；请确认账号进度是否为空。");
+        // An account that has never marked a point complete answers with an empty list. That is a normal
+        // first-run state, not a failed read — the client already refused a response that was missing the
+        // field entirely — and the comparison below is exactly what a first synchronization needs: nothing
+        // to pull, and every local completion to push. Refusing it here used to greet every new player with
+        // a red error that looked like IMAO had failed to read their data.
         progress?.Report(new($"正在比对两边的点位（库街区 {cloudIds.Length} 个）…", 0, 0));
         var data = await core.ExecuteMarkerAsync("markerPreviewSync", new
         {

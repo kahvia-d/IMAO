@@ -1,4 +1,5 @@
 #include "Runtime/ResourceSnapshotContext.h"
+#include "Runtime/TextEncoding.h"
 #include "Coordinate/CoordinateStruct.h"
 #include <functional>
 #include <iostream>
@@ -60,6 +61,38 @@ void Reject(const json& snapshot, const std::string& description, const std::str
     const bool valid = Validate(snapshot, error);
     Check(!valid && error.find(expected) != std::string::npos, description + " (" + error + ")");
 }
+}
+
+// A player who extracts IMAO under a directory whose name is not ASCII must still get a working
+// resource set. The failure this pins down: a diagnostic naming that path carried process-code-page
+// bytes, nlohmann's strict serializer threw type_error.316 while writing the log line, and the
+// exception escaped the logger, so a warning about one optional file disabled everything. Paths that
+// leave the process as JSON are converted here, and the serializer tolerates the bytes if a caller
+// ever forgets.
+void TestTextEncoding() {
+    const fs::path chinese = fs::path(L"E:\\Games\\明潮地图工具") / L"IMao-v2026.10.7.1-windows-x64" / L"IMao-CoreHost.exe";
+    const std::string utf8 = Utf8Text(chinese);
+    Check(utf8.find("明潮地图工具") != std::string::npos, "a non-ASCII directory name survives Utf8Text: " + utf8);
+    Check(Utf8Text(fs::path()) == "", "an empty path has no text");
+    try {
+        const auto roundTripped = json::parse(json({ {"path", utf8} }).dump())["path"].get<std::string>();
+        Check(roundTripped == utf8, "a path converted to UTF-8 serializes strictly and comes back unchanged");
+    } catch (const std::exception& exception) {
+        Check(false, std::string("Utf8Text must produce valid UTF-8: ") + exception.what());
+    }
+    // The bytes the code page produces for 「明潮」 in GBK. Written out explicitly so this check does
+    // not depend on the code page of the machine running it.
+    const std::string gbk = std::string("cannot open E:\\Games\\") + "\xC3\xF7\xB3\xB1" + "\\IMao-CoreHost.exe";
+    bool strictRejected = false;
+    try { (void)json({ {"details", gbk} }).dump(); } catch (const json::exception&) { strictRejected = true; }
+    Check(strictRejected, "the strict serializer refuses code-page bytes, which is why the logger must not use it");
+    try {
+        const auto text = DumpJsonText(json({ {"details", gbk} }));
+        Check(json::parse(text)["details"].get<std::string>().find("\xEF\xBF\xBD") != std::string::npos,
+            "a non-UTF-8 diagnostic is replaced with U+FFFD and stays parseable JSON: " + text);
+    } catch (const std::exception& exception) {
+        Check(false, std::string("a diagnostic must never fail over its own bytes: ") + exception.what());
+    }
 }
 
 int main() {
@@ -183,6 +216,7 @@ int main() {
     Check(ResourceSnapshotContext::MapDataRoot() == fixture.map && ResourceSnapshotContext::Id() == "test-1", "resource roots fixed to snapshot");
     bool frozen = false; try { ResourceSnapshotContext::Initialize(good); } catch (const std::logic_error&) { frozen = true; }
     Check(frozen, "live process snapshot cannot change");
+    TestTextEncoding();
     std::cout << checks << " snapshot checks, " << failures << " failed\n";
     return failures == 0 ? 0 : 1;
 }

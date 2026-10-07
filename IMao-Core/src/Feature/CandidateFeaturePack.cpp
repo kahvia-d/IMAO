@@ -1,6 +1,7 @@
 #include "CandidateFeaturePack.h"
 
 #include "../Coordinate/locationCalculator/MapCoordinate.h"
+#include "../Runtime/TextEncoding.h"
 
 #include <bcrypt.h>
 #include <algorithm>
@@ -369,7 +370,7 @@ CandidateFeaturePackStatus CandidateFeaturePack::LoadDirectory(const std::filesy
                 status.anchorMapCoordinate = anchorMapCoordinate;
             }
             if (!status.referenceImage.empty()) status.referenceImage += ';';
-            status.referenceImage += imagePath.string();
+            status.referenceImage += Utf8Text(imagePath);
             ++status.referenceCount;
             status.selfMatchCount += static_cast<int>(selfMatches.size());
             status.selfMatchErrorPixels = std::max(status.selfMatchErrorPixels, errorPixels);

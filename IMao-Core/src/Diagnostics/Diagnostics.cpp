@@ -2,6 +2,7 @@
 
 #include "../util.h"
 #include "../Runtime/StructuredLogger.h"
+#include "../Runtime/TextEncoding.h"
 
 #include <chrono>
 #include <cctype>
@@ -169,5 +170,5 @@ std::string Diagnostics::SessionDirectory() {
     if (!EnsureInitializedLocked()) {
         return {};
     }
-    return sessionDirectory.string();
+    return Utf8Text(sessionDirectory);
 }

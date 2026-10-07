@@ -8,6 +8,7 @@
 #include "VisualIndex/MapVisualIndex.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/ThreadPriority.h"
+#include "../Runtime/TextEncoding.h"
 #include "../Runtime/RuntimeStatus.h"
 
 #include <algorithm>
@@ -268,7 +269,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         std::size_t loadedKuroPack = 0;
         for (const auto& kuro : kuroPacks) {
             if (ResourceSnapshotContext::Configured() && (!kuro.loaded || !kuro.runtimeApproved))
-                throw std::runtime_error("selected tile package failed: " + kuro.directoryPath.string() + " " + kuro.error);
+                throw std::runtime_error("selected tile package failed: " + Utf8Text(kuro.directoryPath) + " " + kuro.error);
             if (kuro.loaded && kuro.runtimeApproved) {
                 ++loadedKuroPack;
                 RuntimeStatus::SetMessage("正在整合扩展地图索引：" + kuro.directoryName + "（" +
@@ -324,7 +325,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         std::size_t loadedCandidatePack = 0;
         for (const auto& candidate : candidates) {
             if (ResourceSnapshotContext::Configured() && !candidate.loaded)
-                throw std::runtime_error("selected candidate package failed: " + candidate.directoryPath.string() + " " + candidate.error);
+                throw std::runtime_error("selected candidate package failed: " + Utf8Text(candidate.directoryPath) + " " + candidate.error);
             if (candidate.loaded) {
                 ++loadedCandidatePack;
                 RuntimeStatus::SetMessage("正在整合候选地图索引：" + candidate.directoryName + "（" +

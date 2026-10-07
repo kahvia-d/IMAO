@@ -1,4 +1,5 @@
 #include "MapVisualIndex.h"
+#include "../../Runtime/TextEncoding.h"
 
 #include "../Processing/FeatureBinaryCodec.h"
 #include "../../Coordinate/CoordinateStruct.h"
@@ -408,7 +409,7 @@ bool MapVisualIndexCodec::LoadManifestShard(const std::filesystem::path& path,
     if (!FeatureBinaryCodec::Sha256LfTextFile(manifest, lfHash, error)) return false;
     if (lfHash != rawHash && Load(path, lfHash, expectedFeatureCount, output, error)) return true;
     if (lfHash == rawHash) error = rawError;
-    error = manifest.string() + ": " + error;
+    error = Utf8Text(manifest) + ": " + error;
     return false;
 }
 
@@ -418,7 +419,7 @@ bool MapVisualIndexCodec::Load(const std::filesystem::path& path,
     try {
         std::ifstream input(path, std::ios::binary | std::ios::ate);
         if (!input) {
-            error = "visual index is missing: " + path.string();
+            error = "visual index is missing: " + Utf8Text(path);
             return false;
         }
         const auto fileSizeValue = input.tellg();
@@ -436,11 +437,11 @@ bool MapVisualIndexCodec::Load(const std::filesystem::path& path,
             return false;
         }
         if (header.sourceImfSha256 != expectedImfSha256) {
-            error = "visual index source SHA-256 mismatch: " + path.string();
+            error = "visual index source SHA-256 mismatch: " + Utf8Text(path);
             return false;
         }
         if (header.featureCount != expectedFeatureCount) {
-            error = "visual index feature count mismatch: " + path.string() +
+            error = "visual index feature count mismatch: " + Utf8Text(path) +
                 " expected=" + std::to_string(expectedFeatureCount) +
                 " actual=" + std::to_string(header.featureCount);
             return false;
@@ -451,7 +452,7 @@ bool MapVisualIndexCodec::Load(const std::filesystem::path& path,
             header.wordCount != MapVisualIndex::WordCount ||
             header.descriptorColumns != MapVisualIndex::DescriptorColumns ||
             header.tileSize != MapVisualIndex::TileSize || header.tileStride != MapVisualIndex::TileStride) {
-            error = "visual index version or geometry does not match: " + path.string();
+            error = "visual index version or geometry does not match: " + Utf8Text(path);
             return false;
         }
         if (header.tileCount == 0 || header.tileCount > kMaximumTiles ||

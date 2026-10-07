@@ -1,4 +1,5 @@
 #include "FeatureBinaryCodec.h"
+#include "../../Runtime/TextEncoding.h"
 
 #include <bcrypt.h>
 #include <cmath>
@@ -195,7 +196,7 @@ bool FeatureBinaryCodec::Load(const std::filesystem::path& path, ImageFeatureDat
     try {
         std::ifstream input(path, std::ios::binary);
         if (!input) {
-            error = "feature binary cannot be opened: " + path.string();
+            error = "feature binary cannot be opened: " + Utf8Text(path);
             return false;
         }
 
@@ -364,7 +365,7 @@ bool FeatureBinaryCodec::Sha256File(const std::filesystem::path& path,
     try {
         std::ifstream input(path, std::ios::binary);
         if (!input) {
-            error = "file cannot be opened for SHA-256: " + path.string();
+            error = "file cannot be opened for SHA-256: " + Utf8Text(path);
             return false;
         }
         Sha256State hash;
@@ -393,7 +394,7 @@ bool FeatureBinaryCodec::Sha256LfTextFile(const std::filesystem::path& path,
     try {
         std::ifstream input(path, std::ios::binary);
         if (!input) {
-            error = "text source cannot be opened: " + path.string();
+            error = "text source cannot be opened: " + Utf8Text(path);
             return false;
         }
         // Candidate manifests are small; bound allocation for invalid inputs.
@@ -402,14 +403,14 @@ bool FeatureBinaryCodec::Sha256LfTextFile(const std::filesystem::path& path,
         char value;
         while (input.get(value)) {
             if (bytes.size() >= maxManifestBytes) {
-                error = "text source exceeds manifest size limit: " + path.string();
+                error = "text source exceeds manifest size limit: " + Utf8Text(path);
                 return false;
             }
             if (value == '\n' && !bytes.empty() && bytes.back() == '\r') bytes.pop_back();
             bytes.push_back(static_cast<std::uint8_t>(value));
         }
         if (!input.eof()) {
-            error = "text source read failed: " + path.string();
+            error = "text source read failed: " + Utf8Text(path);
             return false;
         }
         Sha256State hash;

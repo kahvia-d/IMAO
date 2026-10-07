@@ -172,6 +172,21 @@ internal static class KuroSyncTests
         catch (KuroProgressProtocolException) { statesRejected = true; }
         check(statesRejected, "an incomplete region list is rejected instead of treated as empty");
 
+        // A player who has never used Kuro has a credential but no completed points, and the endpoint
+        // answers with an empty array. That is a valid answer, not a failed read: the preview used to
+        // refuse it, so every new player saw a red error that looked like IMAO had failed to read their
+        // data, and the first upload — local completions the account has never seen — was unreachable.
+        var emptyResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent("{\"code\":200,\"data\":[]}")
+        };
+        using (var emptyClient = new KuroMapProgressClient(new HttpClient(new KuroHttpHandler(emptyResponse))))
+            check(emptyClient.GetCompletedIdsAsync("secret-token", 8, "device-test").GetAwaiter().GetResult().Count == 0,
+                "an account that has never marked a point answers with an empty list instead of a protocol failure");
+        var firstUpload = new KuroSyncComparison([new KuroSyncRegionComparison(8, "瑝珑", [], true, 4, 0, 0, 0, WillQueue: 4)], [], []);
+        check(firstUpload.CloudCompleted == 0 && firstUpload.ToFetch == 0 && firstUpload.ToUpload == 4 && firstUpload.NeedsApply,
+            "local completions can be uploaded to an account that has never marked anything");
+
         // The upload direction is only valid if the request keeps matching the
         // contract verified against the live endpoint on 2026-09-17.
         var writeHandler = new KuroWriteHandler(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
