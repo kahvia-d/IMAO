@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <IMaoVersion>2026.10.7.2</IMaoVersion>
+    <IMaoVersion>2026.10.8.1</IMaoVersion>
     <IMaoBaselineId>map-baseline-1</IMaoBaselineId>
     <Version>$(IMaoVersion)</Version>
     <AssemblyVersion>$(IMaoVersion)</AssemblyVersion>
