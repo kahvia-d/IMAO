@@ -59,6 +59,10 @@ struct MapViewportLocalizationResult {
     int retrievalRankedSceneCount = 0;
     int retrievalSceneCount = 0;
     int retrievalSceneId = 0;
+    // The runner-up's identity, not just its score. Whether the confusion is a neighbouring region
+    // or an unrelated one is what says whether the lead threshold should be loosened - and the
+    // first field session had three searches miss it by less than 0.06.
+    int retrievalRunnerUpSceneId = 0;
     double retrievalTopScore = 0.0;
     double retrievalRunnerUpScore = 0.0;
     int retrievalTileCount = 0;
@@ -71,6 +75,7 @@ inline std::string MapViewportRetrievalFields(const MapViewportLocalizationResul
     return " retrievalRanked=" + std::to_string(result.retrievalRankedSceneCount) +
         " retrievalScenes=" + std::to_string(result.retrievalSceneCount) +
         " retrievalScene=" + std::to_string(result.retrievalSceneId) +
+        " retrievalRunnerUpScene=" + std::to_string(result.retrievalRunnerUpSceneId) +
         " retrievalTop=" + std::to_string(result.retrievalTopScore) +
         " retrievalRunnerUp=" + std::to_string(result.retrievalRunnerUpScore) +
         " retrievalTiles=" + std::to_string(result.retrievalTileCount) +

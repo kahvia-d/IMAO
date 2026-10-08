@@ -2543,6 +2543,16 @@ void App::ProcessMapViewportResult(const Mat& currentSnapshot) {
 		if (!bridged) {
 			// Keep the existing image/pose pair. Confirming this result against
 			// latestFrame_ would silently attach an old pose to the new terrain.
+			//
+			// Record it as a rejection rather than returning silently. The search did succeed and
+			// did cost its full duration; without a line here it vanishes from the latency
+			// analysis, and a seven-second search thrown away because the player had already
+			// panned on looks exactly like one that never ran. The frame gap is why it failed, so
+			// it belongs on the line.
+			Diagnostics::Record("map-viewport-result", "accepted=false reason=bridge-rejected scope=" +
+				std::string(MapViewportLocalizer::ScopeName(result.scope)) + " scene=" + std::to_string(result.sceneId) +
+				" frameGap=" + std::to_string(result.frameId <= snapshotFrameId ? snapshotFrameId - result.frameId : 0) +
+				" durationMs=" + std::to_string(result.durationMilliseconds) + MapViewportRetrievalFields(result));
 			lastMapViewportSubmitAt = {};
 			pendingMapViewportAnchor.reset();
 			return;

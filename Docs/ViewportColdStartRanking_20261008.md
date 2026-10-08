@@ -56,13 +56,16 @@
 2. **按场景聚合**。每个场景取它自己得分最高的那块瓦片作为该场景分数（与小地图在单个网格
    单元内的 `max` 策略一致：同一地区的副本是重复观测，不是独立证据）。
 3. **决定缩小到什么程度**：
-   - 冠军领先亚军达到 `kRetrievalSceneLead = 1.5` 倍 → 只搜冠军这一个场景，并且用它得分
-     最高的 `kRetrievalHintTiles = 12` 块瓦片算出一个中心与半径，把搜索限制在这个邻域内
-     （等价于一次 `Local512`）。
-   - 两个场景咬得很近 → **两个都留**，不做瓦片限制。两个坐标平面看起来一样，正是调用方已有
-     的 `acceptedScenes > 1` 歧义判定要处理的情况，让那个判定看见它们。
-   - 排序为空 / 索引建不起来 / 邻域一块瓦片都选不出来 → 完全按原样，走全扫。
-4. **兜底全扫**。每个冷启动请求会构造**两个** plan：先是排序选出来的那个，然后是这个路径一直
+   - 冠军领先亚军达到 `kRetrievalSceneLead = 1.5` 倍 → 只搜冠军这一个场景。
+   - 两个场景咬得很近 → **两个都留**。两个坐标平面看起来一样，正是调用方已有的
+     `acceptedScenes > 1` 歧义判定要处理的情况，让那个判定看见它们。
+   - 排序为空 / 索引建不起来 / 某个场景算不出窗口 → 完全按原样，走全扫。
+4. **每个保留的场景各带一个瓦片窗口**。一个窗口描述一个坐标平面，所以"保留两个场景"就需要
+   两个窗口——这正是第一版没做到的地方（见第三节）。窗口由该场景自己得分最高的
+   `kRetrievalHintTiles = 12` 块瓦片算出中心与半径，等价于一次 `Local512`。
+   **要么每个保留场景都有窗口，要么一个都不用**：带窗口的 plan 只比较一个尺度，留一个没窗口的
+   场景在里面，等于只让它在错误的尺度上被搜一次。
+5. **兜底全扫**。每个冷启动请求会构造**两个** plan：先是排序选出来的那个，然后是这个路径一直
    在做的全扫。**没有第二个 plan，一次排错就会丢掉一次本来能成功的定位**，所以全扫是地板，
    排序只能比它更好，不能取代它。
 
@@ -80,81 +83,147 @@
 
 ### 为什么阈值是猜的，以及怎么不靠猜
 
-`kRetrievalSceneLead = 1.5` 是一个**保守的估计**，不是量出来的。所以它被刻意放在"宁可多搜"
-的一侧：领先不到 1.5 倍就走两场景路径，仍然把 9 个场景砍到 2 个。
+`kRetrievalSceneLead = 1.5` 是一个**保守的估计**，不是量出来的。第一版里它决定了走"只搜一个
+场景 + 瓦片窗口"还是"搜两个场景 + 全量瓦片"，所以它一旦猜偏，代价就是几秒。
 
 实机日志会直接给出校准它需要的数据：每条 `map-viewport-result` 同时带
 `scene=<最终接受的场景>` 和 `retrievalScene=<排序点名的场景>`，两下一比就是排序准确率。
 字段清单见第四节的表。
 
-## 三、失败模式
+**第一场实机（第三节）证明了这个阈值的危害，也正因为如此，第四节的改动把它降级成了一个
+次要问题**：现在两条分支都会缩瓦片，阈值只决定"搜一个场景"还是"搜两个"，不再决定"缩不缩"。
+
+## 三、第一场实机的数据（2026-10-08 15:56–16:03）
+
+同一份日志，改动前后各一段。改变的只有程序，机器、地图、账号都没变。
+
+| | 改动前（<15:53:48） | 改动后 |
+|---|---|---|
+| `scope=global` 结果数 | 16 | 8 |
+| 接受 | 15（94%） | 8（100%） |
+| 中位耗时 | **10,409 ms** | 780 ms |
+| p90 / max | 10,735 / 12,195 ms | 7,783 ms |
+
+**排序准确率 8/8**：`retrievalRanked=9` 每一次都是 9（九个已准入场景全部有分数），
+`retrievalScene` 与最终接受的 `scene` **每一次都一致**。这是改前最没有把握的一点。
+
+但耗时分布暴露了第一版的设计缺陷：
+
+```
+kept=1（有瓦片窗口）  n=2   626, 687 ms
+kept=2（无瓦片窗口）  n=6   780, 7392, 7554, 7632, 7716, 7783 ms
+```
+
+`kept=2` 六次里五次是 7.4–7.8 秒。原因不是排序错了，是**排序对了却没缩小瓦片**：两个场景各自
+用**全量**瓦片建匹配器，再乘上 2 个裁剪区域 × 4 个缩放因子 = 最多 16 次 `knnMatch`。
+
+而这六次的 top/亚军比值是 **1.06、1.32、1.43、1.45、1.47** 和 1.32——全都**差一点点**够不到
+1.5。也就是说 1.5 这条线恰好切在真实分布的正中间，把四分之三的搜索推到了慢分支上。
+`retrievalRanked=9` 也说明排序本身是有区分度的，只是余量比预期小。
+
+结论：**换掉"无瓦片窗口"这个分支，而不是去调阈值。** 每场景一个窗口之后，`kept=2` 也只是
+两个几百块瓦片的小匹配器 + 4 次 `knnMatch`。
+
+## 四、切区域时那 16 秒里，有一半是被丢掉的
+
+同一个会话里切到另一个区域的过程（16:02:28–16:02:44）：
+
+```
+16:02:28  local-512   失败  matches=1   cropKeypoints=1016      252 ms
+16:02:28  local-1024  失败  matches=6   cropKeypoints=3722      584 ms   ← 加宽这一档纯属浪费
+16:02:28  global      提交  frame=868
+16:02:36  bridge      accepted=0  inliers=0  requestFrame=868 currentFrame=1081
+          ↑ 这一帧地图已经推进了 213 帧。搜索结果本身是**成功**的，但因为无法把它对齐到
+            当前画面而被**丢弃**，而且此前**一行日志都不留**
+16:02:36  global      重新提交  frame=1081
+16:02:44  global      成功  7716 ms
+```
+
+两次 global 各约 7.5 秒，其中**一次白跑**。这不是两个问题，是**同一个**：搜索慢到跨了 200 多帧，
+等它回来时玩家早就把地图移开了，桥接自然失败。搜索变快，这个问题自己就消失。
+
+顺带补了一行日志：桥接失败时记 `accepted=false reason=bridge-rejected frameGap=<n>`。
+不计成"接受"是因为外壳确实没有采用这个位置；但搜索的耗时是真实发生的，不该从延迟统计里消失。
+
+**另外注意 `local-1024` 那一档**：两次切区域里它分别花了 584 ms 和 889 ms，都是 0 内点。
+它设计上是为了"小范围平移"兜底，而切区域根本不在旧中心附近。本次没有动它——先看 global 变快
+之后它在总延迟里占多大比例，再决定值不值得单独处理。
+
+## 五、失败模式
 
 | 情况 | 行为 |
 |---|---|
 | 排序点名了错误场景 | 该 plan 失败 → 同一次调用里继续跑全扫。多花一个小匹配器，不丢定位 |
 | 排序把真实场景排到第 3 名及以后 | 同上，全扫兜住 |
-| 提示邻域没盖住真实位置 | 同上 |
+| 某个保留场景的窗口没盖住真实位置 | 同上 |
+| 某个保留场景算不出窗口 | 整个 plan 都不带窗口，两个场景都按全量搜、四个尺度都试（与改前一致） |
+| 正确位置需要非 1.0 的缩放 | 带窗口的 plan 只比较 1.0；失败后全扫仍然试全部四个尺度 |
 | 索引载不进来 / 词表形状不对 | `BuildVocabularyIndex` 返回空 → 不做预扫，行为与改前完全一致 |
 | 查询描述子一个视觉词都没命中 | `ScoreTiles` 返回 false → 同上 |
 | 索引有词表但没有 posting | 排序成功但全零分 → 视为"没排名"，同上 |
 
-## 四、日志字段
+## 六、日志字段
 
-`map-viewport-result`（接受与拒绝两条都有）新增：
+`map-viewport-result`（接受、拒绝、以及新增的 `reason=bridge-rejected`）都带：
 
 | 字段 | 含义 |
 |---|---|
-| `retrievalRanked` | 打分不为零的场景数。0 = 排序没点名，走了全扫 |
+| `retrievalRanked` | 打分不为零的场景数。0 = 排序没点名（或这不是一次冷启动），走了全扫 |
 | `retrievalScenes` | 排序保留的场景数（1 或 2） |
 | `retrievalScene` | 排序点名第一的场景 |
-| `retrievalTop` / `retrievalRunnerUp` | 冠军 / 亚军分数，用来校准 `kRetrievalSceneLead` |
-| `retrievalTiles` | 瓦片提示留下的瓦片数。0 = 只缩了场景，没有瓦片提示 |
+| `retrievalRunnerUpScene` | 排序点名的亚军场景 |
+| `retrievalTop` / `retrievalRunnerUp` | 冠军 / 亚军分数 |
+| `retrievalTiles` | **冠军场景**的窗口留下多少块瓦片。0 = 没有窗口 |
 | `retrievalMs` | 排序本身耗时 |
 
 新增字段都追加在行尾，且名字里不含 `scope=` 或 `durationMs=`，所以
 `measurements/accuracy-check/viewport_latency.py` 的既有正则**无需修改**。
 
-## 五、改了哪些文件
+## 七、改了哪些文件
 
 | 文件 | 改动 |
 |---|---|
 | `IMao-Core/src/Feature/VisualIndex/VisualIndexRetrieval.h` | **新增**。共享的打分：描述子 → 视觉词 → TF-IDF → 每块瓦片一个分数。两个定位器共用，加权方式不会各自漂移 |
 | `IMao-Core/src/Coordinate/VisualLocalization/GlobalVisualLocalizer.cpp` | `RetrieveTiles` 的算分部分改调共享模块；分组与提示过滤（本路径自己的策略）原样保留。**行为不变** |
-| `IMao-Core/src/App/MapViewportLocalizer.h` | 结果结构体新增 7 个排序诊断字段 + `MapViewportRetrievalFields()` |
-| `IMao-Core/src/App/MapViewportLocalizer.cpp` | 新增 `VocabularyIndex()` / `RankScenes()` / `BuildPlans()`；`Locate` 的 region/factor/scene 三层循环外面套一层 plan 循环 |
-| `IMao-Core/src/App/App.cpp` | 两条 `map-viewport-result` 追加排序字段 |
+| `IMao-Core/src/App/MapViewportLocalizer.h` | 结果结构体新增 8 个排序诊断字段 + `MapViewportRetrievalFields()` |
+| `IMao-Core/src/App/MapViewportLocalizer.cpp` | 新增 `VocabularyIndex()` / `BuildSceneHint()` / `RankScenes()` / `BuildPlans()`；`SearchPlan` 的提示由"一个"改为"每场景一个"；`Locate` 的 region/factor/scene 三层循环外面套一层 plan 循环 |
+| `IMao-Core/src/App/App.cpp` | 三条 `map-viewport-result` 追加排序字段；桥接失败不再静默返回，改记 `reason=bridge-rejected frameGap=<n>` |
 | `IMao-Core/tests/OptimizationTests.cpp` | 新增 `TestVisualIndexRetrieval()` |
 
 `MapViewportLocalizer::Locate` 里还有一处顺带的节省：地图中央裁剪的 SURF 描述子现在只抽一次，
 排序和第一个裁剪区域共用。**只有冷启动会提前抽**——`local-512` 是常见路径，不能为一次它用不上
 的排序付钱。
 
-## 六、验证
+## 八、验证
 
 | 检查 | 结果 |
 |---|---|
 | `IMaoOptimizationTests` | 通过。新增的 `TestVisualIndexRetrieval` 覆盖：命中词表行的描述子给对应瓦片打分、相反描述子给另一块、没有 posting 时"排了但全零"与"拒绝查询"可区分、空查询与错误宽度被拒、词表形状不符不建索引、偏移量溢出时以载荷为界且越界 tileIndex 被跳过 |
-| `IMaoVisualRegression --scene-self-test` | 39 项全 PASS。这一项同时编入两个定位器与 `MultiSceneViewportTests`，覆盖了"索引排不了名时按原样全扫"这条兜底 |
-| 全量目标编译 | 见本次提交记录 |
+| `IMaoVisualRegression --scene-self-test` | 全 PASS。这一项同时编入两个定位器与 `MultiSceneViewportTests`，覆盖了"索引排不了名时按原样全扫"这条兜底 |
+| `ctest` | 7/7 |
+| 全量目标编译 | 0 error |
 
-## 七、实机要看的
+## 九、实机要看的
 
-1. 冷启动开大地图，**首次识别耗时**是否下降（对比 `Docs/VisualIndexRebuildRegression_20261008.md` §10 的
-   基线：4/22 个会话首次识别超 5 秒，最长 32 秒）。
-2. `retrievalScene` 与最终 `scene=` 是否一致——这就是排序准确率。
-3. `retrievalRanked=0` 的比例。偏高说明大地图视口的描述子对不上索引，排序这条路本身不成立。
-4. `retrievalTiles` 的分布。若普遍偏小（几十块），要确认不是提示太紧；若普遍顶到 2048 上限，
-   说明 top-12 散得太开，均值中心这个做法要重新考虑。
-5. 排序点名错误场景时，多出来的那次小匹配器有没有让**最坏情况**明显变差。
+1. **`retrievalScenes=2` 的耗时是否落到和 `=1` 同一档**。这是本轮改动的直接目标：改前这两档是
+   约 650 ms 与约 7,500 ms，改后应该都在 1 秒上下。
+2. 冷启动**首次识别耗时**。基线见第三节：改动前 `scope=global` 中位 10,409 ms。
+3. `retrievalScene` 与最终 `scene=` 是否仍然一致（排序准确率，第一场是 8/8）。
+4. **`reason=bridge-rejected` 出现的频率**。它现在可见了；如果仍然常见，说明搜索还是太慢，
+   或者桥接本身该重做。
+5. `retrievalRunnerUpScene` 与 `retrievalScene` 的关系：混淆的是相邻地区还是无关地区。
+   这决定 `kRetrievalSceneLead` 该松还是该紧——不过如第二节所说，它现在只是个次要问题。
+6. `local-512` 中位耗时有没有变（小地图路径应当完全不受影响）。
+7. 切区域总延迟里 `local-1024` 那一档占多少（第四节末尾）。
 
-## 八、不做什么
+## 十、不做什么
 
-- **不动 `local-512` / `local-1024` 的路径**。那是 91% 接受的正常路径，本次只碰冷启动。
+- **不动 `local-512` 的路径**。那是 91% 接受的正常路径，本次只碰冷启动。
+- **不动 `local-1024` 那一档**。第四节末尾记了它在切区域时的浪费（584/889 ms，0 内点），
+  但它设计上是为小范围平移兜底；先看 global 变快之后它占多大比例。
 - **不让排序直接决定结果**。它永远只是一个 plan，后面跟着全扫。这条是设计的核心约束，
   不是实现细节。
-- **不动 `kRetrievalHintMaxRadius` 之外的内存预算**。`GetLocalMatcher` 的缓存上限（48 MB /
-  8 项）本来就已经挡不住全扫的 9 个场景，本次没有改它；实机第 5 点如果显示 churn 变差，
-  再单独讨论。
-- **不解决"大地图切区域后识别慢（10–20 秒）"**。那是 `Docs/VisualIndexRebuildRegression_20261008.md`
-  §9 第 4 项的另一个问题，已有它自己的那一处修复。本次改动顺带让它的 `Global` 升级也走排序，
-  但没有针对它做设计。
+- **不动 `GetLocalMatcher` 的缓存预算**（48 MB / 8 项）。它本来就已经挡不住全扫的 9 个场景，
+  本次没有改它；窗口变小之后压力只会更低。
+- **调 `kRetrievalSceneLead`**。第一场数据显示它切在真实分布正中间，但真正的问题不是这个数，
+  而是它当时决定的那条分支没有窗口。现在两条分支都有窗口，样本更多之前不动它。
