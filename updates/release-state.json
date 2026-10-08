@@ -13,7 +13,10 @@
     "previousStableSha256": "8ec7e6528a68a3af58857b1fd800a6b26402a5805aaede81a0967e73a4ef4f35",
     "sourceCommit": "011a1bbca91a1719032e2b29655e544bcd15dd03",
     "artifactDigest": "412a694a8007edb4ec009fffd406ac1ab2d6bbed81bf367fbf1a0611c459a3f9",
-    "buildRunId": 37784559772
+    "buildRunId": 37784559772,
+    "requestId": "e745698829e29765445b9371d9e6d3663301f7928eb5d79534bf21c84cf168b5",
+    "requestArtifactId": 11556201133,
+    "requestArtifactDigest": "7e5be5c4884e037df28a9f16e4175c4d46fbf641d9c4baba1665f1c87e3af337"
   },
   "completed": [
     {
