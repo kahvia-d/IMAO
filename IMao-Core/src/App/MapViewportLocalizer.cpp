@@ -472,7 +472,6 @@ private:
                     }
                     auto* cache = GetLocalMatcher(*tiles);
                     if (!cache || !cache->matcher) continue;
-                    if (planIndex == 0) narrowCandidates = *tiles;
                     std::vector<std::vector<cv::DMatch>> pairs;
                     cache->matcher->knnMatch(features.imgDescriptors, pairs, 2);
                     auto attempt = result;
@@ -490,10 +489,17 @@ private:
                     // matcher accepted: a rejection the copy-free matcher would have accepted is exactly the
                     // kind of difference this is looking for.
                     if (attempt.accepted) ++acceptedScenes;
-                    if (attempt.accepted || (!result.accepted &&
+                    const bool keep = attempt.accepted || (!result.accepted &&
                         (attempt.inlierCount > result.inlierCount ||
-                        (attempt.inlierCount == result.inlierCount && attempt.goodMatchCount > result.goodMatchCount))))
+                        (attempt.inlierCount == result.inlierCount && attempt.goodMatchCount > result.goodMatchCount)));
+                    if (keep) {
+                        // The candidates travel with the attempt they produced. Taking them from
+                        // the loop instead recorded whichever scene happened to be visited last -
+                        // in the two-scene case that is the runner-up, which is how this field
+                        // first reported the answer sitting 5 km from its own candidate set.
+                        if (planIndex == 0) narrowCandidates = *tiles;
                         result = std::move(attempt);
+                    }
                 }
                 if (acceptedScenes > 1) {
                     sceneAmbiguity = true;

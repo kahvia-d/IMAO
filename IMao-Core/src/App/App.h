@@ -369,6 +369,9 @@ private:
 	std::optional<WorldSearchPrior> activeWorldSearchPrior;
 	std::uint64_t mapViewportGeneration = 1;
 	std::optional<std::pair<std::uint64_t, std::uint64_t>> mapViewportRequestInFlight;
+	// When the in-flight request was handed to the worker. The submit gate is the only thing that
+	// can reopen itself, so a search that never answers has to be noticed by its age.
+	std::chrono::steady_clock::time_point mapViewportRequestSubmittedAt{};
 	std::uint64_t nextMapViewportRequestId = 1;
 	std::uint64_t activeMapViewportRequestId = 0;
 	std::uint64_t mapViewportAbsoluteRevision = 0;

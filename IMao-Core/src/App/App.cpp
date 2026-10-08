@@ -49,6 +49,19 @@ constexpr double kViewportPredictionScaleRatioTolerance = 0.15;
 // result arrives roughly 350 ms after its request, so this tolerates two missed rounds. It also
 // bounds how long a stale fix can outlive the map the player has already closed.
 constexpr std::int64_t kMapViewportFixFreshnessMs = 1200;
+// How long one full-screen search may stay in flight before it is abandoned and retried.
+//
+// Only one request is allowed at a time, so a search that never returns leaves the full-screen map
+// permanently blind: the submit gate below it never opens again and the status bar says "locating"
+// until the program is restarted. The field log has exactly that shape - a global request at
+// 17:15:39, no result for the following minute, and the viewport worker rebuilding the same 563 MB
+// of scene matchers every ten seconds in the meantime.
+//
+// The deadline sits above the slowest search that has ever produced an answer (a full sweep was
+// measured at 11-23 s) and below the point where waiting is worse than looking again. A search that
+// overruns it has already failed the player, and the retry gets a new frame, a new ranking and a
+// chance to answer from the ranking's own candidates instead of the sweep.
+constexpr std::int64_t kMapViewportRequestDeadlineMs = 20000;
 
 AutoRoute::Start PlanningStart(int sceneId, const Coordinate& mapCoordinate,
     std::chrono::steady_clock::time_point confirmed, std::uint64_t generation, bool valid) {
@@ -373,6 +386,21 @@ winrt::IAsyncAction App::Start() {
 				std::scoped_lock lock(mapViewportMutex);
 				mapViewportPredictor.GetPrediction(prediction);
 				viewportFrameAnchored = mapViewportPredictor.IsCurrentFrameAnchored();
+			}
+
+			// Abandon a search that has stopped answering. Without this the map stays blind for as
+			// long as the worker takes, and the submit gate below can never reopen.
+			if (mapViewportRequestInFlight.has_value() &&
+				now - mapViewportRequestSubmittedAt >
+					std::chrono::milliseconds(kMapViewportRequestDeadlineMs)) {
+				Diagnostics::Record("map-viewport-timeout", "frame=" + std::to_string(snapshotFrameId) +
+					" request=" + std::to_string(activeMapViewportRequestId) + " waitedMs=" +
+					std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+						now - mapViewportRequestSubmittedAt).count()));
+				MapViewportLocalizer::CancelPending();
+				mapViewportRequestInFlight.reset();
+				activeMapViewportRequestId = 0;
+				lastMapViewportSubmitAt = {};
 			}
 
 			if (!mapViewportRequestInFlight.has_value() &&
@@ -2349,6 +2377,7 @@ bool App::SubmitMapViewportSearch(const Mat& currentSnapshot, MapViewportSearchS
 		viewportRevision, rect, request.mapCrop.clone() };
 	if (request.mapCrop.empty() || !MapViewportLocalizer::Submit(std::move(request))) return false;
 	mapViewportRequestInFlight = std::make_pair(mapViewportGeneration, snapshotFrameId);
+	mapViewportRequestSubmittedAt = std::chrono::steady_clock::now();
 	activeMapViewportRequestId = requestId;
 	mapViewportRequestFrame = requestFrame;
 	mapViewportRequestCapturedAt = snapshotCapturedAt;
