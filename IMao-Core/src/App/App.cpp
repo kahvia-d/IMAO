@@ -699,6 +699,11 @@ void App::Thread_DetectGameState() {
     // the visibility lambda above is defined once, outside the loop.
     bool compassTemplateVerified = false;
     double compassAgreement = 0.0;
+    // The region-switch list, which only exists while it is open. Declared beside the compass verdict
+    // for the same reason: the visibility lambda below is defined once, outside the loop.
+    bool regionPanelVisible = false;
+    double regionPanelNeutralFraction = 0.0;
+    bool previousRegionPanel = false;
     std::string rawControlLayout = "none";
     int rawControllerTriggerAnchors = 0;
     bool rawControllerSlider = false;
@@ -706,7 +711,8 @@ void App::Thread_DetectGameState() {
         bool minimapEvidence, bool focused) {
         const auto previous = overlayVisibility.Read();
         const auto visible = visibilityPolicy.Observe(captured.frameId, captured.capturedAt,
-            captured.maximumAge, mapUiState.State(), mapEvidence, minimapEvidence, focused);
+            captured.maximumAge, mapUiState.State(), mapEvidence, minimapEvidence, focused,
+            regionPanelVisible);
         overlayVisibility.Publish(visible);
         GamepadContextSnapshot::Shared().ObserveUi(coordinateSessionId, DrawItemBase::MarkerProfile(),
             MapUiStateController::IsStableBigMap(mapUiState.State()), mapEvidence, minimapEvidence,
@@ -791,6 +797,8 @@ void App::Thread_DetectGameState() {
 		// previous verdict alive.
 		compassTemplateVerified = false;
 		compassAgreement = 0.0;
+		regionPanelVisible = false;
+		regionPanelNeutralFraction = 0.0;
 		// One frame's map inputs, read the same way by the marker policy below and by the state machine
 		// after the (slower) canvas verification. A template-verified compass is the widget itself, so it
 		// stands on its own; that is what keeps an open map alive when the zoom strip is hidden and the
@@ -807,6 +815,9 @@ void App::Thread_DetectGameState() {
 			// A recently confirmed canvas match outlives the HUD probes, which read widgets and go
 			// blind the moment one is hidden, covered, or drawn a shade off the reference.
 			evidence.anchorFresh = MapViewportAnchorFresh();
+			// The region list, whose button column only exists while it is open. Positive evidence, so
+			// it suppresses the markers on its own rather than waiting out the probe hold.
+			evidence.regionPanelVisible = regionPanelVisible;
 			return evidence;
 		};
 		if (Isolation::Enabled(Isolation::kGameStateDetection)) {
@@ -828,6 +839,20 @@ void App::Thread_DetectGameState() {
 			rawControllerTriggerAnchors = controls.controllerTriggerAnchors;
 			rawControllerSlider = controls.controllerSlider;
 			rawMinimapEvidence = minimapVisible; rawCompassEvidence = compassVisible; rawControlEvidence = mapControlsVisible;
+			// The region list, measured from the frame the way the compass is. While it is up the
+			// player is choosing another region, so the markers for this one are in the way and about
+			// to be wrong; BigMapMarkersVisible below is what acts on it.
+			const auto regionPanel = MapUiVisualDetector::DetectRegionPanel(stateSnapshot, stateRect);
+			regionPanelVisible = regionPanel.visible;
+			regionPanelNeutralFraction = regionPanel.neutralFraction;
+			if (regionPanelVisible != previousRegionPanel) {
+				Diagnostics::Record("map-region-panel", "visible=" + std::to_string(regionPanelVisible) +
+					" neutral=" + std::to_string(regionPanel.neutralFraction) +
+					" darkRows=" + std::to_string(regionPanel.darkSeparatorRows) +
+					" sampled=" + std::to_string(regionPanel.sampledPixels) + " decision=" +
+					(regionPanelVisible ? "hide-markers" : "show-markers"));
+			}
+			previousRegionPanel = regionPanelVisible;
 			const auto taskArea = ScreenCoordinate::SpecifyScreenCoordinate(stateRect, hud::kTaskIcon);
 			const cv::Rect taskRegion(static_cast<int>(taskArea.leftPoint.x), static_cast<int>(taskArea.topPoint.y),
 				static_cast<int>(taskArea.rightPoint.x - taskArea.leftPoint.x), static_cast<int>(taskArea.bottomPoint.y - taskArea.topPoint.y));

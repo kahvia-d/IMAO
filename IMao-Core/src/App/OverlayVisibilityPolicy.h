@@ -67,7 +67,7 @@ public:
     OverlayVisibilityFrame Observe(std::uint64_t frameId,
         OverlayVisibilityFrame::Clock::time_point capturedAt,
         std::chrono::milliseconds maximumAge, MapUiState stableState,
-        bool mapEvidence, bool minimapEvidence, bool focused) {
+        bool mapEvidence, bool minimapEvidence, bool focused, bool regionPanel = false) {
         if (focused) lastFocusedAt_ = capturedAt;
         // "The game is up and in front of the player" for this frame. A foreground that flickers away
         // and back is invisible here; a sustained switch is still a switch, and the freshness window
@@ -77,7 +77,13 @@ public:
         const bool gameplayUp = MapUiStateController::IsStableGameplay(stableState);
         if (live && mapEvidence) lastMapEvidenceAt_ = capturedAt;
         if (live && minimapEvidence) lastMinimapEvidenceAt_ = capturedAt;
-        const bool showMap = live && ((mapEvidence && mapUp) ||
+        // The region list is the one case that revokes on the frame it is seen rather than through the
+        // evidence hold below. The hold exists for captures that had *nothing* to say - a probe that
+        // blinked, a widget a pan put behind the cursor - and this is the opposite of that: a widget
+        // that is unmistakably there and says the player is looking at something else. Holding for
+        // 250 ms here would put the whole previous region's markers on top of the list the player is
+        // reading, which is the frame the panel was detected to avoid.
+        const bool showMap = !regionPanel && live && ((mapEvidence && mapUp) ||
             (frame_.mapVisible && mapUp && !minimapEvidence && Held(capturedAt, lastMapEvidenceAt_)));
         const bool showMinimap = live && ((minimapEvidence && !mapEvidence && gameplayUp) ||
             (frame_.minimapVisible && gameplayUp && !mapEvidence && Held(capturedAt, lastMinimapEvidenceAt_)));

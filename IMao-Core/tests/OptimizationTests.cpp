@@ -14,6 +14,7 @@
 #include "ImageAnchoredOverlayTests.h"
 #include "MinimapHudEvidenceTests.h"
 #include "HudLayoutTests.h"
+#include "Coordinate/HudLayout.h"
 #include "DenseMapConfirmerTests.h"
 #include "OcrCoordinateGateTests.h"
 #include "OcrRouteAgreementTests.h"
@@ -407,7 +408,61 @@ void TestMapCompassVisualDetector() {
 #endif
 }
 
+void TestRegionPanelDetector() {
+    // The rule is a colour fraction over a fixed box plus the panel's dark separators, so the test
+    // paints both and checks the two ways it can be wrong: a panel that is there, and a bright flat
+    // surface that is not. Real captures are what the thresholds were measured on (`--ui-probe`
+    // scores 0.685 for the open panel and 0.001..0.178 for nine frames without it); this is the part
+    // of that which can live in the gate.
+    constexpr int width = 2560, height = 1440;
+    const RECT rect{0, 0, width, height};
+    const cv::Rect box = hud::MapBox(hud::Layout::For(width, height), hud::kRegionPanelButtons);
+    Expect(box.width > 0 && box.height > 0, "the region panel box must land inside a 2560x1440 client");
+
+    cv::Mat frame(height, width, CV_8UC3, cv::Scalar(20, 40, 60));
+    Expect(!MapUiVisualDetector::DetectRegionPanel(frame, rect).visible,
+        "an ordinary dark map must not read as the region list");
+    Expect(!MapUiVisualDetector::DetectRegionPanel({}, rect).visible, "empty frame should be rejected");
+
+    // Six button plates with the panel's own background showing between them.
+    const int plateHeight = box.height / 6;
+    for (int index = 0; index < 6; ++index) {
+        cv::rectangle(frame, cv::Rect(box.x, box.y + index * plateHeight + 8, box.width, plateHeight - 16),
+            cv::Scalar(193, 194, 196), cv::FILLED);
+    }
+    const auto painted = MapUiVisualDetector::DetectRegionPanel(frame, rect);
+    Expect(painted.visible, "the region list's own button column should be detected");
+    Expect(painted.neutralFraction > 0.35 && painted.darkSeparatorRows >= 2,
+        "the detected panel should carry the numbers the thresholds were set from");
+
+    // The documented limit: a flat neutral-bright surface fills the box with grey and has no dark
+    // rows at all. Only the separator count rejects it, which is why that count exists - a cloud
+    // bank's worth of untextured 235-grey would otherwise be a menu.
+    cv::Mat flat(height, width, CV_8UC3, cv::Scalar(20, 40, 60));
+    cv::rectangle(flat, cv::Rect(box.x, box.y, box.width, box.height), cv::Scalar(235, 235, 238), cv::FILLED);
+    const auto flatDetection = MapUiVisualDetector::DetectRegionPanel(flat, rect);
+    Expect(flatDetection.neutralFraction > 0.9 && !flatDetection.visible,
+        "a flat bright surface is fully neutral and must still not be a panel");
+
+    // A teal sea, the shape five of the six reference captures put under this box.
+    cv::Mat sea(height, width, CV_8UC3, cv::Scalar(60, 45, 30));
+    Expect(!MapUiVisualDetector::DetectRegionPanel(sea, rect).visible,
+        "tinted terrain must not read as a neutral panel");
+
+    // And the policy the detector feeds: the panel suppresses the markers, and nothing else.
+    MapFrameEvidence evidence;
+    evidence.controlsVisible = true;
+    evidence.anchorFresh = true;
+    Expect(BigMapMarkersVisible(evidence), "a probed map with no panel should keep drawing");
+    Expect(BigMapEvidence(evidence), "the panel is not evidence about whether the map is open");
+    evidence.regionPanelVisible = true;
+    Expect(!BigMapMarkersVisible(evidence), "the open region list should hide the map markers");
+    Expect(BigMapEvidence(evidence),
+        "the open region list must not close the map UI state - that would drop the viewport session");
+}
+
 void TestMapViewportPredictor() {
+
     MapViewportPredictor predictor;
     const int worldScene = Scene::SceneNameToId("World");
     const std::vector<cv::Point2f> corners = {
@@ -1267,6 +1322,7 @@ int main(int argc, char** argv) {
     TestFineViewportMotion(Expect);
 	TestMapUiStateController();
 	TestMapCompassVisualDetector();
+	TestRegionPanelDetector();
 	TestMapViewportPredictor();
 	TestWorldSearchPrior();
     TestNewSceneRegistry();

@@ -4,6 +4,7 @@
 #include "Coordinate/VisualLocalization/RecoveryPolicy.h"
 #include "App/MapViewportCandidates.h"
 #include "App/MapViewportLocalizer.h"
+#include "App/MapUiVisualDetector.h"
 #include "App/MinimapResumePolicy.h"
 #include "Coordinate/locationCalculator/MapCoordinate.h"
 #include "Feature/CandidateFeaturePack.h"
@@ -873,6 +874,39 @@ int SweepSceneRanking(const std::filesystem::path& repositoryRoot, int queryScen
     return 0;
 }
 
+// What the HUD probes say about one recorded frame.
+//
+// The region-switch panel is decided by a colour fraction over a fixed box, and a box read off a
+// single capture is exactly the kind of thing that looks certain until it meets a second one. This
+// runs the real detectors over the captures the repository already carries, so a threshold can be
+// moved against six negatives instead of against the one frame that suggested it.
+int CheckUiProbes(const std::filesystem::path& imagePath, int clientWidth, int clientHeight) {
+    const cv::Mat snapshot = cv::imread(imagePath.string());
+    if (snapshot.empty()) {
+        std::cerr << "Cannot read " << imagePath.string() << '\n';
+        return 1;
+    }
+    if (clientWidth <= 0 || clientHeight <= 0) { clientWidth = snapshot.cols; clientHeight = snapshot.rows; }
+    const RECT rect{ 0, 0, clientWidth, clientHeight };
+    const auto panel = MapUiVisualDetector::DetectRegionPanel(snapshot, rect);
+    const auto compass = MapUiVisualDetector::DetectBigMapCompass(snapshot, rect);
+    const auto controls = MapUiVisualDetector::DetectBigMapControlLayout(snapshot, rect);
+    std::cout << imagePath.filename().string() << "  " << snapshot.cols << "x" << snapshot.rows
+        << "  client " << clientWidth << "x" << clientHeight << '\n'
+        << "  regionPanel   visible=" << panel.visible
+        << "  neutral=" << std::fixed << std::setprecision(4) << panel.neutralFraction
+        << "  darkRows=" << panel.darkSeparatorRows
+        << "  sampled=" << panel.sampledPixels << '\n'
+        << "  compass       visible=" << compass.visible << "  gold=" << compass.goldPixels
+        << "  verified=" << compass.templateVerified << "  agreement="
+        << std::setprecision(4) << compass.templateAgreement << '\n'
+        << "  controls      visible=" << controls.visible
+        << "  layout=" << (controls.mouse ? "mouse" : (controls.controller ? "controller" : "none")) << '\n';
+    // The panel verdict is what the exit code answers, so a batch of captures can be checked by a
+    // script: 0 means "no panel here", 3 means "panel", 1 means the frame could not be read.
+    return panel.visible ? 3 : 0;
+}
+
 // Rank a real recorded screenshot, at every zoom the product tries.
 //
 // The synthetic checks rank a genuine query first everywhere, so whatever goes wrong in the field
@@ -975,6 +1009,11 @@ int wmain(int argumentCount, wchar_t** arguments) {
         const int height = argumentCount >= 6 ? std::stoi(arguments[5]) : 1440;
         return CheckRankingOnImage(std::filesystem::path(arguments[2]),
             std::filesystem::path(arguments[3]), width, height);
+    }
+    if (argumentCount >= 3 && std::wstring(arguments[1]) == L"--ui-probe") {
+        const int width = argumentCount >= 4 ? std::stoi(arguments[3]) : 0;
+        const int height = argumentCount >= 5 ? std::stoi(arguments[4]) : 0;
+        return CheckUiProbes(std::filesystem::path(arguments[2]), width, height);
     }
     if (argumentCount != 4) {
         std::wcerr << L"Usage: IMaoVisualRegression <repo-root> <manifest.json> <report.json>\n";

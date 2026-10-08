@@ -28,6 +28,24 @@ struct MapControlDetection {
     bool controllerSlider = false;
 };
 
+// The region-switch panel whose button column covers the right of the full-screen map. While it is
+// open the player is picking another region rather than reading this one, so what the overlay draws
+// for the current region is both in the way and about to be wrong.
+//
+// One statistic decides it: the fraction of the button box that is neutral light grey. Measured on
+// the 2026-10-08 capture with the panel open against six captures without it: 69.2% against 0.1,
+// 0.3, 3.5, 4.3, 6.1 and 11.3 percent. The box also carries the number so a threshold that starts
+// misjudging real frames can be corrected from the log rather than from a guess.
+struct MapRegionPanelDetection {
+    bool visible = false;
+    double neutralFraction = 0.0;
+    // Rows of the box that are mostly dark - the panel's own background showing between its button
+    // plates. Two or more of them is what separates a menu from a flat bright surface, which is the
+    // one shape the colour fraction alone would misread.
+    int darkSeparatorRows = 0;
+    int sampledPixels = 0;
+};
+
 // The compiled-in compass reference.  Reported so a damaged embed fails loudly in the test suite instead
 // of silently turning the probe into "never a compass".
 struct MapCompassTemplateInfo {
@@ -50,5 +68,6 @@ public:
     // Independent UI evidence, usable before any player coordinate is known.
     static bool DetectBigMapControls(const cv::Mat& snapshot, const RECT& clientRect);
     static MapControlDetection DetectBigMapControlLayout(const cv::Mat& snapshot, const RECT& clientRect);
+    static MapRegionPanelDetection DetectRegionPanel(const cv::Mat& snapshot, const RECT& clientRect);
     static MapCompassTemplateInfo CompassTemplateInfo();
 };

@@ -47,6 +47,12 @@ struct MapFrameEvidence {
     // went blind for one to two seconds at a time while the canvas kept matching at 74-100 inliers and
     // the player never left the map.
     bool anchorFresh = false;
+    // The region-switch list is open over the map. This is positive evidence about what the player is
+    // looking at, not a probe that went blind: the map is still up and still anchored, but the player
+    // is picking another region, so what the overlay draws for this one is in the way and is about to
+    // be wrong. It suppresses the markers and nothing else - the UI state stays BigMap, because the
+    // map really is open and dropping the state would throw away the viewport session with it.
+    bool regionPanelVisible = false;
 
     // Task-icon descriptors can match map labels during a pan. Current,
     // verified full-screen widgets outweigh that weak HUD hit. An old canvas
@@ -74,7 +80,7 @@ inline bool BigMapEvidence(const MapFrameEvidence& evidence) {
         (evidence.minimapAbsentLongEnough && evidence.Probed());
 }
 inline bool BigMapMarkersVisible(const MapFrameEvidence& evidence) {
-    return !evidence.GameplayHudVisible() && evidence.Probed();
+    return !evidence.GameplayHudVisible() && evidence.Probed() && !evidence.regionPanelVisible;
 }
 
 // Keeps UI transitions separate from raw per-frame feature checks. A stable

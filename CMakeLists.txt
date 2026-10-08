@@ -569,6 +569,11 @@ add_executable(IMaoVisualRegression
     IMao-Core/src/Runtime/ResourceSnapshotContext.cpp
     IMao-Core/src/Runtime/RuntimeStatus.cpp
     IMao-Core/src/App/MapViewportLocalizer.cpp
+    # The HUD probes, so --ui-probe can run them over recorded captures: a box and a threshold read
+    # off one frame is exactly what a second frame disagrees with, and this is where the second frame
+    # gets to vote.
+    IMao-Core/src/App/MapUiVisualDetector.cpp
+    IMao-Core/src/App/MapUiStateController.cpp
     IMao-Core/src/Coordinate/VisualLocalization/GlobalVisualLocalizer.cpp
     IMao-Core/src/Diagnostics/Diagnostics.cpp
     IMao-Core/src/Runtime/StructuredLogger.cpp

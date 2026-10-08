@@ -63,6 +63,17 @@ inline constexpr Box kCoordinateReadout = { 20, 865, 160, 900, AnchorX::Left, An
 inline constexpr Box kMapCenterArea = { 160, 135, 1440, 765, AnchorX::Center, AnchorY::Center };
 inline constexpr Box kBigMapCompass = { 10, 52, 82, 116, AnchorX::Left, AnchorY::Top };
 inline constexpr Box kBigMapZoomStrip = { 1480, 235, 1540, 645, AnchorX::Right, AnchorY::Center };
+// The region-switch panel's own button column - the stack of large light-grey region buttons that
+// only exists while that list is open. Measured 2026-10-08 from a 2560x1440 capture of the open
+// panel, where the buttons occupy x 1408..1822, y 168..822, i.e. reference 880..1139 by 105..514;
+// the box below is inset by ten reference units on every side so the panel's outer edge, the
+// selection frame and the gaps between buttons never vote.
+//
+// Right-anchored, and honestly so: the panel hangs off the right screen edge with a 62-unit margin,
+// which on a 16:9 client is the same pixel as left-anchored - the two only diverge on a client
+// taller or wider than 16:9, exactly the ambiguity the zoom strip above records. Vertical is Top,
+// not Center: the panel occupies the upper 59% of the reference height.
+inline constexpr Box kRegionPanelButtons = { 890, 115, 1130, 505, AnchorX::Right, AnchorY::Top };
 
 /// The single scale and the anchor rules one client size implies.
 struct Layout {
