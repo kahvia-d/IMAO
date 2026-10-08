@@ -10,6 +10,7 @@
 #include "Feature/KuroTileFeaturePack.h"
 #include "Feature/Processing/FeatureBinaryCodec.h"
 #include "Feature/VisualIndex/MapVisualIndex.h"
+#include "Feature/VisualIndex/VisualIndexRetrieval.h"
 #include "ImageProcessing/ImageProcessing.h"
 #include "Runtime/ResourceSnapshotContext.h"
 
@@ -661,11 +662,306 @@ int MeasureViewportCost(const std::filesystem::path& repositoryRoot, int sceneId
     return 0;
 }
 
+// Does the scene scoring favour whichever scene owns the most tiles?
+//
+// The field log has one ranking failure that cost a full sweep: a viewport over Tethys - 13,329
+// keypoints across the whole pack - was ranked below Lahai, which has 366,000, a factor of
+// twenty-seven and the two extremes of the game. A scene's score is the maximum over its tiles, and
+// a maximum over more draws is larger, so the worry is that a big scene wins by having more chances
+// to produce one lucky tile rather than by describing the view better.
+//
+// This asks the question directly instead of guessing: take descriptors that really do come from
+// the query scene, rank them with the shipped retrieval, and print the per-scene scores under the
+// shipped rule and under two alternatives that do not grow with the number of draws.
+int CheckSceneRanking(const std::filesystem::path& repositoryRoot, int querySceneId, int querySize) {
+    std::string error;
+    RuntimeFeatureRepository::Instance().BeginPreload(repositoryRoot / "Assets");
+    const auto resources = RuntimeFeatureRepository::Instance().AwaitReady(error);
+    if (!resources || !resources->visualIndexReady) {
+        std::cerr << "Visual resources failed to load: " << error << '\n';
+        return 1;
+    }
+
+    // The query is a run of the query scene's own tiles, which is what a viewport crop over that
+    // scene produces: same content, same scale, and the descriptors a real crop would yield.
+    cv::Mat query;
+    std::vector<int> queried;
+    for (std::size_t tileIndex = 0; tileIndex < resources->visualIndex.tiles.size() && query.rows < querySize; ++tileIndex) {
+        if (MapViewportCandidates::TileScene(*resources, tileIndex) != querySceneId) continue;
+        const auto& tile = resources->visualIndex.tiles[tileIndex];
+        for (std::uint32_t row = 0; row < tile.featureRowCount && query.rows < querySize; ++row) {
+            const auto index = tile.featureRowOffset + row;
+            if (index >= resources->visualIndex.featureRows.size()) break;
+            query.push_back(resources->map.imgDescriptors.row(
+                static_cast<int>(resources->visualIndex.featureRows[index])));
+        }
+        queried.push_back(static_cast<int>(tileIndex));
+    }
+    if (query.rows == 0) {
+        std::cerr << "Scene " << querySceneId << " has no descriptors to query with.\n";
+        return 1;
+    }
+    std::cout << "query: scene " << querySceneId << ", " << query.rows << " descriptors from "
+        << queried.size() << " of its own tiles\n";
+
+    auto vocabulary = VisualIndexRetrieval::BuildVocabularyIndex(resources->visualIndex.vocabulary);
+    if (!vocabulary) {
+        std::cerr << "The vocabulary could not build a search.\n";
+        return 1;
+    }
+    std::vector<double> scores;
+    if (!VisualIndexRetrieval::ScoreTiles(*resources, *vocabulary, query, scores)) {
+        std::cerr << "The query produced no weights at all.\n";
+        return 1;
+    }
+
+    std::map<int, std::vector<double>> perScene;
+    std::map<int, std::size_t> tileCount;
+    for (std::uint32_t tileIndex = 0; tileIndex < scores.size(); ++tileIndex) {
+        const int sceneId = MapViewportCandidates::TileScene(*resources, tileIndex);
+        if (!Scene::IsRuntimeApproved(sceneId)) continue;
+        ++tileCount[sceneId];
+        if (scores[tileIndex] > 0.0) perScene[sceneId].push_back(scores[tileIndex]);
+    }
+
+    const auto meanOfTop = [](std::vector<double> values, std::size_t count) {
+        if (values.empty()) return 0.0;
+        std::sort(values.begin(), values.end(), std::greater<double>());
+        if (values.size() > count) values.resize(count);
+        double total = 0.0;
+        for (const auto value : values) total += value;
+        return total / static_cast<double>(values.size());
+    };
+
+    struct Row { int scene; double max, top4, top16; std::size_t tiles; };
+    std::vector<Row> rows;
+    for (const auto& [sceneId, values] : perScene) {
+        rows.push_back({ sceneId, values.front(), meanOfTop(values, 4), meanOfTop(values, 16),
+            tileCount[sceneId] });
+    }
+    const auto print = [&](const char* label, auto key) {
+        auto sorted = rows;
+        std::sort(sorted.begin(), sorted.end(), [&](const Row& left, const Row& right) {
+            return key(left) > key(right);
+        });
+        std::cout << "  by " << label << ": ";
+        for (std::size_t index = 0; index < sorted.size(); ++index) {
+            if (index) std::cout << " > ";
+            std::cout << sorted[index].scene;
+        }
+        std::cout << '\n';
+    };
+    std::cout << "scene  tiles   scored      max      top4     top16\n";
+    auto byScene = rows;
+    std::sort(byScene.begin(), byScene.end(), [](const Row& l, const Row& r) { return l.scene < r.scene; });
+    for (const auto& row : byScene) {
+        std::cout << "  " << row.scene << "   " << std::setw(5) << row.tiles << "   "
+            << std::setw(6) << perScene[row.scene].size() << "   " << std::fixed << std::setprecision(4)
+            << std::setw(7) << row.max << "  " << std::setw(7) << row.top4 << "  " << std::setw(7) << row.top16
+            << '\n';
+    }
+    print("max (shipped)", [](const Row& row) { return row.max; });
+    print("mean of top 4", [](const Row& row) { return row.top4; });
+    print("mean of top 16", [](const Row& row) { return row.top16; });
+    return 0;
+}
+
+// Where in a scene the ranking stops recognising it.
+//
+// The whole-scene check above ranks a genuine Tethys query first under every aggregation rule tried,
+// so the field failure - a Tethys viewport ranked below Lahai - is not the scoring rule. It is
+// something about where the view was. This walks the scene one viewport-sized slice at a time, in
+// tile order, and reports the rank of the true scene for each, which turns "Tethys is ranked wrong"
+// into "these parts of Tethys are ranked wrong".
+int SweepSceneRanking(const std::filesystem::path& repositoryRoot, int querySceneId, int querySize) {
+    std::string error;
+    RuntimeFeatureRepository::Instance().BeginPreload(repositoryRoot / "Assets");
+    const auto resources = RuntimeFeatureRepository::Instance().AwaitReady(error);
+    if (!resources || !resources->visualIndexReady) {
+        std::cerr << "Visual resources failed to load: " << error << '\n';
+        return 1;
+    }
+    auto vocabulary = VisualIndexRetrieval::BuildVocabularyIndex(resources->visualIndex.vocabulary);
+    if (!vocabulary) {
+        std::cerr << "The vocabulary could not build a search.\n";
+        return 1;
+    }
+
+    std::vector<std::uint32_t> sceneTiles;
+    for (std::uint32_t tileIndex = 0; tileIndex < resources->visualIndex.tiles.size(); ++tileIndex) {
+        if (MapViewportCandidates::TileScene(*resources, tileIndex) == querySceneId) sceneTiles.push_back(tileIndex);
+    }
+    if (sceneTiles.empty()) {
+        std::cerr << "Scene " << querySceneId << " has no tiles.\n";
+        return 1;
+    }
+
+    int worseThanSecond = 0, total = 0;
+    std::cout << "scene " << querySceneId << ", " << sceneTiles.size() << " tiles, query "
+        << querySize << " descriptors\n";
+    std::cout << "  start  centre                        rank  leader  true   margin\n";
+    for (std::size_t start = 0; start < sceneTiles.size(); start += 4) {
+        cv::Mat query;
+        double centreX = 0.0, centreY = 0.0;
+        int centreCount = 0;
+        for (std::size_t offset = 0; offset < sceneTiles.size() && query.rows < querySize; ++offset) {
+            const auto tileIndex = sceneTiles[(start + offset) % sceneTiles.size()];
+            const auto& tile = resources->visualIndex.tiles[tileIndex];
+            for (std::uint32_t row = 0; row < tile.featureRowCount && query.rows < querySize; ++row) {
+                const auto index = tile.featureRowOffset + row;
+                if (index >= resources->visualIndex.featureRows.size()) break;
+                query.push_back(resources->map.imgDescriptors.row(
+                    static_cast<int>(resources->visualIndex.featureRows[index])));
+            }
+            centreX += (static_cast<double>(tile.minX) + tile.maxX) / 2.0;
+            centreY += (static_cast<double>(tile.minY) + tile.maxY) / 2.0;
+            ++centreCount;
+        }
+        if (query.rows == 0) continue;
+        centreX /= static_cast<double>(centreCount);
+        centreY /= static_cast<double>(centreCount);
+
+        std::vector<double> scores;
+        if (!VisualIndexRetrieval::ScoreTiles(*resources, *vocabulary, query, scores)) continue;
+        std::map<int, double> best;
+        for (std::uint32_t tileIndex = 0; tileIndex < scores.size(); ++tileIndex) {
+            if (!(scores[tileIndex] > 0.0)) continue;
+            const int sceneId = MapViewportCandidates::TileScene(*resources, tileIndex);
+            if (!Scene::IsRuntimeApproved(sceneId)) continue;
+            auto& entry = best[sceneId];
+            entry = std::max(entry, scores[tileIndex]);
+        }
+        if (best.empty()) continue;
+        // Built explicitly: constructing a pair<double,int> vector from a map<int,double> compiles
+        // and silently swaps the members, which reads as every score being zero.
+        std::vector<std::pair<double, int>> ranked;
+        ranked.reserve(best.size());
+        for (const auto& [sceneId, score] : best) ranked.emplace_back(score, sceneId);
+        std::sort(ranked.begin(), ranked.end(), [](const auto& l, const auto& r) {
+            if (l.first != r.first) return l.first > r.first;
+            return l.second < r.second;
+        });
+        int rank = 0;
+        double own = 0.0;
+        for (std::size_t index = 0; index < ranked.size(); ++index) {
+            if (ranked[index].second == querySceneId) { rank = static_cast<int>(index) + 1; own = ranked[index].first; }
+        }
+        ++total;
+        if (rank > 1) ++worseThanSecond;
+        const double leader = ranked.front().first;
+        std::cout << "  " << std::setw(5) << start << "  (" << std::setw(8) << std::fixed
+            << std::setprecision(0) << centreX << "," << std::setw(8) << centreY << ")   "
+            << std::setw(4) << rank << "  " << std::setw(5) << ranked.front().second << "  "
+            << std::setprecision(4) << std::setw(6) << own << "  "
+            << std::setw(6) << (leader > 0.0 ? own / leader : 0.0) << (rank > 2 ? "   <-- missed" : "")
+            << '\n';
+    }
+    std::cout << "  " << worseThanSecond << " of " << total << " positions did not rank the true scene first\n";
+    return 0;
+}
+
+// Rank a real recorded screenshot, at every zoom the product tries.
+//
+// The synthetic checks rank a genuine query first everywhere, so whatever goes wrong in the field
+// is not the scoring rule and not the scene. The remaining difference is the query itself: the
+// product ranks from the central crop taken at its native scale, while the screenshot the player
+// hands it is rendered at whatever zoom the map is on. If the zoom is not the one the index was
+// built at, the ranking is being asked about a picture the index has never seen - and the search
+// itself would still succeed, because it tries four zooms while the ranking only ever sees one.
+int CheckRankingOnImage(const std::filesystem::path& repositoryRoot, const std::filesystem::path& imagePath,
+    int clientWidth, int clientHeight) {
+    std::string error;
+    RuntimeFeatureRepository::Instance().BeginPreload(repositoryRoot / "Assets");
+    const auto resources = RuntimeFeatureRepository::Instance().AwaitReady(error);
+    if (!resources || !resources->visualIndexReady) {
+        std::cerr << "Visual resources failed to load: " << error << '\n';
+        return 1;
+    }
+    auto vocabulary = VisualIndexRetrieval::BuildVocabularyIndex(resources->visualIndex.vocabulary);
+    if (!vocabulary) {
+        std::cerr << "The vocabulary could not build a search.\n";
+        return 1;
+    }
+    const cv::Mat snapshot = cv::imread(imagePath.string());
+    if (snapshot.empty()) {
+        std::cerr << "Cannot read " << imagePath.string() << '\n';
+        return 1;
+    }
+    std::cout << "image " << snapshot.cols << "x" << snapshot.rows << ", client "
+        << clientWidth << "x" << clientHeight << '\n';
+    RECT rect{ 0, 0, clientWidth, clientHeight };
+    const cv::Mat mapCrop = ImageProcessing::CropToMapCenterArea(snapshot, rect);
+    if (mapCrop.empty()) {
+        std::cerr << "The map centre area is empty - client size does not match the image.\n";
+        return 1;
+    }
+    const int centralWidth = std::max(1, cvRound(mapCrop.cols * 350.0 / 1280.0));
+    const int centralHeight = std::max(1, cvRound(mapCrop.rows * 350.0 / 630.0));
+    const cv::Rect centre((mapCrop.cols - centralWidth) / 2, (mapCrop.rows - centralHeight) / 2,
+        centralWidth, centralHeight);
+    const cv::Mat centralCrop = mapCrop(centre);
+    auto surf = cv::xfeatures2d::SURF::create(100, 4, 3, true, true);
+
+    for (const double factor : { 1.0, 1.5, 2.0, 0.75, 0.5, 0.25 }) {
+        cv::Mat query = centralCrop;
+        if (factor != 1.0) {
+            cv::resize(centralCrop, query, {}, factor, factor,
+                factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
+        }
+        auto features = FeatureMatch::ExtractSurfFeatures(surf, query);
+        std::vector<double> scores;
+        if (!VisualIndexRetrieval::ScoreTiles(*resources, *vocabulary, features.imgDescriptors, scores)) {
+            std::cout << "  factor " << factor << ": " << features.imgKeypoints.size()
+                << " keypoints, no weights at all\n";
+            continue;
+        }
+        std::map<int, double> best;
+        for (std::uint32_t tileIndex = 0; tileIndex < scores.size(); ++tileIndex) {
+            if (!(scores[tileIndex] > 0.0)) continue;
+            const int sceneId = MapViewportCandidates::TileScene(*resources, tileIndex);
+            if (!Scene::IsRuntimeApproved(sceneId)) continue;
+            auto& entry = best[sceneId];
+            entry = std::max(entry, scores[tileIndex]);
+        }
+        std::vector<std::pair<double, int>> ranked;
+        for (const auto& [sceneId, score] : best) ranked.emplace_back(score, sceneId);
+        std::sort(ranked.begin(), ranked.end(), [](const auto& l, const auto& r) {
+            if (l.first != r.first) return l.first > r.first;
+            return l.second < r.second;
+        });
+        std::cout << "  factor " << factor << ": " << features.imgKeypoints.size()
+            << " keypoints from " << query.cols << "x" << query.rows << " -> ranked ";
+        for (std::size_t index = 0; index < ranked.size() && index < 5; ++index) {
+            if (index) std::cout << " > ";
+            std::cout << ranked[index].second << "(" << std::fixed << std::setprecision(3)
+                << ranked[index].first << ")";
+        }
+        std::cout << '\n';
+    }
+    return 0;
+}
+
 int wmain(int argumentCount, wchar_t** arguments) {
     if (argumentCount == 2 && std::wstring(arguments[1]) == L"--scene-self-test") return RunMultiSceneViewportTests();
     if (argumentCount >= 3 && std::wstring(arguments[1]) == L"--viewport-cost") {
         const int sceneId = argumentCount >= 4 ? std::stoi(arguments[3]) : Scene::SceneNameToId("World");
         return MeasureViewportCost(std::filesystem::path(arguments[2]), sceneId);
+    }
+    if (argumentCount >= 3 && std::wstring(arguments[1]) == L"--ranking-check") {
+        const int sceneId = argumentCount >= 4 ? std::stoi(arguments[3]) : Scene::SceneNameToId("World");
+        const int querySize = argumentCount >= 5 ? std::stoi(arguments[4]) : 3000;
+        return CheckSceneRanking(std::filesystem::path(arguments[2]), sceneId, querySize);
+    }
+    if (argumentCount >= 3 && std::wstring(arguments[1]) == L"--ranking-sweep") {
+        const int sceneId = argumentCount >= 4 ? std::stoi(arguments[3]) : Scene::SceneNameToId("World");
+        const int querySize = argumentCount >= 5 ? std::stoi(arguments[4]) : 3000;
+        return SweepSceneRanking(std::filesystem::path(arguments[2]), sceneId, querySize);
+    }
+    if (argumentCount >= 4 && std::wstring(arguments[1]) == L"--ranking-image") {
+        const int width = argumentCount >= 5 ? std::stoi(arguments[4]) : 2560;
+        const int height = argumentCount >= 6 ? std::stoi(arguments[5]) : 1440;
+        return CheckRankingOnImage(std::filesystem::path(arguments[2]),
+            std::filesystem::path(arguments[3]), width, height);
     }
     if (argumentCount != 4) {
         std::wcerr << L"Usage: IMaoVisualRegression <repo-root> <manifest.json> <report.json>\n";

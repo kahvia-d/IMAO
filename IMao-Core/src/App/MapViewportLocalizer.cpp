@@ -86,6 +86,15 @@ constexpr std::size_t kRetrievalWideTiles = 4 * kRetrievalHintTiles;
 // stay, and the sweep is nine preparations instead of seventy-two.
 constexpr std::size_t kSweepBytes = 4 * 1024 * 1024;
 constexpr std::size_t kSweepTiles = 64;
+// The zooms a full-screen search tries, in the order it tries them. The ranking uses the same list:
+// it ranks the map-centre crop at each of them and carries the one it was ranked at into the plan,
+// because a crop rendered at one zoom is a different picture to the index than the same crop at
+// another, and ranking it at the wrong one picks the wrong scene.
+constexpr std::array<double, 4> kFactors = { 1.0, 1.5, 2.0, 0.75 };
+// How many of those rankings become plans. Every one of them is a scene that led at some zoom, and
+// the field evidence is a ranking that named the game's largest scene whenever the zoom was not the
+// one the index was built at - so the plan list carries the leaders rather than betting on one.
+constexpr std::size_t kRankedPlans = 3;
 
 
 // The decision half of a match - fit, inliers, reprojection error, support - lives in a shared header so
@@ -184,10 +193,11 @@ private:
         // searched whole; a scene with an EMPTY entry is searched not at all, which is how a prior
         // that covers no tiles keeps meaning "nothing to look at" rather than "look everywhere".
         std::map<int, std::vector<std::uint32_t>> candidates;
-        // Whether this plan compares one scale. A plan whose candidates were ranked from
+        // Whether this plan compares one scale, and which. A plan whose candidates were ranked from
         // descriptors taken at one scale compares that scale; the sweep keeps looking for the scale
         // too, because "the crop is zoomed" is a failure the ranking cannot see.
         bool singleScale = true;
+        double factor = 1.0;
     };
 
     // What the visual index said about a cold start's viewport before anything was compared.
@@ -208,6 +218,12 @@ private:
         double runnerUpScore = 0.0;
         int topCandidateCount = 0;
         double milliseconds = 0.0;
+        // Which zoom this ranking was taken at, and how decisively it separated its winner. A crop
+        // rendered at the zoom the index was built at ranks its own scene far ahead of the rest; at
+        // any other zoom the scores bunch up and the largest scene wins on the number of tiles it
+        // owns. The ratio is that separation, and it orders the plans.
+        double factor = 1.0;
+        double ratio = 0.0;
     };
 
     // Built on the viewport worker the first time a cold start asks for a ranking, for the same
@@ -316,6 +332,7 @@ private:
         ranking.topScore = ranked.front().first;
         ranking.runnerUpSceneId = ranked.size() > 1 ? ranked[1].second : 0;
         ranking.runnerUpScore = ranked.size() > 1 ? ranked[1].first : 0.0;
+        ranking.ratio = ranking.runnerUpScore > 0.0 ? ranking.topScore / ranking.runnerUpScore : 0.0;
 
         // Keep the runner-up only when it cannot be separated from the winner. Two coordinate
         // planes this close are exactly the ambiguity the caller already knows how to reject, so
@@ -364,38 +381,63 @@ private:
     // the cost. It keeps all four zooms, because a crop that is scaled is a failure the ranking
     // cannot see.
     std::vector<SearchPlan> BuildPlans(const MapViewportLocalizationRequest& request,
-        const std::vector<int>& allScenes, const SceneRanking& ranking) {
+        const std::vector<int>& allScenes, const std::vector<SceneRanking>& rankings) {
         std::vector<SearchPlan> plans;
-        if (ranking.valid && !ranking.scenes.empty()) {
+        // Most decisive zoom first. Each ranking carries the zoom it was taken at, and its plan
+        // compares at that zoom - a window is a set of tiles the query matched at one scale, and
+        // comparing it at another is asking a question it was not built to answer.
+        std::vector<const SceneRanking*> ordered;
+        for (const auto& ranking : rankings) {
+            if (ranking.valid && !ranking.scenes.empty()) ordered.push_back(&ranking);
+        }
+        std::sort(ordered.begin(), ordered.end(), [](const SceneRanking* left, const SceneRanking* right) {
+            if (left->ratio != right->ratio) return left->ratio > right->ratio;
+            return left->factor < right->factor;
+        });
+        if (ordered.size() > kRankedPlans) ordered.resize(kRankedPlans);
+
+        for (const auto* ranking : ordered) {
             SearchPlan narrow;
-            SearchPlan wide;
-            narrow.scenes = wide.scenes = ranking.scenes;
-            bool reachesFurther = false;
-            for (const int sceneId : ranking.scenes) {
-                const auto& ordered = ranking.rankedTiles.at(sceneId);
-                // Not "near"/"far": those are legacy Windows macros and the compiler sees them
-                // before it sees a variable name.
-                auto closer = SliceCandidates(ordered, kRetrievalHintBytes, kRetrievalHintTiles);
-                auto wider = SliceCandidates(ordered, kRetrievalWideBytes, kRetrievalWideTiles);
-                reachesFurther = reachesFurther || wider.size() > closer.size();
-                narrow.candidates.emplace(sceneId, std::move(closer));
-                wide.candidates.emplace(sceneId, std::move(wider));
+            narrow.factor = ranking->factor;
+            narrow.scenes = ranking->scenes;
+            for (const int sceneId : ranking->scenes) {
+                narrow.candidates.emplace(sceneId, SliceCandidates(
+                    ranking->rankedTiles.at(sceneId), kRetrievalHintBytes, kRetrievalHintTiles));
             }
             plans.push_back(std::move(narrow));
+        }
+        // One wider rung, at the most decisive zoom: the ranking can be right about the scene and
+        // still not have reached the answer, and widening that one costs a build where the sweep
+        // costs nine.
+        if (!ordered.empty()) {
+            const auto* best = ordered.front();
+            SearchPlan wide;
+            wide.factor = best->factor;
+            wide.scenes = best->scenes;
+            bool reachesFurther = false;
+            for (const int sceneId : best->scenes) {
+                const auto& rankedTiles = best->rankedTiles.at(sceneId);
+                auto wider = SliceCandidates(rankedTiles, kRetrievalWideBytes, kRetrievalWideTiles);
+                reachesFurther = reachesFurther || wider.size() > plans.front().candidates.at(sceneId).size();
+                wide.candidates.emplace(sceneId, std::move(wider));
+            }
             // A rung that reaches no further than the one below it is not a rung.
             if (reachesFurther) plans.push_back(std::move(wide));
-
+        }
+        // The sweep compares every scene that scored, against its own best tiles, at every zoom.
+        // Nine windows of a ninth of the cache each: 26 MB resident and 729 ms to prepare all of
+        // them, measured, against the 9.2 seconds one whole World matcher takes. It used to compare
+        // whole scenes, which is why a search could still be running after a minute.
+        if (!ordered.empty()) {
+            const auto* best = ordered.front();
             SearchPlan sweep;
             sweep.singleScale = false;
-            for (const int sceneId : ranking.scoredScenes) {
-                const auto ordered = ranking.rankedTiles.find(sceneId);
-                if (ordered == ranking.rankedTiles.end()) continue;
-                sweep.candidates.emplace(sceneId, SliceCandidates(
-                    ordered->second, kSweepBytes, kSweepTiles));
+            for (const int sceneId : best->scoredScenes) {
+                const auto ranked = best->rankedTiles.find(sceneId);
+                if (ranked == best->rankedTiles.end()) continue;
+                sweep.candidates.emplace(sceneId, SliceCandidates(ranked->second, kSweepBytes, kSweepTiles));
             }
-            // A scene that scored nothing is not in the sweep. It has no tiles the query resembles,
-            // so comparing against the whole of it would buy a 9-second matcher and nothing else.
-            sweep.scenes = ranking.scoredScenes;
+            sweep.scenes = best->scoredScenes;
             if (!sweep.scenes.empty()) plans.push_back(std::move(sweep));
         }
         SearchPlan requested;
@@ -447,28 +489,62 @@ private:
                 cv::Rect((fullSize.width - centralWidth) / 2, (fullSize.height - centralHeight) / 2,
                     centralWidth, centralHeight), cv::Rect(0, 0, fullSize.width, fullSize.height)
             };
-            // The map-centre crop at its native scale is both the ranking's query and the first
-            // region the search compares, so it is extracted once and shared. Nothing else is
-            // extracted early: a local scope, which is the common case, must not pay for a ranking
-            // it will never use.
-            SceneRanking ranking;
-            std::optional<ImageFeatureData> centreFeatures;
+            // The map-centre crop at native scale is both the ranking's query and the first region
+            // the search compares, so it is extracted once and shared. Nothing else is extracted
+            // early: a local scope, which is the common case, must not pay for a ranking it will
+            // never use.
+            //
+            // The ranking runs at every zoom the search will use, not just the native one. A crop
+            // rendered at one zoom is a different picture to the index than the same crop at
+            // another, and the field log shows what ranking it at the wrong one costs: a World
+            // screenshot ranked Lahai first at factor 2.0 and 0.25 while ranking World first at
+            // 1.0, 1.5, 0.75 and 0.5. Lahai is the largest scene in the game, so at any zoom the
+            // index was not built at, the scene with the most tiles wins.
+            std::vector<SceneRanking> rankings;
+            std::array<std::optional<ImageFeatureData>, kFactors.size()> centreByFactor;
             if (request.scope == MapViewportSearchScope::Global && scenes.size() > 1 && !regions[0].empty()) {
-                if (interrupted()) throw SearchInterrupted{};
-                ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, request.mapCrop(regions[0]));
-                for (auto& point : features.imgKeypoints) point.pt += cv::Point2f(regions[0].x, regions[0].y);
-                ranking = RankScenes(features);
-                centreFeatures = std::move(features);
-                result.retrievalRankedSceneCount = ranking.rankedSceneCount;
-                result.retrievalSceneId = ranking.sceneId;
-                result.retrievalRunnerUpSceneId = ranking.runnerUpSceneId;
-                result.retrievalTopScore = ranking.topScore;
-                result.retrievalRunnerUpScore = ranking.runnerUpScore;
-                result.retrievalSceneCount = ranking.valid ? static_cast<int>(ranking.scenes.size()) : 0;
-                result.retrievalTileCount = ranking.valid ? ranking.topCandidateCount : 0;
-                result.retrievalMilliseconds = ranking.milliseconds;
+                for (std::size_t factorIndex = 0; factorIndex < kFactors.size(); ++factorIndex) {
+                    if (interrupted()) throw SearchInterrupted{};
+                    const double factor = kFactors[factorIndex];
+                    cv::Mat query = request.mapCrop(regions[0]);
+                    if (factor != 1.0) {
+                        cv::resize(request.mapCrop(regions[0]), query, {}, factor, factor,
+                            factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
+                        const double sx = static_cast<double>(query.cols) / regions[0].width;
+                        const double sy = static_cast<double>(query.rows) / regions[0].height;
+                        ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, query);
+                        for (auto& point : features.imgKeypoints) {
+                            point.pt.x = static_cast<float>((point.pt.x + 0.5) / sx - 0.5 + regions[0].x);
+                            point.pt.y = static_cast<float>((point.pt.y + 0.5) / sy - 0.5 + regions[0].y);
+                        }
+                        centreByFactor[factorIndex] = std::move(features);
+                    }
+                    else {
+                        ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, query);
+                        for (auto& point : features.imgKeypoints) point.pt += cv::Point2f(regions[0].x, regions[0].y);
+                        centreByFactor[factorIndex] = std::move(features);
+                    }
+                    auto ranking = RankScenes(*centreByFactor[factorIndex]);
+                    ranking.factor = factor;
+                    rankings.push_back(std::move(ranking));
+                }
+                // The result reports the most decisive ranking, which is the one whose plan runs
+                // first; the rest are in plansRun and acceptedPlan.
+                for (const auto& ranking : rankings) {
+                    if (!ranking.valid) continue;
+                    if (result.retrievalRankedSceneCount == 0 || ranking.ratio > result.retrievalTopScore) {
+                        result.retrievalRankedSceneCount = ranking.rankedSceneCount;
+                        result.retrievalSceneId = ranking.sceneId;
+                        result.retrievalRunnerUpSceneId = ranking.runnerUpSceneId;
+                        result.retrievalTopScore = ranking.ratio;
+                        result.retrievalRunnerUpScore = ranking.runnerUpScore;
+                        result.retrievalSceneCount = static_cast<int>(ranking.scenes.size());
+                        result.retrievalTileCount = ranking.topCandidateCount;
+                    }
+                    result.retrievalMilliseconds += ranking.milliseconds;
+                }
             }
-            const auto plans = BuildPlans(request, scenes, ranking);
+            const auto plans = BuildPlans(request, scenes, rankings);
             bool sceneAmbiguity = false;
             int acceptedPlan = -1;
             int planIndex = -1;
@@ -485,21 +561,35 @@ private:
             if (interrupted()) throw SearchInterrupted{};
             const auto& region = regions[regionIndex];
             const cv::Mat regionCrop = request.mapCrop(region);
-            ImageFeatureData cropFeatures;
-            if (regionIndex == 0 && centreFeatures.has_value()) {
-                cropFeatures = *centreFeatures;
+            // Region 0's crops at every zoom were already extracted for the ranking, so they are not
+            // extracted again here. Region 1, and every case the ranking did not run for, is.
+            const bool centreIsExtracted = regionIndex == 0 && centreByFactor[0].has_value();
+            std::optional<ImageFeatureData> wholeRegion;
+            if (!centreIsExtracted) {
+                ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, regionCrop);
+                for (auto& point : features.imgKeypoints) point.pt += cv::Point2f(region.x, region.y);
+                wholeRegion = std::move(features);
             }
-            else {
-                cropFeatures = FeatureMatch::ExtractSurfFeatures(surf, regionCrop);
-                for (auto& point : cropFeatures.imgKeypoints) point.pt += cv::Point2f(region.x, region.y);
-            }
-            result.cropKeypointCount = static_cast<int>(cropFeatures.imgKeypoints.size());
-            if (cropFeatures.imgDescriptors.empty()) continue;
-            for (const double factor : { 1.0, 1.5, 2.0, 0.75 }) {
-                if (factor != 1.0 && ranked) break;
+            result.cropKeypointCount = static_cast<int>(centreIsExtracted
+                ? centreByFactor[0]->imgKeypoints.size() : wholeRegion->imgKeypoints.size());
+            if (!centreIsExtracted && wholeRegion->imgDescriptors.empty()) continue;
+            for (std::size_t factorIndex = 0; factorIndex < kFactors.size(); ++factorIndex) {
+                const double factor = kFactors[factorIndex];
+                // A ranked plan compares the one zoom its candidates were ranked at; the sweep is
+                // the only plan that still has to look for the zoom.
+                if (ranked && factor != plan.factor) continue;
                 if (interrupted()) throw SearchInterrupted{};
-                ImageFeatureData features = cropFeatures;
-                if (factor != 1.0) {
+                ImageFeatureData features;
+                // The map-centre crop at each zoom was already extracted for the ranking. Reusing it
+                // costs nothing, and re-extracting it nine times over the sweep's scenes would cost
+                // more than the sweep itself.
+                if (regionIndex == 0 && centreByFactor[factorIndex].has_value()) {
+                    features = *centreByFactor[factorIndex];
+                }
+                else if (factor == 1.0 && wholeRegion.has_value()) {
+                    features = *wholeRegion;
+                }
+                else {
                     cv::Mat resized;
                     cv::resize(regionCrop, resized, {}, factor, factor,
                         factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
