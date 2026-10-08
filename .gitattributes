@@ -9,6 +9,10 @@ archive/retired-base-features/*.manifest.json filter=lfs diff=lfs merge=lfs -tex
 # The XML source of the archived feature database stays in the asset tree: it is a build input for
 # rebuilding the binaries above and release staging already excludes it.
 Assets/FeaturesDatas/Map_features.yml filter=lfs diff=lfs merge=lfs -text
+# The one vocabulary every region shard names by hash instead of carrying its own copy. It is the
+# same kind of binary as the shards, so it is stored the same way, by explicit name rather than a
+# directory-wide rule.
+Assets/FeaturesDatas/Map_visual_vocabulary.imx filter=lfs diff=lfs merge=lfs -text
 Assets/FeaturesDatas/**/visual-index.imx filter=lfs diff=lfs merge=lfs -text
 Assets/FeaturesDatas/KuroTilePacks/**/features.yml filter=lfs diff=lfs merge=lfs -text
 Assets/FeaturesDatas/KuroTilePacks/**/features.imf filter=lfs diff=lfs merge=lfs -text
