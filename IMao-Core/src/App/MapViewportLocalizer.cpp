@@ -21,6 +21,7 @@
 #include <cmath>
 #include <condition_variable>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <string>
@@ -60,6 +61,15 @@ constexpr double kRetrievalSceneLead = 1.5;
 // may sit when 20 MB is hundreds of them.
 constexpr std::size_t kRetrievalHintBytes = 20 * 1024 * 1024;
 constexpr std::size_t kRetrievalHintTiles = 64;
+// The ladder's second rung: the same scenes, a slice of the same ranking, four times larger.
+//
+// It exists because the narrow slice sometimes misses - the ranking is right and the window simply
+// does not reach the answer - and the only other rung was the sweep: nine whole scenes, 565 MB of
+// matchers and 72 comparisons, measured at 11-23 seconds. One wider slice of a ranking that is
+// already 17-for-18 is the same shape as the local-512 -> local-1024 ladder this path used to
+// climb, and it costs one build instead of nine.
+constexpr std::size_t kRetrievalWideBytes = 4 * kRetrievalHintBytes;
+constexpr std::size_t kRetrievalWideTiles = 4 * kRetrievalHintTiles;
 
 
 // The decision half of a match - fit, inliers, reprojection error, support - lives in a shared header so
@@ -166,7 +176,10 @@ private:
         int sceneId = 0;
         int runnerUpSceneId = 0;
         std::vector<int> scenes;
-        std::map<int, std::vector<std::uint32_t>> candidates;
+        // Each kept scene's scored tiles in rank order, best first. The plans slice this at
+        // different budgets, which is what makes the ladder a matter of arithmetic rather than a
+        // second ranking pass.
+        std::map<int, std::vector<std::uint32_t>> rankedTiles;
         int rankedSceneCount = 0;
         double topScore = 0.0;
         double runnerUpScore = 0.0;
@@ -193,10 +206,10 @@ private:
             static_cast<std::size_t>(MapVisualIndex::DescriptorColumns * sizeof(float) + sizeof(cv::KeyPoint));
     }
 
-    // The tiles one scene's own ranking liked best, taken in order until they reach the byte target
-    // or the tile cap. No radius: the ranking already says which tiles the query describes, and
-    // covering the gaps between them is what made the candidate set too big to keep.
-    std::vector<std::uint32_t> BuildSceneCandidates(const std::vector<double>& scores, int sceneId) const {
+    // The tiles one scene's own ranking liked, best first. No radius: the ranking already says
+    // which tiles the query describes, and covering the gaps between them is what made the
+    // candidate set too big to keep.
+    std::vector<std::uint32_t> RankSceneTiles(const std::vector<double>& scores, int sceneId) const {
         std::vector<std::pair<double, std::uint32_t>> liked;
         for (std::uint32_t tileIndex = 0; tileIndex < scores.size(); ++tileIndex) {
             if (!(scores[tileIndex] > 0.0)) continue;
@@ -207,13 +220,22 @@ private:
             if (left.first != right.first) return left.first > right.first;
             return left.second < right.second;
         });
+        std::vector<std::uint32_t> ordered;
+        ordered.reserve(liked.size());
+        for (const auto& [score, tileIndex] : liked) ordered.push_back(tileIndex);
+        return ordered;
+    }
+
+    // The best of a ranked list, taken in order until it reaches the byte target or the tile cap.
+    std::vector<std::uint32_t> SliceCandidates(const std::vector<std::uint32_t>& rankedTiles,
+        std::size_t byteBudget, std::size_t tileCap) const {
         std::vector<std::uint32_t> chosen;
         std::size_t bytes = 0;
-        for (const auto& [score, tileIndex] : liked) {
-            if (chosen.size() >= kRetrievalHintTiles) break;
+        for (const auto tileIndex : rankedTiles) {
+            if (chosen.size() >= tileCap) break;
             chosen.push_back(tileIndex);
             bytes += TileBytes(tileIndex);
-            if (bytes >= kRetrievalHintBytes) break;
+            if (bytes >= byteBudget) break;
         }
         return chosen;
     }
@@ -269,32 +291,55 @@ private:
             ranking.scenes.push_back(ranking.runnerUpSceneId);
         }
 
-        // Every kept scene is given candidates, or none is. Half a plan cannot be searched at one
-        // scale: the caller narrows the zoom factors when a plan carries candidates, and a scene
-        // left without them would then only ever be searched at the wrong one.
-        std::map<int, std::vector<std::uint32_t>> candidates;
+        // Every kept scene is ranked, or none is. Half a plan cannot be searched at one scale: the
+        // caller narrows the zoom factors when a plan carries candidates, and a scene left without
+        // them would then only ever be searched at the wrong one.
+        std::map<int, std::vector<std::uint32_t>> rankedTiles;
         for (const int sceneId : ranking.scenes) {
-            auto chosen = BuildSceneCandidates(scores, sceneId);
-            if (chosen.empty()) return ranking;
-            candidates.emplace(sceneId, std::move(chosen));
+            auto ordered = RankSceneTiles(scores, sceneId);
+            if (ordered.empty()) return ranking;
+            rankedTiles.emplace(sceneId, std::move(ordered));
         }
-        ranking.topCandidateCount = static_cast<int>(candidates.at(ranking.sceneId).size());
-        ranking.candidates = std::move(candidates);
+        ranking.topCandidateCount = static_cast<int>(SliceCandidates(
+            rankedTiles.at(ranking.sceneId), kRetrievalHintBytes, kRetrievalHintTiles).size());
+        ranking.rankedTiles = std::move(rankedTiles);
         return ranking;
     }
 
     // The plans a request tries, in order.
     //
-    // Every request except a cold start gets exactly one plan: itself. A cold start gets two,
-    // because the ranking is a hint and not an answer. The first plan is what the index ranked, the
-    // second is the sweep this path has always run. Without the second, a ranking that named the
-    // wrong scene would lose a localisation the sweep would have found, so the sweep stays as the
-    // floor and the ranking can only beat it.
+    // Every request except a cold start gets exactly one plan: itself. A cold start gets up to
+    // three, because the ranking is a hint and not an answer:
+    //
+    //   0. the ranking's own best tiles,
+    //   1. the same ranking, sliced four times wider,
+    //   2. the sweep this path has always run.
+    //
+    // Rung 1 is the one added because rung 0 misses: a ranking that is right but whose window does
+    // not reach the answer used to fall straight through to nine whole scenes, measured at 11-23
+    // seconds. The sweep stays as the floor - without it a ranking that named the wrong scene would
+    // lose a localisation the sweep would have found - so the ranking can only beat it.
     std::vector<SearchPlan> BuildPlans(const MapViewportLocalizationRequest& request,
         const std::vector<int>& allScenes, const SceneRanking& ranking) {
         std::vector<SearchPlan> plans;
         if (ranking.valid && !ranking.scenes.empty()) {
-            plans.push_back(SearchPlan{ ranking.scenes, ranking.candidates });
+            SearchPlan narrow;
+            SearchPlan wide;
+            narrow.scenes = wide.scenes = ranking.scenes;
+            bool reachesFurther = false;
+            for (const int sceneId : ranking.scenes) {
+                const auto& ordered = ranking.rankedTiles.at(sceneId);
+                // Not "near"/"far": those are legacy Windows macros and the compiler sees them
+                // before it sees a variable name.
+                auto closer = SliceCandidates(ordered, kRetrievalHintBytes, kRetrievalHintTiles);
+                auto wider = SliceCandidates(ordered, kRetrievalWideBytes, kRetrievalWideTiles);
+                reachesFurther = reachesFurther || wider.size() > closer.size();
+                narrow.candidates.emplace(sceneId, std::move(closer));
+                wide.candidates.emplace(sceneId, std::move(wider));
+            }
+            plans.push_back(std::move(narrow));
+            // A rung that reaches no further than the one below it is not a rung.
+            if (reachesFurther) plans.push_back(std::move(wide));
         }
         SearchPlan requested;
         requested.scenes = allScenes;
@@ -370,6 +415,8 @@ private:
             bool sceneAmbiguity = false;
             int acceptedPlan = -1;
             int planIndex = -1;
+            // Plan 0's own tiles, kept so the answer can be measured against them once it is known.
+            std::vector<std::uint32_t> narrowCandidates;
             for (const auto& plan : plans) {
             ++planIndex;
             if (result.accepted || sceneAmbiguity || plan.scenes.empty()) continue;
@@ -425,6 +472,7 @@ private:
                     }
                     auto* cache = GetLocalMatcher(*tiles);
                     if (!cache || !cache->matcher) continue;
+                    if (planIndex == 0) narrowCandidates = *tiles;
                     std::vector<std::vector<cv::DMatch>> pairs;
                     cache->matcher->knnMatch(features.imgDescriptors, pairs, 2);
                     auto attempt = result;
@@ -461,6 +509,29 @@ private:
             if (result.accepted) acceptedPlan = planIndex;
             }
             result.acceptedPlan = acceptedPlan;
+            // How far plan 0's own candidates sat from the position this search accepted. It is the
+            // measurement that separates "the candidates never reached the answer" from "they
+            // reached it and the match failed anyway", and it can only be taken once the answer is
+            // known - which is why it lives here rather than in the ranking.
+            if (result.accepted && !narrowCandidates.empty()) {
+                double nearest = std::numeric_limits<double>::infinity();
+                double reach = 0.0;
+                for (const auto tileIndex : narrowCandidates) {
+                    if (tileIndex >= resources_->visualIndex.tiles.size()) continue;
+                    const auto& tile = resources_->visualIndex.tiles[tileIndex];
+                    const double dx = std::max(0.0, std::max(static_cast<double>(tile.minX) - result.centerMapCoordinate.x,
+                        result.centerMapCoordinate.x - static_cast<double>(tile.maxX)));
+                    const double dy = std::max(0.0, std::max(static_cast<double>(tile.minY) - result.centerMapCoordinate.y,
+                        result.centerMapCoordinate.y - static_cast<double>(tile.maxY)));
+                    const double distance = std::hypot(dx, dy);
+                    nearest = std::min(nearest, distance);
+                    reach = std::max(reach, distance);
+                }
+                if (std::isfinite(nearest)) {
+                    result.candidateNearestM = nearest;
+                    result.candidateReachM = reach;
+                }
+            }
         }
         catch (const cv::Exception&) {
             result.accepted = false;
@@ -637,7 +708,6 @@ bool MapViewportLocalizer::TryTakeLatestResult(MapViewportLocalizationResult& re
 const char* MapViewportLocalizer::ScopeName(MapViewportSearchScope scope) {
     switch (scope) {
     case MapViewportSearchScope::Local512: return "local-512";
-    case MapViewportSearchScope::Local1024: return "local-1024";
     case MapViewportSearchScope::Global: return "global";
     }
     return "unknown";

@@ -12,7 +12,6 @@
 
 enum class MapViewportSearchScope {
     Local512,
-    Local1024,
     Global
 };
 
@@ -73,6 +72,12 @@ struct MapViewportLocalizationResult {
     // were built, which is a guess dressed as a measurement.
     int plansRun = 0;
     int acceptedPlan = -1;
+    // How far plan 0's own candidates sat from the position this search accepted: the nearest and
+    // the farthest, in map units, measured to the tiles' rectangles. Only an accepted search can
+    // measure it, and it is what separates "the candidates never reached the answer" from "they
+    // reached it and the match failed anyway".
+    double candidateNearestM = 0.0;
+    double candidateReachM = 0.0;
 };
 
 // The cold-start ranking's own numbers as one diagnostic suffix, leading with its own space. It
@@ -87,7 +92,9 @@ inline std::string MapViewportRetrievalFields(const MapViewportLocalizationResul
         " retrievalTiles=" + std::to_string(result.retrievalTileCount) +
         " retrievalMs=" + std::to_string(result.retrievalMilliseconds) +
         " plansRun=" + std::to_string(result.plansRun) +
-        " acceptedPlan=" + std::to_string(result.acceptedPlan);
+        " acceptedPlan=" + std::to_string(result.acceptedPlan) +
+        " candidateNearestM=" + std::to_string(result.candidateNearestM) +
+        " candidateReachM=" + std::to_string(result.candidateReachM);
 }
 
 // Dedicated worker for the full-screen map.  It intentionally does not share

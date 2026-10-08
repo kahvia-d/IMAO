@@ -367,12 +367,6 @@ private:
 	std::string localizationDiagnosticsMode = "visual";
 	WorldSearchPriorIndex worldSearchPriorIndex;
 	std::optional<WorldSearchPrior> activeWorldSearchPrior;
-	// The window the in-flight request actually searched with. The result comes back
-	// asynchronously and carries only a scope, so without this the failure path has no way to
-	// widen the window that failed - it would widen the session-start one instead, which after
-	// the player pans is a different place entirely.
-	std::optional<Coordinate> lastMapViewportSearchCentre;
-	int lastMapViewportSearchSceneId = 0;
 	std::uint64_t mapViewportGeneration = 1;
 	std::optional<std::pair<std::uint64_t, std::uint64_t>> mapViewportRequestInFlight;
 	std::uint64_t nextMapViewportRequestId = 1;

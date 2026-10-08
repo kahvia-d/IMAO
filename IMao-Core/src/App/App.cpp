@@ -2290,8 +2290,6 @@ void App::BeginMapViewportSession() {
 	pendingMapViewportAnchor.reset();
 	lastMapViewportSubmitAt = {};
 	activeWorldSearchPrior.reset();
-	lastMapViewportSearchCentre.reset();
-	lastMapViewportSearchSceneId = 0;
 	if (featureResources && playerLocationLock.valid &&
 		Scene::IsRuntimeApproved(playerLocationLock.sceneId)) {
 		// Snap the search centre to the tile grid before the prior decides which tiles it touches.
@@ -2356,16 +2354,6 @@ bool App::SubmitMapViewportSearch(const Mat& currentSnapshot, MapViewportSearchS
 	mapViewportRequestCapturedAt = snapshotCapturedAt;
 	lastMapViewportSubmitAt = std::chrono::steady_clock::now();
 	lastMapViewportScope = effectiveScope;
-	// Remember the place this window searched, so a failure widens this window rather than the
-	// one the session opened with.
-	if (submittedPrior.has_value() && submittedPrior->valid) {
-		lastMapViewportSearchCentre = submittedPrior->centerMapCoordinate;
-		lastMapViewportSearchSceneId = submittedPrior->sceneId;
-	}
-	else {
-		lastMapViewportSearchCentre.reset();
-		lastMapViewportSearchSceneId = 0;
-	}
 	Diagnostics::Record("map-viewport-submit", "scope=" +
 		std::string(MapViewportLocalizer::ScopeName(effectiveScope)) + " generation=" +
 		std::to_string(mapViewportGeneration) + " frame=" + std::to_string(snapshotFrameId) +
@@ -2621,29 +2609,14 @@ void App::ProcessMapViewportResult(const Mat& currentSnapshot) {
 		" reprojectionMedian=" + std::to_string(result.medianReprojectionError) +
 		" durationMs=" + std::to_string(result.durationMilliseconds) + MapViewportRetrievalFields(result));
 	RuntimeStatus::SetLocalization("mapLocating", {}, "大地图匹配不足，正在重试");
-	// Widen the window that just missed, not the one the session opened with. The player can pan
-	// far from where they were standing when the map opened, and the search centre follows the
-	// viewport prediction - so after a pan the session-start centre describes somewhere the
-	// player is no longer looking. Widening around it spends the only escalation step pointing
-	// away from the answer, which is why this rung almost never produced a fix.
-	const Coordinate widenCentre = lastMapViewportSearchCentre.has_value()
-		? *lastMapViewportSearchCentre
-		: (activeWorldSearchPrior.has_value() ? activeWorldSearchPrior->centerMapCoordinate : Coordinate{});
-	const int widenScene = lastMapViewportSearchSceneId != 0
-		? lastMapViewportSearchSceneId
-		: (activeWorldSearchPrior.has_value() ? activeWorldSearchPrior->sceneId : 0);
-	if (result.scope == MapViewportSearchScope::Local512 && featureResources &&
-		std::isfinite(widenCentre.x) && std::isfinite(widenCentre.y) &&
-		widenScene != 0 && Scene::IsRuntimeApproved(widenScene)) {
-		auto expanded = worldSearchPriorIndex.Build(*featureResources, widenCentre, 1024.0, widenScene);
-		if (expanded.valid && expanded.candidateTileCount > 0) {
-			Diagnostics::Record("map-viewport-widen", "centre=" + std::to_string(widenCentre.x) + "," +
-				std::to_string(widenCentre.y) + " scene=" + std::to_string(widenScene) + " tiles=" +
-				std::to_string(expanded.candidateTileCount));
-			SubmitMapViewportSearch(currentSnapshot, MapViewportSearchScope::Local1024, expanded);
-			return;
-		}
-	}
+	// A local search that missed goes straight to the global one.
+	//
+	// It used to widen the window around the centre that had just failed first, on the theory that
+	// a small pan only needs a bigger window. The field log says otherwise: in one session
+	// local-1024 was submitted 15 times and accepted once, at a median 501 ms, while the global
+	// search it stood in front of took a median 381 ms and accepted 14 of 18. It was slower than
+	// the thing it was avoiding and it almost never worked, because after a region switch the
+	// centre it widens around is known to be wrong - the local search just failed there.
 	if (result.scope != MapViewportSearchScope::Global) {
 		SubmitMapViewportSearch(currentSnapshot, MapViewportSearchScope::Global, std::nullopt);
 	}
