@@ -15,6 +15,7 @@
 #include "MinimapHudEvidenceTests.h"
 #include "HudLayoutTests.h"
 #include "Coordinate/HudLayout.h"
+#include "App/MapViewportSearchGate.h"
 #include "DenseMapConfirmerTests.h"
 #include "OcrCoordinateGateTests.h"
 #include "OcrRouteAgreementTests.h"
@@ -463,8 +464,24 @@ void TestMapPanelDetector() {
         "an open side panel must not close the map UI state - that would drop the viewport session");
 }
 
-void TestMapViewportPredictor() {
+void TestMapViewportSearchGate() {
+    // The rule the full-screen rung waits on: hold it back while the map is moving, but not forever.
+    // The two windows are measurements, so the test pins the boundary rather than restating it.
+    Expect(map_viewport_gate::AllowFullScreenSearch(true, 0),
+        "a settled map should start the full-screen search immediately");
+    Expect(map_viewport_gate::AllowFullScreenSearch(true, 100000),
+        "waiting past the limit must not matter once the map has settled");
+    Expect(!map_viewport_gate::AllowFullScreenSearch(false, 0),
+        "a map that is still moving should not start a search that will be discarded");
+    Expect(!map_viewport_gate::AllowFullScreenSearch(false, map_viewport_gate::kDeferralLimitMs - 1),
+        "the full-screen rung stays held right up to the limit");
+    Expect(map_viewport_gate::AllowFullScreenSearch(false, map_viewport_gate::kDeferralLimitMs),
+        "a player who never stops panning still gets one attempt");
+    Expect(map_viewport_gate::kSettleMs < map_viewport_gate::kDeferralLimitMs,
+        "the settle window has to be the shorter of the two or the gate is a stall");
+}
 
+void TestMapViewportPredictor() {
     MapViewportPredictor predictor;
     const int worldScene = Scene::SceneNameToId("World");
     const std::vector<cv::Point2f> corners = {
@@ -1325,6 +1342,7 @@ int main(int argc, char** argv) {
 	TestMapUiStateController();
 	TestMapCompassVisualDetector();
 	TestMapPanelDetector();
+	TestMapViewportSearchGate();
 	TestMapViewportPredictor();
 	TestWorldSearchPrior();
     TestNewSceneRegistry();

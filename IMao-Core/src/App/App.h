@@ -372,6 +372,12 @@ private:
 	// When the in-flight request was handed to the worker. The submit gate is the only thing that
 	// can reopen itself, so a search that never answers has to be noticed by its age.
 	std::chrono::steady_clock::time_point mapViewportRequestSubmittedAt{};
+	// When the map last moved under its own prediction, and since when a full-screen search has been
+	// waiting for it to stop. A search takes about a second and its answer only survives if the map
+	// can still be found in the frame in front of the player when it arrives, so one started mid-drag
+	// is work thrown away - measured at eight of eighteen on the 2026-10-08 evening session.
+	std::chrono::steady_clock::time_point lastMapViewportMotionAt{};
+	std::chrono::steady_clock::time_point mapViewportGlobalDeferredSince{};
 	std::uint64_t nextMapViewportRequestId = 1;
 	std::uint64_t activeMapViewportRequestId = 0;
 	std::uint64_t mapViewportAbsoluteRevision = 0;

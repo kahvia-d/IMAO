@@ -1,5 +1,6 @@
 #include "../Feature/Match/SceneMapFeatures.h"
 #include "App.h"
+#include "MapViewportSearchGate.h"
 #include "../Runtime/GamepadWorldActions.h"
 #include "../Runtime/GuideHotkeyRouting.h"
 #include "../Runtime/LayeredMapState.h"
@@ -62,6 +63,9 @@ constexpr std::int64_t kMapViewportFixFreshnessMs = 1200;
 // overruns it has already failed the player, and the retry gets a new frame, a new ranking and a
 // chance to answer from the ranking's own candidates instead of the sweep.
 constexpr std::int64_t kMapViewportRequestDeadlineMs = 20000;
+
+// Whether the map has held still long enough for the full-screen rung to be worth starting lives in
+// MapViewportSearchGate.h, with the two measurements that set its windows.
 
 AutoRoute::Start PlanningStart(int sceneId, const Coordinate& mapCoordinate,
     std::chrono::steady_clock::time_point confirmed, std::uint64_t generation, bool valid) {
@@ -370,6 +374,10 @@ winrt::IAsyncAction App::Start() {
 				std::scoped_lock lock(mapViewportMutex);
 				framePredictionChanged = mapViewportPredictor.ObserveFrame(mapCrop, prediction,
 					&predictionInliers, &predictionScale);
+				// The predictor's answer is "this frame moved", which is what the search gate below
+				// needs and is the only per-frame motion signal that costs nothing: it is computed
+				// from the captured crops the predictor already compares.
+				if (framePredictionChanged) lastMapViewportMotionAt = now;
 				if (framePredictionChanged) {
 					static auto lastFramePredictionReport = std::chrono::steady_clock::time_point{};
 					if (now - lastFramePredictionReport >= std::chrono::milliseconds(250)) {
@@ -417,7 +425,31 @@ winrt::IAsyncAction App::Start() {
 					correctionPrior = activeWorldSearchPrior;
 					scope = MapViewportSearchScope::Local512;
 				}
-				SubmitMapViewportSearch(currentSnapshot, scope, correctionPrior);
+				// The full-screen rung waits for the map to stop; the local one does not, and it is
+				// the rung that keeps the position alive during the drag.
+				const bool mapSettled = lastMapViewportMotionAt == std::chrono::steady_clock::time_point{} ||
+					now - lastMapViewportMotionAt >= std::chrono::milliseconds(map_viewport_gate::kSettleMs);
+				bool searchNow = true;
+				if (scope == MapViewportSearchScope::Global && !mapSettled) {
+					if (mapViewportGlobalDeferredSince == std::chrono::steady_clock::time_point{}) {
+						mapViewportGlobalDeferredSince = now;
+						Diagnostics::Record("map-viewport-defer", "reason=map-moving");
+					}
+					const auto deferredFor = std::chrono::duration_cast<std::chrono::milliseconds>(
+						now - mapViewportGlobalDeferredSince).count();
+					searchNow = map_viewport_gate::AllowFullScreenSearch(false, deferredFor);
+					if (searchNow) {
+						Diagnostics::Record("map-viewport-defer", "reason=limit waitedMs=" +
+							std::to_string(deferredFor));
+					}
+				}
+				else if (mapViewportGlobalDeferredSince != std::chrono::steady_clock::time_point{}) {
+					Diagnostics::Record("map-viewport-defer", "reason=map-settled waitedMs=" +
+						std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+							now - mapViewportGlobalDeferredSince).count()));
+					mapViewportGlobalDeferredSince = {};
+				}
+				if (searchNow) SubmitMapViewportSearch(currentSnapshot, scope, correctionPrior);
 			}
 
 			if (viewportFrameAnchored && prediction.sceneId != 0 && prediction.captureCorners.size() == 4 && prediction.confidence >= 2) {
@@ -2692,6 +2724,12 @@ void App::ResetMapViewport() {
 	activeMapViewportRequestId = 0;
 	mapViewportRequestInFlight.reset();
 	pendingMapViewportAnchor.reset();
+	// A new map session starts settled by definition, and a deferral it inherited belonged to the
+	// session before it. Deliberately NOT cleared where a result is handled: a discarded answer is
+	// exactly the case where the map was moving, and forgetting that there would send the retry
+	// straight back out into the same drag.
+	lastMapViewportMotionAt = {};
+	mapViewportGlobalDeferredSince = {};
 	DrawItemOnGameMap::ClearNearItemsData();
 	Diagnostics::Record("map-viewport-reset", "reason=map-ui-transition");
 }
