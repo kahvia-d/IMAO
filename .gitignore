@@ -1,4 +1,9 @@
 *build*/
+# Measurement scratch: downloaded release archives, rebuilt rasters, staging trees and
+# audit JSON from the feature-format investigation. What matters is written into Docs/
+# and the commit messages; these are the working copies behind it and do not belong here.
+measurements/
+__pycache__/
 !tools/KuroMapFeatureBuilder/
 tools/KuroMapFeatureBuilder/*
 !tools/KuroMapFeatureBuilder/main.cpp
