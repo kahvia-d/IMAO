@@ -449,6 +449,22 @@ private:
             requested.candidates.emplace(request.prior->sceneId,
                 SelectSceneTileIndices(*resources_, request.prior->sceneId, *request.prior));
         }
+        // A global request whose ranking produced nothing has nothing to compare against, and the
+        // only plan left is "every whole scene" - 563 MB of matchers, 9.2 seconds each for World.
+        // That is the path this whole change exists to remove, and it came back exactly here: a
+        // ranking that fails leaves plans empty and fell straight into it, which is the twenty
+        // seconds the watchdog cancelled in the field log. Reporting no answer costs a quarter of a
+        // second and the next frame ranks normally, because a ranking that fails means the map
+        // centre crop was not usable - the player was panning, or the map was mid-transition.
+        //
+        // Only when the ranking could have run, though. An index with no usable vocabulary cannot
+        // rank anything, ever, and failing fast there would mean never localising at all; that case
+        // keeps the exhaustive search because there is no cheaper way to answer it.
+        if (request.scope == MapViewportSearchScope::Global && plans.empty() && VocabularyIndex() != nullptr) {
+            Diagnostics::Record("map-viewport-noranking",
+                "frame=" + std::to_string(request.frameId) + " scenes=" + std::to_string(allScenes.size()));
+            return plans;
+        }
         plans.push_back(std::move(requested));
         return plans;
     }
