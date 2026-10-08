@@ -63,7 +63,18 @@ internal static class RegionSelectionCheck
 
         var keep = materialized.Packages;
         if (keep.Count < 3 || keep.All(p => p.Kind != "tile"))
-            throw new InvalidDataException("staged 树里可用的资源包太少，无法做区域选择检查；缺失：" + string.Join(", ", absent));
+        {
+            // Name where each absent package was looked for, and whether it is there now. The staged
+            // development tree junctions its packs into the build output, so "absent" usually means the
+            // junction target was being rewritten at that moment rather than that a pack is missing -
+            // and a message that says only "absent" sends the reader hunting for a pack that is there.
+            // This happened twice on 2026-10-08 and could not be reproduced afterwards.
+            var looked = string.Join("; ", bundled.Packages
+                .Where(p => absent.Contains(p.Id))
+                .Select(p => $"{p.Id} -> {p.Directory} (exists={Directory.Exists(p.Directory)})"));
+            throw new InvalidDataException("staged 树里可用的资源包太少，无法做区域选择检查；缺失：" +
+                string.Join(", ", absent) + "；查找位置：" + looked);
+        }
 
         var descriptor = materialized with
         {

@@ -88,6 +88,51 @@ else {
     $copied | Format-Table -AutoSize
 }
 
+# The region shards name one shared vocabulary by hash instead of each carrying their own 2.00 MB
+# copy. That file lives under Assets/, which the loop above deliberately never touches, so a run
+# root built before it existed holds shards it cannot read - and refreshing only the binaries would
+# leave it that way, with the new CoreHost reporting "carries no vocabulary". Place it whenever a
+# shard in this root actually needs it, then confirm it is the same one the build produced.
+function Test-ShardNamesSharedVocabulary([string]$ShardPath) {
+    if (-not (Test-Path -LiteralPath $ShardPath -PathType Leaf)) { return $false }
+    $stream = [IO.File]::OpenRead($ShardPath)
+    try {
+        if ($stream.Length -lt 192) { return $false }
+        $header = New-Object byte[] 192
+        if ($stream.Read($header, 0, 192) -ne 192) { return $false }
+    }
+    finally { $stream.Dispose() }
+    # vocabularyPayloadLength is the first uint64 after magic(8) + twelve uint32 header fields.
+    return ([BitConverter]::ToUInt64($header, 56) -eq 0)
+}
+$vocabularyName = 'Map_visual_vocabulary.imx'
+$stagedVocabulary = Join-Path $binaryRoot "Assets/FeaturesDatas/$vocabularyName"
+$runVocabulary = Join-Path $RunRoot "Assets/FeaturesDatas/$vocabularyName"
+$needsVocabulary = $false
+foreach ($region in @(Get-ChildItem -LiteralPath $packsRoot -Directory -ErrorAction SilentlyContinue)) {
+    if (Test-ShardNamesSharedVocabulary (Join-Path $region.FullName 'visual-index.imx')) {
+        $needsVocabulary = $true
+        break
+    }
+}
+if ($needsVocabulary) {
+    if (-not (Test-Path -LiteralPath $stagedVocabulary -PathType Leaf)) {
+        throw ("Shards in this run root name a shared vocabulary but the build output has none: " +
+            "$stagedVocabulary. Build IMao-WinUI first, or the packs cannot be read at all.")
+    }
+    $current = Test-Path -LiteralPath $runVocabulary -PathType Leaf
+    $matches = $current -and (Get-Item -LiteralPath $runVocabulary).Length -eq (Get-Item -LiteralPath $stagedVocabulary).Length -and
+        (Get-FileHash -LiteralPath $runVocabulary -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $stagedVocabulary -Algorithm SHA256).Hash
+    if ($matches) {
+        Write-Host 'Shared visual vocabulary already matches the build output.'
+    }
+    else {
+        if (-not $DryRun) { Copy-Item -LiteralPath $stagedVocabulary -Destination $runVocabulary -Force }
+        Write-Host ('Shared visual vocabulary {0} the run root.' -f
+            $(if ($DryRun) { 'would be placed into' } else { 'placed into' }))
+    }
+}
+
 # The layered-floor sidecars are DATA, not build output: they are edited in the shared Assets tree and
 # the run root holds a copy of it, so a file newer there means the tree under test is stale. Only the
 # regions already present in the run root are touched, and only under layered-floors/ - nothing here
