@@ -1,7 +1,20 @@
 {
   "formatVersion": 1,
-  "highestAllocatedSequence": 42,
-  "active": null,
+  "highestAllocatedSequence": 43,
+  "active": {
+    "previousChannelSequence": 42,
+    "artifactId": 11555755625,
+    "status": "awaiting-signature",
+    "sequence": 43,
+    "tag": "v2026.10.8.1",
+    "releaseId": null,
+    "id": "6bd1e2fe65d44a99bb7b92f2c7c317c4",
+    "version": "2026.10.8.1",
+    "previousStableSha256": "8ec7e6528a68a3af58857b1fd800a6b26402a5805aaede81a0967e73a4ef4f35",
+    "sourceCommit": "011a1bbca91a1719032e2b29655e544bcd15dd03",
+    "artifactDigest": "412a694a8007edb4ec009fffd406ac1ab2d6bbed81bf367fbf1a0611c459a3f9",
+    "buildRunId": 37784559772
+  },
   "completed": [
     {
       "id": "bb3478f2435a4ef0a004c7e11e108b11",
