@@ -1,9 +1,17 @@
 # 视觉索引词汇表共享：方案与迁移风险
 
 > 目标：把视觉索引里 14 份重复的词汇表降到一份，收益 **26.00 MiB**。
-> 状态（2026-10-08）：**编码、运行时、构建器、打包守卫全部完成并逐项验证**。
-> 尚未做的只有"**真正改写仓库里的 14 个分片并生成共享词表文件**"——那一步会改写 LFS
-> 跟踪的二进制，等分支确定后执行。
+> 状态（2026-10-08）：**已落地**。分支 `feature/shared-visual-vocabulary`（堆叠在
+> `feature/imf-v2-quantized` 之上，因为代码改动以那条分支的 v2 编码为基础），三个提交：
+>
+> | 提交 | 内容 |
+> |---|---|
+> | `a78ed4e` | 换检测器的决策实验文档（本轮之前的独立成果） |
+> | `134aff1` | 共享词汇表：编码、运行时、构建器、三个探针、四个打包守卫、单测 |
+> | `69388d2` | 14 个分片重打包 + `Map_visual_vocabulary.imx`（走 LFS） |
+>
+> ⚠️ **这是一次格式迁移**：新程序 + 旧包 ✅、旧程序 + 新包 ❌。程序与区域包必须同序发布，
+> `New-ProgramReleasePackage.ps1` 已强制程序包必须带上共享词表。
 
 ## 一、为什么值得做
 
@@ -86,6 +94,12 @@
 | 新程序 + **旧包**（自带词汇表） | ✅ 正常，旧路径保留 |
 | **旧程序** + 新包（无词汇表） | ❌ 分片加载失败 → `visualIndexReady=false` → **定位失效**（日志有明确错误，但玩家只看到不定位） |
 
+**旧程序那一格有直接证据，不是推测。** 旧版 `Load` 没有外部词汇表参数，它对"载荷长度为 0 的分片"
+的行为**等价于**上面 E 项负向对照里"没提供词汇表"的那一次：14 个分片全部报
+`visual index carries no vocabulary and none was supplied`，退出码 1。
+（旧版代码里那条 `expectedVocabulary != header.vocabularyPayloadLength` 检查会以
+`visual index payload lengths do not match counts` 拒绝，同样不会静默通过。）
+
 因此发布时必须：
 
 1. **程序与 14 个区域包在同一个发布里一起更新**（资源包与程序包同序发布，这是现有流程的能力）；
@@ -107,8 +121,9 @@
 | `OptimizationTests.cpp` | 往返一致、缺词汇表硬失败、错词汇表失败、旧包仍可加载 | ✅ |
 | `Test-BuildPrerequisites.ps1` | 分片若省略词表则要求共享文件存在（读头部 `vocabularyPayloadLength`） | ✅ |
 | `Build-IMao.ps1` | 源码树有共享词表就必须staged 到位 | ✅ |
-| 仓库内 14 个分片的重打包 + 共享词表文件 | 会改写 LFS 二进制 | ⏳ 等分支确定 |
-| `Refresh-MapTestBinaries.ps1` 等 map-test 树脚本 | 复核是否需要在树里保留共享词表 | ⏳ |
+| 仓库内 14 个分片的重打包 + 共享词表文件 | 已提交 `69388d2` | ✅ |
+| `Refresh-MapTestBinaries.ps1` 等 map-test 树脚本 | 复核结论：**无需改动**——它只同步分层侧车数据与顶层二进制，不同步分片；运行根的 `Assets/FeaturesDatas` 来自构建产物，已由 `Build-IMao.ps1` 的守卫覆盖 | ✅ |
+| `Stage-UpdateResources.ps1` | 复核结论：**无需改动**——`Assert-VisualIndexVocabulary` 读的是头部偏移 128 的 `vocabularySha256`，省略载荷后该字段照常写入，两棵树实测结果一致 | ✅ |
 
 ## 六、验证
 
