@@ -67,6 +67,12 @@ struct MapViewportLocalizationResult {
     double retrievalRunnerUpScore = 0.0;
     int retrievalTileCount = 0;
     double retrievalMilliseconds = 0.0;
+    // Which plan answered, and how many ran. Plan 0 is what the ranking chose and plan 1 is the
+    // sweep; -1 means neither accepted. Without this the difference between "the ranking worked"
+    // and "the ranking missed and the sweep rescued it" has to be inferred from how many matchers
+    // were built, which is a guess dressed as a measurement.
+    int plansRun = 0;
+    int acceptedPlan = -1;
 };
 
 // The cold-start ranking's own numbers as one diagnostic suffix, leading with its own space. It
@@ -79,7 +85,9 @@ inline std::string MapViewportRetrievalFields(const MapViewportLocalizationResul
         " retrievalTop=" + std::to_string(result.retrievalTopScore) +
         " retrievalRunnerUp=" + std::to_string(result.retrievalRunnerUpScore) +
         " retrievalTiles=" + std::to_string(result.retrievalTileCount) +
-        " retrievalMs=" + std::to_string(result.retrievalMilliseconds);
+        " retrievalMs=" + std::to_string(result.retrievalMilliseconds) +
+        " plansRun=" + std::to_string(result.plansRun) +
+        " acceptedPlan=" + std::to_string(result.acceptedPlan);
 }
 
 // Dedicated worker for the full-screen map.  It intentionally does not share
