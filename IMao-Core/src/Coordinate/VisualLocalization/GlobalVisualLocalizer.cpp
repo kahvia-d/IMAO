@@ -10,6 +10,7 @@
 #include "../../Feature/Match/UniqueMapFeatures.h"
 #include "../../Feature/Match/FeatureRowCache.h"
 #include "../../Feature/Match/ExactDescriptorMatcher.h"
+#include "../../Feature/VisualIndex/VisualIndexRetrieval.h"
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/features2d.hpp>
@@ -653,39 +654,10 @@ public:
 private:
     std::vector<std::pair<std::uint32_t, double>> RetrieveTiles(const cv::Mat& descriptors,
         const std::vector<VisualMapHint>* hints = nullptr) const {
-        cv::Mat words(descriptors.rows, 1, CV_32S);
-        cv::Mat distances(descriptors.rows, 1, CV_32F);
-        vocabularyIndex_.knnSearch(descriptors, words, distances, 1, cv::flann::SearchParams(64));
-        std::vector<std::uint32_t> counts(MapVisualIndex::WordCount, 0);
-        for (int row = 0; row < words.rows; ++row) {
-            const int word = words.at<int>(row);
-            if (word >= 0 && word < static_cast<int>(counts.size())) ++counts[word];
-        }
-        std::vector<double> queryWeights(MapVisualIndex::WordCount, 0.0);
-        double normSquared = 0.0;
-        const double tileCount = static_cast<double>(resources_->visualIndex.tiles.size());
-        for (std::uint32_t word = 0; word < MapVisualIndex::WordCount; ++word) {
-            if (counts[word] == 0) continue;
-            const auto begin = resources_->visualIndex.postingOffsets[word];
-            const auto end = resources_->visualIndex.postingOffsets[word + 1];
-            const double idf = std::log((tileCount + 1.0) / (static_cast<double>(end - begin) + 1.0)) + 1.0;
-            const double tf = static_cast<double>(counts[word]) / descriptors.rows;
-            queryWeights[word] = tf * idf;
-            normSquared += queryWeights[word] * queryWeights[word];
-        }
-        if (!(normSquared > 0.0)) return {};
-        const double inverseNorm = 1.0 / std::sqrt(normSquared);
-        std::vector<double> scores(resources_->visualIndex.tiles.size(), 0.0);
-        for (std::uint32_t word = 0; word < MapVisualIndex::WordCount; ++word) {
-            const double queryWeight = queryWeights[word] * inverseNorm;
-            if (!(queryWeight > 0.0)) continue;
-            const auto begin = resources_->visualIndex.postingOffsets[word];
-            const auto end = resources_->visualIndex.postingOffsets[word + 1];
-            for (std::uint32_t postingIndex = begin; postingIndex < end; ++postingIndex) {
-                const auto& posting = resources_->visualIndex.postings[postingIndex];
-                scores[posting.tileIndex] += queryWeight * posting.weight;
-            }
-        }
+        // Scoring the query against the index is shared with the full-screen map's cold-start
+        // hint (VisualIndexRetrieval). Only the grouping below is this path's own policy.
+        std::vector<double> scores;
+        if (!VisualIndexRetrieval::ScoreTiles(*resources_, vocabularyIndex_, descriptors, scores)) return {};
         std::map<std::tuple<int, int, int>, std::pair<std::uint32_t, double>> groupedScores;
         for (std::uint32_t tileIndex = 0; tileIndex < scores.size(); ++tileIndex) {
             const auto& tile = resources_->visualIndex.tiles[tileIndex];

@@ -40,6 +40,7 @@
 #include "App/WorldSearchPrior.h"
 #include "Feature/Processing/FeatureBinaryCodec.h"
 #include "Feature/VisualIndex/MapVisualIndex.h"
+#include "Feature/VisualIndex/VisualIndexRetrieval.h"
 #include "Feature/Match/UniqueMapFeatures.h"
 
 #include <Windows.h>
@@ -1044,6 +1045,77 @@ void TestFramePublication() {
     Expect(!frame.Fresh(), "slow update cadence still rejects a stalled capture");
 }
 
+// The ranking both localizers share. It is the only thing that can name a scene without being
+// compared against one, so what has to hold is that it ranks the tile the query actually describes,
+// and that "ranked nothing" stays a distinct answer a caller can fall back from rather than being
+// indistinguishable from "nowhere matches".
+void TestVisualIndexRetrieval() {
+    RuntimeFeatureResources resources;
+    resources.visualIndexReady = true;
+    resources.baseVisualTileCount = 1;
+    auto& index = resources.visualIndex;
+    index.vocabulary = cv::Mat::zeros(MapVisualIndex::WordCount, MapVisualIndex::DescriptorColumns, CV_32FC1);
+    index.vocabulary.at<float>(0, 0) = 1.0f;
+    index.vocabulary.at<float>(1, 0) = -1.0f;
+    // Two tiles in two coordinate planes, each described by one word, so a query has exactly one
+    // defensible answer and a wrong ranking is distinguishable from an empty one.
+    index.tiles = {
+        { 2, 0, 0, 0.0f, 0.0f, 384.0f, 384.0f, 0, 1, 0, 1, 1.0f },
+        { 3, 0, 0, 0.0f, 0.0f, 384.0f, 384.0f, 0, 1, 0, 1, 1.0f }
+    };
+    index.postings = { { 0, 0, 1.0f }, { 1, 1, 1.0f } };
+    index.postingOffsets.assign(MapVisualIndex::WordCount + 1, 2);
+    index.postingOffsets[0] = 0;   // word 0 -> tile 0
+    index.postingOffsets[1] = 1;
+    index.postingOffsets[2] = 2;   // word 1 -> tile 1
+
+    const auto vocabulary = VisualIndexRetrieval::BuildVocabularyIndex(index.vocabulary);
+    Expect(vocabulary != nullptr, "the retrieval vocabulary index should build");
+
+    // A descriptor equal to a vocabulary row lands on that word exactly.
+    cv::Mat positive = cv::Mat::zeros(1, MapVisualIndex::DescriptorColumns, CV_32FC1);
+    positive.at<float>(0, 0) = 1.0f;
+    cv::Mat negative = cv::Mat::zeros(1, MapVisualIndex::DescriptorColumns, CV_32FC1);
+    negative.at<float>(0, 0) = -1.0f;
+
+    std::vector<double> scores;
+    Expect(VisualIndexRetrieval::ScoreTiles(resources, *vocabulary, positive, scores) &&
+        scores.size() == index.tiles.size() && scores[0] > 0.0 && scores[1] == 0.0,
+        "a query should score the tile whose visual word it hit");
+    Expect(VisualIndexRetrieval::ScoreTiles(resources, *vocabulary, negative, scores) &&
+        scores.size() == index.tiles.size() && scores[1] > 0.0 && scores[0] == 0.0,
+        "the opposite descriptor should score the other tile");
+
+    // An index whose words carry no postings still ranks - it just ranks everything zero. That has
+    // to be a success with an empty ranking, not a failure: the callers treat the two differently.
+    index.postings.clear();
+    index.postingOffsets.assign(MapVisualIndex::WordCount + 1, 0);
+    Expect(VisualIndexRetrieval::ScoreTiles(resources, *vocabulary, positive, scores) &&
+        scores.size() == index.tiles.size() && scores[0] == 0.0 && scores[1] == 0.0,
+        "an index with no postings should rank nothing rather than refuse the query");
+
+    // Malformed input is a refusal, never a read past the end of the payload.
+    Expect(!VisualIndexRetrieval::ScoreTiles(resources, *vocabulary, cv::Mat(), scores) && scores.empty(),
+        "an empty query should be refused");
+    Expect(!VisualIndexRetrieval::ScoreTiles(resources, *vocabulary,
+        cv::Mat::zeros(1, MapVisualIndex::DescriptorColumns - 1, CV_32FC1), scores),
+        "a descriptor of the wrong width should be refused");
+    Expect(VisualIndexRetrieval::BuildVocabularyIndex(cv::Mat::zeros(8, 8, CV_32FC1)) == nullptr,
+        "a vocabulary that is not the shape the index describes should build no search");
+
+    // A malformed payload is bounded by its own size, never by the offsets it claims. Both guards
+    // are exercised in one query: the range claims one posting more than exists, and the posting it
+    // does reach names a tile the table does not have. The honest assertion is that the call still
+    // answers and still ranks the one posting that was real.
+    index.postings = { { 0, 0, 1.0f }, { 0, 99, 1.0f } };
+    index.postingOffsets.assign(MapVisualIndex::WordCount + 1, 3);
+    index.postingOffsets[0] = 0;
+    Expect(VisualIndexRetrieval::ScoreTiles(resources, *vocabulary, positive, scores) &&
+        scores.size() == index.tiles.size() && scores[0] > 0.0,
+        "an offset that over-claims its postings must stop at the payload, and a posting for a tile "
+        "outside the table must be skipped rather than scored");
+}
+
 int main(int argc, char** argv) {
     if (argc == 5 && std::string(argv[1]) == "--map-minimap") {
         auto map = cv::imread(argv[2]);
@@ -1200,6 +1272,7 @@ int main(int argc, char** argv) {
     TestNewSceneRegistry();
     TestFeatureBinaryCodec();
     TestMapVisualIndexCodec();
+    TestVisualIndexRetrieval();
     TestManifestShardLineEndings();
     TestSharedVocabularyShard();
     if (failures != 0) {

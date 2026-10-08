@@ -2469,7 +2469,8 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
 		std::to_string(result.goodMatchCount) + " inliers=" + std::to_string(result.inlierCount) +
 		" inlierRatio=" + std::to_string(result.inlierRatio) + " quadrants=" +
 		std::to_string(result.coveredQuadrants) + " reprojectionMedian=" +
-		std::to_string(result.medianReprojectionError) + " durationMs=" + std::to_string(result.durationMilliseconds));
+		std::to_string(result.medianReprojectionError) + " durationMs=" + std::to_string(result.durationMilliseconds) +
+		MapViewportRetrievalFields(result));
 		// Every tenth accepted viewport result, once the search is under way, and every result for the first
 		// thirty: the projection's own durationMs is the clock, and a session was measured gaining 607 MB
 		// between its fifteenth and twentieth second with the map open. Pairing that climb with which
@@ -2608,7 +2609,7 @@ void App::ProcessMapViewportResult(const Mat& currentSnapshot) {
 		" inliers=" + std::to_string(result.inlierCount) + " inlierRatio=" +
 		std::to_string(result.inlierRatio) + " quadrants=" + std::to_string(result.coveredQuadrants) +
 		" reprojectionMedian=" + std::to_string(result.medianReprojectionError) +
-		" durationMs=" + std::to_string(result.durationMilliseconds));
+		" durationMs=" + std::to_string(result.durationMilliseconds) + MapViewportRetrievalFields(result));
 	RuntimeStatus::SetLocalization("mapLocating", {}, "大地图匹配不足，正在重试");
 	// Widen the window that just missed, not the one the session opened with. The player can pan
 	// far from where they were standing when the map opened, and the search centre follows the

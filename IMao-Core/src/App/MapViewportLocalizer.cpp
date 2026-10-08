@@ -6,6 +6,7 @@
 #include "MapViewportCandidates.h"
 #include "MapViewportMatch.h"
 #include "../Feature/Match/UniqueMapFeatures.h"
+#include "../Feature/VisualIndex/VisualIndexRetrieval.h"
 #include "../Runtime/ThreadPriority.h"
 #include "../Diagnostics/Diagnostics.h"
 
@@ -20,6 +21,7 @@
 #include <cmath>
 #include <condition_variable>
 #include <cstdint>
+#include <map>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -34,6 +36,22 @@ using namespace MapViewportCandidates;
 double ElapsedMilliseconds(const std::chrono::steady_clock::time_point& start) {
     return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
 }
+
+// The visual index's ranking is only allowed to narrow a cold start, never to decide for it. These
+// bound how far it may narrow, and every one of them is deliberately on the side of searching more:
+// the cost of a ranking that guessed wrong is the sweep that follows anyway, while the cost of a
+// ranking trusted too far is a localisation the sweep would have found and this path did not.
+//
+// The winner has to lead by this factor before a cold start searches only it. Below the lead, the
+// runner-up is kept as a second scene and the existing ambiguity check gets to see both - which is
+// the honest answer when two coordinate planes look alike.
+constexpr double kRetrievalSceneLead = 1.5;
+// How many of the ranking's own tiles define the hint, and how far the hint reaches. The floor is
+// the warm path's radius (Local512), because a viewport shows far more than one 384-unit tile; the
+// ceiling keeps a scattered ranking from rebuilding a whole-scene matcher under another name.
+constexpr int kRetrievalHintTiles = 12;
+constexpr double kRetrievalHintMinRadius = 512.0;
+constexpr double kRetrievalHintMaxRadius = 2048.0;
 
 
 // The decision half of a match - fit, inliers, reprojection error, support - lives in a shared header so
@@ -90,6 +108,7 @@ public:
         localMatcherBytes_ = 0;
         localMatcherEvictions_ = 0;
         localMatcherUseCounter_ = 0;
+        vocabularyIndex_.release();
         resources_.reset();
     }
 
@@ -124,6 +143,161 @@ public:
     }
 
 private:
+    // One thing a request tries: what it may compare against, and who chose it.
+    struct SearchPlan {
+        MapViewportSearchScope scope = MapViewportSearchScope::Global;
+        std::optional<WorldSearchPrior> prior;
+        std::vector<int> scenes;
+    };
+
+    // What the visual index said about a cold start's viewport before anything was compared.
+    struct SceneRanking {
+        bool valid = false;
+        bool scoped = false;
+        int sceneId = 0;
+        std::vector<int> scenes;
+        std::optional<WorldSearchPrior> prior;
+        int rankedSceneCount = 0;
+        double topScore = 0.0;
+        double runnerUpScore = 0.0;
+        int hintTileCount = 0;
+        double milliseconds = 0.0;
+    };
+
+    // Built on the viewport worker the first time a cold start asks for a ranking, for the same
+    // reason the scene indices themselves are lazy: it must not compete with capture, OCR and
+    // resource startup right after the Start button is pressed.
+    cv::flann::Index* VocabularyIndex() {
+        if (!vocabularyIndex_ && resources_) {
+            vocabularyIndex_ = VisualIndexRetrieval::BuildVocabularyIndex(resources_->visualIndex.vocabulary);
+        }
+        return vocabularyIndex_.get();
+    }
+
+    // Rank the index's tiles against one viewport crop.
+    //
+    // A cold start has no prior, so this is the only thing that can say which scene the player is
+    // looking at without comparing against every scene in the game. It is the same ranking the
+    // minimap runs (VisualIndexRetrieval); what differs is what this path does with it.
+    SceneRanking RankScenes(const ImageFeatureData& features) {
+        SceneRanking ranking;
+        auto* vocabulary = VocabularyIndex();
+        if (!vocabulary || !resources_) return ranking;
+        const auto start = std::chrono::steady_clock::now();
+        std::vector<double> scores;
+        const bool scored = VisualIndexRetrieval::ScoreTiles(
+            *resources_, *vocabulary, features.imgDescriptors, scores);
+        ranking.milliseconds = ElapsedMilliseconds(start);
+        if (!scored) return ranking;
+
+        // One score per scene: the best tile it owns. Copies of the same region are alternate
+        // observations rather than independent evidence, so the maximum is the same policy the
+        // minimap applies inside a single grid cell.
+        std::map<int, double> best;
+        for (std::uint32_t tileIndex = 0; tileIndex < scores.size(); ++tileIndex) {
+            if (!(scores[tileIndex] > 0.0)) continue;
+            const int sceneId = TileScene(*resources_, tileIndex);
+            if (!Scene::IsRuntimeApproved(sceneId)) continue;
+            auto& entry = best[sceneId];
+            entry = std::max(entry, scores[tileIndex]);
+        }
+        if (best.empty()) return ranking;
+        std::vector<std::pair<double, int>> ranked;
+        ranked.reserve(best.size());
+        for (const auto& [sceneId, score] : best) ranked.emplace_back(score, sceneId);
+        std::sort(ranked.begin(), ranked.end(), [](const auto& left, const auto& right) {
+            if (left.first != right.first) return left.first > right.first;
+            return left.second < right.second;
+        });
+        ranking.valid = true;
+        ranking.rankedSceneCount = static_cast<int>(ranked.size());
+        ranking.sceneId = ranked.front().second;
+        ranking.topScore = ranked.front().first;
+        ranking.runnerUpScore = ranked.size() > 1 ? ranked[1].first : 0.0;
+
+        // Two coordinate planes this close are exactly the ambiguity the caller already knows how
+        // to reject, so keep both and let that check see them. One tile hint cannot describe two
+        // planes, so this branch narrows the scenes and leaves the tiles alone.
+        if (ranked.size() > 1 && ranking.runnerUpScore * kRetrievalSceneLead > ranking.topScore) {
+            ranking.scenes = { ranked[0].second, ranked[1].second };
+            return ranking;
+        }
+        ranking.scenes = { ranking.sceneId };
+
+        // The hint has to cover the tiles the ranking actually liked, not only the best one: a
+        // viewport shows far more than a single 384-unit tile, so the top tile is one of many
+        // correct answers rather than the answer.
+        std::vector<std::pair<double, std::uint32_t>> liked;
+        for (std::uint32_t tileIndex = 0; tileIndex < scores.size(); ++tileIndex) {
+            if (!(scores[tileIndex] > 0.0)) continue;
+            if (TileScene(*resources_, tileIndex) != ranking.sceneId) continue;
+            liked.emplace_back(scores[tileIndex], tileIndex);
+        }
+        if (liked.empty()) return ranking;
+        std::sort(liked.begin(), liked.end(), [](const auto& left, const auto& right) {
+            if (left.first != right.first) return left.first > right.first;
+            return left.second < right.second;
+        });
+        if (liked.size() > static_cast<std::size_t>(kRetrievalHintTiles)) liked.resize(kRetrievalHintTiles);
+        double centreX = 0.0, centreY = 0.0;
+        for (const auto& [score, tileIndex] : liked) {
+            const auto& tile = resources_->visualIndex.tiles[tileIndex];
+            centreX += (static_cast<double>(tile.minX) + static_cast<double>(tile.maxX)) / 2.0;
+            centreY += (static_cast<double>(tile.minY) + static_cast<double>(tile.maxY)) / 2.0;
+        }
+        centreX /= static_cast<double>(liked.size());
+        centreY /= static_cast<double>(liked.size());
+        // Measured the way the search measures it - distance to the tile's nearest point - plus a
+        // tile of slack, so a tile whose far corner is hidden behind the centre still counts as
+        // covered.
+        double radius = kRetrievalHintMinRadius;
+        for (const auto& [score, tileIndex] : liked) {
+            const auto& tile = resources_->visualIndex.tiles[tileIndex];
+            const double dx = std::max(0.0, std::max(static_cast<double>(tile.minX) - centreX,
+                centreX - static_cast<double>(tile.maxX)));
+            const double dy = std::max(0.0, std::max(static_cast<double>(tile.minY) - centreY,
+                centreY - static_cast<double>(tile.maxY)));
+            radius = std::max(radius, std::hypot(dx, dy) + static_cast<double>(MapVisualIndex::TileSize));
+        }
+        WorldSearchPrior prior;
+        prior.valid = true;
+        prior.sceneId = ranking.sceneId;
+        prior.centerMapCoordinate = Coordinate{ centreX, centreY };
+        prior.radius = std::min(radius, kRetrievalHintMaxRadius);
+        prior.areaName = "visual-index";
+        ranking.prior = prior;
+        ranking.hintTileCount = static_cast<int>(
+            SelectSceneTileIndices(*resources_, ranking.sceneId, ranking.prior).size());
+        // A hint that selects nothing is not a narrower search, it is no search at all - so drop it
+        // and keep the scene narrowing, which is still worth having on its own.
+        if (ranking.hintTileCount > 0) {
+            ranking.scoped = true;
+            ranking.prior->candidateTileCount = static_cast<std::size_t>(ranking.hintTileCount);
+        }
+        else {
+            ranking.prior.reset();
+        }
+        return ranking;
+    }
+
+    // The plans a request tries, in order.
+    //
+    // Every request except a cold start gets exactly one plan: itself. A cold start gets two,
+    // because the ranking is a hint and not an answer. The first plan is what the index ranked, the
+    // second is the sweep this path has always run. Without the second, a ranking that named the
+    // wrong scene would lose a localisation the sweep would have found, so the sweep stays as the
+    // floor and the ranking can only beat it.
+    std::vector<SearchPlan> BuildPlans(const MapViewportLocalizationRequest& request,
+        const std::vector<int>& allScenes, const SceneRanking& ranking) {
+        std::vector<SearchPlan> plans;
+        if (ranking.valid && !ranking.scenes.empty()) {
+            plans.push_back(SearchPlan{ ranking.scoped ? MapViewportSearchScope::Local512
+                : MapViewportSearchScope::Global, ranking.prior, ranking.scenes });
+        }
+        plans.push_back(SearchPlan{ request.scope, request.prior, allScenes });
+        return plans;
+    }
+
     MapViewportLocalizationResult Locate(const MapViewportLocalizationRequest& request, const std::function<bool()>& interrupted) {
         MapViewportLocalizationResult result;
         result.sessionId = request.sessionId;
@@ -160,16 +334,46 @@ private:
                 cv::Rect((fullSize.width - centralWidth) / 2, (fullSize.height - centralHeight) / 2,
                     centralWidth, centralHeight), cv::Rect(0, 0, fullSize.width, fullSize.height)
             };
+            // The map-centre crop at its native scale is both the ranking's query and the first
+            // region the search compares, so it is extracted once and shared. Nothing else is
+            // extracted early: a local scope, which is the common case, must not pay for a ranking
+            // it will never use.
+            SceneRanking ranking;
+            std::optional<ImageFeatureData> centreFeatures;
+            if (request.scope == MapViewportSearchScope::Global && scenes.size() > 1 && !regions[0].empty()) {
+                if (interrupted()) throw SearchInterrupted{};
+                ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, request.mapCrop(regions[0]));
+                for (auto& point : features.imgKeypoints) point.pt += cv::Point2f(regions[0].x, regions[0].y);
+                ranking = RankScenes(features);
+                centreFeatures = std::move(features);
+                result.retrievalRankedSceneCount = ranking.rankedSceneCount;
+                result.retrievalSceneId = ranking.sceneId;
+                result.retrievalTopScore = ranking.topScore;
+                result.retrievalRunnerUpScore = ranking.runnerUpScore;
+                result.retrievalSceneCount = ranking.valid ? static_cast<int>(ranking.scenes.size()) : 0;
+                result.retrievalTileCount = ranking.scoped ? ranking.hintTileCount : 0;
+                result.retrievalMilliseconds = ranking.milliseconds;
+            }
+            const auto plans = BuildPlans(request, scenes, ranking);
             bool sceneAmbiguity = false;
-            for (const auto& region : regions) {
+            for (const auto& plan : plans) {
+            if (result.accepted || sceneAmbiguity || plan.scenes.empty()) continue;
+            for (std::size_t regionIndex = 0; regionIndex < regions.size(); ++regionIndex) {
             if (interrupted()) throw SearchInterrupted{};
+            const auto& region = regions[regionIndex];
             const cv::Mat regionCrop = request.mapCrop(region);
-            ImageFeatureData cropFeatures = FeatureMatch::ExtractSurfFeatures(surf, regionCrop);
-            for (auto& point : cropFeatures.imgKeypoints) point.pt += cv::Point2f(region.x, region.y);
+            ImageFeatureData cropFeatures;
+            if (regionIndex == 0 && centreFeatures.has_value()) {
+                cropFeatures = *centreFeatures;
+            }
+            else {
+                cropFeatures = FeatureMatch::ExtractSurfFeatures(surf, regionCrop);
+                for (auto& point : cropFeatures.imgKeypoints) point.pt += cv::Point2f(region.x, region.y);
+            }
             result.cropKeypointCount = static_cast<int>(cropFeatures.imgKeypoints.size());
             if (cropFeatures.imgDescriptors.empty()) continue;
             for (const double factor : { 1.0, 1.5, 2.0, 0.75 }) {
-                if (factor != 1.0 && request.scope != MapViewportSearchScope::Global) break;
+                if (factor != 1.0 && plan.scope != MapViewportSearchScope::Global) break;
                 if (interrupted()) throw SearchInterrupted{};
                 ImageFeatureData features = cropFeatures;
                 if (factor != 1.0) {
@@ -186,10 +390,10 @@ private:
                 }
                 if (features.imgDescriptors.empty()) continue;
                 int acceptedScenes = 0;
-                for (const int sceneId : scenes) {
+                for (const int sceneId : plan.scenes) {
                     if (interrupted()) throw SearchInterrupted{};
                     const auto tiles = SelectSceneTileIndices(*resources_, sceneId,
-                        request.scope == MapViewportSearchScope::Global ? std::nullopt : request.prior);
+                        plan.scope == MapViewportSearchScope::Global ? std::nullopt : plan.prior);
                     auto* cache = GetLocalMatcher(tiles);
                     if (!cache || !cache->matcher) continue;
                     std::vector<std::vector<cv::DMatch>> pairs;
@@ -224,6 +428,7 @@ private:
                 if (result.accepted) break;
             }
             if (result.accepted || sceneAmbiguity) break;
+            }
             }
         }
         catch (const cv::Exception&) {
@@ -367,6 +572,9 @@ private:
     std::uint64_t localMatcherUseCounter_ = 0;
     std::optional<MapViewportLocalizationRequest> request_;
     std::optional<MapViewportLocalizationResult> result_;
+    // The vocabulary search the cold-start ranking needs. Built lazily on the worker thread and
+    // never touched by any other, so it needs no lock of its own.
+    cv::Ptr<cv::flann::Index> vocabularyIndex_;
 };
 
 MapViewportRuntime& Runtime() {
