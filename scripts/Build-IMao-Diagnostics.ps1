@@ -79,11 +79,19 @@ try {
     # the diagnostics DLL instead of requiring a full WinUI rebuild.
     $nativeFeatureDirectory = Join-Path $nativeDirectory 'Assets\FeaturesDatas'
     $debugFeatureDirectory = Join-Path $debugDirectory 'Assets\FeaturesDatas'
+    # The base atlas is retired from the asset tree: it is only there in a checkout that restored it
+    # from archive/retired-base-features. These reads have to tolerate that, because this script runs
+    # under $ErrorActionPreference = 'Stop' and a bare Get-Item on a missing path is a terminating
+    # error - which is how this list became a build that could not run at all.
+    #
+    # The shared vocabulary is the opposite case: it is now required, because the region shards name
+    # it by hash instead of carrying their own copy. A diagnostics tree without it cannot localize.
     $runtimeFeatureFiles = @(
-        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_features.imf')
-        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_features.manifest.json')
-        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_visual_index.imx')
-        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_visual_index.manifest.json')
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_features.imf') -ErrorAction SilentlyContinue
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_features.manifest.json') -ErrorAction SilentlyContinue
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_visual_index.imx') -ErrorAction SilentlyContinue
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_visual_index.manifest.json') -ErrorAction SilentlyContinue
+        Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'Map_visual_vocabulary.imx') -ErrorAction SilentlyContinue
         Get-Item -LiteralPath (Join-Path $nativeFeatureDirectory 'kuro-tile-packs.json')
         # Curated candidate packs and their registry are optional; none ship today.
         Get-Item -Path (Join-Path $nativeFeatureDirectory 'candidate-packs.json') -ErrorAction SilentlyContinue
