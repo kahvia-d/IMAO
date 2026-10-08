@@ -12,9 +12,11 @@
 # cannot be located is a silent, in-game-only failure, so the mismatch is caught here - in
 # the release staging path, where the whole resource set is visible at once.
 #
-# Header: 8s magic, u32 version, u32 headerBytes, u32 wordCount, u32 descriptorColumns,
-# then the tile geometry and payload lengths, then sourceImfSha256 and vocabularySha256.
-# The hashes sit at fixed offsets; both are read so a caller can report whose index it was.
+# Header: 8s magic, then the counts, the payload lengths and the tile geometry, then three
+# 32-byte hashes. Only the vocabulary hash is needed here, and its offset is pinned by
+# mutation: flipping one byte at 128 changes the value read below while flipping one at 96
+# does not, so 128 is the vocabulary and 96 is a neighbouring field. Do not re-derive these
+# offsets by adding up the struct - the serialized layout is not the field order.
 
 $ImxMagic = 'IMAOIX01'
 $ImxVocabularySha256Offset = 128
