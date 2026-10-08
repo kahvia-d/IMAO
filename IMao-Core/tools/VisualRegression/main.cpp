@@ -2,6 +2,7 @@
 #include "../../tests/MultiSceneViewportTests.h"
 #include "Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
 #include "Coordinate/VisualLocalization/RecoveryPolicy.h"
+#include "App/MapViewportCandidates.h"
 #include "App/MapViewportLocalizer.h"
 #include "App/MinimapResumePolicy.h"
 #include "Coordinate/locationCalculator/MapCoordinate.h"
@@ -501,8 +502,99 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
 }
 }
 
+// How much of a full-screen sweep's cost is preparing a scene's matcher, and how much is comparing
+// against it.
+//
+// The sweep cycles over nine scene matchers against a cache that holds eight, so it prepares them
+// again and again while it works. Whether reordering it to finish one scene before starting the
+// next is worth it depends entirely on which of the two costs dominates - and they pull in opposite
+// directions, because that reorder trades early exit (nine comparisons) for one preparation per
+// scene. The shipped code comments quote 0.1-0.4 ms for a knnMatch, but those were measured against
+// small local windows, so this measures the real thing: the real merged index, the real matcher
+// construction, and query sizes taken from what the field log actually reports for a viewport crop.
+int MeasureViewportCost(const std::filesystem::path& repositoryRoot, int sceneId) {
+    std::string error;
+    // The real runtime loader, not this tool's own LoadResources: that one still expects the retired
+    // base atlas, and the atlas is gone. BeginPreload with no snapshot configured takes the
+    // registry branch, which is the path a packed install uses.
+    RuntimeFeatureRepository::Instance().BeginPreload(repositoryRoot / "Assets");
+    const auto resources = RuntimeFeatureRepository::Instance().AwaitReady(error);
+    if (!resources) {
+        std::cerr << "Visual resources failed to load: " << error << '\n';
+        return 1;
+    }
+    if (!resources->visualIndexReady) {
+        std::cerr << "Visual index is not ready for this tree.\n";
+        return 1;
+    }
+
+    // One matcher at a time, exactly as GetLocalMatcher builds them.
+    const auto prepare = [&](const std::vector<std::uint32_t>& tiles) {
+        const auto start = std::chrono::steady_clock::now();
+        auto candidates = MapViewportCandidates::SelectSceneCandidates(*resources, tiles);
+        const auto copied = std::chrono::steady_clock::now();
+        auto matcher = cv::makePtr<cv::FlannBasedMatcher>();
+        matcher->add(std::vector<cv::Mat>{ candidates.imgDescriptors });
+        matcher->train();
+        const auto trained = std::chrono::steady_clock::now();
+        return std::make_tuple(std::move(candidates), std::move(matcher),
+            std::chrono::duration<double, std::milli>(copied - start).count(),
+            std::chrono::duration<double, std::milli>(trained - copied).count());
+    };
+
+    const auto allTiles = MapViewportCandidates::SelectSceneTileIndices(*resources, sceneId, std::nullopt);
+    if (allTiles.empty()) {
+        std::cerr << "Scene " << sceneId << " has no tiles in this index.\n";
+        return 1;
+    }
+    std::cout << "scene " << sceneId << " whole: tiles=" << allTiles.size() << '\n';
+    auto [wholeCandidates, wholeMatcher, wholeCopyMs, wholeTrainMs] = prepare(allTiles);
+    std::cout << "  prepare: copy=" << wholeCopyMs << " ms  train=" << wholeTrainMs
+        << " ms  total=" << (wholeCopyMs + wholeTrainMs) << " ms  keypoints="
+        << wholeCandidates.imgKeypoints.size() << '\n';
+
+    // The budget a cold start's first rung uses, built the same way it is chosen.
+    std::vector<std::uint32_t> windowTiles;
+    std::size_t windowBytes = 0;
+    for (const auto tileIndex : allTiles) {
+        windowTiles.push_back(tileIndex);
+        windowBytes += resources->visualIndex.tiles[tileIndex].featureRowCount *
+            (MapVisualIndex::DescriptorColumns * sizeof(float) + sizeof(cv::KeyPoint));
+        if (windowBytes >= 20u * 1024 * 1024 || windowTiles.size() >= 64) break;
+    }
+    std::cout << "scene " << sceneId << " window: tiles=" << windowTiles.size() << '\n';
+    auto [windowCandidates, windowMatcher, windowCopyMs, windowTrainMs] = prepare(windowTiles);
+    std::cout << "  prepare: copy=" << windowCopyMs << " ms  train=" << windowTrainMs
+        << " ms  total=" << (windowCopyMs + windowTrainMs) << " ms  keypoints="
+        << windowCandidates.imgKeypoints.size() << '\n';
+
+    // Query sizes the field log reports for a full-screen crop: the accepted searches sat around
+    // 2,000-6,000 keypoints, the rejected ones as low as 700 and as high as 10,000.
+    for (const int querySize : { 1500, 3000, 6000 }) {
+        const int rows = std::min<int>(querySize, static_cast<int>(resources->map.imgDescriptors.rows));
+        cv::Mat query = resources->map.imgDescriptors.rowRange(0, rows);
+        for (const auto& [label, matcher] : { std::pair<const char*, cv::Ptr<cv::FlannBasedMatcher>>{
+                "whole", wholeMatcher }, { "window", windowMatcher } }) {
+            std::vector<std::vector<cv::DMatch>> pairs;
+            matcher->knnMatch(query, pairs, 2);  // warm
+            const auto start = std::chrono::steady_clock::now();
+            constexpr int kRepeats = 5;
+            for (int repeat = 0; repeat < kRepeats; ++repeat) matcher->knnMatch(query, pairs, 2);
+            const auto elapsed = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - start).count();
+            std::cout << "  knnMatch query=" << rows << " against " << label << ": "
+                << (elapsed / kRepeats) << " ms\n";
+        }
+    }
+    return 0;
+}
+
 int wmain(int argumentCount, wchar_t** arguments) {
     if (argumentCount == 2 && std::wstring(arguments[1]) == L"--scene-self-test") return RunMultiSceneViewportTests();
+    if (argumentCount >= 3 && std::wstring(arguments[1]) == L"--viewport-cost") {
+        const int sceneId = argumentCount >= 4 ? std::stoi(arguments[3]) : Scene::SceneNameToId("World");
+        return MeasureViewportCost(std::filesystem::path(arguments[2]), sceneId);
+    }
     if (argumentCount != 4) {
         std::wcerr << L"Usage: IMaoVisualRegression <repo-root> <manifest.json> <report.json>\n";
         return 2;
