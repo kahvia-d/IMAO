@@ -42,6 +42,7 @@ if ($Destination -eq $SourceRoot -or $Destination -eq (Join-Path $SourceRoot 'As
 if (-not $Version) { $Version = [string]$versionXml.Project.PropertyGroup.IMaoVersion }
 if (-not $BaselineId) { $BaselineId = [string]$versionXml.Project.PropertyGroup.IMaoBaselineId }
 . (Join-Path $PSScriptRoot 'ResourceBuildProvenance.ps1')
+. (Join-Path $PSScriptRoot 'VisualIndexVocabulary.ps1')
 $sourceBefore = Get-ResourceBuildProvenance $SourceRoot $SourceCommit
 $SourceCommit = $sourceBefore.sourceCommit
 function Write-Json($Value, [string]$Path) {
@@ -187,6 +188,11 @@ $packages = [Collections.Generic.List[object]]::new()
 $packages.Add([ordered]@{id='map-data';version=(Get-BundledPackageVersion $mapData 'map-data');kind='map-data';directory='KuroMap';sha256='';files=@()})
 $packages.Add([ordered]@{id='map-icons';version=(Get-BundledPackageVersion $iconData 'map-icons');kind='map-icons';directory='KuroMapIcons';sha256='';files=@()})
 $tileRegistry = Get-Content -LiteralPath (Join-Path $SourceRoot 'Assets/FeaturesDatas/kuro-tile-packs.json') -Encoding UTF8 -Raw | ConvertFrom-Json
+# Every shard staged below merges into the shipped index set by word id, and a shard built
+# against a different vocabulary is dropped at runtime without an error. Collect the
+# indexes as they are staged and assert the whole set shares one vocabulary, so a
+# vocabulary that drifted is a staging failure rather than a silent in-game one.
+$stagedIndexes = [Collections.Generic.List[string]]::new()
 foreach ($name in $tileRegistry.packs) {
     $relative = "FeaturesDatas/KuroTilePacks/$name"
     $sourcePack = Join-Path $SourceRoot "Assets/$relative"
@@ -217,7 +223,13 @@ foreach ($name in $tileRegistry.packs) {
     [IO.Directory]::CreateDirectory((Join-Path $assets $relative)) | Out-Null
     Copy-Item -Path (Join-Path $sourcePack '*') -Destination (Join-Path $assets $relative) -Recurse -Force
     Assert-OutputInventory $sourcePack (Join-Path $assets $relative) -Complete
+    $stagedShard = Join-Path $assets "$relative/visual-index.imx"
+    if (Test-Path -LiteralPath $stagedShard) { [void]$stagedIndexes.Add($stagedShard) }
     $packages.Add([ordered]@{id=[string]$manifest.packId;version=(Get-BundledPackageVersion (Join-Path $assets $relative) ([string]$manifest.packId));kind='tile';directory=$relative;sha256='';files=@()})
+}
+if ($stagedIndexes.Count -gt 0) {
+    $vocabulary = Assert-VisualIndexVocabulary @($stagedIndexes.ToArray())
+    Write-Host "Staged $($stagedIndexes.Count) visual indexes sharing vocabulary $vocabulary"
 }
 # Curated candidate packs are optional and none ship today: the mengzhou region pack superseded the
 # Dreamzhou curated candidate. A registry that names packs is still staged when one is present.
