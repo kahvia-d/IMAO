@@ -4,7 +4,7 @@
   "active": {
     "previousChannelSequence": 42,
     "artifactId": 11555755625,
-    "status": "awaiting-signature",
+    "status": "publishing",
     "sequence": 43,
     "tag": "v2026.10.8.1",
     "releaseId": null,
@@ -16,7 +16,9 @@
     "buildRunId": 37784559772,
     "requestId": "e745698829e29765445b9371d9e6d3663301f7928eb5d79534bf21c84cf168b5",
     "requestArtifactId": 11556201133,
-    "requestArtifactDigest": "7e5be5c4884e037df28a9f16e4175c4d46fbf641d9c4baba1665f1c87e3af337"
+    "requestArtifactDigest": "7e5be5c4884e037df28a9f16e4175c4d46fbf641d9c4baba1665f1c87e3af337",
+    "responseSha256": "c188a2ebf7b29d788c5730eecc12f241356564c36880f5d7bcdc439e8f92e80a",
+    "response": "{\r\n  \"formatVersion\": 1,\r\n  \"requestId\": \"e745698829e29765445b9371d9e6d3663301f7928eb5d79534bf21c84cf168b5\",\r\n  \"keyId\": \"wwmap-production-2026\",\r\n  \"catalogSha256\": \"8c7d03a9b66b554045ff25bc68fee69f5fb739224354ea680eb6705fd8513222\",\r\n  \"approvalSha256\": \"44be9ecf1554227bf7a3ce1a2a3ea62fc64097b2e42e8eb086403b63ab9c7f38\",\r\n  \"catalogSignature\": \"fwasaa9xRWS4SadI4B7Udg3dxlqVt29RdgaY7jiBtHnMO5KbTBOvOVyBDLpo9nJJcE7B2rjegsTwhQK2VWgL1g==\",\r\n  \"approvalSignature\": \"5yFwrI31h6f6lL7IQIzlnVWx0a/1MFdi/yjVSipSnqXONEqsfkN2eW7KwM\\u002BGIcDLv8QZ8CeamYebeBmhCfxdcA==\"\r\n}"
   },
   "completed": [
     {
