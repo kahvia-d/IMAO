@@ -492,7 +492,20 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
         results.push_back({{"captureCorners", corners}, {"id", sample.at("id")}, {"accepted", result.accepted}, {"correct", correct},
             {"sceneId", result.sceneId}, {"matches", result.goodMatchCount}, {"inliers", result.inlierCount},
             {"mapX", result.centerMapCoordinate.x}, {"mapY", result.centerMapCoordinate.y},
-            {"errorDistance", distance}, {"durationMs", result.durationMilliseconds}});
+            {"errorDistance", distance}, {"durationMs", result.durationMilliseconds},
+            // The ladder's own account of itself. Reported here rather than only in the product's
+            // log because this is the only place the viewport path can be run without the game:
+            // without these, "which rung answered, and what did the ranking say" is answerable
+            // only from a field session - which is how the retrieval fields came to be read for a
+            // whole day without anyone noticing they described a plan that had not run.
+            {"plansRun", result.plansRun}, {"acceptedPlan", result.acceptedPlan},
+            {"retrievalSceneId", result.retrievalSceneId}, {"retrievalFactor", result.retrievalFactor},
+            {"retrievalRunnerUpSceneId", result.retrievalRunnerUpSceneId},
+            {"retrievalTopScore", result.retrievalTopScore},
+            {"retrievalRunnerUpScore", result.retrievalRunnerUpScore},
+            {"retrievalTileCount", result.retrievalTileCount},
+            {"retrievalMilliseconds", result.retrievalMilliseconds},
+            {"candidateNearestM", result.candidateNearestM}, {"candidateReachM", result.candidateReachM}});
     }
     MapViewportLocalizer::Shutdown();
     std::filesystem::create_directories(reportPath.parent_path());
@@ -998,9 +1011,18 @@ int wmain(int argumentCount, wchar_t** arguments) {
         ResourceSnapshotContext::Initialize(std::move(snapshot));
         RuntimeFeatureRepository::Instance().BeginPreload(ResourceSnapshotContext::BaselineRoot());
         resources = RuntimeFeatureRepository::Instance().AwaitReady(error);
-    } else {
+    } else if (manifest.contains("diagnosticPacks")) {
         resources = LoadResources(repositoryRoot, error,
-            manifest.value("diagnosticPacks", std::vector<std::string>{}));
+            manifest.at("diagnosticPacks").get<std::vector<std::string>>());
+    } else {
+        // The repository's own Assets, the same loader the probes and the product use. The staging
+        // path above is the only one that still wants LoadResources: it exists to read a fixture's
+        // own feature binaries. Everything else - every manifest under Tests/VisualLocalization -
+        // was written against the base atlas, which has since been retired, so LoadResources could
+        // only ever answer "feature binary cannot be opened: Map_features.imf". That is why the
+        // viewport replay had quietly stopped being runnable at all.
+        RuntimeFeatureRepository::Instance().BeginPreload(repositoryRoot / "Assets");
+        resources = RuntimeFeatureRepository::Instance().AwaitReady(error);
     }
     if (!resources) {
         std::cerr << "Visual resources failed to load: " << error << '\n';
