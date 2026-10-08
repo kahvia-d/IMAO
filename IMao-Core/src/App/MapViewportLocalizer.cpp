@@ -198,6 +198,12 @@ private:
         // too, because "the crop is zoomed" is a failure the ranking cannot see.
         bool singleScale = true;
         double factor = 1.0;
+        // Which of the request's rankings produced this plan, or -1 for a plan that was not built
+        // from one. It travels with the plan so the result can report the ranking of the plan that
+        // ANSWERED: the four rankings disagree - that is the whole reason each zoom gets its own -
+        // so reporting the one that separated its winner most sharply, as this did, describes a plan
+        // that may never have run.
+        int rankingIndex = -1;
     };
 
     // What the visual index said about a cold start's viewport before anything was compared.
@@ -364,6 +370,23 @@ private:
         return ranking;
     }
 
+    // What one ranking contributes to the result.
+    //
+    // One function rather than scattered assignments because these fields have to describe a single
+    // ranking. Assembled piecemeal they are the kind of measurement that reads as a finding and is
+    // not: the log's `retrievalScene` disagreed with its `scene` often enough to look like a ranking
+    // error, when what it actually held was the most decisive zoom's winner while a different zoom's
+    // plan answered. With `retrievalFactor` beside it the field says which question it answered.
+    static void ReportRanking(const SceneRanking& ranking, MapViewportLocalizationResult& result) {
+        result.retrievalSceneCount = static_cast<int>(ranking.scenes.size());
+        result.retrievalSceneId = ranking.sceneId;
+        result.retrievalFactor = ranking.factor;
+        result.retrievalRunnerUpSceneId = ranking.runnerUpSceneId;
+        result.retrievalTopScore = ranking.ratio;
+        result.retrievalRunnerUpScore = ranking.runnerUpScore;
+        result.retrievalTileCount = ranking.topCandidateCount;
+    }
+
     // The plans a request tries, in order.
     //
     // Every request except a cold start gets exactly one plan: itself. A cold start gets up to
@@ -386,23 +409,30 @@ private:
         // Most decisive zoom first. Each ranking carries the zoom it was taken at, and its plan
         // compares at that zoom - a window is a set of tiles the query matched at one scale, and
         // comparing it at another is asking a question it was not built to answer.
-        std::vector<const SceneRanking*> ordered;
-        for (const auto& ranking : rankings) {
-            if (ranking.valid && !ranking.scenes.empty()) ordered.push_back(&ranking);
+        //
+        // Held as indices rather than pointers so each plan can name the ranking it came from and
+        // the result can report that one when the plan answers.
+        std::vector<std::size_t> ordered;
+        for (std::size_t index = 0; index < rankings.size(); ++index) {
+            if (rankings[index].valid && !rankings[index].scenes.empty()) ordered.push_back(index);
         }
-        std::sort(ordered.begin(), ordered.end(), [](const SceneRanking* left, const SceneRanking* right) {
-            if (left->ratio != right->ratio) return left->ratio > right->ratio;
-            return left->factor < right->factor;
+        std::sort(ordered.begin(), ordered.end(), [&rankings](std::size_t left, std::size_t right) {
+            const auto& leftRanking = rankings[left];
+            const auto& rightRanking = rankings[right];
+            if (leftRanking.ratio != rightRanking.ratio) return leftRanking.ratio > rightRanking.ratio;
+            return leftRanking.factor < rightRanking.factor;
         });
         if (ordered.size() > kRankedPlans) ordered.resize(kRankedPlans);
 
-        for (const auto* ranking : ordered) {
+        for (const auto index : ordered) {
+            const auto& ranking = rankings[index];
             SearchPlan narrow;
-            narrow.factor = ranking->factor;
-            narrow.scenes = ranking->scenes;
-            for (const int sceneId : ranking->scenes) {
+            narrow.rankingIndex = static_cast<int>(index);
+            narrow.factor = ranking.factor;
+            narrow.scenes = ranking.scenes;
+            for (const int sceneId : ranking.scenes) {
                 narrow.candidates.emplace(sceneId, SliceCandidates(
-                    ranking->rankedTiles.at(sceneId), kRetrievalHintBytes, kRetrievalHintTiles));
+                    ranking.rankedTiles.at(sceneId), kRetrievalHintBytes, kRetrievalHintTiles));
             }
             plans.push_back(std::move(narrow));
         }
@@ -410,13 +440,14 @@ private:
         // still not have reached the answer, and widening that one costs a build where the sweep
         // costs nine.
         if (!ordered.empty()) {
-            const auto* best = ordered.front();
+            const auto& best = rankings[ordered.front()];
             SearchPlan wide;
-            wide.factor = best->factor;
-            wide.scenes = best->scenes;
+            wide.rankingIndex = static_cast<int>(ordered.front());
+            wide.factor = best.factor;
+            wide.scenes = best.scenes;
             bool reachesFurther = false;
-            for (const int sceneId : best->scenes) {
-                const auto& rankedTiles = best->rankedTiles.at(sceneId);
+            for (const int sceneId : best.scenes) {
+                const auto& rankedTiles = best.rankedTiles.at(sceneId);
                 auto wider = SliceCandidates(rankedTiles, kRetrievalWideBytes, kRetrievalWideTiles);
                 reachesFurther = reachesFurther || wider.size() > plans.front().candidates.at(sceneId).size();
                 wide.candidates.emplace(sceneId, std::move(wider));
@@ -429,15 +460,16 @@ private:
         // them, measured, against the 9.2 seconds one whole World matcher takes. It used to compare
         // whole scenes, which is why a search could still be running after a minute.
         if (!ordered.empty()) {
-            const auto* best = ordered.front();
+            const auto& best = rankings[ordered.front()];
             SearchPlan sweep;
+            sweep.rankingIndex = static_cast<int>(ordered.front());
             sweep.singleScale = false;
-            for (const int sceneId : best->scoredScenes) {
-                const auto ranked = best->rankedTiles.find(sceneId);
-                if (ranked == best->rankedTiles.end()) continue;
+            for (const int sceneId : best.scoredScenes) {
+                const auto ranked = best.rankedTiles.find(sceneId);
+                if (ranked == best.rankedTiles.end()) continue;
                 sweep.candidates.emplace(sceneId, SliceCandidates(ranked->second, kSweepBytes, kSweepTiles));
             }
-            sweep.scenes = best->scoredScenes;
+            sweep.scenes = best.scoredScenes;
             if (!sweep.scenes.empty()) plans.push_back(std::move(sweep));
         }
         // A global request stops here. The windowed sweep above is already its last rung, and
@@ -547,21 +579,19 @@ private:
                     ranking.factor = factor;
                     rankings.push_back(std::move(ranking));
                 }
-                // The result reports the most decisive ranking, which is the one whose plan runs
-                // first; the rest are in plansRun and acceptedPlan.
+                // The result carries the most decisive of the four rankings until a plan answers,
+                // and the plan that answered replaces it below. That order is deliberate: with no
+                // answer, what the ranking believed is the whole of what there is to report, and
+                // the most decisive zoom is what the ladder led with.
+                const SceneRanking* mostDecisive = nullptr;
                 for (const auto& ranking : rankings) {
-                    if (!ranking.valid) continue;
-                    if (result.retrievalRankedSceneCount == 0 || ranking.ratio > result.retrievalTopScore) {
-                        result.retrievalRankedSceneCount = ranking.rankedSceneCount;
-                        result.retrievalSceneId = ranking.sceneId;
-                        result.retrievalRunnerUpSceneId = ranking.runnerUpSceneId;
-                        result.retrievalTopScore = ranking.ratio;
-                        result.retrievalRunnerUpScore = ranking.runnerUpScore;
-                        result.retrievalSceneCount = static_cast<int>(ranking.scenes.size());
-                        result.retrievalTileCount = ranking.topCandidateCount;
-                    }
                     result.retrievalMilliseconds += ranking.milliseconds;
+                    if (!ranking.valid) continue;
+                    result.retrievalRankedSceneCount =
+                        std::max(result.retrievalRankedSceneCount, ranking.rankedSceneCount);
+                    if (!mostDecisive || ranking.ratio > mostDecisive->ratio) mostDecisive = &ranking;
                 }
+                if (mostDecisive) ReportRanking(*mostDecisive, result);
             }
             const auto plans = BuildPlans(request, scenes, rankings);
             bool sceneAmbiguity = false;
@@ -681,6 +711,20 @@ private:
             if (result.accepted) acceptedPlan = planIndex;
             }
             result.acceptedPlan = acceptedPlan;
+            // Finally, the ranking of the plan that answered.
+            //
+            // The four rankings disagree by construction - each zoom ranks the same crop and they
+            // do not agree on the winner, which is why every zoom got its own plan. So the ranking
+            // worth reporting is the one whose plan produced this answer, and reporting any other
+            // makes `retrievalScene` and `scene` disagree exactly when the ranking worked as
+            // designed: the field log's scene=9 answer came from plan 1 while the line reported
+            // scene=1, and read as a ranking error that had not happened.
+            if (acceptedPlan >= 0 && acceptedPlan < static_cast<int>(plans.size())) {
+                const int answered = plans[static_cast<std::size_t>(acceptedPlan)].rankingIndex;
+                if (answered >= 0 && answered < static_cast<int>(rankings.size())) {
+                    ReportRanking(rankings[static_cast<std::size_t>(answered)], result);
+                }
+            }
             // How far plan 0's own candidates sat from the position this search accepted. It is the
             // measurement that separates "the candidates never reached the answer" from "they
             // reached it and the match failed anyway", and it can only be taken once the answer is
