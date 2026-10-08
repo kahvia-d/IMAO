@@ -24,6 +24,7 @@
 #include <limits>
 #include <map>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -204,6 +205,10 @@ private:
         // so reporting the one that separated its winner most sharply, as this did, describes a plan
         // that may never have run.
         int rankingIndex = -1;
+        // What this rung is, for the timing the result carries. A search that runs 14 seconds and
+        // answers nothing is the one the player feels, and `plansRun=5` alone does not say which of
+        // the five spent it.
+        const char* kind = "ranked";
     };
 
     // What the visual index said about a cold start's viewport before anything was compared.
@@ -442,6 +447,7 @@ private:
         if (!ordered.empty()) {
             const auto& best = rankings[ordered.front()];
             SearchPlan wide;
+            wide.kind = "wide";
             wide.rankingIndex = static_cast<int>(ordered.front());
             wide.factor = best.factor;
             wide.scenes = best.scenes;
@@ -462,6 +468,7 @@ private:
         if (!ordered.empty()) {
             const auto& best = rankings[ordered.front()];
             SearchPlan sweep;
+            sweep.kind = "sweep";
             sweep.rankingIndex = static_cast<int>(ordered.front());
             sweep.singleScale = false;
             for (const int sceneId : best.scoredScenes) {
@@ -492,6 +499,7 @@ private:
             }
         }
         SearchPlan requested;
+        requested.kind = "whole";
         requested.scenes = allScenes;
         if (request.prior.has_value() && request.prior->valid) {
             // An empty selection stays empty on purpose: a prior that covers no tiles has always
@@ -599,10 +607,17 @@ private:
             int planIndex = -1;
             // Plan 0's own tiles, kept so the answer can be measured against them once it is known.
             std::vector<std::uint32_t> narrowCandidates;
+            std::string planRungs;
             for (const auto& plan : plans) {
             ++planIndex;
             if (result.accepted || sceneAmbiguity || plan.scenes.empty()) continue;
             ++result.plansRun;
+            // What this rung costs, and how many scene-and-zoom comparisons it spent it on. The
+            // sweep is the one worth watching: it compares every scene that scored at every zoom,
+            // against a matcher cache that holds eight, so its comparisons are where a cold start
+            // that answers nothing in fourteen seconds spends the fourteen.
+            const auto planStartedAt = std::chrono::steady_clock::now();
+            int planComparisons = 0;
             // A plan that carries candidates compares one scale, because they were ranked from
             // descriptors taken at one scale; the sweep keeps looking for the scale as well.
             const bool ranked = plan.singleScale;
@@ -654,6 +669,7 @@ private:
                 int acceptedScenes = 0;
                 for (const int sceneId : plan.scenes) {
                     if (interrupted()) throw SearchInterrupted{};
+                    ++planComparisons;
                     // A scene the plan named is compared against exactly the tiles the plan chose.
                     // No entry means the whole of it, which is what the sweep does.
                     const auto chosen = plan.candidates.find(sceneId);
@@ -709,7 +725,17 @@ private:
             if (result.accepted || sceneAmbiguity) break;
             }
             if (result.accepted) acceptedPlan = planIndex;
+            if (!planRungs.empty()) planRungs += ',';
+            planRungs += std::string(plan.kind);
+            if (plan.singleScale) {
+                std::ostringstream factor;
+                factor << plan.factor;
+                planRungs += "@" + factor.str();
             }
+            planRungs += ":" + std::to_string(planComparisons) + ":" +
+                std::to_string(static_cast<std::int64_t>(ElapsedMilliseconds(planStartedAt)));
+            }
+            result.planMilliseconds = planRungs;
             result.acceptedPlan = acceptedPlan;
             // Finally, the ranking of the plan that answered.
             //

@@ -86,6 +86,12 @@ struct MapViewportLocalizationResult {
     // which is a guess dressed as a measurement.
     int plansRun = 0;
     int acceptedPlan = -1;
+    // What each rung cost, in the order they ran, as `kind[factor]:comparisons:ms` joined by commas.
+    // A cold start that answers in 700 ms and one that runs 14 seconds and answers nothing look
+    // identical in `durationMs` alone, and the second is what the player feels; this says which rung
+    // spent it. The sweep is the rung worth watching - it compares every scene that scored at every
+    // zoom, against a matcher cache that holds eight.
+    std::string planMilliseconds;
     // How far plan 0's own candidates sat from the position this search accepted: the nearest and
     // the farthest, in map units, measured to the tiles' rectangles. Only an accepted search can
     // measure it, and it is what separates "the candidates never reached the answer" from "they
@@ -96,6 +102,11 @@ struct MapViewportLocalizationResult {
 
 // The cold-start ranking's own numbers as one diagnostic suffix, leading with its own space. It
 // lives beside the result it describes so whoever reads the log can find what produced it.
+inline std::string MapViewportPlanFields(const MapViewportLocalizationResult& result) {
+    return result.planMilliseconds.empty() ? std::string{}
+        : " planMs=" + result.planMilliseconds;
+}
+
 inline std::string MapViewportRetrievalFields(const MapViewportLocalizationResult& result) {
     return " retrievalRanked=" + std::to_string(result.retrievalRankedSceneCount) +
         " retrievalScenes=" + std::to_string(result.retrievalSceneCount) +
@@ -109,7 +120,8 @@ inline std::string MapViewportRetrievalFields(const MapViewportLocalizationResul
         " plansRun=" + std::to_string(result.plansRun) +
         " acceptedPlan=" + std::to_string(result.acceptedPlan) +
         " candidateNearestM=" + std::to_string(result.candidateNearestM) +
-        " candidateReachM=" + std::to_string(result.candidateReachM);
+        " candidateReachM=" + std::to_string(result.candidateReachM) +
+        MapViewportPlanFields(result);
 }
 
 // Dedicated worker for the full-screen map.  It intentionally does not share

@@ -506,7 +506,8 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
             {"retrievalRunnerUpScore", result.retrievalRunnerUpScore},
             {"retrievalTileCount", result.retrievalTileCount},
             {"retrievalMilliseconds", result.retrievalMilliseconds},
-            {"candidateNearestM", result.candidateNearestM}, {"candidateReachM", result.candidateReachM}});
+            {"candidateNearestM", result.candidateNearestM}, {"candidateReachM", result.candidateReachM},
+            {"planMs", result.planMilliseconds}});
     }
     MapViewportLocalizer::Shutdown();
     std::filesystem::create_directories(reportPath.parent_path());
