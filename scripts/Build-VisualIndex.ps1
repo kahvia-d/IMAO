@@ -1,7 +1,14 @@
 [CmdletBinding()]
 param(
     [string]$PaddleLib = $env:IMAO_PADDLE_LIB,
-    [string]$OpenCvDir = $env:IMAO_OPENCV_DIR
+    [string]$OpenCvDir = $env:IMAO_OPENCV_DIR,
+    # An existing index whose vocabulary this rebuild reuses. Every index that has to merge
+    # must name the same words, and clustering a fresh vocabulary from re-encoded
+    # descriptors produces a different one - the fixed seed makes a run repeatable, not
+    # insensitive to its input. A rebuild that cannot reuse a vocabulary therefore cannot
+    # be shipped: the packs' shards would describe words the base index does not carry, and
+    # the runtime drops visual locating silently when that happens.
+    [string]$VocabularySource = 'archive/retired-base-features/Map_visual_index.imx'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,6 +17,13 @@ $imfPath = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_features.imf'
 $indexPath = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_visual_index.imx'
 $manifestPath = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_visual_index.manifest.json'
 if (-not (Test-Path -LiteralPath $imfPath)) { throw "Missing IMF source: $imfPath" }
+if (-not [IO.Path]::IsPathRooted($VocabularySource)) {
+    $VocabularySource = Join-Path $repoRoot $VocabularySource
+}
+if (-not (Test-Path -LiteralPath $VocabularySource)) {
+    throw ("Vocabulary source is missing: $VocabularySource`n" +
+        "Pass -VocabularySource with an index whose vocabulary the pack shards already share.")
+}
 if ([string]::IsNullOrWhiteSpace($PaddleLib)) { throw 'Set IMAO_PADDLE_LIB or pass -PaddleLib.' }
 if ([string]::IsNullOrWhiteSpace($OpenCvDir)) { throw 'Set IMAO_OPENCV_DIR or pass -OpenCvDir.' }
 
@@ -57,6 +71,9 @@ foreach ($packDirectory in $packDirectories) {
     & $converter $kuroXml (Join-Path $kuroPack 'features.imf') (Join-Path $kuroPack 'features.imf.manifest.json')
     if ($LASTEXITCODE -ne 0) { throw "Kuro feature binary generation failed for $packDirectory." }
 }
-& $builder (Join-Path $repoRoot 'Assets') $indexPath $manifestPath
+# --reuse-vocabulary rebuilds the base index and every pack shard together against one
+# vocabulary. Rebuilding them separately - or letting the base index cluster a new
+# vocabulary on its own - produces indexes that cannot merge.
+& $builder (Join-Path $repoRoot 'Assets') $indexPath $manifestPath --reuse-vocabulary $VocabularySource
 if ($LASTEXITCODE -ne 0) { throw 'Visual index generation or exact round-trip validation failed.' }
 Write-Host "Visual index generated: $indexPath" -ForegroundColor Green

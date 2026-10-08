@@ -7,7 +7,9 @@
 #include <nlohmann/json.hpp>
 #include <windows.h>
 
+#include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -68,10 +70,9 @@ bool Equivalent(const MapVisualIndex& left, const MapVisualIndex& right) {
 }
 
 bool BuildAndInstallShard(const ImageFeatureData& features, const cv::Mat& vocabulary,
-    const std::filesystem::path& sourcePath, const std::filesystem::path& destination,
+    const std::array<std::uint8_t, 32>& sourceHash, const std::string& sourceName,
+    const std::filesystem::path& destination,
     int sceneId, nlohmann::json& report, std::string& error) {
-    std::array<std::uint8_t, 32> sourceHash{};
-    if (!FeatureBinaryCodec::Sha256File(sourcePath, sourceHash, error)) return false;
     MapVisualIndex shard;
     if (!MapVisualIndexBuilder::Build(features.imgKeypoints, features.imgDescriptors,
         sourceHash, shard, error, vocabulary, sceneId)) return false;
@@ -90,11 +91,98 @@ bool BuildAndInstallShard(const ImageFeatureData& features, const cv::Mat& vocab
         !ReplaceFile(temporary, destination, error)) return false;
     report = {
         {"path", destination.filename().string()}, {"sceneId", sceneId},
-        {"source", sourcePath.filename().string()}, {"sourceSha256", Hex(sourceHash)},
+        {"source", sourceName}, {"sourceSha256", Hex(sourceHash)},
         {"visualIndexSha256", Hex(outputHash)}, {"vocabularySha256", Hex(savedHeader.vocabularySha256)},
         {"featureCount", savedHeader.featureCount}, {"tileCount", savedHeader.tileCount},
         {"postingCount", savedHeader.postingCount}
     };
+    return true;
+}
+
+/// Reads just the vocabulary out of an existing index.
+///
+/// Deliberately not MapVisualIndexCodec::Load: that validates the whole index against the
+/// source it was built from, and a rebuild wants the words, not the identity of whatever
+/// laid them out. The vocabulary carries its own hash in the header, which is checked here,
+/// so the words and their identity still come from one verified source.
+bool ReadVocabulary(const std::filesystem::path& index, const std::filesystem::path& vocabularySource,
+    cv::Mat& vocabulary, std::array<std::uint8_t, 32>& vocabularySha256, std::string& error) {
+    std::ifstream input(vocabularySource, std::ios::binary);
+    if (!input) {
+        error = "vocabulary source cannot be opened: " + vocabularySource.string();
+        return false;
+    }
+    std::vector<std::uint8_t> header(MapVisualIndexHeader::SerializedSize);
+    input.read(reinterpret_cast<char*>(header.data()), static_cast<std::streamsize>(header.size()));
+    if (input.gcount() != static_cast<std::streamsize>(header.size()) ||
+        !std::equal(MapVisualIndexHeader::Magic.begin(), MapVisualIndexHeader::Magic.end(), header.begin())) {
+        error = "vocabulary source is not an IMAOIX01 index";
+        return false;
+    }
+    const auto read32 = [&header](std::size_t offset) {
+        std::uint32_t value = 0;
+        for (std::size_t index = 0; index < 4; ++index) {
+            value |= static_cast<std::uint32_t>(header[offset + index]) << (index * 8);
+        }
+        return value;
+    };
+    const auto read64 = [&header](std::size_t offset) {
+        std::uint64_t value = 0;
+        for (std::size_t index = 0; index < 8; ++index) {
+            value |= static_cast<std::uint64_t>(header[offset + index]) << (index * 8);
+        }
+        return value;
+    };
+    const auto version = read32(8);
+    const auto wordCount = read32(20);
+    const auto descriptorColumns = read32(24);
+    const auto vocabularyPayloadLength = read64(8 + 12 * 4);
+    if (version != MapVisualIndexHeader::CurrentVersion ||
+        wordCount != MapVisualIndex::WordCount || descriptorColumns != MapVisualIndex::DescriptorColumns ||
+        vocabularyPayloadLength != static_cast<std::uint64_t>(wordCount) * descriptorColumns * sizeof(float)) {
+        error = "vocabulary source header does not describe a " +
+            std::to_string(MapVisualIndex::WordCount) + "x" +
+            std::to_string(MapVisualIndex::DescriptorColumns) + " vocabulary";
+        return false;
+    }
+    std::vector<std::uint8_t> payload(static_cast<std::size_t>(vocabularyPayloadLength));
+    input.read(reinterpret_cast<char*>(payload.data()), static_cast<std::streamsize>(payload.size()));
+    if (input.gcount() != static_cast<std::streamsize>(payload.size())) {
+        error = "vocabulary payload is truncated";
+        return false;
+    }
+    vocabulary = cv::Mat(MapVisualIndex::WordCount, MapVisualIndex::DescriptorColumns, CV_32FC1, payload.data()).clone();
+    std::copy_n(header.begin() + 8 + 12 * 4 + 5 * 8 + 32, vocabularySha256.size(), vocabularySha256.begin());
+    error.clear();
+    static_cast<void>(index);
+    return true;
+}
+
+/// The hash a shard records as its source. A pack's own feature source (features.yml)
+/// is a build-time input that is deliberately not shipped, so the hash comes from the
+/// binary header - which is the same value the binary was converted with, and the one
+/// Stage-UpdateResources checks the pack manifest against. Reading the file when it
+/// happens to be present would be a second, weaker source for the same fact.
+bool ShardSourceHash(const ImageFeatureData& features, const FeatureBinaryHeader& header,
+    const nlohmann::json& manifest, std::array<std::uint8_t, 32>& sourceHash,
+    std::string& sourceName, std::string& error) {
+    sourceHash = header.sourceXmlSha256;
+    sourceName = manifest.contains("features") && manifest.at("features").contains("file")
+        ? manifest.at("features").at("file").get<std::string>() : std::string("(unknown source)");
+    if (manifest.contains("features")) {
+        auto recorded = manifest.at("features").value("sha256", std::string());
+        std::transform(recorded.begin(), recorded.end(), recorded.begin(),
+            [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
+        if (!recorded.empty() && FeatureBinaryCodec::Sha256Hex(sourceHash) != recorded) {
+            error = "pack manifest records a different feature source hash than its binary";
+            return false;
+        }
+        const auto count = manifest.at("features").value("keypointCount", 0);
+        if (count != 0 && count != static_cast<int>(features.imgKeypoints.size())) {
+            error = "pack manifest keypoint count does not match its binary";
+            return false;
+        }
+    }
     return true;
 }
 }
@@ -121,17 +209,16 @@ int main(int argc, char** argv) {
             std::string error;
             ImageFeatureData base, features;
             FeatureBinaryHeader baseHeader, packHeader;
-            std::array<std::uint8_t, 32> baseHash{}, xmlHash{};
+            std::array<std::uint8_t, 32> baseHash{}, sourceHash{};
+            std::string sourceName;
             MapVisualIndex baseline;
             if (!FeatureBinaryCodec::Load(featureRoot / "Map_features.imf", base, error, &baseHeader, &baseHash) ||
                 !MapVisualIndexCodec::Load(featureRoot / "Map_visual_index.imx", baseHash, baseHeader.keypointCount, baseline, error) ||
-                !FeatureBinaryCodec::Load(packRoot / "features.imf", features, error, &packHeader) ||
-                !FeatureBinaryCodec::Sha256File(packRoot / file, xmlHash, error)) throw std::runtime_error(error);
-            if (xmlHash != packHeader.sourceXmlSha256 || Hex(xmlHash) != manifest.at("features").at("sha256").get<std::string>() ||
-                packHeader.keypointCount != manifest.at("features").at("keypointCount").get<std::uint32_t>())
-                throw std::runtime_error("Pack binary and source manifest disagree");
+                !FeatureBinaryCodec::Load(packRoot / "features.imf", features, error, &packHeader)) throw std::runtime_error(error);
+            if (!ShardSourceHash(features, packHeader, manifest, sourceHash, sourceName, error))
+                throw std::runtime_error(error);
             nlohmann::json report;
-            if (!BuildAndInstallShard(features, baseline.vocabulary, packRoot / file,
+            if (!BuildAndInstallShard(features, baseline.vocabulary, sourceHash, sourceName,
                 packRoot / "visual-index.imx", scene->id, report, error)) throw std::runtime_error(error);
             report["referenceVerified"] = manifest.at("referenceVerification").value("passed", false);
             std::ofstream(packRoot / "visual-index.manifest.json") << report.dump(2) << '\n';
@@ -142,16 +229,28 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-    if (argc < 3 || argc > 5) {
-        std::cerr << "Usage: IMaoVisualIndexBuilder <Assets directory> <output.imx> [manifest.json] [--base-only]\n"
-                     "  --base-only rebuilds just the base index and leaves the packs' shards alone.\n";
+    if (argc < 3 || argc > 6) {
+        std::cerr << "Usage: IMaoVisualIndexBuilder <Assets directory> <output.imx> [manifest.json]\n"
+                     "                                   [--base-only | --reuse-vocabulary <existing.imx>]\n"
+                     "  --base-only          rebuilds just the base index and leaves the packs' shards alone.\n"
+                     "  --reuse-vocabulary   rebuilds the base index AND every pack shard against the\n"
+                     "                       vocabulary an existing index already carries, instead of\n"
+                     "                       clustering a new one. Every index that has to merge must share\n"
+                     "                       one vocabulary, so a partial rebuild is not an option.\n";
         return 2;
     }
     // The packs' shards are rebuilt from each pack's own feature source, which is not
     // always present (feature binaries are shipped without the XML they came from).
-    // This switch exists so the base index can still be rebuilt in that case.
+    // --base-only exists so the base index can still be rebuilt in that case, and
+    // --reuse-vocabulary so a full rebuild can keep the vocabulary the shipped shards
+    // were built against.
     const bool baseOnly = argc == 5 && std::string(argv[4]) == "--base-only";
     if (argc == 5 && !baseOnly) {
+        std::cerr << "Unknown option: " << argv[4] << '\n';
+        return 2;
+    }
+    const bool reuseVocabulary = argc == 6 && std::string(argv[4]) == "--reuse-vocabulary";
+    if (argc == 6 && !reuseVocabulary) {
         std::cerr << "Unknown option: " << argv[4] << '\n';
         return 2;
     }
@@ -159,7 +258,10 @@ int main(int argc, char** argv) {
     const std::filesystem::path featureRoot = assetRoot / "FeaturesDatas";
     const std::filesystem::path sourceImf = featureRoot / "Map_features.imf";
     const std::filesystem::path destination = std::filesystem::absolute(argv[2]);
-    const std::filesystem::path manifest = argc == 4
+    // The caller always names the manifest when it passes a switch, so the position of
+    // the manifest is the same in every form that carries one.
+    const bool manifestGiven = argc == 4 || argc == 6;
+    const std::filesystem::path manifest = manifestGiven
         ? std::filesystem::absolute(argv[3])
         : destination.parent_path() / "Map_visual_index.manifest.json";
     const auto temporary = destination.wstring() + L".tmp";
@@ -177,13 +279,30 @@ int main(int argc, char** argv) {
     const auto kuroPacks = KuroTileFeaturePack::LoadRegistered(featureRoot.string());
     const auto candidates = CandidateFeaturePack::LoadRegisteredCandidates(featureRoot.string());
 
+    // Reusing a vocabulary is what makes a full rebuild safe to ship: every index that
+    // has to merge must name the same words, and clustering a fresh vocabulary from
+    // re-encoded descriptors produces a different one (the seed only makes the run
+    // repeatable, it does not make it insensitive to the input). The vocabulary is read
+    // straight out of an existing index, so the words and their identity are copied.
+    cv::Mat reusedVocabulary;
+    if (reuseVocabulary) {
+        const std::filesystem::path reference = std::filesystem::absolute(argv[5]);
+        std::array<std::uint8_t, 32> reusedVocabularySha{};
+        if (!ReadVocabulary(destination, reference, reusedVocabulary, reusedVocabularySha, error)) {
+            std::cerr << "Unable to read the vocabulary to reuse: " << error << '\n';
+            return 1;
+        }
+        std::cout << "reusing vocabulary " << Hex(reusedVocabularySha) << " from "
+                  << reference.filename().string() << '\n';
+    }
+
     const auto start = std::chrono::steady_clock::now();
     MapVisualIndex visualIndex;
     // Preserve the legacy nearest-origin partitioning here: it is part of the
     // retrieval index and changing it changes ranking.  At runtime, successful
     // base-index matches are reported as World (see GlobalVisualLocalizer).
     if (!MapVisualIndexBuilder::Build(features.imgKeypoints, features.imgDescriptors,
-            sourceImfSha, visualIndex, error)) {
+            sourceImfSha, visualIndex, error, reusedVocabulary)) {
         std::cerr << "Unable to build visual index: " << error << '\n';
         return 1;
     }
@@ -209,9 +328,12 @@ int main(int argc, char** argv) {
     int optionalKuroFeatureCount = 0;
     for (const auto& kuro : kuroPacks) {
         if (!kuro.loaded || baseOnly) continue;
+        // The pack status already carries the hash its manifest records for the feature
+        // source, and the loader refuses a pack whose binary disagrees with it, so the
+        // shard can be built from the binary without the source file being present.
+        std::string sourceName = std::string("KuroTilePacks/") + kuro.directoryName + "/features.yml";
         nlohmann::json shardReport;
-        if (!BuildAndInstallShard(kuro.featureData, visualIndex.vocabulary,
-            featureRoot / "KuroTilePacks" / kuro.directoryName / "features.yml",
+        if (!BuildAndInstallShard(kuro.featureData, visualIndex.vocabulary, kuro.sourceSha256, sourceName,
             featureRoot / "KuroTilePacks" / kuro.directoryName / "visual-index.imx",
             kuro.sceneId, shardReport, error)) {
             std::cerr << "Unable to build Kuro visual shard for " << kuro.directoryName << ": " << error << '\n';
@@ -225,9 +347,18 @@ int main(int argc, char** argv) {
     int optionalCandidateFeatureCount = 0;
     for (const auto& candidate : candidates) {
         if (!candidate.loaded || baseOnly) continue;
+        // Candidates ship their own manifest and keep hashing it: the status carries no
+        // feature-source hash, and no candidate pack is published today.
+        const auto candidateManifest = featureRoot / candidate.directoryName / "manifest.json";
+        std::array<std::uint8_t, 32> candidateSourceHash{};
+        if (!FeatureBinaryCodec::Sha256File(candidateManifest, candidateSourceHash, error)) {
+            std::cerr << "Unable to hash candidate manifest for " << candidate.directoryName << ": " << error << '\n';
+            return 1;
+        }
+        std::string sourceName = candidate.directoryName + "/manifest.json";
         nlohmann::json shardReport;
         if (!BuildAndInstallShard(candidate.featureData, visualIndex.vocabulary,
-            featureRoot / candidate.directoryName / "manifest.json",
+            candidateSourceHash, sourceName,
             featureRoot / candidate.directoryName / "visual-index.imx",
             candidate.sceneId, shardReport, error)) {
             std::cerr << "Unable to build candidate visual shard for " << candidate.packId << ": " << error << '\n';
