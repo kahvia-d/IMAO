@@ -74,6 +74,18 @@ constexpr std::size_t kRetrievalWideTiles = 4 * kRetrievalHintTiles;
 // 16 microseconds per distinct keypoint, measured on the real index (5,037 keypoints -> 80 ms,
 // 23,611 -> 375 ms, 596,694 -> 9,282 ms), so the wide rung costs roughly 375 ms to build where the
 // narrow one costs 82 ms - and that is the whole difference between them.
+//
+// The sweep's own budget is smaller, and for a different reason: it keeps one window per scene, and
+// all nine have to survive in the matcher cache at once. A window that does not fit evicts one that
+// does, and the sweep then rebuilds all nine on each of its eight crops and zooms. The cache
+// budgets 48 MB, so a window may spend a ninth of it and leave room over.
+//
+// Measured from the field log: with the narrow rung's budget the sweep's nine windows came to about
+// 90 MB, and the one sweep that had to run took 13,058 ms - almost exactly the 72 rebuilds at
+// 185 ms each that thrashing implies. At a ninth of the cache the nine come to 36 MB, they all
+// stay, and the sweep is nine preparations instead of seventy-two.
+constexpr std::size_t kSweepBytes = 4 * 1024 * 1024;
+constexpr std::size_t kSweepTiles = 64;
 
 
 // The decision half of a match - fit, inliers, reprojection error, support - lives in a shared header so
@@ -379,7 +391,7 @@ private:
                 const auto ordered = ranking.rankedTiles.find(sceneId);
                 if (ordered == ranking.rankedTiles.end()) continue;
                 sweep.candidates.emplace(sceneId, SliceCandidates(
-                    ordered->second, kRetrievalHintBytes, kRetrievalHintTiles));
+                    ordered->second, kSweepBytes, kSweepTiles));
             }
             // A scene that scored nothing is not in the sweep. It has no tiles the query resembles,
             // so comparing against the whole of it would buy a 9-second matcher and nothing else.

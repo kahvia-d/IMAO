@@ -606,9 +606,9 @@ int MeasureViewportCost(const std::filesystem::path& repositoryRoot, int sceneId
         }
         std::size_t totalKeypoints = 0, totalTiles = 0;
         double totalPrepare = 0.0;
-        std::cout << "sweep windows, one per scene:\n";
+        std::cout << "sweep windows, one per scene (4 MB each, so all nine fit the 48 MB cache):\n";
         for (auto& [sceneId, tiles] : byScene) {
-            auto sliced = sliceByKeypointsFor(tiles, 20u * 1024 * 1024, 64);
+            auto sliced = sliceByKeypointsFor(tiles, 4u * 1024 * 1024, 64);
             auto [candidates, matcher, copyMs, trainMs] = prepare(sliced);
             totalKeypoints += candidates.imgKeypoints.size();
             totalTiles += sliced.size();
