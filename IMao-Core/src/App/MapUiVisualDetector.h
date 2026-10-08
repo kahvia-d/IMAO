@@ -28,21 +28,32 @@ struct MapControlDetection {
     bool controllerSlider = false;
 };
 
-// The region-switch panel whose button column covers the right of the full-screen map. While it is
-// open the player is picking another region rather than reading this one, so what the overlay draws
-// for the current region is both in the way and about to be wrong.
+// Any of the game's right-side panels drawn over the full-screen map: the region list, an item or
+// teleport detail, the custom-marker editor. While one is open the player is reading a menu rather
+// than the map, so what the overlay draws for the current view is in the way - and after a region
+// switch it is about to be wrong as well. Their backgrounds differ (the region list is dark and
+// translucent, the detail panels are near-white), so colour alone cannot be the rule.
 //
-// One statistic decides it: the fraction of the button box that is neutral light grey. Measured on
-// the 2026-10-08 capture with the panel open against six captures without it: 69.2% against 0.1,
-// 0.3, 3.5, 4.3, 6.1 and 11.3 percent. The box also carries the number so a threshold that starts
-// misjudging real frames can be corrected from the log rather than from a guess.
-struct MapRegionPanelDetection {
+// Two statistics, either of which is enough, both measured 2026-10-08 over eleven captures - six
+// with a panel and five with none:
+//
+//   * the region list's button column, which is the fraction of hud::kRegionPanelButtons that is
+//     neutral light grey: 69.2% with the list open against 0.1..17.8% without it. Its dark separator
+//     count keeps a flat bright surface out, which is the one shape the fraction would misread.
+//   * the panel's own left edge, which is the strongest vertical step in hud::kMapSidePanel as a
+//     fraction of the box's height: 0.82..1.00 for a panel against 0.26..0.45 for open map. A menu
+//     has a straight full-height edge and terrain does not, and unlike the colours this is the same
+//     for every panel the game draws.
+//
+// The numbers travel with the verdict so a threshold that starts misjudging real frames can be
+// corrected from the log rather than from a guess.
+struct MapPanelDetection {
     bool visible = false;
     double neutralFraction = 0.0;
-    // Rows of the box that are mostly dark - the panel's own background showing between its button
-    // plates. Two or more of them is what separates a menu from a flat bright surface, which is the
-    // one shape the colour fraction alone would misread.
+    // Rows of the button box that are mostly dark - the list's own background showing between its
+    // plates.
     int darkSeparatorRows = 0;
+    double verticalEdgeFraction = 0.0;
     int sampledPixels = 0;
 };
 
@@ -68,6 +79,6 @@ public:
     // Independent UI evidence, usable before any player coordinate is known.
     static bool DetectBigMapControls(const cv::Mat& snapshot, const RECT& clientRect);
     static MapControlDetection DetectBigMapControlLayout(const cv::Mat& snapshot, const RECT& clientRect);
-    static MapRegionPanelDetection DetectRegionPanel(const cv::Mat& snapshot, const RECT& clientRect);
+    static MapPanelDetection DetectMapPanel(const cv::Mat& snapshot, const RECT& clientRect);
     static MapCompassTemplateInfo CompassTemplateInfo();
 };

@@ -408,46 +408,48 @@ void TestMapCompassVisualDetector() {
 #endif
 }
 
-void TestRegionPanelDetector() {
-    // The rule is a colour fraction over a fixed box plus the panel's dark separators, so the test
-    // paints both and checks the two ways it can be wrong: a panel that is there, and a bright flat
-    // surface that is not. Real captures are what the thresholds were measured on (`--ui-probe`
-    // scores 0.685 for the open panel and 0.001..0.178 for nine frames without it); this is the part
-    // of that which can live in the gate.
+void TestMapPanelDetector() {
+    // Two real captures carry the two panel shapes the game draws - the region list, which is dark
+    // with light button plates, and a marker detail panel, which is near-white - and four more carry
+    // the map with no panel over it. The thresholds were measured on exactly these (`--ui-probe`:
+    // the strongest vertical edge reads 0.82..1.00 with a panel and 0.32..0.46 without it), so this
+    // is the rule's own boundary rather than a restatement of it.
+#ifndef IMAO_SOURCE_DIR
+    Expect(false, "IMAO_SOURCE_DIR must be defined for UI image regression tests");
+#else
+    const auto uiRoot = std::filesystem::path(IMAO_SOURCE_DIR) / "Tests" / "MapUi";
+    const auto detect = [](const std::filesystem::path& path) {
+        const cv::Mat frame = cv::imread(path.string());
+        if (frame.empty()) return MapPanelDetection{};
+        return MapUiVisualDetector::DetectMapPanel(frame, RECT{0, 0, frame.cols, frame.rows});
+    };
+    for (const char* name : {"region-list.png", "marker-detail-panel.png", "teleport-panel.png",
+            "reward-panel.png", "controller-marker-dialog.png"}) {
+        const auto detection = detect(uiRoot / name);
+        Expect(detection.visible, std::string("a side panel should be detected: ") + name);
+        Expect(detection.verticalEdgeFraction >= 0.65,
+            std::string("the panel's edge should carry the verdict: ") + name);
+    }
+    for (const char* name : {"black-shores-map.png", "keyboard-map-current.png", "controller-map.png",
+            "controller-cursor-assistant.png"}) {
+        Expect(!detect(uiRoot / name).visible, std::string("open map must not read as a panel: ") + name);
+        Expect(detect(uiRoot / name).verticalEdgeFraction < 0.65,
+            std::string("open map must not carry a panel edge: ") + name);
+    }
+#endif
+
+    // The shape the button column alone would misread: a flat neutral-bright surface is 100% grey and
+    // has no dark rows. Only the separator count rejects it, which is why that count exists.
     constexpr int width = 2560, height = 1440;
     const RECT rect{0, 0, width, height};
     const cv::Rect box = hud::MapBox(hud::Layout::For(width, height), hud::kRegionPanelButtons);
     Expect(box.width > 0 && box.height > 0, "the region panel box must land inside a 2560x1440 client");
-
-    cv::Mat frame(height, width, CV_8UC3, cv::Scalar(20, 40, 60));
-    Expect(!MapUiVisualDetector::DetectRegionPanel(frame, rect).visible,
-        "an ordinary dark map must not read as the region list");
-    Expect(!MapUiVisualDetector::DetectRegionPanel({}, rect).visible, "empty frame should be rejected");
-
-    // Six button plates with the panel's own background showing between them.
-    const int plateHeight = box.height / 6;
-    for (int index = 0; index < 6; ++index) {
-        cv::rectangle(frame, cv::Rect(box.x, box.y + index * plateHeight + 8, box.width, plateHeight - 16),
-            cv::Scalar(193, 194, 196), cv::FILLED);
-    }
-    const auto painted = MapUiVisualDetector::DetectRegionPanel(frame, rect);
-    Expect(painted.visible, "the region list's own button column should be detected");
-    Expect(painted.neutralFraction > 0.35 && painted.darkSeparatorRows >= 2,
-        "the detected panel should carry the numbers the thresholds were set from");
-
-    // The documented limit: a flat neutral-bright surface fills the box with grey and has no dark
-    // rows at all. Only the separator count rejects it, which is why that count exists - a cloud
-    // bank's worth of untextured 235-grey would otherwise be a menu.
     cv::Mat flat(height, width, CV_8UC3, cv::Scalar(20, 40, 60));
     cv::rectangle(flat, cv::Rect(box.x, box.y, box.width, box.height), cv::Scalar(235, 235, 238), cv::FILLED);
-    const auto flatDetection = MapUiVisualDetector::DetectRegionPanel(flat, rect);
+    const auto flatDetection = MapUiVisualDetector::DetectMapPanel(flat, rect);
     Expect(flatDetection.neutralFraction > 0.9 && !flatDetection.visible,
         "a flat bright surface is fully neutral and must still not be a panel");
-
-    // A teal sea, the shape five of the six reference captures put under this box.
-    cv::Mat sea(height, width, CV_8UC3, cv::Scalar(60, 45, 30));
-    Expect(!MapUiVisualDetector::DetectRegionPanel(sea, rect).visible,
-        "tinted terrain must not read as a neutral panel");
+    Expect(!MapUiVisualDetector::DetectMapPanel({}, rect).visible, "empty frame should be rejected");
 
     // And the policy the detector feeds: the panel suppresses the markers, and nothing else.
     MapFrameEvidence evidence;
@@ -455,10 +457,10 @@ void TestRegionPanelDetector() {
     evidence.anchorFresh = true;
     Expect(BigMapMarkersVisible(evidence), "a probed map with no panel should keep drawing");
     Expect(BigMapEvidence(evidence), "the panel is not evidence about whether the map is open");
-    evidence.regionPanelVisible = true;
-    Expect(!BigMapMarkersVisible(evidence), "the open region list should hide the map markers");
+    evidence.panelVisible = true;
+    Expect(!BigMapMarkersVisible(evidence), "an open side panel should hide the map markers");
     Expect(BigMapEvidence(evidence),
-        "the open region list must not close the map UI state - that would drop the viewport session");
+        "an open side panel must not close the map UI state - that would drop the viewport session");
 }
 
 void TestMapViewportPredictor() {
@@ -1322,7 +1324,7 @@ int main(int argc, char** argv) {
     TestFineViewportMotion(Expect);
 	TestMapUiStateController();
 	TestMapCompassVisualDetector();
-	TestRegionPanelDetector();
+	TestMapPanelDetector();
 	TestMapViewportPredictor();
 	TestWorldSearchPrior();
     TestNewSceneRegistry();

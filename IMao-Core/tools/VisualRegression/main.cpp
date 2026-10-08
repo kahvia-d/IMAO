@@ -888,14 +888,15 @@ int CheckUiProbes(const std::filesystem::path& imagePath, int clientWidth, int c
     }
     if (clientWidth <= 0 || clientHeight <= 0) { clientWidth = snapshot.cols; clientHeight = snapshot.rows; }
     const RECT rect{ 0, 0, clientWidth, clientHeight };
-    const auto panel = MapUiVisualDetector::DetectRegionPanel(snapshot, rect);
+    const auto panel = MapUiVisualDetector::DetectMapPanel(snapshot, rect);
     const auto compass = MapUiVisualDetector::DetectBigMapCompass(snapshot, rect);
     const auto controls = MapUiVisualDetector::DetectBigMapControlLayout(snapshot, rect);
     std::cout << imagePath.filename().string() << "  " << snapshot.cols << "x" << snapshot.rows
         << "  client " << clientWidth << "x" << clientHeight << '\n'
-        << "  regionPanel   visible=" << panel.visible
+        << "  panel   visible=" << panel.visible
         << "  neutral=" << std::fixed << std::setprecision(4) << panel.neutralFraction
         << "  darkRows=" << panel.darkSeparatorRows
+        << "  edge=" << std::setprecision(4) << panel.verticalEdgeFraction
         << "  sampled=" << panel.sampledPixels << '\n'
         << "  compass       visible=" << compass.visible << "  gold=" << compass.goldPixels
         << "  verified=" << compass.templateVerified << "  agreement="

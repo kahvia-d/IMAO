@@ -74,6 +74,11 @@ inline constexpr Box kBigMapZoomStrip = { 1480, 235, 1540, 645, AnchorX::Right, 
 // taller or wider than 16:9, exactly the ambiguity the zoom strip above records. Vertical is Top,
 // not Center: the panel occupies the upper 59% of the reference height.
 inline constexpr Box kRegionPanelButtons = { 890, 115, 1130, 505, AnchorX::Right, AnchorY::Top };
+// The whole right-hand strip every one of those panels is drawn inside, scanned for the panel's own
+// left edge. Wider than the panels themselves on purpose: the region list starts at reference 880
+// and the detail panels at 1068, so the edge has to be looked for across the range rather than at a
+// place. Right-anchored for the same reason as the box above.
+inline constexpr Box kMapSidePanel = { 900, 60, 1560, 830, AnchorX::Right, AnchorY::Top };
 
 /// The single scale and the anchor rules one client size implies.
 struct Layout {

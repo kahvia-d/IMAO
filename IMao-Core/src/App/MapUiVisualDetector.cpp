@@ -241,73 +241,105 @@ MapCompassDetection MapUiVisualDetector::DetectBigMapCompass(const cv::Mat& snap
     return result;
 }
 
-// The region-switch panel: the stack of large light-grey region buttons the open list paints where
-// the map used to be readable. One statistic decides it, because the widget itself is a flat
-// neutral grey and almost nothing the game draws behind it is - the six reference captures without
-// the panel peak at 11.3% and the panel's own box reads 69.2%.
+// The game's right-side panels, which are drawn over the map and are read by the player instead of it.
 //
-// Deliberately NOT a template. The buttons carry the region names, so their pixels change with the
-// player's progress and with the language; only the plate underneath them is constant, and a plate
-// is what a colour fraction measures directly.
+// Two statistics rather than one because the panels do not look alike: the region list is dark and
+// translucent with light button plates, the item and teleport panels are near-white with dark text,
+// and the custom-marker editor is a third arrangement of the same two colours. What they share is a
+// straight full-height left edge, and that is what the second statistic measures.
+//
+// Deliberately NOT a template. The panels carry region names, item names and counts, so their pixels
+// change with the player's progress and with the language; only the plate underneath is constant.
 namespace {
 constexpr int kPanelNeutralChannels = 16;   // max - min per pixel: "grey" rather than tinted
-constexpr int kPanelNeutralLow = 165;       // the button plates measure 174..196 per channel
+constexpr int kPanelNeutralLow = 165;       // the region list's plates measure 174..196 per channel
 constexpr int kPanelNeutralHigh = 245;      // below plain white, so snow stays out of it
 constexpr double kPanelMinNeutralFraction = 0.35;
 // The plates are separated by the panel's own dark background, and a bright flat surface is not.
 // Without this the fraction alone calls an untextured cloud bank a menu: an even 235-grey fill is
-// 100% neutral, where the real panel reads 69% and still shows five dark rows between its buttons.
+// 100% neutral, where the real list reads 69% and still shows five dark rows between its buttons.
 constexpr int kPanelDarkLevel = 90;
 constexpr double kPanelDarkRowFraction = 0.60;
 constexpr int kPanelMinDarkRows = 2;
+// The panel's left edge. Looked for across the whole strip, because it is at reference 880 for the
+// region list and 1068 for the detail panels.
+constexpr int kPanelEdgeStep = 30;          // luminance step that counts as an edge
+constexpr int kPanelEdgeLookback = 12;      // pixels the step is measured across
+constexpr double kPanelMinEdgeFraction = 0.65;
 }  // namespace
 
-MapRegionPanelDetection MapUiVisualDetector::DetectRegionPanel(const cv::Mat& snapshot, const RECT& clientRect) {
+MapPanelDetection MapUiVisualDetector::DetectMapPanel(const cv::Mat& snapshot, const RECT& clientRect) {
     (void)clientRect;
-    MapRegionPanelDetection result;
-    const cv::Rect crop = ScaleCrop(snapshot, hud::kRegionPanelButtons);
-    if (crop.empty() || snapshot.channels() < 3) return result;
-
+    MapPanelDetection result;
+    if (snapshot.channels() < 3) return result;
     cv::Mat bgr;
     if (snapshot.channels() == 3) bgr = snapshot;
     else if (snapshot.channels() == 4) cv::cvtColor(snapshot, bgr, cv::COLOR_BGRA2BGR);
     else return result;
 
-    const cv::Mat panel = bgr(crop);
-    result.sampledPixels = panel.rows * panel.cols;
-    if (result.sampledPixels <= 0) return result;
+    // ---- the region list's button column ----
+    const cv::Rect crop = ScaleCrop(snapshot, hud::kRegionPanelButtons);
+    if (!crop.empty()) {
+        const cv::Mat panel = bgr(crop);
+        result.sampledPixels = panel.rows * panel.cols;
+        if (result.sampledPixels > 0) {
+            // "Neutral light grey" as range tests rather than a per-pixel loop: the box is 240x390
+            // reference units, 384x624 pixels on a 2560x1440 client, and this runs on the state
+            // thread beside the compass.
+            cv::Mat channels[3];
+            cv::split(panel, channels);
+            cv::Mat highest, lowest;
+            cv::max(channels[0], channels[1], highest);
+            cv::max(highest, channels[2], highest);
+            cv::min(channels[0], channels[1], lowest);
+            cv::min(lowest, channels[2], lowest);
+            cv::Mat spread, neutral, notTooDark, notTooBright, neutralAndLight;
+            cv::subtract(highest, lowest, spread);
+            cv::inRange(spread, cv::Scalar(0), cv::Scalar(kPanelNeutralChannels), neutral);
+            cv::inRange(lowest, cv::Scalar(kPanelNeutralLow), cv::Scalar(255), notTooDark);
+            cv::inRange(highest, cv::Scalar(0), cv::Scalar(kPanelNeutralHigh), notTooBright);
+            cv::bitwise_and(neutral, notTooDark, neutralAndLight);
+            cv::bitwise_and(neutralAndLight, notTooBright, neutralAndLight);
+            result.neutralFraction =
+                static_cast<double>(cv::countNonZero(neutralAndLight)) / result.sampledPixels;
 
-    // "Neutral light grey" as three range tests rather than a per-pixel loop: the box is 240x390
-    // reference units, which is 384x624 pixels on a 2560x1440 client, and this probe runs on the
-    // state thread beside the compass.
-    cv::Mat channels[3];
-    cv::split(panel, channels);
-    cv::Mat highest, lowest;
-    cv::max(channels[0], channels[1], highest);
-    cv::max(highest, channels[2], highest);
-    cv::min(channels[0], channels[1], lowest);
-    cv::min(lowest, channels[2], lowest);
-    cv::Mat spread, neutral, notTooDark, notTooBright, neutralAndLight;
-    cv::subtract(highest, lowest, spread);
-    cv::inRange(spread, cv::Scalar(0), cv::Scalar(kPanelNeutralChannels), neutral);
-    cv::inRange(lowest, cv::Scalar(kPanelNeutralLow), cv::Scalar(255), notTooDark);
-    cv::inRange(highest, cv::Scalar(0), cv::Scalar(kPanelNeutralHigh), notTooBright);
-    cv::bitwise_and(neutral, notTooDark, neutralAndLight);
-    cv::bitwise_and(neutralAndLight, notTooBright, neutralAndLight);
-    const int neutralPixels = cv::countNonZero(neutralAndLight);
-    result.neutralFraction = static_cast<double>(neutralPixels) / result.sampledPixels;
-
-    cv::Mat dark, darkRows;
-    cv::inRange(highest, cv::Scalar(0), cv::Scalar(kPanelDarkLevel), dark);
-    dark /= 255;
-    cv::reduce(dark, darkRows, 1, cv::REDUCE_SUM, CV_32S);
-    const int darkRowThreshold = static_cast<int>(panel.cols * kPanelDarkRowFraction);
-    for (int row = 0; row < darkRows.rows; ++row) {
-        if (darkRows.at<int>(row, 0) >= darkRowThreshold) ++result.darkSeparatorRows;
+            cv::Mat dark, darkRows;
+            cv::inRange(highest, cv::Scalar(0), cv::Scalar(kPanelDarkLevel), dark);
+            dark /= 255;
+            cv::reduce(dark, darkRows, 1, cv::REDUCE_SUM, CV_32S);
+            const int darkRowThreshold = static_cast<int>(panel.cols * kPanelDarkRowFraction);
+            for (int row = 0; row < darkRows.rows; ++row) {
+                if (darkRows.at<int>(row, 0) >= darkRowThreshold) ++result.darkSeparatorRows;
+            }
+        }
     }
-
-    result.visible = result.neutralFraction >= kPanelMinNeutralFraction &&
+    const bool buttonColumn = result.neutralFraction >= kPanelMinNeutralFraction &&
         result.darkSeparatorRows >= kPanelMinDarkRows;
+
+    // ---- the panel's own left edge ----
+    // The strongest vertical step in the strip, as a fraction of the strip's height. A menu edge
+    // crosses every row; terrain produces at best half of them, and the eleven captures that
+    // measured this separate at 0.82 against 0.45.
+    const cv::Rect strip = ScaleCrop(snapshot, hud::kMapSidePanel);
+    if (!strip.empty() && strip.width > kPanelEdgeLookback) {
+        cv::Mat gray;
+        cv::cvtColor(bgr(strip), gray, cv::COLOR_BGR2GRAY);
+        cv::Mat shifted, difference, stepped, columnHits;
+        shifted = gray(cv::Rect(0, 0, gray.cols - kPanelEdgeLookback, gray.rows));
+        cv::absdiff(gray(cv::Rect(kPanelEdgeLookback, 0, gray.cols - kPanelEdgeLookback, gray.rows)),
+            shifted, difference);
+        cv::threshold(difference, stepped, kPanelEdgeStep, 255, cv::THRESH_BINARY);
+        stepped /= 255;
+        cv::reduce(stepped, columnHits, 0, cv::REDUCE_SUM, CV_32S);
+        const double rows = static_cast<double>(gray.rows);
+        for (int column = 0; column < columnHits.cols; ++column) {
+            const double fraction = columnHits.at<int>(0, column) / rows;
+            result.verticalEdgeFraction = (std::max)(result.verticalEdgeFraction, fraction);
+        }
+    }
+    const bool panelEdge = result.verticalEdgeFraction >= kPanelMinEdgeFraction;
+
+    result.visible = buttonColumn || panelEdge;
     return result;
 }
 

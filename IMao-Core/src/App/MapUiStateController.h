@@ -52,7 +52,7 @@ struct MapFrameEvidence {
     // is picking another region, so what the overlay draws for this one is in the way and is about to
     // be wrong. It suppresses the markers and nothing else - the UI state stays BigMap, because the
     // map really is open and dropping the state would throw away the viewport session with it.
-    bool regionPanelVisible = false;
+    bool panelVisible = false;
 
     // Task-icon descriptors can match map labels during a pan. Current,
     // verified full-screen widgets outweigh that weak HUD hit. An old canvas
@@ -80,7 +80,7 @@ inline bool BigMapEvidence(const MapFrameEvidence& evidence) {
         (evidence.minimapAbsentLongEnough && evidence.Probed());
 }
 inline bool BigMapMarkersVisible(const MapFrameEvidence& evidence) {
-    return !evidence.GameplayHudVisible() && evidence.Probed() && !evidence.regionPanelVisible;
+    return !evidence.GameplayHudVisible() && evidence.Probed() && !evidence.panelVisible;
 }
 
 // Keeps UI transitions separate from raw per-frame feature checks. A stable
