@@ -163,6 +163,12 @@ try {
         $kuroBinaryFeatures = Join-Path $outputDirectory "Assets\FeaturesDatas\KuroTilePacks\$kuroDirectory\features.imf"
         if (-not (Test-Path -LiteralPath $kuroBinaryFeatures)) { throw "Missing staged Kuro binary features: $kuroBinaryFeatures" }
     }
+    # The base map XML was retired from the asset tree, so this normally has nothing to find. It
+    # still has to be checked: the file is a build input, not a shipped one, and a checkout that
+    # restores it must not quietly stage it into the release. The path is spelled out rather than
+    # derived from a now-deleted reference - leaving the guard without its path made Test-Path
+    # reject a null argument and broke this whole build script from 3bb2323 until it was noticed.
+    $xmlFeatures = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_features.yml'
     if (Test-Path -LiteralPath $xmlFeatures) { throw "Release staging must not contain the base map XML: $xmlFeatures" }
 
     $paddleDllDirectory = Join-Path $PaddleLib 'paddle\lib'
