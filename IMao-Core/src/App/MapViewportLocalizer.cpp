@@ -70,6 +70,10 @@ constexpr std::size_t kRetrievalHintTiles = 64;
 // climb, and it costs one build instead of nine.
 constexpr std::size_t kRetrievalWideBytes = 4 * kRetrievalHintBytes;
 constexpr std::size_t kRetrievalWideTiles = 4 * kRetrievalHintTiles;
+// Both bounds are four times the narrow rung's, in tiles and in keypoints. Preparation costs about
+// 16 microseconds per distinct keypoint, measured on the real index (5,037 keypoints -> 80 ms,
+// 23,611 -> 375 ms, 596,694 -> 9,282 ms), so the wide rung costs roughly 375 ms to build where the
+// narrow one costs 82 ms - and that is the whole difference between them.
 
 
 // The decision half of a match - fit, inliers, reprojection error, support - lives in a shared header so
@@ -168,6 +172,10 @@ private:
         // searched whole; a scene with an EMPTY entry is searched not at all, which is how a prior
         // that covers no tiles keeps meaning "nothing to look at" rather than "look everywhere".
         std::map<int, std::vector<std::uint32_t>> candidates;
+        // Whether this plan compares one scale. A plan whose candidates were ranked from
+        // descriptors taken at one scale compares that scale; the sweep keeps looking for the scale
+        // too, because "the crop is zoomed" is a failure the ranking cannot see.
+        bool singleScale = true;
     };
 
     // What the visual index said about a cold start's viewport before anything was compared.
@@ -180,6 +188,9 @@ private:
         // different budgets, which is what makes the ladder a matter of arithmetic rather than a
         // second ranking pass.
         std::map<int, std::vector<std::uint32_t>> rankedTiles;
+        // Every scene that scored at all, in rank order. The sweep compares against the best of each
+        // of them, which is what lets it stay cheap without giving up on a scene the ranking rejected.
+        std::vector<int> scoredScenes;
         int rankedSceneCount = 0;
         double topScore = 0.0;
         double runnerUpScore = 0.0;
@@ -195,15 +206,6 @@ private:
             vocabularyIndex_ = VisualIndexRetrieval::BuildVocabularyIndex(resources_->visualIndex.vocabulary);
         }
         return vocabularyIndex_.get();
-    }
-
-    // What one tile costs once it becomes part of a matcher: one 128-wide float descriptor and one
-    // keypoint per row. This is the same quantity the matcher cache budgets, so choosing candidates
-    // by it is choosing by the thing that decides whether they survive to the next search.
-    std::size_t TileBytes(std::uint32_t tileIndex) const {
-        if (tileIndex >= resources_->visualIndex.tiles.size()) return 0;
-        return resources_->visualIndex.tiles[tileIndex].featureRowCount *
-            static_cast<std::size_t>(MapVisualIndex::DescriptorColumns * sizeof(float) + sizeof(cv::KeyPoint));
     }
 
     // The tiles one scene's own ranking liked, best first. No radius: the ranking already says
@@ -227,15 +229,35 @@ private:
     }
 
     // The best of a ranked list, taken in order until it reaches the byte target or the tile cap.
+    //
+    // The budget is spent on DISTINCT keypoints, not on the tiles' row counts. A tile's
+    // featureRowCount counts references, and tiles overlap - 384 units wide on a 192-unit stride,
+    // with six packs stacked inside the World scene - so the same map point is referenced by many
+    // tiles at once. Measured on World: 49 tiles carried 38,800 references but only 5,037 distinct
+    // keypoints, a factor of 7.7. Spending the budget on references bought an eighth of the
+    // candidates it was meant to, which is why a "20 MB" window was really 2.6 MB and why the
+    // field log's retrievalTiles sat at 5-17.
     std::vector<std::uint32_t> SliceCandidates(const std::vector<std::uint32_t>& rankedTiles,
         std::size_t byteBudget, std::size_t tileCap) const {
+        constexpr std::size_t kBytesPerKeypoint =
+            MapVisualIndex::DescriptorColumns * sizeof(float) + sizeof(cv::KeyPoint);
         std::vector<std::uint32_t> chosen;
-        std::size_t bytes = 0;
+        std::vector<unsigned char> counted(resources_->map.imgKeypoints.size(), 0);
+        std::size_t keypoints = 0;
         for (const auto tileIndex : rankedTiles) {
             if (chosen.size() >= tileCap) break;
+            if (tileIndex >= resources_->visualIndex.tiles.size()) continue;
+            const auto& tile = resources_->visualIndex.tiles[tileIndex];
+            for (std::uint32_t row = 0; row < tile.featureRowCount; ++row) {
+                const auto index = tile.featureRowOffset + row;
+                if (index >= resources_->visualIndex.featureRows.size()) break;
+                const auto mapRow = resources_->visualIndex.featureRows[index];
+                if (mapRow >= counted.size() || counted[mapRow] != 0) continue;
+                counted[mapRow] = 1;
+                ++keypoints;
+            }
             chosen.push_back(tileIndex);
-            bytes += TileBytes(tileIndex);
-            if (bytes >= byteBudget) break;
+            if (keypoints * kBytesPerKeypoint >= byteBudget) break;
         }
         return chosen;
     }
@@ -291,15 +313,22 @@ private:
             ranking.scenes.push_back(ranking.runnerUpSceneId);
         }
 
-        // Every kept scene is ranked, or none is. Half a plan cannot be searched at one scale: the
-        // caller narrows the zoom factors when a plan carries candidates, and a scene left without
-        // them would then only ever be searched at the wrong one.
+        // Every scored scene is ranked, not only the kept ones: the sweep compares against the best
+        // of every scene, and it needs their tiles for that.
         std::map<int, std::vector<std::uint32_t>> rankedTiles;
-        for (const int sceneId : ranking.scenes) {
+        std::vector<int> scoredScenes;
+        for (const auto& [score, sceneId] : ranked) {
             auto ordered = RankSceneTiles(scores, sceneId);
-            if (ordered.empty()) return ranking;
+            if (ordered.empty()) continue;
             rankedTiles.emplace(sceneId, std::move(ordered));
+            scoredScenes.push_back(sceneId);
         }
+        // All or nothing for the kept scenes: a plan that carries candidates compares one scale, and
+        // a kept scene without them would then only ever be searched at the wrong one.
+        for (const int sceneId : ranking.scenes) {
+            if (rankedTiles.find(sceneId) == rankedTiles.end()) return ranking;
+        }
+        ranking.scoredScenes = std::move(scoredScenes);
         ranking.topCandidateCount = static_cast<int>(SliceCandidates(
             rankedTiles.at(ranking.sceneId), kRetrievalHintBytes, kRetrievalHintTiles).size());
         ranking.rankedTiles = std::move(rankedTiles);
@@ -311,14 +340,17 @@ private:
     // Every request except a cold start gets exactly one plan: itself. A cold start gets up to
     // three, because the ranking is a hint and not an answer:
     //
-    //   0. the ranking's own best tiles,
-    //   1. the same ranking, sliced four times wider,
-    //   2. the sweep this path has always run.
+    //   0. the ranking's own best tiles, for the scenes it kept,
+    //   1. the same ranking sliced four times wider,
+    //   2. every scene that scored, each against its own best tiles, at every zoom.
     //
-    // Rung 1 is the one added because rung 0 misses: a ranking that is right but whose window does
-    // not reach the answer used to fall straight through to nine whole scenes, measured at 11-23
-    // seconds. The sweep stays as the floor - without it a ranking that named the wrong scene would
-    // lose a localisation the sweep would have found - so the ranking can only beat it.
+    // Rung 2 used to compare against whole scenes - 3,967 tiles and 596,694 keypoints for World,
+    // measured at 9.2 seconds to prepare one matcher. Nine scenes against a cache that holds eight
+    // meant it prepared them all again on every one of its eight crops and zooms, so a single
+    // search could still be running after a minute. Ranking each scene's own tiles costs 0.08 s to
+    // prepare instead of 9.2, and nine of those fit the budget at once, so the churn disappears with
+    // the cost. It keeps all four zooms, because a crop that is scaled is a failure the ranking
+    // cannot see.
     std::vector<SearchPlan> BuildPlans(const MapViewportLocalizationRequest& request,
         const std::vector<int>& allScenes, const SceneRanking& ranking) {
         std::vector<SearchPlan> plans;
@@ -340,6 +372,19 @@ private:
             plans.push_back(std::move(narrow));
             // A rung that reaches no further than the one below it is not a rung.
             if (reachesFurther) plans.push_back(std::move(wide));
+
+            SearchPlan sweep;
+            sweep.singleScale = false;
+            for (const int sceneId : ranking.scoredScenes) {
+                const auto ordered = ranking.rankedTiles.find(sceneId);
+                if (ordered == ranking.rankedTiles.end()) continue;
+                sweep.candidates.emplace(sceneId, SliceCandidates(
+                    ordered->second, kRetrievalHintBytes, kRetrievalHintTiles));
+            }
+            // A scene that scored nothing is not in the sweep. It has no tiles the query resembles,
+            // so comparing against the whole of it would buy a 9-second matcher and nothing else.
+            sweep.scenes = ranking.scoredScenes;
+            if (!sweep.scenes.empty()) plans.push_back(std::move(sweep));
         }
         SearchPlan requested;
         requested.scenes = allScenes;
@@ -422,8 +467,8 @@ private:
             if (result.accepted || sceneAmbiguity || plan.scenes.empty()) continue;
             ++result.plansRun;
             // A plan that carries candidates compares one scale, because they were ranked from
-            // descriptors taken at one scale; a plan without them has to look for the scale too.
-            const bool ranked = !plan.candidates.empty();
+            // descriptors taken at one scale; the sweep keeps looking for the scale as well.
+            const bool ranked = plan.singleScale;
             for (std::size_t regionIndex = 0; regionIndex < regions.size(); ++regionIndex) {
             if (interrupted()) throw SearchInterrupted{};
             const auto& region = regions[regionIndex];
@@ -605,7 +650,13 @@ private:
         }();
         const std::size_t byteBudget = singleEntry ? 0
             : (configuredBudgetMb > 0 ? configuredBudgetMb * 1024 * 1024 : 48 * 1024 * 1024);
-        const std::size_t entryBudget = singleEntry ? 1 : (configuredEntries > 0 ? configuredEntries : 8);
+        // Sixteen entries, not eight. The count bound exists so the cache cannot grow into a second
+        // copy of the map, and the byte budget is what actually enforces that; but eight was below
+        // the nine scenes a sweep compares, so the sweep's ninth matcher evicted its first and every
+        // pass rebuilt all nine. At the sizes a window now has - about 3 MB each - nine of them fit
+        // inside the byte budget with room to spare, and the count bound was the only thing left
+        // making the sweep churn.
+        const std::size_t entryBudget = singleEntry ? 1 : (configuredEntries > 0 ? configuredEntries : 16);
         LocalMatcherCache cache;
         cache.candidates = SelectSceneCandidates(*resources_, tileIndices);
         if (cache.candidates.imgDescriptors.empty()) return nullptr;

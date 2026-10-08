@@ -553,20 +553,92 @@ int MeasureViewportCost(const std::filesystem::path& repositoryRoot, int sceneId
         << " ms  total=" << (wholeCopyMs + wholeTrainMs) << " ms  keypoints="
         << wholeCandidates.imgKeypoints.size() << '\n';
 
-    // The budget a cold start's first rung uses, built the same way it is chosen.
-    std::vector<std::uint32_t> windowTiles;
-    std::size_t windowBytes = 0;
-    for (const auto tileIndex : allTiles) {
-        windowTiles.push_back(tileIndex);
-        windowBytes += resources->visualIndex.tiles[tileIndex].featureRowCount *
-            (MapVisualIndex::DescriptorColumns * sizeof(float) + sizeof(cv::KeyPoint));
-        if (windowBytes >= 20u * 1024 * 1024 || windowTiles.size() >= 64) break;
+    // The budget a cold start's first rung uses, built the same way it is chosen. Two slicings are
+    // measured: the one that counts a tile's row references, which is what shipped until now, and
+    // the one that counts distinct keypoints, which is what the budget was always meant to mean.
+    // The difference is the factor the field log kept hinting at - 49 tiles of World carried 38,800
+    // references but only 5,037 distinct keypoints.
+    const auto sliceByReferences = [&](std::size_t budget) {
+        std::vector<std::uint32_t> tiles;
+        std::size_t bytes = 0;
+        for (const auto tileIndex : allTiles) {
+            tiles.push_back(tileIndex);
+            bytes += resources->visualIndex.tiles[tileIndex].featureRowCount *
+                (MapVisualIndex::DescriptorColumns * sizeof(float) + sizeof(cv::KeyPoint));
+            if (bytes >= budget || tiles.size() >= 64) break;
+        }
+        return tiles;
+    };
+    const auto sliceByKeypointsFor = [&](const std::vector<std::uint32_t>& ordered,
+        std::size_t budget, std::size_t cap) {
+        std::vector<unsigned char> counted(resources->map.imgKeypoints.size(), 0);
+        std::vector<std::uint32_t> tiles;
+        std::size_t keypoints = 0;
+        for (const auto tileIndex : ordered) {
+            if (tiles.size() >= cap) break;
+            const auto& tile = resources->visualIndex.tiles[tileIndex];
+            for (std::uint32_t row = 0; row < tile.featureRowCount; ++row) {
+                const auto index = tile.featureRowOffset + row;
+                if (index >= resources->visualIndex.featureRows.size()) break;
+                const auto mapRow = resources->visualIndex.featureRows[index];
+                if (mapRow >= counted.size() || counted[mapRow] != 0) continue;
+                counted[mapRow] = 1;
+                ++keypoints;
+            }
+            tiles.push_back(tileIndex);
+            if (keypoints * (MapVisualIndex::DescriptorColumns * sizeof(float) + sizeof(cv::KeyPoint)) >= budget) break;
+        }
+        return tiles;
+    };
+    const auto sliceByKeypoints = [&](std::size_t budget, std::size_t cap) {
+        return sliceByKeypointsFor(allTiles, budget, cap);
+    };
+
+    // The claim this change rests on: a sweep now compares against one window per scene instead of
+    // one whole scene per scene, and nine of those windows fit the matcher cache at once. Measure
+    // each scene's window, add them up, and compare against the 48 MB the cache budgets.
+    {
+        std::map<int, std::vector<std::uint32_t>> byScene;
+        for (std::uint32_t tileIndex = 0; tileIndex < resources->visualIndex.tiles.size(); ++tileIndex) {
+            const int sceneId = MapViewportCandidates::TileScene(*resources, tileIndex);
+            if (!Scene::IsRuntimeApproved(sceneId)) continue;
+            byScene[sceneId].push_back(tileIndex);
+        }
+        std::size_t totalKeypoints = 0, totalTiles = 0;
+        double totalPrepare = 0.0;
+        std::cout << "sweep windows, one per scene:\n";
+        for (auto& [sceneId, tiles] : byScene) {
+            auto sliced = sliceByKeypointsFor(tiles, 20u * 1024 * 1024, 64);
+            auto [candidates, matcher, copyMs, trainMs] = prepare(sliced);
+            totalKeypoints += candidates.imgKeypoints.size();
+            totalTiles += sliced.size();
+            totalPrepare += copyMs + trainMs;
+            std::cout << "  scene " << sceneId << ": tiles=" << sliced.size() << " keypoints="
+                << candidates.imgKeypoints.size() << " prepare=" << (copyMs + trainMs) << " ms\n";
+        }
+        std::cout << "  nine windows: tiles=" << totalTiles << " keypoints=" << totalKeypoints
+            << " resident=" << (totalKeypoints * (MapVisualIndex::DescriptorColumns * sizeof(float) +
+                sizeof(cv::KeyPoint)) / (1024 * 1024)) << " MB"
+            << "  prepare=" << totalPrepare << " ms\n";
     }
-    std::cout << "scene " << sceneId << " window: tiles=" << windowTiles.size() << '\n';
-    auto [windowCandidates, windowMatcher, windowCopyMs, windowTrainMs] = prepare(windowTiles);
-    std::cout << "  prepare: copy=" << windowCopyMs << " ms  train=" << windowTrainMs
-        << " ms  total=" << (windowCopyMs + windowTrainMs) << " ms  keypoints="
-        << windowCandidates.imgKeypoints.size() << '\n';
+
+    cv::Ptr<cv::FlannBasedMatcher> windowMatcher;
+    for (const auto& [label, tiles] : std::vector<std::pair<std::string, std::vector<std::uint32_t>>>{
+            { "20 MB of references (what shipped)", sliceByReferences(20u * 1024 * 1024) },
+            { "20 MB of keypoints, cap 64", sliceByKeypoints(20u * 1024 * 1024, 64) },
+            { "20 MB of keypoints, cap 256", sliceByKeypoints(20u * 1024 * 1024, 256) },
+            { "80 MB of keypoints, cap 256", sliceByKeypoints(80u * 1024 * 1024, 256) } }) {
+        auto [candidates, matcher, copyMs, trainMs] = prepare(tiles);
+        std::cout << "  " << label << ": tiles=" << tiles.size() << " keypoints="
+            << candidates.imgKeypoints.size() << " prepare=" << (copyMs + trainMs)
+            << " ms (copy " << copyMs << " + train " << trainMs << ")\n";
+        // The slice the cold start's first rung would use under the corrected accounting.
+        if (label == "20 MB of keypoints, cap 256") windowMatcher = std::move(matcher);
+    }
+    if (!windowMatcher) {
+        std::cerr << "No window matcher was built.\n";
+        return 1;
+    }
 
     // Query sizes the field log reports for a full-screen crop: the accepted searches sat around
     // 2,000-6,000 keypoints, the rejected ones as low as 700 and as high as 10,000.
