@@ -111,6 +111,14 @@ foreach ($relative in @('Assets/FeaturesDatas/Map_features.imf','Assets/Features
     $expected = Test-Path -LiteralPath (Join-Path $SourceRoot $relative) -PathType Leaf
     if ($present -ne $expected) { throw "Base map feature packaging does not match the source tree: $relative" }
 }
+# The shared visual vocabulary is program-level, not part of any region pack: region packs may be
+# deleted by the player, and the shards that remain name this file by hash. It is shipped in the
+# program package so it is always present, and a package that drops it ships unreadable shards.
+$sharedVocabulary = 'Assets/FeaturesDatas/Map_visual_vocabulary.imx'
+if ((Test-Path -LiteralPath (Join-Path $SourceRoot $sharedVocabulary) -PathType Leaf) -and
+    -not (Test-Path -LiteralPath (Join-Path $package $sharedVocabulary) -PathType Leaf)) {
+    throw "Missing shared visual vocabulary in the program package: $sharedVocabulary"
+}
 $runtime = Get-Content -LiteralPath (Join-Path $package 'IMao-WinUI.runtimeconfig.json') -Raw | ConvertFrom-Json
 if (-not $runtime.runtimeOptions.includedFrameworks -or $runtime.runtimeOptions.frameworks -or $runtime.runtimeOptions.framework) { throw 'Program package must include its .NET runtime.' }
 & (Join-Path $PSScriptRoot 'Test-ProgramReleasePackage.ps1') -PackageRoot $package -OutputRoot (Join-Path $OutputRoot 'verification')

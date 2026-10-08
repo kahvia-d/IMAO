@@ -64,6 +64,20 @@ int main(int argc, char** argv) {
         [](const auto& pack) { return pack.loaded && pack.runtimeApproved; });
     std::cout << "loaded and runtime-approved: " << approved << '\n';
 
+    // A shard may reference the shared vocabulary instead of carrying its own 2.00 MB copy.
+    // Look for it where the runtime does; its absence just means the packs are self-contained.
+    MapVisualIndex sharedVocabulary;
+    bool sharedVocabularyReady = false;
+    {
+        const auto vocabularyPath = featureRoot / "Map_visual_vocabulary.imx";
+        std::string vocabularyError;
+        sharedVocabularyReady = MapVisualIndexCodec::LoadVocabulary(vocabularyPath,
+            sharedVocabulary.vocabulary, sharedVocabulary.vocabularySha256, vocabularyError);
+        std::cout << "shared vocabulary: " << (sharedVocabularyReady ? "loaded" : "absent")
+                  << " (" << vocabularyPath.string() << ") " << vocabularyError << '\n';
+    }
+    const MapVisualIndex* const vocabularySource = sharedVocabularyReady ? &sharedVocabulary : nullptr;
+
     cv::Mat vocabulary;
     std::array<std::uint8_t, 32> vocabularySha256{};
     std::size_t mergedTiles = 0;
@@ -81,7 +95,7 @@ int main(int argc, char** argv) {
         std::string error;
         const bool ready = MapVisualIndexCodec::Load(pack.directoryPath / "visual-index.imx",
             pack.sourceSha256, static_cast<std::uint32_t>(pack.featureData.imgKeypoints.size()),
-            shard, error);
+            shard, error, nullptr, vocabularySource);
         std::string mergeError;
         const bool merged = ready && MergeVocabulary(shard, vocabulary, vocabularySha256,
             pack.directoryName, mergedTiles, mergeError);

@@ -100,6 +100,17 @@ std::shared_ptr<const RuntimeFeatureResources> LoadResources(
     resources->baseVisualTileCount = static_cast<std::uint32_t>(resources->visualIndex.tiles.size());
 
     const auto baselineRows = resources->map.imgKeypoints.size();
+    // A shard may reference the shared vocabulary instead of carrying its own 2.00 MB copy.
+    // Look for it where the runtime does; its absence just means the packs are self-contained.
+    MapVisualIndex sharedVocabulary;
+    bool sharedVocabularyReady = false;
+    {
+        const auto vocabularyPath = featureRoot / "Map_visual_vocabulary.imx";
+        std::string vocabularyError;
+        sharedVocabularyReady = MapVisualIndexCodec::LoadVocabulary(vocabularyPath,
+            sharedVocabulary.vocabulary, sharedVocabulary.vocabularySha256, vocabularyError);
+    }
+    const MapVisualIndex* const vocabularySource = sharedVocabularyReady ? &sharedVocabulary : nullptr;
     const auto kuroPacks = KuroTileFeaturePack::LoadRegistered(featureRoot.string());
     for (const auto& kuro : kuroPacks) {
         if (std::find(diagnosticPacks.begin(), diagnosticPacks.end(), kuro.directoryName) != diagnosticPacks.end()) continue;
@@ -109,7 +120,8 @@ std::shared_ptr<const RuntimeFeatureResources> LoadResources(
         MapVisualIndex shard;
         if (!MapVisualIndexCodec::Load(
                 featureRoot / "KuroTilePacks" / kuro.directoryName / "visual-index.imx", kuro.sourceSha256,
-                static_cast<std::uint32_t>(kuro.featureData.imgKeypoints.size()), shard, error) ||
+                static_cast<std::uint32_t>(kuro.featureData.imgKeypoints.size()), shard, error,
+                nullptr, vocabularySource) ||
             !MergeVisualShard(resources->visualIndex, shard, rowBase, error)) return {};
         resources->kuroVisualShards.push_back({
             kuro.sceneId, firstShardTile, static_cast<std::uint32_t>(shard.tiles.size()) });
@@ -126,7 +138,8 @@ std::shared_ptr<const RuntimeFeatureResources> LoadResources(
                 featureRoot / candidate.directoryName / "manifest.json", shardSourceHash, error) ||
             !MapVisualIndexCodec::Load(
                 featureRoot / candidate.directoryName / "visual-index.imx", shardSourceHash,
-                static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size()), shard, error) ||
+                static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size()), shard, error,
+                nullptr, vocabularySource) ||
             !MergeVisualShard(resources->visualIndex, shard, rowBase, error)) return {};
         CandidateFeaturePack::AppendFeatures(resources->map, candidate.featureData);
         CandidateFeaturePack::AppendFeatures(resources->curatedCandidates, candidate.featureData);

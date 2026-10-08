@@ -780,6 +780,90 @@ void TestManifestShardLineEndings() {
     Expect(MapVisualIndexCodec::LoadManifestShard(indexPath, manifest, 1, output, error),
         "a shard originally generated from CRLF must remain supported");
 }
+
+void TestSharedVocabularyShard() {
+    const auto testDirectory = std::filesystem::temp_directory_path() /
+        ("imao-shared-vocabulary-" + std::to_string(GetCurrentProcessId()));
+    std::filesystem::create_directories(testDirectory);
+    const auto cleanup = wil::scope_exit([&] { std::filesystem::remove_all(testDirectory); });
+
+    std::array<std::uint8_t, 32> sourceHash{};
+    for (std::size_t index = 0; index < sourceHash.size(); ++index) {
+        sourceHash[index] = static_cast<std::uint8_t>(17 + index);
+    }
+    const auto fixture = CreateVisualIndexFixture(sourceHash);
+    const auto full = testDirectory / "full.imx";
+    const auto stripped = testDirectory / "stripped.imx";
+    const auto vocabularyPath = testDirectory / "Map_visual_vocabulary.imx";
+    std::string error;
+    Expect(MapVisualIndexCodec::Save(full, fixture, error), "full fixture should save: " + error);
+    Expect(MapVisualIndexCodec::Save(stripped, fixture, error, nullptr, false),
+        "vocabulary-less fixture should save: " + error);
+
+    // The whole point: the shard loses exactly the vocabulary payload and nothing else.
+    const auto fullBytes = ReadAll(full);
+    const auto strippedBytes = ReadAll(stripped);
+    const std::size_t vocabularyBytes =
+        static_cast<std::size_t>(MapVisualIndex::WordCount) * MapVisualIndex::DescriptorColumns * sizeof(float);
+    Expect(fullBytes.size() == strippedBytes.size() + vocabularyBytes,
+        "a shard without the vocabulary must be smaller by exactly the vocabulary payload");
+    Expect(std::equal(strippedBytes.begin() + MapVisualIndexHeader::SerializedSize, strippedBytes.end(),
+               fullBytes.begin() + MapVisualIndexHeader::SerializedSize + vocabularyBytes),
+        "every payload byte after the vocabulary must be carried over unchanged");
+
+    // Reading it back against the shared vocabulary has to reproduce the full index exactly:
+    // re-serialising the loaded index must give the same bytes as the original full file.
+    MapVisualIndex loaded;
+    Expect(MapVisualIndexCodec::Load(stripped, sourceHash, 1, loaded, error, nullptr, &fixture),
+        "a vocabulary-less shard should load against the shared vocabulary: " + error);
+    const auto roundTrip = testDirectory / "round-trip.imx";
+    Expect(MapVisualIndexCodec::Save(roundTrip, loaded, error),
+        "the reloaded shard should re-save: " + error);
+    Expect(ReadAll(roundTrip) == fullBytes,
+        "loading a vocabulary-less shard must produce an index identical to the original");
+
+    // A shard that carries no vocabulary and gets none is a hard failure, never a silent
+    // degradation: the runtime would otherwise lose localization without saying so.
+    Expect(!MapVisualIndexCodec::Load(stripped, sourceHash, 1, loaded, error) &&
+        error.find("carries no vocabulary") != std::string::npos,
+        "a vocabulary-less shard must fail loudly when no vocabulary is supplied");
+
+    auto different = fixture;
+    different.vocabulary.at<float>(0, 0) = 0.5f;
+    Expect(!MapVisualIndexCodec::Load(stripped, sourceHash, 1, loaded, error, nullptr, &different) &&
+        error.find("does not match") != std::string::npos,
+        "a shard must reject a vocabulary it was not built against");
+
+    // The shared vocabulary file itself.
+    Expect(MapVisualIndexCodec::SaveVocabulary(vocabularyPath, fixture.vocabulary, error),
+        "shared vocabulary should save: " + error);
+    cv::Mat vocabulary;
+    std::array<std::uint8_t, 32> vocabularySha256{};
+    Expect(MapVisualIndexCodec::LoadVocabulary(vocabularyPath, vocabulary, vocabularySha256, error),
+        "shared vocabulary should load: " + error);
+    Expect(vocabulary.rows == static_cast<int>(MapVisualIndex::WordCount) &&
+        vocabulary.cols == static_cast<int>(MapVisualIndex::DescriptorColumns) &&
+        vocabulary.at<float>(0, 0) == fixture.vocabulary.at<float>(0, 0),
+        "shared vocabulary round trip should preserve its shape and values");
+
+    auto damagedVocabulary = ReadAll(vocabularyPath);
+    damagedVocabulary.back() ^= 0xff;
+    const auto damagedPath = testDirectory / "damaged-vocabulary.imx";
+    WriteAll(damagedPath, damagedVocabulary);
+    Expect(!MapVisualIndexCodec::LoadVocabulary(damagedPath, vocabulary, vocabularySha256, error) &&
+        error.find("SHA-256") != std::string::npos,
+        "shared vocabulary must reject a corrupt payload");
+
+    Expect(!MapVisualIndexCodec::LoadVocabulary(testDirectory / "absent.imx", vocabulary,
+               vocabularySha256, error) &&
+        error.find("missing") != std::string::npos,
+        "a missing shared vocabulary must say so");
+
+    // The legacy path stays: a shard that still carries its own vocabulary loads with no
+    // source at all, which is what every already-published region pack does.
+    Expect(MapVisualIndexCodec::Load(full, sourceHash, 1, loaded, error, nullptr, nullptr),
+        "a shard carrying its own vocabulary must keep loading without a source: " + error);
+}
 }
 
 void TestMapViewportGeometry() {
@@ -1117,6 +1201,7 @@ int main(int argc, char** argv) {
     TestFeatureBinaryCodec();
     TestMapVisualIndexCodec();
     TestManifestShardLineEndings();
+    TestSharedVocabularyShard();
     if (failures != 0) {
         std::cerr << failures << " optimization test(s) failed.\n";
         return 1;

@@ -249,6 +249,30 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
             loaded->baseVisualTileCount = 0;
         }
 
+        // One shared vocabulary for every region pack. Each pack's shard used to carry its own
+        // copy of the same 4096x128 float matrix - 28.00 MB across 14 packs, of data zlib
+        // cannot meaningfully shrink - so a shard may now omit it and name it by hash instead.
+        // The file lives in featureRoot and not mapFeatureRoot because it has to be present
+        // when no base atlas package is selected, and because a player may delete any single
+        // region pack while the packs that remain still have to localize.
+        //
+        // A missing file is not fatal by itself: every release before this one shipped shards
+        // that carry their own vocabulary, and those must keep loading exactly as they did. A
+        // shard that needs it says so itself, with an error naming the file it wanted.
+        MapVisualIndex sharedVocabulary;
+        bool sharedVocabularyReady = false;
+        {
+            const auto vocabularyPath = featureRoot / "Map_visual_vocabulary.imx";
+            std::string vocabularyError;
+            sharedVocabularyReady = MapVisualIndexCodec::LoadVocabulary(
+                vocabularyPath, sharedVocabulary.vocabulary, sharedVocabulary.vocabularySha256,
+                vocabularyError);
+            Diagnostics::Record("resource-load", "stage=shared-vocabulary ready=" +
+                std::to_string(sharedVocabularyReady) + " path=" + Utf8Text(vocabularyPath) +
+                " error=" + vocabularyError);
+        }
+        const MapVisualIndex* const vocabularySource = sharedVocabularyReady ? &sharedVocabulary : nullptr;
+
         if (!FeatureLoader::loadFeatures((featureRoot / "IconTask_Features.yml").string(), loaded->iconTask) ||
             !FeatureLoader::loadFeatures((featureRoot / "IconWavePlateCrystal_Features.yml").string(), loaded->wavePlateCrystal)) {
             throw std::runtime_error("icon feature resources failed to load");
@@ -279,7 +303,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 const bool shardReady =
                     MapVisualIndexCodec::Load(kuro.directoryPath / "visual-index.imx",
                         kuro.sourceSha256, static_cast<std::uint32_t>(kuro.featureData.imgKeypoints.size()),
-                        shard, shardError) &&
+                        shard, shardError, nullptr, vocabularySource) &&
                     MergeVisualShard(loaded->visualIndex, shard, rowBase, shardError);
                 if (!shardReady) {
                     loaded->visualIndexReady = false;
@@ -335,7 +359,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
                 const bool shardReady =
                     MapVisualIndexCodec::LoadManifestShard(candidate.directoryPath / "visual-index.imx",
                         sourcePath, static_cast<std::uint32_t>(candidate.featureData.imgKeypoints.size()),
-                        shard, shardError) &&
+                        shard, shardError, vocabularySource) &&
                     MergeVisualShard(loaded->visualIndex, shard, rowBase, shardError);
                 if (!shardReady) {
                     loaded->visualIndexReady = false;

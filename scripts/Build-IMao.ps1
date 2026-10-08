@@ -125,6 +125,16 @@ try {
         $baseStaged = Join-Path $outputDirectory "Assets\FeaturesDatas\$baseName"
         if ((Test-Path -LiteralPath $baseSource) -and -not (Test-Path -LiteralPath $baseStaged)) { throw "Missing staged base map feature: $baseStaged" }
     }
+    # The region shards may be written without the vocabulary, naming one shared program-level file
+    # by hash instead: the same 4096x128 matrix in all 14 packs cost 28.00 MB. If the source tree
+    # carries it, it has to arrive staged - a build that ships shards nobody can read reports the
+    # loss as localization quietly not working. Test-BuildPrerequisites.ps1 owns the other half of
+    # this invariant (a shard that needs it must have it in the source tree).
+    $sharedVocabularySource = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_visual_vocabulary.imx'
+    $sharedVocabularyStaged = Join-Path $outputDirectory 'Assets\FeaturesDatas\Map_visual_vocabulary.imx'
+    if ((Test-Path -LiteralPath $sharedVocabularySource) -and -not (Test-Path -LiteralPath $sharedVocabularyStaged)) {
+        throw "Missing staged shared vocabulary: $sharedVocabularyStaged"
+    }
     $visualShards = [Collections.Generic.List[string]]::new()
     $kuroRegistry = Get-Content -LiteralPath (Join-Path $repoRoot 'Assets\FeaturesDatas\kuro-tile-packs.json') -Raw | ConvertFrom-Json
     foreach ($kuroDirectoryValue in @($kuroRegistry.packs)) {

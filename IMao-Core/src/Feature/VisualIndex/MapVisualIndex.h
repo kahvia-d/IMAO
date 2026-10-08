@@ -82,17 +82,42 @@ struct MapVisualIndexHeader {
 
 class MapVisualIndexCodec {
 public:
+    // The shared vocabulary file. Every shard used to carry its own 2.00 MB copy of the
+    // same 4096x128 float matrix - 28.00 MB across the 14 region packs, and the matrix is
+    // effectively incompressible (zlib-6 gets 2,097,152 B down to 1,971,099 B). A shard may
+    // now be written without it and loaded against this file instead. That is why the file
+    // is a program-level resource and not part of any region pack: a player may delete any
+    // region pack, and the packs that remain still have to localize.
+    static constexpr std::array<char, 8> VocabularyMagic = { 'I', 'M', 'A', 'O', 'V', 'O', 'C', '1' };
+    static constexpr std::uint32_t VocabularyHeaderSize = 60;
+
+    static bool SaveVocabulary(const std::filesystem::path& path, const cv::Mat& vocabulary,
+        std::string& error);
+    static bool LoadVocabulary(const std::filesystem::path& path, cv::Mat& vocabulary,
+        std::array<std::uint8_t, 32>& vocabularySha256, std::string& error);
+
     // Accept the original file bytes or CRLF-to-LF checkout conversion only.
     static bool LoadManifestShard(const std::filesystem::path& path,
         const std::filesystem::path& manifest, std::uint32_t expectedFeatureCount,
-        MapVisualIndex& output, std::string& error);
-    static bool Save(const std::filesystem::path& path, const MapVisualIndex& index,
-        std::string& error, MapVisualIndexHeader* header = nullptr);
+        MapVisualIndex& output, std::string& error,
+        const MapVisualIndex* vocabularySource = nullptr);
 
+    // includeVocabulary=false writes a shard whose vocabulary payload length is zero. The
+    // vocabularySha256 field is still written, so the shard still names the vocabulary it
+    // was built against.
+    static bool Save(const std::filesystem::path& path, const MapVisualIndex& index,
+        std::string& error, MapVisualIndexHeader* header = nullptr, bool includeVocabulary = true);
+
+    // vocabularySource supplies the vocabulary for a shard written without one. It is
+    // materialised into output.vocabulary and output.vocabularySha256, so everything
+    // downstream - MergeVisualShard, the FLANN vocabulary index, every probe - sees exactly
+    // the index it saw before and needs no change. A vocabulary-less shard loaded without a
+    // source is a hard failure rather than a silent degradation.
     static bool Load(const std::filesystem::path& path,
         const std::array<std::uint8_t, 32>& expectedImfSha256,
         std::uint32_t expectedFeatureCount, MapVisualIndex& output,
-        std::string& error, MapVisualIndexHeader* header = nullptr);
+        std::string& error, MapVisualIndexHeader* header = nullptr,
+        const MapVisualIndex* vocabularySource = nullptr);
 
     static bool BuildPostingOffsets(MapVisualIndex& index, std::string& error);
 };

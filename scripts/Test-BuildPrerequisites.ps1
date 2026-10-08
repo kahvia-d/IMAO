@@ -76,6 +76,22 @@ $baseVisualIndex = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_visual_index.im
 Test-Requirement ((Test-Path -LiteralPath $baseFeatureBinary) -eq (Test-Path -LiteralPath $baseVisualIndex)) 'Map_features.imf and Map_visual_index.imx must both be present or both be absent.'
 $kuroRegistryPath = Join-Path $repoRoot 'Assets\FeaturesDatas\kuro-tile-packs.json'
 Test-Requirement (Test-Path -LiteralPath $kuroRegistryPath) 'Missing kuro-tile-packs.json. Restore the tile-pack registry.'
+# A region shard may be written without the vocabulary, naming one shared program-level file by
+# hash instead: the 4096x128 matrix is the same 2.00 MB in every pack, so shipping it 14 times
+# cost 28.00 MB. Such a shard is unreadable on its own, and the only place that is allowed to
+# be discovered is here - at runtime it would surface as localization silently not working.
+# vocabularyPayloadLength is the first uint64 after magic(8) + twelve uint32 header fields.
+function Test-ShardCarriesOwnVocabulary([string]$ShardPath) {
+    if (-not (Test-Path -LiteralPath $ShardPath)) { return $true }
+    $stream = [IO.File]::OpenRead($ShardPath)
+    try {
+        $header = New-Object byte[] 192
+        if ($stream.Read($header, 0, 192) -ne 192) { return $true }
+    }
+    finally { $stream.Dispose() }
+    return ([BitConverter]::ToUInt64($header, 56) -ne 0)
+}
+$sharedVocabularyPath = Join-Path $repoRoot 'Assets\FeaturesDatas\Map_visual_vocabulary.imx'
 if (Test-Path -LiteralPath $kuroRegistryPath) {
     try {
         $kuroRegistry = Get-Content -LiteralPath $kuroRegistryPath -Raw | ConvertFrom-Json
@@ -91,6 +107,9 @@ if (Test-Path -LiteralPath $kuroRegistryPath) {
             if (-not (Test-Path -LiteralPath $manifestPath)) { continue }
             Test-Requirement (Test-Path -LiteralPath (Join-Path $packRoot 'visual-index.imx')) "Missing Kuro visual-index.imx shard: $packDirectory. Run scripts\Build-VisualIndex.ps1."
             Test-Requirement (Test-Path -LiteralPath (Join-Path $packRoot 'features.imf')) "Missing Kuro binary features: $packDirectory. Run scripts\Build-VisualIndex.ps1."
+            if (-not (Test-ShardCarriesOwnVocabulary (Join-Path $packRoot 'visual-index.imx'))) {
+                Test-Requirement (Test-Path -LiteralPath $sharedVocabularyPath) "Shard $packDirectory names a shared vocabulary but Assets\FeaturesDatas\Map_visual_vocabulary.imx is missing. Run scripts\Build-VisualIndex.ps1, or restore the vocabulary that shard was built against."
+            }
         }
     }
     catch {

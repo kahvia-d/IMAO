@@ -331,7 +331,7 @@ bool MapVisualIndexCodec::BuildPostingOffsets(MapVisualIndex& index, std::string
 }
 
 bool MapVisualIndexCodec::Save(const std::filesystem::path& path, const MapVisualIndex& index,
-    std::string& error, MapVisualIndexHeader* returnedHeader) {
+    std::string& error, MapVisualIndexHeader* returnedHeader, bool includeVocabulary) {
     try {
         if (index.vocabulary.type() != CV_32FC1 ||
             index.vocabulary.rows != static_cast<int>(MapVisualIndex::WordCount) ||
@@ -342,13 +342,18 @@ bool MapVisualIndexCodec::Save(const std::filesystem::path& path, const MapVisua
         }
 
         const auto vocabularyBytes = SerializeVocabulary(index.vocabulary);
+        // A shard written without the vocabulary still names it: vocabularySha256 is always
+        // the hash of the real matrix, so a reader can tell which shared vocabulary this
+        // shard belongs to and reject a mismatch.
+        const std::vector<std::uint8_t> storedVocabulary =
+            includeVocabulary ? vocabularyBytes : std::vector<std::uint8_t>{};
         const auto tileBytes = SerializeTiles(index.tiles);
         const auto histogramBytes = SerializeHistograms(index.histograms);
         const auto rowBytes = SerializeRows(index.featureRows);
         const auto postingBytes = SerializePostings(index.postings);
 
         Sha256State payloadHash;
-        for (const auto* bytes : { &vocabularyBytes, &tileBytes, &histogramBytes, &rowBytes, &postingBytes }) {
+        for (const auto* bytes : { &storedVocabulary, &tileBytes, &histogramBytes, &rowBytes, &postingBytes }) {
             if (!bytes->empty()) payloadHash.Update(bytes->data(), bytes->size());
         }
 
@@ -358,7 +363,7 @@ bool MapVisualIndexCodec::Save(const std::filesystem::path& path, const MapVisua
         header.histogramEntryCount = static_cast<std::uint32_t>(index.histograms.size());
         header.featureRowCount = static_cast<std::uint32_t>(index.featureRows.size());
         header.postingCount = static_cast<std::uint32_t>(index.postings.size());
-        header.vocabularyPayloadLength = vocabularyBytes.size();
+        header.vocabularyPayloadLength = storedVocabulary.size();
         header.tilePayloadLength = tileBytes.size();
         header.histogramPayloadLength = histogramBytes.size();
         header.featureRowPayloadLength = rowBytes.size();
@@ -378,7 +383,7 @@ bool MapVisualIndexCodec::Save(const std::filesystem::path& path, const MapVisua
             return false;
         }
         output.write(reinterpret_cast<const char*>(headerBytes.data()), headerBytes.size());
-        for (const auto* bytes : { &vocabularyBytes, &tileBytes, &histogramBytes, &rowBytes, &postingBytes }) {
+        for (const auto* bytes : { &storedVocabulary, &tileBytes, &histogramBytes, &rowBytes, &postingBytes }) {
             output.write(reinterpret_cast<const char*>(bytes->data()), static_cast<std::streamsize>(bytes->size()));
         }
         output.flush();
@@ -396,18 +401,142 @@ bool MapVisualIndexCodec::Save(const std::filesystem::path& path, const MapVisua
     }
 }
 
+bool MapVisualIndexCodec::SaveVocabulary(const std::filesystem::path& path, const cv::Mat& vocabulary,
+    std::string& error) {
+    try {
+        if (vocabulary.type() != CV_32FC1 ||
+            vocabulary.rows != static_cast<int>(MapVisualIndex::WordCount) ||
+            vocabulary.cols != static_cast<int>(MapVisualIndex::DescriptorColumns)) {
+            error = "shared vocabulary has the wrong shape";
+            return false;
+        }
+        const auto payload = SerializeVocabulary(vocabulary);
+        const auto payloadHash = HashBytes(payload);
+
+        std::vector<std::uint8_t> header;
+        header.reserve(VocabularyHeaderSize);
+        header.insert(header.end(), VocabularyMagic.begin(), VocabularyMagic.end());
+        AppendLittleEndian(header, static_cast<std::uint32_t>(MapVisualIndex::WordCount));
+        AppendLittleEndian(header, static_cast<std::uint32_t>(MapVisualIndex::DescriptorColumns));
+        AppendLittleEndian(header, static_cast<std::uint32_t>(MapVisualIndexHeader::LittleEndianMarker));
+        AppendLittleEndian(header, static_cast<std::uint64_t>(payload.size()));
+        header.insert(header.end(), payloadHash.begin(), payloadHash.end());
+        if (header.size() != VocabularyHeaderSize) {
+            error = "shared vocabulary header size mismatch";
+            return false;
+        }
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        if (!output) {
+            error = "unable to create shared vocabulary";
+            return false;
+        }
+        output.write(reinterpret_cast<const char*>(header.data()), static_cast<std::streamsize>(header.size()));
+        output.write(reinterpret_cast<const char*>(payload.data()), static_cast<std::streamsize>(payload.size()));
+        output.flush();
+        if (!output.good()) {
+            error = "failed to write shared vocabulary";
+            return false;
+        }
+        error.clear();
+        return true;
+    }
+    catch (const std::exception& exception) {
+        error = exception.what();
+        return false;
+    }
+}
+
+bool MapVisualIndexCodec::LoadVocabulary(const std::filesystem::path& path, cv::Mat& vocabulary,
+    std::array<std::uint8_t, 32>& vocabularySha256, std::string& error) {
+    try {
+        std::ifstream input(path, std::ios::binary | std::ios::ate);
+        if (!input) {
+            error = "shared vocabulary is missing: " + Utf8Text(path);
+            return false;
+        }
+        const auto fileSizeValue = input.tellg();
+        if (fileSizeValue < static_cast<std::streamoff>(VocabularyHeaderSize)) {
+            error = "shared vocabulary is truncated: " + Utf8Text(path);
+            return false;
+        }
+        const auto fileSize = static_cast<std::uint64_t>(fileSizeValue);
+        input.seekg(0);
+        std::vector<std::uint8_t> header(VocabularyHeaderSize);
+        input.read(reinterpret_cast<char*>(header.data()), static_cast<std::streamsize>(header.size()));
+        if (input.gcount() != static_cast<std::streamsize>(header.size()) ||
+            !std::equal(VocabularyMagic.begin(), VocabularyMagic.end(), header.begin())) {
+            error = "shared vocabulary magic or header is invalid: " + Utf8Text(path);
+            return false;
+        }
+        std::size_t offset = VocabularyMagic.size();
+        std::uint32_t wordCount = 0, columns = 0, endianMarker = 0;
+        std::uint64_t payloadLength = 0;
+        if (!ReadLittleEndian(header, offset, wordCount) || !ReadLittleEndian(header, offset, columns) ||
+            !ReadLittleEndian(header, offset, endianMarker) || !ReadLittleEndian(header, offset, payloadLength)) {
+            error = "shared vocabulary header is invalid: " + Utf8Text(path);
+            return false;
+        }
+        if (wordCount != MapVisualIndex::WordCount || columns != MapVisualIndex::DescriptorColumns ||
+            endianMarker != MapVisualIndexHeader::LittleEndianMarker) {
+            error = "shared vocabulary geometry does not match: " + Utf8Text(path);
+            return false;
+        }
+        std::uint64_t expectedPayload = 0;
+        if (!CheckedMultiply<std::uint64_t>(static_cast<std::uint64_t>(wordCount) * columns,
+                sizeof(float), expectedPayload) ||
+            expectedPayload != payloadLength || VocabularyHeaderSize + payloadLength != fileSize) {
+            error = "shared vocabulary length does not match its header: " + Utf8Text(path);
+            return false;
+        }
+        std::vector<std::uint8_t> payload(static_cast<std::size_t>(payloadLength));
+        input.read(reinterpret_cast<char*>(payload.data()), static_cast<std::streamsize>(payload.size()));
+        if (input.gcount() != static_cast<std::streamsize>(payload.size())) {
+            error = "shared vocabulary is truncated: " + Utf8Text(path);
+            return false;
+        }
+        std::array<std::uint8_t, 32> recorded{};
+        std::copy_n(header.begin() + static_cast<std::ptrdiff_t>(offset), recorded.size(), recorded.begin());
+        if (HashBytes(payload) != recorded) {
+            error = "shared vocabulary SHA-256 mismatch: " + Utf8Text(path);
+            return false;
+        }
+        cv::Mat loaded(static_cast<int>(wordCount), static_cast<int>(columns), CV_32FC1);
+        std::size_t payloadOffset = 0;
+        for (int row = 0; row < loaded.rows; ++row) {
+            auto* values = loaded.ptr<float>(row);
+            for (int column = 0; column < loaded.cols; ++column) {
+                if (!ReadFloat(payload, payloadOffset, values[column])) {
+                    error = "shared vocabulary payload is invalid: " + Utf8Text(path);
+                    return false;
+                }
+            }
+        }
+        vocabulary = loaded;
+        vocabularySha256 = recorded;
+        error.clear();
+        return true;
+    }
+    catch (const std::exception& exception) {
+        error = exception.what();
+        return false;
+    }
+}
+
 bool MapVisualIndexCodec::LoadManifestShard(const std::filesystem::path& path,
     const std::filesystem::path& manifest, std::uint32_t expectedFeatureCount,
-    MapVisualIndex& output, std::string& error) {
+    MapVisualIndex& output, std::string& error, const MapVisualIndex* vocabularySource) {
     std::array<std::uint8_t, 32> rawHash{}, lfHash{};
     if (!FeatureBinaryCodec::Sha256File(manifest, rawHash, error)) return false;
-    if (Load(path, rawHash, expectedFeatureCount, output, error)) return true;
+    if (Load(path, rawHash, expectedFeatureCount, output, error, nullptr, vocabularySource)) return true;
     const auto rawError = error;
     // Older indexes were generated from LF manifests before Git converted the
     // checkout to CRLF. Re-run the full codec validation with LF bytes; never
     // bypass source, payload, feature-count, or vocabulary validation.
     if (!FeatureBinaryCodec::Sha256LfTextFile(manifest, lfHash, error)) return false;
-    if (lfHash != rawHash && Load(path, lfHash, expectedFeatureCount, output, error)) return true;
+    if (lfHash != rawHash &&
+        Load(path, lfHash, expectedFeatureCount, output, error, nullptr, vocabularySource)) {
+        return true;
+    }
     if (lfHash == rawHash) error = rawError;
     error = Utf8Text(manifest) + ": " + error;
     return false;
@@ -415,7 +544,8 @@ bool MapVisualIndexCodec::LoadManifestShard(const std::filesystem::path& path,
 
 bool MapVisualIndexCodec::Load(const std::filesystem::path& path,
     const std::array<std::uint8_t, 32>& expectedImfSha256, std::uint32_t expectedFeatureCount,
-    MapVisualIndex& output, std::string& error, MapVisualIndexHeader* returnedHeader) {
+    MapVisualIndex& output, std::string& error, MapVisualIndexHeader* returnedHeader,
+    const MapVisualIndex* vocabularySource) {
     try {
         std::ifstream input(path, std::ios::binary | std::ios::ate);
         if (!input) {
@@ -462,6 +592,24 @@ bool MapVisualIndexCodec::Load(const std::filesystem::path& path,
             return false;
         }
 
+        // A shard may be written without the vocabulary payload: the 4096x128 matrix is the
+        // same 2.00 MB in every region pack, so it ships once as a program-level resource
+        // instead of 14 times. Such a shard cannot be read on its own, and failing loudly
+        // here is the point - the alternative is a silent loss of localization.
+        const bool vocabularyOmitted = header.vocabularyPayloadLength == 0;
+        if (vocabularyOmitted) {
+            if (vocabularySource == nullptr) {
+                error = "visual index carries no vocabulary and none was supplied: " + Utf8Text(path);
+                return false;
+            }
+            if (vocabularySource->vocabulary.type() != CV_32FC1 ||
+                vocabularySource->vocabulary.rows != static_cast<int>(MapVisualIndex::WordCount) ||
+                vocabularySource->vocabulary.cols != static_cast<int>(MapVisualIndex::DescriptorColumns)) {
+                error = "supplied vocabulary has the wrong shape for " + Utf8Text(path);
+                return false;
+            }
+        }
+
         std::uint64_t expectedVocabulary = 0, expectedTiles = 0, expectedHistograms = 0;
         std::uint64_t expectedRows = 0, expectedPostings = 0;
         if (!CheckedMultiply<std::uint64_t>(MapVisualIndex::WordCount * MapVisualIndex::DescriptorColumns,
@@ -470,7 +618,8 @@ bool MapVisualIndexCodec::Load(const std::filesystem::path& path,
             !CheckedMultiply<std::uint64_t>(header.histogramEntryCount, kHistogramSerializedSize, expectedHistograms) ||
             !CheckedMultiply<std::uint64_t>(header.featureRowCount, sizeof(std::uint32_t), expectedRows) ||
             !CheckedMultiply<std::uint64_t>(header.postingCount, kPostingSerializedSize, expectedPostings) ||
-            expectedVocabulary != header.vocabularyPayloadLength || expectedTiles != header.tilePayloadLength ||
+            (vocabularyOmitted ? std::uint64_t{ 0 } : expectedVocabulary) != header.vocabularyPayloadLength ||
+            expectedTiles != header.tilePayloadLength ||
             expectedHistograms != header.histogramPayloadLength || expectedRows != header.featureRowPayloadLength ||
             expectedPostings != header.postingPayloadLength) {
             error = "visual index payload lengths do not match counts";
@@ -501,18 +650,32 @@ bool MapVisualIndexCodec::Load(const std::filesystem::path& path,
         loaded.sourceImfSha256 = header.sourceImfSha256;
         loaded.vocabularySha256 = header.vocabularySha256;
         std::size_t offset = 0;
-        const std::size_t vocabularyEnd = offset + static_cast<std::size_t>(header.vocabularyPayloadLength);
-        if (HashBytes(std::vector<std::uint8_t>(payload.begin(), payload.begin() + vocabularyEnd)) != header.vocabularySha256) {
-            error = "visual index vocabulary SHA-256 mismatch";
-            return false;
+        if (vocabularyOmitted) {
+            // Materialise the shared vocabulary into the shard. Everything downstream - the
+            // merge, the FLANN vocabulary index, every probe - then sees exactly the index it
+            // saw before this change; only the file on disk got smaller.
+            const auto sharedBytes = SerializeVocabulary(vocabularySource->vocabulary);
+            if (HashBytes(sharedBytes) != header.vocabularySha256) {
+                error = "supplied vocabulary does not match the one this shard was built against: " +
+                    Utf8Text(path);
+                return false;
+            }
+            loaded.vocabulary = vocabularySource->vocabulary.clone();
         }
-        loaded.vocabulary.create(MapVisualIndex::WordCount, MapVisualIndex::DescriptorColumns, CV_32FC1);
-        for (int row = 0; row < loaded.vocabulary.rows; ++row) {
-            auto* values = loaded.vocabulary.ptr<float>(row);
-            for (int column = 0; column < loaded.vocabulary.cols; ++column) {
-                if (!ReadFloat(payload, offset, values[column])) {
-                    error = "visual index vocabulary is invalid";
-                    return false;
+        else {
+            const std::size_t vocabularyEnd = offset + static_cast<std::size_t>(header.vocabularyPayloadLength);
+            if (HashBytes(std::vector<std::uint8_t>(payload.begin(), payload.begin() + vocabularyEnd)) != header.vocabularySha256) {
+                error = "visual index vocabulary SHA-256 mismatch";
+                return false;
+            }
+            loaded.vocabulary.create(MapVisualIndex::WordCount, MapVisualIndex::DescriptorColumns, CV_32FC1);
+            for (int row = 0; row < loaded.vocabulary.rows; ++row) {
+                auto* values = loaded.vocabulary.ptr<float>(row);
+                for (int column = 0; column < loaded.vocabulary.cols; ++column) {
+                    if (!ReadFloat(payload, offset, values[column])) {
+                        error = "visual index vocabulary is invalid";
+                        return false;
+                    }
                 }
             }
         }

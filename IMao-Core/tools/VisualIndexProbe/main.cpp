@@ -14,11 +14,38 @@
 #include <string>
 
 int main(int argc, char** argv) {
-    if (argc != 2) {
-        std::cerr << "Usage: IMaoVisualIndexProbe <pack directory>\n";
+    if (argc < 2 || argc > 4) {
+        std::cerr << "Usage: IMaoVisualIndexProbe <pack directory> [--vocabulary <path>]\n";
         return 2;
     }
     const std::filesystem::path packRoot(argv[1]);
+    // The shared vocabulary lives in FeaturesDatas, which the runtime reads it from. A pack
+    // directory sits one level below that (FeaturesDatas/KuroTilePacks/<pack>), and a probe
+    // is also pointed at candidate packs and scratch trees, so look in the pack itself and
+    // then up to two levels rather than assuming one layout.
+    std::filesystem::path vocabularyPath;
+    {
+        auto candidateRoot = packRoot;
+        for (int level = 0; level < 3; ++level) {
+            const auto candidate = candidateRoot / "Map_visual_vocabulary.imx";
+            if (std::filesystem::exists(candidate)) {
+                vocabularyPath = candidate;
+                break;
+            }
+            if (!candidateRoot.has_parent_path()) break;
+            candidateRoot = candidateRoot.parent_path();
+        }
+    }
+    for (int index = 2; index < argc; ++index) {
+        const std::string argument = argv[index];
+        if (argument == "--vocabulary" && index + 1 < argc) {
+            vocabularyPath = argv[++index];
+        }
+        else {
+            std::cerr << "Unknown argument: " << argument << '\n';
+            return 2;
+        }
+    }
     std::string error;
     ImageFeatureData features;
     FeatureBinaryHeader packHeader;
@@ -29,10 +56,24 @@ int main(int argc, char** argv) {
     }
     std::cout << "features.imf  keypoints=" << packHeader.keypointCount << '\n';
 
+    MapVisualIndex sharedVocabulary;
+    bool sharedVocabularyReady = false;
+    if (std::filesystem::exists(vocabularyPath)) {
+        std::string vocabularyError;
+        sharedVocabularyReady = MapVisualIndexCodec::LoadVocabulary(vocabularyPath,
+            sharedVocabulary.vocabulary, sharedVocabulary.vocabularySha256, vocabularyError);
+        std::cout << "shared vocabulary: " << (sharedVocabularyReady ? "loaded" : "UNUSABLE")
+                  << " (" << vocabularyPath.string() << ") " << vocabularyError << '\n';
+    }
+    else {
+        std::cout << "shared vocabulary: absent (" << vocabularyPath.string() << ")\n";
+    }
+
     // The shard records its own feature source's hash, which is what the loader verifies.
     MapVisualIndex index;
     if (!MapVisualIndexCodec::Load(packRoot / "visual-index.imx", packHeader.sourceXmlSha256,
-            packHeader.keypointCount, index, error)) {
+            packHeader.keypointCount, index, error, nullptr,
+            sharedVocabularyReady ? &sharedVocabulary : nullptr)) {
         std::cout << "VISUAL INDEX REJECTED: " << error << '\n';
         return 1;
     }

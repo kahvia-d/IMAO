@@ -221,8 +221,15 @@ if (Test-Path -LiteralPath (Join-Path $runAssets "Updates/$baselineManifestName"
     throw "baseline-files.json must not exist in a no-base-atlas run root"
 }
 # candidate-packs.json is deliberately absent: no curated candidate pack ships any more.
-foreach ($required in @('FeaturesDatas/IconTask_Features.yml', 'FeaturesDatas/IconWavePlateCrystal_Features.yml',
-    'KuroMap/scene-validation.json', 'Updates/bundled-snapshot.json')) {
+# The shared visual vocabulary, when the tree being linked from carries one, is a program-level
+# file that the region shards name by hash. This layout removes the base atlas, which is a
+# different thing: dropping the vocabulary here would leave every shard unreadable.
+$requiredNonPackage = @('FeaturesDatas/IconTask_Features.yml', 'FeaturesDatas/IconWavePlateCrystal_Features.yml',
+    'KuroMap/scene-validation.json', 'Updates/bundled-snapshot.json')
+if (Test-Path -LiteralPath (Join-Path $assetsRoot 'FeaturesDatas/Map_visual_vocabulary.imx') -PathType Leaf) {
+    $requiredNonPackage += 'FeaturesDatas/Map_visual_vocabulary.imx'
+}
+foreach ($required in $requiredNonPackage) {
     if (-not (Test-Path -LiteralPath (Join-Path $runAssets $required))) {
         throw "The no-base-atlas run root is missing a required non-package file: $required"
     }

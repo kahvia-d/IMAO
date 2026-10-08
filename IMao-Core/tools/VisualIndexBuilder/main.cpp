@@ -79,10 +79,15 @@ bool BuildAndInstallShard(const ImageFeatureData& features, const cv::Mat& vocab
     std::filesystem::create_directories(destination.parent_path());
     const auto temporary = destination.wstring() + L".tmp";
     MapVisualIndexHeader savedHeader;
-    if (!MapVisualIndexCodec::Save(temporary, shard, error, &savedHeader)) return false;
+    // The shard is written without the vocabulary: the 4096x128 matrix is the same 2.00 MB in
+    // every region pack, so it ships once as a program-level file and each shard names it by
+    // hash. A rebuilt pack that quietly kept its own copy would give the size win back.
+    if (!MapVisualIndexCodec::Save(temporary, shard, error, &savedHeader, false)) return false;
     MapVisualIndex verified;
-    if (!MapVisualIndexCodec::Load(temporary, sourceHash, shard.featureCount, verified, error) ||
-        !Equivalent(shard, verified)) {
+    // The round trip therefore has to supply the vocabulary the shard was written against,
+    // which is exactly what the runtime does with the shared file.
+    if (!MapVisualIndexCodec::Load(temporary, sourceHash, shard.featureCount, verified, error,
+            nullptr, &shard) || !Equivalent(shard, verified)) {
         if (error.empty()) error = "optional visual shard round-trip mismatch";
         return false;
     }
@@ -236,7 +241,9 @@ int main(int argc, char** argv) {
                      "  --reuse-vocabulary   rebuilds the base index AND every pack shard against the\n"
                      "                       vocabulary an existing index already carries, instead of\n"
                      "                       clustering a new one. Every index that has to merge must share\n"
-                     "                       one vocabulary, so a partial rebuild is not an option.\n";
+                     "                       one vocabulary, so a partial rebuild is not an option.\n"
+                     "  Always writes FeaturesDatas/Map_visual_vocabulary.imx: the region shards are\n"
+                     "  written without the vocabulary and name that file by hash.\n";
         return 2;
     }
     // The packs' shards are rebuilt from each pack's own feature source, which is not
@@ -316,6 +323,16 @@ int main(int argc, char** argv) {
     if (!MapVisualIndexCodec::Load(temporary, sourceImfSha, visualIndex.featureCount,
             verified, error, &verifiedHeader) || !Equivalent(visualIndex, verified)) {
         std::cerr << "Visual index round-trip verification failed: " << error << '\n';
+        return 1;
+    }
+
+    // Every region shard below is written without the vocabulary, so the build has to emit the
+    // one those shards name by hash. It goes next to them, which is where the runtime reads it
+    // from, and writing it here rather than behind a flag means a rebuild cannot forget it and
+    // quietly produce shards that no runtime can read.
+    if (!MapVisualIndexCodec::SaveVocabulary(featureRoot / "Map_visual_vocabulary.imx",
+            visualIndex.vocabulary, error)) {
+        std::cerr << "Unable to write the shared vocabulary: " << error << '\n';
         return 1;
     }
 

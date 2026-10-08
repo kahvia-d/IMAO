@@ -69,6 +69,9 @@
 | [`LayeredFloorIndexFrame_20260926.md`](LayeredFloorIndexFrame_20260926.md) | 隐海试验场分层索引建错坐标系的根因与重建 |
 | [`LayeredMapFalsePositive_Hukou_20260926.md`](LayeredMapFalsePositive_Hukou_20260926.md) | 虎口山脉"地表帧被当成层内"的根因与判定修正 |
 | [`LayeredFloorRetention_20261001.md`](LayeredFloorRetention_20261001.md) | 天槎空间站"走出洞穴后层不解除"：`盲望之塌` 是地表而非楼层，保留判据从足迹改为影像（同前一条的另一半） |
+| [`VisualIndexRebuildRegression_20261008.md`](VisualIndexRebuildRegression_20261008.md) | 视觉索引重建后小地图识别质量崩塌的 A/B 证据与回退（根因未证实） |
+| [`DetectorMigrationDecision_20261008.md`](DetectorMigrationDecision_20261008.md) | **换检测器（SURF → SIFT）决策实验**：逐瓦片协议下的体积/质量实测、被推翻的三个数字、索引 section 拆解与优先级建议 |
+| [`VisualIndexVocabularySharing.md`](VisualIndexVocabularySharing.md) | **视觉索引词汇表去重方案**：14 份重复的 2 MB 词汇表降到一份（28 MB→2 MB），重打包而非重建，格式迁移风险与验证 |
 | [`RouteLibraryAndHandDrawn_20260928.md`](RouteLibraryAndHandDrawn_20260928.md) | **路线列表、手绘路线重做、旧手绘数据导入、按路线筛选（借出/归还）**：规格 + 实施记录 + 五轮实机反馈的真因 |
 | [`HandRouteEditing_20261005.md`](HandRouteEditing_20261005.md) | 手绘路线编辑、合集排序、自动轮换及图标合并阈值的实现与回归记录 |
 | [`RouteCollectionsAndTransfer_20261001.md`](RouteCollectionsAndTransfer_20261001.md) | **路线合集 + 路线包导入导出**：方案（现行，未实施）——合集落盘、9 个新命令、路线包格式、两步导入、界面分工、8 个实施阶段 |
