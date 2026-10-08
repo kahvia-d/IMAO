@@ -8,7 +8,12 @@ param(
     # insensitive to its input. A rebuild that cannot reuse a vocabulary therefore cannot
     # be shipped: the packs' shards would describe words the base index does not carry, and
     # the runtime drops visual locating silently when that happens.
-    [string]$VocabularySource = 'archive/retired-base-features/Map_visual_index.imx'
+    #
+    # The shared vocabulary file is the source that is actually available: it ships with the
+    # program and the region shards name it by hash. A shard can no longer serve as this
+    # source, because shards no longer carry the vocabulary. The archived base index still
+    # does, which is why it remains usable as a fallback.
+    [string]$VocabularySource = 'Assets/FeaturesDatas/Map_visual_vocabulary.imx'
 )
 
 $ErrorActionPreference = 'Stop'

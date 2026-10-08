@@ -104,14 +104,29 @@ bool BuildAndInstallShard(const ImageFeatureData& features, const cv::Mat& vocab
     return true;
 }
 
-/// Reads just the vocabulary out of an existing index.
+/// Reads just the vocabulary out of an existing index, or out of the shared vocabulary file.
 ///
 /// Deliberately not MapVisualIndexCodec::Load: that validates the whole index against the
 /// source it was built from, and a rebuild wants the words, not the identity of whatever
 /// laid them out. The vocabulary carries its own hash in the header, which is checked here,
 /// so the words and their identity still come from one verified source.
+///
+/// The shared vocabulary file is tried first because it is now the source that is actually
+/// available. A region shard cannot be used any more: shards no longer carry the vocabulary,
+/// they name it by hash. A build that still points at a shard gets told so below.
 bool ReadVocabulary(const std::filesystem::path& index, const std::filesystem::path& vocabularySource,
     cv::Mat& vocabulary, std::array<std::uint8_t, 32>& vocabularySha256, std::string& error) {
+    {
+        cv::Mat shared;
+        std::array<std::uint8_t, 32> sharedSha256{};
+        std::string sharedError;
+        if (MapVisualIndexCodec::LoadVocabulary(vocabularySource, shared, sharedSha256, sharedError)) {
+            vocabulary = shared;
+            vocabularySha256 = sharedSha256;
+            error.clear();
+            return true;
+        }
+    }
     std::ifstream input(vocabularySource, std::ios::binary);
     if (!input) {
         error = "vocabulary source cannot be opened: " + vocabularySource.string();
@@ -145,9 +160,14 @@ bool ReadVocabulary(const std::filesystem::path& index, const std::filesystem::p
     if (version != MapVisualIndexHeader::CurrentVersion ||
         wordCount != MapVisualIndex::WordCount || descriptorColumns != MapVisualIndex::DescriptorColumns ||
         vocabularyPayloadLength != static_cast<std::uint64_t>(wordCount) * descriptorColumns * sizeof(float)) {
-        error = "vocabulary source header does not describe a " +
-            std::to_string(MapVisualIndex::WordCount) + "x" +
-            std::to_string(MapVisualIndex::DescriptorColumns) + " vocabulary";
+        // A shard built after the vocabulary moved out of the shards has a zero vocabulary
+        // payload, and "does not describe a vocabulary" would leave the reader guessing.
+        error = vocabularyPayloadLength == 0
+            ? "vocabulary source is a shard that no longer carries a vocabulary; pass the shared "
+              "Map_visual_vocabulary.imx instead: " + vocabularySource.string()
+            : "vocabulary source header does not describe a " +
+                std::to_string(MapVisualIndex::WordCount) + "x" +
+                std::to_string(MapVisualIndex::DescriptorColumns) + " vocabulary";
         return false;
     }
     std::vector<std::uint8_t> payload(static_cast<std::size_t>(vocabularyPayloadLength));
@@ -222,6 +242,26 @@ int main(int argc, char** argv) {
                 !FeatureBinaryCodec::Load(packRoot / "features.imf", features, error, &packHeader)) throw std::runtime_error(error);
             if (!ShardSourceHash(features, packHeader, manifest, sourceHash, sourceName, error))
                 throw std::runtime_error(error);
+            // The shard is written without the vocabulary and names it by hash, so the file it
+            // names has to exist next to the packs and has to be the one this build used. Writing
+            // it here is what lets a brand-new region pack be built on a tree that has never run a
+            // full index build; comparing it is what stops a new pack from being built against a
+            // vocabulary the shipped packs do not share, which the runtime drops without saying so.
+            const auto sharedVocabularyPath = featureRoot / "Map_visual_vocabulary.imx";
+            cv::Mat existingVocabulary;
+            std::array<std::uint8_t, 32> existingSha256{};
+            std::string vocabularyError;
+            if (std::filesystem::exists(sharedVocabularyPath)) {
+                if (!MapVisualIndexCodec::LoadVocabulary(sharedVocabularyPath, existingVocabulary,
+                        existingSha256, vocabularyError) || existingSha256 != baseline.vocabularySha256) {
+                    throw std::runtime_error("shared vocabulary does not match the baseline this pack "
+                        "was built against: " + vocabularyError);
+                }
+            }
+            else if (!MapVisualIndexCodec::SaveVocabulary(sharedVocabularyPath, baseline.vocabulary,
+                    vocabularyError)) {
+                throw std::runtime_error("unable to write the shared vocabulary: " + vocabularyError);
+            }
             nlohmann::json report;
             if (!BuildAndInstallShard(features, baseline.vocabulary, sourceHash, sourceName,
                 packRoot / "visual-index.imx", scene->id, report, error)) throw std::runtime_error(error);

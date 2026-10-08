@@ -208,7 +208,72 @@ foreach ($p in (Get-Content Assets\FeaturesDatas\kuro-tile-packs.json -Raw | Con
 }
 ```
 
-## 七、不做什么
+## 七、新地图包（后续游戏更新新地区）
+
+这一条单独写，因为它最容易在几个月后忘掉。
+
+**结论：①（v2 量化）对新包没有影响；⑤（词表去重）引入过一个缺口，已修。**
+
+### 新包会是什么格式
+
+新包**天生就是 v2**，不需要任何迁移：`IMaoFeatureConverter` 的默认就是 v2
+（`--format v1` 才写旧的 float32，那是为了复现更早的工具产物）。
+① 只是把**已经存在**的 14 个包就地迁移了一次；新包走的是同一条转换器，直接落在 v2。
+
+### 新包必须复用同一套词汇表
+
+这是硬约束，而且是 ① 那一轮实测出来的：**词汇表不可复现**。固定种子
+（`0x494d414f`）、固定采样、固定 FLANN 参数都没用——输入差半个量化步长就足以改变
+k-means 的簇边界。所以新包的分片**必须**用现有那套词表（`8bd80ebd…`）来建，
+否则新旧词表混装 → 合并失败 → 运行时**静默降级**（`visualIndexReady=false`，不报错）。
+
+### ⑤ 引入并已修掉的缺口
+
+⑤ 之前，"词汇表来源"可以是任何一个区域分片（它自带词表）。⑤ 之后分片不再带词表，
+于是 `VisualIndexBuilder::ReadVocabulary` 的两条路都断了：
+
+```
+拿被剥掉词表的分片当来源 → "vocabulary source header does not describe a 4096x128 vocabulary"
+拿新的共享词表文件当来源 → "vocabulary source is not an IMAOIX01 index"
+```
+
+只有归档的基础索引（`archive/retired-base-features/Map_visual_index.imx`）还能用——
+一个把新包绑在退役归档上的隐式依赖。
+
+**修法**（三处）：
+
+1. `ReadVocabulary` **先试共享词表文件**（`IMAOVOC1`，走 `MapVisualIndexCodec::LoadVocabulary`
+   的完整校验），再退回旧的 `IMAOIX01` 路径；并且当来源是"不再带词表的分片"时，
+   错误信息**直接点名**应该传哪个文件。
+2. `Build-VisualIndex.ps1` 的 `-VocabularySource` 默认值改成
+   `Assets/FeaturesDatas/Map_visual_vocabulary.imx`（程序级、一直都在的那个）。
+3. `--pack-only`（**新地区包走的就是这条**）现在自己保证共享词表存在且一致：
+   文件不在就用当前基线的词表写出来，在就比对哈希，不一致**直接拒绝**。
+   这样在一个从未跑过完整索引构建的树上也能建新包，而且新包不可能被建到另一套词表上。
+
+实测：
+
+```
+--reuse-vocabulary <共享词表文件>   → reusing vocabulary 8bd80ebd… ✓
+--reuse-vocabulary <被剥词表的分片> → 明确报错并指名 Map_visual_vocabulary.imx ✓
+--pack-only                        → 产出 vocabularyPayloadLength=0 的分片，vocabularySha256 一致 ✓
+--pack-only + 损坏的共享词表        → "does not match the baseline this pack was built against" 拒绝 ✓
+```
+
+### 加一个新地区时的完整清单
+
+1. 下载瓦片（`Get-MapTileArchive.ps1`）→ 四点校准（`Set-KuroSceneCalibration.ps1`）
+2. 抽特征 + 建包（`Sync-KuroMapFeaturePack.ps1` / `Invoke-MapRegionRebuild.ps1`）
+3. **分片必须复用现有词表**（现在默认就会，且 `--pack-only` 会强制比对）
+4. 参考图验证（8px 容差）
+5. ⚠️ 登记 `kuro-tile-packs.json` **必须与 `approved=true` 同时发生**——
+   `RuntimeFeatureRepository.cpp` 在快照模式下对"已登记但未获运行期批准"的包直接抛错
+6. 打包门禁：`Test-BuildPrerequisites.ps1` 会检查"分片指名了共享词表就必须能找到它"；
+   `Stage-UpdateResources.ps1` 会断言全部索引共用一套词表
+
+**额外好处**：⑤ 之后每加一个新包少发 2.00 MB（不再自带词表副本）。
+
+## 八、不做什么
 
 - **不重建索引**（只重打包）。
 - **不量化词汇表**——那会改变质心取值，进而改变词分配，属于刚刚踩过的那类质量回归。
