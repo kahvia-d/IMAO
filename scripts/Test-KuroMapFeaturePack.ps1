@@ -38,15 +38,32 @@ if (-not $isReferencePassed) {
 # One coordinate may legitimately carry several source tiles: the surface tile and, for a
 # layered-map ("分层") region, one composite per floor (scripts/New-LayeredTileComposite.ps1
 # plus -LayeredCompositeDir on Sync-KuroMapFeaturePack.ps1). What must never happen is the
-# same coordinate listed twice with the SAME bytes - that is a duplicated entry, not an
-# extra appearance. Distinct-coordinate tiles keep the original guarantee.
+# same FLOOR listed twice at one coordinate - that is a duplicated entry, not an extra
+# appearance. Distinct-coordinate tiles keep the original guarantee.
+#
+# Two floors CAN composite to the same bytes at one coordinate, and lahai does exactly that
+# at (-5,8) and (-6,8): floor -1/42 and -2/42 share one archived overlay, and -1/43 and
+# -2/43 differ by an overlay whose pixels are too few to survive the 0.35 dim-and-overlay
+# step. That is a property of the game's own rendering - two floors that look identical
+# there cannot be told apart by looking - not a packaging fault, and the feature builder is
+# indifferent to it because UniqueMapFeatures discards the second copy as a duplicate
+# coordinate+descriptor row. Rejecting it would fail a pack that is correct, so the check
+# keys on floor identity instead of on bytes.
 $entries = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $appearances = @{}
 foreach ($tile in @($manifest.tiles)) {
     $id = "$($tile.x),$($tile.y)"
     $sha = ([string]$tile.sha256).ToLowerInvariant()
     if ([string]::IsNullOrWhiteSpace($sha) -or $sha.Length -ne 64) { throw "Invalid tile entry: $id" }
-    if (-not $entries.Add("$id|$sha")) { throw "Duplicate tile entry (same coordinate and bytes): $id" }
+    $leaf = [IO.Path]::GetFileNameWithoutExtension([string]$tile.file)
+    $floorMatch = [regex]::Match($leaf, '^layered_L(?<layer>[^_]+)_F(?<floor>.+?)_(?<state>\d+)_-?\d+_-?\d+$')
+    $identity = if ($floorMatch.Success) {
+        "layer=$($floorMatch.Groups['layer'].Value) floor=$($floorMatch.Groups['floor'].Value)"
+    }
+    else { [string]$tile.file }
+    if (-not $entries.Add("$id|$identity")) {
+        throw "Floor listed twice at the same coordinate: $id ($identity, $($tile.file))"
+    }
     if (-not $appearances.ContainsKey($id)) { $appearances[$id] = 0 }
     $appearances[$id]++
 }

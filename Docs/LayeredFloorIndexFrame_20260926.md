@@ -234,8 +234,18 @@ pwsh -File scripts\Refresh-MapTestBinaries.ps1 -DryRun
 
 ## 九、遗留
 
-- `lahai` 的包在 `Test-KuroMapFeaturePack.ps1` 的"同坐标同字节重复条目"检查上失败
-  （`-5,8`）。这与本次改动无关（该检查只看 `manifest.json`，本次没动它），但既然跑出来了就先记着。
+- ~~`lahai` 的包在 `Test-KuroMapFeaturePack.ps1` 的"同坐标同字节重复条目"检查上失败
+  （`-5,8`）。这与本次改动无关（该检查只看 `manifest.json`，本次没动它），但既然跑出来了就先记着。~~
+  **2026-10-08 结案：门禁的假设是错的，不是包坏了。**
+  `-5,8` 与 `-6,8` 两处重复来自图层 42/43 各自的两个楼层：`-1/42` 与 `-2/42` 的归档
+  overlay 本身就是同一份字节（`a8be66ce`），`-1/43` 与 `-2/43` 的 overlay 不同
+  （`4ed85f6f` vs `b56dadd0`）但差异像素太少，经 0.35 压暗再叠加后合成结果仍逐字节相同。
+  也就是说**这两层楼在游戏内该处本来就无法区分**，合成器没有报错。
+  而且 `KuroMapFeatureBuilder` 对同坐标同描述子的特征做去重（`UniqueMapFeatures`），
+  重复条目**不贡献任何特征**——这正是 lahai 的 `extractedKeypointCount == keypointCount` 的原因。
+  检查已改为按**楼层身份**（从 `layered_L<layer>_F<floor>_...` 文件名解析）判重：
+  同一楼层在同一坐标出现两次仍然拒绝（已用两个伪造用例反向验证），不同楼层同字节放行。
+  全 14 个包的 `extraAppearances == layeredTileCount` 本就自洽。
 - 本修复针对的是 footprint 包含判定。in-cave 的采纳仍要同时满足 own-art 否决，
   两者互不替代：坐标系修好后，隐海试验场的地表位置仍然会被 own-art 挡住（全游戏扫描里该区
   68.4% → 0.0%）。
