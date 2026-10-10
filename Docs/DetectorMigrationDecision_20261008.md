@@ -267,3 +267,10 @@ pwsh -File measurements\accuracy-check\sweep_per_tile.ps1
 > 这正是 [`measurements/SUPERSEDED.md`](../measurements/SUPERSEDED.md) 存在的理由：
 > 旧文件的误导性内容没法靠提交历史纠正，只能就地标注。
 > 若希望这些证据随仓库走，需要另定放置位置。
+
+> ✅ **2026-10-10 已定放置位置：脚本进了 [`tools/feature-probe/`](../tools/feature-probe/README.md)。**
+> 只搬脚本，不搬测量产物（产物几 MB 到几十 MB，参数相同就能重跑，要留就记参数与结论）。
+> 搬的是**产出证据的那一版**：`imao_vs_sift.py` 在 10-08 到 10-10 之间从 428 行长到 648 行，
+> 多了 `--gate` 那套判据——本文第五节那批 4/12、82.7% 的更正与 14 包重跑都用的是新版，
+> 所以 `tools/feature-probe/` 里那份**比写本文时用的更强**。本文正文按约定不改，
+> 更正与实测见 [`OpenWork.md`](OpenWork.md) 第 7 节。

@@ -133,6 +133,7 @@
 | [`HandDrawnFreePoints_20261004.md`](HandDrawnFreePoints_20261004.md) | 自由点实现、交互一致性和删除清理验证记录 |
 | [`ReleaseAssets_v1.0.2.md`](ReleaseAssets_v1.0.2.md) | v1.0.2 发行资源归档 |
 | [`ReleaseAssets_v1.0.2.sha256`](ReleaseAssets_v1.0.2.sha256) | — |
+| [`FeatureSizeComparison_20261002.md`](FeatureSizeComparison_20261002.md) | 特征与索引的体积对照：v1 与量化后 v2、各检测器参数下的关键点数。2026-10-10 从 `test/feature-algo-budget-compare` 打捞进来，配套脚本见 [`tools/feature-probe/`](../tools/feature-probe/README.md) |
 
 ## 历史记录（`archive/`）
 
