@@ -13,7 +13,10 @@
     "version": "2026.10.10.1",
     "artifactId": 11673455016,
     "artifactDigest": "ce4870b676492f02e7dc39266eb64a919b772334460939cfcc7e1b2d3b9ee801",
-    "id": "046cccedd037459c92772cd29dca3b46"
+    "id": "046cccedd037459c92772cd29dca3b46",
+    "requestId": "f3ac8b8cecdd3c77c80b82d9d7ae4dd297be5da06be1aa64f1968aae4fe218c9",
+    "requestArtifactId": 11674085613,
+    "requestArtifactDigest": "ca925659bec19efb62d8fff1b8ca98789cee1c9d273d390625e71e7d4fdd87d5"
   },
   "completed": [
     {
