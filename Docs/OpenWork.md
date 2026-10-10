@@ -181,16 +181,41 @@ reparse point，更新系统有意使用它；不要收紧成链接计数**—�
 版本字符串不是绑定手段。桥接本身没导入 `Version.props`，所以只加了关戳那一行。
 判据是"换一个 `IMaoVersion` 重新构建，字节是否不变"：实测在 `2026.10.8.1` 与 `2099.1.1.1` 两个完全不同的
 程序版本下，启动器与桥接产出**逐字节相同**的产物，版本信息显示 `1.0.0` 且不再带 `+提交`。
-**每版落盘因此从约 190 MB 降到约 60 MB**——这正是我原先以为靠"修好可复现性"就能拿到、后来发现拿不到的那部分。
+**没动更新子系统源码的发版，这两个产物每版落盘从约 190 MB 降到约 0**——这正是我原先以为靠"修好可复现性"就能拿到、
+后来发现拿不到的那部分。
 ⚠️ 代价要说清：两个二进制不再自带源码出处（`build-info.json` 与 `launcher-build-info.json` 仍带）；
 启动器 PE 版本从此是"启动器版本"而非"程序版本"，看文件属性时别误读。`ProgramUpdates.md` 已同步。
-⚠️ **收益的边界**：实测同一份源码在**不同输出布局**下构建出的桥接仍差 173 字节（MVID / PDB GUID /
-Roslyn 确定性哈希 / 嵌套 PE 时间戳）——**这不是版本泄漏，是构建布局参与了编译**（同一布局下换
-`IMaoVersion` 构建则逐字节相同，那才是上面的判据）。CI 的布局是固定的：`New-CiReleaseArtifacts.ps1:13`
-把 `$GITHUB_WORKSPACE/out/ci-release` 交给 `Build-ReleaseCandidate.ps1`，其中 `publish` / `managed-build` /
-`launcher` 与 `x64/Release` 全是固定子路径，**版本号只用在编译之后的 `program/IMao-v<版本>-windows-x64`
-目录名上**，所以逐版相同成立。但**一旦工作区路径或输出布局变化，这两个产物会变一次**（之后重新稳定）——
-与 4.1 里那条未解释的 `?A0x…` 属于同一类，换 Runner 镜像时要一起核对。
+⚠️ **收益的边界（2026-10-10 云端预演后更正）**：上面那句原来写成"每版落盘降到约 60 MB"、并且
+"逐版相同成立"，**都不准确**。启动器是按源码 glob 编译 `IMao-WinUI.Core/Updates/*.cs`（见
+`ProgramLauncher.csproj`），桥接引用 Core——**所以只要更新子系统的源码变了，这两个产物必然变字节**，
+与版本戳无关。真实规律是：
+
+| 发版 | 启动器 / 桥接 | 该版为它们落盘 |
+|---|---|---|
+| 装了本次改动的这一版（动了 `Updates/*.cs`） | 与上一版**必然不同** | 仍写约 130 MB |
+| 之后没动更新源码的版（UI / 地图 / 资源类） | 与上一版**逐字节相同** | **共享，约 0** |
+
+即**收益从"再下一版"开始显现**，而大多数发版不动 `Updates/*.cs`，所以稳态下这两个 65 MB 基本不再重复。
+剩下的每版 churn 是 `IMao-WinUI.dll`（自带程序版本戳，约 1.5 MB）加上真正改动过的文件。
+（`ProgramUpdateDiskReuse_20261010.md` §5.4 把「自有产物 190 MB/版」当作稳态模型参数，那份按
+`Docs/README.md` 的约定是**不再追改**的当天记录——以本条为准。）
+⚠️ 次要边界：实测同一份源码在**不同输出布局**下构建出的桥接仍差 173 字节（MVID / PDB GUID / Roslyn
+确定性哈希 / 嵌套 PE 时间戳）——**不是版本泄漏，是构建布局参与了编译**（同一布局下换 `IMaoVersion`
+构建则逐字节相同，那才是判据）。CI 布局是固定的（`New-CiReleaseArtifacts.ps1:13` 把
+`$GITHUB_WORKSPACE/out/ci-release` 交给 `Build-ReleaseCandidate.ps1`，内部 `publish` / `managed-build` /
+`launcher` 与 `x64/Release` 全是固定子路径，版本号只用在编译之后的
+`program/IMao-v<版本>-windows-x64` 目录名上）。但**工作区路径本身变过**：预演日志是
+`D:\a\IMAO\IMAO`，而 `2026.10.7.1` 的启动器里嵌的是 `C:\a\IMAO\IMAO`。这条路径差异现在已被
+`ContinuousIntegrationBuild` 消掉（产物里只剩 `/_/`），剩下的布局影响与 4.1 里那条未解释的 `?A0x…`
+同类，换 Runner 镜像时要一起核对。
+
+**本组（4.8–4.13）的端到端验证**：云端预演 run `38029179059`，SHA `574803a6e90052907b0504f20988036f9e925431`，
+2026-10-10，**success**，28.8 分钟，`publish=false`。它跑到了我改动的每一处：启动器在
+`out/ci-release/launcher` 建成、`Clean-source candidate complete` 落在这个 SHA 上、
+`New-ProgramReleasePackage.ps1` 的新校验通过、紧接着 `Test-ProgramReleasePackage.ps1` 验收了刚产出的包
+（`PASS complete resources, isolated IPC snapshot identity/shutdown, packaged native picker, and unchanged
+package contents.`），`Program update checks: 58 passed.` 与 `Resource update checks: 119 passed, 0 failed.`
+与本机数字完全一致。⚠️ **任何新提交都会让这个 SHA 的预演对正式构建作废**——正式发版要重新预演。
 
 ## 5. 代码里的 TODO
 
