@@ -209,8 +209,44 @@ ui 单独                     60.58 MB   （文档说 30 MB）
   同一个调用打在不存在的名字上返回 not found，说明这个测试本身有效。
 - 资源更新套件 **114 项全过，0 失败**，区域选择 `filtered snapshot ready=True`，发布器 34 项通过。
   （114 是 `main` 的基线：4.11 的 3 项与 4.12 的 2 项在 `codex/program-update-disk-reuse` 上，119 = 114 + 5。）
-- ⚠️ **端到端启动没有跑成。** 独立起 CoreHost 需要一份**运行时才生成**的绝对路径快照，
-  我试了四次都被快照校验挡在 `Initi()` 之前（新旧两个二进制表现完全一致，所以是我的调用方式不对，
-  不是改动引起的）。改动后的正常路径与改动前**调用同一个函数、传同样的参数**，
-  唯一差别是文件缺失时——那是有意的行为变更：以前会退回内嵌副本，现在直接报错。
-  这条要等一次真机启动或云端预演才算验证完。
+
+**云端预演 run `38044772630`** —— 2026-10-10，`publish=false`，**success**，28 分 56 秒，SHA
+`d0d28a6ab0718742758784b1aa6a6510c2925cba`。这次落地成了一个**受控 A/B**：上一趟预演
+（`38029179059`）产出的是同一套工件，只差 8.1 / 8.2 这两处改动。
+
+| 分片 | 改前 | 改后 | 变化 |
+|---|---|---|---|
+| **core** | 26.08 MB | **1.98 MB** | **−24.11 MB** |
+| ui | 58.80 MB | 59.02 MB | **+0.22 MB** |
+| 其余五个 | 不变 | 不变 | 0 |
+| **合计** | 438.57 MB | **414.68 MB** | **−23.89 MB** |
+
+- 8.1 的节省在云端复现：本地算的 `26.13 → 2.03` 对云端 `26.08 → 1.98`，差 0.05 MB。
+  **这个数字本身就是 CoreHost 真的瘦下来的证据**——`core` = CoreHost + `common.dll`，
+  一个 `.rsrc` 里塞着 32.19 MB 不可压缩 PNG 的 CoreHost 不可能压进 1.98 MB。
+- 8.2 的判断也被云端证实：`ui` **反而涨了 0.22 MB**（预压缩的 bundle 让 ZIP 压得更差一点），
+  与「只省磁盘、不省流量」一致。要是压缩真能省下载，这里该掉 30 MB 左右。
+- 其余验收行：`PASS complete resources, isolated IPC snapshot identity/shutdown, packaged native picker,
+  and unchanged package contents.`、`Clean-source candidate complete … source d0d28a6a…`、
+  `Program update checks: **52** passed`、`Resource update checks: **114** passed, 0 failed`。
+  **52 与 114 都是 `main` 的基线**（52 + 6 = 58、114 + 5 = 119 是另一条分支上的数字）；
+  这里出现 58 / 119 才说明基线串了。
+
+⚠️ **两件这次仍然没被覆盖的事：**
+
+1. **端到端那条链还是断的。** 把 2846 行预演日志搜遍，**没有一处出现 `--pipe`**——没有任何一步走到
+   `CoreHostMain.cpp:859` 的 `Initi()`，而点数据加载就在那里；`Test-ProgramReleasePackage.ps1` 走的是
+   `--check-resource-snapshot` 的**早退分支**。所以真实的点加载路径目前只由「改动前后调用同一个函数、
+   传同样的参数，差别只在文件缺失时」来保证。**要一次真机启动才算完。**
+   本地也试过独立起 CoreHost，四次都被快照校验挡在 `Initi()` 之前（新旧两个二进制表现完全一致，
+   所以是调用方式不对，不是改动引起的）。
+2. **「压缩在云上生效」是推出来的，不是看见的。** CI 日志不打印启动器体积，`rehearsal-report.json`
+   的 `program.shards[].files` 只有计数没有尺寸。依据是 csproj 属性随提交进了 CI，
+   而 `Build-ReleaseCandidate.ps1` 不覆盖该属性。
+
+⚠️ **这个 SHA 的预演对正式构建的有效期：** 任何新提交都会移动 `build-info.json` 里的 `sourceCommit`
+与 `sourceTreeSha256`，因而改变 `ui` 分片——**哪怕只改 `Docs/`**。`Docs/` 本身不进发行包
+（`Test-Path out\map-test\Docs` = False），但 `New-ProgramReleasePackage.ps1:98-99` 会把
+`Docs/ResourceUpdates.md` 与 `Docs/ProgramUpdates.md` 复制进包当 `README-Updates.md` / `ProgramUpdates.md`；
+`OpenWork.md` 不在被复制的名单里，所以改它不动任何发行字节——**但提交本身会**。
+**正式发版必须在发版的那个 SHA 上重新预演。**
