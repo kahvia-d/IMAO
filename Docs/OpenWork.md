@@ -507,3 +507,53 @@ ui 单独                     60.58 MB   （文档说 30 MB）
 `Docs/ResourceUpdates.md` 与 `Docs/ProgramUpdates.md` 复制进包当 `README-Updates.md` / `ProgramUpdates.md`；
 `OpenWork.md` 不在被复制的名单里，所以改它不动任何发行字节——**但提交本身会**。
 **正式发版必须在发版的那个 SHA 上重新预演。**
+
+### 已发布：v2026.10.10.1（2026-10-10，sequence 44）
+
+`codex/program-update-disk-reuse`、`codex/synthetic-crop-gate-correction`、
+`codex/distribution-size-reduction` 三条分支合并后发布。检测器那条是**纯文档**，玩家看不到任何变化，
+因此没有进公告。
+
+**发布产物实测（同一个仓库相邻两个 Release，可比）：**
+
+| 产物 | v2026.10.8.1 | **v2026.10.10.1** | 变化 |
+|---|---|---|---|
+| **`core.zip`** | 27,351,470（26.08 MiB） | **2,072,817（1.98 MiB）** | **−24.11 MiB** |
+| `ui.zip` | 61,649,335（58.80 MiB） | 61,890,716（59.02 MiB） | **+0.23 MiB** |
+| `runtime.zip` | 150,216,228 | 150,216,216 | −12 B |
+| `windows-x64.zip` | 468,567,868（446.86 MiB） | 442,002,065（421.53 MiB） | **−25.33 MiB** |
+
+- **`core` 的 24.11 MiB 与预演算的 1.98 MiB 完全一致**，三方（本地构建 2.03 / 预演 1.98 / 正式发布 1.98）互相对得上。
+- **`ui` 反而涨 0.23 MiB** —— 8.2 那条「只省磁盘不省流量」在正式产物上再次成立。压缩带来的 ~63 MB
+  是**安装后的磁盘**，不是下载。
+- 安装 ZIP 少 25.33 MiB，正好是那 23.77 MB **不可压缩 PNG** 的量级；启动器/桥接在 ZIP 里本来就压得
+  差不多，所以不贡献——**与 8.1/8.2 的模型一致**。
+
+**发布链路的完整性：**
+
+```
+sequence 44   transaction 046cccedd037459c92772cd29dca3b46
+frozen artifact 11673455016   sha256 ce4870b676492f02e7dc39266eb64a919b772334460939cfcc7e1b2d3b9ee801
+install zip                   sha256 c1cd33db7a93c482c19527d7bfd612dafa322c86166118fa12fdbbfdccfb2527
+```
+
+- 构建 Run `38059112873`（build + prepare，success，46 分 08 秒，含等审批）→ 本地签名 → 发布 Run
+  `38062298860`（publish / cleanup / mirrorchyan / gitee **四个 job 全 success**，8 分 44 秒）。
+- `release-authorization.json`（14,472 字节）随 Release 发布，第三方可用 `verify-install-authorization`
+  独立校验手动安装 ZIP；`release-signing-request.zip`（301,335 字节）永久附在 Release 上供恢复。
+- 大 artifact（1.06 GB 的 `release-build`）已被清理，只剩两个小文件。
+- ⚠️ **发布流程会自己往 `main` 推提交**（`updates/release-state.json` / `channel-state.json` /
+  `stable.json`）：`4f7389a` 预留 sequence → `30498db` 注册请求 → `1264eaf` 接受签名 →
+  `aa47d18` 记录 Release ID → `cbd5a8f` 同步 stable。所以发布期间**本地 `main` 必然落后**，
+  按 `Docs/CloudRelease.md` 用 `git merge --ff-only origin/main` 追平即可（**不要**用
+  `git fetch origin main:main`）。我一开始看到发布 Run 的 `head_sha` 不是自己推的那个 SHA，以为出了问题，
+  其实是这个机制——**下次别再误判**。
+- ⚠️ 更正一条我先前给人看过的过时流程：仓库里**没有任何地方**读
+  `CLOUD_RELEASE_REHEARSAL_RUN_ID`（全库 grep 零命中）。正式发布**不需要**设它：冻结产物在同一次
+  Run 内先用临时密钥 finalize，`prepare` 从**同一趟**取工件并核对摘要。别再按旧记忆去建那个变量。
+
+⚠️ **发布后仍然悬着的两条（未关闭）：**
+
+1. **端到端点加载路径至今没在真机验证过。** 见本节上文；`v2026.10.10.1` 的首次玩家启动就是那次验证。
+   若出现点位不显示或 `required scene points missing`，第一处要查的就是它。
+2. **硬链接的实际节省量仍未实测**（见 4.9）。要等一次**真实更新**后才能与 1,914 MB 的三棵树量值对账。
