@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Win32.SafeHandles;
 using IMao_WinUI.Core.Updates;
 
 if (args.FirstOrDefault() == "worker")
@@ -229,6 +231,18 @@ ProcessStartInfo Child(string path, string mode = "healthy")
     var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
     start.ArgumentList.Add(typeof(Program).Assembly.Location); start.ArgumentList.Add("child"); start.ArgumentList.Add(path); start.ArgumentList.Add(mode);
     return start;
+}
+/// <summary>
+/// Makes a directory junction, which is a reparse point and therefore the one link the update system refuses.
+/// A symbolic link would do the same job but needs a privilege this suite does not assume; a junction does not.
+/// </summary>
+bool MakeJunction(string linkPath, string targetPath)
+{
+    var start = new ProcessStartInfo("cmd.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+    foreach (var argument in new[] { "/c", "mklink", "/J", linkPath, targetPath }) start.ArgumentList.Add(argument);
+    using var process = Process.Start(start)!;
+    process.WaitForExit();
+    return process.ExitCode == 0 && Directory.Exists(linkPath);
 }
 
 await Test("legacy release-page catalogs remain valid", () => { UpdateSignature.ValidateCatalog(catalog with { App = catalog.App with { Package = null } }); return Task.CompletedTask; });
@@ -1117,6 +1131,127 @@ await Test("damaged current and predecessor still retain the original bootstrap"
     await UpdateStorage.WriteAsync(Path.Combine(store.Root, "state.json"), state, default);
     Assert((await store.BeginLaunchAsync()).Id == "");
 });
+// 2026-10-09, C:\Dapps\IMao: state.json names Current, Previous, Pending and Trial, and nothing else ever
+// consulted a version directory - nothing enumerated versions/ for any purpose at all. Six versions of one
+// installation had accumulated to 8.60 GB, and four of them were unreachable from every record. Committing a
+// version is the moment the one it replaced stops being selectable, so that is where the leftover is collected.
+await Test("a version no record can select is pruned once its replacement commits", async () =>
+{
+    var store = Store(); var ids = new List<string>();
+    for (var i = 0; i < 3; i++)
+    {
+        var build = i switch { 0 => shardBuild1, 1 => shardBuild2, _ => shardBuild3 };
+        var tree = ShardTree(build, "v1");
+        tree["Assets/KuroMap/points.json"] = Encoding.UTF8.GetBytes("points:v" + i);
+        var (pkg, served, _) = ShardPackage(build, "v1.0." + i, tree);
+        await store.PrepareAsync(Sign(ShardCatalog(build, "v1.0." + i, pkg, 20 + i)), Serve(served, []));
+        var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+        ids.Add(launch.Id);
+    }
+    Assert(store.ReadState().Current == ids[2] && store.ReadState().Previous == ids[1], "the state names the two newest versions");
+    Assert(Directory.Exists(store.AppDirectory(ids[2])) && Directory.Exists(store.AppDirectory(ids[1])), "the running version and the fallback a rollback would select are kept");
+    Assert(!Directory.Exists(Path.GetDirectoryName(store.AppDirectory(ids[0]))!), "the version no record names is gone");
+    Assert(File.ReadAllText(Path.Combine(store.InstallRoot, "user-sentinel.txt")) == "preserve me", "the installation root is not under versions/ and is never a candidate");
+});
+await Test("a commit prunes only the versions no state slot names", async () =>
+{
+    var store = Store();
+    string Plant(string id)
+    {
+        var directory = Path.Combine(store.Root, "versions", id);
+        Directory.CreateDirectory(Path.Combine(directory, "app"));
+        File.WriteAllText(Path.Combine(directory, "app", "marker.txt"), id);
+        return id;
+    }
+    var running = Plant("2026.1.1.1-aaaaaaaaaaaaaaaa");
+    var trial = Plant("2026.1.1.2-bbbbbbbbbbbbbbbb");
+    var pending = Plant("2026.1.1.3-cccccccccccccccc");
+    var stale = Plant("2026.1.1.4-dddddddddddddddd");
+    var state = store.ReadState();
+    state.Current = running; state.Trial = trial; state.Pending = pending;
+    await UpdateStorage.WriteAsync(Path.Combine(store.Root, "state.json"), state, default);
+    await store.ConfirmHealthyAsync(trial);
+    var committed = store.ReadState();
+    Assert(committed.Current == trial && committed.Previous == running && committed.Pending == pending, "the commit re-points Current and Previous and leaves Pending alone");
+    foreach (var id in new[] { running, trial, pending })
+        Assert(File.Exists(Path.Combine(store.Root, "versions", id, "app", "marker.txt")), "a version the state still names must survive: " + id);
+    Assert(!Directory.Exists(Path.Combine(store.Root, "versions", stale)), "the version no slot names is the only one removed");
+});
+await Test("a leftover another process still holds does not fail the commit", async () =>
+{
+    var store = Store(); var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 30)), Serve(served, []));
+    var launch = await store.BeginLaunchAsync();
+    var stale = Path.Combine(store.Root, "versions", "2026.1.1.9-eeeeeeeeeeeeeeee");
+    Directory.CreateDirectory(stale);
+    var held = Path.Combine(stale, "held.bin"); File.WriteAllText(held, "a scanner or a closing child still has this");
+    using (new FileStream(held, FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+        await store.ConfirmHealthyAsync(launch.Id);
+        Assert(store.ReadState().Current == launch.Id, "pruning is best effort and must never fail the commit");
+        Assert(Directory.Exists(stale), "a leftover that cannot be removed is left for the next commit");
+    }
+});
+// 2026-10-10: a version cost a full copy of everything it did not change - measured at 1,914 MB of pure
+// duplication across three versions of one installation. The update already knew which files those were, because
+// the two signed manifests say so; now it says it with the filesystem instead of with a byte-for-byte copy.
+await Test("a file this release does not change is shared with the running version, not copied", async () =>
+{
+    var store = Store(); var treeA = ShardTree(shardBuild1, "v1");
+    var (pkgA, servedA, _) = ShardPackage(shardBuild1, "v1.0.1", treeA);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkgA, 40)), Serve(servedA, []));
+    var first = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(first.Id);
+    // Version two changes the map data and, through build-info.json, the ui shard; the runtime shard is identical.
+    var treeB = ShardTree(shardBuild2, "v1");
+    treeB["Assets/KuroMap/points.json"] = Encoding.UTF8.GetBytes("points:v2");
+    var (pkgB, servedB, _) = ShardPackage(shardBuild2, "v1.0.2", treeB);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild2, "v1.0.2", pkgB, 41)), Serve(servedB, []));
+    var second = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(second.Id);
+    var shared = Path.Combine(store.AppDirectory(second.Id), "System.Private.CoreLib.dll");
+    var running = Path.Combine(store.AppDirectory(first.Id), "System.Private.CoreLib.dll");
+    Assert(HardLinkProbe.Links(shared) == 2 && HardLinkProbe.Links(running) == 2, $"an unchanged file is one file with two names (links={HardLinkProbe.Links(shared)})");
+    Assert(HardLinkProbe.Links(Path.Combine(store.AppDirectory(second.Id), "build-info.json")) == 1, "a file this release changed is its own copy");
+    Assert(File.ReadAllBytes(shared).AsSpan().SequenceEqual(treeB["System.Private.CoreLib.dll"]), "the shared bytes are still the release's bytes");
+});
+// The whole point of the sharing is that it is invisible to every check the update system already had. A
+// version holding shared files has to be indistinguishable from one holding copies - otherwise an installation
+// that has already updated could not start, and no update could repair it.
+await Test("a version holding shared files still passes the verification the launcher runs", async () =>
+{
+    var store = Store(); var treeA = ShardTree(shardBuild1, "v1");
+    var (pkgA, servedA, _) = ShardPackage(shardBuild1, "v1.0.1", treeA);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkgA, 42)), Serve(servedA, []));
+    var first = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(first.Id);
+    var (pkgB, servedB, _) = ShardPackage(shardBuild2, "v1.0.2", ShardTree(shardBuild2, "v1"));
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild2, "v1.0.2", pkgB, 43)), Serve(servedB, []));
+    var second = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(second.Id);
+    Assert(HardLinkProbe.Links(Path.Combine(store.AppDirectory(second.Id), "System.Private.CoreLib.dll")) == 2, "this case is only meaningful while files really are shared");
+    // ValidateInstalledAsync is what every launch runs before a version may execute: signature, the complete
+    // file list, and every digest. A shared file satisfies all of it; the link count is the only difference.
+    var release = await store.ValidateInstalledAsync(second.Id);
+    Assert(release is not null && release.Version == shardBuild2.AppVersion, "a version whose files are shared must still be launchable");
+    UpdateStorage.RejectLink(Path.Combine(store.AppDirectory(second.Id), "System.Private.CoreLib.dll")); // must not throw
+    // The other half of the contract, and the reason the check is a reparse-point test rather than a link count:
+    // a junction redirects to somewhere this installation does not own and stays refused.
+    var junction = Path.Combine(store.InstallRoot, "junction-probe");
+    if (!MakeJunction(junction, Path.Combine(store.InstallRoot, "ProgramUpdates"))) throw new Exception("this suite needs a junction to lock both halves of the link contract");
+    await Reject(() => { UpdateStorage.RejectLink(Path.Combine(junction, "state.json")); return Task.CompletedTask; });
+    Directory.Delete(junction);
+});
+await Test("refusing to share is reported, never thrown, and leaves nothing behind", async () =>
+{
+    var store = Store(); var directory = Path.Combine(store.InstallRoot, "link-probe"); Directory.CreateDirectory(directory);
+    var original = Path.Combine(directory, "source.bin"); File.WriteAllText(original, "shared bytes");
+    var linked = Path.Combine(directory, "linked.bin");
+    Assert(UpdateStorage.TryHardLink(linked, original), "a hard link on the same volume must succeed");
+    Assert(HardLinkProbe.Links(original) == 2 && File.ReadAllText(linked) == "shared bytes", "the link is a second name for the same bytes");
+    UpdateStorage.RejectLink(linked); // and the guard every verification uses must accept it
+    // A source that is not there - a different volume, a filesystem without hard links - is a decision to copy,
+    // which is why this reports rather than throws.
+    Assert(!UpdateStorage.TryHardLink(Path.Combine(directory, "missing.bin"), Path.Combine(directory, "nothing.bin")), "an impossible link is reported, not thrown");
+    Assert(!File.Exists(Path.Combine(directory, "missing.bin")), "a refused link must not leave a file behind");
+});
 File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new { passed = passed.Count, checks = passed }, UpdateJson.Options));
 Console.WriteLine($"Program update checks: {passed.Count} passed.");
 return 0;
@@ -1124,4 +1259,28 @@ return 0;
 sealed class FixtureNetwork(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) => Task.FromResult(respond(request));
+}
+
+/// <summary>
+/// Reads a file's hard-link count. The suite asserts that reuse shares bytes instead of duplicating them, and
+/// "the staged file has two names" is that claim in a form that cannot pass by accident - the sizes and digests
+/// of a shared file and a copied one are identical, so nothing else in the tree can tell them apart.
+/// </summary>
+static class HardLinkProbe
+{
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ByHandleFileInformation
+    {
+        public uint FileAttributes, CreationTimeLow, CreationTimeHigh, LastAccessTimeLow, LastAccessTimeHigh,
+            LastWriteTimeLow, LastWriteTimeHigh, VolumeSerialNumber, FileSizeHigh, FileSizeLow, NumberOfLinks,
+            FileIndexHigh, FileIndexLow;
+    }
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetFileInformationByHandle(SafeFileHandle handle, out ByHandleFileInformation information);
+    internal static uint Links(string path)
+    {
+        using var file = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        return GetFileInformationByHandle(file.SafeFileHandle, out var information) ? information.NumberOfLinks : 0;
+    }
 }

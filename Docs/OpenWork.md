@@ -91,6 +91,132 @@ ImGui 字体/`imgui.ini` 等窄接口仍会失败或替换成 `?`；超过 `MAX_
 分片只上传变化的 `core` / `ui` / `assets-map-data` 三片加描述符，另外四片（`runtime`、`assets-misc`、
 `assets-map-icons`、`assets-tiles`，合计 646.7 MB）沿用 `2026.9.20.2` 的 URL。
 
+已了结：4.8（**版本目录没有 GC**）——**2026-10-10 已修**。`ConfirmHealthyAsync` 在状态提交落盘之后调用
+`PruneUnreferencedVersions`（`ProgramUpdateStore.cs`），删除 `versions/` 下既非 `Current`、也非 `Previous`、
+`Pending`、`Trial` 的目录。安装根目录不在 `versions/` 之下，所以永不参与——它仍是最后回落的那一份。
+清理是尽力而为的：被扫描器、索引器或尚未退出的子进程占用的目录留到下一次提交，失败一律吞掉，绝不让启动失败；
+`versions/` 或某个版本目录是符号链接/目录联接时整棵不动。候选目录来自目录列举、按**名字**与状态比对，
+`keep` 集合用 `OrdinalIgnoreCase`——**不用任何状态值拼路径**，因此损坏或恶意的版本 id 无法操纵删除目标。
+`state.Versions`（防重放记录）与目录生命周期无关，保持不动。
+三条新用例覆盖"提交后清理无人引用的版本"、"四个状态槽各自保留"、"残留被占用时不阻断提交"；
+把调用去掉做对照，正好是 `the version no record names is gone` 一条变红。既有 52 项一并通过（合计 55）。
+⚠️ 存量安装已经积下的孤立目录要等**下一次成功更新**提交时才被收走（本机那份 6.17 GB 是手工清的）；
+一并完成了 [`ProgramUpdates.md`](ProgramUpdates.md) 里「不自动清理」那段的改写。
+
+已了结：4.9（**复用是"复制"而非"共享"**）——**2026-10-10 已修**。`TryReuseVerifiedAsync`
+（原 `TryCopyVerifiedAsync`，`ProgramUpdateStore.cs`）改为**先建硬链接、失败则复制**
+（`UpdateStorage.TryHardLink` 包 `CreateHardLinkW`，任何失败都返回 false 而不抛异常），
+两条路径落地后都对**目标文件**算一次 SHA-256 与签名清单比对——哈希仍然只承担一个职责：
+让一个本地损坏的文件只拖累它所在的那一个分片。真正保证发布物可信的是 `PrepareAsync` 在装配之后对
+**整棵树**跑的 `VerifyDirectoryAsync`，所以链接不可能把一个副本会拦下的字节带过发布闸门。
+判定复用哪些文件不变（仍由两份签名清单比 size + SHA-256 得出），因此**不需要任何"冻结层/资源"分类表**：
+被链接的集合自动等于"这次没变的那些文件"。
+语义锁写在 `UpdateStorage.RejectLink` 的文档注释里：**判据是 `FileAttributes.ReparsePoint`，硬链接不是
+reparse point，更新系统有意使用它；不要收紧成链接计数**——已更新过的安装按设计就持有共享文件，
+那条检查会让它们全部无法启动且无法远程修复。
+三条新用例：共享文件链接数为 2 而改动的文件为 1（用 `GetFileInformationByHandle` 读，共享与复制的大小
+摘要完全一样，只有链接数能区分）；持共享文件的版本仍通过 `ValidateInstalledAsync`（启动器真正跑的校验）
+且已链接文件能过 `RejectLink`，同时目录联接仍被拒绝（junction 无需提权即可造）；`TryHardLink` 的
+失败契约。把建链改成恒复制做对照，失败信息正是 `an unchanged file is one file with two names (links=1)`。
+合计 **58 项通过**。
+⚠️ **实机节省量还没实测**——套件只能证明链接确实建立、链接数为 2、共享的树仍能通过启动校验；
+逐字节重复量（本机 1,914 MB）是在改动前的三棵树上用只读脚本量出来的，下一次真实更新后才能对账。
+⚠️ 跨卷回退没有自动化用例（套件只有 C: 一个卷），回退是一条 `if`，由上面那条契约用例与"源被损坏"
+用例共同覆盖。一次性迁移**决定不做**，理由见 [`ProgramUpdateDiskReuse_20261010.md`](ProgramUpdateDiskReuse_20261010.md) §6.4。
+
+已了结：4.10（**启动器与桥接没有做路径归一化**）——**2026-10-10 已修**。原先判断"4.1 可能未覆盖这两个产物"是对的，
+而且原因很具体：4.1 的 `-p:ContinuousIntegrationBuild=true` 只传给了 WinUI 的发布（`Build-ReleaseCandidate.ps1:120`），
+**启动器的发布（同文件第 126 行）没传**；桥接则是在 `IMao-WinUI.csproj` 里用一个 `<Exec>` 起**独立的
+`dotnet publish` 进程**构建的，而命令行的属性**传不进子进程**（属性不是环境变量）——所以两个产物都没拿到
+`DeterministicSourcePaths`。
+后果不只是"字节会变"：PDB 记录里的**绝对检出路径参与编译**，进而决定程序集的 **MVID** 与单文件包里
+**嵌套映像的确定性时间戳**。实测 10.4.2 的产物里写着 `C:\Dcode\WWMAP-TOOLS\tools\...`，10.7.1 的写着
+`C:\a\IMAO\IMAO\tools\...`——两台机器的检出路径各自留在了自己的发行字节里。
+修法：两处各补 `-p:ContinuousIntegrationBuild=true`。验证方式是同一个目录、同一个提交只差这个开关：
+启动器的 `C:\Dcode\WWMAP-TOOLS` 出现次数 **1 → 0**、PDB 路径变成 `/_/tools/ProgramLauncher/...`、
+`/_/` 计数 62 → 63、两次产物只差 205 字节（含 MVID 与嵌套时间戳）；桥接 **2 → 0**、`/_/` 63 → 65。
+`IMao-WinUI.csproj` 的 XML 与 `Build-ReleaseCandidate.ps1` 的语法都已校验。
+⚠️ 这条修的是**可复现性**（本机构建与云端构建同提交应逐字节相同，这正是云端预演要保证的，
+而 `New-ProgramReleasePackage.ps1` 只拿同一份构建自己的回执去核对启动器，查不出这件事）。
+它**不会**让这两个文件变成可共享，也**不改变每版落盘量**——磁盘那一半是 4.13，而且我原来的预估是错的。
+
+已了结：4.11（**资源暂存目录残留**）——**2026-10-10 已修**。根因不是"忘了清理"：`InstallReleaseAsync` 的清理写在
+`finally` 里，覆盖了它能看到的所有退出路径，唯独覆盖不了它看不到的那一种——进程被玩家关窗、被启动器的进程组结束、
+或断电时，那个 `finally` 根本不会执行；而 `staging/` 除此之外没有任何地方会看，每个后续事务也只清自己那一个目录，
+所以一次中断就是永久残留。本机那份 69.6 MB 里的两个包**都已经解压并安装到位**（残留里只有 zip、没有 `unpacked`），
+恰恰说明工作早就完成了，只有现场没收拾。
+修法：`ResourceSnapshotService.InitializeAsync` 在**取得与事务相同的锁之后**扫一遍 `staging`。锁是这件事安全的前提——
+`staging` 只由事务写，而每个事务都持这把锁，所以此刻扫到的一定是遗留物，可以整块删。
+尽力而为（被占用就留到下次启动，绝不阻断启动），`staging` 本身或其下某个条目是符号链接/目录联接时整块不动。
+三条新用例：被中断留下的暂存目录在下次启动被清掉；被别的进程占住时不阻断启动且留到下次；
+`staging` 是联接时**不穿透删除**它指向的内容（junction 无需提权即可造）。
+把清扫调用去掉做对照，正好是第一条变红。资源更新套件当时 **117 项通过**（4.12 又加两条后为 119 项），
+`ResourceUpdates.md` 的对应说明已改写。
+⚠️ 存量残留要等**下一次启动**才被收走（本机那份 69.6 MB 目前还在）。
+
+已了结：4.12（**资源描述文件缓存无限累积**）——**2026-10-10 已修**。先量清了两个目录，因为它们的结论相反：
+`packages/` **不按版本累积**，它是每个包 ID 一个目录、原地替换（`map-data` 68.1 MB / `map-icons` 35.5 MB /
+`tethys-kurotiles` 是 0 文件的空壳），所以那 103.6 MB 是**当前**集合；真正无限累积的是 `snapshots/`。
+那里有三种文件，只有一种算记录：`v2/<快照标识>.json` 是 `StageAsync` 落下的真快照，**故意保留全部签名包**
+以便玩家删掉某地区后还能重新启用，状态文件也引用它——**永不清理**；而 `bundled-<哈希>.json` 与
+`runtime-<哈希>.json` 是缓存，两者都只在"按内容算出的名字不存在"时才写，缺了下次启动自动重建。
+实测那个安装积了 **218 个**（bundled 92 + runtime 126，9.3 MB），而 `activation.json` 只引用 **1 个**，
+新增速率约 9.5 个/天。修法：`InitializeAsync` 在**持锁**时、且在状态确定之后，删掉既不被
+`ActivePath`/`PreviousPath`/`PendingPath`/`Attempt.SnapshotPath` 引用、又不在"最新 8 个"之内的描述文件；
+`v2/` 是子目录，`EnumerateFiles` 本来就不递归。尽力而为，被占用的留到下次。
+两条新用例：无人引用的被清、被引用的与 `v2/` 一定留下（最老一批必删、最新一批必留，中间一段**刻意不断言**——
+它取决于本次启动自己写了几个）；被别的进程占住时不阻断启动。资源更新套件 **119 项通过**。
+`ResourceUpdates.md` 里那句玩家承诺**没有被削弱**——它说的是 `v2/` 与 `packages/<包 ID>` 保留已安装资源，
+本次清的只是可按内容重建的缓存，文档已把这个区别写明。
+
+已了结：4.13（**两个 65 MB 产物的版本戳**）——**2026-10-10 已做**。事实：`IMao-Launcher.exe` 与
+`KuroSyncBridge.exe` 跨版本**只差几百字节，且全部是版本戳**。启动器带的是 PE `FileVersion` = 程序版本
+（`New-ProgramReleasePackage.ps1` 还强制校验相等），桥接带的是 SDK 自动追加的源码修订号；
+另外桥接**引用** Core 工程，而 Core 同样导入 `Version.props`，所以它内嵌的那份 Core 也带着程序版本——
+**只去掉桥接自己的戳是不够的**。
+改法四处：`Version.props` 新增 `IMaoLauncherVersion` 与 `IMaoCoreVersion`（各 `1.0.0`，注释写明改启动器协议时
+必须同时改前者）；启动器与 Core 用各自那一行覆盖 `Version`/`AssemblyVersion`/`FileVersion`；
+三者都关掉 `<IncludeSourceRevisionInInformationalVersion>`；`New-ProgramReleasePackage.ps1` 那条校验改为核对
+`IMaoLauncherVersion`——**把这个启动器绑到本发行版的仍是回执的 provenance 与摘要**（同文件上游三行），
+版本字符串不是绑定手段。桥接本身没导入 `Version.props`，所以只加了关戳那一行。
+判据是"换一个 `IMaoVersion` 重新构建，字节是否不变"：实测在 `2026.10.8.1` 与 `2099.1.1.1` 两个完全不同的
+程序版本下，启动器与桥接产出**逐字节相同**的产物，版本信息显示 `1.0.0` 且不再带 `+提交`。
+**没动更新子系统源码的发版，这两个产物每版落盘从约 190 MB 降到约 0**——这正是我原先以为靠"修好可复现性"就能拿到、
+后来发现拿不到的那部分。
+⚠️ 代价要说清：两个二进制不再自带源码出处（`build-info.json` 与 `launcher-build-info.json` 仍带）；
+启动器 PE 版本从此是"启动器版本"而非"程序版本"，看文件属性时别误读。`ProgramUpdates.md` 已同步。
+⚠️ **收益的边界（2026-10-10 云端预演后更正）**：上面那句原来写成"每版落盘降到约 60 MB"、并且
+"逐版相同成立"，**都不准确**。启动器是按源码 glob 编译 `IMao-WinUI.Core/Updates/*.cs`（见
+`ProgramLauncher.csproj`），桥接引用 Core——**所以只要更新子系统的源码变了，这两个产物必然变字节**，
+与版本戳无关。真实规律是：
+
+| 发版 | 启动器 / 桥接 | 该版为它们落盘 |
+|---|---|---|
+| 装了本次改动的这一版（动了 `Updates/*.cs`） | 与上一版**必然不同** | 仍写约 130 MB |
+| 之后没动更新源码的版（UI / 地图 / 资源类） | 与上一版**逐字节相同** | **共享，约 0** |
+
+即**收益从"再下一版"开始显现**，而大多数发版不动 `Updates/*.cs`，所以稳态下这两个 65 MB 基本不再重复。
+剩下的每版 churn 是 `IMao-WinUI.dll`（自带程序版本戳，约 1.5 MB）加上真正改动过的文件。
+（`ProgramUpdateDiskReuse_20261010.md` §5.4 把「自有产物 190 MB/版」当作稳态模型参数，那份按
+`Docs/README.md` 的约定是**不再追改**的当天记录——以本条为准。）
+⚠️ 次要边界：实测同一份源码在**不同输出布局**下构建出的桥接仍差 173 字节（MVID / PDB GUID / Roslyn
+确定性哈希 / 嵌套 PE 时间戳）——**不是版本泄漏，是构建布局参与了编译**（同一布局下换 `IMaoVersion`
+构建则逐字节相同，那才是判据）。CI 布局是固定的（`New-CiReleaseArtifacts.ps1:13` 把
+`$GITHUB_WORKSPACE/out/ci-release` 交给 `Build-ReleaseCandidate.ps1`，内部 `publish` / `managed-build` /
+`launcher` 与 `x64/Release` 全是固定子路径，版本号只用在编译之后的
+`program/IMao-v<版本>-windows-x64` 目录名上）。但**工作区路径本身变过**：预演日志是
+`D:\a\IMAO\IMAO`，而 `2026.10.7.1` 的启动器里嵌的是 `C:\a\IMAO\IMAO`。这条路径差异现在已被
+`ContinuousIntegrationBuild` 消掉（产物里只剩 `/_/`），剩下的布局影响与 4.1 里那条未解释的 `?A0x…`
+同类，换 Runner 镜像时要一起核对。
+
+**本组（4.8–4.13）的端到端验证**：云端预演 run `38029179059`，SHA `574803a6e90052907b0504f20988036f9e925431`，
+2026-10-10，**success**，28.8 分钟，`publish=false`。它跑到了我改动的每一处：启动器在
+`out/ci-release/launcher` 建成、`Clean-source candidate complete` 落在这个 SHA 上、
+`New-ProgramReleasePackage.ps1` 的新校验通过、紧接着 `Test-ProgramReleasePackage.ps1` 验收了刚产出的包
+（`PASS complete resources, isolated IPC snapshot identity/shutdown, packaged native picker, and unchanged
+package contents.`），`Program update checks: 58 passed.` 与 `Resource update checks: 119 passed, 0 failed.`
+与本机数字完全一致。⚠️ **任何新提交都会让这个 SHA 的预演对正式构建作废**——正式发版要重新预演。
+
 ## 5. 代码里的 TODO
 
 | # | 位置 | 内容 | 建议 |

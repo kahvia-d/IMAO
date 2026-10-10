@@ -123,8 +123,15 @@ Invoke-CandidateProcess $env:IMAO_DOTNET (@('build') + $taskManagedArguments + @
 # that build drops the application's resource index even after Rebuild.
 Invoke-CandidateProcess $env:IMAO_DOTNET (@('publish') + $taskManagedArguments + @('--no-restore','-o',$taskPublish)) 'managed-publish.log'
 $taskLauncher = Join-Path $OutputRoot 'launcher'
+# The launcher is its own publish, so it needs the same path normalisation the app build above asks for.
+# DeterministicSourcePaths is what keeps this machine's absolute checkout root out of the embedded PDB
+# record, and that path does not stay there: it is part of the compilation, so it also decides the
+# assembly's MVID and the deterministic timestamps of the images nested in the single-file bundle. Without
+# it a launcher built here and one built on a runner differ by a couple of hundred bytes for the same
+# commit - which is the thing the cloud rehearsal is meant to rule out, and which the launcher receipt
+# cannot catch because it is taken from whichever build produced it (2026-10-10).
 Invoke-CandidateProcess $env:IMAO_DOTNET @('publish','tools/ProgramLauncher/ProgramLauncher.csproj','-c','Release','-r','win-x64',
-    '--self-contained','true','-o',$taskLauncher,'--source',$env:IMAO_NUGET_SOURCE,'-p:NuGetAudit=false') 'launcher-publish.log'
+    '--self-contained','true','-o',$taskLauncher,'--source',$env:IMAO_NUGET_SOURCE,'-p:NuGetAudit=false','-p:ContinuousIntegrationBuild=true') 'launcher-publish.log'
 $taskLauncherReceipt = Get-Content -LiteralPath (Join-Path $taskPublish 'build-info.json') -Raw | ConvertFrom-Json
 $taskLauncherReceipt | Add-Member -NotePropertyName launcherSha256 -NotePropertyValue ((Get-FileHash -LiteralPath (Join-Path $taskLauncher 'IMao-Launcher.exe') -Algorithm SHA256).Hash.ToLowerInvariant())
 [IO.File]::WriteAllText((Join-Path $taskLauncher 'launcher-build-info.json'), ($taskLauncherReceipt | ConvertTo-Json), [Text.UTF8Encoding]::new($false))

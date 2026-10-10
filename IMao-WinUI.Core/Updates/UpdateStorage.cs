@@ -1,5 +1,6 @@
 #nullable enable
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -95,6 +96,18 @@ internal static class UpdateStorage
             throw new InvalidDataException("资源标识或版本格式无效。");
     }
 
+    /// <summary>
+    /// Refuses a path that is, or sits under, a symbolic link or a directory junction.
+    /// </summary>
+    /// <remarks>
+    /// The test is <see cref="FileAttributes.ReparsePoint"/> and nothing else, and that is deliberate rather
+    /// than incidental: a hard link is not a reparse point. It is a second directory entry for the same file,
+    /// which the update system uses on purpose - a runtime library this release does not change is shared with
+    /// the version already running instead of being copied, and the staged tree is still complete and is still
+    /// hashed in full before it is published. <b>Do not tighten this into a link count.</b> An installation that
+    /// has already updated holds shared files by design, so that check would make every one of them fail its own
+    /// startup verification, and no update could repair a client that cannot start.
+    /// </remarks>
     internal static void RejectLink(string path)
     {
         var node = Path.GetFullPath(path);
@@ -107,6 +120,25 @@ internal static class UpdateStorage
             node = parent;
         }
     }
+
+    /// <summary>
+    /// Gives <paramref name="linkPath"/> the same bytes as <paramref name="existingPath"/>, or reports that this
+    /// filesystem will not do it.
+    /// </summary>
+    /// <remarks>
+    /// Always an optimisation, never a requirement: the caller copies when this returns false, so a different
+    /// volume, a network share, a filesystem without hard links or a policy that forbids them all end in the
+    /// same complete and verified tree - only a larger one.
+    /// </remarks>
+    internal static bool TryHardLink(string linkPath, string existingPath)
+    {
+        try { return CreateHardLinkW(linkPath, existingPath, IntPtr.Zero); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException or DllNotFoundException or EntryPointNotFoundException) { return false; }
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CreateHardLinkW(string linkFileName, string existingFileName, IntPtr securityAttributes);
 
     internal static async Task VerifyFileAsync(string path, ResourceFile expected, CancellationToken ct)
     {

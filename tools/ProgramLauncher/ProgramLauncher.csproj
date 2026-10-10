@@ -1,6 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="../../Version.props" />
   <PropertyGroup>
+    <!-- The launcher is a stable component, not a copy of the application. Version.props stamps the
+         application version into every project that imports it, which for a 65 MB self-contained single file
+         meant the bytes changed every release while its contents had not - so each version directory carried
+         its own copy instead of sharing one. Its identity is the launcher protocol; see IMaoLauncherVersion.
+         The source revision is left out for the same reason: provenance travels in launcher-build-info.json,
+         which ships beside it, and the application version is in that package's build-info.json. -->
+    <Version>$(IMaoLauncherVersion)</Version>
+    <AssemblyVersion>$(IMaoLauncherVersion)</AssemblyVersion>
+    <FileVersion>$(IMaoLauncherVersion)</FileVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <OutputType>WinExe</OutputType><TargetFramework>net8.0</TargetFramework>
     <AssemblyName>IMao-Launcher</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier><SelfContained>true</SelfContained>

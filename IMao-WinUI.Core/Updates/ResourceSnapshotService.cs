@@ -74,6 +74,9 @@ public sealed class ResourceSnapshotService
         if (_initialized) return;
         _attemptToken = null;
         UpdateStorage.RejectLink(Root);
+        // Scratch a transaction did not get to clean up after itself. Holding the lock is what makes this the
+        // safe moment to remove it: no other transaction can be running, so everything under staging is leftover.
+        SweepStaleStaging();
         var baselineBytes = JsonSerializer.SerializeToUtf8Bytes(_bundled, UpdateJson.Options);
         var baselineName = "bundled-" + Convert.ToHexString(SHA256.HashData(baselineBytes))[..20].ToLowerInvariant() + ".json";
         var bundledPath = Path.Combine(Root, "snapshots", baselineName);
@@ -163,7 +166,111 @@ public sealed class ResourceSnapshotService
         if (PruneSelection()) await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
         await ApplySelectionAsync(ct).ConfigureAwait(false);
         await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
+        // Last, so the state this reads is the final one for this start - and while the caller still holds the
+        // lock, which is what makes everything it does not recognise dead rather than possibly in flight.
+        SweepStaleDescriptors();
         _initialized = true;
+    }
+
+    /// <summary>
+    /// How many unreferenced descriptors to keep as a margin, so re-activating a snapshot this installation
+    /// used a moment ago does not have to rewrite its descriptor first.
+    /// </summary>
+    private const int RetainedDescriptors = 8;
+
+    /// <summary>
+    /// Keeps the descriptor files under snapshots/ from growing without bound.
+    /// </summary>
+    /// <remarks>
+    /// Three kinds of file live there and only one is a record. `v2/&lt;id&gt;.json` is the descriptor a staged
+    /// release actually activated: the state file names it, it deliberately keeps every signed package so a
+    /// region deleted later can still be selected again, and it is a subdirectory - nothing here touches it.
+    /// `bundled-&lt;hash&gt;.json` and `runtime-&lt;hash&gt;.json` sit directly in snapshots/ and are caches: each is
+    /// written only when the name its content hashes to is absent, and each is rebuilt from live state on the
+    /// next start, so losing one costs a single rewrite and nothing else.
+    ///
+    /// Nothing ever removed them. A copy measured on 2026-10-10 held 218 of them - 92 bundled and 126 runtime,
+    /// 9.3 MB - while activation.json named exactly one, accumulating at roughly 9.5 files a day. What is kept
+    /// is what the state names, plus a small margin of the newest; the rest is dead weight this installation
+    /// will never look at again. Best effort, like every other cleanup here.
+    /// </remarks>
+    private void SweepStaleDescriptors()
+    {
+        var snapshots = Path.Combine(Root, "snapshots");
+        try
+        {
+            if (!Directory.Exists(snapshots)) return;
+            UpdateStorage.RejectLink(snapshots);
+            var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var reference in new[] { _state.ActivePath, _state.PreviousPath, _state.PendingPath, _state.Attempt?.SnapshotPath })
+                if (!string.IsNullOrEmpty(reference)) keep.Add(Path.GetFileName(reference!));
+            // EnumerateFiles does not recurse, so v2/ is not in scope here even before the name check.
+            var stale = Directory.EnumerateFiles(snapshots)
+                .Where(path => !keep.Contains(Path.GetFileName(path)))
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .Skip(RetainedDescriptors)
+                .ToList();
+            foreach (var path in stale)
+            {
+                try
+                {
+                    UpdateStorage.RejectLink(path);
+                    File.Delete(path);
+                }
+                catch (IOException) { }              // Held by a scanner or a reader that is still closing.
+                catch (UnauthorizedAccessException) { }
+                catch (InvalidDataException) { }     // A link where a descriptor is expected: leave it alone.
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        catch (InvalidDataException) { }
+    }
+
+    /// <summary>
+    /// Removes the scratch directories earlier resource transactions left behind.
+    /// </summary>
+    /// <remarks>
+    /// An install deletes its own scratch directory in a finally, which covers every way it can end except the
+    /// one it cannot observe: a process that is killed - by its player closing the window, by the launcher's job
+    /// object, by a power cut - never runs that finally. Nothing else ever looks at staging, and each later
+    /// transaction only cleans up after itself, so one interruption used to leave those bytes there for the
+    /// life of the installation. On 2026-10-10 a player copy was holding 69.6 MB of region packs dated
+    /// 2026-09-19; both of that transaction's packages had already been unpacked and moved into place, so the
+    /// work itself had completed and only the leftover could not be removed.
+    ///
+    /// The lock the caller holds is what makes deleting all of it safe rather than merely convenient: staging is
+    /// written only by a transaction, every transaction takes that same lock, and this runs holding it with none
+    /// of ours in flight. Best effort, like every other cleanup here - a directory a scanner or a closing child
+    /// still holds is simply swept on the next start.
+    /// </remarks>
+    private void SweepStaleStaging()
+    {
+        var staging = Path.Combine(Root, "staging");
+        try
+        {
+            if (!Directory.Exists(staging)) return;
+            // A staging/ that is itself a link points at a directory this installation does not own, and the
+            // enumeration below would list that directory's contents as things to delete.
+            UpdateStorage.RejectLink(staging);
+            foreach (var entry in Directory.EnumerateFileSystemEntries(staging))
+            {
+                try
+                {
+                    // Also refuses a scratch directory that is itself a link, where a recursive delete would
+                    // empty whatever it points at.
+                    UpdateStorage.RejectLink(entry);
+                    if (Directory.Exists(entry)) Directory.Delete(entry, true);
+                    else File.Delete(entry);
+                }
+                catch (IOException) { }              // Held by a scanner or a child that is still closing.
+                catch (UnauthorizedAccessException) { }
+                catch (InvalidDataException) { }     // A link where scratch is expected: leave it alone.
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        catch (InvalidDataException) { }
     }
 
     /// <summary>

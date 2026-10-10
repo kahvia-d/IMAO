@@ -213,9 +213,10 @@ public sealed class ProgramUpdateStore
     }
 
     /// <summary>
-    /// Builds the staged program tree from local bytes and downloads. Every reused file is hashed while it
-    /// is copied, so a locally damaged file makes only its own shard fall back to a download; a failed
-    /// shard download fails the whole preparation with the installed program untouched.
+    /// Builds the staged program tree from local bytes and downloads. Every reused file is hashed as it lands,
+    /// so a locally damaged file makes only its own shard fall back to a download; a failed shard download
+    /// fails the whole preparation with the installed program untouched. A file this release does not change
+    /// is shared with the running version rather than duplicated, so the tree costs roughly what changed.
     ///
     /// A supplier, when one is given, runs first and takes over whatever it can provide. It is consulted
     /// only for a shard release: the whole-archive shape belongs to releases from before shards existed, and
@@ -368,7 +369,7 @@ public sealed class ProgramUpdateStore
         foreach (var path in wanted)
         {
             ct.ThrowIfCancellationRequested();
-            if (await TryCopyVerifiedAsync(UpdateStorage.SafeChild(reuseRoot, path), UpdateStorage.SafeChild(app, path), declared[path], ct))
+            if (await TryReuseVerifiedAsync(UpdateStorage.SafeChild(reuseRoot, path), UpdateStorage.SafeChild(app, path), declared[path], ct))
             {
                 written.Add(path);
                 copied += declared[path].Size;
@@ -381,7 +382,24 @@ public sealed class ProgramUpdateStore
         return true;
     }
 
-    private static async Task<bool> TryCopyVerifiedAsync(string source, string target, ResourceFile expected, CancellationToken ct)
+    /// <summary>
+    /// Puts one file the running program already holds into the staged tree, shared where the filesystem will
+    /// share it and copied where it will not, after proving it is the file the signed catalog describes.
+    /// </summary>
+    /// <remarks>
+    /// Returning false makes the caller fetch this whole shard instead, which is the only reason a hash is taken
+    /// here: a locally damaged file has to cost one shard of download rather than the entire preparation. It is
+    /// not what makes the staged tree trustworthy - the caller of AssembleAsync verifies every file of the
+    /// finished tree against the signed catalog before anything is published - so a shared file cannot smuggle
+    /// past publication a byte that a copy would have stopped.
+    ///
+    /// What is hashed is the staged file, because after a link the two names are the same bytes and after a copy
+    /// only the copy exists. A link also means a source modified in place afterwards would damage both names at
+    /// once; version directories are immutable by design and the finished tree is verified before publication,
+    /// so that ends as a failed preparation with the running program untouched - the same guarantee this had
+    /// when every reused file was duplicated.
+    /// </remarks>
+    private static async Task<bool> TryReuseVerifiedAsync(string source, string target, ResourceFile expected, CancellationToken ct)
     {
         try
         {
@@ -390,17 +408,20 @@ public sealed class ProgramUpdateStore
             UpdateStorage.RejectLink(target);
             if (File.Exists(target)) return false; // A path is written once; another shard already owns it.
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            // Sharing the bytes is what keeps a version from costing a second copy of everything it did not
+            // change. It is only ever an optimisation: a filesystem that refuses the link pays the copy.
+            if (!UpdateStorage.TryHardLink(target, source))
+            {
+                await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                await using var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.Asynchronous);
+                await input.CopyToAsync(output, 131072, ct).ConfigureAwait(false);
+            }
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            await using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.Asynchronous | FileOptions.SequentialScan))
-            await using (var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.Asynchronous))
+            await using (var verify = new FileStream(target, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
                 var buffer = new byte[131072];
                 int count;
-                while ((count = await input.ReadAsync(buffer, ct)) != 0)
-                {
-                    hash.AppendData(buffer, 0, count);
-                    await output.WriteAsync(buffer.AsMemory(0, count), ct);
-                }
+                while ((count = await verify.ReadAsync(buffer, ct).ConfigureAwait(false)) != 0) hash.AppendData(buffer, 0, count);
             }
             if (Convert.ToHexString(hash.GetHashAndReset()).Equals(expected.Sha256, StringComparison.OrdinalIgnoreCase)) return true;
         }
@@ -439,6 +460,56 @@ public sealed class ProgramUpdateStore
         }
         catch (IOException) { } // A scanner may retain scratch files. Never hide the original install failure.
         catch (UnauthorizedAccessException) { }
+    }
+
+    /// <summary>
+    /// Deletes the version directories no record points at any more.
+    /// </summary>
+    /// <remarks>
+    /// A committed installation refers to at most four directories - the one it runs, the one it falls back
+    /// to, and the pending and trial candidates a transition could still name - so everything else under
+    /// versions/ is a leftover from an update that has since been superseded. Nothing else in this class ever
+    /// enumerates that directory, which means without this the leftovers accumulate for the whole life of an
+    /// installation: on 2026-10-09 a player copy had reached 10.14 GB, and 6.17 GB of it was four versions no
+    /// state file mentioned. Once reuse stops being a full copy, keeping more versions becomes cheap and this
+    /// policy can be widened; until then a version nothing can select is not a fallback, it is only bytes.
+    ///
+    /// Best effort by construction. A scanner, an indexer or a child that is still closing can hold a file for
+    /// a moment, and a stale directory is worth far less than a launch that fails, so every failure here is
+    /// swallowed and the next commit tries again. The installation root is never a candidate - it is not under
+    /// versions/ - and no path is ever built from a state value: candidates come from the directory listing and
+    /// are matched to the state by name, so a malformed or hostile id cannot steer a delete.
+    /// </remarks>
+    private void PruneUnreferencedVersions(ProgramUpdateState state)
+    {
+        var versions = Path.Combine(Root, "versions");
+        try
+        {
+            if (!Directory.Exists(versions)) return;
+            // If versions/ itself is a link, everything listed below it lives somewhere else and deleting
+            // through it would remove directories this installation does not own.
+            UpdateStorage.RejectLink(versions);
+            var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var id in new[] { state.Current, state.Previous, state.Pending, state.Trial })
+                if (!string.IsNullOrEmpty(id)) keep.Add(id);
+            foreach (var directory in Directory.EnumerateDirectories(versions))
+            {
+                if (keep.Contains(Path.GetFileName(directory))) continue;
+                try
+                {
+                    // Also rejects a version directory that is itself a link, in which case a recursive delete
+                    // would empty whatever it points at.
+                    UpdateStorage.RejectLink(directory);
+                    Directory.Delete(directory, true);
+                }
+                catch (IOException) { }              // Held by a scanner, an indexer, or a child still closing.
+                catch (UnauthorizedAccessException) { }
+                catch (InvalidDataException) { }     // A link where a version directory should be: leave it be.
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        catch (InvalidDataException) { }
     }
 
     // Called only by the launcher while it holds the per-installation lifetime lock.
@@ -489,6 +560,9 @@ public sealed class ProgramUpdateStore
         if (state.Trial != id) throw new InvalidOperationException("启动确认与候选程序不一致。");
         state.Previous = state.Current; state.Current = id; state.Trial = null; state.Notice = "程序更新已完成，启动与地图资源检查通过。";
         await SaveAsync(state, ct);
+        // The commit above is what makes the version this one replaced unreachable, so the prune belongs after
+        // it is durable - and only here. Every other transition still points at what it is about to keep.
+        PruneUnreferencedVersions(state);
     }
 
     public async Task QueueRollbackAsync(CancellationToken ct = default)

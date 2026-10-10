@@ -1,6 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Version.props" />
   <PropertyGroup>
+    <!-- Core is compiled into the application, the launcher (by source) and the bridge. It carries its own
+         stable version for the same reason the launcher does: the bridge embeds this assembly in a
+         self-contained single file, so stamping the application version here made that 65 MB file differ
+         every release even after its own stamp was removed. See IMaoCoreVersion. -->
+    <Version>$(IMaoCoreVersion)</Version>
+    <AssemblyVersion>$(IMaoCoreVersion)</AssemblyVersion>
+    <FileVersion>$(IMaoCoreVersion)</FileVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>IMao_WinUI.Core</RootNamespace>
     <Platforms>AnyCPU;x64;x86</Platforms>

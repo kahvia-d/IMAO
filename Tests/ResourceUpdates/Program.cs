@@ -1613,6 +1613,109 @@ await Test("package directory promotion retry respects cancellation without dele
     await ThrowsAsync<OperationCanceledException>(() => UpdateStorage.MoveDirectoryAsync(source, target, cancel.Token)); Equal("signed-content", File.ReadAllText(path)); False(Directory.Exists(target));
 });
 
+// 2026-10-10, %LOCALAPPDATA%\IMao-WinUI\ResourceUpdates: a staging directory was still holding 69.6 MB of
+// region packs dated 2026-09-19. An install deletes its own scratch in a finally, and a process that is killed
+// or closed while it runs never reaches it - and nothing else ever looked at staging, so the leftover was
+// permanent. Both of that transaction's packages had already been unpacked and moved into place, which is what
+// says the work had finished and only the cleanup had not.
+await Test("scratch a killed install left behind is swept on the next start", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var stale = Path.Combine(f.Root, "staging", "aa84caa1735e46e9bd2082010c854039");
+    Directory.CreateDirectory(stale);
+    await File.WriteAllBytesAsync(Path.Combine(stale, "map-data.zip"), new byte[1024]);
+    await File.WriteAllBytesAsync(Path.Combine(stale, "dreamzhou-kurotiles.zip"), new byte[1024]);
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    True(!Directory.Exists(stale), "the leftover scratch directory must be gone");
+    True(Directory.Exists(Path.Combine(f.Root, "staging")), "the staging root is not itself a leftover");
+    Equal("bundled", restarted.Current.SnapshotId);
+});
+await Test("scratch another process still holds does not fail the start", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var stale = Path.Combine(f.Root, "staging", "held-by-a-scanner");
+    Directory.CreateDirectory(stale);
+    var path = Path.Combine(stale, "map-data.zip"); await File.WriteAllTextAsync(path, "still open");
+    using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+        var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+        Equal("bundled", restarted.Current.SnapshotId);
+        True(Directory.Exists(stale), "a leftover that cannot be removed is left for the next start");
+    }
+});
+await Test("a staging directory that is a link is never swept through", async () =>
+{
+    using var f = New(); await f.Initialize();
+    // What a linked staging points at is not this installation's to delete, so the sweep has to refuse the
+    // directory itself rather than enumerate the contents it redirects to.
+    var elsewhere = Path.Combine(f.Root, "not-ours"); Directory.CreateDirectory(elsewhere);
+    var keep = Path.Combine(elsewhere, "keep.json"); await File.WriteAllTextAsync(keep, "{\"mine\":true}");
+    var staging = Path.Combine(f.Root, "staging");
+    if (Directory.Exists(staging)) Directory.Delete(staging, true);
+    if (!Junction.Create(staging, elsewhere)) throw new Exception("this suite needs a junction to prove the sweep refuses links");
+    try
+    {
+        var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+        Equal("bundled", restarted.Current.SnapshotId);
+        True(File.Exists(keep), "what a linked staging points at must survive");
+    }
+    finally { try { Directory.Delete(staging); } catch (IOException) { } }
+});
+
+// 2026-10-10: snapshots/ held 218 descriptor files while activation.json named one. bundled-<hash>.json and
+// runtime-<hash>.json are caches - each is written only when the name its content hashes to is absent, and
+// each is rebuilt from live state - but nothing ever removed them. v2/ is the opposite: it holds the
+// descriptor a staged release actually activated, which deliberately keeps every signed package so a region
+// deleted later can be selected again.
+await Test("descriptor cache nothing names is swept, and v2 is never touched", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var snapshots = Path.Combine(f.Root, "snapshots");
+    var state = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(Path.Combine(f.Root, "activation.json")));
+    var named = Path.GetFileName(state.GetProperty("activePath").GetString()!);
+    // Twelve cache entries, oldest first, so "newest eight" is something the test can check rather than assume.
+    var planted = new List<string>();
+    for (var i = 0; i < 12; i++)
+    {
+        var path = Path.Combine(snapshots, "runtime-" + i.ToString("x2").PadLeft(24, '0') + ".json");
+        await File.WriteAllTextAsync(path, "{\"cache\":" + i + "}");
+        File.SetLastWriteTimeUtc(path, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMinutes(i));
+        planted.Add(path);
+    }
+    var v2 = Path.Combine(snapshots, "v2"); Directory.CreateDirectory(v2);
+    var record = Path.Combine(v2, "resources-2026.1.1.1.json"); await File.WriteAllTextAsync(record, "{\"staged\":true}");
+
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+
+    Equal("bundled", restarted.Current.SnapshotId);
+    True(File.Exists(Path.Combine(snapshots, named)), "a descriptor the state names must survive");
+    True(File.Exists(record), "v2/ is a record, not a cache, and must survive");
+    foreach (var path in planted.Take(4)) False(File.Exists(path));
+    // The newest few are the margin the sweep keeps on purpose. The middle of the run is deliberately left
+    // unasserted: how many of those survive depends on how many descriptors this start wrote of its own.
+    foreach (var path in planted.Skip(8)) True(File.Exists(path), "the newest descriptors stay as a margin");
+});
+await Test("a descriptor another process holds does not fail the start", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var snapshots = Path.Combine(f.Root, "snapshots");
+    // The oldest of a dozen, so the sweep is certain to try to remove this one.
+    var held = Path.Combine(snapshots, "runtime-" + new string('0', 24) + ".json");
+    await File.WriteAllTextAsync(held, "{\"held\":true}");
+    File.SetLastWriteTimeUtc(held, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    for (var i = 0; i < 12; i++)
+    {
+        var path = Path.Combine(snapshots, "runtime-" + i.ToString("x2").PadLeft(24, '0') + ".json");
+        await File.WriteAllTextAsync(path, "{}");
+    }
+    using (new FileStream(held, FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+        var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+        Equal("bundled", restarted.Current.SnapshotId);
+        True(File.Exists(held), "a descriptor that cannot be removed is left for the next start");
+    }
+});
+
 await File.WriteAllTextAsync(Path.Combine(output, "results.json"), JsonSerializer.Serialize(new { passed = passed.Count, failed = failed.Count, checks = passed, failures = failed, evidenceDirectory = suiteRoot }, UpdateJson.Options));
 Console.WriteLine($"Resource update checks: {passed.Count} passed, {failed.Count} failed. Evidence: {suiteRoot}");
 if (failed.Count > 0) Environment.ExitCode = 1;
@@ -1703,6 +1806,22 @@ sealed class FakeNetwork : HttpMessageHandler
         if (Redirect is not null) { var redirect = new HttpResponseMessage(HttpStatusCode.Redirect) { RequestMessage = request }; redirect.Headers.Location = Redirect; return Task.FromResult(redirect); }
         if (!Routes.TryGetValue(url, out var bytes)) throw new HttpRequestException("Unknown test URL: " + url);
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request, Content = new ByteArrayContent(bytes) });
+    }
+}
+
+/// <summary>
+/// Makes a directory junction, which is a reparse point - the one kind of link the update system refuses. A
+/// symbolic link would prove the same thing but needs a privilege this suite does not assume; a junction does not.
+/// </summary>
+static class Junction
+{
+    internal static bool Create(string linkPath, string targetPath)
+    {
+        var start = new ProcessStartInfo("cmd.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var argument in new[] { "/c", "mklink", "/J", linkPath, targetPath }) start.ArgumentList.Add(argument);
+        using var process = Process.Start(start)!;
+        process.WaitForExit();
+        return process.ExitCode == 0 && Directory.Exists(linkPath);
     }
 }
 
