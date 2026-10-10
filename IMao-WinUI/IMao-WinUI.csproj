@@ -48,7 +48,12 @@
             就 NU1101 直接失败；再补一个 URL 源又会被 NuGet 当成本地路径（同样是 NU1301）。
          交给常规还原即可：全局包缓存本来就优先于远程源，缺包时才联网。
          桥接程序会单独复制到用户目录运行，因此必须自带 .NET 运行时。 -->
-    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectDirectory)\..\tools\KuroSyncBridge\KuroSyncBridge.csproj&quot; -c Release -r win-x64 -p:Platform=x64 --self-contained true -p:PublishSingleFile=true -o &quot;$(TargetDir).kuro-bridge&quot; -p:NuGetAudit=false" />
+    <!-- 桥接程序是另起一个 dotnet publish 进程构建的，外层命令行的 -p:ContinuousIntegrationBuild=true
+         传不进来——那是一个属性，不是环境变量，<Exec> 起的新进程看不到它。必须在命令行上再传一次：
+         少了它，PDB 记录里会留下构建机的绝对检出路径，而那条路径参与编译，会一路决定程序集的 MVID
+         与单文件包里嵌套映像的确定性时间戳。结果是同一个提交在两台机器上构建出的桥接字节不同
+         （2026-10-10 实测：本机 C:\Dcode\WWMAP-TOOLS 与云端 C:\a\IMAO\IMAO 各自留在了自己的产物里）。 -->
+    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectDirectory)\..\tools\KuroSyncBridge\KuroSyncBridge.csproj&quot; -c Release -r win-x64 -p:Platform=x64 --self-contained true -p:PublishSingleFile=true -o &quot;$(TargetDir).kuro-bridge&quot; -p:NuGetAudit=false -p:ContinuousIntegrationBuild=true" />
     <Copy SourceFiles="$(TargetDir).kuro-bridge\KuroSyncBridge.exe" DestinationFolder="$(TargetDir)" />
   </Target>
 

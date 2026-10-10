@@ -74,6 +74,9 @@ public sealed class ResourceSnapshotService
         if (_initialized) return;
         _attemptToken = null;
         UpdateStorage.RejectLink(Root);
+        // Scratch a transaction did not get to clean up after itself. Holding the lock is what makes this the
+        // safe moment to remove it: no other transaction can be running, so everything under staging is leftover.
+        SweepStaleStaging();
         var baselineBytes = JsonSerializer.SerializeToUtf8Bytes(_bundled, UpdateJson.Options);
         var baselineName = "bundled-" + Convert.ToHexString(SHA256.HashData(baselineBytes))[..20].ToLowerInvariant() + ".json";
         var bundledPath = Path.Combine(Root, "snapshots", baselineName);
@@ -164,6 +167,52 @@ public sealed class ResourceSnapshotService
         await ApplySelectionAsync(ct).ConfigureAwait(false);
         await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
         _initialized = true;
+    }
+
+    /// <summary>
+    /// Removes the scratch directories earlier resource transactions left behind.
+    /// </summary>
+    /// <remarks>
+    /// An install deletes its own scratch directory in a finally, which covers every way it can end except the
+    /// one it cannot observe: a process that is killed - by its player closing the window, by the launcher's job
+    /// object, by a power cut - never runs that finally. Nothing else ever looks at staging, and each later
+    /// transaction only cleans up after itself, so one interruption used to leave those bytes there for the
+    /// life of the installation. On 2026-10-10 a player copy was holding 69.6 MB of region packs dated
+    /// 2026-09-19; both of that transaction's packages had already been unpacked and moved into place, so the
+    /// work itself had completed and only the leftover could not be removed.
+    ///
+    /// The lock the caller holds is what makes deleting all of it safe rather than merely convenient: staging is
+    /// written only by a transaction, every transaction takes that same lock, and this runs holding it with none
+    /// of ours in flight. Best effort, like every other cleanup here - a directory a scanner or a closing child
+    /// still holds is simply swept on the next start.
+    /// </remarks>
+    private void SweepStaleStaging()
+    {
+        var staging = Path.Combine(Root, "staging");
+        try
+        {
+            if (!Directory.Exists(staging)) return;
+            // A staging/ that is itself a link points at a directory this installation does not own, and the
+            // enumeration below would list that directory's contents as things to delete.
+            UpdateStorage.RejectLink(staging);
+            foreach (var entry in Directory.EnumerateFileSystemEntries(staging))
+            {
+                try
+                {
+                    // Also refuses a scratch directory that is itself a link, where a recursive delete would
+                    // empty whatever it points at.
+                    UpdateStorage.RejectLink(entry);
+                    if (Directory.Exists(entry)) Directory.Delete(entry, true);
+                    else File.Delete(entry);
+                }
+                catch (IOException) { }              // Held by a scanner or a child that is still closing.
+                catch (UnauthorizedAccessException) { }
+                catch (InvalidDataException) { }     // A link where scratch is expected: leave it alone.
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        catch (InvalidDataException) { }
     }
 
     /// <summary>

@@ -1613,6 +1613,55 @@ await Test("package directory promotion retry respects cancellation without dele
     await ThrowsAsync<OperationCanceledException>(() => UpdateStorage.MoveDirectoryAsync(source, target, cancel.Token)); Equal("signed-content", File.ReadAllText(path)); False(Directory.Exists(target));
 });
 
+// 2026-10-10, %LOCALAPPDATA%\IMao-WinUI\ResourceUpdates: a staging directory was still holding 69.6 MB of
+// region packs dated 2026-09-19. An install deletes its own scratch in a finally, and a process that is killed
+// or closed while it runs never reaches it - and nothing else ever looked at staging, so the leftover was
+// permanent. Both of that transaction's packages had already been unpacked and moved into place, which is what
+// says the work had finished and only the cleanup had not.
+await Test("scratch a killed install left behind is swept on the next start", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var stale = Path.Combine(f.Root, "staging", "aa84caa1735e46e9bd2082010c854039");
+    Directory.CreateDirectory(stale);
+    await File.WriteAllBytesAsync(Path.Combine(stale, "map-data.zip"), new byte[1024]);
+    await File.WriteAllBytesAsync(Path.Combine(stale, "dreamzhou-kurotiles.zip"), new byte[1024]);
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    True(!Directory.Exists(stale), "the leftover scratch directory must be gone");
+    True(Directory.Exists(Path.Combine(f.Root, "staging")), "the staging root is not itself a leftover");
+    Equal("bundled", restarted.Current.SnapshotId);
+});
+await Test("scratch another process still holds does not fail the start", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var stale = Path.Combine(f.Root, "staging", "held-by-a-scanner");
+    Directory.CreateDirectory(stale);
+    var path = Path.Combine(stale, "map-data.zip"); await File.WriteAllTextAsync(path, "still open");
+    using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+        var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+        Equal("bundled", restarted.Current.SnapshotId);
+        True(Directory.Exists(stale), "a leftover that cannot be removed is left for the next start");
+    }
+});
+await Test("a staging directory that is a link is never swept through", async () =>
+{
+    using var f = New(); await f.Initialize();
+    // What a linked staging points at is not this installation's to delete, so the sweep has to refuse the
+    // directory itself rather than enumerate the contents it redirects to.
+    var elsewhere = Path.Combine(f.Root, "not-ours"); Directory.CreateDirectory(elsewhere);
+    var keep = Path.Combine(elsewhere, "keep.json"); await File.WriteAllTextAsync(keep, "{\"mine\":true}");
+    var staging = Path.Combine(f.Root, "staging");
+    if (Directory.Exists(staging)) Directory.Delete(staging, true);
+    if (!Junction.Create(staging, elsewhere)) throw new Exception("this suite needs a junction to prove the sweep refuses links");
+    try
+    {
+        var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+        Equal("bundled", restarted.Current.SnapshotId);
+        True(File.Exists(keep), "what a linked staging points at must survive");
+    }
+    finally { try { Directory.Delete(staging); } catch (IOException) { } }
+});
+
 await File.WriteAllTextAsync(Path.Combine(output, "results.json"), JsonSerializer.Serialize(new { passed = passed.Count, failed = failed.Count, checks = passed, failures = failed, evidenceDirectory = suiteRoot }, UpdateJson.Options));
 Console.WriteLine($"Resource update checks: {passed.Count} passed, {failed.Count} failed. Evidence: {suiteRoot}");
 if (failed.Count > 0) Environment.ExitCode = 1;
@@ -1703,6 +1752,22 @@ sealed class FakeNetwork : HttpMessageHandler
         if (Redirect is not null) { var redirect = new HttpResponseMessage(HttpStatusCode.Redirect) { RequestMessage = request }; redirect.Headers.Location = Redirect; return Task.FromResult(redirect); }
         if (!Routes.TryGetValue(url, out var bytes)) throw new HttpRequestException("Unknown test URL: " + url);
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request, Content = new ByteArrayContent(bytes) });
+    }
+}
+
+/// <summary>
+/// Makes a directory junction, which is a reparse point - the one kind of link the update system refuses. A
+/// symbolic link would prove the same thing but needs a privilege this suite does not assume; a junction does not.
+/// </summary>
+static class Junction
+{
+    internal static bool Create(string linkPath, string targetPath)
+    {
+        var start = new ProcessStartInfo("cmd.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var argument in new[] { "/c", "mklink", "/J", linkPath, targetPath }) start.ArgumentList.Add(argument);
+        using var process = Process.Start(start)!;
+        process.WaitForExit();
+        return process.ExitCode == 0 && Directory.Exists(linkPath);
     }
 }
 

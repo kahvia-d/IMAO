@@ -79,8 +79,8 @@ ImGui 字体/`imgui.ini` 等窄接口仍会失败或替换成 `?`；超过 `MAX_
 | 4.4 | 待决策 | 分片级断点续传（现在单片失败整次重试、从零） | 2026-09-21 实测：472 MB 离线包上传时 TLS 握手超时，重跑发布脚本按**已上传资产的名字与摘要**跳过、只补缺的那几个，所以资产级续传已经有了，缺的是单个大文件内部的字节级续传。看用户实际失败率再定 |
 | 4.6 | 新发现 | 安装根目录与快捷方式的图标**不会**随更新变化（更新器按设计不碰原始副本，见 `ProgramUpdates.md`） | 要么接受，要么给启动器做"下次启动替换自己"的自更新（改的是救援路径，需单独设计与测试） |
 | 4.7 | 小 | `IMao-WinUI/Package.appxmanifest` 引用了 5 个不存在的 PNG（`StoreLogo.png`、`Square150x150Logo.png` 等） | 只在打 MSIX 包时会踩；补资源或清理清单 |
-| 4.10 | 中 | `IMao-Launcher.exe`(65.0 MB) + `KuroSyncBridge.exe`(65.4 MB) 每版仍改变字节，合计 **130.4 MB = 每版 190 MB churn 的 69%**。4.1 的构建可复现修复（2026-10-07）**可能未覆盖这两个产物** | 核对启动器与 KuroSyncBridge 的构建是否满足 4.1 的确定性条件（`/d1trimfile`、`CsWinRTAotOptimizerEnabled`）；若满足仍变，查时间戳/资源段/单文件打包。收敛后每版落盘可从 ~190 MB 降到 ~60 MB，收益比 4.9 更干净 |
-| 4.11 | 小 | `%LOCALAPPDATA%\IMao-WinUI\ResourceUpdates\staging` 残留 2 个临时包共 **69.6 MB**（本机实测：`dreamzhou-kurotiles.zip` 34.5 + `map-data.zip` 35.1），与 `ResourceUpdates.md` 的「下载与安装的临时文件由事务结束时清理」不符 | 排查资源更新事务中断后的清理路径；与 4.8 同属"没人负责删"的一类 |
+| 4.12 | **已量，待决策** | **已量清（2026-10-10）**：`packages` **不按版本累积**——它是每个包 ID 一个目录、原地替换（`map-data` 68.1 MB / `map-icons` 35.5 MB / `tethys-kurotiles` **0 文件**，是个空壳残留），所以那 103.6 MB 是**当前**集合而非历史。真正无限累积的是 **`snapshots/`：219 个条目、218 个文件、9.3 MB，而 `activation.json` 只引用其中 1 个**（`bundled-*.json` 92 个 + `runtime-*.json` 126 个 + `v2/` 2 个）。最早 2026-09-16、最新 2026-10-09：**23 天新增 218 个文件，约 9.5 个/天、约 140 MB/年** | 与 4.8 / 4.11 同属"没人负责删"的一类：descriptor 按内容哈希命名，写完就不再被看第二眼。建议在 `ResourceSnapshotService` 里加保留策略——只保留 `activation.json` 三个槽位引用的 descriptor 加最近若干个，其余在**持有同一把锁时**清掉（与 4.11 的清扫同一处挂载点）。**没有动手**：`ResourceUpdates.md` 是随程序发给玩家的文档，其中「首版保留历史已安装包」这句要一起改，属于对外承诺，先请拍板 |
+| 4.13 | 待决策 | **这两个产物每版都变是"版本戳"造成的，不是构建缺陷**（可复现性问题已单独修完，见下）。`IMao-Launcher.exe`(65.0 MB) 的 PE `FileVersion` 被 `New-ProgramReleasePackage.ps1:40` **强制要求等于程序版本**，否则打包直接抛错；`KuroSyncBridge.exe`(65.4 MB) 的 `1.0.0+<commit>` 来自 SDK 自动的源码修订号。所以各自 65 MB 的重复能不能省，取决于要不要保留这两个戳 | 启动器：把它的版本改成"启动器协议/启动器版本"而非程序版本——它的身份本来就是协议号，`ProgramUpdates.md` 也写着「稳定启动器本身不原地替换」，但放宽打包期不变量属于决策。桥接：`<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>` 可去掉提交戳，去掉后只要源码没变它就能被共享，代价是成品不再自带提交出处（`build-info.json` 仍带）。**两者都要先拍板**。⚠️ 更正：我原先写的"收敛后每版落盘可从 ~190 MB 降到 ~60 MB" **是错的**——可复现性修好并不会让它们变成可共享 |
 
 已了结：4.1（**构建不可复现**）——**2026-10-07 已修**。native 编译/链接加 `/d1trimfile:<仓库根>`，用
 `-DCMAKE_C_FLAGS`/`-DCMAKE_CXX_FLAGS` 覆盖时显式带回 MSVC 默认开关，托管关闭 `CsWinRTAotOptimizerEnabled`；
@@ -125,6 +125,35 @@ reparse point，更新系统有意使用它；不要收紧成链接计数**—�
 逐字节重复量（本机 1,914 MB）是在改动前的三棵树上用只读脚本量出来的，下一次真实更新后才能对账。
 ⚠️ 跨卷回退没有自动化用例（套件只有 C: 一个卷），回退是一条 `if`，由上面那条契约用例与"源被损坏"
 用例共同覆盖。一次性迁移**决定不做**，理由见 [`ProgramUpdateDiskReuse_20261010.md`](ProgramUpdateDiskReuse_20261010.md) §6.4。
+
+已了结：4.10（**启动器与桥接没有做路径归一化**）——**2026-10-10 已修**。原先判断"4.1 可能未覆盖这两个产物"是对的，
+而且原因很具体：4.1 的 `-p:ContinuousIntegrationBuild=true` 只传给了 WinUI 的发布（`Build-ReleaseCandidate.ps1:120`），
+**启动器的发布（同文件第 126 行）没传**；桥接则是在 `IMao-WinUI.csproj` 里用一个 `<Exec>` 起**独立的
+`dotnet publish` 进程**构建的，而命令行的属性**传不进子进程**（属性不是环境变量）——所以两个产物都没拿到
+`DeterministicSourcePaths`。
+后果不只是"字节会变"：PDB 记录里的**绝对检出路径参与编译**，进而决定程序集的 **MVID** 与单文件包里
+**嵌套映像的确定性时间戳**。实测 10.4.2 的产物里写着 `C:\Dcode\WWMAP-TOOLS\tools\...`，10.7.1 的写着
+`C:\a\IMAO\IMAO\tools\...`——两台机器的检出路径各自留在了自己的发行字节里。
+修法：两处各补 `-p:ContinuousIntegrationBuild=true`。验证方式是同一个目录、同一个提交只差这个开关：
+启动器的 `C:\Dcode\WWMAP-TOOLS` 出现次数 **1 → 0**、PDB 路径变成 `/_/tools/ProgramLauncher/...`、
+`/_/` 计数 62 → 63、两次产物只差 205 字节（含 MVID 与嵌套时间戳）；桥接 **2 → 0**、`/_/` 63 → 65。
+`IMao-WinUI.csproj` 的 XML 与 `Build-ReleaseCandidate.ps1` 的语法都已校验。
+⚠️ 这条修的是**可复现性**（本机构建与云端构建同提交应逐字节相同，这正是云端预演要保证的，
+而 `New-ProgramReleasePackage.ps1` 只拿同一份构建自己的回执去核对启动器，查不出这件事）。
+它**不会**让这两个文件变成可共享，也**不改变每版落盘量**——磁盘那一半是 4.13，而且我原来的预估是错的。
+
+已了结：4.11（**资源暂存目录残留**）——**2026-10-10 已修**。根因不是"忘了清理"：`InstallReleaseAsync` 的清理写在
+`finally` 里，覆盖了它能看到的所有退出路径，唯独覆盖不了它看不到的那一种——进程被玩家关窗、被启动器的进程组结束、
+或断电时，那个 `finally` 根本不会执行；而 `staging/` 除此之外没有任何地方会看，每个后续事务也只清自己那一个目录，
+所以一次中断就是永久残留。本机那份 69.6 MB 里的两个包**都已经解压并安装到位**（残留里只有 zip、没有 `unpacked`），
+恰恰说明工作早就完成了，只有现场没收拾。
+修法：`ResourceSnapshotService.InitializeAsync` 在**取得与事务相同的锁之后**扫一遍 `staging`。锁是这件事安全的前提——
+`staging` 只由事务写，而每个事务都持这把锁，所以此刻扫到的一定是遗留物，可以整块删。
+尽力而为（被占用就留到下次启动，绝不阻断启动），`staging` 本身或其下某个条目是符号链接/目录联接时整块不动。
+三条新用例：被中断留下的暂存目录在下次启动被清掉；被别的进程占住时不阻断启动且留到下次；
+`staging` 是联接时**不穿透删除**它指向的内容（junction 无需提权即可造）。
+把清扫调用去掉做对照，正好是第一条变红。资源更新套件 **117 项通过**，`ResourceUpdates.md` 的对应说明已改写。
+⚠️ 存量残留要等**下一次启动**才被收走（本机那份 69.6 MB 目前还在）。
 
 ## 5. 代码里的 TODO
 
