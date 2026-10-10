@@ -212,16 +212,10 @@ list(FILTER CppFiles EXCLUDE REGEX "[/\\\\]CoreHost[/\\\\].*\\.cpp$")
 # uses CoreHostMain.cpp exclusively so it owns the pipe lifecycle.
 list(FILTER CppFiles EXCLUDE REGEX "[/\\\\]Main\\.cpp$")
 
-# rc.exe does not reliably report the JSON files referenced by IMao-Core.rc
-# as Ninja dependencies. Keep synchronized map snapshots from producing a
-# stale DLL when only an embedded JSON resource changes.
-set_property(SOURCE "${CMAKE_SOURCE_DIR}/IMao-Core/src/IMao-Core.rc" APPEND PROPERTY OBJECT_DEPENDS
-    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_World.json"
-    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Tethys.json"
-    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Fabricatorium.json"
-    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Avinoleum.json"
-    "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/itemsData_Lahai.json"
-)
+# Every file under Resource/ is a dependency of the resource script. The scene point data used to be
+# listed by hand as well, because rc.exe does not report the JSON files it embedded as Ninja
+# dependencies and a stale DLL was the result. Nothing from Resource/ is embedded any more except one
+# icon, so the glob below is the whole dependency set.
 file(GLOB_RECURSE EmbeddedResourceInputs CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/IMao-Core/src/Resource/*")
 set_property(SOURCE "${CMAKE_SOURCE_DIR}/IMao-Core/src/IMao-Core.rc" APPEND PROPERTY OBJECT_DEPENDS
     "${CMAKE_SOURCE_DIR}/IMao-Core/src/resource.h" ${EmbeddedResourceInputs})

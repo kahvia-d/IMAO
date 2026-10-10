@@ -106,3 +106,111 @@ ImGui 字体/`imgui.ini` 等窄接口仍会失败或替换成 `?`；超过 `MAX_
 - 发布后本地 `main` 会落后远端（脚本用 GitHub API 直接写远端 `main`）：先 `git fetch origin`，再
   `git merge --ff-only origin/main` 追平。**不要用 `git fetch origin main:main`**——`main` 已检出时 Git
   直接拒绝（`refusing to fetch into branch ... checked out at ...`），2026-09-21 踩过一次。
+
+## 8. 分发包体积（2026-10-10，核实群友反馈后）
+
+群友报了三条重复，**数字全部属实**，核实后两条已改、一条不能改。原始数字：
+
+| 他说的 | 核实 |
+|---|---|
+| ① 302 张 itemImages PNG = 23.8 MB、5 份 itemsData JSON = 8.4 MB 内嵌进 `.rsrc` | ✅ 23.77 + 8.39 = **32.16 MB**；CoreHost 35.72 MB 里 `.rsrc` 正是 **32.19 MB** |
+| ① 发行包又单独发 KuroMapIcons 35.5 MB | ✅ `Assets/KuroMapIcons` = **35.53 MB / 541 文件** |
+| ① `310000620` 两份字节相同 | ✅ 而且不止它：**286/301 相同**，15 个已漂移 |
+| ② Launcher 段 9.3 MB / 文件 65 MB / overlay 55.6 MB | ✅ **9.38 / 64.99 / 55.61** |
+| ② Bridge overlay 56.2 MB | ✅ **56.16**（段 9.19，文件 65.35） |
+| ② root 另有一份 .NET 约 67 MB | ✅ 实测 **70.51 MB**（180 个文件） |
+| ③ itemsData_World 既内嵌又单独发布 | ✅ 而且**内嵌那份在任何正常安装里都读不到** |
+
+### 已了结：8.1（内嵌图标与场景点位）
+
+**它不只是占磁盘，是每版重下。** `ShardMap.cs:32` 把 CoreHost 放在 `core` 分片，而
+`ProgramUpdateStore.cs:190-213` 的规则是「分片里**每一个**文件都和上一版签名清单一致时才跳过」——
+只要一个文件变了就整包重下。CoreHost 每版必变，于是那 22.5 MB **永不改变的已压缩 PNG**
+每次都要陪着重下一遍。
+
+**改法：**
+
+- `IMao-Core/src/IMao-Core.rc` 删掉 301 个 PNG 与全部 5 个 JSON 资源，**只留 `IDB_PNG_Activity_02`**；
+- `DrawItemBase.cpp` 删掉 `LoadJson`（唯一调用点就是那个回退）与内嵌回退分支，缺文件即报错；
+- `CMakeLists.txt` 删掉那段已失效的 JSON `OBJECT_DEPENDS`（`Resource/*` 的全量 glob 本来就在下一行）；
+- 删掉 `IMao-Core/src/Resource/itemImages/` 下 301 个已无人引用的文件（全库引用核查过：只有 `.rc`
+  和 `resource.h` 提过 `itemImages`）。
+
+**为什么单留 `Activity_02`：** 它是唯一一个「两处都没有就没人管」的 id——只被**筛选目录**
+（`catalog-*.json`，副本挑战「深坠异想奇境」）引用，而 `Sync-KuroMapData.ps1:213` 从**点位数据**收集
+图标来源，所以任何一次同步都不会给它在 `icon-manifest.json` 里留位置；手改清单也会被下次同步当孤儿删掉。
+它那张图和 `Activity_02_1` 的 `icon-0175.png` **字节完全相同**（6498 字节），所以留着它就是留住现状。
+其余 301 个 id 要么有发行图标，要么和另外 **232 个 catalog id** 一样本来就没有图标。
+
+**实测（同一份源码、同一次构建）：**
+
+| | 改前 | 改后 |
+|---|---|---|
+| `IMao-CoreHost.exe` | 35.72 MB | **3.54 MB** |
+| 其中 `.rsrc` | 32.19 MB | **7 KB** |
+| `core` 分片（CoreHost + common.dll）zip | 26.13 MB | **2.03 MB** |
+
+即**每个玩家每次 core 分片变动的更新少下约 24 MB**，装完少占 32 MB。
+
+⚠️ 顺带确认了一件容易被误读的事：`.rc` 里的资源标识符来自 `resource.h`，而那里写的是
+`constexpr auto IDB_PNG_x = 130;`——**RC 编译器不认 `constexpr`，所以这些在 `.rc` 里是字符串名**，
+正好和 `FindResource(..., L"IDB_PNG_" + itemId, L"PNG")` 对得上。rc.exe 会把名字转成大写存，而
+`FindResource` 的名字比较不区分大小写——这条我直接用 `LoadLibraryEx` + 枚举/查找实测过。
+
+### 已了结：8.2（启动器与桥接的单文件压缩）
+
+两个程序都是 `SelfContained` + `PublishSingleFile`，overlay 里各装着一整套 .NET 运行时，
+而且都被 `ShardMap.cs:24-28` 归入 **`ui`** 分片——**每版必变**的那个。
+
+改法只有两处：`ProgramLauncher.csproj` 加 `<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>`，
+`IMao-WinUI.csproj` 发布桥接的那条 `Exec` 加 `-p:EnableCompressionInSingleFile=true`。
+
+| | 改前 | 改后 |
+|---|---|---|
+| `IMao-Launcher.exe` | 64.99 MB | **33.93 MB** |
+| `KuroSyncBridge.exe` | 65.35 MB | **33.84 MB** |
+| 启动耗时（桥接无参返回路径，9 次中位） | 75.9 ms | 129.8 ms（**+54 ms**） |
+
+⚠️ **但它省的是磁盘，不是流量。** 发布端用 `CompressionLevel.Optimal`（`UpdatePublisher/Program.cs:455`），
+**分片 ZIP 本来就把这 130 MB 压到 60.58 MB 了**。把压缩版换进 `ui` 分片重新打包：**60.58 → 59.34 MB**，
+只省 1.24 MB。我一开始以为压缩能省下载，**是实测把这个推断推翻的**。
+
+### 8.3 不能做的三条（连原理一起记下）
+
+- **根目录那份 70.51 MB 的 .NET 运行时不能去。** `Build-ReleaseCandidate.ps1:118` 用
+  `--self-contained true` 发布主程序；改成依赖框架就要玩家先自己装 .NET 8 Desktop Runtime，
+  对一个「解压即用」的工具是倒退。
+- **启动器不能改成依赖那份运行时。** 它的职责是「程序坏掉时把它修起来」
+  （`ProgramLauncher.cs`：健康检查、失败回退到上一版），依赖根目录那份运行时就等于在最需要它的时候失效。
+  **这是设计约束，不是疏忽。** 桥接改成依赖框架技术上更可行（根目录那份永远在），但要多一条
+  「浏览器启动时怎么找到运行时」的路径，为磁盘数字换耦合不值。
+- **NativeAOT（彻底不要运行时）不是开关，是一个项目。** `IMao-WinUI.Core/Updates/` 下的 JSON
+  全是反射式 `JsonSerializer.Deserialize<T>`（21 处，**没有任何 source generator**），要 AOT
+  得先把这层改成源生成序列化——而那是在**救命路径**上动刀。
+
+### 8.4 核实中发现的一处文档与实测不符
+
+本文件 4.1「已了结」段里写着每版必下的地板是 `core` + `ui` ≈ **56 MB**、修好后只剩 `ui` ≈ **30 MB**，
+并注明「逐片对照留待下一版实测」。我按当前分片实测：
+
+```
+core 26.13 MB + ui 60.58 MB = 86.7 MB   （文档说 56 MB）
+ui 单独                     60.58 MB   （文档说 30 MB）
+```
+
+**比文档高约一倍**，而且那句「留待实测」至今没做。差异最可能来自 launcher/bridge 长成两个 65 MB 的
+自包含单文件（它们就在 `ui` 里：130.34 MB，占该分片原始体积 134.14 MB 的 97%）。**这条仍待重新推导。**
+
+### 8.5 验证状态
+
+- 构建与链接通过（`LoadJson` 若还有引用会链接失败，没有）。
+- 资源目录实测：改后 `.rsrc` 只有 2 种类型（`PNG` 按名字 + `RT_MANIFEST` 按整数），`PNG` 下**唯一一条**
+  `IDB_PNG_ACTIVITY_02`；用真实的 `FindResource(L"IDB_PNG_Activity_02", L"PNG")` 命中，6498 字节。
+  同一个调用打在不存在的名字上返回 not found，说明这个测试本身有效。
+- 资源更新套件 **114 项全过，0 失败**，区域选择 `filtered snapshot ready=True`，发布器 34 项通过。
+  （114 是 `main` 的基线：4.11 的 3 项与 4.12 的 2 项在 `codex/program-update-disk-reuse` 上，119 = 114 + 5。）
+- ⚠️ **端到端启动没有跑成。** 独立起 CoreHost 需要一份**运行时才生成**的绝对路径快照，
+  我试了四次都被快照校验挡在 `Initi()` 之前（新旧两个二进制表现完全一致，所以是我的调用方式不对，
+  不是改动引起的）。改动后的正常路径与改动前**调用同一个函数、传同样的参数**，
+  唯一差别是文件缺失时——那是有意的行为变更：以前会退回内嵌副本，现在直接报错。
+  这条要等一次真机启动或云端预演才算验证完。

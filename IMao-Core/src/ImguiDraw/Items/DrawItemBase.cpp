@@ -154,51 +154,21 @@ void DrawItemBase::Shutdown() {
     refreshableCategories = RefreshableCategories{};
 }
 
-bool LoadJson(json& JsonData, const wchar_t* resourceName) {
-    HRSRC hResInfo = FindResource(g_hDllInstance, resourceName, L"JSON");
-    if (!hResInfo) {
-        std::cout << "无法找到资源！" << std::endl;
-        return false;
-    }
-
-    HGLOBAL hResData = LoadResource(g_hDllInstance, hResInfo);
-    if (!hResData) {
-        std::cout << "无法加载资源！" << std::endl;
-        return false;
-    }
-
-    LPVOID pResData = LockResource(hResData);
-    if (!pResData) {
-        std::cout << "无法锁定资源！" << std::endl;
-        return false;
-    }
-
-    DWORD resSize = SizeofResource(g_hDllInstance, hResInfo);
-
-    try {
-        std::string jsonStr(static_cast<const char*>(pResData), resSize);
-        JsonData = json::parse(jsonStr);
-        return JsonData.is_array();
-    }
-    catch (const json::parse_error& e) {
-        std::cout << "JSON parsing error:" << e.what() << std::endl;
-        return false;
-    }
-}
-
 void DrawItemBase::LoadItemsjson() {
-    const wchar_t* embedded[] = {L"ITEMSJSON_World", L"ITEMSJSON_Tethys", L"ITEMSJSON_Fabricatorium",
-        L"ITEMSJSON_Avinoleum", L"ITEMSJSON_Lahai"};
     for (const auto sceneId : Scene::sceneIds) {
         json* data = nullptr;
         if (!FindItemJsonData(sceneId, data) || !data) throw std::runtime_error("unknown runtime scene");
         *data = json::array();
         const auto name = Scene::SceneIdToName(sceneId);
         if (!Scene::IsRuntimeApproved(sceneId)) continue;
+        // The points come from the resource snapshot and nowhere else. They used to be embedded in
+        // this module as a fallback, which staging had already made unreachable on any normal
+        // install - Stage-UpdateResources.ps1 writes this file for every scene - while costing
+        // 8.39 MB of .rsrc that the core shard re-downloads with every CoreHost change, and being
+        // frozen at program build time it could serve stale points after a resource release. A
+        // missing file is a broken install, and it says so rather than quietly using build-time data.
         const auto path = ResourceSnapshotContext::MapDataRoot() / "runtime" / ("itemsData_" + name + ".json");
-        if (fs::exists(path)) {
-            if (!LoadExternalKuroRuntimeJson(*data, name.c_str())) throw std::runtime_error("invalid external points for " + name);
-        } else if (ResourceSnapshotContext::Strict() || sceneId > 5 || !LoadJson(*data, embedded[sceneId - 1])) {
+        if (!fs::exists(path) || !LoadExternalKuroRuntimeJson(*data, name.c_str())) {
             throw std::runtime_error("required scene points missing: " + name);
         }
     }
