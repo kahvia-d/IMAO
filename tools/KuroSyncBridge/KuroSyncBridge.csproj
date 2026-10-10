@@ -8,6 +8,11 @@
     <PlatformTarget>x64</PlatformTarget>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The bridge is a stable component: it should be the same bytes from one release to the next unless its
+         own source changes, so that a version directory can share it instead of copying another 65 MB. The
+         SDK appends the source revision to InformationalVersion by itself, which alone was enough to make
+         every release differ. Provenance travels in the package's build-info.json instead. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../IMao-WinUI.Core/IMao-WinUI.Core.csproj" />

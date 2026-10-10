@@ -166,7 +166,65 @@ public sealed class ResourceSnapshotService
         if (PruneSelection()) await UpdateStorage.WriteAsync(_selectionPath, _selection, ct).ConfigureAwait(false);
         await ApplySelectionAsync(ct).ConfigureAwait(false);
         await UpdateStorage.WriteAsync(_statePath, _state, ct).ConfigureAwait(false);
+        // Last, so the state this reads is the final one for this start - and while the caller still holds the
+        // lock, which is what makes everything it does not recognise dead rather than possibly in flight.
+        SweepStaleDescriptors();
         _initialized = true;
+    }
+
+    /// <summary>
+    /// How many unreferenced descriptors to keep as a margin, so re-activating a snapshot this installation
+    /// used a moment ago does not have to rewrite its descriptor first.
+    /// </summary>
+    private const int RetainedDescriptors = 8;
+
+    /// <summary>
+    /// Keeps the descriptor files under snapshots/ from growing without bound.
+    /// </summary>
+    /// <remarks>
+    /// Three kinds of file live there and only one is a record. `v2/&lt;id&gt;.json` is the descriptor a staged
+    /// release actually activated: the state file names it, it deliberately keeps every signed package so a
+    /// region deleted later can still be selected again, and it is a subdirectory - nothing here touches it.
+    /// `bundled-&lt;hash&gt;.json` and `runtime-&lt;hash&gt;.json` sit directly in snapshots/ and are caches: each is
+    /// written only when the name its content hashes to is absent, and each is rebuilt from live state on the
+    /// next start, so losing one costs a single rewrite and nothing else.
+    ///
+    /// Nothing ever removed them. A copy measured on 2026-10-10 held 218 of them - 92 bundled and 126 runtime,
+    /// 9.3 MB - while activation.json named exactly one, accumulating at roughly 9.5 files a day. What is kept
+    /// is what the state names, plus a small margin of the newest; the rest is dead weight this installation
+    /// will never look at again. Best effort, like every other cleanup here.
+    /// </remarks>
+    private void SweepStaleDescriptors()
+    {
+        var snapshots = Path.Combine(Root, "snapshots");
+        try
+        {
+            if (!Directory.Exists(snapshots)) return;
+            UpdateStorage.RejectLink(snapshots);
+            var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var reference in new[] { _state.ActivePath, _state.PreviousPath, _state.PendingPath, _state.Attempt?.SnapshotPath })
+                if (!string.IsNullOrEmpty(reference)) keep.Add(Path.GetFileName(reference!));
+            // EnumerateFiles does not recurse, so v2/ is not in scope here even before the name check.
+            var stale = Directory.EnumerateFiles(snapshots)
+                .Where(path => !keep.Contains(Path.GetFileName(path)))
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .Skip(RetainedDescriptors)
+                .ToList();
+            foreach (var path in stale)
+            {
+                try
+                {
+                    UpdateStorage.RejectLink(path);
+                    File.Delete(path);
+                }
+                catch (IOException) { }              // Held by a scanner or a reader that is still closing.
+                catch (UnauthorizedAccessException) { }
+                catch (InvalidDataException) { }     // A link where a descriptor is expected: leave it alone.
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        catch (InvalidDataException) { }
     }
 
     /// <summary>

@@ -1662,6 +1662,60 @@ await Test("a staging directory that is a link is never swept through", async ()
     finally { try { Directory.Delete(staging); } catch (IOException) { } }
 });
 
+// 2026-10-10: snapshots/ held 218 descriptor files while activation.json named one. bundled-<hash>.json and
+// runtime-<hash>.json are caches - each is written only when the name its content hashes to is absent, and
+// each is rebuilt from live state - but nothing ever removed them. v2/ is the opposite: it holds the
+// descriptor a staged release actually activated, which deliberately keeps every signed package so a region
+// deleted later can be selected again.
+await Test("descriptor cache nothing names is swept, and v2 is never touched", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var snapshots = Path.Combine(f.Root, "snapshots");
+    var state = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(Path.Combine(f.Root, "activation.json")));
+    var named = Path.GetFileName(state.GetProperty("activePath").GetString()!);
+    // Twelve cache entries, oldest first, so "newest eight" is something the test can check rather than assume.
+    var planted = new List<string>();
+    for (var i = 0; i < 12; i++)
+    {
+        var path = Path.Combine(snapshots, "runtime-" + i.ToString("x2").PadLeft(24, '0') + ".json");
+        await File.WriteAllTextAsync(path, "{\"cache\":" + i + "}");
+        File.SetLastWriteTimeUtc(path, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMinutes(i));
+        planted.Add(path);
+    }
+    var v2 = Path.Combine(snapshots, "v2"); Directory.CreateDirectory(v2);
+    var record = Path.Combine(v2, "resources-2026.1.1.1.json"); await File.WriteAllTextAsync(record, "{\"staged\":true}");
+
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+
+    Equal("bundled", restarted.Current.SnapshotId);
+    True(File.Exists(Path.Combine(snapshots, named)), "a descriptor the state names must survive");
+    True(File.Exists(record), "v2/ is a record, not a cache, and must survive");
+    foreach (var path in planted.Take(4)) False(File.Exists(path));
+    // The newest few are the margin the sweep keeps on purpose. The middle of the run is deliberately left
+    // unasserted: how many of those survive depends on how many descriptors this start wrote of its own.
+    foreach (var path in planted.Skip(8)) True(File.Exists(path), "the newest descriptors stay as a margin");
+});
+await Test("a descriptor another process holds does not fail the start", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var snapshots = Path.Combine(f.Root, "snapshots");
+    // The oldest of a dozen, so the sweep is certain to try to remove this one.
+    var held = Path.Combine(snapshots, "runtime-" + new string('0', 24) + ".json");
+    await File.WriteAllTextAsync(held, "{\"held\":true}");
+    File.SetLastWriteTimeUtc(held, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    for (var i = 0; i < 12; i++)
+    {
+        var path = Path.Combine(snapshots, "runtime-" + i.ToString("x2").PadLeft(24, '0') + ".json");
+        await File.WriteAllTextAsync(path, "{}");
+    }
+    using (new FileStream(held, FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+        var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+        Equal("bundled", restarted.Current.SnapshotId);
+        True(File.Exists(held), "a descriptor that cannot be removed is left for the next start");
+    }
+});
+
 await File.WriteAllTextAsync(Path.Combine(output, "results.json"), JsonSerializer.Serialize(new { passed = passed.Count, failed = failed.Count, checks = passed, failures = failed, evidenceDirectory = suiteRoot }, UpdateJson.Options));
 Console.WriteLine($"Resource update checks: {passed.Count} passed, {failed.Count} failed. Evidence: {suiteRoot}");
 if (failed.Count > 0) Environment.ExitCode = 1;

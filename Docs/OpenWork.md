@@ -79,8 +79,6 @@ ImGui 字体/`imgui.ini` 等窄接口仍会失败或替换成 `?`；超过 `MAX_
 | 4.4 | 待决策 | 分片级断点续传（现在单片失败整次重试、从零） | 2026-09-21 实测：472 MB 离线包上传时 TLS 握手超时，重跑发布脚本按**已上传资产的名字与摘要**跳过、只补缺的那几个，所以资产级续传已经有了，缺的是单个大文件内部的字节级续传。看用户实际失败率再定 |
 | 4.6 | 新发现 | 安装根目录与快捷方式的图标**不会**随更新变化（更新器按设计不碰原始副本，见 `ProgramUpdates.md`） | 要么接受，要么给启动器做"下次启动替换自己"的自更新（改的是救援路径，需单独设计与测试） |
 | 4.7 | 小 | `IMao-WinUI/Package.appxmanifest` 引用了 5 个不存在的 PNG（`StoreLogo.png`、`Square150x150Logo.png` 等） | 只在打 MSIX 包时会踩；补资源或清理清单 |
-| 4.12 | **已量，待决策** | **已量清（2026-10-10）**：`packages` **不按版本累积**——它是每个包 ID 一个目录、原地替换（`map-data` 68.1 MB / `map-icons` 35.5 MB / `tethys-kurotiles` **0 文件**，是个空壳残留），所以那 103.6 MB 是**当前**集合而非历史。真正无限累积的是 **`snapshots/`：219 个条目、218 个文件、9.3 MB，而 `activation.json` 只引用其中 1 个**（`bundled-*.json` 92 个 + `runtime-*.json` 126 个 + `v2/` 2 个）。最早 2026-09-16、最新 2026-10-09：**23 天新增 218 个文件，约 9.5 个/天、约 140 MB/年** | 与 4.8 / 4.11 同属"没人负责删"的一类：descriptor 按内容哈希命名，写完就不再被看第二眼。建议在 `ResourceSnapshotService` 里加保留策略——只保留 `activation.json` 三个槽位引用的 descriptor 加最近若干个，其余在**持有同一把锁时**清掉（与 4.11 的清扫同一处挂载点）。**没有动手**：`ResourceUpdates.md` 是随程序发给玩家的文档，其中「首版保留历史已安装包」这句要一起改，属于对外承诺，先请拍板 |
-| 4.13 | 待决策 | **这两个产物每版都变是"版本戳"造成的，不是构建缺陷**（可复现性问题已单独修完，见下）。`IMao-Launcher.exe`(65.0 MB) 的 PE `FileVersion` 被 `New-ProgramReleasePackage.ps1:40` **强制要求等于程序版本**，否则打包直接抛错；`KuroSyncBridge.exe`(65.4 MB) 的 `1.0.0+<commit>` 来自 SDK 自动的源码修订号。所以各自 65 MB 的重复能不能省，取决于要不要保留这两个戳 | 启动器：把它的版本改成"启动器协议/启动器版本"而非程序版本——它的身份本来就是协议号，`ProgramUpdates.md` 也写着「稳定启动器本身不原地替换」，但放宽打包期不变量属于决策。桥接：`<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>` 可去掉提交戳，去掉后只要源码没变它就能被共享，代价是成品不再自带提交出处（`build-info.json` 仍带）。**两者都要先拍板**。⚠️ 更正：我原先写的"收敛后每版落盘可从 ~190 MB 降到 ~60 MB" **是错的**——可复现性修好并不会让它们变成可共享 |
 
 已了结：4.1（**构建不可复现**）——**2026-10-07 已修**。native 编译/链接加 `/d1trimfile:<仓库根>`，用
 `-DCMAKE_C_FLAGS`/`-DCMAKE_CXX_FLAGS` 覆盖时显式带回 MSVC 默认开关，托管关闭 `CsWinRTAotOptimizerEnabled`；
@@ -152,8 +150,47 @@ reparse point，更新系统有意使用它；不要收紧成链接计数**—�
 尽力而为（被占用就留到下次启动，绝不阻断启动），`staging` 本身或其下某个条目是符号链接/目录联接时整块不动。
 三条新用例：被中断留下的暂存目录在下次启动被清掉；被别的进程占住时不阻断启动且留到下次；
 `staging` 是联接时**不穿透删除**它指向的内容（junction 无需提权即可造）。
-把清扫调用去掉做对照，正好是第一条变红。资源更新套件 **117 项通过**，`ResourceUpdates.md` 的对应说明已改写。
+把清扫调用去掉做对照，正好是第一条变红。资源更新套件当时 **117 项通过**（4.12 又加两条后为 119 项），
+`ResourceUpdates.md` 的对应说明已改写。
 ⚠️ 存量残留要等**下一次启动**才被收走（本机那份 69.6 MB 目前还在）。
+
+已了结：4.12（**资源描述文件缓存无限累积**）——**2026-10-10 已修**。先量清了两个目录，因为它们的结论相反：
+`packages/` **不按版本累积**，它是每个包 ID 一个目录、原地替换（`map-data` 68.1 MB / `map-icons` 35.5 MB /
+`tethys-kurotiles` 是 0 文件的空壳），所以那 103.6 MB 是**当前**集合；真正无限累积的是 `snapshots/`。
+那里有三种文件，只有一种算记录：`v2/<快照标识>.json` 是 `StageAsync` 落下的真快照，**故意保留全部签名包**
+以便玩家删掉某地区后还能重新启用，状态文件也引用它——**永不清理**；而 `bundled-<哈希>.json` 与
+`runtime-<哈希>.json` 是缓存，两者都只在"按内容算出的名字不存在"时才写，缺了下次启动自动重建。
+实测那个安装积了 **218 个**（bundled 92 + runtime 126，9.3 MB），而 `activation.json` 只引用 **1 个**，
+新增速率约 9.5 个/天。修法：`InitializeAsync` 在**持锁**时、且在状态确定之后，删掉既不被
+`ActivePath`/`PreviousPath`/`PendingPath`/`Attempt.SnapshotPath` 引用、又不在"最新 8 个"之内的描述文件；
+`v2/` 是子目录，`EnumerateFiles` 本来就不递归。尽力而为，被占用的留到下次。
+两条新用例：无人引用的被清、被引用的与 `v2/` 一定留下（最老一批必删、最新一批必留，中间一段**刻意不断言**——
+它取决于本次启动自己写了几个）；被别的进程占住时不阻断启动。资源更新套件 **119 项通过**。
+`ResourceUpdates.md` 里那句玩家承诺**没有被削弱**——它说的是 `v2/` 与 `packages/<包 ID>` 保留已安装资源，
+本次清的只是可按内容重建的缓存，文档已把这个区别写明。
+
+已了结：4.13（**两个 65 MB 产物的版本戳**）——**2026-10-10 已做**。事实：`IMao-Launcher.exe` 与
+`KuroSyncBridge.exe` 跨版本**只差几百字节，且全部是版本戳**。启动器带的是 PE `FileVersion` = 程序版本
+（`New-ProgramReleasePackage.ps1` 还强制校验相等），桥接带的是 SDK 自动追加的源码修订号；
+另外桥接**引用** Core 工程，而 Core 同样导入 `Version.props`，所以它内嵌的那份 Core 也带着程序版本——
+**只去掉桥接自己的戳是不够的**。
+改法四处：`Version.props` 新增 `IMaoLauncherVersion` 与 `IMaoCoreVersion`（各 `1.0.0`，注释写明改启动器协议时
+必须同时改前者）；启动器与 Core 用各自那一行覆盖 `Version`/`AssemblyVersion`/`FileVersion`；
+三者都关掉 `<IncludeSourceRevisionInInformationalVersion>`；`New-ProgramReleasePackage.ps1` 那条校验改为核对
+`IMaoLauncherVersion`——**把这个启动器绑到本发行版的仍是回执的 provenance 与摘要**（同文件上游三行），
+版本字符串不是绑定手段。桥接本身没导入 `Version.props`，所以只加了关戳那一行。
+判据是"换一个 `IMaoVersion` 重新构建，字节是否不变"：实测在 `2026.10.8.1` 与 `2099.1.1.1` 两个完全不同的
+程序版本下，启动器与桥接产出**逐字节相同**的产物，版本信息显示 `1.0.0` 且不再带 `+提交`。
+**每版落盘因此从约 190 MB 降到约 60 MB**——这正是我原先以为靠"修好可复现性"就能拿到、后来发现拿不到的那部分。
+⚠️ 代价要说清：两个二进制不再自带源码出处（`build-info.json` 与 `launcher-build-info.json` 仍带）；
+启动器 PE 版本从此是"启动器版本"而非"程序版本"，看文件属性时别误读。`ProgramUpdates.md` 已同步。
+⚠️ **收益的边界**：实测同一份源码在**不同输出布局**下构建出的桥接仍差 173 字节（MVID / PDB GUID /
+Roslyn 确定性哈希 / 嵌套 PE 时间戳）——**这不是版本泄漏，是构建布局参与了编译**（同一布局下换
+`IMaoVersion` 构建则逐字节相同，那才是上面的判据）。CI 的布局是固定的：`New-CiReleaseArtifacts.ps1:13`
+把 `$GITHUB_WORKSPACE/out/ci-release` 交给 `Build-ReleaseCandidate.ps1`，其中 `publish` / `managed-build` /
+`launcher` 与 `x64/Release` 全是固定子路径，**版本号只用在编译之后的 `program/IMao-v<版本>-windows-x64`
+目录名上**，所以逐版相同成立。但**一旦工作区路径或输出布局变化，这两个产物会变一次**（之后重新稳定）——
+与 4.1 里那条未解释的 `?A0x…` 属于同一类，换 Runner 镜像时要一起核对。
 
 ## 5. 代码里的 TODO
 

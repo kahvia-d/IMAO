@@ -31,13 +31,22 @@ if (Test-Path -LiteralPath $NativeBuildReceipt -PathType Leaf) {
     throw 'A clean program package requires native-build-info.json from the same clean source build.'
 }
 $version = [string]$build.appVersion
+# The launcher carries its own version rather than the application's: it is a stable component whose identity
+# is the launcher protocol, and stamping the application version into a 65 MB self-contained binary made it
+# differ byte-for-byte every release while its contents had not changed.
+[xml]$versionProps = Get-Content -LiteralPath (Join-Path $SourceRoot 'Version.props') -Raw
+$launcherVersion = [string]$versionProps.Project.PropertyGroup.IMaoLauncherVersion
+if (-not $launcherVersion) { throw 'Version.props must declare IMaoLauncherVersion.' }
 if ([version]$version -ge [version]'2026.9.9.4') {
     if (-not $LauncherRoot) { throw 'Self-updating program packages require -LauncherRoot from the same source build.' }
     $launcherBuild = Get-Content -LiteralPath (Join-Path $LauncherRoot 'launcher-build-info.json') -Raw | ConvertFrom-Json
     Assert-ManagedBuildProvenance $launcherBuild $sourceBefore
     if ($launcherBuild.appVersion -ne $version) { throw 'Launcher version differs from application version.' }
     if ($launcherBuild.launcherSha256 -ne (Get-FileHash -LiteralPath (Join-Path $LauncherRoot 'IMao-Launcher.exe') -Algorithm SHA256).Hash) { throw 'Launcher bytes differ from their build receipt.' }
-    if ([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $LauncherRoot 'IMao-Launcher.exe')).FileVersion -ne $version) { throw 'Launcher executable version does not match the package.' }
+    # What binds this launcher to THIS release is the receipt's provenance and digest above, not a version
+    # string. The version it must carry is its own, so a launcher built from a different protocol line is
+    # still caught here.
+    if ([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $LauncherRoot 'IMao-Launcher.exe')).FileVersion -ne $launcherVersion) { throw 'Launcher executable version does not match IMaoLauncherVersion.' }
 }
 $name = "IMao-v$version-windows-x64"
 $package = Join-Path $OutputRoot $name

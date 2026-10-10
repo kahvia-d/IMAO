@@ -6,5 +6,12 @@
     <AssemblyVersion>$(IMaoVersion)</AssemblyVersion>
     <FileVersion>$(IMaoVersion)</FileVersion>
     <AppxPackageVersion>$(IMaoVersion)</AppxPackageVersion>
+    <!-- 启动器与 Core 是不随程序版本重建的稳定组件。它们的身份不是程序版本，而把它们做成程序版本会让
+         一个 65 MB 的自包含单文件每版都改变字节——内容其实没变，于是每个版本目录都白背一份、无法与
+         上一版共享（2026-10-10 实测：两个产物每版各变几百字节，全部是版本戳）。
+         改启动器协议（ProgramPackageValidation.LauncherProtocol）时必须同时改 IMaoLauncherVersion，
+         New-ProgramReleasePackage.ps1 会核对它与启动器 PE 里的 FileVersion 一致。 -->
+    <IMaoLauncherVersion>1.0.0</IMaoLauncherVersion>
+    <IMaoCoreVersion>1.0.0</IMaoCoreVersion>
   </PropertyGroup>
 </Project>
