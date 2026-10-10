@@ -79,6 +79,8 @@ ImGui 字体/`imgui.ini` 等窄接口仍会失败或替换成 `?`；超过 `MAX_
 | 4.4 | 待决策 | 分片级断点续传（现在单片失败整次重试、从零） | 2026-09-21 实测：472 MB 离线包上传时 TLS 握手超时，重跑发布脚本按**已上传资产的名字与摘要**跳过、只补缺的那几个，所以资产级续传已经有了，缺的是单个大文件内部的字节级续传。看用户实际失败率再定 |
 | 4.6 | 新发现 | 安装根目录与快捷方式的图标**不会**随更新变化（更新器按设计不碰原始副本，见 `ProgramUpdates.md`） | 要么接受，要么给启动器做"下次启动替换自己"的自更新（改的是救援路径，需单独设计与测试） |
 | 4.7 | 小 | `IMao-WinUI/Package.appxmanifest` 引用了 5 个不存在的 PNG（`StoreLogo.png`、`Square150x150Logo.png` 等） | 只在打 MSIX 包时会踩；补资源或清理清单 |
+| 4.10 | 中 | `IMao-Launcher.exe`(65.0 MB) + `KuroSyncBridge.exe`(65.4 MB) 每版仍改变字节，合计 **130.4 MB = 每版 190 MB churn 的 69%**。4.1 的构建可复现修复（2026-10-07）**可能未覆盖这两个产物** | 核对启动器与 KuroSyncBridge 的构建是否满足 4.1 的确定性条件（`/d1trimfile`、`CsWinRTAotOptimizerEnabled`）；若满足仍变，查时间戳/资源段/单文件打包。收敛后每版落盘可从 ~190 MB 降到 ~60 MB，收益比 4.9 更干净 |
+| 4.11 | 小 | `%LOCALAPPDATA%\IMao-WinUI\ResourceUpdates\staging` 残留 2 个临时包共 **69.6 MB**（本机实测：`dreamzhou-kurotiles.zip` 34.5 + `map-data.zip` 35.1），与 `ResourceUpdates.md` 的「下载与安装的临时文件由事务结束时清理」不符 | 排查资源更新事务中断后的清理路径；与 4.8 同属"没人负责删"的一类 |
 
 已了结：4.1（**构建不可复现**）——**2026-10-07 已修**。native 编译/链接加 `/d1trimfile:<仓库根>`，用
 `-DCMAKE_C_FLAGS`/`-DCMAKE_CXX_FLAGS` 覆盖时显式带回 MSVC 默认开关，托管关闭 `CsWinRTAotOptimizerEnabled`；
@@ -90,6 +92,39 @@ ImGui 字体/`imgui.ini` 等窄接口仍会失败或替换成 `?`；超过 `MAX_
 `IMao-v2026.9.21.1-windows-x64.zip`（717.3 MB），并因为 `map-data` 有变化同时带上 472.1 MB 离线集合包；
 分片只上传变化的 `core` / `ui` / `assets-map-data` 三片加描述符，另外四片（`runtime`、`assets-misc`、
 `assets-map-icons`、`assets-tiles`，合计 646.7 MB）沿用 `2026.9.20.2` 的 URL。
+
+已了结：4.8（**版本目录没有 GC**）——**2026-10-10 已修**。`ConfirmHealthyAsync` 在状态提交落盘之后调用
+`PruneUnreferencedVersions`（`ProgramUpdateStore.cs`），删除 `versions/` 下既非 `Current`、也非 `Previous`、
+`Pending`、`Trial` 的目录。安装根目录不在 `versions/` 之下，所以永不参与——它仍是最后回落的那一份。
+清理是尽力而为的：被扫描器、索引器或尚未退出的子进程占用的目录留到下一次提交，失败一律吞掉，绝不让启动失败；
+`versions/` 或某个版本目录是符号链接/目录联接时整棵不动。候选目录来自目录列举、按**名字**与状态比对，
+`keep` 集合用 `OrdinalIgnoreCase`——**不用任何状态值拼路径**，因此损坏或恶意的版本 id 无法操纵删除目标。
+`state.Versions`（防重放记录）与目录生命周期无关，保持不动。
+三条新用例覆盖"提交后清理无人引用的版本"、"四个状态槽各自保留"、"残留被占用时不阻断提交"；
+把调用去掉做对照，正好是 `the version no record names is gone` 一条变红。既有 52 项一并通过（合计 55）。
+⚠️ 存量安装已经积下的孤立目录要等**下一次成功更新**提交时才被收走（本机那份 6.17 GB 是手工清的）；
+一并完成了 [`ProgramUpdates.md`](ProgramUpdates.md) 里「不自动清理」那段的改写。
+
+已了结：4.9（**复用是"复制"而非"共享"**）——**2026-10-10 已修**。`TryReuseVerifiedAsync`
+（原 `TryCopyVerifiedAsync`，`ProgramUpdateStore.cs`）改为**先建硬链接、失败则复制**
+（`UpdateStorage.TryHardLink` 包 `CreateHardLinkW`，任何失败都返回 false 而不抛异常），
+两条路径落地后都对**目标文件**算一次 SHA-256 与签名清单比对——哈希仍然只承担一个职责：
+让一个本地损坏的文件只拖累它所在的那一个分片。真正保证发布物可信的是 `PrepareAsync` 在装配之后对
+**整棵树**跑的 `VerifyDirectoryAsync`，所以链接不可能把一个副本会拦下的字节带过发布闸门。
+判定复用哪些文件不变（仍由两份签名清单比 size + SHA-256 得出），因此**不需要任何"冻结层/资源"分类表**：
+被链接的集合自动等于"这次没变的那些文件"。
+语义锁写在 `UpdateStorage.RejectLink` 的文档注释里：**判据是 `FileAttributes.ReparsePoint`，硬链接不是
+reparse point，更新系统有意使用它；不要收紧成链接计数**——已更新过的安装按设计就持有共享文件，
+那条检查会让它们全部无法启动且无法远程修复。
+三条新用例：共享文件链接数为 2 而改动的文件为 1（用 `GetFileInformationByHandle` 读，共享与复制的大小
+摘要完全一样，只有链接数能区分）；持共享文件的版本仍通过 `ValidateInstalledAsync`（启动器真正跑的校验）
+且已链接文件能过 `RejectLink`，同时目录联接仍被拒绝（junction 无需提权即可造）；`TryHardLink` 的
+失败契约。把建链改成恒复制做对照，失败信息正是 `an unchanged file is one file with two names (links=1)`。
+合计 **58 项通过**。
+⚠️ **实机节省量还没实测**——套件只能证明链接确实建立、链接数为 2、共享的树仍能通过启动校验；
+逐字节重复量（本机 1,914 MB）是在改动前的三棵树上用只读脚本量出来的，下一次真实更新后才能对账。
+⚠️ 跨卷回退没有自动化用例（套件只有 C: 一个卷），回退是一条 `if`，由上面那条契约用例与"源被损坏"
+用例共同覆盖。一次性迁移**决定不做**，理由见 [`ProgramUpdateDiskReuse_20261010.md`](ProgramUpdateDiskReuse_20261010.md) §6.4。
 
 ## 5. 代码里的 TODO
 

@@ -41,6 +41,7 @@
 | [`ResourceUpdates.md`](ResourceUpdates.md) | 程序与地图资源更新 |
 | [`ResourceUpdateValidation.md`](ResourceUpdateValidation.md) | 资源更新系统验证记录（2026-09-09） |
 | [`ProgramShardIncrementalPlan.md`](ProgramShardIncrementalPlan.md) | 程序本体分片增量更新方案（已评审） |
+| [`ProgramUpdateDiskReuse_20261010.md`](ProgramUpdateDiskReuse_20261010.md) | **磁盘增量：把"复用"从复制改成硬链接**（方案已定，未实施）——三份完整快照的成因、程序 425 MB 冻结层 + 190 MB/版自有产物的实测拆分、被否决的原地替换与 git 两条路、新装玩家稳态约 1.45 GB |
 | [`MapRegionOnDemandHandoff.md`](MapRegionOnDemandHandoff.md) | 区域按需下载 / 删除 · 设计说明（续篇） |
 | [`MapRegionRefactor-Handoff.md`](MapRegionRefactor-Handoff.md) | 地图资源分区域重构 · 交接说明 |
 
