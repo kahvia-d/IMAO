@@ -15,6 +15,12 @@
     <AssemblyName>IMao-Launcher</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier><SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile><IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- The bundle carries a whole .NET runtime; deflating it takes 64.99 MB to 33.93 MB and a measured
+         54 ms of launch time, once per program start. It does not shrink the download: the program shards
+         are ZipArchive CompressionLevel.Optimal (tools/UpdatePublisher/Program.cs:455), so the shard ZIP
+         already deflates this payload - swapping a compressed launcher into the ui shard moved its ZIP
+         from 60.58 MB to 59.34 MB. This is a disk win, not a bandwidth one. -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- The launcher is what players open and pin, so it carries the same icon as the program. -->
     <ApplicationIcon>..\..\Assets\WindowIcon.ico</ApplicationIcon>

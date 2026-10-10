@@ -53,7 +53,10 @@
          少了它，PDB 记录里会留下构建机的绝对检出路径，而那条路径参与编译，会一路决定程序集的 MVID
          与单文件包里嵌套映像的确定性时间戳。结果是同一个提交在两台机器上构建出的桥接字节不同
          （2026-10-10 实测：本机 C:\Dcode\WWMAP-TOOLS 与云端 C:\a\IMAO\IMAO 各自留在了自己的产物里）。 -->
-    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectDirectory)\..\tools\KuroSyncBridge\KuroSyncBridge.csproj&quot; -c Release -r win-x64 -p:Platform=x64 --self-contained true -p:PublishSingleFile=true -o &quot;$(TargetDir).kuro-bridge&quot; -p:NuGetAudit=false -p:ContinuousIntegrationBuild=true" />
+    <!-- 单文件包自带一整套 .NET 运行时，deflate 它把 65.35 MB 变成 33.84 MB，代价是每次启动多约 54 ms。
+         它不缩小下载：程序分片按 ZipArchive CompressionLevel.Optimal 打包（tools/UpdatePublisher/Program.cs），
+         ZIP 本来就会压这份载荷——实测换进 ui 分片只从 60.58 MB 变成 59.34 MB。这是磁盘收益。 -->
+    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectDirectory)\..\tools\KuroSyncBridge\KuroSyncBridge.csproj&quot; -c Release -r win-x64 -p:Platform=x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o &quot;$(TargetDir).kuro-bridge&quot; -p:NuGetAudit=false -p:ContinuousIntegrationBuild=true" />
     <Copy SourceFiles="$(TargetDir).kuro-bridge\KuroSyncBridge.exe" DestinationFolder="$(TargetDir)" />
   </Target>
 
