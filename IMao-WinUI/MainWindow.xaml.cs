@@ -17,6 +17,9 @@ public sealed partial class MainWindow : WindowEx
 
     public MainWindow()
     {
+        // The window is built by a static initializer, so its construction can be the first thing that runs;
+        // this marker is what separates "died building the window" from "died before it" in startup.log.
+        StartupLog.Write("main-window-ctor");
         InitializeComponent();
         this.Activated += MainWindow_Activated;
         this.Closed += MainWindow_Closed;

@@ -53,6 +53,10 @@ public partial class App : Application
 
     public App()
     {
+        // Step markers, not decoration: this constructor runs before the window, before the health report
+        // and before anything can be shown, and its failures used to leave no trace at all. Written through
+        // StartupLog so that recording a step can never initialize App's own statics and become the failure.
+        StartupLog.Write("app-ctor-enter");
         InitializeComponent();
         Host = Microsoft.Extensions.Hosting.Host.
         CreateDefaultBuilder().
@@ -114,7 +118,7 @@ public partial class App : Application
         }).
         Build();
 
-        App.GetService<IAppNotificationService>().Initialize();
+        StartupLog.Write("app-host-ready");
 
         UnhandledException += App_UnhandledException;
     }
@@ -129,6 +133,9 @@ public partial class App : Application
 
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // The last marker before the first one that can be lost: everything above this line ran without
+        // recording anything, so its absence in startup.log is itself the diagnosis.
+        StartupLog.Write($"on-launched base={AppContext.BaseDirectory}");
         var installRoot = ProgramUpdateStore.FindInstallRoot(AppContext.BaseDirectory);
         var launcher = Path.Combine(installRoot, "IMao-Launcher.exe");
         if (File.Exists(launcher) && !ProgramLaunchSession.IsManaged)
@@ -173,6 +180,12 @@ public partial class App : Application
             MainWindow.Activate();
             return;
         }
+        // Optional scaffolding, and the last step that used to be able to kill the process: it ran in the
+        // App constructor, where its failure became a stowed exception before any window or log existed.
+        // It belongs here, with resources already up, and its own guard means a failure cannot reach the
+        // code below even if the service's internal one is ever removed.
+        try { GetService<IAppNotificationService>().Initialize(); }
+        catch (Exception error) { Trace("notification-init-failed " + error); }
         _ = GetService<MarkerGuideCoordinator>();
         var mapTools = GetService<MapToolsController>();
         var gamepad = GetService<GamepadInputService>();
@@ -225,7 +238,9 @@ public partial class App : Application
             await ProgramLaunchSession.ReportHealthyAsync(ResourceUpdateBootstrap.ReadBuildInfo().AppVersion, snapshots.Current.SnapshotId);
             updates.Refresh();
         }
-        catch (Exception error) { updates.ShowError(error); await CloseCleanlyAsync(); }
+        // The last silent path in startup. On the machine this was written for, nothing else had been
+        // recorded yet, so a failure here has to survive the process that hit it.
+        catch (Exception error) { Trace("program-health-failed " + error); updates.ShowError(error); await CloseCleanlyAsync(); }
     }
 
     private async Task CloseCleanlyAsync(bool skipUpdateWait = false)
@@ -256,14 +271,11 @@ public partial class App : Application
     /// Appends one line to the startup log. Startup work happens before the window is usable, so a slow step
     /// there is only diagnosable from a log; logging never throws into startup.
     /// </summary>
-    private static void Trace(string line)
-    {
-        try
-        {
-            string directory = Path.Combine(UserDataPaths.Root, "Logs");
-            Directory.CreateDirectory(directory);
-            File.AppendAllText(Path.Combine(directory, "startup.log"), $"{DateTimeOffset.UtcNow:O} {line}{Environment.NewLine}");
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
-    }
+    /// <remarks>
+    /// The writing itself lives in <see cref="StartupLog"/>, which depends on nothing else, so the steps that
+    /// run before this type is initialized can be recorded too. Calls through this method still initialize
+    /// <see cref="App"/> first - that is deliberate: the window field's initializer is a startup step, and
+    /// inside the resource-init try it is the one place a broken XAML tree is reported instead of silent.
+    /// </remarks>
+    private static void Trace(string line) => StartupLog.Write(line);
 }
