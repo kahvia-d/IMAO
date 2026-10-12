@@ -4,6 +4,15 @@
 `IMao/Assets`。这些文件于 2026-08-23 从本地解压包逐文件 SHA-256 校验后
 复制到仓库根目录的 `Assets/`，以匹配 C++ 核心在运行时使用的相对路径。
 
+> **这份清单是"v1.0.2 归档记录"，不是逐版本的载荷清单。** 它随包发布只为留档（包里叫
+> `Licenses/ReleaseAssets_v1.0.2.sha256` 与 `Upstream-ReleaseAssets-v1.0.2.md`），
+> **不参与任何校验**：每次发布的完整性以签名清单里的 `files`（逐文件大小 + SHA-256）为准，
+> 由 `ProgramPackageValidation` 校验。因此清单里的条目与今天的 `Assets/` **本来就允许不一致**：
+> `Assets/FeaturesDatas/Map_features.yml` 在"每个地区自带特征"之后已退役并归档到
+> `archive/retired-base-features/`，`WindowIcon.ico` 也在 2026-10-10 换成了单图标版本。
+> 下面那段校验命令只用来核对**这份归档本身**，不能用它判断某个安装是否缺文件。
+> 2026-10-12 一位玩家的机器上就有人据此报了"打包遗漏"，其实两处都是预期结果。
+
 ## 已归档内容
 
 | 目录 | 用途 | 文件数 | 大小 |
