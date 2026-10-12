@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "highestAllocatedSequence": 45,
   "active": {
-    "status": "awaiting-signature",
+    "status": "publishing",
     "id": "4132f5d60a32406c9c5a435f2de045b2",
     "previousChannelSequence": 44,
     "previousStableSha256": "cda0340dc46b8e67702371b0ca416925c615c33064fec6764fbc3bc15070cb3b",
@@ -16,7 +16,9 @@
     "buildRunId": 38226327264,
     "requestId": "d270eca7269a864d604a8edd2f99e25d2c9135217062a3af12e5c9b0fd9af8bc",
     "requestArtifactId": 11738895984,
-    "requestArtifactDigest": "cacefe0e78525746efe2e36c6adea708072c07ef60bdeacdb52806d2b4f3bbd5"
+    "requestArtifactDigest": "cacefe0e78525746efe2e36c6adea708072c07ef60bdeacdb52806d2b4f3bbd5",
+    "responseSha256": "659d3e6b12198c2efbecec16468dab6c70b73746f3fe877de7271bca5183be05",
+    "response": "{\r\n  \"formatVersion\": 1,\r\n  \"requestId\": \"d270eca7269a864d604a8edd2f99e25d2c9135217062a3af12e5c9b0fd9af8bc\",\r\n  \"keyId\": \"wwmap-production-2026\",\r\n  \"catalogSha256\": \"d3304e14d76444b2e4183f0557d1bf2ead2b0f253e7015f3f3ee3d23128aba23\",\r\n  \"approvalSha256\": \"9f73910cbfb60d84ad623d8a9d69e416c9395d0284dfdb0c26fc423529a660a9\",\r\n  \"catalogSignature\": \"GdtCyGASXn0vD6cM5iZKhNsG01bCfdI/\\u002BMlUA66cDx5aTS5CfIIFVEYFAmf/ZhVMBAo9qQPdAVaoFxXXEKm4Xg==\",\r\n  \"approvalSignature\": \"T1DG7MhF3ldLU0ChmqJnZYdPVr75d4cz7bFVFtJJ9LzsL5Va6AYrdEJWhUHhz/iDikfNtfEotwlImgupxKE8pA==\"\r\n}"
   },
   "completed": [
     {
