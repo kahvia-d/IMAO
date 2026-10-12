@@ -63,7 +63,10 @@ internal static class ResourceUpdateBootstrap
             bundled = new() { SnapshotId = "bundled-" + info.AppVersion, BaselineId = info.BaselineId,
                 BaselineRoot = assets, MapDataRoot = Path.Combine(assets, "KuroMap"), Bundled = true, Packages = packages };
         }
-        return new ResourceSnapshotService(Path.Combine(UserDataPaths.Root, "ResourceUpdates"), bundled, info.AppVersion, PreflightAsync, Path.Combine(AppContext.BaseDirectory, "IMao-CoreHost.exe"));
+        // The user-data root is named as well as the update root, so a link planted at %LOCALAPPDATA%\IMao-WinUI
+        // itself is refused instead of quietly relocating this program's whole data tree. It is the highest
+        // directory this program creates; %LOCALAPPDATA% above it belongs to Windows, not to this program.
+        return new ResourceSnapshotService(Path.Combine(UserDataPaths.Root, "ResourceUpdates"), bundled, info.AppVersion, PreflightAsync, Path.Combine(AppContext.BaseDirectory, "IMao-CoreHost.exe"), UserDataPaths.Root);
     }
 
     public static UpdateService CreateUpdater(ResourceSnapshotService snapshots, MirrorChyanCredentialVault credentials)

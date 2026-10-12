@@ -1417,6 +1417,28 @@ await Test("extraction refuses a linked destination and a linked subdirectory in
     }
     finally { try { Directory.Delete(assets); } catch (IOException) { } }
 });
+await Test("a caller that names no boundary keeps the unbounded check it always had", async () =>
+{
+    // The publisher tooling calls the same extraction without naming a boundary, and its inputs must stay
+    // exactly as strict as they were. This is the control that stops "the boundary exists" from quietly
+    // becoming "nothing above the destination is checked" for a caller that never asked for a boundary.
+    var real = Path.Combine(output, "unbounded-real"); Directory.CreateDirectory(real);
+    var link = Path.Combine(output, "unbounded-link");
+    if (!MakeJunction(link, real)) throw new Exception("this suite needs a junction to lock both halves of this contract");
+    var destination = Path.Combine(link, "destination"); Directory.CreateDirectory(destination);
+    var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var shard = pkg.Shards[0];
+    var archive = Path.Combine(destination, "shard.zip"); File.Copy(served[shard.Url], archive);
+    // (a) With a boundary that contains the destination, the ancestor above it is the environment's business.
+    var bounded = Path.Combine(destination, "with-boundary");
+    await ProgramPackageValidation.ExtractShardAsync(archive, bounded, pkg, shard.Id, default, destination);
+    Assert(Directory.Exists(bounded) && File.Exists(Path.Combine(bounded, shard.Files[0])), "a named boundary makes the ancestor above it irrelevant");
+    // (b) The same extraction with no boundary still refuses that ancestor, and refuses it before creating anything.
+    var unbounded = Path.Combine(destination, "unbounded");
+    await Reject(() => ProgramPackageValidation.ExtractShardAsync(archive, unbounded, pkg, shard.Id));
+    Assert(!Directory.Exists(unbounded), "the unbounded check refuses before the destination is created");
+});
 File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new { passed = passed.Count, checks = passed }, UpdateJson.Options));
 Console.WriteLine($"Program update checks: {passed.Count} passed.");
 return 0;

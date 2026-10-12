@@ -25,9 +25,21 @@ public sealed class ResourceSnapshotService
     private string _selectedStoredPath = "";
     private bool _initialized;
 
-    public ResourceSnapshotService(string root, ResourceSnapshot bundledSnapshot, string appVersion, Func<string, CancellationToken, Task>? preflight = null, string? coreHostPath = null)
+    /// <param name="ownedRoot">
+    /// The highest directory this program created and owns, one level above <paramref name="root"/>: the caller
+    /// passes its user-data root (<c>%LOCALAPPDATA%\IMao-WinUI</c>). It is the boundary of every link check made
+    /// on the update root, so a link planted at <c>IMao-WinUI</c> itself is still refused instead of relocating
+    /// this program's whole data tree. Omitted, the boundary is <paramref name="root"/> itself.
+    /// </param>
+    public ResourceSnapshotService(string root, ResourceSnapshot bundledSnapshot, string appVersion, Func<string, CancellationToken, Task>? preflight = null, string? coreHostPath = null, string? ownedRoot = null)
     {
         Root = Path.GetFullPath(root);
+        // Claiming a directory this program did not create would be claiming the environment, so the caller
+        // names one and it is checked to contain the update root before it is ever used as a boundary.
+        UpdateRootBoundary = string.IsNullOrWhiteSpace(ownedRoot) ? Root : Path.GetFullPath(ownedRoot);
+        if (!Root.Equals(UpdateRootBoundary, StringComparison.OrdinalIgnoreCase) &&
+            !Root.StartsWith(UpdateRootBoundary.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("受管根目录必须包含更新根目录。", nameof(ownedRoot));
         _appVersion = UpdateSignature.RequireVersion(appVersion);
         _bundled = bundledSnapshot with { Bundled = true };
         _preflight = preflight;
@@ -39,6 +51,13 @@ public sealed class ResourceSnapshotService
     }
 
     public string Root { get; }
+    /// <summary>
+    /// The boundary of every link check made on <see cref="Root"/>: the highest directory this program created
+    /// and owns. Above it sit the player's profile and, under Proton, the compatibility layer's path mapping,
+    /// neither of which this program can vouch for and neither of which is a decision input. See
+    /// <see cref="UpdateStorage.RejectLink(string, string)"/>.
+    /// </summary>
+    internal string UpdateRootBoundary { get; }
     public ResourceSnapshot Bundled => _bundled;
     /// <summary>The signed snapshot with every package it offers, whether or not the player selected it.</summary>
     public ResourceSnapshot Current { get; private set; }
@@ -70,10 +89,12 @@ public sealed class ResourceSnapshotService
     public async Task InitializeAsync(CancellationToken ct = default)
     {
         if (_initialized) return;
+        // Checked before the lock is taken, because taking the lock is what creates the update root: a link
+        // here must be refused rather than followed, with nothing created on the far side of it.
+        UpdateStorage.RejectLink(Root, UpdateRootBoundary);
         await using var gate = await UpdateStorage.LockAsync(Root, ct).ConfigureAwait(false);
         if (_initialized) return;
         _attemptToken = null;
-        UpdateStorage.RejectLink(Root, Root);
         // Scratch a transaction did not get to clean up after itself. Holding the lock is what makes this the
         // safe moment to remove it: no other transaction can be running, so everything under staging is leftover.
         SweepStaleStaging();
@@ -200,7 +221,7 @@ public sealed class ResourceSnapshotService
         try
         {
             if (!Directory.Exists(snapshots)) return;
-            UpdateStorage.RejectLink(snapshots, Root);
+            UpdateStorage.RejectLink(snapshots, UpdateRootBoundary);
             var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var reference in new[] { _state.ActivePath, _state.PreviousPath, _state.PendingPath, _state.Attempt?.SnapshotPath })
                 if (!string.IsNullOrEmpty(reference)) keep.Add(Path.GetFileName(reference!));
@@ -214,7 +235,7 @@ public sealed class ResourceSnapshotService
             {
                 try
                 {
-                    UpdateStorage.RejectLink(path, Root);
+                    UpdateStorage.RejectLink(path, UpdateRootBoundary);
                     File.Delete(path);
                 }
                 catch (IOException) { }              // Held by a scanner or a reader that is still closing.
@@ -252,14 +273,14 @@ public sealed class ResourceSnapshotService
             if (!Directory.Exists(staging)) return;
             // A staging/ that is itself a link points at a directory this installation does not own, and the
             // enumeration below would list that directory's contents as things to delete.
-            UpdateStorage.RejectLink(staging, Root);
+            UpdateStorage.RejectLink(staging, UpdateRootBoundary);
             foreach (var entry in Directory.EnumerateFileSystemEntries(staging))
             {
                 try
                 {
                     // Also refuses a scratch directory that is itself a link, where a recursive delete would
                     // empty whatever it points at.
-                    UpdateStorage.RejectLink(entry, Root);
+                    UpdateStorage.RejectLink(entry, UpdateRootBoundary);
                     if (Directory.Exists(entry)) Directory.Delete(entry, true);
                     else File.Delete(entry);
                 }
@@ -640,7 +661,7 @@ public sealed class ResourceSnapshotService
     {
         var full = Path.GetFullPath(directory);
         var packagesRoot = Path.GetFullPath(Path.Combine(Root, "packages")) + Path.DirectorySeparatorChar;
-        if (full.StartsWith(packagesRoot, StringComparison.OrdinalIgnoreCase)) return Root;
+        if (full.StartsWith(packagesRoot, StringComparison.OrdinalIgnoreCase)) return UpdateRootBoundary;
         var assets = _bundled.BaselineRoot;
         if (!string.IsNullOrEmpty(assets))
         {
@@ -655,7 +676,7 @@ public sealed class ResourceSnapshotService
     {
         var snapshotRoot = Path.GetFullPath(Path.Combine(Root, "snapshots")) + Path.DirectorySeparatorChar;
         if (!Path.GetFullPath(path).StartsWith(snapshotRoot, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("资源快照路径超出安装目录。");
-        UpdateStorage.RejectLink(path, Root);
+        UpdateStorage.RejectLink(path, UpdateRootBoundary);
         if (!File.Exists(path)) throw new InvalidDataException("资源快照文件缺失。");
         var snapshot = UpdateStorage.Read<ResourceSnapshot>(path);
         if (snapshot.BaselineId != _bundled.BaselineId || string.IsNullOrEmpty(snapshot.SnapshotId)) throw new InvalidDataException("资源快照与当前程序不兼容。");

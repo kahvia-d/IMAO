@@ -224,18 +224,24 @@ package contents.`），`Program update checks: 58 passed.` 与 `Resource update
 | 5.1 | `IMao-WinUI/AppNotificationActivationHandler.cs`、`Services/AppNotificationService.cs`、`Contracts/Services/IAppNotificationService.cs`（**三个文件均已删除**） | WinUI 模板遗留的"处理通知激活"占位（命中会弹 TODO 对话框） | ✅ **已完成（`1517c5c`）**：2026-10-12 一位玩家**所有版本都打不开**——`App` 构造函数里那行未加保护的 `AppNotificationManager.Default` 在他那台没有 Windows App Runtime Main/Singleton 包的机器上抛 `E_ACCESSDENIED`，变成 stowed exception（`0xC000027B`）在能写任何日志之前杀死进程。整条脚手架已删除，`App.xaml.cs` 留了注释说明为什么**不**注册通知（见 MEMORY K74） |
 | 5.2 | `IMao-WinUI/ShellPage.xaml.cs:16,36` | 模板文案：导航标题/图标、标题栏图标 | 标题栏图标运行时已由 `MainWindow.xaml.cs:23` 正确设置；清掉过期注释即可 |
 
-## 5b. Steam Deck / Proton（2026-10-12 新增）
+## 5b. Steam Deck / Proton（2026-10-12 新增，2026-10-12 晚修订）
 
 玩家反馈在 Steam Deck 上出现 `资源目录不能包含符号链接或目录联接：Z:\home`。**路径这一条已修**（受管根目录
-边界，见 `SteamDeck_zh-Hans.md`；自动化测试 65 + 124 项通过，并做了"把边界关掉就变红"的对照实验）。
-**下面两条是启动级阻塞，属于产品决策，本次没有动**：
+边界，见 `SteamDeck_zh-Hans.md`；自动化测试 66 + 126 项通过，并做了"把边界关掉就变红"的对照实验）。
+**下面的阻塞项属于产品决策，本次没有动。**
+
+⚠️ **证据强度**：5b.1 是**代码事实**；5b.2 是**导入表取证 + 合理推断**（Wine 是否真跑不通那些私有组件，
+**必须实机确认**）；5b.3/5b.4 是**待实机**。不要把 5b.2 当作已证实的运行结果。
 
 | # | 优先级 | 未完成项 | 出处 | 下一步动作 |
 |---|---|---|---|---|
-| 5b.1 | 高（阻塞） | 清单要求管理员提升：`IMao-WinUI/app.manifest:20` 是 `requireAdministrator`，Steam / Gaming Mode 不会弹 UAC，Wine 也无法在非交互会话里提升 | `SteamDeck_zh-Hans.md` §0 | 先确认是否真的必须提升（低层键鼠钩子、跨进程访问是否只在提升下可用）；能降就降到 `asInvoker` |
-| 5b.2 | 高（阻塞） | WinUI 3 / Windows App SDK 自包含运行时依赖 Windows 私有合成器组件（`Microsoft.UI.Xaml.dll` → `CoreMessagingXP.dll`、`Microsoft.Internal.FrameworkUdk.dll`、`dcomp.dll` → `DwmSceneI.dll` / `dwmcorei.dll`），Wine 无对应实现 | `SteamDeck_zh-Hans.md` §0；导入表取证 | 真机先跑 `IMao-CoreHost.exe` 与 `IMaoCaptureAssistant.exe` 两步判定原生核与捕获；**若捕获黑屏，则不必讨论 UI 外壳重写** |
-| 5b.3 | 中 | XInput 走 Wine 的 `xinput1_4` 回退链才有机会；`GetForegroundWindow() == gameHwnd` 与 `AttachThreadInput` 抢前台在 gamescope 下的行为未知 | `SteamDeck_zh-Hans.md` §3、§5 | 需要实机日志（`Logs/gamepad-*.jsonl` 的 `input-state` 行同时有 `foreground=` 与 `gameHwnd=`）；**在有实机证据之前不要放宽焦点判定** |
-| 5b.4 | 低 | SDL3 的原生 PS 路径（hidraw 原始 HID）在 Proton 下不可用；若 Steam Input 模板把内置手柄呈现为 DualSense 类型 5/6，SDL 会另外打开同一只物理手柄 | `IMao-WinUI/Services/ControllerDeviceSource.cs` | 目前不会重复触发动作（两条路径汇入同一个状态机），但提示布局可能错配；考虑"XInput 已接管同一只设备时不再打开 SDL" |
+| 5b.0 | 高 | **实机入口尚未走**：整条验证链的第一步不需要 UI（`IMao-CoreHost.exe --check-resources <Assets>`） | `SteamDeck_zh-Hans.md` §3 | 先在设备上跑第 0 / 1 步拿到证据，再决定后面要不要做 |
+| 5b.1 | 高（阻塞） | **代码事实**：清单要求管理员提升——`IMao-WinUI/app.manifest:20` 是 `requireAdministrator`，Steam / Gaming Mode 不会弹 UAC | `SteamDeck_zh-Hans.md` §0 | 先确认是否真的必须提升（低层键鼠钩子、跨进程访问是否只在提升下可用）；能降就降到 `asInvoker` |
+| 5b.2 | 高（疑似阻塞） | **推断（导入表取证）**：WinUI 3 / Windows App SDK 自包含运行时依赖 Windows 私有合成器组件（`Microsoft.UI.Xaml.dll` → `CoreMessagingXP.dll`、`Microsoft.Internal.FrameworkUdk.dll`、`dcomp.dll` → `DwmSceneI.dll` / `dwmcorei.dll`）。**Wine 是否真的实现不了，未验证** | `SteamDeck_zh-Hans.md` §7 | 用 5b.0 的入口先判定原生核与捕获；**若捕获黑屏，则不必讨论 UI 外壳重写** |
+| 5b.3 | 中 | XInput 走 Wine 的 `xinput1_4` 回退链才有机会；`GetForegroundWindow() == gameHwnd` 与 `AttachThreadInput` 抢前台在 gamescope 下的行为未知 | `SteamDeck_zh-Hans.md` §5 | 按 §5 的五步顺序实机验证，每步收指定日志；**在有实机证据之前不要放宽焦点判定** |
+| 5b.4 | 低 | **推断**：SDL3 的原生 PS 路径（hidraw 原始 HID）在 Proton 下不可用；若 Steam Input 模板把内置手柄呈现为 DualSense 类型 5/6，SDL 会另外打开同一只物理手柄 | `IMao-WinUI/Services/ControllerDeviceSource.cs:84` | 目前不会重复触发动作（两条路径汇入同一个状态机），但提示布局可能错配；**先实机确认模板呈现的是哪一型**，再决定要不要加"XInput 已接管同一只设备时不再打开 SDL" |
+| 5b.5 | 中 | **IMAO 与游戏必须同一 Wine 会话**，而 Steam 默认给每个非 Steam 快捷方式单独建前缀；`SteamDeck_zh-Hans.md` §4 的具体做法（`STEAM_COMPAT_DATA_PATH` 启动选项、直接跑 proton）**未在设备上核对过**，仓库对这些选项名零命中 | `SteamDeck_zh-Hans.md` §4 | 用 §4.4 第 0 步（`/proc/<pid>/environ` 比较 `WINEPREFIX`）先判定，再把可用写法回填文档；**做不到同前缀就没有继续验证的意义** |
+| 5b.6 | 低 | 仓库里**没有任何**能 dump"已枚举窗口列表"的诊断：`IMaoCaptureAssistant` 只回答找没找到；`IMaoOverlayPresentProbe --mode=hittest` 会打印游戏 HWND 但不在发行包、且要管理员 PowerShell | `SteamDeck_zh-Hans.md` §4.4 | 若实机需要区分"窗口不在同一桌面"与"窗口不可用"，再考虑加一个最小窗口枚举开关；**先确认真机确实需要它** |
 
 ## 6. 环境与流程（提示，不是必须做）
 

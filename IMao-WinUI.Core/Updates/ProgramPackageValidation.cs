@@ -211,10 +211,10 @@ public static class ProgramPackageValidation
     /// file under a signed path is still refused by the record check instead of being overwritten.
     /// </summary>
     /// <param name="ownedRoot">
-    /// The boundary of every link check, normally the staging root this destination sits in.
-    /// <see cref="MirrorChyanProgramSource"/> passes the destination itself, which is narrower and therefore
-    /// stricter: that transport writes into an already-created staging directory whose own ancestors the
-    /// program update store has already checked with its own boundary.
+    /// The boundary of every link check, normally the staging root this destination sits in; null keeps the
+    /// unbounded walk to the volume root, which is what the publisher tooling has always had. It is deliberately
+    /// *not* defaulted to the destination: that would quietly narrow the check for a caller that never named a
+    /// boundary, and the publisher's own inputs must stay exactly as strict as they were.
     /// </param>
     internal static async Task ExtractEntriesAsync(string destination, IReadOnlyList<ResourceFile> files, Dictionary<string, ZipArchiveEntry> entries, CancellationToken ct, string? ownedRoot = null)
     {
@@ -224,11 +224,11 @@ public static class ProgramPackageValidation
             var target = UpdateStorage.SafeChild(destination, file.Path);
             // Checked before the directory is created, not after: an entry that lands under a linked
             // subdirectory must be refused without creating anything on the other side of that link.
-            UpdateStorage.RejectLink(target, ownedRoot ?? destination);
+            UpdateStorage.RejectLink(target, ownedRoot);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             if (File.Exists(target))
             {
-                await UpdateStorage.VerifyFileAsync(target, file, ct, ownedRoot ?? destination);
+                await UpdateStorage.VerifyFileAsync(target, file, ct, ownedRoot);
                 continue;
             }
             await using (var input = entries[file.Path].Open())
@@ -244,7 +244,7 @@ public static class ProgramPackageValidation
                     await output.WriteAsync(buffer.AsMemory(0, count), ct);
                 }
             }
-            await UpdateStorage.VerifyFileAsync(target, file, ct, ownedRoot ?? destination);
+            await UpdateStorage.VerifyFileAsync(target, file, ct, ownedRoot);
         }
     }
 

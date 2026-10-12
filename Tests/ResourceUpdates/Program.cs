@@ -1814,6 +1814,36 @@ await Test("a boundary that does not contain the path is refused rather than tru
     UpdateStorage.RejectLink(inside, f.Root);
 });
 
+await Test("a link at the highest directory this program owns is refused, not relocated", async () =>
+{
+    // The update root is one level below the user-data root, and the user-data root is the highest directory
+    // this program creates. A link planted there would relocate the whole data tree - settings, sync
+    // credentials, descriptor cache - so it is inside the boundary, not above it.
+    using var seed = New();
+    var real = Path.Combine(suiteRoot, "userdata-real"); Directory.CreateDirectory(real);
+    var link = Path.Combine(suiteRoot, "userdata-link");
+    if (!Junction.Create(link, real)) throw new Exception("this suite needs a junction at the user-data root");
+    // Built the way production builds it: the constructor creates nothing, so the first thing that would touch
+    // the disk is the check itself, and a refusal must leave the far side untouched.
+    var service = new ResourceSnapshotService(Path.Combine(link, "ResourceUpdates"), seed.Bundled, seed.Build.AppVersion,
+        (_, _) => Task.CompletedTask, null, link);
+    var message = await CaptureAsync(() => service.InitializeAsync());
+    True(message.Contains("符号链接") || message.Contains("目录联接"), "a link at the user-data root must be refused: " + message);
+    True(message.Contains(link, StringComparison.OrdinalIgnoreCase), "the refusal must name the directory this program manages: " + message);
+    True(!Directory.Exists(Path.Combine(real, "ResourceUpdates")), "nothing may be created through the link");
+    // The same shape without the link works, so this refuses the link and not the layout.
+    var plain = Path.Combine(suiteRoot, "plain-userdata");
+    using var ok = new Fixture(Path.Combine(plain, "ResourceUpdates"), plain);
+    await ok.Initialize();
+    Equal("bundled", ok.Snapshots.Current.SnapshotId);
+});
+await Test("a boundary that does not contain the update root is refused at construction", async () =>
+{
+    using var f = New();
+    Throws<ArgumentException>(() => new ResourceSnapshotService(f.Root, f.Bundled, f.Build.AppVersion, (_, _) => Task.CompletedTask,
+        null, Path.Combine(suiteRoot, "somewhere-else")));
+});
+
 await File.WriteAllTextAsync(Path.Combine(output, "results.json"), JsonSerializer.Serialize(new { passed = passed.Count, failed = failed.Count, checks = passed, failures = failed, evidenceDirectory = suiteRoot }, UpdateJson.Options));
 Console.WriteLine($"Resource update checks: {passed.Count} passed, {failed.Count} failed. Evidence: {suiteRoot}");
 if (failed.Count > 0) Environment.ExitCode = 1;
@@ -1929,6 +1959,12 @@ sealed class Fixture : IDisposable
     private readonly ECDsa _publishedSigner = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     private readonly HttpClient _http;
     public string Root { get; }
+    /// <summary>
+    /// The highest directory this fixture's program owns, one level above <see cref="Root"/> by default equals
+    /// it. A fixture that wants the production layout passes the parent, which is what a link at the
+    /// user-data root is refused against.
+    /// </summary>
+    public string OwnedRoot { get; }
     public BuildInfo Build { get; } = new() { AppVersion = "2026.9.9.1", BaselineId = "test-baseline" };
     public ResourceSnapshot Bundled { get; set; }
     public TrustedUpdateKey Key { get; }
@@ -1943,15 +1979,15 @@ sealed class Fixture : IDisposable
     public int PreflightCalls { get; private set; }
     /// <summary>Exactly what the native preflight was handed, so a test can inspect what the host would load.</summary>
     public ResourceSnapshot? LastPreflightSnapshot { get; private set; }
-    public Fixture(string root)
+    public Fixture(string root, string? ownedRoot = null)
     {
-        Root = root; Directory.CreateDirectory(root); _http = new HttpClient(Network);
+        Root = root; OwnedRoot = ownedRoot ?? root; Directory.CreateDirectory(root); _http = new HttpClient(Network);
         Key = new TrustedUpdateKey { KeyId = "test-only", TestOnly = true, PublicKey = Convert.ToBase64String(_signer.ExportSubjectPublicKeyInfo()) };
         PublishedKey = new TrustedUpdateKey { KeyId = "published-test", PublicKey = Convert.ToBase64String(_publishedSigner.ExportSubjectPublicKeyInfo()) };
         Bundled = new ResourceSnapshot { SnapshotId = "bundled", BaselineId = Build.BaselineId, BaselineRoot = Path.Combine(root, "baseline"), MapDataRoot = Path.Combine(root, "baseline/data"), Bundled = true };
     }
     public async Task Initialize() { Snapshots = NewSnapshots(); await Snapshots.InitializeAsync(); Updates = NewUpdates(Snapshots); }
-    public ResourceSnapshotService NewSnapshots(string? appVersion = null) => new(Root, Bundled, appVersion ?? Build.AppVersion, (path, ct) => { ct.ThrowIfCancellationRequested(); PreflightCalls++; LastPreflightSnapshot = JsonSerializer.Deserialize<ResourceSnapshot>(File.ReadAllBytes(path), UpdateJson.Options); if (PreflightFails) throw new InvalidDataException("Injected preflight failure."); return Task.CompletedTask; });
+    public ResourceSnapshotService NewSnapshots(string? appVersion = null) => new(Root, Bundled, appVersion ?? Build.AppVersion, (path, ct) => { ct.ThrowIfCancellationRequested(); PreflightCalls++; LastPreflightSnapshot = JsonSerializer.Deserialize<ResourceSnapshot>(File.ReadAllBytes(path), UpdateJson.Options); if (PreflightFails) throw new InvalidDataException("Injected preflight failure."); return Task.CompletedTask; }, null, OwnedRoot);
     /// <summary>One release offering the mandatory map-data package plus three independent region packs.</summary>
     public UpdateCatalog RegionCatalog(long sequence = 2)
     {

@@ -894,7 +894,7 @@ public sealed class UpdateService : IDisposable
 
     private async Task InstallReleaseAsync(ResourceRelease release, Dictionary<string, ZipArchiveEntry>? offline, IProgress<UpdateProgress>? progress, CancellationToken ct, HashSet<string>? only = null, HashSet<string>? tolerating = null)
     {
-        UpdateStorage.RejectLink(_snapshots.Root, _snapshots.Root);
+        UpdateStorage.RejectLink(_snapshots.Root, _snapshots.UpdateRootBoundary);
         // A per-region install touches only the selected packages. A package that is not part of this
         // request is left exactly as it is, including one whose downloaded copy the player removed.
         var touched = only is null ? release.Packages : release.Packages.Where(p => only.Contains(p.Id)).ToList();
@@ -923,7 +923,7 @@ public sealed class UpdateService : IDisposable
         }
         var work = Path.Combine(_snapshots.Root, "staging", Guid.NewGuid().ToString("N"));
         // Before the directory exists, so a staging root that is itself a link is refused rather than followed.
-        UpdateStorage.RejectLink(work, _snapshots.Root);
+        UpdateStorage.RejectLink(work, _snapshots.UpdateRootBoundary);
         Directory.CreateDirectory(work);
         long completed = 0;
         var total = needed.Sum(p => p.Size);
@@ -991,7 +991,7 @@ public sealed class UpdateService : IDisposable
         finally
         {
             // Delete only this transaction's generated scratch files. Installed packages are immutable and retained.
-            try { if (Directory.Exists(work)) { UpdateStorage.RejectLink(work, _snapshots.Root); Directory.Delete(work, true); } }
+            try { if (Directory.Exists(work)) { UpdateStorage.RejectLink(work, _snapshots.UpdateRootBoundary); Directory.Delete(work, true); } }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }
