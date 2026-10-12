@@ -73,7 +73,7 @@ public sealed class ResourceSnapshotService
         await using var gate = await UpdateStorage.LockAsync(Root, ct).ConfigureAwait(false);
         if (_initialized) return;
         _attemptToken = null;
-        UpdateStorage.RejectLink(Root);
+        UpdateStorage.RejectLink(Root, Root);
         // Scratch a transaction did not get to clean up after itself. Holding the lock is what makes this the
         // safe moment to remove it: no other transaction can be running, so everything under staging is leftover.
         SweepStaleStaging();
@@ -200,7 +200,7 @@ public sealed class ResourceSnapshotService
         try
         {
             if (!Directory.Exists(snapshots)) return;
-            UpdateStorage.RejectLink(snapshots);
+            UpdateStorage.RejectLink(snapshots, Root);
             var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var reference in new[] { _state.ActivePath, _state.PreviousPath, _state.PendingPath, _state.Attempt?.SnapshotPath })
                 if (!string.IsNullOrEmpty(reference)) keep.Add(Path.GetFileName(reference!));
@@ -214,7 +214,7 @@ public sealed class ResourceSnapshotService
             {
                 try
                 {
-                    UpdateStorage.RejectLink(path);
+                    UpdateStorage.RejectLink(path, Root);
                     File.Delete(path);
                 }
                 catch (IOException) { }              // Held by a scanner or a reader that is still closing.
@@ -252,14 +252,14 @@ public sealed class ResourceSnapshotService
             if (!Directory.Exists(staging)) return;
             // A staging/ that is itself a link points at a directory this installation does not own, and the
             // enumeration below would list that directory's contents as things to delete.
-            UpdateStorage.RejectLink(staging);
+            UpdateStorage.RejectLink(staging, Root);
             foreach (var entry in Directory.EnumerateFileSystemEntries(staging))
             {
                 try
                 {
                     // Also refuses a scratch directory that is itself a link, where a recursive delete would
                     // empty whatever it points at.
-                    UpdateStorage.RejectLink(entry);
+                    UpdateStorage.RejectLink(entry, Root);
                     if (Directory.Exists(entry)) Directory.Delete(entry, true);
                     else File.Delete(entry);
                 }
@@ -622,11 +622,40 @@ public sealed class ResourceSnapshotService
         JsonSerializer.SerializeToUtf8Bytes(
             right.Packages.Select(p => p with { Directory = "" }).OrderBy(p => p.Id, StringComparer.Ordinal).ToList(), UpdateJson.Options));
 
+    /// <summary>
+    /// The root this service owns for a package copy, and therefore the boundary of every link check on it.
+    /// </summary>
+    /// <remarks>
+    /// A resource package has exactly two legal homes. A downloaded copy lives under this service's own update
+    /// root; a copy the program ships lives inside the program's asset directory. Both are directories this
+    /// program placed, and neither is the environment above them - which is what a link check that walked to
+    /// the volume root used to compare against, and why an installation reached through a compatibility layer's
+    /// path mapping was refused for a component it did not own (see <see cref="UpdateStorage.RejectLink(string, string)"/>).
+    ///
+    /// The last line is unreachable for a real snapshot, because the caller has already refused a directory that
+    /// is in neither home. It answers with the package directory itself rather than with the volume root: an
+    /// unverifiable location must narrow the check, never widen it.
+    /// </remarks>
+    internal string OwnedRootFor(string directory)
+    {
+        var full = Path.GetFullPath(directory);
+        var packagesRoot = Path.GetFullPath(Path.Combine(Root, "packages")) + Path.DirectorySeparatorChar;
+        if (full.StartsWith(packagesRoot, StringComparison.OrdinalIgnoreCase)) return Root;
+        var assets = _bundled.BaselineRoot;
+        if (!string.IsNullOrEmpty(assets))
+        {
+            var assetsRoot = Path.GetFullPath(assets);
+            if (full.Equals(assetsRoot, StringComparison.OrdinalIgnoreCase) ||
+                full.StartsWith(assetsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return assetsRoot;
+        }
+        return full;
+    }
+
     private async Task<ResourceSnapshot> ReadAndValidateAsync(string path, CancellationToken ct)
     {
         var snapshotRoot = Path.GetFullPath(Path.Combine(Root, "snapshots")) + Path.DirectorySeparatorChar;
         if (!Path.GetFullPath(path).StartsWith(snapshotRoot, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("资源快照路径超出安装目录。");
-        UpdateStorage.RejectLink(path);
+        UpdateStorage.RejectLink(path, Root);
         if (!File.Exists(path)) throw new InvalidDataException("资源快照文件缺失。");
         var snapshot = UpdateStorage.Read<ResourceSnapshot>(path);
         if (snapshot.BaselineId != _bundled.BaselineId || string.IsNullOrEmpty(snapshot.SnapshotId)) throw new InvalidDataException("资源快照与当前程序不兼容。");
@@ -664,7 +693,7 @@ public sealed class ResourceSnapshotService
             var directory = Path.GetFullPath(package.Directory);
             var bundledPackage = FindBundledPackage(package);
             if (!directory.StartsWith(packagesRoot, StringComparison.OrdinalIgnoreCase) && (bundledPackage is null || directory != Path.GetFullPath(bundledPackage.Directory))) throw new InvalidDataException("资源包路径超出安装目录。");
-            await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct).ConfigureAwait(false);
+            await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct, OwnedRootFor(directory)).ConfigureAwait(false);
         }
         if (runtime.MapDataRoot != runtime.Packages.Single(p => p.Kind == "map-data").Directory) throw new InvalidDataException("地图数据目录与资源快照不一致。");
         // The icon package is optional: when the root is empty the icons stay in the map-data

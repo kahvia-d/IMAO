@@ -101,16 +101,21 @@ public static class ProgramPackageValidation
         if (assigned.Count != paths.Count) throw new InvalidDataException("程序分片没有覆盖完整的程序文件清单。");
     }
 
-    public static async Task ExtractAsync(string archive, string destination, ProgramPackage package, CancellationToken ct = default)
+    /// <param name="ownedRoot">
+    /// The directory the caller owns, and the boundary of every link check below it. See
+    /// <see cref="UpdateStorage.RejectLink(string, string)"/> for why the walk stops there; a caller that does
+    /// not name one keeps the older, unbounded check.
+    /// </param>
+    public static async Task ExtractAsync(string archive, string destination, ProgramPackage package, CancellationToken ct = default, string? ownedRoot = null)
     {
         Validate(package);
-        await UpdateStorage.VerifyFileAsync(archive, new ResourceFile { Path = "program.zip", Size = package.Size, Sha256 = package.Sha256 }, ct);
+        await UpdateStorage.VerifyFileAsync(archive, new ResourceFile { Path = "program.zip", Size = package.Size, Sha256 = package.Sha256 }, ct, ownedRoot);
         if (Directory.Exists(destination)) throw new IOException("程序候选目录已经存在。");
-        UpdateStorage.RejectLink(destination);
+        UpdateStorage.RejectLink(destination, ownedRoot);
         using var zip = ZipFile.OpenRead(archive);
         var entries = ReadArchiveEntries(zip, package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase));
         Directory.CreateDirectory(destination);
-        await ExtractEntriesAsync(destination, package.Files, entries, ct);
+        await ExtractEntriesAsync(destination, package.Files, entries, ct, ownedRoot);
     }
 
     /// <summary>
@@ -120,20 +125,20 @@ public static class ProgramPackageValidation
     /// whole-archive path uses. The destination may already exist; a path another shard already wrote
     /// fails instead of being overwritten.
     /// </summary>
-    public static async Task ExtractShardAsync(string archive, string destination, ProgramPackage package, string shardId, CancellationToken ct = default)
+    public static async Task ExtractShardAsync(string archive, string destination, ProgramPackage package, string shardId, CancellationToken ct = default, string? ownedRoot = null)
     {
         Validate(package);
         var shard = package.Shards?.FirstOrDefault(s => s.Id.Equals(shardId, StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidDataException("程序分片不属于此程序包。");
-        await UpdateStorage.VerifyFileAsync(archive, new ResourceFile { Path = shard.Id + ".zip", Size = shard.Size, Sha256 = shard.Sha256 }, ct);
+        await UpdateStorage.VerifyFileAsync(archive, new ResourceFile { Path = shard.Id + ".zip", Size = shard.Size, Sha256 = shard.Sha256 }, ct, ownedRoot);
         var declared = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
         var ordered = new List<ResourceFile>(shard.Files.Count);
         foreach (var path in shard.Files) ordered.Add(declared.TryGetValue(path, out var file) ? file : throw new InvalidDataException("程序分片包含程序文件清单之外的文件。"));
-        UpdateStorage.RejectLink(destination);
+        UpdateStorage.RejectLink(destination, ownedRoot);
         using var zip = ZipFile.OpenRead(archive);
         var entries = ReadArchiveEntries(zip, ordered.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase));
         Directory.CreateDirectory(destination);
-        await ExtractEntriesAsync(destination, ordered, entries, ct);
+        await ExtractEntriesAsync(destination, ordered, entries, ct, ownedRoot);
     }
 
     /// <summary>
@@ -205,17 +210,25 @@ public static class ProgramPackageValidation
     /// every byte was correct. Identical bytes are not the second write this refuses to do - a *different*
     /// file under a signed path is still refused by the record check instead of being overwritten.
     /// </summary>
-    internal static async Task ExtractEntriesAsync(string destination, IReadOnlyList<ResourceFile> files, Dictionary<string, ZipArchiveEntry> entries, CancellationToken ct)
+    /// <param name="ownedRoot">
+    /// The boundary of every link check, normally the staging root this destination sits in.
+    /// <see cref="MirrorChyanProgramSource"/> passes the destination itself, which is narrower and therefore
+    /// stricter: that transport writes into an already-created staging directory whose own ancestors the
+    /// program update store has already checked with its own boundary.
+    /// </param>
+    internal static async Task ExtractEntriesAsync(string destination, IReadOnlyList<ResourceFile> files, Dictionary<string, ZipArchiveEntry> entries, CancellationToken ct, string? ownedRoot = null)
     {
         foreach (var file in files)
         {
             ct.ThrowIfCancellationRequested();
             var target = UpdateStorage.SafeChild(destination, file.Path);
+            // Checked before the directory is created, not after: an entry that lands under a linked
+            // subdirectory must be refused without creating anything on the other side of that link.
+            UpdateStorage.RejectLink(target, ownedRoot ?? destination);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            UpdateStorage.RejectLink(target);
             if (File.Exists(target))
             {
-                await UpdateStorage.VerifyFileAsync(target, file, ct);
+                await UpdateStorage.VerifyFileAsync(target, file, ct, ownedRoot ?? destination);
                 continue;
             }
             await using (var input = entries[file.Path].Open())
@@ -231,7 +244,7 @@ public static class ProgramPackageValidation
                     await output.WriteAsync(buffer.AsMemory(0, count), ct);
                 }
             }
-            await UpdateStorage.VerifyFileAsync(target, file, ct);
+            await UpdateStorage.VerifyFileAsync(target, file, ct, ownedRoot ?? destination);
         }
     }
 
@@ -239,8 +252,13 @@ public static class ProgramPackageValidation
     /// Optional. Hashing an unpacked program tree is the longest stretch of a preparation with nothing else to
     /// report, so the caller can show it moving; reporting changes nothing about what is verified.
     /// </param>
+    /// <param name="ownedRoot">
+    /// The directory the caller owns - the installation root or the staging root the tree sits in. Every link
+    /// check below stops there, so an installation or an update directory placed under a compatibility layer's
+    /// path mapping still verifies while a link inside the tree is still refused.
+    /// </param>
     public static async Task VerifyDirectoryAsync(string directory, ProgramRelease release, CancellationToken ct = default,
-        IProgress<UpdateProgress>? progress = null)
+        IProgress<UpdateProgress>? progress = null, string? ownedRoot = null)
     {
         var package = release.Package ?? throw new InvalidDataException("程序更新缺少签名包信息。");
         Validate(package);
@@ -249,10 +267,10 @@ public static class ProgramPackageValidation
         int seen = 0;
         while (pending.Count > 0)
         {
-            var current = pending.Pop(); UpdateStorage.RejectLink(current);
+            var current = pending.Pop(); UpdateStorage.RejectLink(current, ownedRoot);
             foreach (var path in Directory.EnumerateFileSystemEntries(current))
             {
-                UpdateStorage.RejectLink(path);
+                UpdateStorage.RejectLink(path, ownedRoot);
                 if (Directory.Exists(path)) { pending.Push(path); continue; }
                 var relative = Path.GetRelativePath(directory, path).Replace('\\', '/');
                 // Written by the program itself, so the manifest cannot declare it: see RuntimeArtifacts.
@@ -267,7 +285,7 @@ public static class ProgramPackageValidation
         progress?.Report(new UpdateProgress("校验新版程序文件", 0, total));
         foreach (var file in package.Files)
         {
-            await UpdateStorage.VerifyFileAsync(UpdateStorage.SafeChild(directory, file.Path), file, ct);
+            await UpdateStorage.VerifyFileAsync(UpdateStorage.SafeChild(directory, file.Path), file, ct, ownedRoot);
             verified += file.Size;
             progress?.Report(new UpdateProgress("校验新版程序文件", verified, total));
         }

@@ -1716,6 +1716,104 @@ await Test("a descriptor another process holds does not fail the start", async (
     }
 });
 
+// ---- Steam Deck / Proton: where the link check is allowed to look (2026-10) -------------------------------
+// Under Proton this program is reached through Wine's Z: drive mapping and through the player's own directory
+// layout, so a component that Wine reports as a reparse point sits *above* the update root - and outside it.
+// The 2026-10 Steam Deck report was exactly that. These checks pin both halves of the boundary: a link above
+// the update root is the environment's business, and a link at or below it is still refused.
+await Test("an update root reached through a link above it installs, verifies and rolls back", async () =>
+{
+    var real = Path.Combine(suiteRoot, "compat-real"); Directory.CreateDirectory(real);
+    var link = Path.Combine(suiteRoot, "compat-link");
+    if (!Junction.Create(link, real)) throw new Exception("this suite needs a junction to stand in for the compatibility layer's path mapping");
+    // Everything this program owns is a real directory under the link; only the ancestor is a link.
+    using var f = new Fixture(Path.Combine(link, "ResourceUpdates"));
+    await f.Initialize();
+    f.Publish(f.Catalog()); await f.Updates.CheckAsync(); await f.Updates.InstallAsync();
+    True(f.Snapshots.HasPending);
+    var next = f.NewSnapshots(); await next.InitializeAsync(); Equal("snapshot-2", next.Current.SnapshotId);
+    await next.ReportHealthyAsync("snapshot-2"); True(next.CanRollback);
+    await next.QueueRollbackAsync();
+    var rollback = f.NewSnapshots(); await rollback.InitializeAsync(); Equal("bundled", rollback.Current.SnapshotId);
+    await rollback.ReportHealthyAsync("bundled");
+    // The bytes are where the link resolves to, not only where the link's own name says.
+    True(Directory.Exists(Path.Combine(real, "ResourceUpdates", "snapshots")), "the snapshot descriptors land under the directory the ancestor link resolves to");
+    True(Directory.Exists(Path.Combine(real, "ResourceUpdates", "packages", "map-data", "2026.9.9.2")), "the installed package lands under the directory the ancestor link resolves to");
+});
+await Test("a link above the update root is reported as a mapping and decides nothing", async () =>
+{
+    var lines = new List<string>();
+    UpdatePathDiagnostics.SetSink(line => { lock (lines) lines.Add(line); });
+    try
+    {
+        var real = Path.Combine(suiteRoot, "mapping-real"); Directory.CreateDirectory(real);
+        var link = Path.Combine(suiteRoot, "mapping-link");
+        if (!Junction.Create(link, real)) throw new Exception("this suite needs a junction to report as a mapping");
+        using var f = new Fixture(Path.Combine(link, "ResourceUpdates"));
+        await f.Initialize();
+        Equal("bundled", f.Snapshots.Current.SnapshotId);
+        True(lines.Any(line => line.StartsWith(UpdatePathDiagnostics.Mapping, StringComparison.Ordinal) && line.Contains("mapping-link", StringComparison.OrdinalIgnoreCase)),
+            "the ancestor that is a link must be reported as a path mapping: " + string.Join(" | ", lines));
+        False(lines.Any(line => line.StartsWith(UpdatePathDiagnostics.Refusal, StringComparison.Ordinal)));
+    }
+    finally { UpdatePathDiagnostics.SetSink(null); }
+});
+await Test("a link inside the update root is still refused, and names the boundary", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var elsewhere = Path.Combine(suiteRoot, "linked-packages-target"); Directory.CreateDirectory(elsewhere);
+    var keep = Path.Combine(elsewhere, "keep.txt"); await File.WriteAllTextAsync(keep, "not this installation's to touch");
+    // packages/ is where a downloaded resource package is unpacked, promoted into and, on removal, deleted
+    // from: a link here is precisely the case the check exists for.
+    var packages = Path.Combine(f.Root, "packages");
+    if (Directory.Exists(packages)) Directory.Delete(packages, true);
+    if (!Junction.Create(packages, elsewhere)) throw new Exception("this suite needs a junction to lock this half of the contract");
+    try
+    {
+        f.Publish(f.Catalog()); await f.Updates.CheckAsync();
+        var message = await CaptureAsync(() => f.Updates.InstallAsync());
+        True(message.Contains("符号链接") || message.Contains("目录联接"), "a linked package root must be refused: " + message);
+        True(message.Contains(f.Root, StringComparison.OrdinalIgnoreCase), "the refusal must name the directory this program manages: " + message);
+        False(f.Snapshots.HasPending);
+        True(File.Exists(keep), "nothing on the other side of a linked package root may be touched");
+    }
+    finally { try { Directory.Delete(packages); } catch (IOException) { } }
+});
+await Test("a staging root that is a link is never unpacked into or swept through", async () =>
+{
+    using var f = New(); await f.Initialize();
+    var elsewhere = Path.Combine(suiteRoot, "linked-staging-target"); Directory.CreateDirectory(elsewhere);
+    var keep = Path.Combine(elsewhere, "keep.txt"); await File.WriteAllTextAsync(keep, "not this installation's to touch");
+    var staging = Path.Combine(f.Root, "staging");
+    if (Directory.Exists(staging)) Directory.Delete(staging, true);
+    if (!Junction.Create(staging, elsewhere)) throw new Exception("this suite needs a junction to lock the scratch contract");
+    try
+    {
+        f.Publish(f.Catalog()); await f.Updates.CheckAsync();
+        await ThrowsAsync<InvalidDataException>(() => f.Updates.InstallAsync());
+        False(f.Snapshots.HasPending);
+        True(File.Exists(keep), "a file on the other side of a linked staging root must survive");
+        True(Directory.EnumerateFileSystemEntries(elsewhere).All(p => Path.GetFileName(p) == "keep.txt"),
+            "no scratch directory may be left on the other side either: " + string.Join(",", Directory.EnumerateFileSystemEntries(elsewhere).Select(Path.GetFileName)));
+        // The sweep on the next start must refuse it for the same reason rather than delete through it.
+        var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+        Equal("bundled", restarted.Current.SnapshotId);
+        True(File.Exists(keep), "the sweep that runs on every start must not delete through a linked staging root");
+    }
+    finally { try { Directory.Delete(staging); } catch (IOException) { } }
+});
+await Test("a boundary that does not contain the path is refused rather than trusted", async () =>
+{
+    // The boundary is what makes the check meaningful, so naming the wrong one has to fail closed instead of
+    // quietly checking nothing. This is the guard against a future call site passing the wrong root.
+    using var f = New(); await f.Initialize();
+    var inside = Path.Combine(f.Root, "packages", "map-data", "2026.9.9.2", "markers.json");
+    var error = await CaptureAsync(() => { UpdateStorage.RejectLink(inside, Path.Combine(f.Root, "snapshots")); return Task.CompletedTask; });
+    True(error.Contains("超出"), "a path outside the named boundary must be refused: " + error);
+    // And the same path under the root that does contain it is accepted.
+    UpdateStorage.RejectLink(inside, f.Root);
+});
+
 await File.WriteAllTextAsync(Path.Combine(output, "results.json"), JsonSerializer.Serialize(new { passed = passed.Count, failed = failed.Count, checks = passed, failures = failed, evidenceDirectory = suiteRoot }, UpdateJson.Options));
 Console.WriteLine($"Resource update checks: {passed.Count} passed, {failed.Count} failed. Evidence: {suiteRoot}");
 if (failed.Count > 0) Environment.ExitCode = 1;

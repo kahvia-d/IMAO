@@ -105,6 +105,9 @@ public sealed class MirrorChyanProgramSource : IProgramFileSupplier
             // would break.
             candidates.AddRange(provided.Select(f => f.Path));
             _progress?.Report(new UpdateProgress("校验 Mirror酱提供的文件", 0, provided.Count, SourceName));
+            // The staging destination is the boundary of the link checks made while these files land: it was
+            // created by the program update store, whose own boundary check covered its ancestors, so checking
+            // it and everything below is what keeps a link inside the staged tree from redirecting a write.
             await ProgramPackageValidation.ExtractEntriesAsync(app, provided, entries, ct).ConfigureAwait(false);
             _progress?.Report(new UpdateProgress("校验 Mirror酱提供的文件", provided.Count, provided.Count, SourceName));
             foreach (var path in candidates) supplied.Add(path);

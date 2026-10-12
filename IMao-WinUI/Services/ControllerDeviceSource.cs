@@ -27,7 +27,14 @@ internal sealed class ControllerDeviceSource : IGamepadDeviceSource
     private readonly Dictionary<string, PsDevice> ps = new(StringComparer.Ordinal);
     private bool attempted, initialized, disposed;
     private long enumeratedAt;
-    public string Diagnostic { get; private set; } = "";
+    private string nativeDiagnostic = "";
+    /// <summary>
+    /// What to tell a player when nothing was found. Two failures are possible and they are not the same one:
+    /// the PS side may be missing while Xbox input still works, and the XInput component may not load at all -
+    /// which on a compatibility layer is a property of the layer rather than of the controller.
+    /// </summary>
+    public string Diagnostic => nativeDiagnostic.Length == 0 ? xbox.Diagnostic
+        : xbox.Diagnostic.Length == 0 ? nativeDiagnostic : nativeDiagnostic + " · " + xbox.Diagnostic;
 
     private void EnsureInitialized()
     {
@@ -44,10 +51,10 @@ internal sealed class ControllerDeviceSource : IGamepadDeviceSource
             SdlNative.SetHint("SDL_JOYSTICK_HIDAPI_PS4_RUMBLE", "0");
             SdlNative.SetHint("SDL_JOYSTICK_HIDAPI_PS5_RUMBLE", "0");
             initialized = SdlNative.InitSubSystem(0x2000);
-            if (!initialized) Diagnostic = "原生 PS 手柄初始化失败：" + SdlNative.Error;
+            if (!initialized) nativeDiagnostic = "原生 PS 手柄初始化失败：" + SdlNative.Error;
         }
         catch (Exception e) when (e is DllNotFoundException or BadImageFormatException or EntryPointNotFoundException or FileLoadException)
-        { Diagnostic = "原生 PS 手柄组件无法加载，Xbox 输入仍可使用：" + e.GetType().Name; }
+        { nativeDiagnostic = "原生 PS 手柄组件无法加载，Xbox 输入仍可使用：" + e.GetType().Name; }
     }
 
     public IReadOnlyList<GamepadDeviceInfo> GetDevices()
@@ -78,7 +85,7 @@ internal sealed class ControllerDeviceSource : IGamepadDeviceSource
                 seen.Add(instance);
                 if (ps.Values.Any(d => d.Instance == instance && d.Controller != IntPtr.Zero)) continue;
                 string path = Marshal.PtrToStringUTF8(SdlNative.GetGamepadPathForId(instance)) ?? "";
-                if (path.Length == 0) { Diagnostic = "PS 手柄未提供稳定设备路径，暂不自动接管"; continue; }
+                if (path.Length == 0) { nativeDiagnostic = "PS 手柄未提供稳定设备路径，暂不自动接管"; continue; }
                 string id = "ps:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(path))).ToLowerInvariant();
                 if (!ps.TryGetValue(id, out var device))
                 {
@@ -88,7 +95,7 @@ internal sealed class ControllerDeviceSource : IGamepadDeviceSource
                 }
                 if (device.Controller != IntPtr.Zero) SdlNative.CloseGamepad(device.Controller);
                 device.Controller = SdlNative.OpenGamepad(instance); device.Instance = instance;
-                if (device.Controller == IntPtr.Zero) Diagnostic = "无法读取 PS 手柄：" + SdlNative.Error;
+                if (device.Controller == IntPtr.Zero) nativeDiagnostic = "无法读取 PS 手柄：" + SdlNative.Error;
             }
             foreach (var device in ps.Values.Where(d => d.Controller != IntPtr.Zero && !seen.Contains(d.Instance)))
             { SdlNative.CloseGamepad(device.Controller); device.Controller = IntPtr.Zero; }

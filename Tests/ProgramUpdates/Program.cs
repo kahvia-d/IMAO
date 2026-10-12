@@ -1282,6 +1282,141 @@ await Test("refusing to share is reported, never thrown, and leaves nothing behi
     Assert(!UpdateStorage.TryHardLink(Path.Combine(directory, "missing.bin"), Path.Combine(directory, "nothing.bin")), "an impossible link is reported, not thrown");
     Assert(!File.Exists(Path.Combine(directory, "missing.bin")), "a refused link must not leave a file behind");
 });
+// ---- Steam Deck / Proton: where the link check is allowed to look (2026-10) -------------------------------
+// A Steam Deck player reported "资源目录不能包含符号链接或目录联接：Z:\home". Under Proton the installation is
+// reached through Wine's Z: drive mapping and through the player's own directory layout, and the component Wine
+// reports as a reparse point sat *above* - and outside - the directory this program owns; every directory it
+// owns was real. The checks below pin both halves of that boundary: a link above an owned root is the
+// environment's business and must not decide anything, and a link at or below it is still refused.
+await Test("an installation reached through a link above it still updates, verifies and commits", async () =>
+{
+    // What Proton looks like from inside the process: the components that are links (the drive mapping, the
+    // Steam library) are ancestors, and everything this program placed is a real directory underneath them.
+    var real = Path.Combine(output, "compat-layer-real"); Directory.CreateDirectory(real);
+    var link = Path.Combine(output, "compat-layer-link");
+    if (!MakeJunction(link, real)) throw new Exception("this suite needs a junction to stand in for the compatibility layer's path mapping");
+    var install = Path.Combine(link, "IMao"); Directory.CreateDirectory(install);
+    File.WriteAllText(Path.Combine(install, "build-info.json"), JsonSerializer.Serialize(build1, UpdateJson.Options));
+    var store = new ProgramUpdateStore(install, [key], build1.AppVersion, true, (_, _) => Task.CompletedTask);
+    var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    await store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 70)), Serve(served, []));
+    var launch = await store.BeginLaunchAsync();
+    await store.ConfirmHealthyAsync(launch.Id);
+    // The path the program uses goes through the link; the bytes it wrote are under what that link resolves to.
+    Assert(Directory.Exists(Path.Combine(real, "IMao", "ProgramUpdates", "versions", launch.Id, "app")), "the staged version lands under the directory the ancestor link resolves to");
+    Assert(store.ReadState().Current == launch.Id, "the version is committed through a path whose ancestor is a link");
+    Assert(File.Exists(Path.Combine(install, "build-info.json")), "the installation the link resolves to is still the one being updated");
+});
+await Test("a link above the installation is reported as a mapping and decides nothing", async () =>
+{
+    var lines = new List<string>();
+    UpdatePathDiagnostics.SetSink(line => { lock (lines) lines.Add(line); });
+    try
+    {
+        var real = Path.Combine(output, "mapping-real"); Directory.CreateDirectory(real);
+        var link = Path.Combine(output, "mapping-link");
+        if (!MakeJunction(link, real)) throw new Exception("this suite needs a junction to report as a mapping");
+        var install = Path.Combine(link, "IMao"); Directory.CreateDirectory(install);
+        var store = new ProgramUpdateStore(install, [key], build1.AppVersion, true, (_, _) => Task.CompletedTask);
+        var state = store.ReadState();
+        Assert(state.Current.Length == 0, "a fresh installation reads as the original manually installed program");
+        var mapping = lines.Where(line => line.StartsWith(UpdatePathDiagnostics.Mapping, StringComparison.Ordinal)).ToList();
+        Assert(mapping.Any(line => line.Contains("mapping-link", StringComparison.OrdinalIgnoreCase)),
+            "the ancestor that is a link must be reported as a path mapping: " + string.Join(" | ", lines));
+        Assert(lines.All(line => !line.StartsWith(UpdatePathDiagnostics.Refusal, StringComparison.Ordinal)),
+            "nothing above an owned root may be reported as a refusal: " + string.Join(" | ", lines));
+    }
+    finally { UpdatePathDiagnostics.SetSink(null); }
+});
+await Test("a version directory that is a link is still refused, and names the boundary", async () =>
+{
+    var store = Store();
+    var elsewhere = Path.Combine(output, "linked-version-target"); Directory.CreateDirectory(elsewhere);
+    var keep = Path.Combine(elsewhere, "keep.txt"); File.WriteAllText(keep, "not this installation's to touch");
+    var id = "2026.9.9.4-" + new string('a', 16);
+    Directory.CreateDirectory(Path.Combine(store.Root, "versions"));
+    var junction = Path.Combine(store.Root, "versions", id);
+    if (!MakeJunction(junction, elsewhere)) throw new Exception("this suite needs a junction to lock this half of the link contract");
+    try
+    {
+        var lines = new List<string>();
+        UpdatePathDiagnostics.SetSink(line => { lock (lines) lines.Add(line); });
+        try
+        {
+            var error = await Capture(() => store.ValidateInstalledAsync(id));
+            Assert(error is InvalidDataException, "a version directory that is a link must be refused: " + error);
+            Assert(error!.Message.Contains(store.InstallRoot, StringComparison.OrdinalIgnoreCase),
+                "the refusal must name the directory this program manages, so the reason is actionable: " + error.Message);
+            Assert(lines.Any(line => line.StartsWith(UpdatePathDiagnostics.Refusal, StringComparison.Ordinal) && line.Contains("versions", StringComparison.Ordinal)),
+                "the refusal must also be recorded: " + string.Join(" | ", lines));
+        }
+        finally { UpdatePathDiagnostics.SetSink(null); }
+        Assert(File.Exists(keep), "nothing under a version directory that is a link is ever read, written or removed");
+        Assert(store.ReadState().Current.Length == 0, "the store keeps working after refusing one candidate");
+    }
+    finally { try { Directory.Delete(junction); } catch (IOException) { } }
+});
+await Test("a staging root that is a link is never created in, swept through or deleted", async () =>
+{
+    var store = Store();
+    var elsewhere = Path.Combine(output, "linked-staging-target"); Directory.CreateDirectory(elsewhere);
+    var keep = Path.Combine(elsewhere, "keep.txt"); File.WriteAllText(keep, "not this installation's to touch");
+    Directory.CreateDirectory(store.Root);
+    var staging = Path.Combine(store.Root, "staging");
+    if (!MakeJunction(staging, elsewhere)) throw new Exception("this suite needs a junction to lock the scratch-cleanup contract");
+    try
+    {
+        var tree = ShardTree(shardBuild1, "v1");
+        var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+        // The scratch tree would live in whatever the link points at, so the transaction has to be refused
+        // before it is created - and clean-up must never walk into the directory on the other side.
+        await Reject(() => store.PrepareAsync(Sign(ShardCatalog(shardBuild1, "v1.0.1", pkg, 71)), Serve(served, [])));
+        Assert(File.Exists(keep), "a file on the other side of a linked staging root must survive every clean-up path");
+        Assert(!Directory.EnumerateFileSystemEntries(elsewhere).Any(p => Path.GetFileName(p) != "keep.txt"),
+            "no scratch directory may be left on the other side either: " + string.Join(",", Directory.EnumerateFileSystemEntries(elsewhere).Select(Path.GetFileName)));
+        Assert(store.ReadState().Pending is null, "a refused transaction never becomes pending");
+    }
+    finally { try { Directory.Delete(staging); } catch (IOException) { } }
+});
+await Test("extraction refuses a linked destination and a linked subdirectory inside it", async () =>
+{
+    var store = Store();
+    var tree = ShardTree(shardBuild1, "v1");
+    var (pkg, served, _) = ShardPackage(shardBuild1, "v1.0.1", tree);
+    var shard = pkg.Shards[0];
+    var linkRoot = Path.Combine(store.Root, "staging");
+    Directory.CreateDirectory(linkRoot);
+    var archive = Path.Combine(linkRoot, "shard.zip"); File.Copy(served[shard.Url], archive);
+    // (a) The destination itself resolves somewhere else, so nothing may be written into it.
+    var elsewhere = Path.Combine(output, "linked-destination-target"); Directory.CreateDirectory(elsewhere);
+    var untouched = Path.Combine(elsewhere, "keep.txt"); File.WriteAllText(untouched, "not this installation's to touch");
+    var destination = Path.Combine(linkRoot, "linked-app");
+    if (!MakeJunction(destination, elsewhere)) throw new Exception("this suite needs a junction to lock the extraction contract");
+    try
+    {
+        await Reject(() => ProgramPackageValidation.ExtractShardAsync(archive, destination, pkg, shard.Id, default, store.Root));
+        Assert(File.Exists(untouched), "an extraction into a linked destination must write nothing through it");
+    }
+    finally { try { Directory.Delete(destination); } catch (IOException) { } }
+    // (b) The destination is real but one of the directories an entry lands in is a link: a shard that writes
+    // `Assets/...` must not be able to place that tree anywhere but inside the destination.
+    var assetsShard = pkg.Shards.First(s => s.Files.Any(f => f.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)));
+    var innerArchive = Path.Combine(linkRoot, "inner-shard.zip"); File.Copy(served[assetsShard.Url], innerArchive);
+    var inner = Path.Combine(linkRoot, "inner-app"); Directory.CreateDirectory(inner);
+    var target = Path.Combine(output, "linked-assets-target"); Directory.CreateDirectory(target);
+    var kept = Path.Combine(target, "keep.txt"); File.WriteAllText(kept, "not this installation's to touch");
+    var assets = Path.Combine(inner, "Assets");
+    if (!MakeJunction(assets, target)) throw new Exception("this suite needs a junction to lock the linked-subdirectory contract");
+    try
+    {
+        await Reject(() => ProgramPackageValidation.ExtractShardAsync(innerArchive, inner, pkg, assetsShard.Id, default, store.Root));
+        Assert(File.Exists(kept), "a file on the other side of a linked subdirectory must survive");
+        Assert(Directory.EnumerateFileSystemEntries(target).All(p => Path.GetFileName(p) == "keep.txt"),
+            "nothing may be created on the other side of the linked subdirectory: " + string.Join(",", Directory.EnumerateFileSystemEntries(target).Select(Path.GetFileName)));
+    }
+    finally { try { Directory.Delete(assets); } catch (IOException) { } }
+});
 File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new { passed = passed.Count, checks = passed }, UpdateJson.Options));
 Console.WriteLine($"Program update checks: {passed.Count} passed.");
 return 0;

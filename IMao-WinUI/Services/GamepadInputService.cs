@@ -214,10 +214,20 @@ public sealed class GamepadInputService : INotifyPropertyChanged, IDisposable
                 input.Reset(); guides.SuspendGamepad("手柄连接已断开");
                 toolbar.Stop("手柄连接已断开", restoreGame: true);
                 mapTools?.Feed(sample, now);
-                SetMessage((selectedDevice < 0 ? "未检测到所选 Xbox / PlayStation 手柄" :
-                    selection.WaitingForNeutral && readController(selectedDevice).Connected ? "请先松开按键、扳机并回正摇杆" :
-                    $"{selection.Device?.Name ?? "手柄"} 已断开，等待重新连接") +
-                    (devices.Diagnostic.Length == 0 ? "" : " · " + devices.Diagnostic));
+                // Four different situations end here and the player's next step is different for each, so the
+                // sentence says which one it is. Before 2026-10 a missing XInput component, a layer that
+                // presents no controller, and a chosen device that went away all produced the same words, and
+                // on a Steam Deck that is the difference between a settings problem and a support ticket.
+                string reason;
+                if (selectedDevice >= 0)
+                    reason = selection.WaitingForNeutral && readController(selectedDevice).Connected
+                        ? "请先松开按键、扳机并回正摇杆"
+                        : $"{selection.Device?.Name ?? "手柄"} 已断开，等待重新连接";
+                else if (devices.Diagnostic.Length > 0) reason = "未检测到 Xbox / PlayStation 手柄 · " + devices.Diagnostic;
+                else if (configuredId.Length > 0) reason = "未检测到已选择的原生 PS 手柄，请重新连接，或在设置中改回自动选择";
+                else if (configuredDevice >= 0) reason = $"未检测到已选择的 Xbox / XInput {configuredDevice + 1}，请确认它已连接，或在设置中改回自动选择";
+                else reason = "未检测到 Xbox / PlayStation 手柄（XInput 槽位 0-3 均无设备；掌机内置手柄需先由 Steam Input 呈现为 Xbox 手柄）";
+                SetMessage(reason);
                 return;
             }
             if (core.IsConnected && !toolbar.IsOpen && now >= pollAt && !querying)

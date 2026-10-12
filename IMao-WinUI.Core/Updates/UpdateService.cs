@@ -688,7 +688,7 @@ public sealed class UpdateService : IDisposable
             // A package that ships inside the program resolves to its installation copy, which is already
             // there; only the packages genuinely absent from this machine are downloaded.
             if (FindBundled(item.Release) is not null) continue;
-            if (Directory.Exists(target)) await VerifyInstalledAsync(target, item.Release, ct).ConfigureAwait(false);
+            if (Directory.Exists(target)) await VerifyInstalledAsync(target, item.Release, ct, OwnedRootFor(target)).ConfigureAwait(false);
             else { needed.Add(item.Release); missing.Add(item.Release.Id); }
         }
         // Ask before downloading: a player who selects a whole region wants to know it will not fit first.
@@ -725,7 +725,7 @@ public sealed class UpdateService : IDisposable
         foreach (var directory in removable)
         {
             ct.ThrowIfCancellationRequested();
-            UpdateStorage.RejectLink(directory);
+            UpdateStorage.RejectLink(directory, OwnedRootFor(directory));
             if (Directory.Exists(directory)) Directory.Delete(directory, true);
             var receipt = directory + ".receipt.json";
             if (File.Exists(receipt)) File.Delete(receipt);
@@ -894,7 +894,7 @@ public sealed class UpdateService : IDisposable
 
     private async Task InstallReleaseAsync(ResourceRelease release, Dictionary<string, ZipArchiveEntry>? offline, IProgress<UpdateProgress>? progress, CancellationToken ct, HashSet<string>? only = null, HashSet<string>? tolerating = null)
     {
-        UpdateStorage.RejectLink(_snapshots.Root);
+        UpdateStorage.RejectLink(_snapshots.Root, _snapshots.Root);
         // A per-region install touches only the selected packages. A package that is not part of this
         // request is left exactly as it is, including one whose downloaded copy the player removed.
         var touched = only is null ? release.Packages : release.Packages.Where(p => only.Contains(p.Id)).ToList();
@@ -907,11 +907,11 @@ public sealed class UpdateService : IDisposable
             {
                 // A bundled copy is verified in place only when this install actually rewrites the release;
                 // refreshing one region must not require the program's own packages to be re-hashed.
-                if (tolerating is null) await UpdateStorage.VerifyDirectoryAsync(target, package.Files, ct).ConfigureAwait(false);
+                if (tolerating is null) await UpdateStorage.VerifyDirectoryAsync(target, package.Files, ct, OwnedRootFor(target)).ConfigureAwait(false);
             }
             else if (Directory.Exists(target))
             {
-                if (tolerating is null) await VerifyInstalledAsync(target, package, ct).ConfigureAwait(false);
+                if (tolerating is null) await VerifyInstalledAsync(target, package, ct, OwnedRootFor(target)).ConfigureAwait(false);
             }
             else if (tolerating is null || tolerating.Contains(package.Id)) needed.Add(package);
         }
@@ -922,6 +922,8 @@ public sealed class UpdateService : IDisposable
             if (_freeSpace() < requiredBytes) throw new IOException("磁盘空间不足，无法安全安装资源更新。");
         }
         var work = Path.Combine(_snapshots.Root, "staging", Guid.NewGuid().ToString("N"));
+        // Before the directory exists, so a staging root that is itself a link is refused rather than followed.
+        UpdateStorage.RejectLink(work, _snapshots.Root);
         Directory.CreateDirectory(work);
         long completed = 0;
         var total = needed.Sum(p => p.Size);
@@ -949,10 +951,12 @@ public sealed class UpdateService : IDisposable
                 completed += package.Size;
                 progress?.Report(new UpdateProgress("验证并解压资源", completed, total));
                 var unpacked = Path.Combine(work, package.Id);
-                await ExtractPackageAsync(zipPath, unpacked, package, ct).ConfigureAwait(false);
+                await ExtractPackageAsync(zipPath, unpacked, package, work, ct).ConfigureAwait(false);
                 var target = PackageDirectory(package);
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                UpdateStorage.RejectLink(Path.GetDirectoryName(target)!);
+                // Checking the target rather than its parent covers the same components - the walk starts one
+                // level deeper - and cannot step outside the boundary the target's own root defines.
+                UpdateStorage.RejectLink(target, OwnedRootFor(target));
                 ct.ThrowIfCancellationRequested();
                 await UpdateStorage.WriteAsync(target + ".receipt.json", package, ct).ConfigureAwait(false);
                 await UpdateStorage.MoveDirectoryAsync(unpacked, target, ct).ConfigureAwait(false);
@@ -987,7 +991,7 @@ public sealed class UpdateService : IDisposable
         finally
         {
             // Delete only this transaction's generated scratch files. Installed packages are immutable and retained.
-            try { if (Directory.Exists(work)) { UpdateStorage.RejectLink(work); Directory.Delete(work, true); } }
+            try { if (Directory.Exists(work)) { UpdateStorage.RejectLink(work, _snapshots.Root); Directory.Delete(work, true); } }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }
@@ -997,34 +1001,49 @@ public sealed class UpdateService : IDisposable
 
     private string PackageDirectory(ResourcePackage package) => FindBundled(package)?.Directory ?? Path.Combine(_snapshots.Root, "packages", package.Id, package.Version);
 
-    private static async Task VerifyInstalledAsync(string directory, ResourcePackage package, CancellationToken ct)
+    /// <summary>
+    /// The root this service owns for a package copy. One implementation, shared with the snapshot service that
+    /// resolves where each copy lives, so a link check and the path it is checking can never disagree about
+    /// which directory is the boundary.
+    /// </summary>
+    private string OwnedRootFor(string directory) => _snapshots.OwnedRootFor(directory);
+
+    private static async Task VerifyInstalledAsync(string directory, ResourcePackage package, CancellationToken ct, string ownedRoot)
     {
-        UpdateStorage.RejectLink(directory);
+        UpdateStorage.RejectLink(directory, ownedRoot);
         var manifestPath = directory + ".receipt.json";
         if (!File.Exists(manifestPath))
         {
             // Recover only a complete payload that exactly matches the newly verified signed descriptor.
-            await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct).ConfigureAwait(false);
+            await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct, ownedRoot).ConfigureAwait(false);
             await UpdateStorage.WriteAsync(manifestPath, package, ct).ConfigureAwait(false);
         }
         var existing = UpdateStorage.Read<ResourcePackage>(manifestPath);
         if (existing.Id != package.Id || existing.Version != package.Version || existing.Kind != package.Kind || existing.Size != package.Size || !existing.Sha256.Equals(package.Sha256, StringComparison.OrdinalIgnoreCase) ||
             !JsonSerializer.SerializeToUtf8Bytes(existing.Files, UpdateJson.Options).AsSpan().SequenceEqual(JsonSerializer.SerializeToUtf8Bytes(package.Files, UpdateJson.Options)))
             throw new InvalidDataException("同一资源包版本已存在不同内容，请由维护者发布新版本。");
-        await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct).ConfigureAwait(false);
+        await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct, ownedRoot).ConfigureAwait(false);
     }
 
-    private static async Task ExtractPackageAsync(string zipPath, string directory, ResourcePackage package, CancellationToken ct)
+    /// <param name="ownedRoot">
+    /// The staging root this unpack directory sits in. The destination is created here, so the boundary is what
+    /// keeps a link planted inside the scratch tree from redirecting an extracted file out of it - and the
+    /// archive itself is still held to the signed per-file records by <see cref="CopyVerifiedAsync"/>.
+    /// </param>
+    private static async Task ExtractPackageAsync(string zipPath, string directory, ResourcePackage package, string ownedRoot, CancellationToken ct)
     {
         using var zip = ZipFile.OpenRead(zipPath);
         var entries = ReadArchiveEntries(zip);
         if (entries.Count != package.Files.Count) throw new InvalidDataException("资源包文件数与清单不一致。");
+        UpdateStorage.RejectLink(directory, ownedRoot);
         Directory.CreateDirectory(directory);
         foreach (var file in package.Files)
         {
             ct.ThrowIfCancellationRequested();
             if (!entries.TryGetValue(file.Path, out var entry) || entry.Length != file.Size) throw new InvalidDataException("资源包缺少文件或展开长度不符。");
             var path = UpdateStorage.SafeChild(directory, file.Path);
+            // Checked before the directory is created, so nothing is ever created on the far side of a link.
+            UpdateStorage.RejectLink(path, ownedRoot);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             await using var source = entry.Open();
             await using var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.Asynchronous);

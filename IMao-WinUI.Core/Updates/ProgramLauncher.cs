@@ -51,7 +51,7 @@ public sealed class ProgramLauncher
 
     public async Task RunAsync(CancellationToken ct = default)
     {
-        UpdateStorage.RejectLink(store.Root); Directory.CreateDirectory(store.Root);
+        UpdateStorage.RejectLink(store.Root, store.InstallRoot); Directory.CreateDirectory(store.Root);
         FileStream lifetime;
         try { lifetime = new FileStream(Path.Combine(store.Root, "launcher.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
         catch (IOException ex) { throw new IOException("此安装目录的程序已经运行。请在已打开的软件中操作，或完全退出后再试。", ex); }
@@ -176,7 +176,7 @@ public sealed class ProgramLauncher
         if (!int.TryParse(Environment.GetEnvironmentVariable("IMAO_LAUNCH_PARENT"), out int pid) || !long.TryParse(Environment.GetEnvironmentVariable("IMAO_LAUNCH_PARENT_START"), out long ticks) || !UpdateStorage.IsProcessAlive(pid, ticks))
             throw new IOException("启动器已退出，请重新打开软件。");
         ProgramProcessJob.JoinFromChild();
-        var path = Path.Combine(installRoot, "ProgramUpdates", "running.lock"); UpdateStorage.RejectLink(path);
+        var path = Path.Combine(installRoot, "ProgramUpdates", "running.lock"); UpdateStorage.RejectLink(path, installRoot);
         return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
     }
 

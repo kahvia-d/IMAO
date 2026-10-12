@@ -158,6 +158,10 @@
                 <Button Content="刷新手柄列表" Click="RefreshGamepads_Click" />
                 <TextBlock x:Name="GamepadStatus" Style="{StaticResource IMaoBodyTextStyle}" />
                 <TextBlock x:Name="GamepadInstructions" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <!-- Steam Deck / Proton 使用条件。掌机内置手柄没有专有模式：Steam Input 把它呈现成 Xbox 手柄后，
+                     走的就是上面这一套按键语义，所以这里只说明前提与排查入口。 -->
+                <TextBlock x:Name="GamepadPlatformNote" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap"
+                           Text="Steam Deck / Proton：请先确认 Steam Input 已把内置手柄呈现为 Xbox 手柄（手柄布局选择手柄类模板），并让本程序与游戏运行在同一个 Proton 前缀内，两者都满足时本程序沿用上面的 Xbox 按键语义，不需要额外模式。背键 L4/L5/R4/R5 请在 Steam Input 中自行映射到 A/B/X/Y、LB/RB 等按键。若此处显示未检测到手柄，请把本页状态与「诊断」页的实时事件、Logs 目录下的 gamepad-*.jsonl 一并提供给维护者。" />
                 <InfoBar x:Name="GamepadMessage" IsOpen="False" IsClosable="True" />
             </StackPanel>
         </Border>

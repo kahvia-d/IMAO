@@ -38,7 +38,10 @@ public sealed class ProgramUpdateStore
         bool allowTestKeys = false, Func<string, CancellationToken, Task>? preflight = null, Func<long>? availableBytes = null)
     {
         InstallRoot = Path.GetFullPath(installRoot).TrimEnd(Path.DirectorySeparatorChar);
-        UpdateStorage.RejectLink(InstallRoot);
+        // The installation root is the deepest directory this store owns, so it is also the boundary of every
+        // link check it makes. Above it sit the player's profile and, under Proton, the compatibility layer's
+        // path mapping - neither of which this program can vouch for, and neither of which is a decision input.
+        UpdateStorage.RejectLink(InstallRoot, InstallRoot);
         this.keys = keys.ToArray(); testKeys = allowTestKeys; this.runningAppVersion = runningAppVersion ?? "";
         this.preflight = preflight ?? CheckNativeAsync;
         freeBytes = availableBytes ?? (() => new DriveInfo(Path.GetPathRoot(InstallRoot)!).AvailableFreeSpace);
@@ -54,7 +57,7 @@ public sealed class ProgramUpdateStore
 
     public ProgramUpdateState ReadState()
     {
-        UpdateStorage.RejectLink(StatePath);
+        UpdateStorage.RejectLink(StatePath, InstallRoot);
         var state = UpdateStorage.Read<ProgramUpdateState>(StatePath);
         if (state.FormatVersion != 1 || state.Current is null || state.HighestSequence < 0 || state.Versions is null ||
             (state.HighestSequence > 0 && !UpdateSignature.IsHash(state.HighestPayloadHash))) throw new InvalidDataException("程序更新状态损坏，请保留安装目录并联系维护者。");
@@ -100,7 +103,7 @@ public sealed class ProgramUpdateStore
         var catalog = UpdateSignature.Verify(envelope, keys, testKeys);
         var package = catalog.App.Package ?? throw new InvalidOperationException("此版本需要从发行页手动安装完整程序包。");
         if (package.LauncherProtocol != ProgramPackageValidation.LauncherProtocol) throw new InvalidOperationException("新版程序需要升级启动器，请手动安装完整程序包。");
-        UpdateStorage.RejectLink(Root);
+        UpdateStorage.RejectLink(Root, InstallRoot);
         await using var gate = await UpdateStorage.LockAsync(Root, ct);
         var state = ReadState();
         if (state.Trial is not null) throw new InvalidOperationException("当前程序尚未完成启动确认。");
@@ -132,13 +135,16 @@ public sealed class ProgramUpdateStore
             long required = checked(PlannedDownload(package, installed) + package.Files.Sum(f => f.Size) + 128L * 1024 * 1024);
             if (freeBytes() < required) throw new IOException("安装目录所在磁盘空间不足，当前程序未改变。");
             var transaction = UpdateStorage.SafeChild(Root, "staging/" + Guid.NewGuid().ToString("N"));
+            // Before the directory exists, so a staging root that is itself a link is refused rather than
+            // followed: the scratch tree would otherwise be created inside whatever it points at.
+            UpdateStorage.RejectLink(transaction, Root);
             Directory.CreateDirectory(transaction);
             try
             {
             var app = Path.Combine(transaction, "app");
             await AssembleAsync(package, app, transaction, reuseRoot, installed, download, progress, ct, supplier, fallbackSupplier, catalogDownloadsAllowed);
             // Every file in the tree is hashed here, so this stage reports its own bytes rather than a static line.
-            await ProgramPackageValidation.VerifyDirectoryAsync(app, catalog.App, ct, progress);
+            await ProgramPackageValidation.VerifyDirectoryAsync(app, catalog.App, ct, progress, Root);
             progress?.Report(new UpdateProgress("检查新版程序的地图资源", 0, 0));
             await preflight(app, ct);
             await File.WriteAllBytesAsync(Path.Combine(transaction, "update.json"), envelope, ct);
@@ -155,13 +161,15 @@ public sealed class ProgramUpdateStore
     public async Task<ProgramRelease?> ValidateInstalledAsync(string id, CancellationToken ct = default)
     {
         if (id.Length == 0) return null;
-        var root = VersionRoot(id); UpdateStorage.RejectLink(root);
+        var root = VersionRoot(id); UpdateStorage.RejectLink(root, InstallRoot);
         var manifest = Path.Combine(root, "update.json");
         if (new FileInfo(manifest).Length > UpdateSignature.MaxManifestBytes) throw new InvalidDataException("程序清单过大。");
         var release = UpdateSignature.Verify(await File.ReadAllBytesAsync(manifest, ct), keys, testKeys).App;
         var package = release.Package ?? throw new InvalidDataException("缺少程序包签名信息。");
         if (package.LauncherProtocol != ProgramPackageValidation.LauncherProtocol || id != release.Version + "-" + package.Sha256.ToLowerInvariant()[..16]) throw new InvalidDataException("程序版本目录与签名不匹配。");
-        await ProgramPackageValidation.VerifyDirectoryAsync(AppDirectory(id), release, ct);
+        // The boundary is the installation root rather than the update root because the original manually
+        // installed program IS the installation root: an empty id resolves AppDirectory to it.
+        await ProgramPackageValidation.VerifyDirectoryAsync(AppDirectory(id), release, ct, null, InstallRoot);
         return release;
     }
 
@@ -176,7 +184,7 @@ public sealed class ProgramUpdateStore
         try
         {
             var manifest = Path.Combine(VersionRoot(state.Current), "update.json");
-            UpdateStorage.RejectLink(manifest);
+            UpdateStorage.RejectLink(manifest, InstallRoot);
             if (!File.Exists(manifest) || new FileInfo(manifest).Length > UpdateSignature.MaxManifestBytes) return null;
             return UpdateSignature.Verify(File.ReadAllBytes(manifest), keys, testKeys).App.Package?.Files;
         }
@@ -246,7 +254,7 @@ public sealed class ProgramUpdateStore
             await DownloadAsync(download, new ProgramDownloadTarget("完整程序包", package.Url, package.Size, package.Sha256, CatalogSource), archive, ct);
             LastCatalogDownloadCount++;
             progress?.Report(new UpdateProgress("校验并解压新版程序", 0, 0, CatalogSource));
-            await ProgramPackageValidation.ExtractAsync(archive, app, package, ct);
+            await ProgramPackageValidation.ExtractAsync(archive, app, package, ct, Root);
             TryDelete(archive);
             return;
         }
@@ -267,7 +275,7 @@ public sealed class ProgramUpdateStore
             {
                 index++;
                 if (shard.Files.All(supplied.Contains)) continue;
-                if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, supplied, progress, ct)) continue;
+                if (await TryReuseShardAsync(package, shard, reuseRoot, known, app, supplied, progress, InstallRoot, ct)) continue;
                 // With an explicit mirror source the signed addresses are not an option, so a shard neither the
                 // supplier nor this machine covered ends the attempt here instead of becoming a download. The
                 // caller's next move - the mirror's own whole archive - depends on knowing this.
@@ -297,7 +305,7 @@ public sealed class ProgramUpdateStore
                     break;
                 }
                 progress?.Report(new UpdateProgress($"校验并解压新版程序（{index}/{package.Shards.Count}）", 0, 0, CatalogSource));
-                await ProgramPackageValidation.ExtractShardAsync(archive, app, package, shard.Id, ct);
+                await ProgramPackageValidation.ExtractShardAsync(archive, app, package, shard.Id, ct, Root);
                 TryDelete(archive);
             }
             if (!restarted) return;
@@ -348,7 +356,7 @@ public sealed class ProgramUpdateStore
     /// </summary>
     private static async Task<bool> TryReuseShardAsync(ProgramPackage package, ProgramShard shard, string reuseRoot,
         Dictionary<string, ResourceFile>? known, string app, IReadOnlySet<string>? supplied,
-        IProgress<UpdateProgress>? progress, CancellationToken ct)
+        IProgress<UpdateProgress>? progress, string ownedRoot, CancellationToken ct)
     {
         var declared = package.Files.ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
         List<string> wanted = supplied is null ? shard.Files : shard.Files.Where(path => !supplied.Contains(path)).ToList();
@@ -369,7 +377,7 @@ public sealed class ProgramUpdateStore
         foreach (var path in wanted)
         {
             ct.ThrowIfCancellationRequested();
-            if (await TryReuseVerifiedAsync(UpdateStorage.SafeChild(reuseRoot, path), UpdateStorage.SafeChild(app, path), declared[path], ct))
+            if (await TryReuseVerifiedAsync(UpdateStorage.SafeChild(reuseRoot, path), UpdateStorage.SafeChild(app, path), declared[path], ownedRoot, ct))
             {
                 written.Add(path);
                 copied += declared[path].Size;
@@ -399,13 +407,13 @@ public sealed class ProgramUpdateStore
     /// so that ends as a failed preparation with the running program untouched - the same guarantee this had
     /// when every reused file was duplicated.
     /// </remarks>
-    private static async Task<bool> TryReuseVerifiedAsync(string source, string target, ResourceFile expected, CancellationToken ct)
+    private static async Task<bool> TryReuseVerifiedAsync(string source, string target, ResourceFile expected, string ownedRoot, CancellationToken ct)
     {
         try
         {
-            UpdateStorage.RejectLink(source);
+            UpdateStorage.RejectLink(source, ownedRoot);
             if (!File.Exists(source) || new FileInfo(source).Length != expected.Size) return false;
-            UpdateStorage.RejectLink(target);
+            UpdateStorage.RejectLink(target, ownedRoot);
             if (File.Exists(target)) return false; // A path is written once; another shard already owns it.
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             // Sharing the bytes is what keeps a version from costing a second copy of everything it did not
@@ -448,10 +456,10 @@ public sealed class ProgramUpdateStore
             var stack = new Stack<string>(); var directories = new List<string>(); var files = new List<string>(); stack.Push(directory);
             while (stack.Count > 0)
             {
-                var current = stack.Pop(); UpdateStorage.RejectLink(current); directories.Add(current);
+                var current = stack.Pop(); UpdateStorage.RejectLink(current, Root); directories.Add(current);
                 foreach (var path in Directory.EnumerateFileSystemEntries(current))
                 {
-                    UpdateStorage.RejectLink(path);
+                    UpdateStorage.RejectLink(path, Root);
                     if (Directory.Exists(path)) stack.Push(path); else files.Add(path);
                 }
             }
@@ -488,7 +496,7 @@ public sealed class ProgramUpdateStore
             if (!Directory.Exists(versions)) return;
             // If versions/ itself is a link, everything listed below it lives somewhere else and deleting
             // through it would remove directories this installation does not own.
-            UpdateStorage.RejectLink(versions);
+            UpdateStorage.RejectLink(versions, Root);
             var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var id in new[] { state.Current, state.Previous, state.Pending, state.Trial })
                 if (!string.IsNullOrEmpty(id)) keep.Add(id);
@@ -499,7 +507,7 @@ public sealed class ProgramUpdateStore
                 {
                     // Also rejects a version directory that is itself a link, in which case a recursive delete
                     // would empty whatever it points at.
-                    UpdateStorage.RejectLink(directory);
+                    UpdateStorage.RejectLink(directory, Root);
                     Directory.Delete(directory, true);
                 }
                 catch (IOException) { }              // Held by a scanner, an indexer, or a child still closing.

@@ -224,6 +224,19 @@ package contents.`），`Program update checks: 58 passed.` 与 `Resource update
 | 5.1 | `IMao-WinUI/AppNotificationActivationHandler.cs`、`Services/AppNotificationService.cs`、`Contracts/Services/IAppNotificationService.cs`（**三个文件均已删除**） | WinUI 模板遗留的"处理通知激活"占位（命中会弹 TODO 对话框） | ✅ **已完成（`1517c5c`）**：2026-10-12 一位玩家**所有版本都打不开**——`App` 构造函数里那行未加保护的 `AppNotificationManager.Default` 在他那台没有 Windows App Runtime Main/Singleton 包的机器上抛 `E_ACCESSDENIED`，变成 stowed exception（`0xC000027B`）在能写任何日志之前杀死进程。整条脚手架已删除，`App.xaml.cs` 留了注释说明为什么**不**注册通知（见 MEMORY K74） |
 | 5.2 | `IMao-WinUI/ShellPage.xaml.cs:16,36` | 模板文案：导航标题/图标、标题栏图标 | 标题栏图标运行时已由 `MainWindow.xaml.cs:23` 正确设置；清掉过期注释即可 |
 
+## 5b. Steam Deck / Proton（2026-10-12 新增）
+
+玩家反馈在 Steam Deck 上出现 `资源目录不能包含符号链接或目录联接：Z:\home`。**路径这一条已修**（受管根目录
+边界，见 `SteamDeck_zh-Hans.md`；自动化测试 65 + 124 项通过，并做了"把边界关掉就变红"的对照实验）。
+**下面两条是启动级阻塞，属于产品决策，本次没有动**：
+
+| # | 优先级 | 未完成项 | 出处 | 下一步动作 |
+|---|---|---|---|---|
+| 5b.1 | 高（阻塞） | 清单要求管理员提升：`IMao-WinUI/app.manifest:20` 是 `requireAdministrator`，Steam / Gaming Mode 不会弹 UAC，Wine 也无法在非交互会话里提升 | `SteamDeck_zh-Hans.md` §0 | 先确认是否真的必须提升（低层键鼠钩子、跨进程访问是否只在提升下可用）；能降就降到 `asInvoker` |
+| 5b.2 | 高（阻塞） | WinUI 3 / Windows App SDK 自包含运行时依赖 Windows 私有合成器组件（`Microsoft.UI.Xaml.dll` → `CoreMessagingXP.dll`、`Microsoft.Internal.FrameworkUdk.dll`、`dcomp.dll` → `DwmSceneI.dll` / `dwmcorei.dll`），Wine 无对应实现 | `SteamDeck_zh-Hans.md` §0；导入表取证 | 真机先跑 `IMao-CoreHost.exe` 与 `IMaoCaptureAssistant.exe` 两步判定原生核与捕获；**若捕获黑屏，则不必讨论 UI 外壳重写** |
+| 5b.3 | 中 | XInput 走 Wine 的 `xinput1_4` 回退链才有机会；`GetForegroundWindow() == gameHwnd` 与 `AttachThreadInput` 抢前台在 gamescope 下的行为未知 | `SteamDeck_zh-Hans.md` §3、§5 | 需要实机日志（`Logs/gamepad-*.jsonl` 的 `input-state` 行同时有 `foreground=` 与 `gameHwnd=`）；**在有实机证据之前不要放宽焦点判定** |
+| 5b.4 | 低 | SDL3 的原生 PS 路径（hidraw 原始 HID）在 Proton 下不可用；若 Steam Input 模板把内置手柄呈现为 DualSense 类型 5/6，SDL 会另外打开同一只物理手柄 | `IMao-WinUI/Services/ControllerDeviceSource.cs` | 目前不会重复触发动作（两条路径汇入同一个状态机），但提示布局可能错配；考虑"XInput 已接管同一只设备时不再打开 SDL" |
+
 ## 6. 环境与流程（提示，不是必须做）
 
 - 生产私钥唯一副本曾只存在于 Codex 包的 `LocalCache` 里；**2026-09-20 已复制回文档主位置**

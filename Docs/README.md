@@ -95,6 +95,7 @@
 | [`OverlayContinuityFix_20260908.md`](OverlayContinuityFix_20260908.md) | 小地图闪烁与大地图快拖错位（2026-09-08） |
 | [`MapMarkerFlicker_20260928.md`](MapMarkerFlicker_20260928.md) | 玩家反馈「标记一闪一闪」的日志分析与修复（2026-09-28） |
 | [`MapMarkerFlicker_20260928_evening_playerlog.md`](MapMarkerFlicker_20260928_evening_playerlog.md) | 同一症状的第二轮排查：下午/傍晚新旧版对照，焦点门是大地图标记的另一条来源（2026-09-28） |
+| [`SteamDeck_zh-Hans.md`](SteamDeck_zh-Hans.md) | **Steam Deck / Proton 验证与使用指南**：路径安全边界（受管根目录）、Steam Input 配置、按键验证、日志收集、实机复现步骤，以及"自动化 / Proton / 实机"三级验证状态的区分 |
 
 ## 库街区进度同步扩展
 

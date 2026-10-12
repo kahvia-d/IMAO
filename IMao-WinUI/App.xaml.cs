@@ -56,6 +56,12 @@ public partial class App : Application
         // and before anything can be shown, and its failures used to leave no trace at all. Written through
         // StartupLog so that recording a step can never initialize App's own statics and become the failure.
         StartupLog.Write("app-ctor-enter");
+        // Where the path layer reports what it could and could not verify. Compatibility layers map the
+        // filesystem in ways Windows never does, and the difference between "the environment mapped this path",
+        // "the link was inside this program's own tree and was refused" and "the path could not be inspected"
+        // is the difference between a support answer and a guess. One line per distinct finding, at most
+        // sixty-four of them, and none of it is a credential.
+        UpdatePathDiagnostics.SetSink(line => StartupLog.Write("compat " + line));
         InitializeComponent();
         Host = Microsoft.Extensions.Hosting.Host.
         CreateDefaultBuilder().
