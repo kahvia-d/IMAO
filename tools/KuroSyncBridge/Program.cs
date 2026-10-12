@@ -40,8 +40,19 @@ sealed record BridgeSettings(string AllowedOrigin)
     public static BridgeSettings Load(string directory)
     {
         string path = Path.Combine(directory, "KuroSyncBridge.settings.json");
-        var value = JsonSerializer.Deserialize<BridgeSettings>(File.ReadAllText(path));
-        if (value is null || !value.AllowedOrigin.StartsWith("chrome-extension://", StringComparison.Ordinal)) throw new InvalidDataException();
-        return value;
+        // The application writes this file when it registers the host, so it normally exists. A browser can
+        // still invoke the bridge first - a fresh install, a profile that was just reset - and that first
+        // invocation used to die on FileNotFoundException, leaving the extension a broken pipe and the
+        // event log a stack trace. The origin is built in, so the file is a convenience rather than the
+        // source of truth: fall back to it, and write one so the next invocation finds a file.
+        try
+        {
+            var value = JsonSerializer.Deserialize<BridgeSettings>(File.ReadAllText(path));
+            if (value is not null && value.AllowedOrigin.StartsWith("chrome-extension://", StringComparison.Ordinal)) return value;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException) { }
+        try { File.WriteAllText(path, KuroNativeBridgeHost.SettingsJson()); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+        return new BridgeSettings(KuroNativeBridgeHost.Origin);
     }
 }
