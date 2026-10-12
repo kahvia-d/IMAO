@@ -8,6 +8,9 @@ using System.Text.Json;
 using Microsoft.Win32.SafeHandles;
 using IMao_WinUI.Core.Updates;
 
+// Shared by the child fixture and the test that reads the launcher log, so the two cannot drift.
+const string stderrMarker = "fixture-child-stderr-tail";
+
 if (args.FirstOrDefault() == "worker")
 {
     File.WriteAllText(args[1], Environment.ProcessId.ToString());
@@ -35,6 +38,14 @@ if (args.FirstOrDefault() == "child")
     File.AppendAllText(Path.Combine(ProgramUpdateStore.FindInstallRoot(directory), "child-trace.log"), "Child started: " + mode + "\n");
     using var lease = ProgramLauncher.AcquireChildLease(ProgramUpdateStore.FindInstallRoot(directory));
     if (mode == "crash") return 17;
+    if (mode == "crash-stderr")
+    {
+        // What a real child does when the runtime or the XAML stack refuses to start: it explains itself on
+        // standard error and exits, which for a windowed process is the only place that explanation exists.
+        Console.Error.WriteLine(stderrMarker + ": the apphost would explain itself here");
+        Console.Error.Flush();
+        return 17;
+    }
     if (mode == "hang") { await Task.Delay(TimeSpan.FromMinutes(2)); return 0; }
     var build = JsonSerializer.Deserialize<BuildInfo>(File.ReadAllText(Path.Combine(directory, "build-info.json")), UpdateJson.Options)!;
     await ProgramLaunchSession.ReportHealthyAsync(mode == "wrong-version" ? "2000.1.1.1" : build.AppVersion, "fixture-snapshot");
@@ -733,6 +744,25 @@ await Test("real candidate process crash restores old program without a retry lo
     var store = Store(); await store.PrepareAsync(envelope, Download);
     await new ProgramLauncher(store, path => Child(path, path == store.InstallRoot ? "healthy" : "crash"), TimeSpan.FromSeconds(5)).RunAsync();
     Assert(store.ReadState().Current == "" && store.ReadState().Pending is null && store.ReadState().Trial is null);
+});
+await Test("a child that dies before the handshake leaves its exit code and stderr in the launcher log", async () =>
+{
+    // The player-visible dialog is the only artefact a report carries, and the exit code is what identifies
+    // the cause (a stowed XAML exception, a missing DLL, a managed exception). Both used to be discarded.
+    var store = Store(); await store.PrepareAsync(envelope, Download);
+    var launcher = new ProgramLauncher(store, path => Child(path, path == store.InstallRoot ? "healthy" : "crash-stderr"), TimeSpan.FromSeconds(5));
+    await launcher.RunAsync();
+    var log = await File.ReadAllTextAsync(Path.Combine(store.Root, "launcher.log"));
+    Assert(log.Contains("exit=0x00000011"), "the child's own exit code belongs in the launcher log: " + log);
+    Assert(log.Contains(stderrMarker), "the child's stderr tail belongs in the launcher log: " + log);
+    Assert(launcher.LastFailure.Contains("0x00000011"), "the dialog detail must name the exit code: " + launcher.LastFailure);
+});
+await Test("a child this launcher had to kill is not reported with an exit code", async () =>
+{
+    var store = Store(); await store.PrepareAsync(envelope, Download);
+    await new ProgramLauncher(store, path => Child(path, path == store.InstallRoot ? "healthy" : "hang"), TimeSpan.FromSeconds(2)).RunAsync();
+    var log = await File.ReadAllTextAsync(Path.Combine(store.Root, "launcher.log"));
+    Assert(log.Contains("exit=killed"), "a killed child must not be reported as if it had exited: " + log);
 });
 await Test("real candidate timeout kills only owned child and restores old program", async () =>
 {

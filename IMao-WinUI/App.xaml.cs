@@ -4,7 +4,6 @@ using IMao_WinUI.Core.Contracts.Services;
 using IMao_WinUI.Core.Services;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
-using IMao_WinUI.Notifications;
 using IMao_WinUI.Services;
 using IMao_WinUI.ViewModels;
 using IMao_WinUI.Views;
@@ -53,6 +52,10 @@ public partial class App : Application
 
     public App()
     {
+        // Step markers, not decoration: this constructor runs before the window, before the health report
+        // and before anything can be shown, and its failures used to leave no trace at all. Written through
+        // StartupLog so that recording a step can never initialize App's own statics and become the failure.
+        StartupLog.Write("app-ctor-enter");
         InitializeComponent();
         Host = Microsoft.Extensions.Hosting.Host.
         CreateDefaultBuilder().
@@ -62,11 +65,7 @@ public partial class App : Application
             // Default Activation Handler
             services.AddTransient<ActivationHandler<LaunchActivatedEventArgs>, DefaultActivationHandler>();
 
-            // Other Activation Handlers
-            services.AddTransient<IActivationHandler, AppNotificationActivationHandler>();
-
             // Services
-            services.AddSingleton<IAppNotificationService, AppNotificationService>();
             services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
             services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
             services.AddSingleton<CoreHostService>();
@@ -114,7 +113,7 @@ public partial class App : Application
         }).
         Build();
 
-        App.GetService<IAppNotificationService>().Initialize();
+        StartupLog.Write("app-host-ready");
 
         UnhandledException += App_UnhandledException;
     }
@@ -129,6 +128,9 @@ public partial class App : Application
 
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // The last marker before the first one that can be lost: everything above this line ran without
+        // recording anything, so its absence in startup.log is itself the diagnosis.
+        StartupLog.Write($"on-launched base={AppContext.BaseDirectory}");
         var installRoot = ProgramUpdateStore.FindInstallRoot(AppContext.BaseDirectory);
         var launcher = Path.Combine(installRoot, "IMao-Launcher.exe");
         if (File.Exists(launcher) && !ProgramLaunchSession.IsManaged)
@@ -148,8 +150,6 @@ public partial class App : Application
             ) ?? "en-us"; // 没有匹配项时默认使用en-us
 
         base.OnLaunched(args);
-
-        //App.GetService<IAppNotificationService>().Show(string.Format("AppNotificationSamplePayload".GetLocalized(), AppContext.BaseDirectory));
 
         try
         {
@@ -173,6 +173,12 @@ public partial class App : Application
             MainWindow.Activate();
             return;
         }
+        // No notification registration here, on purpose. This program never shows one, Microsoft documents
+        // app notifications as unsupported for elevated processes - this manifest requires admin - and an
+        // unpackaged self-contained app needs the Windows App Runtime Main/Singleton packages for them. On
+        // 2026-10-12 a machine that had never held those packages turned the single registration call into
+        // a stowed exception that killed the process before any window or log could exist, in every
+        // released version. The scaffolding is gone rather than guarded: nothing ever used it.
         _ = GetService<MarkerGuideCoordinator>();
         var mapTools = GetService<MapToolsController>();
         var gamepad = GetService<GamepadInputService>();
@@ -225,7 +231,9 @@ public partial class App : Application
             await ProgramLaunchSession.ReportHealthyAsync(ResourceUpdateBootstrap.ReadBuildInfo().AppVersion, snapshots.Current.SnapshotId);
             updates.Refresh();
         }
-        catch (Exception error) { updates.ShowError(error); await CloseCleanlyAsync(); }
+        // The last silent path in startup. On the machine this was written for, nothing else had been
+        // recorded yet, so a failure here has to survive the process that hit it.
+        catch (Exception error) { Trace("program-health-failed " + error); updates.ShowError(error); await CloseCleanlyAsync(); }
     }
 
     private async Task CloseCleanlyAsync(bool skipUpdateWait = false)
@@ -256,14 +264,11 @@ public partial class App : Application
     /// Appends one line to the startup log. Startup work happens before the window is usable, so a slow step
     /// there is only diagnosable from a log; logging never throws into startup.
     /// </summary>
-    private static void Trace(string line)
-    {
-        try
-        {
-            string directory = Path.Combine(UserDataPaths.Root, "Logs");
-            Directory.CreateDirectory(directory);
-            File.AppendAllText(Path.Combine(directory, "startup.log"), $"{DateTimeOffset.UtcNow:O} {line}{Environment.NewLine}");
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
-    }
+    /// <remarks>
+    /// The writing itself lives in <see cref="StartupLog"/>, which depends on nothing else, so the steps that
+    /// run before this type is initialized can be recorded too. Calls through this method still initialize
+    /// <see cref="App"/> first - that is deliberate: the window field's initializer is a startup step, and
+    /// inside the resource-init try it is the one place a broken XAML tree is reported instead of silent.
+    /// </remarks>
+    private static void Trace(string line) => StartupLog.Write(line);
 }

@@ -144,11 +144,28 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
 
     public async Task OpenAsync(JsonElement context)
     {
-        if (disposed || window is not null || opening || !core.IsConnected) return;
+        // Both entry points converge here - the in-game tool button and the gamepad's LB - and every early
+        // return below used to be silent. On 2026-10-12 a machine where the launcher icon was drawn and both
+        // inputs did nothing left no trace anywhere in the log; each reason now names itself.
+        if (disposed || window is not null || opening || !core.IsConnected)
+        {
+            core.ReportGamepadDiagnostic("map-tools-open-skipped",
+                $"disposed={disposed} window={(window is null ? "none" : "present")} opening={opening} coreConnected={core.IsConnected}");
+            return;
+        }
         var game = unchecked((nint)(long)Number(context, "gameHwnd"));
-        if (game == 0 || GetForegroundWindow() != game) return;
+        if (game == 0 || GetForegroundWindow() != game)
+        {
+            core.ReportGamepadDiagnostic("map-tools-open-skipped",
+                $"foreground=0x{unchecked((long)GetForegroundWindow()):X} game=0x{unchecked((long)game):X}");
+            return;
+        }
         var identity = GamepadWindowIdentity.Capture(game);
-        if (!identity.IsCurrent) return;
+        if (!identity.IsCurrent)
+        {
+            core.ReportGamepadDiagnostic("map-tools-open-skipped", $"game-window-changed handle=0x{unchecked((long)game):X}");
+            return;
+        }
         long operation = ++generation;
         opening = true; closing = returnFailed = handoff = querying = sending = commandBusy = false;
         controllerConnected = canvasControllerOwned = false;

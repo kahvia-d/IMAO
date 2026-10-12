@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Win32.SafeHandles;
 
@@ -33,10 +34,18 @@ public sealed class ProgramLauncher
     private readonly ProgramUpdateStore store;
     private readonly Func<string, ProcessStartInfo> startFactory;
     private readonly TimeSpan healthTimeout;
+    /// <summary>
+    /// Why the last attempt failed, in the terms a support conversation needs: the child's exit code when it
+    /// chose to exit, or the fact that this launcher had to kill it. Empty until an attempt fails.
+    /// </summary>
+    public string LastFailure { get; private set; } = "";
     public ProgramLauncher(ProgramUpdateStore store, Func<string, ProcessStartInfo>? startFactory = null, TimeSpan? healthTimeout = null)
     {
         this.store = store;
-        this.startFactory = startFactory ?? (directory => new ProcessStartInfo(Path.Combine(directory, "IMao-WinUI.exe")) { WorkingDirectory = directory, UseShellExecute = false });
+        // Standard error is captured because a child that dies before it can report anything leaves its only
+        // explanation there: the .NET apphost and the CLR write startup failures to stderr and exit, which for
+        // a windowed process is otherwise invisible.
+        this.startFactory = startFactory ?? (directory => new ProcessStartInfo(Path.Combine(directory, "IMao-WinUI.exe")) { WorkingDirectory = directory, UseShellExecute = false, RedirectStandardError = true });
         this.healthTimeout = healthTimeout ?? TimeSpan.FromMinutes(5);
     }
 
@@ -74,7 +83,7 @@ public sealed class ProgramLauncher
             try
             {
                 if (!child.Start()) throw new IOException("无法启动程序。");
-                if (start.RedirectStandardError) errorOutput = child.StandardError.ReadToEndAsync();
+                if (start.RedirectStandardError) errorOutput = DrainTailAsync(child.StandardError);
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(healthTimeout);
                 var health = ReadHealthAsync(pipe, child, nonce, build.AppVersion, timeout.Token);
                 var exit = child.WaitForExitAsync(ct);
@@ -87,9 +96,19 @@ public sealed class ProgramLauncher
             }
             catch (Exception error)
             {
+                // Read the exit code before killing anything: a child that exited on its own carries the reason
+                // (0xC000027B is a stowed WinRT/XAML exception, 0xC0000135 a missing DLL, 0xE0434352 a managed
+                // exception), while one this launcher has to kill must never be reported as if it had chosen to
+                // exit. Until 2026-10-12 neither was recorded anywhere, and "the program will not open at all"
+                // on one player's machine needed an ETW session on that machine to explain.
+                bool exited = false; int exitCode = 0;
+                try { exited = child.HasExited; if (exited) exitCode = child.ExitCode; } catch (InvalidOperationException) { }
                 try { if (child.Id > 0 && !child.HasExited) { child.Kill(true); await child.WaitForExitAsync(CancellationToken.None); } } catch (InvalidOperationException) { }
+                LastFailure = exited
+                    ? $"子进程退出码：0x{exitCode:X8}{DescribeExit(exitCode)}"
+                    : $"等待程序启动确认超过 {healthTimeout.TotalMinutes:0.#} 分钟，子进程已被终止。";
                 var diagnostic = errorOutput is null ? "" : await errorOutput;
-                try { await File.AppendAllTextAsync(Path.Combine(store.Root, "launcher.log"), $"{DateTimeOffset.UtcNow:O} {launch.Id} {error}\n{diagnostic}\n", CancellationToken.None); }
+                try { await File.AppendAllTextAsync(Path.Combine(store.Root, "launcher.log"), $"{DateTimeOffset.UtcNow:O} {launch.Id} {(exited ? $"exit=0x{exitCode:X8}" : "exit=killed")} {error}\n{diagnostic}\n", CancellationToken.None); }
                 catch (IOException) { } catch (UnauthorizedAccessException) { }
                 if (launch.Trial && retryFallback && !ct.IsCancellationRequested) { retryFallback = false; continue; }
                 throw;
@@ -108,6 +127,48 @@ public sealed class ProgramLauncher
         var health = JsonSerializer.Deserialize<ProgramHealth>(line);
         if (health is null || health.Nonce != nonce || health.ProcessId != child.Id || health.Version != version || string.IsNullOrWhiteSpace(health.ResourceSnapshotId))
             throw new InvalidDataException("程序版本或资源启动确认不匹配。");
+    }
+
+    /// <summary>
+    /// Names the exit codes this program has actually died with on players' machines.
+    /// </summary>
+    /// <remarks>
+    /// Only codes a support conversation has already needed are listed, and anything else stays a bare number:
+    /// a guess in the dialog would be worse than the hex.
+    /// </remarks>
+    private static string DescribeExit(int code) => code switch
+    {
+        unchecked((int)0xC000027B) => "（启动期的 WinRT/XAML 异常，窗口未能创建）",
+        unchecked((int)0xC0000135) => "（缺少 DLL）",
+        unchecked((int)0xC0000142) => "（DLL 初始化失败）",
+        unchecked((int)0xC0000005) => "（访问冲突：常见于注入、驱动或安全软件）",
+        unchecked((int)0xE0434352) => "（.NET 未处理异常）",
+        _ => "",
+    };
+
+    /// <summary>
+    /// Keeps the last few kilobytes of a child's standard error.
+    /// </summary>
+    /// <remarks>
+    /// Reading to the end would accumulate for the child's whole lifetime, and this launcher lives exactly as
+    /// long as the child does, so only the tail is kept. Nothing here may throw into the caller: this is a
+    /// diagnostic, and losing it must never mask the launch failure it was collected for.
+    /// </remarks>
+    private static async Task<string> DrainTailAsync(StreamReader reader)
+    {
+        var tail = new StringBuilder();
+        var buffer = new char[4096];
+        try
+        {
+            int count;
+            while ((count = await reader.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+            {
+                tail.Append(buffer, 0, count);
+                if (tail.Length > 8192) tail.Remove(0, tail.Length - 8192);
+            }
+        }
+        catch (Exception error) when (error is IOException or ObjectDisposedException or InvalidOperationException or OperationCanceledException) { }
+        return tail.ToString();
     }
 
     public static FileStream AcquireChildLease(string installRoot)

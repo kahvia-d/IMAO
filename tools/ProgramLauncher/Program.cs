@@ -9,6 +9,7 @@ internal static class EntryPoint
 {
     static async Task<int> Main(string[] args)
     {
+        ProgramLauncher? launcher = null;
         try
         {
             using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("trusted-keys.json")!;
@@ -22,12 +23,18 @@ internal static class EntryPoint
                 return elevated is null ? 1 : 0;
             }
             var store = new ProgramUpdateStore(AppContext.BaseDirectory, keys, ReadRunningVersion());
-            await new ProgramLauncher(store).RunAsync();
+            launcher = new ProgramLauncher(store);
+            await launcher.RunAsync();
             return 0;
         }
         catch (Exception error)
         {
-            MessageBox(IntPtr.Zero, error.Message, "IMao 程序启动与更新", 0x10);
+            // This dialog is the only artefact a player can send back, so it carries what a diagnosis needs:
+            // why the child died, and where the log holding the rest of it lives. On 2026-10-12 a player
+            // reported exactly this dialog for every version he tried, and the exit code behind it - the one
+            // fact that identified the cause - was recoverable only by hand on his machine.
+            var detail = launcher is null || launcher.LastFailure.Length == 0 ? "" : Environment.NewLine + launcher.LastFailure;
+            MessageBox(IntPtr.Zero, $"{error.Message}{detail}{Environment.NewLine}{Environment.NewLine}诊断日志：{Path.Combine(AppContext.BaseDirectory, "ProgramUpdates", "launcher.log")}", "IMao 程序启动与更新", 0x10);
             return 1;
         }
     }
