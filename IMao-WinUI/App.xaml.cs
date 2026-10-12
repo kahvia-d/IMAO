@@ -4,7 +4,6 @@ using IMao_WinUI.Core.Contracts.Services;
 using IMao_WinUI.Core.Services;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
-using IMao_WinUI.Notifications;
 using IMao_WinUI.Services;
 using IMao_WinUI.ViewModels;
 using IMao_WinUI.Views;
@@ -66,11 +65,7 @@ public partial class App : Application
             // Default Activation Handler
             services.AddTransient<ActivationHandler<LaunchActivatedEventArgs>, DefaultActivationHandler>();
 
-            // Other Activation Handlers
-            services.AddTransient<IActivationHandler, AppNotificationActivationHandler>();
-
             // Services
-            services.AddSingleton<IAppNotificationService, AppNotificationService>();
             services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
             services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
             services.AddSingleton<CoreHostService>();
@@ -156,8 +151,6 @@ public partial class App : Application
 
         base.OnLaunched(args);
 
-        //App.GetService<IAppNotificationService>().Show(string.Format("AppNotificationSamplePayload".GetLocalized(), AppContext.BaseDirectory));
-
         try
         {
             if (ProgramLaunchSession.IsManaged) programLease = ProgramLauncher.AcquireChildLease(installRoot);
@@ -180,12 +173,12 @@ public partial class App : Application
             MainWindow.Activate();
             return;
         }
-        // Optional scaffolding, and the last step that used to be able to kill the process: it ran in the
-        // App constructor, where its failure became a stowed exception before any window or log existed.
-        // It belongs here, with resources already up, and its own guard means a failure cannot reach the
-        // code below even if the service's internal one is ever removed.
-        try { GetService<IAppNotificationService>().Initialize(); }
-        catch (Exception error) { Trace("notification-init-failed " + error); }
+        // No notification registration here, on purpose. This program never shows one, Microsoft documents
+        // app notifications as unsupported for elevated processes - this manifest requires admin - and an
+        // unpackaged self-contained app needs the Windows App Runtime Main/Singleton packages for them. On
+        // 2026-10-12 a machine that had never held those packages turned the single registration call into
+        // a stowed exception that killed the process before any window or log could exist, in every
+        // released version. The scaffolding is gone rather than guarded: nothing ever used it.
         _ = GetService<MarkerGuideCoordinator>();
         var mapTools = GetService<MapToolsController>();
         var gamepad = GetService<GamepadInputService>();
