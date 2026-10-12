@@ -13,7 +13,10 @@
     "artifactId": 11737847073,
     "sequence": 45,
     "tag": "v2026.10.12.1",
-    "buildRunId": 38226327264
+    "buildRunId": 38226327264,
+    "requestId": "d270eca7269a864d604a8edd2f99e25d2c9135217062a3af12e5c9b0fd9af8bc",
+    "requestArtifactId": 11738895984,
+    "requestArtifactDigest": "cacefe0e78525746efe2e36c6adea708072c07ef60bdeacdb52806d2b4f3bbd5"
   },
   "completed": [
     {
