@@ -499,6 +499,23 @@ LRESULT CALLBACK KeyboardProcedure(int code, WPARAM message, LPARAM value) {
     }
     return 1;
 }
+// A click the overlay does not claim is forwarded to the game and leaves no other trace, which is exactly
+// the shape of "the launcher icon is on screen, the map is recognized, and clicks go through to the game".
+// Rate limited, because this runs for clicks that are normally the game's.
+void RecordClickNotOwned(const char* reason, const POINT& point, const std::string& target) {
+    static Clock::time_point last{};
+    const auto now = Clock::now();
+    if (last != Clock::time_point{} && now - last < std::chrono::milliseconds(400)) return;
+    last = now;
+    const auto age = regionsAt == Clock::time_point{} ? -1LL :
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - regionsAt).count();
+    StructuredLogger::Record("info", "markers", "marker-click-not-ours",
+        std::string("reason=") + reason + " regionAgeMs=" + std::to_string(age) +
+        " regions=" + std::to_string(regions.size()) +
+        " target=" + (target.empty() ? std::string("none") : target) +
+        " at=" + std::to_string(point.x) + "," + std::to_string(point.y));
+}
+
 LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
     if (code < 0) return CallNextHookEx(mouseHook, code, message, value);
     const auto& info = *reinterpret_cast<MSLLHOOKSTRUCT*>(value);
@@ -566,8 +583,8 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
             info.pt.x >= planningBinding.origin.x && info.pt.y >= planningBinding.origin.y &&
             info.pt.x <= planningBinding.origin.x + planningBinding.rect.right &&
             info.pt.y <= planningBinding.origin.y + planningBinding.rect.bottom;
-        if (!regionsFresh && !handDrawClick) return CallNextHookEx(mouseHook, code, message, value);
-        if (!focused) return CallNextHookEx(mouseHook, code, message, value);
+        if (!regionsFresh && !handDrawClick) { RecordClickNotOwned("stale-regions", info.pt, target); return CallNextHookEx(mouseHook, code, message, value); }
+        if (!focused) { RecordClickNotOwned("game-unfocused", info.pt, target); return CallNextHookEx(mouseHook, code, message, value); }
         // A click on the big map records a point and is swallowed, so the game never sees it: a
         // click that both drew a point and moved the player would be worse than no click support.
         if(regionsFresh && target.starts_with("route:hand:") && !target.starts_with("route:hand:node:") && !right) {
@@ -608,6 +625,7 @@ LRESULT CALLBACK MouseProcedure(int code, WPARAM message, LPARAM value) {
         // window owns focus. Ordinary marker writes retain the strict game gate.
         if (!gameFocused) return CallNextHookEx(mouseHook, code, message, value);
         if (target.empty()) {
+            RecordClickNotOwned("no-target", info.pt, target);
             if (message == WM_LBUTTONDOWN) { dismissRequested = true; mapInteractive = false; regions.clear(); }
             return CallNextHookEx(mouseHook, code, message, value);
         }
