@@ -221,7 +221,7 @@ package contents.`），`Program update checks: 58 passed.` 与 `Resource update
 
 | # | 位置 | 内容 | 建议 |
 |---|---|---|---|
-| 5.1 | `IMao-WinUI/AppNotificationActivationHandler.cs:29,46`、`AppNotificationService.cs:34,47` | WinUI 模板遗留的"处理通知激活"占位（命中会弹 TODO 对话框） | 这个程序不用 app 通知 → **直接删掉这段死代码** |
+| 5.1 | `IMao-WinUI/AppNotificationActivationHandler.cs`、`Services/AppNotificationService.cs`、`Contracts/Services/IAppNotificationService.cs`（**三个文件均已删除**） | WinUI 模板遗留的"处理通知激活"占位（命中会弹 TODO 对话框） | ✅ **已完成（`1517c5c`）**：2026-10-12 一位玩家**所有版本都打不开**——`App` 构造函数里那行未加保护的 `AppNotificationManager.Default` 在他那台没有 Windows App Runtime Main/Singleton 包的机器上抛 `E_ACCESSDENIED`，变成 stowed exception（`0xC000027B`）在能写任何日志之前杀死进程。整条脚手架已删除，`App.xaml.cs` 留了注释说明为什么**不**注册通知（见 MEMORY K74） |
 | 5.2 | `IMao-WinUI/ShellPage.xaml.cs:16,36` | 模板文案：导航标题/图标、标题栏图标 | 标题栏图标运行时已由 `MainWindow.xaml.cs:23` 正确设置；清掉过期注释即可 |
 
 ## 6. 环境与流程（提示，不是必须做）
