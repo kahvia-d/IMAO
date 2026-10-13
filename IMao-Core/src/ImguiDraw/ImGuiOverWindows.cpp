@@ -480,6 +480,8 @@ int ImGuiOverWindows::start()
     std::uint64_t renderedFrames = 0, observedFrames = 0, lastObservedFrame = 0;
     std::uint64_t capturedFrames = 0, lastCapturedFrame = 0;
     std::uint64_t attachedFrames = 0, trackingMisses = 0, heldMinimapFrames = 0;
+    std::uint64_t mapRequestedFrames = 0, mapAttachedFrames = 0, mapStaleFrames = 0,
+        mapContextRejectedFrames = 0, mapVisibilityRejectedFrames = 0, mapAttachRejectedFrames = 0;
     // 最近一次**实测**的小地图屏幕变换：配准失败的那一帧复用它（最多 150 毫秒），
     // 只影响叠加层的贴合，不参与任何位置计算。
     OverlayScreenTransform lastMinimapMotion;
@@ -770,6 +772,22 @@ int ImGuiOverWindows::start()
                         frameStart - capture->capturedAt).count() : -1) +
                     " sourceAgeMs=" + std::to_string(frame->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
                         frameStart - frame->capturedAt).count() : -1) +
+                    " sourceMaximumAgeMs=" + std::to_string(frame->maximumAge.count()) +
+                    " visibilityAgeMs=" + std::to_string(visibility->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
+                        frameStart - visibility->capturedAt).count() : -1) +
+                    " visibilityMaximumAgeMs=" + std::to_string(visibility->maximumAge.count()) +
+                    " sourceFrame=" + std::to_string(frame->frameId) +
+                    " visibilityFrame=" + std::to_string(visibility->frameId) +
+                    " visibilitySinceFrame=" + std::to_string(visibility->visibleSinceFrame) +
+                    " visibilityMap=" + std::to_string(visibility->mapVisible) +
+                    " sourceMap=" + std::to_string(frame->mapVisible) +
+                    " sourceReliable=" + std::to_string(frame->mapMotion.reliable) +
+                    " mapRequestedFrames=" + std::to_string(mapRequestedFrames) +
+                    " mapAttachedFrames=" + std::to_string(mapAttachedFrames) +
+                    " mapStaleFrames=" + std::to_string(mapStaleFrames) +
+                    " mapContextRejectedFrames=" + std::to_string(mapContextRejectedFrames) +
+                    " mapVisibilityRejectedFrames=" + std::to_string(mapVisibilityRejectedFrames) +
+                    " mapAttachRejectedFrames=" + std::to_string(mapAttachRejectedFrames) +
                     " inputGapMs=" + std::to_string(attachedGapMs()) +
                     " boundsMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxBounds).count()) +
                     " trackMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxTrack).count()) +
@@ -815,6 +833,8 @@ int ImGuiOverWindows::start()
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
                 attachedFrames = trackingMisses = 0; heldMinimapFrames = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;
+                mapRequestedFrames = mapAttachedFrames = mapStaleFrames = mapContextRejectedFrames =
+                    mapVisibilityRejectedFrames = mapAttachRejectedFrames = 0;
                 syncTotalMs = newFrameTotalMs = buildTotalMs = renderTotalMs = hashTotalMs = presentTotalMs = 0;
                 syncCalls = renderCalls = hashCalls = presentCalls = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();
@@ -823,7 +843,9 @@ int ImGuiOverWindows::start()
             bool mapEligible = false, minimapEligible = false;
             PresentedOverlayFrame presented{frame, {}, false, false, frameStart};
             presented.capture = capture;
-            if (frame->Fresh() && DrawItemBase::IsMarkerDisplayContext(h_window) &&
+            const bool sourceFresh = frame->Fresh();
+            if (frame->mapVisible) ++mapRequestedFrames;
+            if (sourceFresh && DrawItemBase::IsMarkerDisplayContext(h_window) &&
                 frame->clientRect.right == GameRect.right && frame->clientRect.bottom == GameRect.bottom) {
                 if (frame->mapVisible && visibility->AllowsMap(frame->frameId)) {
                     mapEligible = true;
@@ -839,7 +861,8 @@ int ImGuiOverWindows::start()
                         drewMap = true;
                         presented.motion = motion;
                         ++attachedFrames;
-                    } else ++trackingMisses;
+                        ++mapAttachedFrames;
+                    } else { ++trackingMisses; ++mapAttachRejectedFrames; }
                 }
                 else if (frame->minimapVisible && visibility->AllowsMinimap(frame->frameId)) {
                     minimapEligible = true;
@@ -893,6 +916,11 @@ int ImGuiOverWindows::start()
                         }
                     }
                 }
+                else if (frame->mapVisible) ++mapVisibilityRejectedFrames;
+            }
+            else if (frame->mapVisible) {
+                if (!sourceFresh) ++mapStaleFrames;
+                else ++mapContextRejectedFrames;
             }
             if (!mapEligible) mapMotion.Reset();
             if (!drewMap) DrawMarkerInteraction::Clear();

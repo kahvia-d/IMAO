@@ -319,6 +319,7 @@ winrt::IAsyncAction App::Start() {
 	auto startTime = std::chrono::high_resolution_clock::now();
 	int cycleTime = 100;
     uint64_t lastLocalizedFrame = 0;
+	auto lastMapCycleReport = std::chrono::steady_clock::time_point{};
 	// The in-game status bar prints this number, so publishing it per frame made the overlay's own
 	// frame content change on every iteration and defeated OverlayPacing::ShouldPresentFrame: the
 	// window was then re-presented - and the whole screen recomposited for the game - even when
@@ -334,6 +335,9 @@ winrt::IAsyncAction App::Start() {
             continue;
         }
         const CapturedFrame captured = *latest;
+        const auto cycleStarted = std::chrono::steady_clock::now();
+        double mapPredictMs = 0.0, mapResultMs = 0.0, mapSearchMs = 0.0, mapFilterMs = 0.0;
+        bool measuredMapCycle = false;
         lastLocalizedFrame = snapshotFrameId = captured.frameId;
         snapshotCapturedAt = captured.capturedAt;
         rect = captured.clientRect;
@@ -359,6 +363,8 @@ winrt::IAsyncAction App::Start() {
 		// and drawing only consume its latest accepted viewport or a lightweight
 		// frame-to-frame prediction; they never wait for SURF matching.
 		if (isOpenMap.load() and enabledMapShowItem and captureFresh and isWindowFocused.load()) {
+            measuredMapCycle = true;
+            const auto predictStarted = std::chrono::steady_clock::now();
 			RuntimeStatus::SetLocalization("mapLocating", {}, "正在识别大地图视口");
 			imguiWindowsHeight = rect.bottom;
 			imguiWindowsWidth = rect.right;
@@ -389,12 +395,18 @@ winrt::IAsyncAction App::Start() {
 				mapViewportPredictor.GetPrediction(prediction);
 				observedMapViewportRevision = prediction.revision;
 			}
+            mapPredictMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - predictStarted).count();
+            const auto resultStarted = std::chrono::steady_clock::now();
 			ProcessMapViewportResult(currentSnapshot);
 			{
 				std::scoped_lock lock(mapViewportMutex);
 				mapViewportPredictor.GetPrediction(prediction);
 				viewportFrameAnchored = mapViewportPredictor.IsCurrentFrameAnchored();
 			}
+            mapResultMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - resultStarted).count();
+            const auto searchStarted = std::chrono::steady_clock::now();
 
 			// Abandon a search that has stopped answering. Without this the map stays blind for as
 			// long as the worker takes, and the submit gate below can never reopen.
@@ -452,6 +464,9 @@ winrt::IAsyncAction App::Start() {
 				if (searchNow) SubmitMapViewportSearch(currentSnapshot, scope, correctionPrior);
 			}
 
+            mapSearchMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - searchStarted).count();
+            const auto filterStarted = std::chrono::steady_clock::now();
 			if (viewportFrameAnchored && prediction.sceneId != 0 && prediction.captureCorners.size() == 4 && prediction.confidence >= 2) {
                 renderedViewport = prediction;
 				const Coordinate predictedCenterROC = RelativeCoordinates::ImgMapCoordToROC(
@@ -459,6 +474,8 @@ winrt::IAsyncAction App::Start() {
 				DrawItemOnGameMap::UpdateCenterPointNearItemsData(predictedCenterROC,
 					prediction.captureCorners, rect, prediction.sceneId);
 			}
+            mapFilterMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - filterStarted).count();
 
 			cycleTime = App::updateMapDataCycleTime.load();
 		}else {
@@ -641,7 +658,34 @@ winrt::IAsyncAction App::Start() {
 			DrawItemOnMinMap::ClearNearItemsData();
 		}
 
+        const auto publishStarted = std::chrono::steady_clock::now();
 		PublishOverlayFrame(captured, renderedViewport);
+        const auto publishedAt = std::chrono::steady_clock::now();
+        if (measuredMapCycle && publishedAt - lastMapCycleReport >= std::chrono::seconds(2)) {
+            lastMapCycleReport = publishedAt;
+            // Sample one completed cycle, including mutex waits. The asynchronous
+            // solver's durationMs is not the cost of producing this marker frame.
+            const auto published = overlayFrames.Read();
+            Diagnostics::Record("map-overlay-cycle", "frame=" + std::to_string(captured.frameId) +
+                " publishedFrame=" + std::to_string(published->frameId) +
+                " scene=" + std::to_string(renderedViewport.sceneId) +
+                " confidence=" + std::to_string(renderedViewport.confidence) +
+                " predictMs=" + std::to_string(mapPredictMs) +
+                " resultMs=" + std::to_string(mapResultMs) +
+                " searchMs=" + std::to_string(mapSearchMs) +
+                " filterMs=" + std::to_string(mapFilterMs) +
+                " publishMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - publishStarted).count()) +
+                " cycleMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - cycleStarted).count()) +
+                " captureAgeAtStartMs=" + std::to_string(std::chrono::duration<double, std::milli>(cycleStarted - captured.capturedAt).count()) +
+                " captureAgeAtEndMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - captured.capturedAt).count()) +
+                " publishedAgeMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - published->capturedAt).count()) +
+                " maximumAgeMs=" + std::to_string(published->maximumAge.count()) +
+                " updateMapMs=" + std::to_string(updateMapDataCycleTime.load()) +
+                " updateMinimapMs=" + std::to_string(updateMinMapDataCycleTime.load()) +
+                " mapVisible=" + std::to_string(published->mapVisible) +
+                " reliable=" + std::to_string(published->mapMotion.reliable) +
+                " markers=" + std::to_string(published->mapMarkers.markers.size()));
+        }
 		auto endTime = std::chrono::high_resolution_clock::now();
 		auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
 		frameWindowTotalMs += elapsedTime;

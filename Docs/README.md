@@ -95,6 +95,7 @@
 | [`OverlayContinuityFix_20260908.md`](OverlayContinuityFix_20260908.md) | 小地图闪烁与大地图快拖错位（2026-09-08） |
 | [`MapMarkerFlicker_20260928.md`](MapMarkerFlicker_20260928.md) | 玩家反馈「标记一闪一闪」的日志分析与修复（2026-09-28） |
 | [`MapMarkerFlicker_20260928_evening_playerlog.md`](MapMarkerFlicker_20260928_evening_playerlog.md) | 同一症状的第二轮排查：下午/傍晚新旧版对照，焦点门是大地图标记的另一条来源（2026-09-28） |
+| [`MapMarkerFlicker_20261013_even.md`](MapMarkerFlicker_20261013_even.md) | even 的大世界 / 下层金库对照：源帧年龄、附着绘制差异与新增诊断（2026-10-13） |
 
 ## 库街区进度同步扩展
 
