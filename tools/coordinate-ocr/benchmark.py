@@ -87,12 +87,23 @@ def prepare(corpus, data_root, output, profiles):
         image = cv2.imdecode(np.frombuffer(source.read_bytes(), dtype=np.uint8), cv2.IMREAD_COLOR)
         if image is None:
             raise ValueError(f'unreadable image: {source}')
-        height, width = image.shape[:2]
+        stored_height, stored_width = image.shape[:2]
+        width, height = frame.get('frameSize', [stored_width, stored_height])
+        source_rect = frame.get('sourceRect', [0, 0, stored_width, stored_height])
+        if (len(source_rect) != 4 or any(type(value) is not int for value in source_rect) or
+            type(width) is not int or type(height) is not int or width <= 0 or height <= 0):
+            raise ValueError(f'invalid source geometry: {frame_id}')
+        sx, sy, sw, sh = source_rect
+        if (sw != stored_width or sh != stored_height or sx < 0 or sy < 0 or
+            sx+sw > width or sy+sh > height):
+            raise ValueError(f'stored pixels do not match source geometry: {frame_id}')
         for profile in profiles:
             x, y, w, h = roi(profile, width, height)
             if w <= 0 or h <= 0 or x < 0 or y < 0 or x + w > width or y + h > height:
                 raise ValueError(f'invalid crop: {frame_id} {profile}')
-            crop = image[y:y+h, x:x+w].copy()
+            if x < sx or y < sy or x+w > sx+sw or y+h > sy+sh:
+                raise ValueError(f'saved strip does not cover ROI: {frame_id} {profile}')
+            crop = image[y-sy:y-sy+h, x-sx:x-sx+w].copy()
             target = output / profile / f'{frame_id}.png'
             target.parent.mkdir(parents=True, exist_ok=True)
             ok, encoded = cv2.imencode('.png', crop)
@@ -239,7 +250,7 @@ def verify_native_provenance(expected, metadata):
 
 def markdown(report):
     lines = ['# 坐标 OCR 独立离线评测', '',
-        '旧素材回归集；这些帧此前用于分析/调参，不能证明新场景的泛化能力。', '',
+        report.get('corpusNote') or '素材说明未提供；泛化结论需要独立验收素材。', '',
         '推理输入不含标签和位置先验。两侧读取同一份无缩放 BGR 裁剪，解码像素摘要逐条核对。', '',
         '单条输出与候选召回分别计分；未知 z 不计三维命中。无读数误报单独统计。', '',
         '本报告评估识别与解析，不模拟 App 的位置发布、位移预算或视觉定位。', '',

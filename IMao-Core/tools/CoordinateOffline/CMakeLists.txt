@@ -72,3 +72,26 @@ target_link_libraries(IMaoCoordinateOffline PRIVATE
     "${PADDLE_LIB}/paddle/lib/paddle_inference.lib"
     mklml libiomp5md mkldnn glog gflags_static libprotobuf xxhash yaml-cpp
     ${OpenCV_LIBS} shlwapi)
+
+add_executable(IMaoCoordinateSampleTests SampleStoreTests.cpp)
+set_property(SOURCE SampleStoreTests.cpp APPEND PROPERTY OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/SampleStore.h")
+target_compile_options(IMaoCoordinateSampleTests PRIVATE /utf-8 /bigobj)
+target_compile_definitions(IMaoCoordinateSampleTests PRIVATE NOMINMAX)
+target_include_directories(IMaoCoordinateSampleTests PRIVATE ${OpenCV_INCLUDE_DIRS}
+    "${IMAO_DEPENDENCY_ROOT}/IMao-Core/packages/nlohmann" "${IMAO_SOURCE_ROOT}/IMao-Core/src")
+target_link_libraries(IMaoCoordinateSampleTests PRIVATE ${OpenCV_LIBS} bcrypt)
+
+add_library(IMaoCoordinateCaptureEngine STATIC CaptureEngine.cpp)
+target_compile_options(IMaoCoordinateCaptureEngine PRIVATE /utf-8 /bigobj)
+target_compile_definitions(IMaoCoordinateCaptureEngine PUBLIC NOMINMAX)
+target_include_directories(IMaoCoordinateCaptureEngine PUBLIC ${OpenCV_INCLUDE_DIRS}
+    "${IMAO_DEPENDENCY_ROOT}/IMao-Core/packages/nlohmann" "${IMAO_SOURCE_ROOT}/IMao-Core/src")
+target_link_libraries(IMaoCoordinateCaptureEngine PUBLIC ${OpenCV_LIBS} bcrypt d3d11 dxgi windowsapp runtimeobject dwmapi user32 gdi32 ole32)
+add_executable(IMaoCoordinateCaptureTests SampleCaptureTests.cpp)
+target_compile_options(IMaoCoordinateCaptureTests PRIVATE /utf-8 /bigobj)
+target_link_libraries(IMaoCoordinateCaptureTests PRIVATE IMaoCoordinateCaptureEngine)
+add_executable(IMaoCoordinateSampleCapture SampleCaptureMain.cpp)
+target_compile_options(IMaoCoordinateSampleCapture PRIVATE /utf-8 /bigobj)
+target_link_libraries(IMaoCoordinateSampleCapture PRIVATE IMaoCoordinateCaptureEngine)
+add_executable(IMaoCoordinateLauncherFixture LauncherFixture.cpp)
+target_compile_options(IMaoCoordinateLauncherFixture PRIVATE /utf-8)

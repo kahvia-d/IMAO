@@ -23,6 +23,7 @@ function Invoke-OfflineBuild([string]$Command) {
     $start.WorkingDirectory = $sourceRoot
     $start.UseShellExecute = $false
     $start.CreateNoWindow = $true
+    $start.EnvironmentVariables['VSLANG'] = '1033'
     $start.RedirectStandardOutput = $true
     $start.RedirectStandardError = $true
     [void]$start.EnvironmentVariables.Remove('Path')

@@ -54,6 +54,7 @@
 | [`KuroTileFeaturePacks.md`](KuroTileFeaturePacks.md) | 库街区瓦片特征包 |
 | [`VisualLocalization_zh-Hans.md`](VisualLocalization_zh-Hans.md) | 小地图视觉定位 |
 | [`CoordinateOfflineEvaluation_zh-Hans.md`](CoordinateOfflineEvaluation_zh-Hans.md) | 坐标 OCR 独立离线评测：共同像素输入、无标签先验、单条输出与候选召回、PP-OCR / 单字符 YOLO 对照 |
+| [`CoordinateSampleCapture_zh-Hans.md`](CoordinateSampleCapture_zh-Hans.md) | 独立坐标素材采集：原始像素带、前台游戏限定、暂停/结束、预算、会话校验与离线回放 |
 | [`PerformanceOptimizationPlan_zh-Hans.md`](PerformanceOptimizationPlan_zh-Hans.md) | 启动加载与坐标识别优化实施计划 |
 | [`MapRecognitionAudit_20260906.md`](MapRecognitionAudit_20260906.md) | 2026-09-06 地图识别根因审计 |
 | [`MinimapRetrievalAudit_20260907.md`](MinimapRetrievalAudit_20260907.md) | 小地图跨区域定位排查（2026-09-07 晚间） |

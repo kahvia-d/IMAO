@@ -82,11 +82,12 @@ $dataRoot = 'C:\Dcode\WWMAP-TOOLS'
 $python = Join-Path $dataRoot 'out\coord-ocr-compare\.venv\Scripts\python.exe'
 $upstream = Join-Path $dataRoot 'third_party\research\WutheringWaves-Navigator'
 
-# 只构建独立原生评测器，不编译/刷新测试客户端，不复制玩家版安装文件。
+# 构建独立原生评测器、采集器及其测试，不编译/刷新测试客户端。
 .\scripts\Build-CoordinateOffline.ps1 -DependencyRoot $dataRoot
 
-# 23 项检查，包括对上游真实代码注入故障；不下载测试依赖。
+# 包含对上游真实代码注入故障；不下载测试依赖。
 $env:IMAO_OCR_UPSTREAM = $upstream
+$env:IMAO_CAPTURE_LAUNCHER_FIXTURE = (Resolve-Path out\build\coordinate-offline\IMaoCoordinateLauncherFixture.exe).Path
 & $python -m unittest discover -s Tests\CoordinateOffline -v
 
 # 每轮使用新目录，已含 report.json 的目录会被拒绝，保留旧证据。

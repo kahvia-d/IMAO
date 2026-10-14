@@ -1,0 +1,126 @@
+#pragma once
+#include <Windows.h>
+#include <bcrypt.h>
+#include <opencv2/opencv.hpp>
+#include "Runtime/TextEncoding.h"
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <mutex>
+#include <sstream>
+
+using SampleJson = nlohmann::json;
+inline std::string SampleUtc() {
+    SYSTEMTIME now{}; GetSystemTime(&now);
+    char text[32]{};
+    std::snprintf(text, sizeof(text), "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
+        now.wYear, now.wMonth, now.wDay, now.wHour, now.wMinute, now.wSecond, now.wMilliseconds);
+    return text;
+}
+inline cv::Rect SampleEnvelope(cv::Size client) {
+    if (client.width <= 0 || client.height <= 0) throw std::runtime_error("empty client geometry");
+    const double scale = (std::min)(client.width/1600.0, client.height/900.0);
+    const int width = (std::min)(client.width, (std::max)(client.width/4, int(std::lround(400*scale))));
+    const int height = (std::min)(client.height, (std::max)(client.height/32, int(std::lround(80*scale))));
+    return {0, client.height-height, width, height};
+}
+inline cv::Rect MapCapturedClient(cv::Size content, cv::Rect clientScreen, cv::Rect capturedBounds) {
+    if (clientScreen.width <= 0 || clientScreen.height <= 0) throw std::runtime_error("empty client rectangle");
+    if (content == clientScreen.size()) return {0, 0, content.width, content.height};
+    const cv::Rect offset(clientScreen.x-capturedBounds.x, clientScreen.y-capturedBounds.y,
+                          clientScreen.width, clientScreen.height);
+    if (content == capturedBounds.size() && offset.x >= 0 && offset.y >= 0 &&
+        offset.x+offset.width <= content.width && offset.y+offset.height <= content.height) return offset;
+    throw std::runtime_error("capture/client geometry cannot be mapped exactly");
+}
+inline bool SamplingEligible(bool recording, bool targetIsGame, bool foregroundMatches) {
+    return recording && targetIsGame && foregroundMatches;
+}
+inline std::string SampleSha256(const std::vector<unsigned char>& bytes) {
+    struct Handles {
+        BCRYPT_ALG_HANDLE algorithm = nullptr; BCRYPT_HASH_HANDLE hash = nullptr;
+        ~Handles() { if (hash) BCryptDestroyHash(hash); if (algorithm) BCryptCloseAlgorithmProvider(algorithm, 0); }
+    } handles;
+    auto check = [](NTSTATUS status) { if (status < 0) throw std::runtime_error("sample SHA256 failed"); };
+    check(BCryptOpenAlgorithmProvider(&handles.algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0));
+    check(BCryptCreateHash(handles.algorithm, &handles.hash, nullptr, 0, nullptr, 0, 0));
+    check(BCryptHashData(handles.hash, const_cast<PUCHAR>(bytes.data()), static_cast<ULONG>(bytes.size()), 0));
+    unsigned char hash[32]{};
+    check(BCryptFinishHash(handles.hash, hash, sizeof(hash), 0));
+    std::ostringstream text; text << std::hex << std::setfill('0');
+    for (unsigned char byte : hash) text << std::setw(2) << int(byte);
+    return text.str();
+}
+struct SampleLimits { std::size_t samples = 1200; std::uint64_t bytes = 256ULL*1024*1024; };
+
+class SampleStore {
+public:
+    SampleStore(const std::filesystem::path& root, std::string id, const std::string& origin, SampleLimits limits)
+        : id_(std::move(id)), limits_(limits) {
+        if (id_.empty() || std::any_of(id_.begin(), id_.end(), [](unsigned char c) {
+            return !(std::isalnum(c) || c == '-' || c == '_'); })) throw std::runtime_error("unsafe session id");
+        if (!limits.samples) throw std::runtime_error("sample limit must be positive");
+        directory_ = root / id_;
+        std::filesystem::create_directories(root);
+        if (!std::filesystem::create_directory(directory_)) throw std::runtime_error("session directory already exists");
+        index_.open(directory_/"index.jsonl", std::ios::binary);
+        Write({{"type", "session-start"}, {"formatVersion", 1}, {"sessionId", id_}, {"origin", origin},
+               {"backend", "wgc"}, {"pixelFormat", "B8G8R8A8_UNORM"}, {"createdAtUtc", SampleUtc()},
+               {"maximumSamples", limits.samples}, {"maximumPngBytes", limits.bytes}});
+    }
+    bool Save(const cv::Mat& strip, cv::Size client, cv::Rect source, const SampleJson& metadata) {
+        std::lock_guard lock(mutex_);
+        if (finished_) return false;
+        if (strip.type() != CV_8UC3 || strip.size() != source.size() || source.x < 0 || source.y < 0 ||
+            source.x+source.width > client.width || source.y+source.height > client.height)
+            throw std::runtime_error("sample pixels/geometry mismatch");
+        std::vector<unsigned char> encoded;
+        if (!cv::imencode(".png", strip, encoded, {cv::IMWRITE_PNG_COMPRESSION, 1}))
+            throw std::runtime_error("sample PNG encode failed");
+        if (encoded.size() > limits_.bytes-bytes_) { FinishLocked("byte-limit"); return false; }
+        std::ostringstream number; number << std::setfill('0') << std::setw(6) << count_+1;
+        const auto filename = "frame-"+number.str()+".png";
+        const auto target = directory_/filename;
+        const auto pending = directory_/(filename+".tmp");
+        std::ofstream file(pending, std::ios::binary);
+        file.write(reinterpret_cast<const char*>(encoded.data()), std::streamsize(encoded.size()));
+        file.close();
+        if (!file) throw std::runtime_error("sample image write failed");
+        std::filesystem::rename(pending, target);
+        SampleJson record = metadata.is_object() ? metadata : SampleJson::object();
+        record.update({{"type", "sample"}, {"id", id_+"-"+number.str()}, {"image", filename},
+            {"frameSize", {client.width, client.height}}, {"sourceRect", {source.x, source.y, source.width, source.height}},
+            {"sha256", SampleSha256(encoded)}, {"pngBytes", encoded.size()}, {"writtenAtUtc", SampleUtc()}});
+        Write(record);
+        ++count_; bytes_ += encoded.size();
+        if (count_ >= limits_.samples) FinishLocked("sample-limit");
+        return true;
+    }
+    void Event(SampleJson record) {
+        std::lock_guard lock(mutex_);
+        if (!finished_) { record["atUtc"] = SampleUtc(); Write(record); }
+    }
+    void Finish(const std::string& reason) { std::lock_guard lock(mutex_); if (!finished_) FinishLocked(reason); }
+    bool Finished() const { std::lock_guard lock(mutex_); return finished_; }
+    std::size_t Count() const { std::lock_guard lock(mutex_); return count_; }
+    const std::filesystem::path& Directory() const { return directory_; }
+private:
+    void Write(const SampleJson& record) {
+        index_ << DumpJsonText(record) << '\n'; index_.flush();
+        if (!index_) throw std::runtime_error("sample index write failed");
+    }
+    void FinishLocked(const std::string& reason) {
+        Write({{"type", "session-end"}, {"samples", count_}, {"pngBytes", bytes_},
+               {"reason", reason}, {"endedAtUtc", SampleUtc()}});
+        finished_ = true;
+    }
+    mutable std::mutex mutex_;
+    std::string id_;
+    SampleLimits limits_;
+    std::filesystem::path directory_;
+    std::ofstream index_;
+    std::size_t count_ = 0;
+    std::uint64_t bytes_ = 0;
+    bool finished_ = false;
+};
