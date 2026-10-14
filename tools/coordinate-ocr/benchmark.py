@@ -97,6 +97,32 @@ def prepare(corpus, data_root, output, profiles):
         if (sw != stored_width or sh != stored_height or sx < 0 or sy < 0 or
             sx+sw > width or sy+sh > height):
             raise ValueError(f'stored pixels do not match source geometry: {frame_id}')
+        capture_digest = frame.get('captureSHA256')
+        if corpus.get('capturePairedMinimap') or 'captureSHA256' in frame:
+            if (not isinstance(capture_digest, str) or len(capture_digest) != 64 or
+                    any(char not in '0123456789abcdef' for char in capture_digest)):
+                raise ValueError(f'missing or invalid capture image digest: {frame_id}')
+        if capture_digest is not None and sha256(source) != capture_digest:
+            raise ValueError(f'capture image digest mismatch: {frame_id}')
+        minimap = frame.get('minimap')
+        if corpus.get('capturePairedMinimap') or minimap is not None:
+            if (not isinstance(minimap, dict) or minimap.get('frameId') != frame_id or
+                    type(frame.get('frameSystemRelativeTime100ns')) is not int):
+                raise ValueError(f'invalid minimap frame pairing: {frame_id}')
+            mini_source = Path(data_root) / minimap['image']
+            if not mini_source.is_file():
+                raise ValueError(f'missing paired minimap: {mini_source}')
+            mini_data = mini_source.read_bytes()
+            if hashlib.sha256(mini_data).hexdigest() != minimap['sha256']:
+                raise ValueError(f'minimap digest mismatch: {frame_id}')
+            mini_image = cv2.imdecode(np.frombuffer(mini_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+            rect = minimap['sourceRect']
+            if len(rect) != 4 or any(type(value) is not int for value in rect):
+                raise ValueError(f'invalid minimap geometry: {frame_id}')
+            mx, my, mw, mh = rect
+            if (mini_image is None or mini_image.shape[:2] != (mh, mw) or mx < 0 or my < 0 or
+                    mw <= 0 or mh <= 0 or mx+mw > width or my+mh > height):
+                raise ValueError(f'invalid minimap pixel geometry: {frame_id}')
         for profile in profiles:
             x, y, w, h = roi(profile, width, height)
             if w <= 0 or h <= 0 or x < 0 or y < 0 or x + w > width or y + h > height:

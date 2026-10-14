@@ -13,6 +13,10 @@ LRESULT CALLBACK FixtureWindow(HWND hwnd, UINT message, WPARAM wparam, LPARAM lp
         brush = CreateSolidBrush(RGB(71,82,93)); FillRect(dc, &bottom, brush); DeleteObject(brush);
         RECT left{0, 0, 20, client.bottom};
         brush = CreateSolidBrush(RGB(121,132,143)); FillRect(dc, &left, brush); DeleteObject(brush);
+        static unsigned generation = 0;
+        brush = CreateSolidBrush(RGB(++generation % 255, 50, 170));
+        RECT topStamp{60,40,68,48}, bottomStamp{60,client.bottom-25,68,client.bottom-17};
+        FillRect(dc, &topStamp, brush); FillRect(dc, &bottomStamp, brush); DeleteObject(brush);
         EndPaint(hwnd, &paint); return 0;
     }
     return DefWindowProcW(hwnd, message, wparam, lparam);
@@ -42,7 +46,7 @@ int wmain(int argc, wchar_t** argv) {
             if (!window) throw std::runtime_error("fixture window creation failed");
             ShowWindow(window, SW_SHOWNOACTIVATE); UpdateWindow(window);
             auto store = std::make_shared<SampleStore>(std::filesystem::path(argv[1]),
-                bordered ? "bordered" : "borderless", "fixture", SampleLimits{3, 1024*1024});
+                bordered ? "bordered" : "borderless", "fixture", SampleLimits{3, 1024*1024}, true);
             WgcSampler capture(window, true, 100, store);
             Pump(window, 400);
             if (store->Count() != 0) throw std::runtime_error("paused capture unexpectedly saved pixels");
@@ -56,6 +60,16 @@ int wmain(int argc, wchar_t** argv) {
             if (image.size() != cv::Size(200,40) || image.at<cv::Vec3b>(10,10) != cv::Vec3b(143,132,121) ||
                 image.at<cv::Vec3b>(10,50) != cv::Vec3b(93,82,71))
                 throw std::runtime_error("captured client pixel mapping is not exact");
+            for (int i = 1; i <= 3; ++i) {
+                const auto name = "frame-00000" + std::to_string(i);
+                auto strip = cv::imread((store->Directory()/(name+".png")).string());
+                auto minimap = cv::imread((store->Directory()/(name+".minimap.png")).string());
+                if (minimap.empty()) throw std::runtime_error("same-frame minimap image was not saved");
+                if (minimap.size() != cv::Size(77,77) || minimap.at<cv::Vec3b>(10,10) != cv::Vec3b(33,22,11))
+                    throw std::runtime_error("minimap client pixel mapping is not exact");
+                if (strip.at<cv::Vec3b>(17,62) != minimap.at<cv::Vec3b>(30,47))
+                    throw std::runtime_error("coordinate/minimap paint generations differ");
+            }
         }
         std::cout << "Actual WGC fixtures: paused state, borderless/bordered mapping and exact BGR pixels passed.\n";
         return 0;

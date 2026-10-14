@@ -150,5 +150,89 @@ class SessionExportContracts(unittest.TestCase):
             sessions.inspect_session(self.root, labels={'other': labels['session-a-000001']})
 
 
+class PairedSessionContracts(SessionExportContracts):
+    def setUp(self):
+        super().setUp()
+        import cv2
+        import numpy as np
+        cv2.imencode('.png', np.full((154, 154, 3), 99, dtype=np.uint8))[1].tofile(self.root/'frame-000001.minimap.png')
+        data = (self.root/'frame-000001.minimap.png').read_bytes()
+        self.records[0].update(formatVersion=2, pairedMinimap=True)
+        self.records[1]['frameSystemRelativeTime100ns'] = 12345
+        self.records[1]['minimap'] = {'frameId': 'session-a-000001', 'image': 'frame-000001.minimap.png',
+                                     'sourceRect': [30, 23, 154, 154], 'sha256': hashlib.sha256(data).hexdigest(),
+                                     'pngBytes': len(data)}
+        self.records[1]['pngBytes'] = (self.root/'frame-000001.png').stat().st_size
+        self.records[-1]['pngBytes'] = self.records[1]['pngBytes'] + len(data)
+        self.save()
+
+    def test_export_keeps_same_frame_minimap_without_inventing_coordinates(self):
+        report = sessions.inspect_session(self.root)
+        frame = report['corpus']['frames'][0]
+        self.assertEqual(report['pairedSamples'], 1)
+        self.assertEqual(frame['frameSystemRelativeTime100ns'], 12345)
+        self.assertEqual(frame['minimap']['frameId'], frame['id'])
+        self.assertEqual(frame['minimap']['sourceRect'], [30, 23, 154, 154])
+        self.assertTrue(Path(frame['minimap']['image']).is_file())
+        self.assertIsNone(frame['expected'])
+        inputs = benchmark.prepare(report['corpus'], self.root, self.root/'ocr-inputs', ['production'])
+        self.assertNotIn('minimap', inputs[0])
+        self.assertNotIn('frameSystemRelativeTime100ns', inputs[0])
+
+    def test_missing_minimap_is_fatal_even_in_recovery(self):
+        (self.root/'frame-000001.minimap.png').unlink()
+        with self.assertRaisesRegex(ValueError, 'missing'):
+            sessions.inspect_session(self.root, allow_incomplete=True)
+
+    def test_replay_rechecks_pair_after_export_without_leaking_it_to_ocr(self):
+        report = sessions.inspect_session(self.root)
+        (self.root/'frame-000001.minimap.png').unlink()
+        with self.assertRaisesRegex(ValueError, 'minimap'):
+            benchmark.prepare(report['corpus'], self.root, self.root/'ocr-inputs', ['production'])
+
+    def test_pair_replay_requires_coordinate_digest_and_rejects_replaced_pixels(self):
+        import cv2
+        import numpy as np
+        report = sessions.inspect_session(self.root)
+        frame = report['corpus']['frames'][0]
+        original = frame.pop('captureSHA256')
+        with self.assertRaisesRegex(ValueError, 'digest'):
+            benchmark.prepare(report['corpus'], self.root, self.root/'ocr-inputs', ['production'])
+        frame['captureSHA256'] = ''
+        with self.assertRaisesRegex(ValueError, 'digest'):
+            benchmark.prepare(report['corpus'], self.root, self.root/'ocr-inputs', ['production'])
+        frame['captureSHA256'] = original
+        cv2.imencode('.png', np.full((80, 400, 3), 123, dtype=np.uint8))[1].tofile(self.root/'frame-000001.png')
+        with self.assertRaisesRegex(ValueError, 'digest'):
+            benchmark.prepare(report['corpus'], self.root, self.root/'ocr-inputs', ['production'])
+
+    def test_missing_pair_metadata_is_not_treated_as_legacy(self):
+        del self.records[1]['minimap']
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'paired'):
+            sessions.inspect_session(self.root)
+
+    def test_wrong_minimap_digest_geometry_or_frame_id_is_fatal(self):
+        original = dict(self.records[1]['minimap'])
+        for field, value, error in [('sha256', '0'*64, 'digest'),
+                                     ('sourceRect', [30, 23, 153, 154], 'geometry'),
+                                     ('frameId', 'another-frame', 'frame')]:
+            self.records[1]['minimap'] = dict(original, **{field: value})
+            self.save()
+            with self.assertRaisesRegex(ValueError, error):
+                sessions.inspect_session(self.root)
+
+    def test_pair_png_budget_and_time_are_checked(self):
+        self.records[-1]['pngBytes'] += 1
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'bytes'):
+            sessions.inspect_session(self.root)
+        self.records[-1]['pngBytes'] -= 1
+        del self.records[1]['frameSystemRelativeTime100ns']
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'time'):
+            sessions.inspect_session(self.root)
+
+
 if __name__ == '__main__':
     unittest.main()

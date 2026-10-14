@@ -96,6 +96,7 @@ int wmain(int argc, wchar_t** argv) {
         std::cout << "Coordinate sample capture\n"
             "--output PATH [--interval-ms 500] [--max-seconds 600] [--max-samples 1200] [--max-mib 256]\n"
             "Starts PAUSED. Ctrl+Alt+F8 starts/pauses. Ctrl+Alt+F7 finishes.\n"
+            "Each sample saves same-frame coordinate-strip and minimap PNGs.\n"
             "Only the foreground Client-Win64-Shipping.exe window is sampled. No OCR runs.\n";
         return 0;
     }
@@ -107,10 +108,10 @@ int wmain(int argc, wchar_t** argv) {
         winrt::init_apartment(winrt::apartment_type::multi_threaded);
         Hotkeys hotkeys;
         StopEvent stopEvent;
-        store = std::make_shared<SampleStore>(options.output,SessionId(),"game",options.limits);
+        store = std::make_shared<SampleStore>(options.output,SessionId(),"game",options.limits,true);
         store->Event({{"type", "options"}, {"intervalMilliseconds", options.intervalMs},
             {"maximumSecondsAfterFirstStart", options.maxSeconds}, {"initialState", "paused"},
-            {"toolVersion", "1"}});
+            {"toolVersion", "2"}});
         SetConsoleCtrlHandler(StopConsole,TRUE);
         std::cout << "Ready (paused). Ctrl+Alt+F8 starts/pauses; Ctrl+Alt+F7 finishes.\n"
                   << "Samples: " << Utf8Text(store->Directory()) << '\n';

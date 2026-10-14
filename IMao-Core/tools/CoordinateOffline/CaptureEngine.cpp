@@ -45,8 +45,8 @@ struct WgcSampler::State {
     GraphicsCaptureSession session{nullptr};
     winrt::Windows::Graphics::SizeInt32 poolSize{};
     winrt::event_token frameToken{};
-    winrt::com_ptr<ID3D11Texture2D> staging;
-    cv::Size stagingSize{};
+    winrt::com_ptr<ID3D11Texture2D> staging[2];
+    cv::Size stagingSize[2]{};
     std::string geometryNotice;
 
     bool Eligible() const {
@@ -59,6 +59,33 @@ struct WgcSampler::State {
         recording = false;
         try { store->Event({{"type", "error"}, {"stage", "capture"}, {"message", message}}); }
         catch (const std::exception& indexError) { std::cerr << "Capture error could not be indexed: " << indexError.what() << '\n'; }
+    }
+    cv::Mat ReadRegion(ID3D11Texture2D* texture, cv::Rect region, unsigned slot) {
+        D3D11_TEXTURE2D_DESC description{}; texture->GetDesc(&description);
+        if (description.Format != DXGI_FORMAT_B8G8R8A8_UNORM || description.SampleDesc.Count != 1)
+            throw std::runtime_error("capture texture is not the requested BGRA8 format");
+        if (region.empty() || region.x < 0 || region.y < 0 || region.x+region.width > int(description.Width) ||
+            region.y+region.height > int(description.Height)) throw std::runtime_error("capture ROI outside actual texture");
+        if (!staging[slot] || stagingSize[slot] != region.size()) {
+            staging[slot] = nullptr;
+            D3D11_TEXTURE2D_DESC cpu{};
+            cpu.Width = region.width; cpu.Height = region.height; cpu.MipLevels = 1; cpu.ArraySize = 1;
+            cpu.Format = DXGI_FORMAT_B8G8R8A8_UNORM; cpu.SampleDesc.Count = 1;
+            cpu.Usage = D3D11_USAGE_STAGING; cpu.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+            winrt::check_hresult(d3d->CreateTexture2D(&cpu, nullptr, staging[slot].put()));
+            stagingSize[slot] = region.size();
+        }
+        D3D11_BOX box{UINT(region.x),UINT(region.y),0,UINT(region.x+region.width),UINT(region.y+region.height),1};
+        context->CopySubresourceRegion(staging[slot].get(),0,0,0,0,texture,0,&box);
+        D3D11_MAPPED_SUBRESOURCE memory{};
+        winrt::check_hresult(context->Map(staging[slot].get(),0,D3D11_MAP_READ,0,&memory));
+        cv::Mat bgr;
+        try {
+            cv::Mat bgra(region.height,region.width,CV_8UC4,memory.pData,memory.RowPitch);
+            cv::cvtColor(bgra,bgr,cv::COLOR_BGRA2BGR);
+        } catch (...) { context->Unmap(staging[slot].get(),0); throw; }
+        context->Unmap(staging[slot].get(),0);
+        return bgr;
     }
     void Frame(const Direct3D11CaptureFramePool& sender) {
         try {
@@ -106,38 +133,18 @@ struct WgcSampler::State {
             }
             geometryNotice.clear();
             const auto source = SampleEnvelope(client.size());
+            const auto minimapSource = SampleMinimapEnvelope(client.size());
             const cv::Rect textureRegion(source.x+mapped.x,source.y+mapped.y,source.width,source.height);
             auto access = frame.Surface().as<Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>();
             winrt::com_ptr<ID3D11Texture2D> texture;
             winrt::check_hresult(access->GetInterface(__uuidof(ID3D11Texture2D), texture.put_void()));
-            D3D11_TEXTURE2D_DESC description{}; texture->GetDesc(&description);
-            if (description.Format != DXGI_FORMAT_B8G8R8A8_UNORM || description.SampleDesc.Count != 1)
-                throw std::runtime_error("capture texture is not the requested BGRA8 format");
-            if (textureRegion.x < 0 || textureRegion.y < 0 || textureRegion.x+textureRegion.width > int(description.Width) ||
-                textureRegion.y+textureRegion.height > int(description.Height))
-                throw std::runtime_error("capture ROI outside actual texture");
-            if (!staging || stagingSize != source.size()) {
-                staging = nullptr;
-                D3D11_TEXTURE2D_DESC cpu{};
-                cpu.Width = source.width; cpu.Height = source.height; cpu.MipLevels = 1; cpu.ArraySize = 1;
-                cpu.Format = DXGI_FORMAT_B8G8R8A8_UNORM; cpu.SampleDesc.Count = 1;
-                cpu.Usage = D3D11_USAGE_STAGING; cpu.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-                winrt::check_hresult(d3d->CreateTexture2D(&cpu, nullptr, staging.put()));
-                stagingSize = source.size();
-            }
-            D3D11_BOX box{UINT(textureRegion.x),UINT(textureRegion.y),0,
-                UINT(textureRegion.x+textureRegion.width),UINT(textureRegion.y+textureRegion.height),1};
-            context->CopySubresourceRegion(staging.get(),0,0,0,0,texture.get(),0,&box);
-            D3D11_MAPPED_SUBRESOURCE memory{};
-            winrt::check_hresult(context->Map(staging.get(),0,D3D11_MAP_READ,0,&memory));
-            cv::Mat bgr;
-            try {
-                cv::Mat bgra(source.height,source.width,CV_8UC4,memory.pData,memory.RowPitch);
-                cv::cvtColor(bgra,bgr,cv::COLOR_BGRA2BGR);
-            } catch (...) { context->Unmap(staging.get(),0); throw; }
-            context->Unmap(staging.get(),0);
+            const auto bgr = ReadRegion(texture.get(), textureRegion, 0);
+            if (!Eligible()) return;
+            const auto minimap = ReadRegion(texture.get(),
+                {minimapSource.x+mapped.x,minimapSource.y+mapped.y,minimapSource.width,minimapSource.height}, 1);
             if (!Eligible() || ClientScreen(target) != client) return;
-            store->Save(bgr, client.size(), source, {{"frameSystemRelativeTime100ns", frame.SystemRelativeTime().count()},
+            store->SavePair(bgr, minimap, client.size(), source, minimapSource,
+                {{"frameSystemRelativeTime100ns", frame.SystemRelativeTime().count()},
                 {"contentSize", {content.Width,content.Height}}, {"clientOffset", {mapped.x,mapped.y}},
                 {"clientDpi", GetDpiForWindow(target)}, {"receivedAtUtc", SampleUtc()},
                 {"captureMilliseconds", std::chrono::duration<double,std::milli>(CaptureClock::now()-begin).count()},
