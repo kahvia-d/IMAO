@@ -237,4 +237,3 @@ def infer(upstream_root, inputs, repeats):
             'inferenceThreads': options.intra_op_num_threads, 'interOpThreads': options.inter_op_num_threads,
             'providers': worker.model.get_providers(), 'inputShape': worker.model.get_inputs()[0].shape,
             'configuration': 'upstream defaults, spacing-dominant parser', 'repeats': repeats}}
-
