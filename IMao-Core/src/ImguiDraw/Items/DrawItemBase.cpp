@@ -351,6 +351,16 @@ vector<string> DrawItemBase::GetFilteredPoints(string scene, string nameId) {
     return markerStore->CompletedIds(scene, nameId);
 }
 
+PointFilterCompletionRead DrawItemBase::ReadPointFilterCompletions(const std::string& scene) {
+    PointFilterCompletionRead result;
+    if (!markerStore) return result;
+    result.permanent = markerStore->ReadCompletions(scene);
+    if (farmStore) result.farm = farmStore->ReadCompletions(MarkerCompletionStore::SceneState(scene));
+    else result.farm.profileId = result.permanent.profileId;
+    result.dailyCategories.insert(refreshableCategories.Ids().begin(), refreshableCategories.Ids().end());
+    return result;
+}
+
 bool DrawItemBase::IsPointCompleted(const string& scene, const ItemDatas& item) {
     if(AutoRoute::IsFreeStop(item)) {
         try{return freeStore && freeStore->Completed(MarkerProfile(),item);}

@@ -13,6 +13,7 @@ using json = nlohmann::json;
 
 #include "../../Domain/MapData.h"
 #include "../../Runtime/NearbySelection.h"
+#include "../../Runtime/CompletionReadView.h"
 
 struct ItemTextureData {
 	std::string nameId;
@@ -38,6 +39,7 @@ public:
 	// require adding a new Windows resource for every upstream update.
 	static std::string GetExternalIconPath(const std::string& itemNameId);
 	static std::vector<std::string> GetFilteredPoints(std::string scene, std::string nameId);
+    static PointFilterCompletionRead ReadPointFilterCompletions(const std::string& scene);
     static bool IsPointCompleted(const std::string& scene, const ItemDatas& item);
     // Whether a point belongs to a category the game refills every day (采集物 ∪ 敌人).
     // Only these are auto-marked by the farming mode, excluded from synchronization and

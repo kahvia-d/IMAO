@@ -1,5 +1,6 @@
 #pragma once
 #include "AtomicFile.h"
+#include "CompletionReadView.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cctype>
@@ -73,6 +74,18 @@ public:
         for (const auto& [key, value] : document_.at("points").items())
             if (key.rfind(prefix, 0) == 0) result.push_back(key.substr(prefix.size()));
         std::sort(result.begin(), result.end());
+        return result;
+    }
+
+    FarmCompletionRead ReadCompletions(int stateId) {
+        std::scoped_lock lock(mutex_);
+        FarmCompletionRead result;
+        result.profileId = profile_;
+        if (stateId <= 0) return result;
+        ExpireLocked();
+        const auto prefix = std::to_string(stateId) + ":";
+        for (const auto& [key, value] : document_.at("points").items())
+            if (key.rfind(prefix, 0) == 0) result.ids.insert(key.substr(prefix.size()));
         return result;
     }
 

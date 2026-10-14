@@ -2,6 +2,7 @@
 #include "Runtime/FarmCompletionStore.h"
 #include "Runtime/RefreshableCategories.h"
 #include "Runtime/MarkerLayout.h"
+#include "CompletionViewTests.h"
 #include <iostream>
 #include <iterator>
 #include <stdexcept>
@@ -28,6 +29,7 @@ int main() {
     const auto root = std::filesystem::temp_directory_path() / ("imao-marker-tests-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64()));
     std::filesystem::create_directories(root);
     try {
+        CompletionViewTests::Test(root, Require);
         WriteTextAtomically(root / "account_1.json", R"({"World":{"test":[{"id":"1410302557575794688"}]}})");
         MarkerCompletionStore store(root);
         Require(store.Completed("World", "test", "1410302557575794688"), "legacy string identity lost");
