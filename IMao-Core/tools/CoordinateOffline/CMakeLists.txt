@@ -41,6 +41,19 @@ foreach(_key preprocessingSource parserSource nativeAdapterSource nativeBuildCon
 endforeach()
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/CoordinateBuildFingerprint.generated.h"
     "// Build-time hashes of the directly used project sources/headers/library.\ninline constexpr const char* kCoordinateBuildFingerprint = R\"IMAO(${_fingerprint})IMAO\";\n")
+# Only this executable sees the extended model allowance. Never edit the runtime header
+# or pretend the English model is a different model by rewriting its inference.yml.
+file(READ "${_path_ppocrHeader}" _offline_rec_header)
+set(_original_guard "model_name != \"PP-OCRv5_server_rec\")")
+string(FIND "${_offline_rec_header}" "${_original_guard}" _guard_at)
+if(_guard_at LESS 0)
+    message(FATAL_ERROR "Cannot locate recognizer model guard; review offline compatibility")
+endif()
+string(REPLACE "${_original_guard}"
+    "model_name != \"PP-OCRv5_server_rec\" && model_name != \"en_PP-OCRv5_mobile_rec\")"
+    _offline_rec_header "${_offline_rec_header}")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/include/ocr_rec.h" "${_offline_rec_header}")
 file(READ "${_preprocess_source}" _source)
 string(FIND "${_source}" "std::vector<cv::Mat> PreprocessCoordinateRegion(" _start)
 string(FIND "${_source}" "\nclass CoordinateRecognizerRuntime {" _end)

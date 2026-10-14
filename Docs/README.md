@@ -174,3 +174,4 @@
 | [`ResourceSelectionRegression_20260909.md`](archive/ResourceSelectionRegression_20260909.md) | F8 更新后地图定位失效：实际资源选择回归 |
 | [`SparseMapViewport_20260909.md`](archive/SparseMapViewport_20260909.md) | 中央海面导致的大地图定位失败 |
 | [`TethysVideoReview_20260909.md`](archive/TethysVideoReview_20260909.md) | Tethys 视频检查 |
+| [`2026-10-14-english-coordinate-model.md`](superpowers/plans/2026-10-14-english-coordinate-model.md) | 英文坐标模型独立离线评测计划 |

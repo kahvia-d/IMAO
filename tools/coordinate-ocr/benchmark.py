@@ -229,7 +229,12 @@ def summarize(corpus, inputs, pipelines):
     return summaries, scored
 
 
-def provenance(source_root, data_root, corpus_path, native, upstream):
+def resolve_model(args, data_root):
+    return Path(getattr(args, 'ppocr_model', None) or
+                data_root / 'Assets/models/PP-OCRv5_mobile_rec_infer').resolve()
+
+
+def provenance(source_root, data_root, corpus_path, native, upstream, model=None):
     import cv2
     import numpy as np
     import onnxruntime as ort
@@ -254,17 +259,21 @@ def provenance(source_root, data_root, corpus_path, native, upstream):
              'corpus': corpus_path,
              'benchmarkCode': Path(__file__),
              'upstreamAdapterCode': Path(__file__).with_name('upstream_adapter.py')}
-    pp = data_root / 'Assets/models/PP-OCRv5_mobile_rec_infer'
+    pp = Path(model or data_root / 'Assets/models/PP-OCRv5_mobile_rec_infer').resolve()
     for path in sorted(pp.iterdir()):
         if path.is_file():
             files[f'ppocr/{path.name}'] = path
     return {'sourceCommit': git_head(source_root), 'upstreamCommit': git_head(upstream),
+            'modelDirectory': str(pp),
             'versions': {'python': sys.version, 'opencvPython': cv2.__version__,
                          'numpy': np.__version__, 'onnxruntime': ort.__version__},
             'sha256': {name: sha256(path) for name, path in files.items()}}
 
 
 def verify_native_provenance(expected, metadata):
+    if ('modelDirectory' in expected and
+            Path(metadata.get('modelDirectory', '')).resolve() != Path(expected['modelDirectory']).resolve()):
+        raise ValueError('native model directory differs from requested model directory')
     compiled = metadata.get('compiledSHA256', {})
     for key in ('preprocessingSource', 'parserSource', 'nativeAdapterSource', 'nativeBuildConfiguration',
                 'parserHeader', 'coordinateStructHeader', 'hudLayoutHeader',
@@ -276,6 +285,8 @@ def verify_native_provenance(expected, metadata):
 
 def markdown(report):
     lines = ['# 坐标 OCR 独立离线评测', '',
+        f"PP-OCR 模型：`{report.get('native', {}).get('modelName', '未记录')}`；"
+        f"字典字符数：{report.get('native', {}).get('dictionaryCharacters', '未记录')}。", '',
         report.get('corpusNote') or '素材说明未提供；泛化结论需要独立验收素材。', '',
         '推理输入不含标签和位置先验。两侧读取同一份无缩放 BGR 裁剪，解码像素摘要逐条核对。', '',
         '单条输出与候选召回分别计分；未知 z 不计三维命中。无读数误报单独统计。', '',
@@ -300,6 +311,7 @@ def markdown(report):
 def run(args):
     source_root = Path(__file__).resolve().parents[2]
     data_root, upstream, native = map(lambda p: Path(p).resolve(), (args.data_root, args.upstream, args.native))
+    model = resolve_model(args, data_root)
     corpus_path, output = Path(args.corpus).resolve(), Path(args.output).resolve()
     corpus = read_json(corpus_path)
     if (output / 'report.json').exists():
@@ -309,11 +321,12 @@ def run(args):
     inputs = prepare(corpus, data_root, output / 'inputs', args.profiles)
     manifest = output / 'inputs.json'
     write_json(manifest, {'formatVersion': 1, 'inputs': inputs})
-    provenance_before = provenance(source_root, data_root, corpus_path, native, upstream)
+    provenance_before = provenance(source_root, data_root, corpus_path, native, upstream, model)
+    write_json(output / 'provenance-before.json', provenance_before)
     env = dict(os.environ)
     env['PATH'] = str(data_root / 'x64/Release') + os.pathsep + env.get('PATH', '')
     native_report = output / 'ppocr.json'
-    completed = subprocess.run([str(native), str(data_root / 'Assets/models/PP-OCRv5_mobile_rec_infer'),
+    completed = subprocess.run([str(native), str(model),
                                 str(manifest), str(native_report), str(args.repeats)],
                                env=env, capture_output=True, text=True, errors='replace')
     (output / 'native.log').write_text(completed.stdout + completed.stderr, encoding='utf-8')
@@ -331,7 +344,7 @@ def run(args):
     for item in inputs:
         if sha256(item['image']) != item['cropSHA256']:
             raise ValueError(f'input file changed during evaluation: {item["id"]}')
-    provenance_after = provenance(source_root, data_root, corpus_path, native, upstream)
+    provenance_after = provenance(source_root, data_root, corpus_path, native, upstream, model)
     if provenance_before != provenance_after:
         raise ValueError('model, source, or binary changed during evaluation')
     report = {'formatVersion': 1, 'corpusNote': corpus.get('note'), 'repeats': args.repeats,
@@ -350,6 +363,7 @@ def main():
     parser.add_argument('--data-root', required=True, help='Existing checkout containing models and screenshots')
     parser.add_argument('--upstream', required=True, help='Existing local upstream checkout; never downloaded')
     parser.add_argument('--native', required=True, help='Freshly built IMaoCoordinateOffline.exe')
+    parser.add_argument('--ppocr-model', help='Explicit local PP-OCR model directory; defaults to the current IMao model')
     parser.add_argument('--corpus', default=str(Path(__file__).resolve().parents[2] / 'Tests/CoordinateOffline/corpus.json'))
     parser.add_argument('--output', required=True)
     parser.add_argument('--profiles', nargs='+', choices=PROFILES, default=list(PROFILES))

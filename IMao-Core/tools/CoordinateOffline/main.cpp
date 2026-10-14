@@ -68,6 +68,36 @@ int wmain(int argc, wchar_t** argv) {
         if (repeats < 1) throw std::runtime_error("repeats must be positive");
         std::ifstream inputFile(manifest);
         const auto inputs = Json::parse(inputFile).at("inputs");
+        const auto config = YAML::LoadFile((model / "inference.yml").string());
+        const auto modelName = config["Global"]["model_name"].as<std::string>();
+        if (modelName != "PP-OCRv5_mobile_rec" && modelName != "PP-OCRv5_server_rec" &&
+            modelName != "en_PP-OCRv5_mobile_rec")
+            throw std::runtime_error("unsupported offline model name");
+        if (config["PostProcess"]["name"].as<std::string>() != "CTCLabelDecode")
+            throw std::runtime_error("offline model requires CTCLabelDecode");
+        bool matchedShape = false, matchedBgr = false;
+        for (const auto& op : config["PreProcess"]["transform_ops"]) {
+            if (op["RecResizeImg"]) matchedShape = op["RecResizeImg"]["image_shape"].as<std::vector<int>>() == std::vector<int>{3, 48, 320};
+            if (op["DecodeImage"]) matchedBgr = op["DecodeImage"]["img_mode"].as<std::string>() == "BGR" &&
+                !op["DecodeImage"]["channel_first"].as<bool>();
+        }
+        if (!matchedShape || !matchedBgr) throw std::runtime_error("incompatible offline model preprocessing");
+        const auto yamlDictionary = config["PostProcess"]["character_dict"].as<std::vector<std::string>>();
+        std::ifstream dictionaryFile(model / "ppocr_keys.txt", std::ios::binary);
+        if (!dictionaryFile) throw std::runtime_error("model dictionary cannot be opened");
+        std::vector<std::string> dictionary;
+        std::string character;
+        while (std::getline(dictionaryFile, character)) {
+            if (!character.empty() && character.back() == '\r') character.pop_back();
+            dictionary.push_back(character);
+        }
+        if (dictionary != yamlDictionary) throw std::runtime_error("model dictionary differs from inference.yml character order");
+        for (const char required : std::string("0123456789+-,")) {
+            if (std::find(dictionary.begin(), dictionary.end(), std::string(1, required)) == dictionary.end())
+                throw std::runtime_error("model dictionary lacks a coordinate character");
+        }
+        for (const auto* filename : {"inference.json", "inference.pdiparams"})
+            if (!std::filesystem::is_regular_file(model / filename)) throw std::runtime_error("model file is missing");
         const auto initialize = Clock::now();
         const int threads = std::clamp(static_cast<int>(std::max(1u, std::thread::hardware_concurrency()) / 2), 2, 4);
         PaddleOCR::CRNNRecognizer recognizer(model.string(), false, 0, 4000, threads, true,
@@ -126,6 +156,8 @@ int wmain(int argc, wchar_t** argv) {
             pipelines["ppocr-corroborated"].push_back(cross);
         }
         Json report = {{"pipelines", pipelines}, {"metadata", {{"opencvNative", CV_VERSION},
+            {"modelName", modelName}, {"dictionaryCharacters", dictionary.size()},
+            {"modelDirectory", [&] { const auto value = std::filesystem::absolute(model).u8string(); return std::string(value.begin(), value.end()); }()},
             {"preprocessingSourceSHA256", IMAO_PREPROCESS_SHA256}, {"parserSourceSHA256", IMAO_PARSER_SHA256},
             {"nativeAdapterSourceSHA256", IMAO_ADAPTER_SHA256}, {"compilerVersion", IMAO_COMPILER_VERSION},
             {"compiledSHA256", Json::parse(kCoordinateBuildFingerprint)},

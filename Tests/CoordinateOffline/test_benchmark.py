@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 
 MODULE = Path(__file__).resolve().parents[2] / 'tools/coordinate-ocr/benchmark.py'
@@ -15,6 +16,19 @@ if MODULE.exists():
 
 
 class BenchmarkContracts(unittest.TestCase):
+    def test_explicit_model_directory_overrides_default_without_changing_data_root(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            model = root / 'english'
+            self.assertEqual(benchmark.resolve_model(SimpleNamespace(ppocr_model=str(model)), root), model.resolve())
+            self.assertEqual(benchmark.resolve_model(SimpleNamespace(ppocr_model=None), root),
+                             (root / 'Assets/models/PP-OCRv5_mobile_rec_infer').resolve())
+
+    def test_native_report_from_another_model_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'model directory'):
+            benchmark.verify_native_provenance({'sha256': {}, 'modelDirectory': '/english'},
+                                               {'modelDirectory': '/generic'})
+
     def setUp(self):
         self.assertIsNotNone(benchmark, 'The independent benchmark has not been implemented')
         self.frame = {'id': 'a', 'state': 'present', 'expected': {'x': -12, 'y': 34, 'z': 5}}

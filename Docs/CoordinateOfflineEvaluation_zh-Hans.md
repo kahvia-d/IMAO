@@ -101,6 +101,34 @@ $output = Join-Path $dataRoot ('out\coordinate-offline\run-' + (Get-Date -Format
 输出目录含 `report.md`、完整 `report.json`、两侧原始报告、`inputs.json`、全部实际裁剪和原生日志。
 非零退出表示该轮没有有效完整结论；输入、引擎或摘要异常不能靠忽略样本放行。
 
+### 指定英文模型候选
+
+`--ppocr-model <本地模型目录>` 可以选择 `en_PP-OCRv5_mobile_rec`。不指定时仍使用
+`--data-root/Assets/models/PP-OCRv5_mobile_rec_infer`。本工具不会自动下载模型。
+英文模型仍包含字母和多种符号，不是只识别数字的专用训练模型。
+
+模型目录必须包含官方 `inference.json`、`inference.pdiparams`、`inference.yml`，以及
+从 `PostProcess.character_dict` 按原顺序、UTF-8、每行一字符生成的 `ppocr_keys.txt`。
+禁止通过删字典项或改 `Global.model_name` 冒充兼容。离线工具只接受已列明的三种
+PP-OCRv5 模型名、BGR `[3,48,320]` 和 CTC 解码，并逐项核对字典顺序。
+英文模型额外允许项只存在于 CMake 生成的离线头文件，实际运行时头文件保持原样。
+
+```powershell
+& $python tools\coordinate-ocr\benchmark.py `
+    --data-root $dataRoot --upstream $upstream `
+    --native out\build\coordinate-offline\IMaoCoordinateOffline.exe `
+    --ppocr-model "$dataRoot\out\coordinate-models\en_PP-OCRv5_mobile_rec_infer" `
+    --corpus "$dataRoot\out\coordinate-minimap-check\full-corpus-v4.json" `
+    --output "$dataRoot\out\coordinate-english-comparison\english-full" --repeats 1
+```
+
+报告的 `provenance.modelDirectory`、`native.modelName`、`native.dictionaryCharacters`
+及 `provenance.sha256` 记录实际模型身份和每个文件摘要。管线名仍对应相同的预处理与解析路线，
+比较不同模型时应同时展示模型身份。模型、代码或输入在评测期间改变会使该轮失败。
+
+原生模型拒绝加载测试需要设置 `IMAO_OFFLINE_NATIVE` 和 `IMAO_ENGLISH_MODEL`；
+测试会在临时目录改错字典顺序、模型名、输入通道及权重完整性，确认没有成功报告。
+
 ## 本轮观察与下一步
 
 同一份现有回归集，单条输出结果可复现：
