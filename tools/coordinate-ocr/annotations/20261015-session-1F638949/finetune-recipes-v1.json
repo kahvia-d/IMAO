@@ -1,0 +1,467 @@
+{
+  "purpose": "Exact local experiment recipes; dependencies and source checkout expected under rawEvidenceRoot. Not a production training service.",
+  "sourceCommit": "dab3fe35379033fdcb2d0e9572fac0b36c9a9ebf",
+  "rawEvidenceRoot": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-finetune-20261015",
+  "files": {
+    "official-en-config.yaml": {
+      "sha256": "19ccdc0fdb0632ef20438584a609c63f40ba347233b7164fd04f3453a47ab50d",
+      "text": "Global:\n  model_name: en_PP-OCRv5_mobile_rec # To use static model for inference.\n  debug: false\n  use_gpu: true\n  epoch_num: 75\n  log_smooth_window: 20\n  print_batch_step: 10\n  save_model_dir: ./output/en_rec_ppocr_v5\n  save_epoch_step: 10\n  eval_batch_step: [0, 1000]\n  cal_metric_during_train: true\n  pretrained_model:\n  checkpoints:\n  save_inference_dir:\n  use_visualdl: false\n  infer_img:\n  character_dict_path: ./ppocr/utils/dict/ppocrv5_en_dict.txt\n  max_text_length: &max_text_length 25\n  infer_mode: false\n  use_space_char: true\n  distributed: true\n  save_res_path: ./output/rec/predicts_en_ppocrv5.txt\n  d2s_train_image_shape: [3, 48, 320]\n\n\nOptimizer:\n  name: Adam\n  beta1: 0.9\n  beta2: 0.999\n  lr:\n    name: Cosine\n    learning_rate: 0.0005\n    warmup_epoch: 5\n  regularizer:\n    name: L2\n    factor: 3.0e-05\n\n\nArchitecture:\n  model_type: rec\n  algorithm: SVTR_LCNet\n  Transform:\n  Backbone:\n    name: PPLCNetV3\n    scale: 0.95\n  Head:\n    name: MultiHead\n    head_list:\n      - CTCHead:\n          Neck:\n            name: svtr\n            dims: 120\n            depth: 2\n            hidden_dims: 120\n            kernel_size: [1, 3]\n            use_guide: True\n          Head:\n            fc_decay: 0.00001\n      - NRTRHead:\n          nrtr_dim: 384\n          max_text_length: *max_text_length\n\nLoss:\n  name: MultiLoss\n  loss_config_list:\n    - CTCLoss:\n    - NRTRLoss:\n\nPostProcess:  \n  name: CTCLabelDecode\n\nMetric:\n  name: RecMetric\n  main_indicator: acc\n  ignore_space: False\n\nTrain:\n  dataset:\n    name: MultiScaleDataSet\n    ds_width: false\n    data_dir: ./train_data/\n    ext_op_transform_idx: 1\n    label_file_list:\n    - ./train_data/train_list.txt\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - RecConAug:\n        prob: 0.5\n        ext_data_num: 2\n        image_shape: [48, 320, 3]\n        max_text_length: *max_text_length\n    - RecAug:\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  sampler:\n    name: MultiScaleSampler\n    scales: [[320, 32], [320, 48], [320, 64]]\n    first_bs: &bs 128\n    fix_bs: false\n    divided_factor: [8, 16] # w, h\n    is_training: True\n  loader:\n    shuffle: true\n    batch_size_per_card: *bs\n    drop_last: true\n    num_workers: 8\nEval:\n  dataset:\n    name: SimpleDataSet\n    data_dir: ./train_data/\n    label_file_list:\n    - ./train_data/val_list.txt\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape: [3, 48, 320]\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: true\n    drop_last: false\n    batch_size_per_card: 128\n    num_workers: 4\n"
+    },
+    "english-control.yaml": {
+      "sha256": "4fc090374bbce99e0c277b14bcc667a4ce85f50487ce082fd3bf60e2c684a524",
+      "text": "Global:\n  model_name: en_PP-OCRv5_mobile_rec\n  debug: false\n  use_gpu: true\n  epoch_num: 5\n  log_smooth_window: 20\n  print_batch_step: 10\n  save_model_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/english-control\n  save_epoch_step: 1\n  eval_batch_step:\n  - 0\n  - 52\n  cal_metric_during_train: true\n  pretrained_model: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/downloads/en_PP-OCRv5_mobile_rec_pretrained\n  checkpoints: null\n  save_inference_dir: null\n  use_visualdl: false\n  infer_img: null\n  character_dict_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/english-dict.txt\n  max_text_length: 25\n  infer_mode: false\n  use_space_char: true\n  distributed: false\n  save_res_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/english-control-predicts.txt\n  d2s_train_image_shape:\n  - 3\n  - 48\n  - 384\n  seed: 20261015\nOptimizer:\n  name: Adam\n  beta1: 0.9\n  beta2: 0.999\n  lr:\n    name: Cosine\n    learning_rate: 1.0e-05\n    warmup_epoch: 1\n  regularizer:\n    name: L2\n    factor: 3.0e-05\nArchitecture:\n  model_type: rec\n  algorithm: SVTR_LCNet\n  Transform: null\n  Backbone:\n    name: PPLCNetV3\n    scale: 0.95\n  Head:\n    name: MultiHead\n    head_list:\n    - CTCHead:\n        Neck:\n          name: svtr\n          dims: 120\n          depth: 2\n          hidden_dims: 120\n          kernel_size:\n          - 1\n          - 3\n          use_guide: true\n        Head:\n          fc_decay: 1.0e-05\n    - NRTRHead:\n        nrtr_dim: 384\n        max_text_length: 25\nLoss:\n  name: MultiLoss\n  loss_config_list:\n  - CTCLoss: null\n  - NRTRLoss: null\nPostProcess:\n  name: CTCLabelDecode\nMetric:\n  name: RecMetric\n  main_indicator: acc\n  ignore_space: false\nTrain:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/train.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: true\n    batch_size_per_card: 16\n    drop_last: true\n    num_workers: 0\n    use_shared_memory: false\nEval:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/dev-component.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: false\n    batch_size_per_card: 16\n    drop_last: false\n    num_workers: 0\n    use_shared_memory: false\n"
+    },
+    "numeric-specialist.yaml": {
+      "sha256": "66dbbf6953bbb12228b7001fe9e422f59523aeaf9a639091938c4d4ca02289ce",
+      "text": "Global:\n  model_name: en_PP-OCRv5_mobile_rec\n  debug: false\n  use_gpu: true\n  epoch_num: 5\n  log_smooth_window: 20\n  print_batch_step: 10\n  save_model_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-specialist\n  save_epoch_step: 1\n  eval_batch_step:\n  - 0\n  - 52\n  cal_metric_during_train: true\n  pretrained_model: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-initial\n  checkpoints: null\n  save_inference_dir: null\n  use_visualdl: false\n  infer_img: null\n  character_dict_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-dict.txt\n  max_text_length: 25\n  infer_mode: false\n  use_space_char: false\n  distributed: false\n  save_res_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-specialist-predicts.txt\n  d2s_train_image_shape:\n  - 3\n  - 48\n  - 384\n  seed: 20261015\nOptimizer:\n  name: Adam\n  beta1: 0.9\n  beta2: 0.999\n  lr:\n    name: Cosine\n    learning_rate: 1.0e-05\n    warmup_epoch: 1\n  regularizer:\n    name: L2\n    factor: 3.0e-05\nArchitecture:\n  model_type: rec\n  algorithm: SVTR_LCNet\n  Transform: null\n  Backbone:\n    name: PPLCNetV3\n    scale: 0.95\n  Head:\n    name: MultiHead\n    head_list:\n    - CTCHead:\n        Neck:\n          name: svtr\n          dims: 120\n          depth: 2\n          hidden_dims: 120\n          kernel_size:\n          - 1\n          - 3\n          use_guide: true\n        Head:\n          fc_decay: 1.0e-05\n    - NRTRHead:\n        nrtr_dim: 384\n        max_text_length: 25\nLoss:\n  name: MultiLoss\n  loss_config_list:\n  - CTCLoss: null\n  - NRTRLoss: null\nPostProcess:\n  name: CTCLabelDecode\nMetric:\n  name: RecMetric\n  main_indicator: acc\n  ignore_space: false\nTrain:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/train.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: true\n    batch_size_per_card: 16\n    drop_last: true\n    num_workers: 0\n    use_shared_memory: false\nEval:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/dev-component.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: false\n    batch_size_per_card: 16\n    drop_last: false\n    num_workers: 0\n    use_shared_memory: false\n"
+    },
+    "english-control-bnfrozen.yaml": {
+      "sha256": "297bb2dd267d48f2c47c85527bde427a5a2d7a493182606e74210f6218fae904",
+      "text": "Global:\n  model_name: en_PP-OCRv5_mobile_rec\n  debug: false\n  use_gpu: true\n  epoch_num: 5\n  log_smooth_window: 20\n  print_batch_step: 10\n  save_model_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/english-control-bnfrozen\n  save_epoch_step: 1\n  eval_batch_step:\n  - 0\n  - 52\n  cal_metric_during_train: true\n  pretrained_model: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/downloads/en_PP-OCRv5_mobile_rec_pretrained\n  checkpoints: null\n  save_inference_dir: null\n  use_visualdl: false\n  infer_img: null\n  character_dict_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/english-dict.txt\n  max_text_length: 25\n  infer_mode: false\n  use_space_char: true\n  distributed: false\n  save_res_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/english-control-bnfrozen-predictions.txt\n  d2s_train_image_shape:\n  - 3\n  - 48\n  - 384\n  seed: 20261015\nOptimizer:\n  name: Adam\n  beta1: 0.9\n  beta2: 0.999\n  lr:\n    name: Cosine\n    learning_rate: 1.0e-05\n    warmup_epoch: 1\n  regularizer:\n    name: L2\n    factor: 3.0e-05\nArchitecture:\n  model_type: rec\n  algorithm: SVTR_LCNet\n  Transform: null\n  Backbone:\n    name: PPLCNetV3\n    scale: 0.95\n  Head:\n    name: MultiHead\n    head_list:\n    - CTCHead:\n        Neck:\n          name: svtr\n          dims: 120\n          depth: 2\n          hidden_dims: 120\n          kernel_size:\n          - 1\n          - 3\n          use_guide: true\n        Head:\n          fc_decay: 1.0e-05\n    - NRTRHead:\n        nrtr_dim: 384\n        max_text_length: 25\nLoss:\n  name: MultiLoss\n  loss_config_list:\n  - CTCLoss: null\n  - NRTRLoss: null\nPostProcess:\n  name: CTCLabelDecode\nMetric:\n  name: RecMetric\n  main_indicator: acc\n  ignore_space: false\nTrain:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/train.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: true\n    batch_size_per_card: 16\n    drop_last: true\n    num_workers: 0\n    use_shared_memory: false\nEval:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/dev-component.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: false\n    batch_size_per_card: 16\n    drop_last: false\n    num_workers: 0\n    use_shared_memory: false\n"
+    },
+    "numeric-specialist-bnfrozen.yaml": {
+      "sha256": "8f50559165b2b781f42a45b3612156616954fd42ee6d72c01c31faf952b20ae8",
+      "text": "Global:\n  model_name: en_PP-OCRv5_mobile_rec\n  debug: false\n  use_gpu: true\n  epoch_num: 5\n  log_smooth_window: 20\n  print_batch_step: 10\n  save_model_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-specialist-bnfrozen\n  save_epoch_step: 1\n  eval_batch_step:\n  - 0\n  - 52\n  cal_metric_during_train: true\n  pretrained_model: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-initial\n  checkpoints: null\n  save_inference_dir: null\n  use_visualdl: false\n  infer_img: null\n  character_dict_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-dict.txt\n  max_text_length: 25\n  infer_mode: false\n  use_space_char: false\n  distributed: false\n  save_res_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-specialist-bnfrozen-predictions.txt\n  d2s_train_image_shape:\n  - 3\n  - 48\n  - 384\n  seed: 20261015\nOptimizer:\n  name: Adam\n  beta1: 0.9\n  beta2: 0.999\n  lr:\n    name: Cosine\n    learning_rate: 1.0e-05\n    warmup_epoch: 1\n  regularizer:\n    name: L2\n    factor: 3.0e-05\nArchitecture:\n  model_type: rec\n  algorithm: SVTR_LCNet\n  Transform: null\n  Backbone:\n    name: PPLCNetV3\n    scale: 0.95\n  Head:\n    name: MultiHead\n    head_list:\n    - CTCHead:\n        Neck:\n          name: svtr\n          dims: 120\n          depth: 2\n          hidden_dims: 120\n          kernel_size:\n          - 1\n          - 3\n          use_guide: true\n        Head:\n          fc_decay: 1.0e-05\n    - NRTRHead:\n        nrtr_dim: 384\n        max_text_length: 25\nLoss:\n  name: MultiLoss\n  loss_config_list:\n  - CTCLoss: null\n  - NRTRLoss: null\nPostProcess:\n  name: CTCLabelDecode\nMetric:\n  name: RecMetric\n  main_indicator: acc\n  ignore_space: false\nTrain:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/train.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: true\n    batch_size_per_card: 16\n    drop_last: true\n    num_workers: 0\n    use_shared_memory: false\nEval:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/dev-component.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: false\n    batch_size_per_card: 16\n    drop_last: false\n    num_workers: 0\n    use_shared_memory: false\n"
+    },
+    "numeric-runtime-bnfrozen.yaml": {
+      "sha256": "e12894c9b45e9177e21faa66824cb68466ab95fbb1c129667164bf09fed45773",
+      "text": "Global:\n  model_name: en_PP-OCRv5_mobile_rec\n  debug: false\n  use_gpu: true\n  epoch_num: 5\n  log_smooth_window: 20\n  print_batch_step: 10\n  save_model_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-runtime-bnfrozen\n  save_epoch_step: 1\n  eval_batch_step:\n  - 0\n  - 52\n  cal_metric_during_train: true\n  pretrained_model: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-runtime-initial\n  checkpoints: null\n  save_inference_dir: null\n  use_visualdl: false\n  infer_img: null\n  character_dict_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-runtime-dict.txt\n  max_text_length: 25\n  infer_mode: false\n  use_space_char: true\n  distributed: false\n  save_res_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-runtime-predicts.txt\n  d2s_train_image_shape:\n  - 3\n  - 48\n  - 384\n  seed: 20261015\nOptimizer:\n  name: Adam\n  beta1: 0.9\n  beta2: 0.999\n  lr:\n    name: Cosine\n    learning_rate: 1.0e-05\n    warmup_epoch: 1\n  regularizer:\n    name: L2\n    factor: 3.0e-05\nArchitecture:\n  model_type: rec\n  algorithm: SVTR_LCNet\n  Transform: null\n  Backbone:\n    name: PPLCNetV3\n    scale: 0.95\n  Head:\n    name: MultiHead\n    head_list:\n    - CTCHead:\n        Neck:\n          name: svtr\n          dims: 120\n          depth: 2\n          hidden_dims: 120\n          kernel_size:\n          - 1\n          - 3\n          use_guide: true\n        Head:\n          fc_decay: 1.0e-05\n    - NRTRHead:\n        nrtr_dim: 384\n        max_text_length: 25\nLoss:\n  name: MultiLoss\n  loss_config_list:\n  - CTCLoss: null\n  - NRTRLoss: null\nPostProcess:\n  name: CTCLabelDecode\nMetric:\n  name: RecMetric\n  main_indicator: acc\n  ignore_space: false\nTrain:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/train.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: true\n    batch_size_per_card: 16\n    drop_last: true\n    num_workers: 0\n    use_shared_memory: false\nEval:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/dev-component.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: false\n    batch_size_per_card: 16\n    drop_last: false\n    num_workers: 0\n    use_shared_memory: false\n"
+    },
+    "numeric-runtime-bnfrozen-export-paddle30.yaml": {
+      "sha256": "bb3cb38134a8371ebb71397597eed97e94781465942e4c651eeb3fe1ee5d65d6",
+      "text": "Global:\n  model_name: en_PP-OCRv5_mobile_rec\n  debug: false\n  use_gpu: true\n  epoch_num: 5\n  log_smooth_window: 20\n  print_batch_step: 10\n  save_model_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-runtime-bnfrozen\n  save_epoch_step: 1\n  eval_batch_step:\n  - 0\n  - 52\n  cal_metric_during_train: true\n  pretrained_model: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-runtime-bnfrozen/latest\n  checkpoints: null\n  save_inference_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-runtime-bnfrozen-infer-paddle30\n  use_visualdl: false\n  infer_img: null\n  character_dict_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-runtime-dict.txt\n  max_text_length: 25\n  infer_mode: false\n  use_space_char: true\n  distributed: false\n  save_res_path: C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/numeric-runtime-predicts.txt\n  d2s_train_image_shape:\n  - 3\n  - 48\n  - 320\n  seed: 20261015\nOptimizer:\n  name: Adam\n  beta1: 0.9\n  beta2: 0.999\n  lr:\n    name: Cosine\n    learning_rate: 1.0e-05\n    warmup_epoch: 1\n  regularizer:\n    name: L2\n    factor: 3.0e-05\nArchitecture:\n  model_type: rec\n  algorithm: SVTR_LCNet\n  Transform: null\n  Backbone:\n    name: PPLCNetV3\n    scale: 0.95\n  Head:\n    name: MultiHead\n    head_list:\n    - CTCHead:\n        Neck:\n          name: svtr\n          dims: 120\n          depth: 2\n          hidden_dims: 120\n          kernel_size:\n          - 1\n          - 3\n          use_guide: true\n        Head:\n          fc_decay: 1.0e-05\n    - NRTRHead:\n        nrtr_dim: 384\n        max_text_length: 25\nLoss:\n  name: MultiLoss\n  loss_config_list:\n  - CTCLoss: null\n  - NRTRLoss: null\nPostProcess:\n  name: CTCLabelDecode\nMetric:\n  name: RecMetric\n  main_indicator: acc\n  ignore_space: false\nTrain:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/train.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 384\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: true\n    batch_size_per_card: 16\n    drop_last: true\n    num_workers: 0\n    use_shared_memory: false\nEval:\n  dataset:\n    name: SimpleDataSet\n    data_dir: C:/Dcode/WWMAP-TOOLS/out/coordinate-expanded-study-20261015/training-prep-v1\n    label_file_list:\n    - C:/Dcode/WWMAP-TOOLS/out/coordinate-finetune-20261015/dev-component.txt\n    ratio_list:\n    - 1.0\n    transforms:\n    - DecodeImage:\n        img_mode: BGR\n        channel_first: false\n    - MultiLabelEncode:\n        gtc_encode: NRTRLabelEncode\n    - RecResizeImg:\n        image_shape:\n        - 3\n        - 48\n        - 320\n    - KeepKeys:\n        keep_keys:\n        - image\n        - label_ctc\n        - label_gtc\n        - length\n        - valid_ratio\n  loader:\n    shuffle: false\n    batch_size_per_card: 16\n    drop_last: false\n    num_workers: 0\n    use_shared_memory: false\n"
+    },
+    "training-requirements.txt": {
+      "sha256": "f7dfed2c5cc3b4aa7fe44c8c8b999522799b120e3e4c261e16666b68cc516d03",
+      "text": "numpy==1.26.4\nopencv-python-headless==4.11.0.86\nPillow\nPyYAML\nrequests\nshapely\nscikit-image\npyclipper\nlmdb\ntqdm\nrapidfuzz\nalbumentations\npackaging\nhttpx\nprotobuf>=3.20.2\nopt_einsum==3.3.0\nsafetensors\nnetworkx\n"
+    },
+    "initialize_models.py": {
+      "sha256": "9ff241431d2448f7d81a56f95cc11fd33a591c7048172389dd782ecacb83dede",
+      "text": "from pathlib import Path\nimport os,sys,copy,json,hashlib\nos.environ['NO_ALBUMENTATIONS_UPDATE']='1'\nROOT=Path(__file__).resolve().parent\nsys.path.insert(0,str(ROOT/'PaddleOCR-source'))\nimport yaml,numpy as np,paddle\nfrom ppocr.modeling.architectures import build_model\nfrom ppocr.postprocess import build_post_process\nfrom ppocr.data.imaug.label_ops import NRTRLabelEncode\npaddle.set_device('cpu')\nweights=paddle.load(str(ROOT/'downloads/en_PP-OCRv5_mobile_rec_pretrained.pdparams'))\ndef model_and_chars(trial):\n    c=yaml.safe_load((ROOT/(trial+'.yaml')).read_text(encoding='utf-8'))\n    chars=build_post_process(c['PostProcess'],c['Global']).character\n    nrtr=NRTRLabelEncode(c['Global']['max_text_length'],c['Global']['character_dict_path'],c['Global']['use_space_char']).character+['__unused_extra__']\n    arch=copy.deepcopy(c['Architecture']);n=len(chars)\n    arch['Head']['out_channels_list']={'CTCLabelDecode':n,'SARLabelDecode':n+2,'NRTRLabelDecode':n+3}\n    return build_model(arch),chars,nrtr\ncontrol,old_ctc,old_nrtr=model_and_chars('english-control')\nnumeric,new_ctc,new_nrtr=model_and_chars('numeric-specialist')\nassert len(old_ctc)==438 and len(new_ctc)==13 and len(old_nrtr)==442 and len(new_nrtr)==17\nctc_map=[old_ctc.index(c) for c in new_ctc]\nnrtr_map=[old_nrtr.index(c) for c in new_nrtr]\ntransforms={'head.ctc_head.fc.weight':(ctc_map,1),'head.ctc_head.fc.bias':(ctc_map,0),\n 'head.gtc_head.embedding.embedding.weight':(nrtr_map,0),'head.gtc_head.tgt_word_prj.weight':(nrtr_map,1)}\nstate={};changed=[]\nfor key,expected in numeric.state_dict().items():\n    assert key in weights,key\n    assert list(control.state_dict()[key].shape)==list(weights[key].shape),key\n    original=weights[key].numpy()\n    selected=np.take(original,*transforms[key]) if key in transforms else original\n    assert list(selected.shape)==list(expected.shape),(key,selected.shape,expected.shape)\n    state[key]=paddle.to_tensor(selected)\n    if key in transforms:changed.append({'key':key,'before':list(original.shape),'after':list(selected.shape)})\nassert len(state)==968 and len(changed)==4\nnumeric.set_state_dict(state)\npaddle.save(state,str(ROOT/'numeric-initial.pdparams'))\nreceipt={'sourceWeightsSHA256':hashlib.sha256((ROOT/'downloads/en_PP-OCRv5_mobile_rec_pretrained.pdparams').read_bytes()).hexdigest(),\n 'numericInitialSHA256':hashlib.sha256((ROOT/'numeric-initial.pdparams').read_bytes()).hexdigest(),\n 'parameterEntries':968,'unchangedParameterEntries':964,'remappedEntries':changed,\n 'oldCTCClasses':438,'newCTCClasses':13,'newCTCCharacters':new_ctc,'ctcSourceIndices':ctc_map,\n 'nrtrSourceIndices':nrtr_map,'ignoredModelParameters':[],'randomInitializedModelParameters':[]}\n(ROOT/'initialization-receipt.json').write_text(json.dumps(receipt,indent=2)+'\\n',encoding='utf-8')\nprint(json.dumps(receipt,indent=2))\n"
+    },
+    "initialize_runtime_specialist.py": {
+      "sha256": "ed165d42bfe55d586e51954ea56e5a74e1368fd1fd394916c8dc8a87c13b18c6",
+      "text": "from pathlib import Path\nimport os,sys,copy,json,hashlib\nos.environ['NO_ALBUMENTATIONS_UPDATE']='1'\nROOT=Path(__file__).resolve().parent;sys.path.insert(0,str(ROOT/'PaddleOCR-source'))\nimport yaml,numpy as np,paddle\nfrom ppocr.modeling.architectures import build_model\nfrom ppocr.postprocess import build_post_process\nfrom ppocr.data.imaug.label_ops import NRTRLabelEncode\npaddle.set_device('cpu')\ndef definitions(name):\n    c=yaml.safe_load((ROOT/(name+'.yaml')).read_text(encoding='utf-8'))\n    chars=build_post_process(c['PostProcess'],c['Global']).character\n    nrtr=NRTRLabelEncode(c['Global']['max_text_length'],c['Global']['character_dict_path'],c['Global']['use_space_char']).character+['__unused_extra__']\n    arch=copy.deepcopy(c['Architecture']);n=len(chars);arch['Head']['out_channels_list']={'CTCLabelDecode':n,'SARLabelDecode':n+2,'NRTRLabelDecode':n+3}\n    return build_model(arch),chars,nrtr\n_,old_ctc,old_nrtr=definitions('english-control')\nmodel,chars,nrtr=definitions('numeric-runtime-bnfrozen')\nassert len(chars)==16 and len(nrtr)==20\nassert set(chars[1:])==set('0123456789-,+: ')\nold=paddle.load(str(ROOT/'downloads/en_PP-OCRv5_mobile_rec_pretrained.pdparams'))\nctc_map=[old_ctc.index(c) for c in chars];nrtr_map=[old_nrtr.index(c) for c in nrtr]\nmaps={'head.ctc_head.fc.weight':(ctc_map,1),'head.ctc_head.fc.bias':(ctc_map,0),\n      'head.gtc_head.embedding.embedding.weight':(nrtr_map,0),'head.gtc_head.tgt_word_prj.weight':(nrtr_map,1)}\nstate={}\nfor k,expected in model.state_dict().items():\n    a=old[k].numpy();value=np.take(a,*maps[k]) if k in maps else a\n    assert list(value.shape)==list(expected.shape),k\n    state[k]=paddle.to_tensor(value)\nassert len(state)==968\nmodel.set_state_dict(state);paddle.save(state,str(ROOT/'numeric-runtime-initial.pdparams'))\n(ROOT/'runtime-initialization-receipt.json').write_text(json.dumps({'ctcCharacters':chars,'ctcClasses':16,'nrtrClasses':20,\n 'ctcSourceIndices':ctc_map,'nrtrSourceIndices':nrtr_map,'remappedEntries':list(maps),'unchangedEntries':964,\n 'unobservedTrainingCharacters':['+',':',' '],'note':'Transferred pretrained punctuation weights retained for existing parser compatibility; no synthetic labels introduced.',\n 'sourceWeightsSHA256':hashlib.sha256((ROOT/'downloads/en_PP-OCRv5_mobile_rec_pretrained.pdparams').read_bytes()).hexdigest()},indent=2),encoding='utf-8')\nprint('Initialized 16-class numeric/punctuation CTC head from pretrained columns; all 968 parameters accounted for.')\n"
+    },
+    "train_frozen_bn.py": {
+      "sha256": "43b163a544fa66108da5376126a078f7f53c256432b980af99e26a7d3f04b6ac",
+      "text": "\"\"\"Trial wrapper: preserve pretrained BN running statistics without editing upstream.\"\"\"\nfrom pathlib import Path\nimport os,sys,json\nos.environ['NO_ALBUMENTATIONS_UPDATE']='1';os.environ['FLAGS_allocator_strategy']='auto_growth'\nROOT=Path(__file__).resolve().parent;sys.path.insert(0,str(ROOT/'PaddleOCR-source'))\nimport paddle\nimport tools.train as trainer\nimport tools.program as program\noriginal=trainer.build_model\ndef frozen_build(config):\n    model=original(config);count=0\n    for layer in model.sublayers():\n        if isinstance(layer,(paddle.nn.BatchNorm1D,paddle.nn.BatchNorm2D,paddle.nn.BatchNorm3D)):\n            layer._use_global_stats=True;count+=1\n    assert count==151,('Unexpected BN count',count)\n    print('TRIAL: frozen pretrained running statistics in',count,'BN layers; affine parameters remain trainable.',flush=True)\n    return model\ntrainer.build_model=frozen_build\nconfig,device,logger,writer=program.preprocess(is_train=True)\ntrainer.set_seed(config['Global']['seed'])\ntrainer.main(config,device,logger,writer)\n"
+    },
+    "component_eval.py": {
+      "sha256": "e226b74d7ba5755d033b77a40d4e0bc509280e06b297cfbaa6700936f5a5e0b3",
+      "text": "from pathlib import Path\nimport os,sys,copy,json,hashlib,re,gc\nos.environ['NO_ALBUMENTATIONS_UPDATE']='1';os.environ['FLAGS_allocator_strategy']='auto_growth'\nROOT=Path(__file__).resolve().parent;sys.path.insert(0,str(ROOT/'PaddleOCR-source'))\nimport yaml,numpy as np,cv2,paddle\nfrom ppocr.modeling.architectures import build_model\nfrom ppocr.postprocess import build_post_process\nfrom ppocr.data.imaug.rec_img_aug import RecResizeImg\nDATA=Path(r'C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-expanded-study-20261015\\training-prep-v1')\nmanifest=json.loads((DATA/'manifest.json').read_text(encoding='utf-8'))\nsplits=json.loads((ROOT/'split-manifest.json').read_text(encoding='utf-8'))\nmembership={n:group for group in ['train','developmentHoldout','purged'] for n in splits[group]}\ndevice=sys.argv[1] if len(sys.argv)>1 else 'gpu:0';paddle.set_device(device)\nrows=manifest['rows'] if device.startswith('gpu') else [r for r in manifest['rows'] if membership[r['id']]=='developmentHoldout']\nresize=RecResizeImg([3,48,384])\nimages=[]\nfor row in rows:\n    pixels=cv2.imdecode(np.frombuffer((DATA/row['image']).read_bytes(),np.uint8),cv2.IMREAD_COLOR)\n    images.append(resize({'image':pixels})['image'])\nreport=[]\ntrials=[('english-before','english-control',ROOT/'downloads/en_PP-OCRv5_mobile_rec_pretrained.pdparams'),\n        ('numeric-before','numeric-specialist',ROOT/'numeric-initial.pdparams'),\n        ('english-after','english-control',ROOT/'english-control/latest.pdparams'),\n        ('numeric-after','numeric-specialist',ROOT/'numeric-specialist/latest.pdparams')]\nmode=sys.argv[2] if len(sys.argv)>2 else ''\ndiagnostic=mode=='bnrestore'\nif diagnostic:\n    trials=[('english-bnrestore','english-control',ROOT/'english-control-bnrestore.pdparams'),\n            ('numeric-bnrestore','numeric-specialist',ROOT/'numeric-specialist-bnrestore.pdparams')]\nif mode=='bnfrozen':\n    trials=[('english-bnfrozen','english-control',ROOT/'english-control-bnfrozen/latest.pdparams'),\n            ('numeric-bnfrozen','numeric-specialist',ROOT/'numeric-specialist-bnfrozen/latest.pdparams')]\nif mode=='runtime':\n    trials=[('numeric-runtime-before','numeric-runtime-bnfrozen',ROOT/'numeric-runtime-initial.pdparams'),\n            ('numeric-runtime-after','numeric-runtime-bnfrozen',ROOT/'numeric-runtime-bnfrozen/latest.pdparams')]\nfor name,trial,weights_path in trials:\n    target=ROOT/f'component-{name}-{device.replace(\":\",\"-\")}.json'\n    config=yaml.safe_load((ROOT/(trial+'.yaml')).read_text(encoding='utf-8'))\n    decoder=build_post_process(config['PostProcess'],config['Global']);n=len(decoder.character)\n    arch=copy.deepcopy(config['Architecture']);arch['Head']['out_channels_list']={'CTCLabelDecode':n,'SARLabelDecode':n+2,'NRTRLabelDecode':n+3}\n    model=build_model(arch);weights=paddle.load(str(weights_path))\n    assert all(k in weights and list(v.shape)==list(weights[k].shape) for k,v in model.state_dict().items())\n    model.set_state_dict(weights);model.eval();outputs=[]\n    with paddle.no_grad():\n        for start in range(0,len(rows),16):\n            batch=paddle.to_tensor(np.stack(images[start:start+16]))\n            predictions=model(batch).numpy();decoded=decoder(predictions)\n            for row,(text,score) in zip(rows[start:start+16],decoded):\n                sign=[];parsed=re.fullmatch(r'(-?\\d+),(-?\\d+),(-?\\d+)',text)\n                if parsed:\n                    for axis,val in zip('xyz',map(int,parsed.groups())):\n                        exp=row['expected'][axis]\n                        if exp and val and (exp<0)!=(val<0):sign.append(axis)\n                outputs.append({'id':row['id'],'split':membership[row['id']],'expected':row['text'],'text':text,\n                    'score':float(score),'exactText':text==row['text'],'signErrors':sign})\n    assert len(outputs)==len(rows) and len({r['id'] for r in outputs})==len(rows)\n    summary=[]\n    for split in ['train','developmentHoldout','purged']:\n        part=[r for r in outputs if r['split']==split]\n        if part:summary.append({'split':split,'frames':len(part),'correct':sum(r['exactText'] for r in part),\n            'signErrorFrames':sum(bool(r['signErrors']) for r in part)})\n    result={'trial':name,'device':device,'weightsSHA256':hashlib.sha256(weights_path.read_bytes()).hexdigest(),\n        'configSHA256':hashlib.sha256((ROOT/(trial+'.yaml')).read_bytes()).hexdigest(),\n        'metricScope':'recognizer component on label-informed boxes; NOT end-to-end OCR accuracy',\n        'humanVerified':False,'summary':summary,'predictions':outputs}\n    target.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\\n',encoding='utf-8')\n    print(name,device,summary,flush=True);report.append({'file':target.name,'summary':summary})\n    del model,weights;gc.collect()\n    if device.startswith('gpu'):paddle.device.cuda.empty_cache()\n(ROOT/f'component-summary-{device.replace(\":\",\"-\")}{\"-\"+mode if mode else \"\"}.json').write_text(json.dumps(report,indent=2)+'\\n',encoding='utf-8')\n"
+    },
+    "export_on_cpu.py": {
+      "sha256": "d8e862f9201bab2ca4065a9f9065b52cea623857e6b9870b3747f744d436ce70",
+      "text": "from pathlib import Path\nimport sys,os\nos.environ['NO_ALBUMENTATIONS_UPDATE']='1'\nROOT=Path(__file__).resolve().parent;sys.path.insert(0,str(ROOT/'PaddleOCR-source'))\nimport paddle\nfrom tools.export_model import main\npaddle.set_device('cpu')\nmain()\n"
+    },
+    "score_end_to_end.py": {
+      "sha256": "4ac9f77a29a6da37c36c66d86289ad27a19a8db84f177a8339349e3f450b78fe",
+      "text": "from pathlib import Path\nimport json,importlib.util,hashlib\nROOT=Path(__file__).resolve().parent\nSOURCE=Path(r'C:\\Users\\Kahvia\\.codex\\worktrees\\coordinate-offline-evaluation\\WWMAP-TOOLS')\nspec=importlib.util.spec_from_file_location('benchmark',SOURCE/'tools/coordinate-ocr/benchmark.py')\nb=importlib.util.module_from_spec(spec);spec.loader.exec_module(b)\ncorpus=b.read_json(ROOT/'end-to-end-corpus.json');inputs=b.read_json(ROOT/'end-to-end-inputs.json')['inputs']\nassert len(inputs)==648 and len(corpus['frames'])==324\nall_summaries=[];cases=[];sources=[]\nmodels=[('english-before','end-to-end-before.json'),('english-bnfrozen','end-to-end-english-bnfrozen-paddle30.json')]\nextra=ROOT/'end-to-end-numeric-runtime-paddle30.json'\nif extra.exists():models.append(('numeric-runtime-bnfrozen',extra.name))\ninitial=ROOT/'end-to-end-numeric-initial-paddle30.json'\nif initial.exists():models.append(('numeric-runtime-initial',initial.name))\nfor model,file in models:\n    raw=b.read_json(ROOT/file);ss,scored=b.summarize(corpus,inputs,raw['pipelines'])\n    for s in ss:\n        group=[x for x in scored if x['mode']==s['mode'] and x['id'].endswith('@'+s['profile'])]\n        known=[x for x in group if x['state']=='present']\n        s.update(model=model,knownPresentAbstentions=sum(x['abstained'] for x in known))\n        assert s['xyzLabeled']==175 and s['absentFrames']==141\n        assert s['xyzCorrect']+s['wrongXYZReturns']+s['knownPresentAbstentions']==175\n        all_summaries.append(s)\n        for x in group:\n            if x['wrongXYZReturn'] or x['falsePositive']:\n                cases.append({'model':model,'mode':s['mode'],'profile':s['profile'],'id':x['id'],\n                    'expected':x['expected'],'selected':x['selected'],'rawText':x.get('rawText'),'state':x['state']})\n    sources.append({'model':model,'file':file,'sha256':b.sha256(ROOT/file),'metadata':raw['metadata']})\nreport={'scope':'Label-free fixed ROI, original frames; 175 same-session blocked development XYZ, 141 absent, 8 unknown. Training excluded.',\n    'humanVerified':False,'independentSessionTest':False,'inputManifestSHA256':b.sha256(ROOT/'end-to-end-inputs.json'),\n    'corpusSHA256':b.sha256(ROOT/'end-to-end-corpus.json'),'sourceEvidence':sources,'summary':all_summaries,'wrongCases':cases}\nb.write_json(ROOT/'end-to-end-report.json',report)\nfor s in all_summaries:\n    if s['profile']=='readout-line' and s['mode'] in ['ppocr-contrast-clock','ppocr-raw-clock','ppocr-corroborated-clock']:\n        print(s['model'],s['mode'],'XYZ',s['xyzCorrect'],'wrong',s['wrongXYZReturns'],'miss',s['knownPresentAbstentions'],'sign',s['signErrorFrames'],'FP',s['falsePositives'])\n"
+    },
+    "verify_finetune.py": {
+      "sha256": "9119c5d8f175079c2cf250d759bedcc015fb12495c2dfa5425748de44f949187",
+      "text": "\"\"\"Audit fixed training runs, immutable labels, model files and independent replay counts.\"\"\"\nfrom pathlib import Path\nimport json,hashlib,re,sys,gc\nfrom collections import Counter\nROOT=Path(__file__).resolve().parent\nSOURCE=Path(r'C:\\Users\\Kahvia\\.codex\\worktrees\\coordinate-offline-evaluation\\WWMAP-TOOLS')\ndef read(p):return json.loads(p.read_text(encoding='utf-8-sig'))\ndef sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()\nsplit=read(ROOT/'split-manifest.json')\nassert (len(split['train']),len(split['developmentHoldout']),len(split['purged']))==(828,175,8)\nassert not set(split['train'])&set(split['developmentHoldout'])\nassert max(int(x[-6:]) for x in split['train'])==899 and min(int(x[-6:]) for x in split['developmentHoldout'])==950\nfor name,group in [('train','train'),('dev-component','developmentHoldout'),('purged','purged')]:\n    records=(ROOT/(name+'.txt')).read_text(encoding='utf-8').splitlines()\n    ids={'session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-'+Path(line.split('\\t')[0]).stem[-6:] for line in records}\n    assert ids==set(split[group]) and len(records)==len(ids)\n\nsys.path.insert(0,str(ROOT/'PaddleOCR-source'))\nimport paddle,numpy as np,yaml\npaddle.set_device('cpu')\ntrials=[('english-control','english-train.log','downloads/en_PP-OCRv5_mobile_rec_pretrained.pdparams',False),\n ('numeric-specialist','numeric-train.log','numeric-initial.pdparams',False),\n ('english-control-bnfrozen','english-bnfrozen-train.log','downloads/en_PP-OCRv5_mobile_rec_pretrained.pdparams',True),\n ('numeric-specialist-bnfrozen','numeric-bnfrozen-train.log','numeric-initial.pdparams',True),\n ('numeric-runtime-bnfrozen','numeric-runtime-train.log','numeric-runtime-initial.pdparams',True)]\ntraining=[]\nfor name,log_name,initial,frozen in trials:\n    config=yaml.safe_load((ROOT/(name+'.yaml')).read_text(encoding='utf-8'))\n    assert config['Global']['epoch_num']==5 and config['Global']['seed']==20261015\n    assert config['Train']['loader']['batch_size_per_card']==16\n    log=(ROOT/log_name).read_text(encoding='utf-8-sig')\n    assert 'epoch: [5/5], global_step: 250' in log\n    assert not re.search(r'\\bloss:\\s*(?:nan|inf)\\b',log,re.IGNORECASE)\n    assert 'not matched with loaded params' not in log and 'not in model' not in log\n    before=paddle.load(str(ROOT/initial));weights=ROOT/name/'latest.pdparams';after=paddle.load(str(weights))\n    assert len(after)==968 and all(np.isfinite(v.numpy()).all() for v in after.values())\n    bn=[k for k in after if k.endswith(('._mean','._variance'))];assert len(bn)==302\n    equal_bn=sum(np.array_equal(before[k].numpy(),after[k].numpy()) for k in bn)\n    if frozen:assert equal_bn==302\n    changed=sum(not np.array_equal(before[k].numpy(),after[k].numpy()) for k in after if k not in bn)\n    assert changed>0\n    training.append({'name':name,'epochs':5,'optimizerUpdates':250,'imagePresentations':4000,\n      'eligibleTrainFrames':828,'finiteParameterEntries':968,'unchangedBNBuffers':equal_bn,\n      'changedOtherParameterEntries':changed,'weightsSHA256':sha(weights),\n      'configSHA256':sha(ROOT/(name+'.yaml')),'logSHA256':sha(ROOT/log_name)})\n    del before,after;gc.collect()\n\nreport=read(ROOT/'end-to-end-report.json');inputs=read(ROOT/'end-to-end-inputs.json')['inputs']\ncorpus={f['id']:f for f in read(ROOT/'end-to-end-corpus.json')['frames']}\nassert Counter(f['state'] for f in corpus.values())=={'present':175,'absent':141,'unknown':8}\nassert set(f['id'] for f in corpus.values() if f['state']=='present')==set(split['developmentHoldout'])\nassert all('state' not in x and 'expected' not in x for x in inputs)\nexpected_summaries={(s['model'],s['profile'],s['mode']):s for s in report['summary']}\nassert len(expected_summaries)==64\ncounted=0\nfor evidence in report['sourceEvidence']:\n    raw=read(ROOT/evidence['file']);assert sha(ROOT/evidence['file'])==evidence['sha256']\n    index={x['id']:x for x in inputs}\n    for mode,predictions in raw['pipelines'].items():\n        assert len(predictions)==len(index)==648 and {x['id'] for x in predictions}==set(index)\n        counts={}\n        for p in predictions:\n            assert p['pixelDigest']==index[p['id']]['pixelDigest']\n            assert not p.get('error')\n            fid,profile=p['id'].split('@');f=corpus[fid];s=p['selected'];c=counts.setdefault(profile,Counter())\n            c['frames']+=1\n            if f['state']=='present':\n                if s is None:c['miss']+=1\n                else:\n                    exact=all(s[k]==f['expected'][k] for k in 'xyz')\n                    c['correct']+=exact;c['wrong']+=not exact\n            elif f['state']=='absent':c['fp']+=s is not None\n        for profile,c in counts.items():\n            summary=expected_summaries[(evidence['model'],profile,mode)]\n            assert c['frames']==324 and c['correct']==summary['xyzCorrect'] and c['wrong']==summary['wrongXYZReturns']\n            assert c['miss']==summary['knownPresentAbstentions'] and c['fp']==summary['falsePositives']\n        counted+=len(predictions)\nassert counted==20736\nlegacy=read(Path(r'C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-label-expansion-20261015\\verification.json'))\nfor path,digest in legacy['sourceHashes'].items():assert sha(Path(path))==digest\nassert corpus['session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001100']['state']=='unknown'\nmodel_artifacts={}\nfor name in ['english-control-bnfrozen-infer-paddle30','numeric-runtime-bnfrozen-infer-paddle30']:\n    folder=ROOT/name;c=yaml.safe_load((folder/'inference.yml').read_text(encoding='utf-8'))\n    dictionary=(folder/'ppocr_keys.txt').read_text(encoding='utf-8').splitlines()\n    assert dictionary==c['PostProcess']['character_dict']\n    assert set('0123456789+-,')<=set(dictionary)\n    assert read(folder/'inference.json')['base_code']['version']==1\n    model_artifacts[name]={f:sha(folder/f) for f in ['inference.json','inference.pdiparams','inference.yml','ppocr_keys.txt']}\nruntime_dict=(ROOT/'numeric-runtime-dict.txt').read_text(encoding='utf-8').splitlines()\nassert len(runtime_dict)==14 and set(runtime_dict)==set('0123456789-,+:')\nbudget=read(ROOT/'download-budget-with-exporter.json')\nassert budget['conservativeTotalBytes']==818260866 and budget['conservativeTotalBytes']<1000000000\nfor row in read(ROOT/'download-receipts.json'):\n    path=ROOT/'downloads'/row['name'];assert path.stat().st_size==row['bytes'] and sha(path)==row['sha256']\nsource_files=read(ROOT/'source-tree.json')\nfor row in source_files['files']:\n    data=(ROOT/'PaddleOCR-source'/row['path']).read_bytes()\n    assert hashlib.sha1(f'blob {len(data)}\\0'.encode()+data).hexdigest()==row['sha']\nresult={'trainingRuns':training,'independentReplayJudgmentsVerified':counted,'replayRoutesVerified':64,\n    'labelsUnchanged':True,'frame1100Excluded':True,'labelFreeReplayInputs':True,\n    'sourceFilesUnchanged':len(source_files['files']),'modelArtifacts':model_artifacts,\n    'downloadBudgetConservativeBytes':818260866,'authorizedDownloadBytes':1000000000,\n    'unresolvedEnvironmentWarning':'GPU Paddle compiled cuDNN9.9 vs available cuDNN9.5; retained in logs; final replay uses existing CPU native library.',\n    'independentSessionAcceptance':False,'productionChanged':False,'endToEndReportSHA256':sha(ROOT/'end-to-end-report.json')}\n(ROOT/'finetune-verification.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\\n',encoding='utf-8')\nprint(json.dumps({k:v for k,v in result.items() if k not in ['trainingRuns','modelArtifacts']},ensure_ascii=False,indent=2))\n"
+    }
+  },
+  "initialization": {
+    "sourceWeightsSHA256": "e25c9536f39791dfbd2f005f7e0fbbc2652d35b79bae999740059d93fec8e950",
+    "numericInitialSHA256": "deccad941b1b1837268b5797a3d75c15babad629a7d903b748e841ceb0e5714b",
+    "parameterEntries": 968,
+    "unchangedParameterEntries": 964,
+    "remappedEntries": [
+      {
+        "key": "head.ctc_head.fc.weight",
+        "before": [
+          120,
+          438
+        ],
+        "after": [
+          120,
+          13
+        ]
+      },
+      {
+        "key": "head.ctc_head.fc.bias",
+        "before": [
+          438
+        ],
+        "after": [
+          13
+        ]
+      },
+      {
+        "key": "head.gtc_head.embedding.embedding.weight",
+        "before": [
+          442,
+          384
+        ],
+        "after": [
+          17,
+          384
+        ]
+      },
+      {
+        "key": "head.gtc_head.tgt_word_prj.weight",
+        "before": [
+          384,
+          442
+        ],
+        "after": [
+          384,
+          17
+        ]
+      }
+    ],
+    "oldCTCClasses": 438,
+    "newCTCClasses": 13,
+    "newCTCCharacters": [
+      "blank",
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "-",
+      ","
+    ],
+    "ctcSourceIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      75,
+      74
+    ],
+    "nrtrSourceIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      78,
+      77,
+      441
+    ],
+    "ignoredModelParameters": [],
+    "randomInitializedModelParameters": []
+  },
+  "runtimeInitialization": {
+    "ctcCharacters": [
+      "blank",
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "-",
+      ",",
+      "+",
+      ":",
+      " "
+    ],
+    "ctcClasses": 16,
+    "nrtrClasses": 20,
+    "ctcSourceIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      75,
+      74,
+      73,
+      78,
+      437
+    ],
+    "nrtrSourceIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      78,
+      77,
+      76,
+      81,
+      440,
+      441
+    ],
+    "remappedEntries": [
+      "head.ctc_head.fc.weight",
+      "head.ctc_head.fc.bias",
+      "head.gtc_head.embedding.embedding.weight",
+      "head.gtc_head.tgt_word_prj.weight"
+    ],
+    "unchangedEntries": 964,
+    "unobservedTrainingCharacters": [
+      "+",
+      ":",
+      " "
+    ],
+    "note": "Transferred pretrained punctuation weights retained for existing parser compatibility; no synthetic labels introduced.",
+    "sourceWeightsSHA256": "e25c9536f39791dfbd2f005f7e0fbbc2652d35b79bae999740059d93fec8e950"
+  },
+  "downloadReceipts": [
+    {
+      "name": "paddlepaddle_gpu-3.2.0-cp312-cp312-win_amd64.whl",
+      "url": "https://paddle-whl.cdn.bcebos.com/stable/cu126/paddlepaddle-gpu/paddlepaddle_gpu-3.2.0-cp312-cp312-win_amd64.whl",
+      "bytes": 496295384,
+      "sha256": "f3d4330f4f484989cd1dbe5682914a8333bdd75ffc95c5270a16e325e080318d"
+    },
+    {
+      "name": "en_PP-OCRv5_mobile_rec_pretrained.pdparams",
+      "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/en_PP-OCRv5_mobile_rec_pretrained.pdparams",
+      "bytes": 70070474,
+      "sha256": "e25c9536f39791dfbd2f005f7e0fbbc2652d35b79bae999740059d93fec8e950"
+    },
+    {
+      "name": "paddlepaddle-3.0.0-cp312-cp312-win_amd64.whl",
+      "url": "https://paddle-whl.cdn.bcebos.com/stable/cpu/paddlepaddle/paddlepaddle-3.0.0-cp312-cp312-win_amd64.whl",
+      "bytes": 97056269,
+      "sha256": "68efccd9b64233243e48d89a20d34904e2827abc3458c7dddb9e97ef8e2209f6"
+    }
+  ],
+  "downloadBudget": {
+    "authorizedBytes": 1000000000,
+    "wheelAndWeightsBytes": 566365858,
+    "sourceBytes": 6520331,
+    "pythonDependencyBytes": 123318408,
+    "metadataAndRetryReserveBytes": 25000000,
+    "conservativeTotalBytes": 818260866,
+    "dependencies": [
+      {
+        "name": "numpy",
+        "bytes": 15517754,
+        "url": "https://files.pythonhosted.org/packages/16/2e/86f24451c2d530c88daf997cb8d6ac622c1d40d19f5a031ed68a4b73a374/numpy-1.26.4-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "opencv-python-headless",
+        "bytes": 39402386,
+        "url": "https://files.pythonhosted.org/packages/86/8a/69176a64335aed183529207ba8bc3d329c2999d852b4f3818027203f50e6/opencv_python_headless-4.11.0.86-cp37-abi3-win_amd64.whl"
+      },
+      {
+        "name": "opt-einsum",
+        "bytes": 65486,
+        "url": "https://files.pythonhosted.org/packages/bc/19/404708a7e54ad2798907210462fd950c3442ea51acc8790f3da48d2bee8b/opt_einsum-3.3.0-py3-none-any.whl"
+      },
+      {
+        "name": "pillow",
+        "bytes": 7227137,
+        "url": "https://files.pythonhosted.org/packages/45/89/da2f7971a317f83d807fdd4065c0af40208e59e692cc43d315a71a0e96d1/pillow-12.3.0-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "PyYAML",
+        "bytes": 154003,
+        "url": "https://files.pythonhosted.org/packages/86/bf/899e81e4cce32febab4fb42bb97dcdf66bc135272882d1987881a4b519e9/pyyaml-6.0.3-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "requests",
+        "bytes": 73075,
+        "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl"
+      },
+      {
+        "name": "shapely",
+        "bytes": 1791280,
+        "url": "https://files.pythonhosted.org/packages/f6/26/ba9192f0a72c830aa8cc1c61e207ada57cc54b7de81668b1836f575ee717/shapely-2.2.0-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "scikit-image",
+        "bytes": 11911059,
+        "url": "https://files.pythonhosted.org/packages/23/4d/a3cc1e96f080e253dad2251bfae7587cf2b7912bcd76fd43fd366ff35a87/scikit_image-0.26.0-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "pyclipper",
+        "bytes": 104619,
+        "url": "https://files.pythonhosted.org/packages/97/77/dfea08e3b230b82ee22543c30c35d33d42f846a77f96caf7c504dd54fab1/pyclipper-1.4.0-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "lmdb",
+        "bytes": 188441,
+        "url": "https://files.pythonhosted.org/packages/8a/4f/9bb38e2f0af048003d652f60d5c707b39f67f3f14010ed969d9a036569a2/lmdb-3.0.0-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "tqdm",
+        "bytes": 80199,
+        "url": "https://files.pythonhosted.org/packages/a7/03/921a3d3c75785aca9ebfbfcabfbc3a1be12e2ab5265deb026d55a5a3f83e/tqdm-4.70.1-py3-none-any.whl"
+      },
+      {
+        "name": "RapidFuzz",
+        "bytes": 1731992,
+        "url": "https://files.pythonhosted.org/packages/84/c4/12f01df5778227c8655fcd9b429fc001d43270f5d8d154edc9066bab1de3/rapidfuzz-3.14.6-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "albumentations",
+        "bytes": 369423,
+        "url": "https://files.pythonhosted.org/packages/8e/64/013409c451a44b61310fb757af4527f3de57fc98a00f40448de28b864290/albumentations-2.0.8-py3-none-any.whl"
+      },
+      {
+        "name": "albucore",
+        "bytes": 15372,
+        "url": "https://files.pythonhosted.org/packages/0a/e2/91f145e1f32428e9e1f21f46a7022ffe63d11f549ee55c3b9265ff5207fc/albucore-0.0.24-py3-none-any.whl"
+      },
+      {
+        "name": "packaging",
+        "bytes": 129956,
+        "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
+      },
+      {
+        "name": "httpx",
+        "bytes": 73517,
+        "url": "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl"
+      },
+      {
+        "name": "httpcore",
+        "bytes": 78784,
+        "url": "https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl"
+      },
+      {
+        "name": "protobuf",
+        "bytes": 456514,
+        "url": "https://files.pythonhosted.org/packages/8a/55/b77bda4e5e5f5971fb51b07663694690e9afdb9402136c16a522bd621cad/protobuf-7.36.2-cp310-abi3-win_amd64.whl"
+      },
+      {
+        "name": "safetensors",
+        "bytes": 355540,
+        "url": "https://files.pythonhosted.org/packages/1b/6d/3fba214c1e5e0f69991677ec3bc17023f0421776975e1de0c682dca475e2/safetensors-0.8.0-cp310-abi3-win_amd64.whl"
+      },
+      {
+        "name": "networkx",
+        "bytes": 2142205,
+        "url": "https://files.pythonhosted.org/packages/7e/cd/fe58041e9011f307c490e3e17dd48cc516448f7c698a3f2d9d9d65d7e6a8/networkx-3.7-py3-none-any.whl"
+      },
+      {
+        "name": "certifi",
+        "bytes": 136983,
+        "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl"
+      },
+      {
+        "name": "charset-normalizer",
+        "bytes": 207486,
+        "url": "https://files.pythonhosted.org/packages/eb/e6/e6e083884cbcfd49c64865af05027fe7011be7b2d9179524f099a1b611f3/charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "idna",
+        "bytes": 69583,
+        "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl"
+      },
+      {
+        "name": "ImageIO",
+        "bytes": 328389,
+        "url": "https://files.pythonhosted.org/packages/7d/8a/3b7f62b9df56460959f1b9bef094248d2a4d7f393c5b0d2da8efcdf0e40e/imageio-2.38.1-py3-none-any.whl"
+      },
+      {
+        "name": "lazy-loader",
+        "bytes": 8791,
+        "url": "https://files.pythonhosted.org/packages/23/93/4e45e37f26c820216704b36b8e67cc55c490a7abd287a78a26a2c0e21386/lazy_loader-0.6-py3-none-any.whl"
+      },
+      {
+        "name": "pydantic",
+        "bytes": 488106,
+        "url": "https://files.pythonhosted.org/packages/35/ea/a56b9fe5066f3537b7882f77e9c5dfb26d8c2eefdaed9b5fc73d57b4dc22/pydantic-2.14.1-py3-none-any.whl"
+      },
+      {
+        "name": "pydantic_core",
+        "bytes": 2172522,
+        "url": "https://files.pythonhosted.org/packages/c5/17/8bbd530b8659e9d963f5b16f6cb8e159f4cd174b4d6304e48969ab12dba8/pydantic_core-2.50.1-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "scipy",
+        "bytes": 36549682,
+        "url": "https://files.pythonhosted.org/packages/a2/84/dc08d77fbf3d87d3ee27f6a0c6dcce1de5829a64f2eae85a0ecc1f0daa73/scipy-1.17.1-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "tifffile",
+        "bytes": 243960,
+        "url": "https://files.pythonhosted.org/packages/1a/e4/e804505f87627cd8cdae9c010c47c4485fd8c1ce31a7dd0ab7fcc4707377/tifffile-2026.3.3-py3-none-any.whl"
+      },
+      {
+        "name": "urllib3",
+        "bytes": 135717,
+        "url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl"
+      },
+      {
+        "name": "anyio",
+        "bytes": 132079,
+        "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl"
+      },
+      {
+        "name": "colorama",
+        "bytes": 25335,
+        "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl"
+      },
+      {
+        "name": "annotated-types",
+        "bytes": 13427,
+        "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl"
+      },
+      {
+        "name": "h11",
+        "bytes": 37515,
+        "url": "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl"
+      },
+      {
+        "name": "simsimd",
+        "bytes": 87454,
+        "url": "https://files.pythonhosted.org/packages/45/89/a45ef421b70d557eac7d196b03e45ff9ff8c7c786b4e54dfb505c1efc0f1/simsimd-6.5.16-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "stringzilla",
+        "bytes": 752316,
+        "url": "https://files.pythonhosted.org/packages/bf/16/d5a72d0b67ea10909f1aa6f93ee2d0c3418ceade6fd0895898b414c390ab/stringzilla-5.2.0-cp312-cp312-win_amd64.whl"
+      },
+      {
+        "name": "typing_extensions",
+        "bytes": 45571,
+        "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl"
+      },
+      {
+        "name": "typing-inspection",
+        "bytes": 14750,
+        "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl"
+      }
+    ],
+    "compatibleCPUExporterBytes": 97056269
+  }
+}

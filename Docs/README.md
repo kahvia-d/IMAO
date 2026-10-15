@@ -178,3 +178,4 @@
 | [`CoordinateLineExperiment_20261015_zh-Hans.md`](CoordinateLineExperiment_20261015_zh-Hans.md) | 坐标行、等比缩放与日期边界离线实验及失败间隔法 |
 | [`CoordinateAnnotationExpansion_20261015_zh-Hans.md`](CoordinateAnnotationExpansion_20261015_zh-Hans.md) | 已有 1160 帧的助手视觉标注扩充、逐帧复核来源与待定清单 |
 | [`CoordinateExpandedEvaluation_20261015_zh-Hans.md`](CoordinateExpandedEvaluation_20261015_zh-Hans.md) | 扩展坐标集全量重评分、负号与 Z 错误分析、1011 张训练裁片准备 |
+| [`CoordinateFinetune_20261015_zh-Hans.md`](CoordinateFinetune_20261015_zh-Hans.md) | 五组 GPU 微调、冻结 BN 对照、数字模型兼容导出与原生 CPU 回放 |
