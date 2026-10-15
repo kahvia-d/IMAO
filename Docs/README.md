@@ -187,3 +187,4 @@
 | [`CoordinateOwnYoloPilot_20261015_zh-Hans.md`](CoordinateOwnYoloPilot_20261015_zh-Hans.md) | 官方通用初始化、自有字符框与自训 YOLO 原型、拟合局限及 ONNX CPU 链路 |
 | [`CoordinateOwnYoloExpansion_20261015_zh-Hans.md`](CoordinateOwnYoloExpansion_20261015_zh-Hans.md) | 自训 YOLO 扩充草地雪地与不同坐标，固定开发回放、错误分析及 ONNX 一致性 |
 | [`CoordinateOwnYoloXY_20261015_zh-Hans.md`](CoordinateOwnYoloXY_20261015_zh-Hans.md) | XY 必需、Z 可选，日期冲突隔离、自训 YOLO 同框对照及 XY 口径比较 |
+| [`CoordinateSignLayout_20261015_zh-Hans.md`](CoordinateSignLayout_20261015_zh-Hans.md) | X 固定起点与 Y 相对间距的漏符号校验、正数检查及删框对照 |
