@@ -1,0 +1,76 @@
+{
+  "frames": 1011,
+  "cropPixelCopiesVerified": 1011,
+  "sourceAndMinimapHashesVerified": 2022,
+  "assistantVisualCropPasses": 1011,
+  "humanVerified": false,
+  "qaEvidence": {
+    "a": {
+      "file": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-expanded-study-20261015\\training-prep-v1\\crop-qa-a.json",
+      "sha256": "0c9f450f3b93de1511ac66076a1384b585c2d54036a11ef617627b853fa535f6",
+      "count": 352
+    },
+    "b": {
+      "file": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-expanded-study-20261015\\crop-qa-b.json",
+      "sha256": "c28bd89f8289700631983e7a13d5dd747d8fc01ace3db3ca89536cfdfcc1eb4a",
+      "count": 352
+    },
+    "c": {
+      "file": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-expanded-study-20261015\\crop-qa-c.json",
+      "sha256": "2618c0121d0871e9c192211498afdf527962dc466950c031a9d6cf27a3e7b41a",
+      "count": 307
+    }
+  },
+  "recognitionTSVMatchesManifest": true,
+  "dictionaryCharacters": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "-",
+    ","
+  ],
+  "characterFrequency": {
+    "-": 1544,
+    "9": 777,
+    "6": 786,
+    "5": 1363,
+    ",": 2022,
+    "1": 1348,
+    "4": 820,
+    "0": 779,
+    "3": 840,
+    "8": 599,
+    "7": 668,
+    "2": 1056
+  },
+  "sourceCropRectFormat": "left,top,right,bottom, bottom/right exclusive, relative to captured 640x128 strip",
+  "labelInformedGeometry": true,
+  "evaluationEligible": false,
+  "trainingStarted": false,
+  "split": "unassigned-development",
+  "negativeRegressionFrames": 141,
+  "quarantinedFrames": 8,
+  "quarantinedFrameNumbers": [
+    "000054",
+    "000059",
+    "000508",
+    "000561",
+    "001012",
+    "001013",
+    "001014",
+    "001100"
+  ],
+  "sourceCorpusSHA256": "cf854d2f070d326294ebfdd1b0323754881a19da700e7cab894fe5032a512868",
+  "manifestSHA256": "0767ece34123fbfb7a05275630fcea03ffdd0434bba4af85eeb6299f1af8c309",
+  "recognitionTSVSHA256": "6a0825374b9f45fd177cc80b04ddadb4438ce6a38c8492a7f2aefe603f620f01",
+  "snapshotSHA256": "6ac0c4494da5174d491e6c0f2851d6c04a4d58d770a4bfd7ce2c710668715283",
+  "dictionarySHA256": "af502356243c7e1f6a9a12d78f34d727cf1c0dc1266f16f2b9479a13561f0b5e",
+  "imagePNGBytes": 8604177
+}
