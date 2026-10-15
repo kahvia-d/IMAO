@@ -183,3 +183,4 @@
 | [`CoordinateStationaryGrass_20261015_zh-Hans.md`](CoordinateStationaryGrass_20261015_zh-Hans.md) | 三组同位置草地清晰／遮挡配对、39 帧小地图支持及整组划分约束 |
 | [`CoordinatePairedFinetune_20261015_zh-Hans.md`](CoordinatePairedFinetune_20261015_zh-Hans.md) | 三组配对补充／上下文训练失败对照、整组留出与训练推理差距 |
 | [`CoordinateInputAlignment_20261015_zh-Hans.md`](CoordinateInputAlignment_20261015_zh-Hans.md) | 原生真实张量与 checkpoint 对齐、padding 对照及坐标／日期边界分解 |
+| [`CoordinateImageGap_20261015_zh-Hans.md`](CoordinateImageGap_20261015_zh-Hans.md) | 无标签图像空隙裁切、末位截断反例及整图／裁片 XYZ 支持对照 |
