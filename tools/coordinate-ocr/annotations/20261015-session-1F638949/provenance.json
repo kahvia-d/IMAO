@@ -1,0 +1,74 @@
+{
+  "frames": 1160,
+  "counts": {
+    "present": 1011,
+    "unknown": 8,
+    "absent": 141
+  },
+  "pairedImageHashesVerified": 2320,
+  "baseReaderRecords": 2320,
+  "thirdReviewRecords": 6,
+  "readerDisagreements": 5,
+  "fullImageAbsentReviewed": 145,
+  "fullImageAbsentDowngradedToUnknown": 4,
+  "legacyOriginalLabels": 36,
+  "legacyExactXYZ": 20,
+  "legacyConflictsIsolated": 1,
+  "legacyExactXYZIncluded": 19,
+  "newExactXYZ": 992,
+  "legacyFilesUnchanged": true,
+  "humanVerified": false,
+  "trainingStarted": false,
+  "independentTestSet": false,
+  "unresolvedFrames": [
+    "000054",
+    "000059",
+    "000508",
+    "000561",
+    "001012",
+    "001013",
+    "001014",
+    "001100"
+  ],
+  "sourceHashes": {
+    "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-minimap-check\\manual-labels-v4.json": "66a3e1249aaf774b6fecb18f0479ab1844efa9d0edeb15a9d4edd72874bbb2d3",
+    "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-minimap-check\\full-corpus-v4.json": "54003e825d3da635eb5f9ceeebe00c97e95ad496c06106370dcb41c935c9560d"
+  },
+  "inputHashes": {
+    "a-first.tsv": "d8b5461efdab3c822051f38b64b21cff80af4bb1d95cbb4dcf3c819b32a1660d",
+    "a-second.tsv": "9d8affbf2b18d0f6db130679c51436dcdafb12ecad02e133efe642593cf5813e",
+    "absent-full-review.tsv": "a903fe878d35af019d73fb88f1d3e4116083d2618174c7f6e93f84d78e7ba6fd",
+    "b-first.tsv": "d0cc72637082181174eadfa2233b327094fdc45d04ca859d6f7473820c10baf8",
+    "b-second.tsv": "b15a7fdf25d30122bcfa0d32b1f561916260f523faf2747b964c64edbcc0e496",
+    "c-first.tsv": "abf5bfa9ef9b74608c4d65aaf6ff6795714ae483075604b6b918615e9890c43e",
+    "c-second.tsv": "8e0b21254ee75f9c225d9e91e80c8da4d7fbb3ab25d9ecc165c20f3b14e84168",
+    "root-first.tsv": "4e527810d33c34f5784b58b999dd57aa9bd6700c168d378003fa6b703c25792a",
+    "root-second.tsv": "0e742daee4fe79094924ddd47ff44c7385aae16e6bb4212762a0ec1a5777ec05",
+    "third-review.tsv": "ed5ad57c1e4b5369aeacf49734cbc5e5ea767330750e5352b7d85e351c85f610"
+  },
+  "outputHashes": {
+    "expanded-labels-v5.json": "a59c368776c97183e49700f312d0a1c4374a2d9ed16d34b910c220ba98f3d7ec",
+    "expanded-corpus-v5.json": "cf854d2f070d326294ebfdd1b0323754881a19da700e7cab894fe5032a512868",
+    "annotation-ledger.json": "fb3e7db1716c51d42b127083ea3ecb238b8991bad3df329cb109f743681f078f",
+    "review-needed.json": "62e7b6b4001c14c3ca3a878fd646aef7889f0bcc405c1e5a71d759e3a7b41f71",
+    "legacy-conflicts.json": "aa9f154919afeac29190ffe294efe4a9d88c309d346c1a576bce37ef06aed1cf"
+  },
+  "method": "Two isolated assistant contexts per original-pixel sheet; no model/minimap labels.",
+  "sourceSession": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD",
+  "coordinateImagePattern": "frame-{frame:06}.png",
+  "minimapImagePattern": "frame-{frame:06}.minimap.png",
+  "localEvidenceRoot": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-label-expansion-20261015",
+  "curationSHA256": "dc112e5f42f85a096f4b9e0a6e6d9c83f53b1df3b17be49d03c5dc181ed70e69",
+  "limitations": [
+    "Assistant visual review; not human-verified ground truth.",
+    "One previously explored session; development only, no independent test split.",
+    "Frame1100 pending per user; preserve legacy Y=-5388 without scoring it in expanded corpus.",
+    "No OCR or SURF predictions used as exact labels. No training or production changes."
+  ],
+  "resolutions": {
+    "000030": "Third reader/root enlargement: -877,1406,16.",
+    "000725": "First/third reader plus root enlargement agree; second-reader uncertainty retained.",
+    "000726": "First/third reader plus root enlargement agree; second-reader uncertainty retained."
+  },
+  "entryCorrection": "root-first.tsv: frame217 entry omitted while serializing manually read 193-240 block; restored -501,2167,75 from sheet, shifted following entries to their actual frame IDs before comparing readers. No image labels inferred.\n"
+}

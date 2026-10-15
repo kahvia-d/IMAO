@@ -176,3 +176,4 @@
 | [`TethysVideoReview_20260909.md`](archive/TethysVideoReview_20260909.md) | Tethys 视频检查 |
 | [`2026-10-14-english-coordinate-model.md`](superpowers/plans/2026-10-14-english-coordinate-model.md) | 英文坐标模型独立离线评测计划 |
 | [`CoordinateLineExperiment_20261015_zh-Hans.md`](CoordinateLineExperiment_20261015_zh-Hans.md) | 坐标行、等比缩放与日期边界离线实验及失败间隔法 |
+| [`CoordinateAnnotationExpansion_20261015_zh-Hans.md`](CoordinateAnnotationExpansion_20261015_zh-Hans.md) | 已有 1160 帧的助手视觉标注扩充、逐帧复核来源与待定清单 |
