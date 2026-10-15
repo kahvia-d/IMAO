@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 
-PROFILES = ('production', 'readout-wide', 'upstream-band')
+PROFILES = ('production', 'readout-wide', 'upstream-band', 'readout-line', 'gap-probe')
 
 
 def read_json(path):
@@ -43,7 +43,8 @@ def roi(profile, width, height):
         raise ValueError('empty frame')
     if profile == 'upstream-band':
         return 0, height - max(1, height // 32), max(1, width // 4), max(1, height // 32)
-    boxes = {'production': (20, 865, 160, 900), 'readout-wide': (20, 870, 248, 900)}
+    boxes = {'production': (20, 865, 160, 900), 'readout-wide': (20, 870, 248, 900),
+             'readout-line': (20, 878, 400, 899), 'gap-probe': (20, 878, 400, 899)}
     if profile not in boxes:
         raise ValueError(f'unknown ROI profile: {profile}')
     left, top, right, bottom = boxes[profile]
@@ -130,6 +131,12 @@ def prepare(corpus, data_root, output, profiles):
             if x < sx or y < sy or x+w > sx+sw or y+h > sy+sh:
                 raise ValueError(f'saved strip does not cover ROI: {frame_id} {profile}')
             crop = image[y-sy:y-sy+h, x-sx:x-sx+w].copy()
+            crop_decision = None
+            if profile == 'gap-probe':
+                sys.path.insert(0, str(Path(__file__).parent))
+                from line_crop import split_line
+                crop, crop_decision = split_line(crop)
+                w = crop.shape[1]
             target = output / profile / f'{frame_id}.png'
             target.parent.mkdir(parents=True, exist_ok=True)
             ok, encoded = cv2.imencode('.png', crop)
@@ -141,6 +148,8 @@ def prepare(corpus, data_root, output, profiles):
                            'profile': profile, 'image': str(target), 'rect': [x, y, w, h],
                            'frameSize': [width, height], 'sourceSHA256': sha256(source),
                            'cropSHA256': sha256(target), 'pixelDigest': pixel_digest(crop)})
+            if crop_decision is not None:
+                inputs[-1]['pixelCropDecision'] = crop_decision
     return inputs
 
 
@@ -249,6 +258,8 @@ def provenance(source_root, data_root, corpus_path, native, upstream, model=None
              'nativeAdapterSource': source_root / 'IMao-Core/tools/CoordinateOffline/main.cpp',
              'nativeBuildConfiguration': source_root / 'IMao-Core/tools/CoordinateOffline/CMakeLists.txt',
              'nativeBuildScript': source_root / 'scripts/Build-CoordinateOffline.ps1',
+             'offlinePreprocessingHeader': source_root / 'IMao-Core/tools/CoordinateOffline/OfflinePreprocessing.h',
+             'offlineClockBoundaryHeader': source_root / 'IMao-Core/tools/CoordinateOffline/OfflineClockBoundary.h',
              'ppocrLibrary': source_root / 'IMao-Core/paddleocr_cpp_infer/lib/ppocr.lib',
              'ppocrHeader': source_root / 'IMao-Core/paddleocr_cpp_infer/include/ocr_rec.h',
              'parserHeader': source_root / 'IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.h',
@@ -259,6 +270,7 @@ def provenance(source_root, data_root, corpus_path, native, upstream, model=None
              'corpus': corpus_path,
              'benchmarkCode': Path(__file__),
              'upstreamAdapterCode': Path(__file__).with_name('upstream_adapter.py')}
+    files['lineCropCode'] = Path(__file__).with_name('line_crop.py')
     pp = Path(model or data_root / 'Assets/models/PP-OCRv5_mobile_rec_infer').resolve()
     for path in sorted(pp.iterdir()):
         if path.is_file():
@@ -277,7 +289,8 @@ def verify_native_provenance(expected, metadata):
     compiled = metadata.get('compiledSHA256', {})
     for key in ('preprocessingSource', 'parserSource', 'nativeAdapterSource', 'nativeBuildConfiguration',
                 'parserHeader', 'coordinateStructHeader', 'hudLayoutHeader',
-                'ppocrLibrary', 'ppocrHeader', 'ppocrPreprocessHeader', 'ppocrUtilityHeader'):
+                'ppocrLibrary', 'ppocrHeader', 'ppocrPreprocessHeader', 'ppocrUtilityHeader', 'offlinePreprocessingHeader',
+                'offlineClockBoundaryHeader'):
         actual = compiled.get(key, metadata.get(key + 'SHA256'))
         if key in expected['sha256'] and actual != expected['sha256'][key]:
             raise ValueError(f'stale native executable: compiled {key} does not match current source; rebuild it')
@@ -287,11 +300,12 @@ def markdown(report):
     lines = ['# 坐标 OCR 独立离线评测', '',
         f"PP-OCR 模型：`{report.get('native', {}).get('modelName', '未记录')}`；"
         f"字典字符数：{report.get('native', {}).get('dictionaryCharacters', '未记录')}。", '',
+        f"离线预处理：`{report.get('native', {}).get('preprocessingMode', 'production')}`。", '',
         report.get('corpusNote') or '素材说明未提供；泛化结论需要独立验收素材。', '',
         '推理输入不含标签和位置先验。两侧读取同一份无缩放 BGR 裁剪，解码像素摘要逐条核对。', '',
         '单条输出与候选召回分别计分；未知 z 不计三维命中。无读数误报单独统计。', '',
         '本报告评估识别与解析，不模拟 App 的位置发布、位移预算或视觉定位。', '',
-        '| 输入区域 | 管线 | XY 正确 | XYZ 正确 | 候选 XYZ 召回 | 错误返回 XY/XYZ | 无输出 | 无读数误报 | 总耗时 P50/P95 ms |',
+        '| 输入区域 | 管线 | XY 正确 | XYZ 正确 | 候选 XYZ 召回 | 错误返回 XY/XYZ | 无输出 | 无读数误报 | 识别器耗时 P50/P95 ms |',
         '|---|---|---:|---:|---:|---:|---:|---:|---:|']
     for row in report['summary']:
         lines.append(f"| {row['profile']} | {row['mode']} | {row['xyCorrect']}/{row['xyLabeled']} | "
@@ -301,9 +315,14 @@ def markdown(report):
     lines += ['', 'PP-OCR 单路线取解析器最高分候选（同分保留原顺序）；这是固定的离线选择规则。',
               'ppocr-corroborated 调用实际 Corroborate，以 TopHat 为主、contrast 为见证，匹配 XY。',
               'YOLO 使用上游的字符检测和 spacing-dominant 解析器，只计它实际接受的单条输出。',
-              '耗时包含预处理、推理、解析；初始化单列，不包含磁盘读取、摘要计算和冷启动。',
+              '耗时包含识别器预处理、推理、解析；初始化单列，不包含输入裁切/像素间隔分割、磁盘读取、摘要和冷启动。',
               '三种取景只用于诊断：production=(20,865)-(160,900)，readout-wide=(20,870)-(248,900)，',
               'upstream-band=左侧四分之一宽、贴底高度 floor(H/32)。没有将扫描最高分当作新默认值。', '',
+              '实验取景 readout-line=(20,878)-(400,899)；gap-probe 为已发现会误截 z 的失败间隔实验，',
+              '仅用于复现反例，不作为有效坐标裁切；决策见 inputs.json。aspect 保留宽高比，额外 raw 路线保留 BGR，',
+              '其余路线复用现有灰度、CLAHE、TopHat 与解析器；预处理尺寸和像素摘要见 preprocessingTrace。', '',
+              '*-clock 是独立的完整日期及时间边界对照：只提取已识别的三个整数，不补字符，',
+              '仍调用原解析器、0.65 阈值及相同的 Corroborate；原路线保留。', '',
               '逐帧输出、原文、分数、修复标志、字形框、输入摘要和代码/模型 SHA256 见 report.json。', '']
     return '\n'.join(lines)
 
@@ -326,13 +345,18 @@ def run(args):
     env = dict(os.environ)
     env['PATH'] = str(data_root / 'x64/Release') + os.pathsep + env.get('PATH', '')
     native_report = output / 'ppocr.json'
-    completed = subprocess.run([str(native), str(model),
-                                str(manifest), str(native_report), str(args.repeats)],
+    preprocessing = getattr(args, 'preprocessing', 'production')
+    command = [str(native), str(model), str(manifest), str(native_report), str(args.repeats), preprocessing]
+    if getattr(args, 'save_preprocessed', False):
+        command.append(str(output / 'preprocessed'))
+    completed = subprocess.run(command,
                                env=env, capture_output=True, text=True, errors='replace')
     (output / 'native.log').write_text(completed.stdout + completed.stderr, encoding='utf-8')
     if completed.returncode != 0:
         raise ValueError(f'native adapter failed ({completed.returncode}); see {output / "native.log"}')
     native_payload = read_json(native_report)
+    if native_payload['metadata'].get('preprocessingMode') != preprocessing:
+        raise ValueError('native preprocessing differs from requested mode; rebuild the native adapter')
     verify_native_provenance(provenance_before, native_payload['metadata'])
     sys.path.insert(0, str(Path(__file__).parent))
     from upstream_adapter import infer
@@ -364,9 +388,12 @@ def main():
     parser.add_argument('--upstream', required=True, help='Existing local upstream checkout; never downloaded')
     parser.add_argument('--native', required=True, help='Freshly built IMaoCoordinateOffline.exe')
     parser.add_argument('--ppocr-model', help='Explicit local PP-OCR model directory; defaults to the current IMao model')
+    parser.add_argument('--preprocessing', choices=('production', 'aspect'), default='production',
+                        help='Offline-only preprocessing experiment; default keeps production behavior')
+    parser.add_argument('--save-preprocessed', action='store_true', help='Save actual native preprocessing variants for visual inspection')
     parser.add_argument('--corpus', default=str(Path(__file__).resolve().parents[2] / 'Tests/CoordinateOffline/corpus.json'))
     parser.add_argument('--output', required=True)
-    parser.add_argument('--profiles', nargs='+', choices=PROFILES, default=list(PROFILES))
+    parser.add_argument('--profiles', nargs='+', choices=PROFILES, default=list(PROFILES[:3]))
     parser.add_argument('--repeats', type=int, default=3)
     args = parser.parse_args()
     try:

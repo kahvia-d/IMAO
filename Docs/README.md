@@ -175,3 +175,4 @@
 | [`SparseMapViewport_20260909.md`](archive/SparseMapViewport_20260909.md) | 中央海面导致的大地图定位失败 |
 | [`TethysVideoReview_20260909.md`](archive/TethysVideoReview_20260909.md) | Tethys 视频检查 |
 | [`2026-10-14-english-coordinate-model.md`](superpowers/plans/2026-10-14-english-coordinate-model.md) | 英文坐标模型独立离线评测计划 |
+| [`CoordinateLineExperiment_20261015_zh-Hans.md`](CoordinateLineExperiment_20261015_zh-Hans.md) | 坐标行、等比缩放与日期边界离线实验及失败间隔法 |

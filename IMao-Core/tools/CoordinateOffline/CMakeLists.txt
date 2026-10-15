@@ -32,9 +32,11 @@ set(_path_ppocrLibrary "${IMAO_SOURCE_ROOT}/IMao-Core/paddleocr_cpp_infer/lib/pp
 set(_path_ppocrHeader "${IMAO_SOURCE_ROOT}/IMao-Core/paddleocr_cpp_infer/include/ocr_rec.h")
 set(_path_ppocrPreprocessHeader "${IMAO_SOURCE_ROOT}/IMao-Core/paddleocr_cpp_infer/include/preprocess_op.h")
 set(_path_ppocrUtilityHeader "${IMAO_SOURCE_ROOT}/IMao-Core/paddleocr_cpp_infer/include/utility.h")
+set(_path_offlinePreprocessingHeader "${CMAKE_CURRENT_SOURCE_DIR}/OfflinePreprocessing.h")
+set(_path_offlineClockBoundaryHeader "${CMAKE_CURRENT_SOURCE_DIR}/OfflineClockBoundary.h")
 set(_fingerprint "{}")
 foreach(_key preprocessingSource parserSource nativeAdapterSource nativeBuildConfiguration
-    parserHeader coordinateStructHeader hudLayoutHeader ppocrLibrary ppocrHeader ppocrPreprocessHeader ppocrUtilityHeader)
+    parserHeader coordinateStructHeader hudLayoutHeader ppocrLibrary ppocrHeader ppocrPreprocessHeader ppocrUtilityHeader offlinePreprocessingHeader offlineClockBoundaryHeader)
     file(SHA256 "${_path_${_key}}" _sha)
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_path_${_key}}")
     string(JSON _fingerprint SET "${_fingerprint}" "${_key}" "\"${_sha}\"")
@@ -63,6 +65,14 @@ endif()
 math(EXPR _length "${_end}-${_start}")
 string(SUBSTRING "${_source}" ${_start} ${_length} _body)
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/CoordinatePreprocessing.generated.h" "// Generated from the current runtime source. Do not edit.\n${_body}\n")
+set(_width_cap "std::min(scaledWidth, 312)")
+string(FIND "${_body}" "${_width_cap}" _cap_at)
+if(_cap_at LESS 0)
+    message(FATAL_ERROR "Production width cap changed; review aspect experiment")
+endif()
+string(REPLACE "${_width_cap}" "scaledWidth" _aspect_body "${_body}")
+string(REPLACE "PreprocessCoordinateRegion(" "PreprocessCoordinateRegionAspect(" _aspect_body "${_aspect_body}")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/CoordinateAspectPreprocessing.generated.h" "// Offline aspect experiment; generated from production body.\n${_aspect_body}\n")
 
 add_executable(IMaoCoordinateOffline main.cpp
     "${IMAO_SOURCE_ROOT}/IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp")
@@ -87,6 +97,19 @@ target_link_libraries(IMaoCoordinateOffline PRIVATE
     ${OpenCV_LIBS} shlwapi)
 
 add_executable(IMaoCoordinateSampleTests SampleStoreTests.cpp)
+add_executable(IMaoCoordinatePreprocessingTests PreprocessingTests.cpp)
+add_executable(IMaoCoordinateClockTests ClockBoundaryTests.cpp
+    "${IMAO_SOURCE_ROOT}/IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp")
+target_compile_options(IMaoCoordinateClockTests PRIVATE /utf-8)
+target_compile_definitions(IMaoCoordinateClockTests PRIVATE NOMINMAX)
+target_include_directories(IMaoCoordinateClockTests PRIVATE "${IMAO_SOURCE_ROOT}/IMao-Core/src" ${OpenCV_INCLUDE_DIRS}
+    "${IMAO_DEPENDENCY_ROOT}/IMao-Core/packages/nlohmann")
+target_link_libraries(IMaoCoordinateClockTests PRIVATE ${OpenCV_LIBS})
+target_compile_options(IMaoCoordinatePreprocessingTests PRIVATE /utf-8)
+target_include_directories(IMaoCoordinatePreprocessingTests PRIVATE "${CMAKE_CURRENT_BINARY_DIR}" ${OpenCV_INCLUDE_DIRS}
+    "${IMAO_SOURCE_ROOT}/IMao-Core/paddleocr_cpp_infer")
+target_link_libraries(IMaoCoordinatePreprocessingTests PRIVATE ${OpenCV_LIBS}
+    "${IMAO_SOURCE_ROOT}/IMao-Core/paddleocr_cpp_infer/lib/ppocr.lib")
 set_property(SOURCE SampleStoreTests.cpp APPEND PROPERTY OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/SampleStore.h")
 target_compile_options(IMaoCoordinateSampleTests PRIVATE /utf-8 /bigobj)
 target_compile_definitions(IMaoCoordinateSampleTests PRIVATE NOMINMAX)

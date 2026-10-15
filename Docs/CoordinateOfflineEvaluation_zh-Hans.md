@@ -129,6 +129,11 @@ PP-OCRv5 模型名、BGR `[3,48,320]` 和 CTC 解码，并逐项核对字典顺�
 原生模型拒绝加载测试需要设置 `IMAO_OFFLINE_NATIVE` 和 `IMAO_ENGLISH_MODEL`；
 测试会在临时目录改错字典顺序、模型名、输入通道及权重完整性，确认没有成功报告。
 
+后续输入实验支持 `--preprocessing aspect`、`--profiles readout-line` 和 `--save-preprocessed`。
+原有默认 profiles 与生产预处理保持不变。aspect 中的 `*-clock` 是单列的完整日期边界对照，
+不修改原解析器或互证规则。`gap-probe` 已证明可能误截 z，仅作失败诊断。
+设计、耗时边界和实测限制见 [坐标行实验](CoordinateLineExperiment_20261015_zh-Hans.md)。
+
 ## 本轮观察与下一步
 
 同一份现有回归集，单条输出结果可复现：

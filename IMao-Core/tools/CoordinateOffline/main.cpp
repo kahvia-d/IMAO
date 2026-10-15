@@ -13,7 +13,8 @@
 #include <sstream>
 #include <thread>
 #include <vector>
-#include "CoordinatePreprocessing.generated.h"
+#include "OfflinePreprocessing.h"
+#include "OfflineClockBoundary.h"
 #include "CoordinateBuildFingerprint.generated.h"
 
 using Json = nlohmann::json;
@@ -60,10 +61,82 @@ Json ResultJson(const std::string& id, const std::string& digest,
         {"rawText", text}, {"modelScore", score}, {"totalMilliseconds", Median(durations)}};
 }
 
+void AppendClockPrefixPipelines(Json& pipelines) {
+    std::vector<std::vector<std::vector<CoordinateCandidate>>> parsedRoutes;
+    for (const auto* source : {"ppocr-contrast", "ppocr-tophat", "ppocr-raw"}) {
+        if (!pipelines.contains(source)) continue;
+        const auto name = std::string(source) + "-clock";
+        Json rows = Json::array();
+        std::vector<std::vector<CoordinateCandidate>> allCandidates;
+        for (const auto& original : pipelines[source]) {
+            const auto start = Clock::now();
+            const auto raw = original.at("rawText").get<std::string>();
+            const auto prefix = CoordinatePrefixBeforeClock(raw);
+            const auto text = prefix.value_or(raw);
+            auto candidates = CoordinateCandidateParser::Parse(text, original.at("modelScore").get<float>());
+            const double extraMs = Elapsed(start);
+            auto row = ResultJson(original.at("id"), original.at("pixelDigest"), candidates,
+                raw, original.at("modelScore"), {original.at("totalMilliseconds").get<double>() + extraMs});
+            row["parsedText"] = text;
+            row["clockBoundary"] = prefix ? "verified-full-clock" : "unchanged";
+            row["clockPostprocessingMilliseconds"] = extraMs;
+            if (original.contains("preprocessingTrace")) row["preprocessingTrace"] = original["preprocessingTrace"];
+            rows.push_back(std::move(row));
+            allCandidates.push_back(std::move(candidates));
+        }
+        pipelines[name] = std::move(rows);
+        parsedRoutes.push_back(std::move(allCandidates));
+    }
+    if (parsedRoutes.size() < 2) return;
+    const auto& contrast = pipelines["ppocr-contrast-clock"];
+    const auto& topHat = pipelines["ppocr-tophat-clock"];
+    const auto& originalCross = pipelines.at("ppocr-corroborated");
+    if (contrast.size() != topHat.size() || originalCross.size() != topHat.size())
+        throw std::runtime_error("clock-route frame count mismatch");
+    Json cross = Json::array();
+    for (std::size_t i = 0; i < contrast.size(); ++i) {
+        if (contrast[i]["id"] != topHat[i]["id"] || contrast[i]["pixelDigest"] != topHat[i]["pixelDigest"] ||
+            originalCross[i]["id"] != topHat[i]["id"] || originalCross[i]["pixelDigest"] != topHat[i]["pixelDigest"])
+            throw std::runtime_error("clock-route input mismatch");
+        const auto start = Clock::now();
+        const auto candidates = CoordinateCandidateParser::Corroborate(parsedRoutes[1][i], parsedRoutes[0][i]);
+        auto row = ResultJson(topHat[i]["id"], topHat[i]["pixelDigest"], candidates,
+            topHat[i]["rawText"], topHat[i]["modelScore"],
+            {originalCross[i]["totalMilliseconds"].get<double>() +
+             contrast[i]["clockPostprocessingMilliseconds"].get<double>() +
+             topHat[i]["clockPostprocessingMilliseconds"].get<double>() + Elapsed(start)});
+        row["parsedText"] = topHat[i]["parsedText"];
+        row["witnessText"] = contrast[i]["rawText"];
+        row["witnessParsedText"] = contrast[i]["parsedText"];
+        cross.push_back(std::move(row));
+    }
+    pipelines["ppocr-corroborated-clock"] = std::move(cross);
+}
+
 int wmain(int argc, wchar_t** argv) {
     try {
-        if (argc != 5) throw std::runtime_error("Usage: IMaoCoordinateOffline <model-dir> <inputs.json> <report.json> <repeats>");
+        if (argc == 4 && std::wstring(argv[1]) == L"--clock-prefix") {
+            const std::filesystem::path source(argv[2]), output(argv[3]);
+            if (std::filesystem::exists(output)) throw std::runtime_error("clock report already exists");
+            std::ifstream stream(source);
+            auto report = Json::parse(stream);
+            const auto sourceMetadata = report.at("metadata");
+            AppendClockPrefixPipelines(report.at("pipelines"));
+            report["sourceMetadata"] = sourceMetadata;
+            report["clockPostprocessor"] = {{"compiledSHA256", Json::parse(kCoordinateBuildFingerprint)},
+                {"previousTrusted", "none"}, {"policy", "strict-full-date-and-time"}};
+            std::ofstream result(output, std::ios::binary);
+            result << report.dump(2) << '\n';
+            if (!result) throw std::runtime_error("cannot write clock report");
+            return 0;
+        }
+        if (argc < 5 || argc > 7) throw std::runtime_error("Usage: IMaoCoordinateOffline <model-dir> <inputs.json> <report.json> <repeats> [production|aspect] [debug-images-directory]");
         const std::filesystem::path model(argv[1]), manifest(argv[2]), output(argv[3]);
+        const std::wstring mode = argc >= 6 ? argv[5] : L"production";
+        if (mode != L"production" && mode != L"aspect") throw std::runtime_error("unknown preprocessing mode");
+        const bool aspect = mode == L"aspect";
+        const std::filesystem::path debug = argc == 7 ? argv[6] : L"";
+        if (!debug.empty()) std::filesystem::create_directories(debug);
         const int repeats = std::stoi(argv[4]);
         if (repeats < 1) throw std::runtime_error("repeats must be positive");
         std::ifstream inputFile(manifest);
@@ -114,6 +187,7 @@ int wmain(int argc, wchar_t** argv) {
         const double initializationMs = Elapsed(initialize);
         Json pipelines = {{"ppocr-contrast", Json::array()}, {"ppocr-tophat", Json::array()},
             {"ppocr-corroborated", Json::array()}};
+        if (aspect) pipelines["ppocr-raw"] = Json::array();
         for (const auto& input : inputs) {
             const auto path = std::filesystem::u8path(input.at("image").get<std::string>());
             const auto crop = cv::imread(path.string(), cv::IMREAD_COLOR);
@@ -122,15 +196,16 @@ int wmain(int argc, wchar_t** argv) {
             if (digest != input.at("pixelDigest").get<std::string>())
                 throw std::runtime_error("input pixel digest mismatch");
             const auto id = input.at("id").get<std::string>();
-            std::vector<double> contrastDurations, topHatDurations, crossDurations;
-            std::vector<CoordinateCandidate> contrastCandidates, topHatCandidates, crossCandidates;
-            std::string contrastText, topHatText;
-            float contrastScore = 0, topHatScore = 0;
+            std::vector<double> contrastDurations, topHatDurations, crossDurations, rawDurations;
+            std::vector<CoordinateCandidate> contrastCandidates, topHatCandidates, crossCandidates, rawCandidates;
+            std::string contrastText, topHatText, rawText;
+            float contrastScore = 0, topHatScore = 0, rawScore = 0;
+            Json traces = Json::object();
             Json first = nullptr;
             for (int repeat = 0; repeat < repeats; ++repeat) {
                 const auto start = Clock::now();
-                const auto variants = PreprocessCoordinateRegion(crop);
-                if (variants.size() != 3) throw std::runtime_error("preprocessing produced no variants");
+                const auto variants = aspect ? PreprocessOfflineAspect(crop) : PreprocessCoordinateRegion(crop);
+                if (variants.size() != (aspect ? 4u : 3u)) throw std::runtime_error("preprocessing produced no variants");
                 const double preprocessMs = Elapsed(start);
                 auto routeStart = Clock::now();
                 infer(variants[0], contrastText, contrastScore);
@@ -145,18 +220,40 @@ int wmain(int argc, wchar_t** argv) {
                 topHatDurations.push_back(preprocessMs + topHatMs);
                 crossDurations.push_back(Elapsed(start));
                 Json signature = {{"contrast", contrastText}, {"tophat", topHatText}};
+                if (aspect) {
+                    routeStart = Clock::now();
+                    infer(variants[3], rawText, rawScore);
+                    rawCandidates = CoordinateCandidateParser::Parse(rawText, rawScore);
+                    rawDurations.push_back(preprocessMs + Elapsed(routeStart));
+                    signature["raw"] = rawText;
+                }
                 if (first.is_null()) first = signature;
                 else if (signature != first) throw std::runtime_error("non-deterministic decoding across repeats");
+                if (repeat == 0) {
+                    for (const auto& [name, index] : std::vector<std::pair<std::string, int>>{{"contrast", 0}, {"tophat", 2}, {"raw", 3}}) {
+                        if (index >= variants.size()) continue;
+                        traces[name] = {{"width", variants[index].cols}, {"height", variants[index].rows},
+                                        {"pixelDigest", PixelDigest(variants[index])}};
+                        if (!debug.empty()) {
+                            const auto path = debug / std::filesystem::u8path(id + "." + name + ".png");
+                            if (!cv::imwrite(path.string(), variants[index])) throw std::runtime_error("cannot write preprocessing evidence");
+                        }
+                    }
+                }
             }
             pipelines["ppocr-contrast"].push_back(ResultJson(id, digest, contrastCandidates, contrastText, contrastScore, contrastDurations));
             pipelines["ppocr-tophat"].push_back(ResultJson(id, digest, topHatCandidates, topHatText, topHatScore, topHatDurations));
+            if (aspect) pipelines["ppocr-raw"].push_back(ResultJson(id, digest, rawCandidates, rawText, rawScore, rawDurations));
             auto cross = ResultJson(id, digest, crossCandidates, topHatText, topHatScore, crossDurations);
             cross["witnessText"] = contrastText;
             cross["witnessScore"] = contrastScore;
             pipelines["ppocr-corroborated"].push_back(cross);
+            for (auto& [name, rows] : pipelines.items()) rows.back()["preprocessingTrace"] = traces;
         }
+        if (aspect) AppendClockPrefixPipelines(pipelines);
         Json report = {{"pipelines", pipelines}, {"metadata", {{"opencvNative", CV_VERSION},
             {"modelName", modelName}, {"dictionaryCharacters", dictionary.size()},
+            {"preprocessingMode", aspect ? "aspect" : "production"},
             {"modelDirectory", [&] { const auto value = std::filesystem::absolute(model).u8string(); return std::string(value.begin(), value.end()); }()},
             {"preprocessingSourceSHA256", IMAO_PREPROCESS_SHA256}, {"parserSourceSHA256", IMAO_PARSER_SHA256},
             {"nativeAdapterSourceSHA256", IMAO_ADAPTER_SHA256}, {"compilerVersion", IMAO_COMPILER_VERSION},
