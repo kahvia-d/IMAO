@@ -185,3 +185,4 @@
 | [`CoordinateInputAlignment_20261015_zh-Hans.md`](CoordinateInputAlignment_20261015_zh-Hans.md) | 原生真实张量与 checkpoint 对齐、padding 对照及坐标／日期边界分解 |
 | [`CoordinateImageGap_20261015_zh-Hans.md`](CoordinateImageGap_20261015_zh-Hans.md) | 无标签图像空隙裁切、末位截断反例及整图／裁片 XYZ 支持对照 |
 | [`CoordinateOwnYoloPilot_20261015_zh-Hans.md`](CoordinateOwnYoloPilot_20261015_zh-Hans.md) | 官方通用初始化、自有字符框与自训 YOLO 原型、拟合局限及 ONNX CPU 链路 |
+| [`CoordinateOwnYoloExpansion_20261015_zh-Hans.md`](CoordinateOwnYoloExpansion_20261015_zh-Hans.md) | 自训 YOLO 扩充草地雪地与不同坐标，固定开发回放、错误分析及 ONNX 一致性 |
