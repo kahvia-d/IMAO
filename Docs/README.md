@@ -180,3 +180,4 @@
 | [`CoordinateExpandedEvaluation_20261015_zh-Hans.md`](CoordinateExpandedEvaluation_20261015_zh-Hans.md) | 扩展坐标集全量重评分、负号与 Z 错误分析、1011 张训练裁片准备 |
 | [`CoordinateFinetune_20261015_zh-Hans.md`](CoordinateFinetune_20261015_zh-Hans.md) | 五组 GPU 微调、冻结 BN 对照、数字模型兼容导出与原生 CPU 回放 |
 | [`CoordinateCoverageFinetune_20261015_zh-Hans.md`](CoordinateCoverageFinetune_20261015_zh-Hans.md) | 草地雪地分组覆盖、六张历史正 X 回放、两组补训及未解决难例 |
+| [`CoordinateStationaryGrass_20261015_zh-Hans.md`](CoordinateStationaryGrass_20261015_zh-Hans.md) | 三组同位置草地清晰／遮挡配对、39 帧小地图支持及整组划分约束 |

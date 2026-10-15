@@ -1,0 +1,3201 @@
+{
+  "purpose": "Clear/grass-occluded pairs at stable displayed XYZ, supported by paired minimaps; data organization only, no retraining or pipeline change.",
+  "sourceCorpus": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-label-expansion-20261015\\expanded-corpus-v5.json",
+  "sourceCorpusSHA256": "cf854d2f070d326294ebfdd1b0323754881a19da700e7cab894fe5032a512868",
+  "newLabels": 0,
+  "modifiedLabels": 0,
+  "humanVerified": false,
+  "independentAcceptance": false,
+  "positiveXFramesInSelectedGroups": 0,
+  "groups": [
+    {
+      "id": "grass-still-744-753",
+      "first": 744,
+      "last": 753,
+      "frames": 10,
+      "expected": {
+        "x": -557,
+        "y": -37,
+        "z": -25
+      },
+      "humanVerified": false,
+      "coordinateEvidence": "Assistant visually checked original coordinate strips, including all frames and clearer anchors. Existing per-frame labels agree; no new or rewritten labels.",
+      "positionEvidence": "Paired minimap terrain alignment excludes central arrow and overlay regions; stable to <0.5 pixel. Does not prove zero movement below displayed coordinate precision.",
+      "clearerAnchors": [
+        744,
+        746,
+        747
+      ],
+      "grassOverlap": [
+        748,
+        749,
+        750,
+        751,
+        752,
+        753
+      ],
+      "minimapComparisons": [
+        {
+          "frame": 745,
+          "matches": 77,
+          "inliers": 75,
+          "inlierFraction": 0.974025974025974,
+          "centerDisplacementPixels": 0.19586718802456948,
+          "medianReprojectionPixels": 0.13793775008370987,
+          "inlierSpan": [
+            202.586669921875,
+            191.53089904785156
+          ],
+          "transform": [
+            [
+              1.0000698559619434,
+              5.691931722900387e-06,
+              -0.1177233950483322
+            ],
+            [
+              -5.691931722900387e-06,
+              1.0000698559619434,
+              -0.1710076951767522
+            ]
+          ]
+        },
+        {
+          "frame": 746,
+          "matches": 93,
+          "inliers": 92,
+          "inlierFraction": 0.989247311827957,
+          "centerDisplacementPixels": 0.09316055306810742,
+          "medianReprojectionPixels": 0.09421097166551895,
+          "inlierSpan": [
+            202.586669921875,
+            191.53089904785156
+          ],
+          "transform": [
+            [
+              0.9998068466047255,
+              -0.0002522180890258557,
+              0.011910489910720821
+            ],
+            [
+              0.0002522180890258557,
+              0.9998068466047255,
+              -0.08997550304356508
+            ]
+          ]
+        },
+        {
+          "frame": 747,
+          "matches": 92,
+          "inliers": 84,
+          "inlierFraction": 0.9130434782608695,
+          "centerDisplacementPixels": 0.10557739450371764,
+          "medianReprojectionPixels": 0.12301680597124401,
+          "inlierSpan": [
+            201.21359252929688,
+            195.75357055664062
+          ],
+          "transform": [
+            [
+              0.9998874601756308,
+              0.00015490488885179296,
+              -0.08479101476402673
+            ],
+            [
+              -0.00015490488885179296,
+              0.9998874601756308,
+              -0.03648435526726074
+            ]
+          ]
+        },
+        {
+          "frame": 748,
+          "matches": 78,
+          "inliers": 74,
+          "inlierFraction": 0.9487179487179487,
+          "centerDisplacementPixels": 0.11308568859062125,
+          "medianReprojectionPixels": 0.11845874715135939,
+          "inlierSpan": [
+            201.21359252929688,
+            191.53089904785156
+          ],
+          "transform": [
+            [
+              0.9999596656826476,
+              0.00011802223368137196,
+              -0.07731152579157724
+            ],
+            [
+              -0.00011802223368137196,
+              0.9999596656826476,
+              -0.07106224220048202
+            ]
+          ]
+        },
+        {
+          "frame": 749,
+          "matches": 77,
+          "inliers": 72,
+          "inlierFraction": 0.935064935064935,
+          "centerDisplacementPixels": 0.13248861264486014,
+          "medianReprojectionPixels": 0.1145313014004064,
+          "inlierSpan": [
+            202.586669921875,
+            191.53089904785156
+          ],
+          "transform": [
+            [
+              0.9998894253010522,
+              -5.52534901605978e-05,
+              -0.06530316228622371
+            ],
+            [
+              5.52534901605978e-05,
+              0.9998894253010522,
+              -0.09423378809954906
+            ]
+          ]
+        },
+        {
+          "frame": 750,
+          "matches": 87,
+          "inliers": 84,
+          "inlierFraction": 0.9655172413793104,
+          "centerDisplacementPixels": 0.1967637039214014,
+          "medianReprojectionPixels": 0.1522681620961367,
+          "inlierSpan": [
+            202.586669921875,
+            195.75357055664062
+          ],
+          "transform": [
+            [
+              0.9998937365530406,
+              0.00014700189786795404,
+              -0.14898009730409695
+            ],
+            [
+              -0.00014700189786795404,
+              0.9998937365530406,
+              -0.1029707138100765
+            ]
+          ]
+        },
+        {
+          "frame": 751,
+          "matches": 83,
+          "inliers": 80,
+          "inlierFraction": 0.963855421686747,
+          "centerDisplacementPixels": 0.13387084921565598,
+          "medianReprojectionPixels": 0.13195591845425614,
+          "inlierSpan": [
+            201.21359252929688,
+            191.53089904785156
+          ],
+          "transform": [
+            [
+              1.0003711580942933,
+              -0.00012673355279351275,
+              -0.09471453134005225
+            ],
+            [
+              0.00012673355279351275,
+              1.0003711580942933,
+              -0.1784658462230838
+            ]
+          ]
+        },
+        {
+          "frame": 752,
+          "matches": 84,
+          "inliers": 80,
+          "inlierFraction": 0.9523809523809523,
+          "centerDisplacementPixels": 0.15579533990941719,
+          "medianReprojectionPixels": 0.1162014587870997,
+          "inlierSpan": [
+            202.586669921875,
+            191.53089904785156
+          ],
+          "transform": [
+            [
+              1.000022986701848,
+              -6.445573981848937e-05,
+              -0.07807317485865849
+            ],
+            [
+              6.445573981848937e-05,
+              1.000022986701848,
+              -0.14249112491603455
+            ]
+          ]
+        },
+        {
+          "frame": 753,
+          "matches": 82,
+          "inliers": 75,
+          "inlierFraction": 0.9146341463414634,
+          "centerDisplacementPixels": 0.14474683312914957,
+          "medianReprojectionPixels": 0.1300673853749026,
+          "inlierSpan": [
+            202.586669921875,
+            191.53089904785156
+          ],
+          "transform": [
+            [
+              0.9997394444323722,
+              0.0001665557019863559,
+              -0.06925965507293877
+            ],
+            [
+              -0.0001665557019863559,
+              0.9997394444323722,
+              -0.06754657150709611
+            ]
+          ]
+        }
+      ],
+      "movingBoundaries": {
+        "before": {
+          "frame": 743,
+          "expected": {
+            "x": -558,
+            "y": -38,
+            "z": -24
+          }
+        },
+        "after": {
+          "frame": 754,
+          "expected": {
+            "x": -558,
+            "y": -37,
+            "z": -25
+          }
+        }
+      },
+      "nextSplitConstraint": "Keep this entire group in one partition; no clearer-anchor training / obscured-frame validation leakage.",
+      "members": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000744",
+          "frame": 744,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000744.png",
+          "imageSHA256": "0b7869cd5b5688379ba2b2435950645c4382a571e6e4584cfecf4ac3907a8c60",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000744.minimap.png",
+          "minimapSHA256": "ca3fa8b60009dd40f7e9e8be4a29624ea9e1a7f35fffcca2b9379a1b52236773",
+          "viewRole": "clearer-anchor",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000745",
+          "frame": 745,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000745.png",
+          "imageSHA256": "03b47213e0226c0600f5ce462ce19f3b78a006f2e0df161736d5183aa6a6d37d",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000745.minimap.png",
+          "minimapSHA256": "1f1d7505f8074ed6708dc031f67502ab905d7c7963cc5a642df6908129a51408",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000746",
+          "frame": 746,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000746.png",
+          "imageSHA256": "04864b1c150dafd26d0abd041d38623e537623eb8c784cd4c13d9c38f830fb97",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000746.minimap.png",
+          "minimapSHA256": "e92ed7e6d54e9c7eebff4001eb3398ec170099a20f024847f830be5b06d70599",
+          "viewRole": "clearer-anchor",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000747",
+          "frame": 747,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000747.png",
+          "imageSHA256": "2a9104bf0f567b0efac75640000d18b0ce9b90ff98d28602f6b4c92a1b2c33da",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000747.minimap.png",
+          "minimapSHA256": "26cb36866ee48cd8160b3ca1617d974dd8aa0af81837ed424284a0ee78de0831",
+          "viewRole": "clearer-anchor",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000748",
+          "frame": 748,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000748.png",
+          "imageSHA256": "5ecd20a907348db393789fe0c00e2b2c5754276a2ce65f48412b4f50b426b951",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000748.minimap.png",
+          "minimapSHA256": "aaaddc09f8c6bf7f045be41960d329172abeb70b101855f4e409afc9cc3fcc6e",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000749",
+          "frame": 749,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000749.png",
+          "imageSHA256": "3d4ec0e79062f803d1ce11dbf45a87fc1863840e153c26fce7a4d154f999eb52",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000749.minimap.png",
+          "minimapSHA256": "f7d499614b8c5de59811e9180d5b0879d254a05c76c9df2e4d7f910b92ec6087",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000750",
+          "frame": 750,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000750.png",
+          "imageSHA256": "caf7b0423deaf6964b815e448de3948556d7c8e50a578e6f91f63d248993cc84",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000750.minimap.png",
+          "minimapSHA256": "180286dfa443e8c36fab11b0e85f1056fdf7bac6e5d5a2593c61edd628048a6e",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000751",
+          "frame": 751,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000751.png",
+          "imageSHA256": "c4b8ee7de13c64abc1a097856c0e560509a6489839d97cadf9294eec5a243b3e",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000751.minimap.png",
+          "minimapSHA256": "d45b2ec650d9560ebfdfc2c6ae735560efee0a6cedd6f1c7bba0403e632266b0",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "purged"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000752",
+          "frame": 752,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000752.png",
+          "imageSHA256": "17fd408e0822f68ce5004fb28de0948c7ff35f80331865c2ca763c0e5136fc3c",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000752.minimap.png",
+          "minimapSHA256": "8296b2cbe3a891b80804145691f7937f6aea417ce7480eab1cda4dd3a62aff1e",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "purged"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000753",
+          "frame": 753,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000753.png",
+          "imageSHA256": "44bee339436d1c61f2f250f8063d2299eafc06ed15d0abb3d416d0f07c705682",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000753.minimap.png",
+          "minimapSHA256": "0d731900be9d4e93c219d2d99d4875e802167211923acc7d6a95fb3c65948872",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "purged"
+        }
+      ]
+    },
+    {
+      "id": "grass-still-776-787",
+      "first": 776,
+      "last": 787,
+      "frames": 12,
+      "expected": {
+        "x": -582,
+        "y": -79,
+        "z": -15
+      },
+      "humanVerified": false,
+      "coordinateEvidence": "Assistant visually checked original coordinate strips, including all frames and clearer anchors. Existing per-frame labels agree; no new or rewritten labels.",
+      "positionEvidence": "Paired minimap terrain alignment excludes central arrow and overlay regions; stable to <0.5 pixel. Does not prove zero movement below displayed coordinate precision.",
+      "clearerAnchors": [
+        778,
+        779,
+        782
+      ],
+      "grassOverlap": [
+        776,
+        777,
+        780,
+        781,
+        783,
+        784,
+        785,
+        786,
+        787
+      ],
+      "minimapComparisons": [
+        {
+          "frame": 777,
+          "matches": 202,
+          "inliers": 201,
+          "inlierFraction": 0.995049504950495,
+          "centerDisplacementPixels": 0.012539500317735115,
+          "medianReprojectionPixels": 0.05800160416929196,
+          "inlierSpan": [
+            201.09429931640625,
+            183.47955322265625
+          ],
+          "transform": [
+            [
+              0.9998615092243969,
+              -9.853265367011535e-05,
+              0.020748659426346044
+            ],
+            [
+              9.853265367011535e-05,
+              0.9998615092243969,
+              -0.004390595916795109
+            ]
+          ]
+        },
+        {
+          "frame": 778,
+          "matches": 180,
+          "inliers": 176,
+          "inlierFraction": 0.9777777777777777,
+          "centerDisplacementPixels": 0.04203636603603147,
+          "medianReprojectionPixels": 0.07675670625883771,
+          "inlierSpan": [
+            202.92433166503906,
+            183.4658203125
+          ],
+          "transform": [
+            [
+              0.9999437272144309,
+              -9.327096755067503e-05,
+              0.026201285251370103
+            ],
+            [
+              9.327096755067503e-05,
+              0.9999437272144309,
+              -0.04585574603954001
+            ]
+          ]
+        },
+        {
+          "frame": 779,
+          "matches": 158,
+          "inliers": 156,
+          "inlierFraction": 0.9873417721518988,
+          "centerDisplacementPixels": 0.030707750472523082,
+          "medianReprojectionPixels": 0.06296908096663183,
+          "inlierSpan": [
+            202.92433166503906,
+            191.51553344726562
+          ],
+          "transform": [
+            [
+              0.9998885071821116,
+              -0.00011141275711064823,
+              0.018378699424625472
+            ],
+            [
+              0.00011141275711064823,
+              0.9998885071821116,
+              -0.029337521896195734
+            ]
+          ]
+        },
+        {
+          "frame": 780,
+          "matches": 159,
+          "inliers": 156,
+          "inlierFraction": 0.9811320754716981,
+          "centerDisplacementPixels": 0.01597944538261972,
+          "medianReprojectionPixels": 0.06151333380728858,
+          "inlierSpan": [
+            202.92433166503906,
+            188.84674072265625
+          ],
+          "transform": [
+            [
+              0.9998805053571437,
+              -0.0001043711950747114,
+              0.03582734010203037
+            ],
+            [
+              0.0001043711950747114,
+              0.9998805053571437,
+              -0.011799538847495433
+            ]
+          ]
+        },
+        {
+          "frame": 781,
+          "matches": 158,
+          "inliers": 154,
+          "inlierFraction": 0.9746835443037974,
+          "centerDisplacementPixels": 0.01264219291057899,
+          "medianReprojectionPixels": 0.0736724563673608,
+          "inlierSpan": [
+            202.92433166503906,
+            183.4658203125
+          ],
+          "transform": [
+            [
+              1.0003049718262838,
+              -0.00022499967681000824,
+              0.000323032813896805
+            ],
+            [
+              0.00022499967681000824,
+              1.0003049718262838,
+              -0.07271028535787305
+            ]
+          ]
+        },
+        {
+          "frame": 782,
+          "matches": 167,
+          "inliers": 165,
+          "inlierFraction": 0.9880239520958084,
+          "centerDisplacementPixels": 0.03778675499645245,
+          "medianReprojectionPixels": 0.06536503052559231,
+          "inlierSpan": [
+            202.92433166503906,
+            183.87210083007812
+          ],
+          "transform": [
+            [
+              1.0001301052731455,
+              -5.0288874933614955e-05,
+              0.009279922485130206
+            ],
+            [
+              5.0288874933614955e-05,
+              1.0001301052731455,
+              -0.05479416190439959
+            ]
+          ]
+        },
+        {
+          "frame": 783,
+          "matches": 144,
+          "inliers": 141,
+          "inlierFraction": 0.9791666666666666,
+          "centerDisplacementPixels": 0.020602697005119304,
+          "medianReprojectionPixels": 0.06633698934444812,
+          "inlierSpan": [
+            201.09429931640625,
+            183.4658203125
+          ],
+          "transform": [
+            [
+              1.0002671587967598,
+              -0.00021766677147403522,
+              0.0025932701272980497
+            ],
+            [
+              0.00021766677147403522,
+              1.0002671587967598,
+              -0.07831816482734966
+            ]
+          ]
+        },
+        {
+          "frame": 784,
+          "matches": 140,
+          "inliers": 137,
+          "inlierFraction": 0.9785714285714285,
+          "centerDisplacementPixels": 0.05111859361113932,
+          "medianReprojectionPixels": 0.0779611798349748,
+          "inlierSpan": [
+            202.92433166503906,
+            183.4658203125
+          ],
+          "transform": [
+            [
+              0.9995911143731994,
+              -0.0001561221676530133,
+              0.061821995511137845
+            ],
+            [
+              0.0001561221676530133,
+              0.9995911143731994,
+              -0.01944939508870559
+            ]
+          ]
+        },
+        {
+          "frame": 785,
+          "matches": 158,
+          "inliers": 155,
+          "inlierFraction": 0.9810126582278481,
+          "centerDisplacementPixels": 0.026166996703703108,
+          "medianReprojectionPixels": 0.08228095686434812,
+          "inlierSpan": [
+            202.92433166503906,
+            183.4658203125
+          ],
+          "transform": [
+            [
+              1.0000948844621365,
+              -0.00027732063737660566,
+              0.0431831024973153
+            ],
+            [
+              0.00027732063737660566,
+              1.0000948844621365,
+              -0.06173180329561698
+            ]
+          ]
+        },
+        {
+          "frame": 786,
+          "matches": 142,
+          "inliers": 140,
+          "inlierFraction": 0.9859154929577465,
+          "centerDisplacementPixels": 0.01251576101543458,
+          "medianReprojectionPixels": 0.07872995488794751,
+          "inlierSpan": [
+            202.92433166503906,
+            183.87210083007812
+          ],
+          "transform": [
+            [
+              0.9997249045763696,
+              -0.00033162731207373196,
+              0.06371677889578004
+            ],
+            [
+              0.00033162731207373196,
+              0.9997249045763696,
+              -0.000820428895139788
+            ]
+          ]
+        },
+        {
+          "frame": 787,
+          "matches": 139,
+          "inliers": 135,
+          "inlierFraction": 0.9712230215827338,
+          "centerDisplacementPixels": 0.03077601368076203,
+          "medianReprojectionPixels": 0.060472396013600486,
+          "inlierSpan": [
+            202.92433166503906,
+            183.4658203125
+          ],
+          "transform": [
+            [
+              0.9996586472966922,
+              -0.00047798850926789656,
+              0.09882786038672428
+            ],
+            [
+              0.00047798850926789656,
+              0.9996586472966922,
+              -0.04752030826595842
+            ]
+          ]
+        }
+      ],
+      "movingBoundaries": {
+        "before": {
+          "frame": 775,
+          "expected": {
+            "x": -582,
+            "y": -78,
+            "z": -15
+          }
+        },
+        "after": {
+          "frame": 788,
+          "expected": {
+            "x": -581,
+            "y": -81,
+            "z": -14
+          }
+        }
+      },
+      "nextSplitConstraint": "Keep this entire group in one partition; no clearer-anchor training / obscured-frame validation leakage.",
+      "members": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000776",
+          "frame": 776,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000776.png",
+          "imageSHA256": "9e789d7417b8464c423a2b854b9ff1cdc40036c79ffacfdc0cae9d66306eb6bf",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000776.minimap.png",
+          "minimapSHA256": "feff806f5710d018035c75fd41e40b7289e92dd660993ce484d2367c0848bb90",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000777",
+          "frame": 777,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000777.png",
+          "imageSHA256": "40f3e3e0bbec50df020cfd54b4509e289e538e0a2f3c275c68e37d99296c4a82",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000777.minimap.png",
+          "minimapSHA256": "b85bc4089061e45d050c412723e97225fcbab9ecf345e3fb9628ada1ca53b078",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000778",
+          "frame": 778,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000778.png",
+          "imageSHA256": "3626b331049cf4875e31c2dfa3ac084458592eab93e63efeb26a792b36612c27",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000778.minimap.png",
+          "minimapSHA256": "862c527ec5bda8af18668d47b8176a8a52e3235aefdd2b08d3a42a43a9daa8c8",
+          "viewRole": "clearer-anchor",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000779",
+          "frame": 779,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000779.png",
+          "imageSHA256": "19ed69e52838402c927598ce2dd07a73fe49d03a5ecac1078088fb17ee41e3bb",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000779.minimap.png",
+          "minimapSHA256": "0fa55179d4687e82d7e3ca2af5736fea24b9695148bc884759c85f3ea37ef696",
+          "viewRole": "clearer-anchor",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000780",
+          "frame": 780,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000780.png",
+          "imageSHA256": "590a5be0dc76de2c555e2238eab683fb917a832fbf48957f174d90fb975a3aa4",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000780.minimap.png",
+          "minimapSHA256": "9204b96b347c06d13fed9ffb6ee6fbf36456da485f3ea7110dce38f12117390e",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000781",
+          "frame": 781,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000781.png",
+          "imageSHA256": "ea5ed895d31e97cb88289c1de14558e622f4c6e37fa183f2a5f8e65b202fcb3b",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000781.minimap.png",
+          "minimapSHA256": "c64c6565e93394e6598118382fecd753b0a475a811f94cbf96a579febeca5970",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000782",
+          "frame": 782,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000782.png",
+          "imageSHA256": "8c14656b773742c875874d419280adf229b0b56d1c618d94c093c085425505b5",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000782.minimap.png",
+          "minimapSHA256": "d869c1b911fefc8764adb024484ee36ba1cdc4b4a698b7dca7ba4b991d32f85f",
+          "viewRole": "clearer-anchor",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783",
+          "frame": 783,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000783.png",
+          "imageSHA256": "dd3ba847e4463390b9f5873de0f7941fe593106b6422a5d99242b149c3a40638",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000783.minimap.png",
+          "minimapSHA256": "040ca680cc57f375a32a84b46017462167ecf398bc022a46426085ac9f4406a2",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000784",
+          "frame": 784,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000784.png",
+          "imageSHA256": "ab25065468f95523ed24ae77093b327532bc4b33b3b006bd345e1d4548f6d347",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000784.minimap.png",
+          "minimapSHA256": "74c7bd802dc28ee7f379bc0c18faf8da10b34f40c23ccfc58875ae497182a407",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000785",
+          "frame": 785,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000785.png",
+          "imageSHA256": "c7cc17a06ef522e2176649089431fef3f5863dc194e7b737c064e7f92b060135",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000785.minimap.png",
+          "minimapSHA256": "9e2bc900580c11f150ad7e5922bb10ed7e62f2308b0b6bb5f910f846696e5ad2",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000786",
+          "frame": 786,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000786.png",
+          "imageSHA256": "fbadaebbc610164c22bb8f594c4651dcc181e4842fdf9106f1a95eee36cbef7a",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000786.minimap.png",
+          "minimapSHA256": "58f185a1215f110f9edb9e338d9869fe14e430032b4d741501e66054fc574680",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000787",
+          "frame": 787,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000787.png",
+          "imageSHA256": "f5abe0ba0280cf3bb6cde9da3e4aaeeed564c76ea75b021b366605055e2a6d43",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000787.minimap.png",
+          "minimapSHA256": "0e13c20f7cd8bfe4425130fe6a1a79f87527749d4df3ab42718607fbca88c15b",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "development"
+        }
+      ]
+    },
+    {
+      "id": "grass-still-884-900",
+      "first": 884,
+      "last": 900,
+      "frames": 17,
+      "expected": {
+        "x": -464,
+        "y": -109,
+        "z": 17
+      },
+      "humanVerified": false,
+      "coordinateEvidence": "Assistant visually checked original coordinate strips, including all frames and clearer anchors. Existing per-frame labels agree; no new or rewritten labels.",
+      "positionEvidence": "Paired minimap terrain alignment excludes central arrow and overlay regions; stable to <0.5 pixel. Does not prove zero movement below displayed coordinate precision.",
+      "clearerAnchors": [
+        884
+      ],
+      "grassOverlap": [
+        885,
+        886,
+        887,
+        888,
+        889,
+        890,
+        891,
+        892,
+        893,
+        894,
+        895,
+        896,
+        897,
+        898,
+        899,
+        900
+      ],
+      "minimapComparisons": [
+        {
+          "frame": 885,
+          "matches": 167,
+          "inliers": 161,
+          "inlierFraction": 0.9640718562874252,
+          "centerDisplacementPixels": 0.17774633931408007,
+          "medianReprojectionPixels": 0.1266613202874852,
+          "inlierSpan": [
+            192.88558959960938,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              0.9996334846760602,
+              0.00043685188921425646,
+              0.03659168570310397
+            ],
+            [
+              -0.00043685188921425646,
+              0.9996334846760602,
+              0.2707060651050548
+            ]
+          ]
+        },
+        {
+          "frame": 886,
+          "matches": 161,
+          "inliers": 157,
+          "inlierFraction": 0.9751552795031055,
+          "centerDisplacementPixels": 0.2104859218525843,
+          "medianReprojectionPixels": 0.12994430432311455,
+          "inlierSpan": [
+            194.27049255371094,
+            187.58255004882812
+          ],
+          "transform": [
+            [
+              0.9997465798016253,
+              0.0001669266286884185,
+              0.09353770115049997
+            ],
+            [
+              -0.0001669266286884185,
+              0.9997465798016253,
+              0.24517637993492325
+            ]
+          ]
+        },
+        {
+          "frame": 887,
+          "matches": 165,
+          "inliers": 157,
+          "inlierFraction": 0.9515151515151515,
+          "centerDisplacementPixels": 0.19336361829162077,
+          "medianReprojectionPixels": 0.14032610099484927,
+          "inlierSpan": [
+            194.48654174804688,
+            194.2382354736328
+          ],
+          "transform": [
+            [
+              0.9996032945931013,
+              0.0008005909766804391,
+              -0.07047744012821322
+            ],
+            [
+              -0.0008005909766804391,
+              0.9996032945931013,
+              0.33950914954626016
+            ]
+          ]
+        },
+        {
+          "frame": 888,
+          "matches": 161,
+          "inliers": 154,
+          "inlierFraction": 0.9565217391304348,
+          "centerDisplacementPixels": 0.14828410591830285,
+          "medianReprojectionPixels": 0.11076822201499567,
+          "inlierSpan": [
+            194.48654174804688,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              0.9999267223317051,
+              0.00015013045079150764,
+              0.05891886841602432
+            ],
+            [
+              -0.00015013045079150764,
+              0.9999267223317051,
+              0.15905989028517603
+            ]
+          ]
+        },
+        {
+          "frame": 889,
+          "matches": 128,
+          "inliers": 121,
+          "inlierFraction": 0.9453125,
+          "centerDisplacementPixels": 0.14386553106614167,
+          "medianReprojectionPixels": 0.10655192173009563,
+          "inlierSpan": [
+            192.88558959960938,
+            187.72750854492188
+          ],
+          "transform": [
+            [
+              0.9999324442060799,
+              0.0002604012034753157,
+              0.022459924412472854
+            ],
+            [
+              -0.0002604012034753157,
+              0.9999324442060799,
+              0.17659107565339205
+            ]
+          ]
+        },
+        {
+          "frame": 890,
+          "matches": 163,
+          "inliers": 156,
+          "inlierFraction": 0.9570552147239264,
+          "centerDisplacementPixels": 0.16435111706848998,
+          "medianReprojectionPixels": 0.12761962773720614,
+          "inlierSpan": [
+            194.48654174804688,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              0.9995862505095636,
+              0.0005318514678852253,
+              -0.005769289579129011
+            ],
+            [
+              -0.0005318514678852253,
+              0.9995862505095636,
+              0.2804265591867869
+            ]
+          ]
+        },
+        {
+          "frame": 891,
+          "matches": 160,
+          "inliers": 151,
+          "inlierFraction": 0.94375,
+          "centerDisplacementPixels": 0.14355124455881277,
+          "medianReprojectionPixels": 0.10752387723545398,
+          "inlierSpan": [
+            194.48654174804688,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              1.0000557916230466,
+              0.0001899085772748081,
+              0.02692597237237973
+            ],
+            [
+              -0.0001899085772748081,
+              1.0000557916230466,
+              0.14818225825512218
+            ]
+          ]
+        },
+        {
+          "frame": 892,
+          "matches": 151,
+          "inliers": 142,
+          "inlierFraction": 0.9403973509933775,
+          "centerDisplacementPixels": 0.1398253098994068,
+          "medianReprojectionPixels": 0.09611407990887538,
+          "inlierSpan": [
+            194.48654174804688,
+            187.72750854492188
+          ],
+          "transform": [
+            [
+              0.9999148113572499,
+              0.00013436562860195847,
+              0.04571281999841442
+            ],
+            [
+              -0.00013436562860195847,
+              0.9999148113572499,
+              0.1568968809079993
+            ]
+          ]
+        },
+        {
+          "frame": 893,
+          "matches": 173,
+          "inliers": 166,
+          "inlierFraction": 0.9595375722543352,
+          "centerDisplacementPixels": 0.16637070209057736,
+          "medianReprojectionPixels": 0.13298400587538822,
+          "inlierSpan": [
+            193.78224182128906,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              0.9996153812379459,
+              0.0005630579432123473,
+              -0.008198192767987032
+            ],
+            [
+              -0.0005630579432123473,
+              0.9996153812379459,
+              0.2823657811366208
+            ]
+          ]
+        },
+        {
+          "frame": 894,
+          "matches": 163,
+          "inliers": 157,
+          "inlierFraction": 0.9631901840490797,
+          "centerDisplacementPixels": 0.15852838368097347,
+          "medianReprojectionPixels": 0.10892490692196624,
+          "inlierSpan": [
+            194.48654174804688,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              0.9996741147151572,
+              5.0855236399178485e-05,
+              0.11314924877900984
+            ],
+            [
+              -5.0855236399178485e-05,
+              0.9996741147151572,
+              0.18359613614565506
+            ]
+          ]
+        },
+        {
+          "frame": 895,
+          "matches": 149,
+          "inliers": 143,
+          "inlierFraction": 0.959731543624161,
+          "centerDisplacementPixels": 0.1360227617729548,
+          "medianReprojectionPixels": 0.11114434490888084,
+          "inlierSpan": [
+            192.88558959960938,
+            187.72750854492188
+          ],
+          "transform": [
+            [
+              0.9999684475062262,
+              -6.947239574176802e-05,
+              0.06602225688122182
+            ],
+            [
+              6.947239574176802e-05,
+              0.9999684475062262,
+              0.12035440888610618
+            ]
+          ]
+        },
+        {
+          "frame": 896,
+          "matches": 168,
+          "inliers": 158,
+          "inlierFraction": 0.9404761904761905,
+          "centerDisplacementPixels": 0.21750786025530688,
+          "medianReprojectionPixels": 0.16345583541109301,
+          "inlierSpan": [
+            194.48654174804688,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              0.999162397458956,
+              0.000639560323780316,
+              0.028135140756254774
+            ],
+            [
+              -0.000639560323780316,
+              0.999162397458956,
+              0.3991661148295197
+            ]
+          ]
+        },
+        {
+          "frame": 897,
+          "matches": 160,
+          "inliers": 153,
+          "inlierFraction": 0.95625,
+          "centerDisplacementPixels": 0.15650921145491806,
+          "medianReprojectionPixels": 0.11430093782590076,
+          "inlierSpan": [
+            194.48654174804688,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              0.9999024679863359,
+              3.9416404616087505e-05,
+              0.07249939174669251
+            ],
+            [
+              -3.9416404616087505e-05,
+              0.9999024679863359,
+              0.15905702344151953
+            ]
+          ]
+        },
+        {
+          "frame": 898,
+          "matches": 139,
+          "inliers": 130,
+          "inlierFraction": 0.935251798561151,
+          "centerDisplacementPixels": 0.15605993739464982,
+          "medianReprojectionPixels": 0.10711817888470301,
+          "inlierSpan": [
+            193.78224182128906,
+            187.72750854492188
+          ],
+          "transform": [
+            [
+              0.999615963225238,
+              8.36674510626242e-05,
+              0.10265671665377696
+            ],
+            [
+              -8.36674510626242e-05,
+              0.999615963225238,
+              0.19907877818690284
+            ]
+          ]
+        },
+        {
+          "frame": 899,
+          "matches": 153,
+          "inliers": 147,
+          "inlierFraction": 0.9607843137254902,
+          "centerDisplacementPixels": 0.15974814800294218,
+          "medianReprojectionPixels": 0.11168332218019839,
+          "inlierSpan": [
+            194.48654174804688,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              0.9996639686235934,
+              0.0002044559762342665,
+              0.06741379080466983
+            ],
+            [
+              -0.0002044559762342665,
+              0.9996639686235934,
+              0.21779073774803143
+            ]
+          ]
+        },
+        {
+          "frame": 900,
+          "matches": 152,
+          "inliers": 146,
+          "inlierFraction": 0.9605263157894737,
+          "centerDisplacementPixels": 0.1510093996178887,
+          "medianReprojectionPixels": 0.1433610143535475,
+          "inlierSpan": [
+            194.48654174804688,
+            193.42881774902344
+          ],
+          "transform": [
+            [
+              0.9998359020249639,
+              0.0001195487384011248,
+              0.0630186532547813
+            ],
+            [
+              -0.0001195487384011248,
+              0.9998359020249639,
+              0.1745062060693441
+            ]
+          ]
+        }
+      ],
+      "movingBoundaries": {
+        "before": {
+          "frame": 883,
+          "expected": {
+            "x": -464,
+            "y": -110,
+            "z": 17
+          }
+        },
+        "after": {
+          "frame": 901,
+          "expected": {
+            "x": -464,
+            "y": -108,
+            "z": 17
+          }
+        }
+      },
+      "nextSplitConstraint": "Keep this entire group in one partition; no clearer-anchor training / obscured-frame validation leakage.",
+      "members": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000884",
+          "frame": 884,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000884.png",
+          "imageSHA256": "c77deb095eb3d2e086cb31a9c613832b6b3d2e5dd44e6284f889cb217106999a",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000884.minimap.png",
+          "minimapSHA256": "054b75e841e7adba4a0bb53dd2c97d014f31ee32fa36068a391491254057a9fc",
+          "viewRole": "clearer-anchor",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000885",
+          "frame": 885,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000885.png",
+          "imageSHA256": "688ee6d34d2c3c9eb05598a6f3e84d67831d3027a5d3b973582fc253b209e40f",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000885.minimap.png",
+          "minimapSHA256": "816c1600f80ca9688e499bcb2685b29944a85a0c4e580378ce3b99ca5ccfbd35",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000886",
+          "frame": 886,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000886.png",
+          "imageSHA256": "0e9a647637da8c30962c62e32829c837b6919960ce09ae7a6224014a5d3d6904",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000886.minimap.png",
+          "minimapSHA256": "53a7992cbb8133fca565bf49564be617fec310887ee38256e3c2ce8ba8af90fa",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000887",
+          "frame": 887,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000887.png",
+          "imageSHA256": "a8ffe5bb5b29d1b996875c55ac8f25148971862e7e9febd027f660ff3594c20f",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000887.minimap.png",
+          "minimapSHA256": "c42828c3d8116d1fb8a641c608329e14d2a38fd3a6640bc1c048d9faaa68f07d",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000888",
+          "frame": 888,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000888.png",
+          "imageSHA256": "0956b6ace49359693b97c6260c0589fa590ffb4e090be717de6669a3c52b4b90",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000888.minimap.png",
+          "minimapSHA256": "7df0cfd3b47749bd387efc9361c72994fe7a6fff669d19205c76e7063458c3e4",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000889",
+          "frame": 889,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000889.png",
+          "imageSHA256": "85b71c1c31d9db82e5ff1388feb43a74d276b03799a98522627d55a1482566c9",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000889.minimap.png",
+          "minimapSHA256": "9d34951d75a74ff048b0ffa3883a9e5e3f94d7f69ba39311f0929138397f0ebe",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000890",
+          "frame": 890,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000890.png",
+          "imageSHA256": "60c9eaac273a9ea30986871e77b3b74582b1b2c437568f681f07c88d3b509952",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000890.minimap.png",
+          "minimapSHA256": "bb76dc09d83fe81c30f8ff1dd0a8688edd931bcfdf0eed683cd5bf072c1cfa7e",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000891",
+          "frame": 891,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000891.png",
+          "imageSHA256": "a7d11e479dad7571ce33c1d83462e39bd7c0eeef9de5303b1fc8466a532e217b",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000891.minimap.png",
+          "minimapSHA256": "abc06addc60f39c95dc35e7dad7774d55a4fde28de328995fc8d0c20d49de3c5",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000892",
+          "frame": 892,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000892.png",
+          "imageSHA256": "0e3b3ba196a2b4842c0289b9714dc7dcf8286c600c216bf73cac32c8f5809593",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000892.minimap.png",
+          "minimapSHA256": "d15680d1d29858d0a9b36b14a4dd78b75a973ac6271e75e80895051205af1467",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000893",
+          "frame": 893,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000893.png",
+          "imageSHA256": "789cea4aec32dda1d50d80c3619a506247680879f0e992123f3ce8bde2a61225",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000893.minimap.png",
+          "minimapSHA256": "3abc29ae6e96b5ea6f6d4f21c97c2bbb785dc643a8bd64f49fa1012591910ef3",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000894",
+          "frame": 894,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000894.png",
+          "imageSHA256": "59078417a73d53a7b6d5466483009aa34cfe490dc33e717b5caf751d0ce1d5a2",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000894.minimap.png",
+          "minimapSHA256": "5e496a9e3d0e14cdd6aa6cc155267178812fdb3229befa5cfbbbb46361a36090",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000895",
+          "frame": 895,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000895.png",
+          "imageSHA256": "472dace822c027c8f1d82d5fce43cc82a10283cdb454e587327ac501d61c5e9f",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000895.minimap.png",
+          "minimapSHA256": "8ad87dcd64626973a033690f89ea9fe3d7e94e39f32f05922710d8f38eb70093",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000896",
+          "frame": 896,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000896.png",
+          "imageSHA256": "9e36a1fe391130dae200ef4d2e4dd19fd695304fb559b2122c40578890d40ea5",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000896.minimap.png",
+          "minimapSHA256": "6cc1bfc007d71ef5bbc82952621fb7651d0e7c1be0297e52a53fc28a00d8b514",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000897",
+          "frame": 897,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000897.png",
+          "imageSHA256": "cc5fd2b474d66aa1f2bb2fedcc728394bfc41349252a7be01b72ee7e96ef32b4",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000897.minimap.png",
+          "minimapSHA256": "fd923874c5f21a8cb44916a25b0e11bfa814d7cea4e0e60086de204f1a334840",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000898",
+          "frame": 898,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000898.png",
+          "imageSHA256": "012c78c795ad0f2df18fac08a1aa4757b30ae308db003c8469645624e1b09ac7",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000898.minimap.png",
+          "minimapSHA256": "09ea2083be54d812e3c34238eaca44bc574d2e09e39cb122b5cb861ff42b87c5",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000899",
+          "frame": 899,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000899.png",
+          "imageSHA256": "c1b87da1334a7b02c52acc529ab3af4c4d44414093c5d6af1977f137d739da85",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000899.minimap.png",
+          "minimapSHA256": "5ab3f1bcc0a510d6e8837d8e7a0ec289b355f678cce12115d466725eb70e4bcb",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "train",
+          "existingV2Split": "train"
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000900",
+          "frame": 900,
+          "image": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000900.png",
+          "imageSHA256": "124c01c47e2adb6cb9999ec9c75753acafb21c003de2deeaa2f722509a6ad862",
+          "minimap": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-samples\\session-1F638949-A4DA-46C7-8131-3F08EEFD62FD\\frame-000900.minimap.png",
+          "minimapSHA256": "ad1fe3b46241ad68f441a1ceca0a5b51fad0e241af719cf76cc51bb7d0955bdf",
+          "viewRole": "grass-overlap",
+          "existingV1Split": "purged",
+          "existingV2Split": "train"
+        }
+      ]
+    }
+  ],
+  "modelEvidence": [
+    {
+      "model": "initial",
+      "mode": "ppocr-contrast-clock",
+      "group": "grass-still-776-787",
+      "correct": 11,
+      "missed": 0,
+      "wrong": 1,
+      "sourceFile": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-finetune-20261015\\coverage-v2\\replay-initial.json",
+      "sourceSHA256": "4380618f255102d9c0b0da8726f42a02f10d7b48bc5d559bcea06783259d1e9c",
+      "predictions": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000776@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9605880379676819,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:38+8 + ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000777@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9215155839920044,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:39+8 :1",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000778@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9874692559242249,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:39+8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000779@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9918193817138672,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:40+8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000780@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "582,-79,715",
+            "score": 0.9593337178230286,
+            "x": 582,
+            "y": -79,
+            "z": 715
+          },
+          "rawText": "582,-79,715 2026-10-14 14:10:40+8 + ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000781@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9740163087844849,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:41+87 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000782@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.976877748966217,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:41+8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9946410655975342,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:42+8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000784@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9581814408302307,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:42-8  1",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000785@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9669671058654785,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:43+8  0",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000786@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9572378396987915,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43+8 + 1",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000787@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.946548342704773,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:44+8 + 4",
+          "exactXYZ": true
+        }
+      ],
+      "trainingOverlap": false
+    },
+    {
+      "model": "initial",
+      "mode": "ppocr-corroborated-clock",
+      "group": "grass-still-776-787",
+      "correct": 7,
+      "missed": 3,
+      "wrong": 2,
+      "sourceFile": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-finetune-20261015\\coverage-v2\\replay-initial.json",
+      "sourceSHA256": "4380618f255102d9c0b0da8726f42a02f10d7b48bc5d559bcea06783259d1e9c",
+      "predictions": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000776@readout-line",
+          "selected": null,
+          "rawText": " -582-79,-15 2026-10-1414:10:38+8  ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000777@readout-line",
+          "selected": null,
+          "rawText": ": -582,-79,-15 2026-102141410:39+8 1",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000778@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9862818121910095,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:39+8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000779@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9839363098144531,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:40+8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000780@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "582,-79,-15 2026-10-14 14  0-40+8",
+            "score": 0.9099531173706055,
+            "x": 582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "582,-79,-15 2026-10-14 14  0-40+8",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000781@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10-14 14: : 0:41 +84",
+            "score": 0.9632465243339539,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14: : 0:41 +84",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000782@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9770562648773193,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:41+8  0",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-16",
+            "score": 0.9333521127700806,
+            "x": -582,
+            "y": -79,
+            "z": -16
+          },
+          "rawText": "-582,-79,-16 2026-10-14 14:10:42+8  -1",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000784@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026- 0114:14:10:4248 -",
+            "score": 0.8942356109619141,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026- 0114:14:10:4248 -",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000785@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9459297060966492,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43-8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000786@readout-line",
+          "selected": null,
+          "rawText": "-582-79,-15 2026-10-141:10:43+8 ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000787@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10-141410:44+8 15",
+            "score": 0.9742264747619629,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-141410:44+8 15",
+          "exactXYZ": true
+        }
+      ],
+      "trainingOverlap": false
+    },
+    {
+      "model": "previous",
+      "mode": "ppocr-contrast-clock",
+      "group": "grass-still-776-787",
+      "correct": 10,
+      "missed": 1,
+      "wrong": 1,
+      "sourceFile": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-finetune-20261015\\coverage-v2\\replay-previous.json",
+      "sourceSHA256": "e8a8c339d0ab975d5dd5da8804958a7c32cf55da62b1e4522f67dea5d7c48fef",
+      "predictions": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000776@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9611857533454895,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:38+8- ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000777@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10-14,14:10:39+8 ---",
+            "score": 0.952023983001709,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14,14:10:39+8 ---",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000778@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9892776608467102,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:39+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000779@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9766928553581238,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:40+8+ ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000780@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "582,-79,-15",
+            "score": 0.9698724746704102,
+            "x": 582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "582,-79,-15 2026-10-14 14:10:40+8 + ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000781@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.976366400718689,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:41+8- ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000782@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.99920654296875,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:41+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9987229704856873,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:42+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000784@readout-line",
+          "selected": null,
+          "rawText": "7-582,-79,-15 2026-10-14 14:10:42-8  1",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000785@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9478362202644348,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43-8 - ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000786@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9521113038063049,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43+8 +--",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000787@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9621682167053223,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414,10:44+8+ ",
+          "exactXYZ": true
+        }
+      ],
+      "trainingOverlap": true
+    },
+    {
+      "model": "previous",
+      "mode": "ppocr-corroborated-clock",
+      "group": "grass-still-776-787",
+      "correct": 8,
+      "missed": 4,
+      "wrong": 0,
+      "sourceFile": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-finetune-20261015\\coverage-v2\\replay-previous.json",
+      "sourceSHA256": "e8a8c339d0ab975d5dd5da8804958a7c32cf55da62b1e4522f67dea5d7c48fef",
+      "predictions": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000776@readout-line",
+          "selected": null,
+          "rawText": ": -582,-79,-15 2026-10-1414:10:38-8+  ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000777@readout-line",
+          "selected": null,
+          "rawText": ": -582,-79,-5 2026-10-14-14,70:39+8---",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000778@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9856455326080322,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:39+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000779@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9991835355758667,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:40+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000780@readout-line",
+          "selected": null,
+          "rawText": "-582,-79,-15- 2026-10-1414- -0-70+8 ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000781@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10,-1414::0:41+8,7-",
+            "score": 0.9512096047401428,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10,-1414::0:41+8,7-",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000782@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9991164207458496,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:41+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.973414421081543,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:42+8 -",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000784@readout-line",
+          "selected": null,
+          "rawText": "--582,-79,-15 2026- 0-14-14:10:42-8 --",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000785@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9636350274085999,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43-8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000786@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10-141,:10:43+8--",
+            "score": 0.9447183609008789,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-141,:10:43+8--",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000787@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 20-6-10-14,1410:44+8-:5",
+            "score": 0.938225507736206,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 20-6-10-14,1410:44+8-:5",
+          "exactXYZ": true
+        }
+      ],
+      "trainingOverlap": true
+    },
+    {
+      "model": "coverage-only",
+      "mode": "ppocr-contrast-clock",
+      "group": "grass-still-776-787",
+      "correct": 9,
+      "missed": 2,
+      "wrong": 1,
+      "sourceFile": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-finetune-20261015\\coverage-v2\\replay-coverage-only.json",
+      "sourceSHA256": "43ce257b30fa7b64e47893242d29926e672551c6f1462ecb52c39e777330c958",
+      "predictions": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000776@readout-line",
+          "selected": null,
+          "rawText": "-582,-79,-15- 2026-10-1414:10:38+8- ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000777@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10-14,14:10:39+8 ---",
+            "score": 0.9473209381103516,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14,14:10:39+8 ---",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000778@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9672694802284241,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:39+8 -",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000779@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9665623903274536,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:40+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000780@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "582,-79,-15",
+            "score": 0.96806401014328,
+            "x": 582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "582,-79,-15 2026-10-14 14:10:40+8 + ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000781@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9619083404541016,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:41+8,- ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000782@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9602730870246887,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:41+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.992739200592041,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:42+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000784@readout-line",
+          "selected": null,
+          "rawText": "7-582,-79,-15 2026-10-14 14:10:42-8 1",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000785@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9580588936805725,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43-8 - ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000786@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9517444968223572,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43+8 +-1",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000787@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9583248496055603,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414,10:44+8- ",
+          "exactXYZ": true
+        }
+      ],
+      "trainingOverlap": false
+    },
+    {
+      "model": "coverage-only",
+      "mode": "ppocr-corroborated-clock",
+      "group": "grass-still-776-787",
+      "correct": 8,
+      "missed": 4,
+      "wrong": 0,
+      "sourceFile": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-finetune-20261015\\coverage-v2\\replay-coverage-only.json",
+      "sourceSHA256": "43ce257b30fa7b64e47893242d29926e672551c6f1462ecb52c39e777330c958",
+      "predictions": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000776@readout-line",
+          "selected": null,
+          "rawText": ": -582,-79,-15 2026-10-1414:10:38-8+ ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000777@readout-line",
+          "selected": null,
+          "rawText": ": -582,-79,-15 2026-10-14-14,70:39+87--5",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000778@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9923497438430786,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:39+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000779@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9911799430847168,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:40+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000780@readout-line",
+          "selected": null,
+          "rawText": "-582,-79,-15- 2026-10-1414- -0-70+8",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000781@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10,-1414::0:41+8,7-",
+            "score": 0.9614266157150269,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10,-1414::0:41+8,7-",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000782@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9867415428161621,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:41+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9649832844734192,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:42+8 -",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000784@readout-line",
+          "selected": null,
+          "rawText": "--582,-79,-15 2026- 0-14-1,4,10:42-8 --",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000785@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9259872436523438,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43-8 - ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000786@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10-141,-10:43+8,--5",
+            "score": 0.9342719316482544,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-141,-10:43+8,--5",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000787@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 20,6-10-14,1410:44+8-:15",
+            "score": 0.9253679513931274,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 20,6-10-14,1410:44+8-:15",
+          "exactXYZ": true
+        }
+      ],
+      "trainingOverlap": false
+    },
+    {
+      "model": "coverage-positive",
+      "mode": "ppocr-contrast-clock",
+      "group": "grass-still-776-787",
+      "correct": 11,
+      "missed": 0,
+      "wrong": 1,
+      "sourceFile": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-finetune-20261015\\coverage-v2\\replay-coverage-positive.json",
+      "sourceSHA256": "2c1a4e23859ec91f6c7165033758babeb178a4aa0566ebd2a39619b9eea7c0bb",
+      "predictions": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000776@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9664071202278137,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:38+8- ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000777@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10-14,14:10:39+8 ---",
+            "score": 0.9396143555641174,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14,14:10:39+8 ---",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000778@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9620392918586731,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:39+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000779@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9734786748886108,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:40+8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000780@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "582,-79,-15",
+            "score": 0.9643324613571167,
+            "x": 582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "582,-79,-15 2026-10-14 14:10:40+8 + ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000781@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9698638916015625,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:41+8,- ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000782@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9975112676620483,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:41+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9957931637763977,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:42+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000784@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9587844014167786,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:42-8 1",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000785@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.940743088722229,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-14 14:10:43-8 - ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000786@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.956732988357544,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43+8 +--",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000787@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9639942646026611,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414,10:44+8+ ",
+          "exactXYZ": true
+        }
+      ],
+      "trainingOverlap": false
+    },
+    {
+      "model": "coverage-positive",
+      "mode": "ppocr-corroborated-clock",
+      "group": "grass-still-776-787",
+      "correct": 8,
+      "missed": 4,
+      "wrong": 0,
+      "sourceFile": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-finetune-20261015\\coverage-v2\\replay-coverage-positive.json",
+      "sourceSHA256": "2c1a4e23859ec91f6c7165033758babeb178a4aa0566ebd2a39619b9eea7c0bb",
+      "predictions": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000776@readout-line",
+          "selected": null,
+          "rawText": ": -582,-79,-15 2026-10-1414:10:38-8+  ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000777@readout-line",
+          "selected": null,
+          "rawText": ": -582,-79,-15 2026-10-14-14,-70:39+87--5",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000778@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.994123101234436,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:39+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000779@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.993329644203186,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:40+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000780@readout-line",
+          "selected": null,
+          "rawText": "-582,-79,-15- 2026-10-1414: -0-70+8 ",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000781@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10,-1414::0:41+8,7-",
+            "score": 0.9721536636352539,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10,-1414::0:41+8,7-",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000782@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9887789487838745,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:41+8 ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9802422523498535,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:42+8 -",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000784@readout-line",
+          "selected": null,
+          "rawText": "--582,-79,-15 2026- 0-14-1,4:1,0:42-8 --",
+          "exactXYZ": false
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000785@readout-line",
+          "selected": {
+            "correction": "",
+            "rawText": "-582,-79,-15",
+            "score": 0.9538815021514893,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-1414:10:43-8  ",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000786@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 2026-10-141,:10:43+8,--5",
+            "score": 0.9179064631462097,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 2026-10-141,:10:43+8,--5",
+          "exactXYZ": true
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000787@readout-line",
+          "selected": {
+            "correction": "clock-text-dropped",
+            "rawText": "-582,-79,-15 20,6-10-14,1410:44+8-: 15",
+            "score": 0.9246597290039062,
+            "x": -582,
+            "y": -79,
+            "z": -15
+          },
+          "rawText": "-582,-79,-15 20,6-10-14,1410:44+8-: 15",
+          "exactXYZ": true
+        }
+      ],
+      "trainingOverlap": false
+    }
+  ],
+  "limitations": [
+    "Existing negative-X grass examples; do not fill positive-X coverage by changing signs.",
+    "Clear/obscured frame roles are relative assistant visual judgments, not a numerical readability guarantee.",
+    "Minimap agreement alone cannot transfer exact XYZ or distinguish movement smaller than the displayed integer.",
+    "Group 744-753 spans train/purged in v2, not train/development. No existing split is rewritten.",
+    "Other repeated-readout runs not promoted automatically: 1-5 insufficient minimap features; 652-656 dark sparse map lacks strong positional evidence."
+  ],
+  "localEvidenceRoot": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-stationary-study-20261015",
+  "recipe": {
+    "path": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-stationary-study-20261015\\audit_groups.py",
+    "sha256": "90c15262774224b4ce5bd389cef6c7509bc4b5b28be442e891be743be44e7397",
+    "text": "\"\"\"Register clear/occluded stationary-readout pairs; preserve every existing label and split.\"\"\"\nfrom pathlib import Path\nimport json,hashlib\nimport cv2,numpy as np\nROOT=Path(__file__).resolve().parent\nSOURCE=Path(r'C:\\Users\\Kahvia\\.codex\\worktrees\\coordinate-offline-evaluation\\WWMAP-TOOLS')\nDATA=Path(r'C:\\Dcode\\WWMAP-TOOLS')\nread=lambda p:json.loads(p.read_text(encoding='utf-8-sig'))\nsha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\ncorpus_path=DATA/'out/coordinate-label-expansion-20261015/expanded-corpus-v5.json'\ncorpus=read(corpus_path);frames={int(f['id'][-6:]):f for f in corpus['frames']}\ncandidates=read(ROOT/'minimap-stationary-candidates.json')\nv1=read(DATA/'out/coordinate-finetune-20261015/split-manifest.json')\nv2=read(DATA/'out/coordinate-finetune-20261015/coverage-v2/coverage-manifest.json')\nv2index={r['id']:r for r in v2['rows']}\ndefinitions=[('grass-still-744-753',744,753,[744,746,747],[748,749,750,751,752,753]),\n             ('grass-still-776-787',776,787,[778,779,782],[776,777,780,781,783,784,785,786,787]),\n             ('grass-still-884-900',884,900,[884],[885,886,887,888,889,890,891,892,893,894,895,896,897,898,899,900])]\ngroups=[]\nfor name,lo,hi,clear,obscured in definitions:\n    expected=frames[lo]['expected'];members=[]\n    metric=next(g for g in candidates['groups'] if g['first']==lo and g['last']==hi)\n    assert all(p.get('inliers',0)>=60 and p['centerDisplacementPixels']<.5 and min(p['inlierSpan'])>75 for p in metric['comparisons'])\n    for n in range(lo,hi+1):\n        f=frames[n];assert f['state']=='present' and f['expected']==expected\n        assert sha(Path(f['image']))==f['captureSHA256']\n        assert sha(Path(f['minimap']['image']))==f['minimap']['sha256']\n        v1split=next(k for k in ['train','developmentHoldout','purged'] if f['id'] in v1[k])\n        members.append({'id':f['id'],'frame':n,'image':f['image'],'imageSHA256':f['captureSHA256'],\n            'minimap':f['minimap']['image'],'minimapSHA256':f['minimap']['sha256'],\n            'viewRole':'clearer-anchor' if n in clear else 'grass-overlap',\n            'existingV1Split':v1split,'existingV2Split':v2index[f['id']]['split']})\n    before=frames[lo-1]['expected'];after=frames[hi+1]['expected']\n    assert before!=expected and after!=expected\n    groups.append({'id':name,'first':lo,'last':hi,'frames':hi-lo+1,'expected':expected,\n        'humanVerified':False,'coordinateEvidence':'Assistant visually checked original coordinate strips, including all frames and clearer anchors. Existing per-frame labels agree; no new or rewritten labels.',\n        'positionEvidence':'Paired minimap terrain alignment excludes central arrow and overlay regions; stable to <0.5 pixel. Does not prove zero movement below displayed coordinate precision.',\n        'clearerAnchors':clear,'grassOverlap':obscured,'minimapComparisons':metric['comparisons'],\n        'movingBoundaries':{'before':{'frame':lo-1,'expected':before},'after':{'frame':hi+1,'expected':after}},\n        'nextSplitConstraint':'Keep this entire group in one partition; no clearer-anchor training / obscured-frame validation leakage.',\n        'members':members})\n\n# Actual model evidence: v2's held-out group is entirely in its new development block.\nmodel_evidence=[]\nfor model in ['initial','previous','coverage-only','coverage-positive']:\n    path=DATA/f'out/coordinate-finetune-20261015/coverage-v2/replay-{model}.json';raw=read(path)\n    for mode in ['ppocr-contrast-clock','ppocr-corroborated-clock']:\n        part=[r for r in raw['pipelines'][mode] if 776<=int(r['id'].split('@')[0][-6:])<=787]\n        assert len(part)==12\n        observations=[]\n        for p in part:\n            f=frames[int(p['id'].split('@')[0][-6:])];s=p['selected']\n            observations.append({'id':p['id'],'selected':s,'rawText':p.get('rawText'),\n                'exactXYZ':s is not None and all(s[k]==f['expected'][k] for k in 'xyz')})\n        model_evidence.append({'model':model,'mode':mode,'group':'grass-still-776-787',\n            'correct':sum(r['exactXYZ'] for r in observations),'missed':sum(r['selected'] is None for r in observations),\n            'wrong':sum(r['selected'] is not None and not r['exactXYZ'] for r in observations),\n            'sourceFile':str(path),'sourceSHA256':sha(path),'predictions':observations,\n            'trainingOverlap':model=='previous'})\n\nresult={'purpose':'Clear/grass-occluded pairs at stable displayed XYZ, supported by paired minimaps; data organization only, no retraining or pipeline change.',\n    'sourceCorpus':str(corpus_path),'sourceCorpusSHA256':sha(corpus_path),\n    'newLabels':0,'modifiedLabels':0,'humanVerified':False,'independentAcceptance':False,\n    'positiveXFramesInSelectedGroups':0,'groups':groups,'modelEvidence':model_evidence,\n    'limitations':['Existing negative-X grass examples; do not fill positive-X coverage by changing signs.',\n        'Clear/obscured frame roles are relative assistant visual judgments, not a numerical readability guarantee.',\n        'Minimap agreement alone cannot transfer exact XYZ or distinguish movement smaller than the displayed integer.',\n        'Group 744-753 spans train/purged in v2, not train/development. No existing split is rewritten.',\n        'Other repeated-readout runs not promoted automatically: 1-5 insufficient minimap features; 652-656 dark sparse map lacks strong positional evidence.']}\n(ROOT/'stationary-groups.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\\n',encoding='utf-8')\ntarget=SOURCE/'tools/coordinate-ocr/annotations/20261015-session-1F638949/stationary-grass-groups-v1.json'\ncrosscheck=read(ROOT/'stationary-verification.json')\nassert crosscheck['sourceGroupsSHA256']==sha(ROOT/'stationary-groups.json')\ntarget.write_text(json.dumps({**result,'localEvidenceRoot':str(ROOT),\n    'recipe':{'path':str(Path(__file__)),'sha256':sha(Path(__file__)),'text':Path(__file__).read_text(encoding='utf-8')},\n    'localCandidateMetricsSHA256':sha(ROOT/'minimap-stationary-candidates.json'),\n    'independentMinimapCheck':crosscheck},ensure_ascii=False,indent=2)+'\\n',encoding='utf-8')\nfor g in groups:\n    print(g['id'],g['frames'],g['expected'],'max map drift',max(p['centerDisplacementPixels'] for p in g['minimapComparisons']))\nfor m in model_evidence:print(m['model'],m['mode'],'correct',m['correct'],'wrong',m['wrong'],'miss',m['missed'])\n"
+  },
+  "localCandidateMetricsSHA256": "69ce29fd53c449b6a50b4d30caf80e58bcefe91858751b893720439cd06012d6",
+  "independentMinimapCheck": {
+    "method": "Independent Shi-Tomasi corners + forward/backward Lucas-Kanade terrain flow. Original >=30 consistent tracks, span>75px and drift<0.5px criteria retained; low feature counts reported as inconclusive, not silently passed.",
+    "checks": [
+      {
+        "group": "grass-still-744-753",
+        "checks": [
+          {
+            "frame": 745,
+            "survivingTracks": 29,
+            "consistentTracks": 29,
+            "trackSpan": [
+              203.0,
+              150.0
+            ],
+            "medianTerrainDriftPixels": 0.2552781403064728,
+            "qualityPassed": false,
+            "stationarySupported": false,
+            "interpretation": "insufficient reliable tracks; inconclusive"
+          },
+          {
+            "frame": 746,
+            "survivingTracks": 28,
+            "consistentTracks": 27,
+            "trackSpan": [
+              203.0,
+              158.0
+            ],
+            "medianTerrainDriftPixels": 0.13354110717773438,
+            "qualityPassed": false,
+            "stationarySupported": false,
+            "interpretation": "insufficient reliable tracks; inconclusive"
+          },
+          {
+            "frame": 747,
+            "survivingTracks": 36,
+            "consistentTracks": 26,
+            "trackSpan": [
+              203.0,
+              150.0
+            ],
+            "medianTerrainDriftPixels": 0.1457301527261734,
+            "qualityPassed": false,
+            "stationarySupported": false,
+            "interpretation": "insufficient reliable tracks; inconclusive"
+          },
+          {
+            "frame": 748,
+            "survivingTracks": 25,
+            "consistentTracks": 24,
+            "trackSpan": [
+              181.0,
+              180.0
+            ],
+            "medianTerrainDriftPixels": 0.16120919585227966,
+            "qualityPassed": false,
+            "stationarySupported": false,
+            "interpretation": "insufficient reliable tracks; inconclusive"
+          },
+          {
+            "frame": 749,
+            "survivingTracks": 24,
+            "consistentTracks": 21,
+            "trackSpan": [
+              193.0,
+              180.0
+            ],
+            "medianTerrainDriftPixels": 0.1707400530576706,
+            "qualityPassed": false,
+            "stationarySupported": false,
+            "interpretation": "insufficient reliable tracks; inconclusive"
+          },
+          {
+            "frame": 750,
+            "survivingTracks": 32,
+            "consistentTracks": 24,
+            "trackSpan": [
+              188.0,
+              180.0
+            ],
+            "medianTerrainDriftPixels": 0.17983081936836243,
+            "qualityPassed": false,
+            "stationarySupported": false,
+            "interpretation": "insufficient reliable tracks; inconclusive"
+          },
+          {
+            "frame": 751,
+            "survivingTracks": 25,
+            "consistentTracks": 25,
+            "trackSpan": [
+              184.0,
+              180.0
+            ],
+            "medianTerrainDriftPixels": 0.17460057139396667,
+            "qualityPassed": false,
+            "stationarySupported": false,
+            "interpretation": "insufficient reliable tracks; inconclusive"
+          },
+          {
+            "frame": 752,
+            "survivingTracks": 23,
+            "consistentTracks": 21,
+            "trackSpan": [
+              195.0,
+              180.0
+            ],
+            "medianTerrainDriftPixels": 0.18697164952754974,
+            "qualityPassed": false,
+            "stationarySupported": false,
+            "interpretation": "insufficient reliable tracks; inconclusive"
+          },
+          {
+            "frame": 753,
+            "survivingTracks": 36,
+            "consistentTracks": 25,
+            "trackSpan": [
+              198.0,
+              180.0
+            ],
+            "medianTerrainDriftPixels": 0.1760520040988922,
+            "qualityPassed": false,
+            "stationarySupported": false,
+            "interpretation": "insufficient reliable tracks; inconclusive"
+          }
+        ],
+        "allPairsSupported": false
+      },
+      {
+        "group": "grass-still-776-787",
+        "checks": [
+          {
+            "frame": 777,
+            "survivingTracks": 119,
+            "consistentTracks": 119,
+            "trackSpan": [
+              200.0,
+              193.0
+            ],
+            "medianTerrainDriftPixels": 0.014570238068699837,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 778,
+            "survivingTracks": 98,
+            "consistentTracks": 93,
+            "trackSpan": [
+              200.0,
+              192.0
+            ],
+            "medianTerrainDriftPixels": 0.024968791753053665,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 779,
+            "survivingTracks": 67,
+            "consistentTracks": 66,
+            "trackSpan": [
+              200.0,
+              180.0
+            ],
+            "medianTerrainDriftPixels": 0.019719282165169716,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 780,
+            "survivingTracks": 68,
+            "consistentTracks": 67,
+            "trackSpan": [
+              198.0,
+              192.0
+            ],
+            "medianTerrainDriftPixels": 0.021357841789722443,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 781,
+            "survivingTracks": 64,
+            "consistentTracks": 63,
+            "trackSpan": [
+              113.0,
+              192.0
+            ],
+            "medianTerrainDriftPixels": 0.023254139348864555,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 782,
+            "survivingTracks": 69,
+            "consistentTracks": 67,
+            "trackSpan": [
+              196.0,
+              192.0
+            ],
+            "medianTerrainDriftPixels": 0.025429943576455116,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 783,
+            "survivingTracks": 70,
+            "consistentTracks": 69,
+            "trackSpan": [
+              198.0,
+              192.0
+            ],
+            "medianTerrainDriftPixels": 0.029124567285180092,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 784,
+            "survivingTracks": 73,
+            "consistentTracks": 72,
+            "trackSpan": [
+              198.0,
+              192.0
+            ],
+            "medianTerrainDriftPixels": 0.02928195148706436,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 785,
+            "survivingTracks": 83,
+            "consistentTracks": 78,
+            "trackSpan": [
+              198.0,
+              193.0
+            ],
+            "medianTerrainDriftPixels": 0.02212916687130928,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 786,
+            "survivingTracks": 81,
+            "consistentTracks": 78,
+            "trackSpan": [
+              198.0,
+              193.0
+            ],
+            "medianTerrainDriftPixels": 0.02767413668334484,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 787,
+            "survivingTracks": 80,
+            "consistentTracks": 76,
+            "trackSpan": [
+              200.0,
+              193.0
+            ],
+            "medianTerrainDriftPixels": 0.028697552159428596,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          }
+        ],
+        "allPairsSupported": true
+      },
+      {
+        "group": "grass-still-884-900",
+        "checks": [
+          {
+            "frame": 885,
+            "survivingTracks": 61,
+            "consistentTracks": 59,
+            "trackSpan": [
+              187.0,
+              188.0
+            ],
+            "medianTerrainDriftPixels": 0.1632775068283081,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 886,
+            "survivingTracks": 51,
+            "consistentTracks": 50,
+            "trackSpan": [
+              187.0,
+              157.0
+            ],
+            "medianTerrainDriftPixels": 0.18626968562602997,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 887,
+            "survivingTracks": 61,
+            "consistentTracks": 53,
+            "trackSpan": [
+              187.0,
+              194.0
+            ],
+            "medianTerrainDriftPixels": 0.14717702567577362,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 888,
+            "survivingTracks": 53,
+            "consistentTracks": 52,
+            "trackSpan": [
+              187.0,
+              188.0
+            ],
+            "medianTerrainDriftPixels": 0.138799786567688,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 889,
+            "survivingTracks": 49,
+            "consistentTracks": 48,
+            "trackSpan": [
+              187.0,
+              157.0
+            ],
+            "medianTerrainDriftPixels": 0.140991672873497,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 890,
+            "survivingTracks": 56,
+            "consistentTracks": 52,
+            "trackSpan": [
+              187.0,
+              194.0
+            ],
+            "medianTerrainDriftPixels": 0.13638059794902802,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 891,
+            "survivingTracks": 49,
+            "consistentTracks": 47,
+            "trackSpan": [
+              187.0,
+              188.0
+            ],
+            "medianTerrainDriftPixels": 0.14333586394786835,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 892,
+            "survivingTracks": 51,
+            "consistentTracks": 49,
+            "trackSpan": [
+              187.0,
+              157.0
+            ],
+            "medianTerrainDriftPixels": 0.14217421412467957,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 893,
+            "survivingTracks": 60,
+            "consistentTracks": 55,
+            "trackSpan": [
+              187.0,
+              194.0
+            ],
+            "medianTerrainDriftPixels": 0.1429159939289093,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 894,
+            "survivingTracks": 50,
+            "consistentTracks": 49,
+            "trackSpan": [
+              187.0,
+              188.0
+            ],
+            "medianTerrainDriftPixels": 0.14185123145580292,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 895,
+            "survivingTracks": 51,
+            "consistentTracks": 50,
+            "trackSpan": [
+              182.0,
+              157.0
+            ],
+            "medianTerrainDriftPixels": 0.14054672420024872,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 896,
+            "survivingTracks": 59,
+            "consistentTracks": 55,
+            "trackSpan": [
+              187.0,
+              194.0
+            ],
+            "medianTerrainDriftPixels": 0.14697030186653137,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 897,
+            "survivingTracks": 55,
+            "consistentTracks": 52,
+            "trackSpan": [
+              187.0,
+              188.0
+            ],
+            "medianTerrainDriftPixels": 0.13726769387722015,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 898,
+            "survivingTracks": 53,
+            "consistentTracks": 52,
+            "trackSpan": [
+              187.0,
+              157.0
+            ],
+            "medianTerrainDriftPixels": 0.14551812410354614,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 899,
+            "survivingTracks": 54,
+            "consistentTracks": 52,
+            "trackSpan": [
+              187.0,
+              188.0
+            ],
+            "medianTerrainDriftPixels": 0.14631438255310059,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          },
+          {
+            "frame": 900,
+            "survivingTracks": 52,
+            "consistentTracks": 51,
+            "trackSpan": [
+              187.0,
+              188.0
+            ],
+            "medianTerrainDriftPixels": 0.15071730315685272,
+            "qualityPassed": true,
+            "stationarySupported": true,
+            "interpretation": "supports low drift"
+          }
+        ],
+        "allPairsSupported": true
+      }
+    ],
+    "sourceGroupsSHA256": "ea4d975d5ea27b8e9192a49e0828a9b9141ef3bd1c2a32c37200dec926b16e43",
+    "doesNotEstablishExactWorldPosition": true
+  }
+}
