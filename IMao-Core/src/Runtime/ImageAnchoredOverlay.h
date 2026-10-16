@@ -51,17 +51,23 @@ inline OverlayScreenTransform ReconcileTerrainAnchor(const OverlayMotionSample& 
 class ImageAnchoredOverlay {
 public:
     explicit ImageAnchoredOverlay(bool minimap) : minimap_(minimap) {}
-    void Reset() { source_.reset(); tracker_.Reset(); lastCapture_ = 0; captureHistory_.clear(); }
+    void Reset() { source_.reset(); tracker_.Reset(); lastCapture_ = 0; freshAttempt_ = 0; captureHistory_.clear(); }
+    bool RecoveredFreshSource() const { return recoveredFresh_; }
+    const char* LastFailure() const { return failure_; }
 
     bool Update(const std::shared_ptr<const OverlayFrame>& source, const CapturedFrame& capture,
         OverlayScreenTransform& output, std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) {
+        recoveredFresh_ = false;
+        failure_ = "invalid-input";
         if (!source || source->motionImage.empty() || capture.image.empty() || capture.frameId < source->frameId ||
             capture.clientRect.right != source->clientRect.right || capture.clientRect.bottom != source->clientRect.bottom ||
             capture.frameId == 0 || now < capture.capturedAt || now - capture.capturedAt >= capture.maximumAge) {
             Reset(); return false;
         }
         const auto& pose = minimap_ ? source->minimapMotion : source->mapMotion;
+        failure_ = "unreliable-pose";
         if (!pose.reliable || pose.scene <= 0 || pose.pixelsPerUnit <= 0.0) { Reset(); return false; }
+        failure_ = "source-anchor";
         if (source_ != source) {
             bool continued = false;
             if (source_) {
@@ -104,15 +110,32 @@ public:
         }
         if (lastCapture_ != capture.frameId) {
             const auto region = source->motionRegion;
+            failure_ = "capture-region";
             if ((region & cv::Rect(0, 0, capture.image.cols, capture.image.rows)) != region) { Reset(); return false; }
             OverlayScreenTransform measured;
-            if (!tracker_.Track(capture.image(region), measured)) return false;
+            failure_ = "primary-track";
+            if (!tracker_.Track(capture.image(region), measured)) {
+                // Reacquire only from recent source pixels, through the same strict
+                // geometric checks. Never substitute coordinates for image evidence.
+                if (!minimap_ || freshAttempt_ == source->frameId || capture.capturedAt < source->capturedAt ||
+                    capture.capturedAt - source->capturedAt > std::chrono::milliseconds(250)) return false;
+                freshAttempt_ = source->frameId;
+                ScreenMotionTracker fresh;
+                failure_ = "fresh-source-track";
+                if (!fresh.Anchor(source->motionImage, true) || !fresh.Track(capture.image(region), measured)) return false;
+                tracker_ = std::move(fresh);
+                anchorToSource_ = {};
+                captureHistory_.clear();
+                RememberCapture(source->frameId, {});
+                recoveredFresh_ = true;
+            }
             anchorToCapture_ = measured;
             lastCapture_ = capture.frameId;
             RememberCapture(lastCapture_, measured);
         }
         const auto fromSource = ComposeOverlayTransforms(anchorToCapture_, InverseOverlayTransform(anchorToSource_));
         output = ComposeOverlayTransforms(CropMotionToScreen(fromSource, source->motionRegion, source->motionRegion), correction_);
+        failure_ = "none";
         return true;
     }
 private:
@@ -126,5 +149,7 @@ private:
     ScreenMotionTracker tracker_;
     std::shared_ptr<const OverlayFrame> source_;
     OverlayScreenTransform correction_, anchorToSource_, anchorToCapture_;
-    std::uint64_t lastCapture_ = 0;
+    std::uint64_t lastCapture_ = 0, freshAttempt_ = 0;
+    bool recoveredFresh_ = false;
+    const char* failure_ = "none";
 };

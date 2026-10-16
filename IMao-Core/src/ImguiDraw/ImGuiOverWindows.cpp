@@ -869,6 +869,11 @@ int ImGuiOverWindows::start()
                     OverlayScreenTransform motion;
                     const auto motionStarted = std::chrono::steady_clock::now();
                     const bool attached = minimapMotion.Update(frame, *capture, motion);
+                    if (attached && minimapMotion.RecoveredFreshSource())
+                        Diagnostics::Record("minimap-overlay-recovered", "method=fresh-source sourceFrame=" +
+                            std::to_string(frame->frameId) + " captureFrame=" + std::to_string(capture->frameId) +
+                            " steadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::steady_clock::now().time_since_epoch()).count()));
                     maxMotion = std::max(maxMotion, std::chrono::steady_clock::now() - motionStarted);
                     // 配准失败那一帧原来整层不画（实测 70 次 / 2.6 分钟），标记和路线因此一闪一闪。
                     // 这里只复用**上一次实测的屏幕变换**最多 150 毫秒——位置仍来自 App 侧的最新值
@@ -903,8 +908,11 @@ int ImGuiOverWindows::start()
                             // Which condition failed decides the fix: "reliable" is the recovery state
                             // (PublishOverlayFrame ties it to CoordinateLockState::Tracking), so a false
                             // here means the localizer, not the tracker.  The rest is the tracker.
-                            Diagnostics::Record("minimap-overlay-drop", "reason=no-attach frame=" +
-                                std::to_string(frame->frameId) + " misses=" + std::to_string(trackingMisses) +
+                            Diagnostics::Record("minimap-overlay-drop", std::string("reason=no-attach stage=") +
+                                minimapMotion.LastFailure() + " frame=" +
+                                std::to_string(frame->frameId) + " captureFrame=" + std::to_string(capture->frameId) +
+                                " steadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(dropNow.time_since_epoch()).count()) +
+                                " misses=" + std::to_string(trackingMisses) +
                                 " reliable=" + std::to_string(frame->minimapMotion.reliable) +
                                 " scene=" + std::to_string(frame->playerScene) +
                                 " ownFrame=" + std::to_string(frame->frameId >= capture->frameId) +

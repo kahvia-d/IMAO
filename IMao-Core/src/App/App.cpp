@@ -1373,11 +1373,15 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	};
 
 	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition, bool relative = false, bool visual = true,
-        std::chrono::steady_clock::time_point capturedAt = {}, std::uint64_t sourceFrame = 0) -> bool {
+        std::chrono::steady_clock::time_point capturedAt = {}, std::uint64_t sourceFrame = 0,
+        CoordinateHandoff::VisualSource visualSource = CoordinateHandoff::VisualSource::Local) -> bool {
         if (capturedAt == std::chrono::steady_clock::time_point{}) capturedAt = snapshotCapturedAt;
         if (sourceFrame == 0) sourceFrame = snapshotFrameId;
         if (visual && !relative && (capturedAt > now || now - capturedAt > std::chrono::milliseconds(750))) return false;
         if (relative && coordinateHandoff.ReadoutActive()) return false;
+        if (!relative && capturedAt < lastPositionCapturedAt) {
+            Diagnostics::Record("position-commit-rejected", "reason=older-capture"); return false;
+        }
 		// B：每次提交都记下它相对上一个可信位置的位移与来源，用来钉死"单秒跳 120~377 单位"是哪条路。
 		double commitJumpUnits = -1.0;
 		// 用户的轨迹设计推广到**所有来源**：12:41 那次是读数丢了负号，13:08 这次却是局部匹配自己跑到一个
@@ -1403,6 +1407,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						" map=" + std::to_string(candidate.mapCenter.x) + "," + std::to_string(candidate.mapCenter.y) +
 						" predicted=" + std::to_string(predicted.x) + "," + std::to_string(predicted.y) +
 						" source=" + std::string(recognition ? "recognition" : (relative ? "relative" : "tracked")));
+                    if (!relative) coordinateHandoff.RejectVisual(sourceFrame, capturedAt, visualSource);
 					return false;
 				}
 			}
@@ -1430,22 +1435,26 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					" map=" + std::to_string(candidate.mapCenter.x) + "," + std::to_string(candidate.mapCenter.y) +
 					" lock=" + std::to_string(playerLocationLock.mapCoordinate.x) + "," +
 					std::to_string(playerLocationLock.mapCoordinate.y));
+                if (visual && !relative) coordinateHandoff.RejectVisual(sourceFrame, capturedAt, visualSource);
 				return false;
 			}
 		}
-		// Returning from readout requires two distinct, consistent absolute image fixes.
+        // Returning from readout requires sustained independent absolute image fixes.
         const bool wasReadoutActive = coordinateHandoff.ReadoutActive();
         if (visual && !relative && !coordinateHandoff.ObserveVisual(sourceFrame, capturedAt,
-            candidate.mapCenter.x, candidate.mapCenter.y, candidate.sceneId)) {
-            Diagnostics::Record("coordinate-handoff", "action=await-surf-confirmation"); return false;
-        }
-        if (!relative && capturedAt < lastPositionCapturedAt) {
-            Diagnostics::Record("position-commit-rejected", "reason=older-capture"); return false;
+            candidate.mapCenter.x, candidate.mapCenter.y, candidate.sceneId, visualSource)) {
+            Diagnostics::Record("coordinate-handoff", "action=await-surf-confirmation source=" +
+                std::string(visualSource == CoordinateHandoff::VisualSource::Global ? "global" : "local") +
+                " frame=" + std::to_string(sourceFrame) + " steadyMs=" + std::to_string(
+                    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count())); return false;
         }
         if (!visual) coordinateHandoff.ObserveReadout(capturedAt);
         if (wasReadoutActive != coordinateHandoff.ReadoutActive())
-            Diagnostics::Record("coordinate-handoff", coordinateHandoff.ReadoutActive() ?
-                "from=surf to=readout" : "from=readout to=surf");
+            Diagnostics::Record("coordinate-handoff", std::string(coordinateHandoff.ReadoutActive() ?
+                "from=surf to=readout" : "from=readout to=surf") +
+                " source=" + (visualSource == CoordinateHandoff::VisualSource::Global ? "global" : "local") +
+                " frame=" + std::to_string(sourceFrame) + " steadyMs=" + std::to_string(
+                    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()));
         if (!relative) lastPositionCapturedAt = capturedAt;
         // Only a visual source is a certain state; a coordinate publish passes visual=false and
 		// must not touch T or the record (an OCR misread may never move the region).
@@ -1790,7 +1799,9 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                                 std::chrono::duration<double>(ocrResult.capturedAt.time_since_epoch()).count());
 					}
 					else {
-						Diagnostics::Record("coordinate-publish-rejected", "reason=" + decision.reason +
+						Diagnostics::Record(decision.Publishable() ?
+                            (confirmed ? "coordinate-readout-standby" : "coordinate-readout-pending") :
+                            "coordinate-publish-rejected", "reason=" + decision.reason +
 							" scene=" + std::to_string(reading.sceneId) + " world=" + world +
 							" score=" + std::to_string(reading.score) +
 							" correction=" + (candidate->correction.empty() ? "none" : candidate->correction) +
@@ -1864,6 +1875,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		Diagnostics::SaveImage(result.quality == VisualLocalizationQuality::Rejected
 			? "visual-rejected-minimap" : "visual-candidate-minimap", normalizedMinimap);
 		if (result.candidates.empty() || result.ambiguous || result.quality == VisualLocalizationQuality::Rejected) {
+            coordinateHandoff.ObserveFailure(CoordinateHandoff::VisualSource::Global);
 			std::string rejectionReason;
 			if (result.searchIncomplete) {
                 rejectionReason = "search-budget-exhausted";
@@ -1923,7 +1935,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			else {
 				Diagnostics::Record("visual-localization-revalidate", "accepted=false scene=" +
 					std::to_string(globalCandidate.sceneId) + " request=" + std::to_string(result.requestId));
-				globalVisualConfirmation.Reset();
+				coordinateHandoff.ObserveFailure(CoordinateHandoff::VisualSource::Global);
+                globalVisualConfirmation.Reset();
 				coordinateRecovery.OnRecognitionFailure();
 				RuntimeStatus::SetLocalization("recovering", {}, "小地图候选位置复核失败，正在重试");
 				return false;
@@ -1935,6 +1948,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// can publish a position or seed the big-map search.
 		if (!HasReacquisitionSupport(candidate.affineEstimated, candidate.inlierCount,
 			candidate.inlierRatio, candidate.coveredQuadrants)) {
+            coordinateHandoff.ObserveFailure(CoordinateHandoff::VisualSource::Global);
 			globalVisualConfirmation.Reset();
 			Diagnostics::Record("visual-localization-revalidate", "accepted=false reason=weak-reacquisition-geometry");
 			coordinateRecovery.OnRecognitionFailure();
@@ -1942,10 +1956,12 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		}
 		if (coordinateHandoff.ReadoutActive() || globalVisualConfirmation.Observe(coordinateUiGeneration, snapshotFrameId,
 			{ candidate.sceneId, candidate.mapCenter.x, candidate.mapCenter.y }, now)) {
-			if (coordinateHandoff.ReadoutActive() && !featureRechecked) return false;
+			if (coordinateHandoff.ReadoutActive() && !featureRechecked) {
+                coordinateHandoff.ObserveFailure(CoordinateHandoff::VisualSource::Global); return false;
+            }
             return commitVisualPosition(candidate, true, false, true,
                 featureRechecked ? snapshotCapturedAt : lastVisualRequestCapturedAt,
-                featureRechecked ? snapshotFrameId : result.frameId);
+                featureRechecked ? snapshotFrameId : result.frameId, CoordinateHandoff::VisualSource::Global);
 		}
 		return false;
 	};
@@ -2127,8 +2143,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                 minimapTerrainScale = Scene::MinimapScale(candidate.sceneId);
                 viewportTerrainTrackingGeneration = coordinateUiGeneration;
             }
-			commitVisualPosition(candidate, true);
-			return true;
+            return commitVisualPosition(candidate, true, !candidate.affineEstimated, true,
+                snapshotCapturedAt, snapshotFrameId, CoordinateHandoff::VisualSource::Global);
 		}
 		resumeAwaitingConfirmation = minimapResumePolicy.AwaitingConfirmation();
 		RuntimeStatus::SetLocalization("recovering", {}, supported
@@ -2196,7 +2212,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		submitOcrRead(true);
 	}
 
-    if (!minimapFeaturesReady) { coordinateHandoff.ObserveFailure(); submitOcrRead(true); }
+    if (!minimapFeaturesReady) { coordinateHandoff.ObserveFailure(CoordinateHandoff::VisualSource::Local); submitOcrRead(true); }
     if (!minimapFeaturesReady && tryContourTracking()) {
         outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
         outMinMapRadius = minMapImg.rows / 2.0f;
@@ -2247,7 +2263,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - trackingStart).count()) +
 		" accepted=" + std::to_string(continuityAccepted));
     const bool surfAccepted = continuityAccepted;
-    if (!surfAccepted) { coordinateHandoff.ObserveFailure(); submitOcrRead(true); }
+    if (!surfAccepted) { coordinateHandoff.ObserveFailure(CoordinateHandoff::VisualSource::Local); submitOcrRead(true); }
 	if (!continuityAccepted && now - lastDenseConfirmAt >= std::chrono::milliseconds(250)) {
 		// The position we are standing on is the strongest prior there is: if the feature
 		// pack cannot follow this frame, ask the map pixels whether we are still here.

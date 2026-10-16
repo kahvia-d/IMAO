@@ -308,7 +308,7 @@ private:
 	std::uint64_t nextOcrRequestId = 1;
 	int ocrAttemptsForRecovery = 0;
 	CoordinateRecoveryController::Clock::time_point lastOcrSubmitAt{};
-    CoordinateHandoff coordinateHandoff;
+    CoordinateHandoff coordinateHandoff{std::chrono::milliseconds(750)};
     std::uint64_t lastOcrSubmittedFrame = 0;
     std::chrono::steady_clock::time_point lastPositionCapturedAt{};
     std::chrono::steady_clock::time_point lastVisualRequestCapturedAt{};
