@@ -190,3 +190,4 @@
 | [`CoordinateSignLayout_20261015_zh-Hans.md`](CoordinateSignLayout_20261015_zh-Hans.md) | X 固定起点与 Y 相对间距的漏符号校验、正数检查及删框对照 |
 | [`CoordinateSignRecovery_20261016_zh-Hans.md`](CoordinateSignRecovery_20261016_zh-Hans.md) | 图像确认后补负号、24 张训练来源补充、开发回归及新会话验收冻结 |
 | [`CoordinateIndependentEvaluation_20261016_zh-Hans.md`](CoordinateIndependentEvaluation_20261016_zh-Hans.md) | 新会话 1162 组素材整理、冻结双模型全量回放、错误审计与验收未通过结论 |
+| [`CoordinateTargetedRetrain_20261016_zh-Hans.md`](CoordinateTargetedRetrain_20261016_zh-Hans.md) | 浅色数字与五位数补训、旧数据对照、蓝色耀光续训反例及 CPU ONNX 核验 |
