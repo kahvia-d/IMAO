@@ -12,6 +12,7 @@
 #include "..\Feature\RuntimeFeatureRepository.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateRecoveryController.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\OcrCoordinateGate.h"
+#include "../Coordinate/IdentifyWorldCoordinates/CoordinateHandoff.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateTrust.h"
 #include "..\Coordinate\VisualLocalization\GlobalVisualLocalizer.h"
 #include "MapUiStateController.h"
@@ -307,8 +308,12 @@ private:
 	std::uint64_t nextOcrRequestId = 1;
 	int ocrAttemptsForRecovery = 0;
 	CoordinateRecoveryController::Clock::time_point lastOcrSubmitAt{};
-    // OCR may bound visual searches after repeated failures; text never
-    // publishes a position or supplies scene identity by itself.
+    CoordinateHandoff coordinateHandoff;
+    std::uint64_t lastOcrSubmittedFrame = 0;
+    std::chrono::steady_clock::time_point lastPositionCapturedAt{};
+    std::chrono::steady_clock::time_point lastVisualRequestCapturedAt{};
+    // Own YOLO runs in standby and may publish through the readout gates.
+    // Region identity remains owned by independent visual/map evidence.
     bool ocrAssistEnabled = true;
     // The game's own coordinate readout is the only source that knows the position outright,
     // so while the visual lock is doubtful it may publish one directly - but only through
@@ -356,7 +361,7 @@ private:
     Coordinate drawnMinimapROC{};
     int drawnMinimapSceneId = 0;
     std::chrono::steady_clock::time_point drawnMinimapAt{};
-    OcrCoordinateGate::Gate ocrCoordinateGate;
+    OcrCoordinateGate::Gate ocrCoordinateGate{OcrCoordinateGate::Config{.minimumScore = 0.25f}};
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
 	// initialized.  It is warmed in the background after a visual lock, or

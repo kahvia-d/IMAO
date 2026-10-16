@@ -5,6 +5,7 @@
 #include <Windows.h>
 #include <atomic>
 #include <cstdint>
+#include <chrono>
 #include <opencv2/core.hpp>
 #include <optional>
 #include <string>
@@ -14,6 +15,7 @@ struct CoordinateRecognitionRequest {
     std::uint64_t uiGeneration = 0;
     std::uint64_t frameId = 0;
     std::uint64_t requestId = 0;
+    std::chrono::steady_clock::time_point capturedAt{};
     cv::Mat snapshot;
     RECT clientRect{};
     std::optional<Coordinate> previousTrusted;

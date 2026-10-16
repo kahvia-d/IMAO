@@ -136,6 +136,23 @@ if (Test-Path -LiteralPath $candidateRegistryPath) {
 }
 Test-Requirement (Test-Path -LiteralPath (Join-Path $repoRoot 'IMao-Core\paddleocr_cpp_infer\lib\ppocr.lib')) 'Missing the committed PaddleOCR helper library.'
 
+# The coordinate recognizer is self-contained: reject LFS pointers, missing DLLs
+# and mismatched model bytes before constructing a client tree.
+$coordinateModelRoot = Join-Path $repoRoot 'Assets/models/coordinate-yolo'
+try {
+    $coordinateModel = Get-Content -LiteralPath (Join-Path $coordinateModelRoot 'model.json') -Encoding UTF8 -Raw | ConvertFrom-Json
+    foreach ($coordinateFile in $coordinateModel.files.PSObject.Properties) {
+        $coordinatePath = Join-Path $coordinateModelRoot $coordinateFile.Name
+        Test-Requirement (Test-Path -LiteralPath $coordinatePath) "Missing coordinate YOLO artifact: $($coordinateFile.Name)"
+        if (Test-Path -LiteralPath $coordinatePath) {
+            Test-Requirement ((Get-Item -LiteralPath $coordinatePath).Length -eq $coordinateFile.Value.bytes -and
+                (Get-FileHash -LiteralPath $coordinatePath -Algorithm SHA256).Hash.ToLowerInvariant() -eq $coordinateFile.Value.sha256) "Coordinate YOLO artifact digest mismatch: $($coordinateFile.Name)"
+        }
+    }
+} catch {
+    Test-Requirement $false "Coordinate YOLO model bundle unavailable: $($_.Exception.Message)"
+}
+
 if ($errors.Count -gt 0) {
     Write-Host 'Build prerequisites: FAILED' -ForegroundColor Red
     $errors | ForEach-Object { Write-Host " - $_" -ForegroundColor Red }

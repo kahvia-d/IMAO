@@ -1,0 +1,34 @@
+{
+  "scope": "Native port/export consistency on previously observed inputs, not new-session accuracy.",
+  "referenceFrames": 2012,
+  "checks": {
+    "decoder": {
+      "frames": 2012,
+      "sameXYAndOptionalZ": 2012,
+      "differences": []
+    },
+    "inference": {
+      "frames": 2012,
+      "sameXYAndOptionalZ": 2012,
+      "differences": []
+    },
+    "preprocessing": {
+      "frames": 435,
+      "exactRawAndContrastPixels": 435
+    }
+  },
+  "files": {
+    "reference": {
+      "sha256": "3cad51adc058f04f4289cca0eff7da1a64fd860cf2014113175c7eb27760a8a0"
+    },
+    "decoder": {
+      "sha256": "7bc6afec3c739cb8d76701189aa19e15f45997b33b4aace2a48254609a545f25"
+    },
+    "inference": {
+      "sha256": "04ee242cc9a735d5e32dc62b038f0bcef25615b1119a5f7cb905125960d88abe"
+    },
+    "preprocessing": {
+      "sha256": "8d67dc18bf8287df864843c8481b2eefdf5e9edc36ffebcd3ef6880812f14417"
+    }
+  }
+}

@@ -3,6 +3,7 @@
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/ThreadPriority.h"
 #include "CoordinateReadoutRoi.h"
+#include "YoloCoordinateRecognizer.h"
 #include <include/ocr_rec.h>
 
 #include <algorithm>
@@ -99,13 +100,13 @@ public:
         std::unique_lock lock(mutex_);
         condition_.wait(lock, [this] { return initializationComplete_; });
         error = error_;
-        return recognizer_ != nullptr;
+        return recognizer_ != nullptr || yolo_ != nullptr;
     }
 
     bool Submit(CoordinateRecognitionRequest request) {
         std::scoped_lock lock(mutex_);
         const auto now = std::chrono::steady_clock::now();
-        if (!started_ || !initializationComplete_ || recognizer_ == nullptr ||
+        if (!started_ || !initializationComplete_ || (recognizer_ == nullptr && yolo_ == nullptr) ||
             (lastSubmittedAt_ != std::chrono::steady_clock::time_point{} &&
                 now - lastSubmittedAt_ < kMinimumSubmissionInterval)) return false;
         request.snapshot = request.snapshot.clone();
@@ -129,6 +130,33 @@ public:
         result.uiGeneration = request.uiGeneration;
         result.frameId = request.frameId;
         result.requestId = request.requestId;
+        result.capturedAt = request.capturedAt;
+
+        if (yolo_) {
+            const auto region = YoloCoordinateRecognizer::Region(request.snapshot.size());
+            if (request.snapshot.empty() || region.empty()) {
+                result.status = CoordinateRecognitionStatus::UnsupportedResolution;
+                return result;
+            }
+            const auto started = std::chrono::steady_clock::now();
+            const bool calibrated = request.snapshot.size() == cv::Size(2560,1440) &&
+                region == cv::Rect(32,1405,608,33);
+            std::scoped_lock inferenceLock(inferenceMutex_);
+            const auto selected = yolo_->Recognize(request.snapshot(region), calibrated);
+            result.inferenceMilliseconds = MillisecondsSince(started);
+            if (!selected.is_null()) {
+                CoordinateCandidate candidate;
+                candidate.x = selected["xy"][0]; candidate.y = selected["xy"][1];
+                candidate.z = selected["z"].is_null() ? 0 : selected["z"].get<int>();
+                candidate.modelScore = selected["xyScore"];
+                candidate.rawText = selected["textXY"];
+                result.candidates.push_back(std::move(candidate));
+            }
+            result.status = result.candidates.empty() ? CoordinateRecognitionStatus::NoCandidate : CoordinateRecognitionStatus::Ready;
+            Diagnostics::Record("coordinate-recognition", "model=own-yolo candidates=" +
+                std::to_string(result.candidates.size()) + " inferenceMs=" + std::to_string(result.inferenceMilliseconds));
+            return result;
+        }
 
         cv::Rect region;
         std::string rejection;
@@ -291,6 +319,7 @@ public:
         {
             std::scoped_lock inferenceLock(inferenceMutex_);
             recognizer_.reset();
+            yolo_.reset();
         }
         {
             std::scoped_lock lock(mutex_);
@@ -309,8 +338,13 @@ private:
         const std::string& requestedDictionaryPath) {
         const auto start = std::chrono::steady_clock::now();
         std::unique_ptr<CRNNRecognizer> recognizer;
+        std::unique_ptr<YoloCoordinateRecognizer> yolo;
         std::string failure;
         try {
+            if (std::filesystem::path(modelDirectory).filename() == "coordinate-yolo") {
+                yolo = std::make_unique<YoloCoordinateRecognizer>(std::filesystem::path(modelDirectory));
+                if (stopToken.stop_requested()) throw std::runtime_error("YOLO initialization cancelled");
+            } else {
             const unsigned int hardwareThreads = std::max(1u, std::thread::hardware_concurrency());
             const int inferenceThreads = std::clamp(static_cast<int>(hardwareThreads / 2), 2, 4);
             const std::string dictionaryPath = requestedDictionaryPath.empty()
@@ -325,17 +359,20 @@ private:
             std::vector<float> scores(1);
             std::vector<double> times{ 0.0, 0.0, 0.0 };
             recognizer->Run({ blank }, texts, scores, times);
+            }
         }
         catch (const std::exception& exception) {
             failure = exception.what();
             recognizer.reset();
+            yolo.reset();
         }
 
         bool ready = false;
         {
             std::scoped_lock inferenceLock(inferenceMutex_);
             recognizer_ = std::move(recognizer);
-            ready = recognizer_ != nullptr;
+            yolo_ = std::move(yolo);
+            ready = recognizer_ != nullptr || yolo_ != nullptr;
         }
         {
             std::scoped_lock lock(mutex_);
@@ -374,6 +411,7 @@ private:
             result.uiGeneration = request.uiGeneration;
             result.frameId = request.frameId;
             result.requestId = request.requestId;
+            result.capturedAt = request.capturedAt;
             result.status = CoordinateRecognitionStatus::NoCandidate;
             try {
                 result = Recognize(request);
@@ -400,6 +438,7 @@ private:
     std::jthread initThread_;
     std::jthread workerThread_;
     std::unique_ptr<CRNNRecognizer> recognizer_;
+    std::unique_ptr<YoloCoordinateRecognizer> yolo_;
     bool started_ = false;
     bool initializationComplete_ = false;
     std::string error_;

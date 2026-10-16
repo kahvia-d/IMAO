@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "model": "IMao own flight coordinate YOLO",
+  "trainingSource": "Own 164-source-image flight trial; official generic YOLO11n initialization",
+  "sourceWeightsSHA256": "2a917b5989e02c87bd6b913d1f91eb2eeb3427d0581a2c35e1691224bfdb3750",
+  "runtime": "ONNX Runtime CPU 1.31.0, API23",
+  "classes": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "-",
+    ",",
+    "+",
+    ":"
+  ],
+  "inputShape": [
+    1,
+    3,
+    64,
+    896
+  ],
+  "confidence": 0.25,
+  "nmsIoU": 0.45,
+  "maxDet": 256,
+  "files": {
+    "coordinate.onnx": {
+      "sha256": "f5abe76f9e9a982c502328a8e087525399c6a57074dd251a8835771686d561e4",
+      "bytes": 10430275
+    },
+    "onnxruntime.dll": {
+      "sha256": "aa7737cc5c987286f09f6f12304fa786ea697b11b4ca7ab59a027ff4ce343a9c",
+      "bytes": 19288928
+    }
+  }
+}
