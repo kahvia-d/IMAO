@@ -192,3 +192,4 @@
 | [`CoordinateIndependentEvaluation_20261016_zh-Hans.md`](CoordinateIndependentEvaluation_20261016_zh-Hans.md) | 新会话 1162 组素材整理、冻结双模型全量回放、错误审计与验收未通过结论 |
 | [`CoordinateTargetedRetrain_20261016_zh-Hans.md`](CoordinateTargetedRetrain_20261016_zh-Hans.md) | 浅色数字与五位数补训、旧数据对照、蓝色耀光续训反例及 CPU ONNX 核验 |
 | [`CoordinateFlightEffectRetrain_20261016_zh-Hans.md`](CoordinateFlightEffectRetrain_20261016_zh-Hans.md) | 飞行特效 435 组素材、25 来源补训与留出回放、旧样本退步及批量／单张边界诊断 |
+| [`CoordinateRegressionRecovery_20261016_zh-Hans.md`](CoordinateRegressionRecovery_20261016_zh-Hans.md) | 字符优势互证与自有旧权重后备、严格基线退步恢复、单张 CPU/GPU 一致性与额外开销 |
