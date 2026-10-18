@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoordinateCandidate.h"
+#include "../../Runtime/LocalizationSignal.h"
 
 #include <Windows.h>
 #include <atomic>
@@ -25,6 +26,9 @@ struct CoordinateRecognitionRequest {
     // 调用方显式打开：运行时在没有新鲜锁的帧上打开，诊断工具保持关闭——它存在的意义就是分别
     // 看清每一条路线读出了什么。
     bool crossCheckRoutes = false;
+    std::chrono::steady_clock::time_point submittedAt{};
+    std::weak_ptr<LocalizationSignal> completionSignal;
+    bool deadlineScheduled = false;
 };
 
 class IdentifyWorldCoordinates {
@@ -34,6 +38,7 @@ public:
     static bool AwaitReady(std::string& error);
     static bool Submit(CoordinateRecognitionRequest request);
     static bool TryTakeLatestResult(CoordinateRecognitionResult& result);
+    static bool HasLatestResult();
     static CoordinateRecognitionResult RecognizeCropForDiagnostics(const cv::Mat& coordinateCrop,
         std::optional<Coordinate> previousTrusted = std::nullopt, bool useTopHatRoute = false);
     // Test support for a complete supported-resolution game capture.  Runtime

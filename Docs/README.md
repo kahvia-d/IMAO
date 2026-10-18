@@ -195,3 +195,15 @@
 | [`CoordinateRegressionRecovery_20261016_zh-Hans.md`](CoordinateRegressionRecovery_20261016_zh-Hans.md) | 字符优势互证与自有旧权重后备、严格基线退步恢复、单张 CPU/GPU 一致性与额外开销 |
 | [`CoordinateYoloIntegration_20261016_zh-Hans.md`](CoordinateYoloIntegration_20261016_zh-Hans.md) | 自训 YOLO 原生接入、SURF/OCR 待命与交接初版、构建和回放验收 |
 | [`CoordinateHandoffStability_20261016_zh-Hans.md`](CoordinateHandoffStability_20261016_zh-Hans.md) | 实机来源切回稳定期、严格像素配准恢复与失败诊断 |
+| [`PixelAnchorHandoffRecovery_20261018_zh-Hans.md`](PixelAnchorHandoffRecovery_20261018_zh-Hans.md) | 最近实测截图恢复、局部/全局来源健康分离、时序保护与掉绘时长诊断 |
+| [`MinimapReadoutProjection_20261018_zh-Hans.md`](MinimapReadoutProjection_20261018_zh-Hans.md) | 固定朝向小地图的可信读数投影、原始读数时效、统一标记/路线中心与像素路径隔离 |
+| [`MinimapReadoutPublication_20261018_zh-Hans.md`](MinimapReadoutPublication_20261018_zh-Hans.md) | OCR绘制快照发布脱离SURF恢复状态、旧锚点替代保护与完整发布决策回归 |
+| [`ReadoutContinuity_20261018_zh-Hans.md`](ReadoutContinuity_20261018_zh-Hans.md) | 已提交历史位置校验断读恢复、接管150ms请求与视觉恢复前提前发布布局 |
+
+| [`ReadoutMotion_20261018_zh-Hans.md`](ReadoutMotion_20261018_zh-Hans.md) | OCR优先消费与100ms接管调度、绘制线程受限运动及完整显示资格缺口诊断 |
+
+| [`ReadoutJitterFix_20261018_zh-Hans.md`](ReadoutJitterFix_20261018_zh-Hans.md) | 新OCR读数交接连续性、短窗估速与量化/延迟/停止/反向回归 |
+
+| [`ReadoutDirectTest_20261018_zh-Hans.md`](ReadoutDirectTest_20261018_zh-Hans.md) | 完全关闭OCR显示预测和平滑的实机对照、零补偿及有效期回归 |
+
+- [OCR 接管调度稳定性（2026-10-18）](ReadoutScheduling_20261018_zh-Hans.md)

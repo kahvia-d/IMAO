@@ -15,6 +15,16 @@ struct CapturedFrame {
     std::chrono::milliseconds maximumAge{500};
 };
 
+// Session-only evidence for the already projected, north-up minimap layout.
+// Its clock belongs to an accepted readout, never to a newer screenshot.
+struct MinimapReadoutProjection {
+    bool active = false;
+    int scene = 0;
+    std::uint64_t generation = 0, fixFrameId = 0;
+    std::chrono::steady_clock::time_point capturedAt{};
+    double terrainScale = 0.0;
+};
+
 struct OverlayFrame {
     uint64_t frameId = 0;
     RECT clientRect{};
@@ -31,6 +41,7 @@ struct OverlayFrame {
     ItemMarkerFrame mapMarkers, minimapMarkers;
     std::vector<RouteDatas> mapRoutes, minimapRoutes;
     std::vector<FreeRouteMarker> minimapFreeMarkers;
+    MinimapReadoutProjection minimapReadout;
 
     bool Fresh(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) const {
         return frameId != 0 && now >= capturedAt && now - capturedAt < maximumAge;
@@ -45,7 +56,10 @@ inline bool CanRetainOverlayAnchor(const OverlayFrame& previous, const OverlayFr
     return previous.Fresh(now) && previous.focused && pending.focused && !previous.motionImage.empty() &&
         previous.clientRect.right == pending.clientRect.right && previous.clientRect.bottom == pending.clientRect.bottom &&
         ((mapRequested && previous.mapVisible && previous.mapMotion.generation == pending.mapMotion.generation) ||
-            (minimapRequested && previous.minimapVisible && previous.playerScene == pending.playerScene));
+            // Readout publication is authorized by its own original fix. Never
+            // replace a rejected proof with a cached layout from another fix.
+            (minimapRequested && !pending.minimapReadout.active && previous.minimapVisible &&
+                previous.playerScene == pending.playerScene));
 }
 
 // Input consumers use the same geometry the renderer actually displayed.

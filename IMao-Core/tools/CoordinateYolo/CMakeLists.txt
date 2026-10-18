@@ -24,9 +24,21 @@ target_compile_options(CoordinateYoloDecoderTests PRIVATE /source-charset:utf-8 
 target_link_libraries(CoordinateYoloDecoderTests PRIVATE ${OpenCV_LIBS})
 add_test(NAME CoordinateYoloDecoderTests COMMAND CoordinateYoloDecoderTests)
 add_executable(CoordinateContinuityTests "${ROOT}/IMao-Core/tests/CoordinateContinuityTests.cpp"
+    "${ROOT}/IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateRecoveryController.cpp"
     "${ROOT}/IMao-Core/src/App/ScreenMotionTracker.cpp")
 target_include_directories(CoordinateContinuityTests PRIVATE "${ROOT}/IMao-Core/src" "${ROOT}/IMao-Core/packages/nlohmann" ${OpenCV_INCLUDE_DIRS})
 target_compile_definitions(CoordinateContinuityTests PRIVATE NOMINMAX)
 target_compile_options(CoordinateContinuityTests PRIVATE /source-charset:utf-8 /execution-charset:utf-8 /EHsc /bigobj)
 target_link_libraries(CoordinateContinuityTests PRIVATE ${OpenCV_LIBS})
 add_test(NAME CoordinateContinuityTests COMMAND CoordinateContinuityTests)
+
+add_executable(ReadoutMotionTests "${ROOT}/IMao-Core/tests/ReadoutMotionTests.cpp")
+target_include_directories(ReadoutMotionTests PRIVATE "${ROOT}/IMao-Core/src" "${ROOT}/IMao-Core/packages/nlohmann" ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(ReadoutMotionTests PRIVATE ${OpenCV_LIBS})
+target_compile_definitions(ReadoutMotionTests PRIVATE NOMINMAX)
+add_test(NAME ReadoutMotionTests COMMAND ReadoutMotionTests)
+
+add_executable(LocalizationSchedulingTests "${ROOT}/IMao-Core/tests/LocalizationSchedulingTests.cpp")
+target_include_directories(LocalizationSchedulingTests PRIVATE "${ROOT}/IMao-Core/src")
+target_compile_definitions(LocalizationSchedulingTests PRIVATE NOMINMAX)
+add_test(NAME LocalizationSchedulingTests COMMAND LocalizationSchedulingTests)

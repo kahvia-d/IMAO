@@ -12,6 +12,8 @@
 #include "..\Feature\RuntimeFeatureRepository.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateRecoveryController.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\OcrCoordinateGate.h"
+#include "../Runtime/ReadoutWorkSchedule.h"
+#include "ReadoutVisualWorker.h"
 #include "../Coordinate/IdentifyWorldCoordinates/CoordinateHandoff.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateTrust.h"
 #include "..\Coordinate\VisualLocalization\GlobalVisualLocalizer.h"
@@ -99,6 +101,7 @@ public:
 
 	void StopTasks() {
 		allThreadStopFlag = true;
+        localizationSignal->NotifyResult();
         GamepadContextSnapshot::Shared().End(coordinateSessionId);
         overlayFrames.Publish({});
         overlayVisibility.Publish({});
@@ -111,6 +114,7 @@ public:
 		if (detectGameStateThread.joinable()) detectGameStateThread.join();
 		if (keyMonitoringThread.joinable()) keyMonitoringThread.join();
 
+        readoutVisualWorker.Shutdown();
 		featureResources.reset();
 		std::vector<cv::KeyPoint>().swap(nearPlayerMapKeypoints);
 		nearPlayerMapDescriptors.release();
@@ -205,6 +209,8 @@ public:
 		enabledMinMapShowItem = setValue;
 	}
 
+    static bool MinimapMarkersEnabled() { return enabledMinMapShowItem.load(); }
+
 private:
 	std::atomic_bool allThreadStopFlag = false;
 	std::thread mainThread;
@@ -274,6 +280,8 @@ private:
     std::uint64_t routeFixSequence = 0, routeFixContinuity = 0;
     std::chrono::steady_clock::time_point routeFixCapturedAt{};
     bool routeVisualFix = false;
+    std::chrono::steady_clock::time_point lastReadoutAcceptedAt{};
+    std::uint64_t lastReadoutPublishedFix = 0;
     double minimapTerrainScale = kNominalMinimapTerrainScale;
 	// A viewport is a search range only; it never publishes player coordinates.
 	std::optional<MinimapResumeHint> viewportResumeHint;
@@ -308,6 +316,15 @@ private:
 	std::uint64_t nextOcrRequestId = 1;
 	int ocrAttemptsForRecovery = 0;
 	CoordinateRecoveryController::Clock::time_point lastOcrSubmitAt{};
+    std::shared_ptr<LocalizationSignal> localizationSignal = std::make_shared<LocalizationSignal>();
+    ReadoutVisualWorker readoutVisualWorker{localizationSignal};
+    std::optional<VisualLocalizationCandidate> pendingReadoutGlobalCandidate;
+    std::uint64_t pendingReadoutGlobalRequest = 0, latestReadoutGlobalRequest = 0;
+    std::uint64_t lastReadoutVisualSubmittedFrame = 0;
+    std::optional<CapturedFrame> readoutVisualAnchor;
+    std::uint64_t readoutVisualAnchorGeneration = 0;
+    bool localizationServiceOnly = false;
+    ReadoutWorkSchedule readoutWorkSchedule;
     CoordinateHandoff coordinateHandoff{std::chrono::milliseconds(750)};
     std::uint64_t lastOcrSubmittedFrame = 0;
     std::chrono::steady_clock::time_point lastPositionCapturedAt{};

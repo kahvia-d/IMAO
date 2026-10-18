@@ -135,3 +135,14 @@ public:
 
     static std::string_view QualityName(VisualLocalizationQuality quality);
 };
+
+// Owned by one background probe thread. Separate FLANN/cache state prevents
+// a local revalidation from holding the global runtime's coordination mutex.
+class VisualTrackingContext {
+public:
+ explicit VisualTrackingContext(std::shared_ptr<const RuntimeFeatureResources> resources);
+ ~VisualTrackingContext();
+ bool Track(const cv::Mat& normalized,const ImageFeatureData& features,int scene,
+  const Coordinate& center,VisualLocalizationCandidate& result,double radius=0,double fixedScale=0);
+private:struct State;std::unique_ptr<State> state_;
+};

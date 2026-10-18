@@ -40,6 +40,7 @@ struct CoordinateRecognitionResult {
     double preprocessingMilliseconds = 0.0;
     double inferenceMilliseconds = 0.0;
     double parsingMilliseconds = 0.0;
+    std::chrono::steady_clock::time_point submittedAt{}, completedAt{};
 };
 
 class CoordinateCandidateParser {

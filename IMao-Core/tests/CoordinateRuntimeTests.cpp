@@ -19,12 +19,18 @@ int main(int argc,char**argv) {
         CoordinateRecognitionRequest request;
         request.sessionId=13;request.uiGeneration=7;request.frameId=42;request.requestId=99;
         request.capturedAt=std::chrono::steady_clock::now();const auto captured=request.capturedAt;
+        auto signal=std::make_shared<LocalizationSignal>();
+        const auto observed=signal->Snapshot();
+        request.completionSignal=signal;
         request.snapshot=frame;require(IdentifyWorldCoordinates::Submit(std::move(request)));
         // Submit owns pixels even if the capture buffer is immediately reused.
         frame.setTo(cv::Scalar::all(0));
+        require(signal->WaitUntil(observed,std::chrono::steady_clock::now()+5s,false));
+        require(IdentifyWorldCoordinates::HasLatestResult());
         CoordinateRecognitionResult result;bool arrived=false;
         for(int i=0;i<1000&&!arrived;++i){arrived=IdentifyWorldCoordinates::TryTakeLatestResult(result);if(!arrived)std::this_thread::sleep_for(5ms);}
         require(arrived&&result.sessionId==13&&result.uiGeneration==7&&result.frameId==42&&result.requestId==99&&result.capturedAt==captured);
+        require(!IdentifyWorldCoordinates::HasLatestResult());
         YoloCoordinateRecognizer direct(model);const auto selected=direct.Recognize(crop,true);
         require(!selected.is_null()&&result.status==CoordinateRecognitionStatus::Ready&&result.candidates.size()==1);
         require(result.candidates[0].x==selected["xy"][0]&&result.candidates[0].y==selected["xy"][1]);

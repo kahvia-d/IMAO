@@ -3,6 +3,7 @@
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/ThreadPriority.h"
 #include "CoordinateReadoutRoi.h"
+#include "../../Runtime/ReadoutWorkSchedule.h"
 #include "YoloCoordinateRecognizer.h"
 #include <include/ocr_rec.h>
 
@@ -22,7 +23,7 @@ using PaddleOCR::CRNNRecognizer;
 std::atomic_bool IdentifyWorldCoordinates::isLoaded = false;
 
 namespace {
-constexpr auto kMinimumSubmissionInterval = std::chrono::milliseconds(150);
+constexpr auto kMinimumSubmissionInterval = ReadoutWorkSchedule::SubmissionInterval();
 
 double MillisecondsSince(std::chrono::steady_clock::time_point start) {
     return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
@@ -108,13 +109,16 @@ public:
         const auto now = std::chrono::steady_clock::now();
         if (!started_ || !initializationComplete_ || (recognizer_ == nullptr && yolo_ == nullptr) ||
             (lastSubmittedAt_ != std::chrono::steady_clock::time_point{} &&
-                now - lastSubmittedAt_ < kMinimumSubmissionInterval)) return false;
+                now - lastSubmittedAt_ < (request.deadlineScheduled ? std::chrono::milliseconds(50) : kMinimumSubmissionInterval))) return false;
         request.snapshot = request.snapshot.clone();
+        request.submittedAt = now;
         pendingRequest_ = std::move(request);
         lastSubmittedAt_ = now;
         condition_.notify_all();
         return true;
     }
+
+    bool HasResult() { std::scoped_lock lock(mutex_); return latestResult_.has_value(); }
 
     bool TakeResult(CoordinateRecognitionResult& result) {
         std::scoped_lock lock(mutex_);
@@ -427,8 +431,11 @@ private:
             }
             {
                 std::scoped_lock lock(mutex_);
+                result.submittedAt = request.submittedAt;
+                result.completedAt = std::chrono::steady_clock::now();
                 latestResult_ = std::move(result);
             }
+            if (auto signal = request.completionSignal.lock()) signal->NotifyResult();
         }
     }
 
@@ -531,3 +538,5 @@ bool IdentifyWorldCoordinates::IdentifyCoordinateFromSnapshot(const cv::Mat& sna
     if (!GetClientRect(hwnd, &rect)) return false;
     return IdentifyCoordinateFromSnapshot(snapshot, output, rect);
 }
+
+bool IdentifyWorldCoordinates::HasLatestResult() { return Runtime().HasResult(); }
