@@ -482,6 +482,9 @@ int ImGuiOverWindows::start()
     std::uint64_t attachedFrames = 0, trackingMisses = 0, heldMinimapFrames = 0;
     std::uint64_t mapRequestedFrames = 0, mapAttachedFrames = 0, mapStaleFrames = 0,
         mapContextRejectedFrames = 0, mapVisibilityRejectedFrames = 0, mapAttachRejectedFrames = 0;
+    std::uint64_t minimapRequestedFrames = 0, minimapAttachedFrames = 0, minimapHeldFrames = 0,
+        minimapStaleFrames = 0, minimapContextRejectedFrames = 0,
+        minimapVisibilityRejectedFrames = 0, minimapAttachRejectedFrames = 0;
     // 最近一次**实测**的小地图屏幕变换：配准失败的那一帧复用它（最多 150 毫秒），
     // 只影响叠加层的贴合，不参与任何位置计算。
     OverlayScreenTransform lastMinimapMotion;
@@ -788,6 +791,13 @@ int ImGuiOverWindows::start()
                     " mapContextRejectedFrames=" + std::to_string(mapContextRejectedFrames) +
                     " mapVisibilityRejectedFrames=" + std::to_string(mapVisibilityRejectedFrames) +
                     " mapAttachRejectedFrames=" + std::to_string(mapAttachRejectedFrames) +
+                    " minimapRequestedFrames=" + std::to_string(minimapRequestedFrames) +
+                    " minimapAttachedFrames=" + std::to_string(minimapAttachedFrames) +
+                    " minimapHeldFrames=" + std::to_string(minimapHeldFrames) +
+                    " minimapStaleFrames=" + std::to_string(minimapStaleFrames) +
+                    " minimapContextRejectedFrames=" + std::to_string(minimapContextRejectedFrames) +
+                    " minimapVisibilityRejectedFrames=" + std::to_string(minimapVisibilityRejectedFrames) +
+                    " minimapAttachRejectedFrames=" + std::to_string(minimapAttachRejectedFrames) +
                     " inputGapMs=" + std::to_string(attachedGapMs()) +
                     " boundsMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxBounds).count()) +
                     " trackMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxTrack).count()) +
@@ -835,6 +845,8 @@ int ImGuiOverWindows::start()
                 attachedFrames = trackingMisses = 0; heldMinimapFrames = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;
                 mapRequestedFrames = mapAttachedFrames = mapStaleFrames = mapContextRejectedFrames =
                     mapVisibilityRejectedFrames = mapAttachRejectedFrames = 0;
+                minimapRequestedFrames = minimapAttachedFrames = minimapHeldFrames = minimapStaleFrames =
+                    minimapContextRejectedFrames = minimapVisibilityRejectedFrames = minimapAttachRejectedFrames = 0;
                 syncTotalMs = newFrameTotalMs = buildTotalMs = renderTotalMs = hashTotalMs = presentTotalMs = 0;
                 syncCalls = renderCalls = hashCalls = presentCalls = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();
@@ -845,6 +857,7 @@ int ImGuiOverWindows::start()
             presented.capture = capture;
             const bool sourceFresh = frame->Fresh();
             if (frame->mapVisible) ++mapRequestedFrames;
+            if (frame->minimapVisible) ++minimapRequestedFrames;
             if (sourceFresh && DrawItemBase::IsMarkerDisplayContext(h_window) &&
                 frame->clientRect.right == GameRect.right && frame->clientRect.bottom == GameRect.bottom) {
                 if (frame->mapVisible && visibility->AllowsMap(frame->frameId)) {
@@ -886,11 +899,13 @@ int ImGuiOverWindows::start()
                         drewMinimap = true;
                         presented.motion = useMotion;
                         if (attached) {
+                            ++minimapAttachedFrames;
                             ++attachedFrames;
                             lastMinimapMotion = motion;
                             lastMinimapMotionAt = motionNow;
-                        } else ++heldMinimapFrames;
+                        } else { ++heldMinimapFrames; ++minimapHeldFrames; }
                     } else {
+                        ++minimapAttachRejectedFrames;
                         ++trackingMisses;
                         // An unattached frame draws neither markers nor route.  This is the only
                         // record of that (the marker-count record is gated on the screenshot
@@ -917,10 +932,15 @@ int ImGuiOverWindows::start()
                     }
                 }
                 else if (frame->mapVisible) ++mapVisibilityRejectedFrames;
+                else if (frame->minimapVisible) ++minimapVisibilityRejectedFrames;
             }
             else if (frame->mapVisible) {
                 if (!sourceFresh) ++mapStaleFrames;
                 else ++mapContextRejectedFrames;
+            }
+            else if (frame->minimapVisible) {
+                if (!sourceFresh) ++minimapStaleFrames;
+                else ++minimapContextRejectedFrames;
             }
             if (!mapEligible) mapMotion.Reset();
             if (!drewMap) DrawMarkerInteraction::Clear();

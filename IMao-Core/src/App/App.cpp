@@ -320,6 +320,7 @@ winrt::IAsyncAction App::Start() {
 	int cycleTime = 100;
     uint64_t lastLocalizedFrame = 0;
 	auto lastMapCycleReport = std::chrono::steady_clock::time_point{};
+    auto lastMinimapCycleReport = std::chrono::steady_clock::time_point{};
 	// The in-game status bar prints this number, so publishing it per frame made the overlay's own
 	// frame content change on every iteration and defeated OverlayPacing::ShouldPresentFrame: the
 	// window was then re-presented - and the whole screen recomposited for the game - even when
@@ -338,6 +339,8 @@ winrt::IAsyncAction App::Start() {
         const auto cycleStarted = std::chrono::steady_clock::now();
         double mapPredictMs = 0.0, mapResultMs = 0.0, mapSearchMs = 0.0, mapFilterMs = 0.0;
         bool measuredMapCycle = false;
+        double minimapPositionMs = 0.0, minimapFilterMs = 0.0;
+        bool minimapPositionKnown = false, minimapFilterRan = false;
         lastLocalizedFrame = snapshotFrameId = captured.frameId;
         snapshotCapturedAt = captured.capturedAt;
         rect = captured.clientRect;
@@ -502,7 +505,11 @@ winrt::IAsyncAction App::Start() {
 			imguiWindowsHeight = minMapBottomPoint.y + 10;//在绘制小地图区域 缩写imgui透明窗口范围
 			imguiWindowsWidth = rect.right * 0.3;
 
-			if (co_await GetMinMapPlayerROC(currentSnapshot, playerROC, minMapRadius)) {
+            const auto minimapPositionStarted = std::chrono::steady_clock::now();
+            minimapPositionKnown = co_await GetMinMapPlayerROC(currentSnapshot, playerROC, minMapRadius);
+            minimapPositionMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - minimapPositionStarted).count();
+			if (minimapPositionKnown) {
 				// 影子预测：不改任何行为，只把"用正确坐标记录外推能有多准"测出来。
 				// 外推 0.5/1/2 秒的残差决定下一步要不要真的用预测替代冻结的位置。
 				if (coordinateTrust.HasScene()) {
@@ -629,7 +636,11 @@ winrt::IAsyncAction App::Start() {
 						" settleGap=" + std::to_string(drawnGap));
 				}
 				if (enabledMinMapShowItem && renderTrusted) {
+                    const auto minimapFilterStarted = std::chrono::steady_clock::now();
 					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, drawnMinimapROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
+                    minimapFilterMs = std::chrono::duration<double, std::milli>(
+                        std::chrono::steady_clock::now() - minimapFilterStarted).count();
+                    minimapFilterRan = true;
 				}
 				else {
 					DrawItemOnMinMap::ClearNearItemsData();
@@ -661,6 +672,26 @@ winrt::IAsyncAction App::Start() {
         const auto publishStarted = std::chrono::steady_clock::now();
 		PublishOverlayFrame(captured, renderedViewport);
         const auto publishedAt = std::chrono::steady_clock::now();
+        if (coordinateVisible && publishedAt - lastMinimapCycleReport >= std::chrono::seconds(2)) {
+            lastMinimapCycleReport = publishedAt;
+            const auto published = overlayFrames.Read();
+            Diagnostics::Record("minimap-overlay-cycle", "frame=" + std::to_string(captured.frameId) +
+                " publishedFrame=" + std::to_string(published->frameId) +
+                " scene=" + std::to_string(playerCurrentSceneId) +
+                " positionKnown=" + std::to_string(minimapPositionKnown) +
+                " positionMs=" + std::to_string(minimapPositionMs) +
+                " filterRan=" + std::to_string(minimapFilterRan) +
+                " filterMs=" + std::to_string(minimapFilterMs) +
+                " publishMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - publishStarted).count()) +
+                " cycleMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - cycleStarted).count()) +
+                " captureAgeAtStartMs=" + std::to_string(std::chrono::duration<double, std::milli>(cycleStarted - captured.capturedAt).count()) +
+                " publishedAgeMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - published->capturedAt).count()) +
+                " maximumAgeMs=" + std::to_string(published->maximumAge.count()) +
+                " updateMinimapMs=" + std::to_string(updateMinMapDataCycleTime.load()) +
+                " minimapVisible=" + std::to_string(published->minimapVisible) +
+                " reliable=" + std::to_string(published->minimapMotion.reliable) +
+                " markers=" + std::to_string(published->minimapMarkers.markers.size()));
+        }
         if (measuredMapCycle && publishedAt - lastMapCycleReport >= std::chrono::seconds(2)) {
             lastMapCycleReport = publishedAt;
             // Sample one completed cycle, including mutex waits. The asynchronous
