@@ -1179,3 +1179,15 @@ std::string_view GlobalVisualLocalizer::QualityName(VisualLocalizationQuality qu
 }
 
 void GlobalVisualLocalizer::CancelPending() { Runtime().CancelPending(); }
+
+struct VisualTrackingContext::State {
+ explicit State(std::shared_ptr<const RuntimeFeatureResources> resources):engine(std::move(resources)){}
+ VisualLocalizationEngine engine;
+};
+VisualTrackingContext::VisualTrackingContext(std::shared_ptr<const RuntimeFeatureResources> resources)
+ :state_(std::make_unique<State>(std::move(resources))){}
+VisualTrackingContext::~VisualTrackingContext()=default;
+bool VisualTrackingContext::Track(const cv::Mat& normalized,const ImageFeatureData& features,int scene,
+ const Coordinate& center,VisualLocalizationCandidate& result,double radius,double fixedScale){
+ return state_->engine.Track(normalized.size(),features,scene,center,result,radius,{},fixedScale);
+}

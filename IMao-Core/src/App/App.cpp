@@ -4,6 +4,8 @@
 #include "../Runtime/GamepadWorldActions.h"
 #include "../Runtime/GuideHotkeyRouting.h"
 #include "../Runtime/LayeredMapState.h"
+#include "../Runtime/MinimapCoordinateLayout.h"
+#include "../Runtime/ReadoutMotion.h"
 #include "..\Coordinate\locationCalculator\RelativeCoordinates.h"
 #include "../Coordinate/VisualLocalization/RecoveryPolicy.h"
 #include "..\Coordinate\locationCalculator\ScreenCoordinate.h"
@@ -253,6 +255,7 @@ void App::Thread_Capture() {
                 if (frameId == 0) ++unpublishedCaptures;
                 else {
                     capturedFrames.Publish({frameId, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250)});
+                    localizationSignal->NotifyCapture();
                     ++published;
                     // Once per session, after a real frame has travelled the whole capture path: this is the
                     // measurement that separates "the tool costs this much to exist" from "it costs this much
@@ -319,6 +322,7 @@ winrt::IAsyncAction App::Start() {
 	auto startTime = std::chrono::high_resolution_clock::now();
 	int cycleTime = 100;
     uint64_t lastLocalizedFrame = 0;
+	auto lastMapCycleReport = std::chrono::steady_clock::time_point{};
 	// The in-game status bar prints this number, so publishing it per frame made the overlay's own
 	// frame content change on every iteration and defeated OverlayPacing::ShouldPresentFrame: the
 	// window was then re-presented - and the whole screen recomposited for the game - even when
@@ -327,13 +331,32 @@ winrt::IAsyncAction App::Start() {
 	long long frameWindowSamples = 0;
 	auto frameWindowStartedAt = std::chrono::steady_clock::now();
 	while (!allThreadStopFlag) {
+        const auto wakeVersion = localizationSignal->Snapshot();
         const auto latest = capturedFrames.Read();
-        if (latest->image.empty() || latest->frameId == lastLocalizedFrame) {
+        const auto serviceNow = CoordinateHandoff::Clock::now();
+        const bool newCapture = latest->frameId != lastLocalizedFrame;
+        const bool serviceContext = lastCoordinateVisible && !isOpenMap.load() && isExistMinMap.load() &&
+            isWindowFocused.load() && latest->frameId != 0 && serviceNow >= latest->capturedAt &&
+            serviceNow - latest->capturedAt < latest->maximumAge;
+        const bool resultReady = serviceContext &&
+            (IdentifyWorldCoordinates::HasLatestResult() || readoutVisualWorker.HasResult());
+        const bool timerReady = serviceContext && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight &&
+            latest->frameId != lastOcrSubmittedFrame && serviceNow - lastOcrSubmitAt >= std::chrono::milliseconds(50) &&
+            readoutWorkSchedule.SubmissionDue(serviceNow, ReadoutWorkSchedule::SubmissionInterval());
+        if (latest->image.empty() || (!newCapture && !resultReady && !timerReady)) {
             if (latest->image.empty()) overlayFrames.Publish({});
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            auto deadline = serviceNow + std::chrono::milliseconds(100);
+            if (serviceContext && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && latest->frameId != lastOcrSubmittedFrame)
+                deadline = std::max(lastOcrSubmitAt + std::chrono::milliseconds(50),
+                    readoutWorkSchedule.NextSubmission(serviceNow, ReadoutWorkSchedule::SubmissionInterval()));
+            localizationSignal->WaitUntil(wakeVersion, deadline);
             continue;
         }
+        localizationServiceOnly = !newCapture;
         const CapturedFrame captured = *latest;
+        const auto cycleStarted = std::chrono::steady_clock::now();
+        double mapPredictMs = 0.0, mapResultMs = 0.0, mapSearchMs = 0.0, mapFilterMs = 0.0;
+        bool measuredMapCycle = false;
         lastLocalizedFrame = snapshotFrameId = captured.frameId;
         snapshotCapturedAt = captured.capturedAt;
         rect = captured.clientRect;
@@ -359,6 +382,8 @@ winrt::IAsyncAction App::Start() {
 		// and drawing only consume its latest accepted viewport or a lightweight
 		// frame-to-frame prediction; they never wait for SURF matching.
 		if (isOpenMap.load() and enabledMapShowItem and captureFresh and isWindowFocused.load()) {
+            measuredMapCycle = true;
+            const auto predictStarted = std::chrono::steady_clock::now();
 			RuntimeStatus::SetLocalization("mapLocating", {}, "正在识别大地图视口");
 			imguiWindowsHeight = rect.bottom;
 			imguiWindowsWidth = rect.right;
@@ -389,12 +414,18 @@ winrt::IAsyncAction App::Start() {
 				mapViewportPredictor.GetPrediction(prediction);
 				observedMapViewportRevision = prediction.revision;
 			}
+            mapPredictMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - predictStarted).count();
+            const auto resultStarted = std::chrono::steady_clock::now();
 			ProcessMapViewportResult(currentSnapshot);
 			{
 				std::scoped_lock lock(mapViewportMutex);
 				mapViewportPredictor.GetPrediction(prediction);
 				viewportFrameAnchored = mapViewportPredictor.IsCurrentFrameAnchored();
 			}
+            mapResultMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - resultStarted).count();
+            const auto searchStarted = std::chrono::steady_clock::now();
 
 			// Abandon a search that has stopped answering. Without this the map stays blind for as
 			// long as the worker takes, and the submit gate below can never reopen.
@@ -452,6 +483,9 @@ winrt::IAsyncAction App::Start() {
 				if (searchNow) SubmitMapViewportSearch(currentSnapshot, scope, correctionPrior);
 			}
 
+            mapSearchMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - searchStarted).count();
+            const auto filterStarted = std::chrono::steady_clock::now();
 			if (viewportFrameAnchored && prediction.sceneId != 0 && prediction.captureCorners.size() == 4 && prediction.confidence >= 2) {
                 renderedViewport = prediction;
 				const Coordinate predictedCenterROC = RelativeCoordinates::ImgMapCoordToROC(
@@ -459,6 +493,8 @@ winrt::IAsyncAction App::Start() {
 				DrawItemOnGameMap::UpdateCenterPointNearItemsData(predictedCenterROC,
 					prediction.captureCorners, rect, prediction.sceneId);
 			}
+            mapFilterMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - filterStarted).count();
 
 			cycleTime = App::updateMapDataCycleTime.load();
 		}else {
@@ -475,7 +511,11 @@ winrt::IAsyncAction App::Start() {
 			++coordinateUiGeneration;
 			globalVisualConfirmation.Reset();
 			minimapResumePolicy.Reset();
-			if (!coordinateVisible) { coordinateRecoveryStartedAt.reset(); GlobalVisualLocalizer::CancelPending(); }
+			coordinateHandoff.Reset();
+            ocrCoordinateGate.Reset();
+            lastPositionCapturedAt = {};
+            lastOcrSubmittedFrame = 0;
+            if (!coordinateVisible) { coordinateRecoveryStartedAt.reset(); GlobalVisualLocalizer::CancelPending(); }
 		}
 		coordinateRecovery.SetVisible(coordinateVisible);
 		if (coordinateVisible) {
@@ -496,7 +536,7 @@ winrt::IAsyncAction App::Start() {
 					// 不请求读数、不改状态栏文字，只是让运行时热着。真正何时询问仍由停摆/恢复条件决定。
 					if (ocrAssistEnabled && !ocrPreloadStarted) {
 						const auto ocrModelDirectory = ResourceSnapshotContext::BaselineRoot() /
-							"models" / "PP-OCRv5_mobile_rec_infer";
+							"models" / "coordinate-yolo";
 						IdentifyWorldCoordinates::BeginPreload(ocrModelDirectory.string());
 						ocrPreloadStarted = true;
 						Diagnostics::Record("ocr-preload", "enabled=true trigger=warmup-after-first-lock");
@@ -570,7 +610,10 @@ winrt::IAsyncAction App::Start() {
 				bool renderTrusted = true;
 				std::string renderNote = "authoritative";
 				Coordinate renderTargetROC = playerROC;
-				if (playerCurrentSceneId > 0 && fixAgeSeconds > 0.25) {
+                const bool directReadout = coordinateHandoff.ReadoutActive() &&
+                    kRuntimeReadoutDisplayMode == ReadoutDisplayMode::Direct;
+                if (directReadout) renderNote = "readout-direct";
+				if (!directReadout && playerCurrentSceneId > 0 && fixAgeSeconds > 0.25) {
 					Coordinate predictedMap{};
 					double predictedSpeed = 0.0;
 					const double secondsAt = std::chrono::duration<double>(renderNow.time_since_epoch()).count();
@@ -595,7 +638,7 @@ winrt::IAsyncAction App::Start() {
 				drawnMinimapSceneId = playerCurrentSceneId;
 				const double drawnGap = std::hypot(renderTargetROC.x - drawnMinimapROC.x,
 					renderTargetROC.y - drawnMinimapROC.y);
-				if (drawnSceneChanged || drawnElapsed <= 0.0 || drawnGap > 40.0) {
+				if (directReadout || drawnSceneChanged || drawnElapsed <= 0.0 || drawnGap > 40.0) {
 					drawnMinimapROC = renderTargetROC;
 				}
 				else {
@@ -636,12 +679,40 @@ winrt::IAsyncAction App::Start() {
                 }
             }
 
-			cycleTime = App::updateMinMapDataCycleTime;
+            cycleTime = coordinateHandoff.ReadoutActive()
+                ? static_cast<int>(ReadoutWorkSchedule::ServiceInterval().count()) : App::updateMinMapDataCycleTime.load();
 		}else{
 			DrawItemOnMinMap::ClearNearItemsData();
 		}
 
+        const auto publishStarted = std::chrono::steady_clock::now();
 		PublishOverlayFrame(captured, renderedViewport);
+        const auto publishedAt = std::chrono::steady_clock::now();
+        if (measuredMapCycle && publishedAt - lastMapCycleReport >= std::chrono::seconds(2)) {
+            lastMapCycleReport = publishedAt;
+            // Sample one completed cycle, including mutex waits. The asynchronous
+            // solver's durationMs is not the cost of producing this marker frame.
+            const auto published = overlayFrames.Read();
+            Diagnostics::Record("map-overlay-cycle", "frame=" + std::to_string(captured.frameId) +
+                " publishedFrame=" + std::to_string(published->frameId) +
+                " scene=" + std::to_string(renderedViewport.sceneId) +
+                " confidence=" + std::to_string(renderedViewport.confidence) +
+                " predictMs=" + std::to_string(mapPredictMs) +
+                " resultMs=" + std::to_string(mapResultMs) +
+                " searchMs=" + std::to_string(mapSearchMs) +
+                " filterMs=" + std::to_string(mapFilterMs) +
+                " publishMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - publishStarted).count()) +
+                " cycleMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - cycleStarted).count()) +
+                " captureAgeAtStartMs=" + std::to_string(std::chrono::duration<double, std::milli>(cycleStarted - captured.capturedAt).count()) +
+                " captureAgeAtEndMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - captured.capturedAt).count()) +
+                " publishedAgeMs=" + std::to_string(std::chrono::duration<double, std::milli>(publishedAt - published->capturedAt).count()) +
+                " maximumAgeMs=" + std::to_string(published->maximumAge.count()) +
+                " updateMapMs=" + std::to_string(updateMapDataCycleTime.load()) +
+                " updateMinimapMs=" + std::to_string(updateMinMapDataCycleTime.load()) +
+                " mapVisible=" + std::to_string(published->mapVisible) +
+                " reliable=" + std::to_string(published->mapMotion.reliable) +
+                " markers=" + std::to_string(published->mapMarkers.markers.size()));
+        }
 		auto endTime = std::chrono::high_resolution_clock::now();
 		auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
 		frameWindowTotalMs += elapsedTime;
@@ -650,7 +721,11 @@ winrt::IAsyncAction App::Start() {
 			frameWindowTotalMs = 0; frameWindowSamples = 0; frameWindowStartedAt = endTime;
 		}
 		if (elapsedTime < cycleTime) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - elapsedTime));
+            auto deadline = CoordinateHandoff::Clock::now() + std::chrono::milliseconds(cycleTime - elapsedTime);
+            if (coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && snapshotFrameId != lastOcrSubmittedFrame)
+                deadline = std::min(deadline, std::max(lastOcrSubmitAt + std::chrono::milliseconds(50),
+                    readoutWorkSchedule.NextSubmission(CoordinateHandoff::Clock::now(), ReadoutWorkSchedule::SubmissionInterval())));
+            localizationSignal->WaitUntil(wakeVersion, deadline, coordinateHandoff.ReadoutActive());
 		}
 		startTime = std::chrono::high_resolution_clock::now();
 	}
@@ -1292,7 +1367,14 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	Mat normalizedMinimap;
 	ImageFeatureData minMapFeatureData;
 	MinimapFeatureDiagnostics minimapDiagnostics;
-	const bool minimapFeaturesReady = GlobalVisualLocalizer::PrepareMinimap(
+    bool minimapFeaturesReady = false;
+    bool visualPrepared = false;
+    // Deferred until after OCR consumption/submission. Most active readout passes
+    // need no SURF extraction, layered classification or synchronous recovery.
+    auto prepareVisualFrame = [&]() {
+        if (visualPrepared) return;
+        visualPrepared = true;
+	minimapFeaturesReady = GlobalVisualLocalizer::PrepareMinimap(
 		minMapImg, normalizedMinimap, minMapFeatureData,
 		trustedMinimapReference.empty() ? nullptr : &trustedMinimapReference, &minimapDiagnostics);
 	RuntimeStatus::SetMinimapFeatureStats(minimapDiagnostics.rawKeypointCount,
@@ -1315,8 +1397,22 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			if (!minimapDiagnostics.featureMask.empty()) Diagnostics::SaveImage("minimap-feature-mask", minimapDiagnostics.featureMask);
 		}
 	}
+    };
 	const auto now = CoordinateRecoveryController::Clock::now();
 
+
+    auto observeVisualFailure = [&](CoordinateHandoff::VisualSource source, std::uint64_t frame,
+        CoordinateHandoff::Clock::time_point capturedAt) {
+        const bool neededBefore = coordinateHandoff.NeedsReadout(now);
+        const bool applied = coordinateHandoff.ObserveFailure(source, capturedAt);
+        Diagnostics::Record("coordinate-source-health", std::string("source=") +
+            (source == CoordinateHandoff::VisualSource::Global ? "global" : "local") +
+            " action=failure applied=" + std::to_string(applied) + " frame=" + std::to_string(frame) +
+            " needsBefore=" + std::to_string(neededBefore) +
+            " needsAfter=" + std::to_string(coordinateHandoff.NeedsReadout(now)) +
+            " captureSteadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(capturedAt.time_since_epoch()).count()) +
+            " steadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()));
+    };
 	auto returnTrustedPosition = [&]() -> bool {
 		if (playerCurrentSceneId == 0 || !coordinateRecovery.CanUseTrustedPosition(now)) return false;
 		outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
@@ -1324,7 +1420,13 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		return true;
 	};
 
-	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition, bool relative = false, bool visual = true) {
+	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition, bool relative = false, bool visual = true,
+        std::chrono::steady_clock::time_point capturedAt = {}, std::uint64_t sourceFrame = 0,
+        CoordinateHandoff::VisualSource visualSource = CoordinateHandoff::VisualSource::Local) -> bool {
+        if (capturedAt == std::chrono::steady_clock::time_point{}) capturedAt = snapshotCapturedAt;
+        if (sourceFrame == 0) sourceFrame = snapshotFrameId;
+        if (visual && !relative && (capturedAt > now || now - capturedAt > std::chrono::milliseconds(750))) return false;
+        if (relative && coordinateHandoff.ReadoutActive()) return false;
 		// B：每次提交都记下它相对上一个可信位置的位移与来源，用来钉死"单秒跳 120~377 单位"是哪条路。
 		double commitJumpUnits = -1.0;
 		// 用户的轨迹设计推广到**所有来源**：12:41 那次是读数丢了负号，13:08 这次却是局部匹配自己跑到一个
@@ -1350,7 +1452,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						" map=" + std::to_string(candidate.mapCenter.x) + "," + std::to_string(candidate.mapCenter.y) +
 						" predicted=" + std::to_string(predicted.x) + "," + std::to_string(predicted.y) +
 						" source=" + std::string(recognition ? "recognition" : (relative ? "relative" : "tracked")));
-					return;
+                    if (!relative) coordinateHandoff.RejectVisual(sourceFrame, capturedAt, visualSource);
+					return false;
 				}
 			}
 		}
@@ -1377,10 +1480,37 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					" map=" + std::to_string(candidate.mapCenter.x) + "," + std::to_string(candidate.mapCenter.y) +
 					" lock=" + std::to_string(playerLocationLock.mapCoordinate.x) + "," +
 					std::to_string(playerLocationLock.mapCoordinate.y));
-				return;
+                if (visual && !relative) coordinateHandoff.RejectVisual(sourceFrame, capturedAt, visualSource);
+				return false;
 			}
 		}
-		// Only a visual source is a certain state; a coordinate publish passes visual=false and
+        if (!relative && capturedAt < lastPositionCapturedAt) {
+            // Independently verified geometry still contributes recovery health,
+            // but cannot switch source or overwrite a newer accepted position.
+            if (visual && coordinateHandoff.ReadoutActive())
+                coordinateHandoff.ObserveVisual(sourceFrame, capturedAt, candidate.mapCenter.x,
+                    candidate.mapCenter.y, candidate.sceneId, visualSource, false);
+            Diagnostics::Record("position-commit-rejected", "reason=older-capture"); return false;
+        }
+        // Returning from readout requires sustained independent absolute image fixes.
+        const bool wasReadoutActive = coordinateHandoff.ReadoutActive();
+        if (visual && !relative && !coordinateHandoff.ObserveVisual(sourceFrame, capturedAt,
+            candidate.mapCenter.x, candidate.mapCenter.y, candidate.sceneId, visualSource)) {
+            Diagnostics::Record("coordinate-handoff", "action=await-surf-confirmation source=" +
+                std::string(visualSource == CoordinateHandoff::VisualSource::Global ? "global" : "local") +
+                " frame=" + std::to_string(sourceFrame) + " steadyMs=" + std::to_string(
+                    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count())); return false;
+        }
+        if (!visual) coordinateHandoff.ObserveReadout(capturedAt);
+        if (wasReadoutActive != coordinateHandoff.ReadoutActive())
+            Diagnostics::Record("coordinate-handoff", std::string(coordinateHandoff.ReadoutActive() ?
+                "from=surf to=readout" : "from=readout to=surf") +
+                " source=" + (visualSource == CoordinateHandoff::VisualSource::Global ? "global" : "local") +
+                " frame=" + std::to_string(sourceFrame) + " steadyMs=" + std::to_string(
+                    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()));
+        readoutVisualAnchor.reset();
+        if (!relative) lastPositionCapturedAt = capturedAt;
+        // Only a visual source is a certain state; a coordinate publish passes visual=false and
 		// must not touch T or the record (an OCR misread may never move the region).
 		if (visual && candidate.sceneId > 0)
 			coordinateTrust.NoteVisualMatch(candidate.sceneId, candidate.mapCenter,
@@ -1390,7 +1520,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         if (recognition || playerCurrentSceneId != candidate.sceneId)
             minimapTerrainScale = Scene::MinimapScale(candidate.sceneId);
         if(recognition || playerCurrentSceneId != candidate.sceneId) ++routeFixContinuity;
-        routeFixSequence=snapshotFrameId;routeFixCapturedAt=relative ? trustedMinimapCapturedAt : snapshotCapturedAt;routeVisualFix=true;
+        routeFixSequence=sourceFrame;routeFixCapturedAt=capturedAt;routeVisualFix=visual;
         if (recognition && candidate.affineEstimated && std::isfinite(candidate.scale) &&
             candidate.scale >= Scene::MinimapScale(candidate.sceneId) * 0.85 && candidate.scale <= Scene::MinimapScale(candidate.sceneId) * 1.15) {
             minimapTerrainScale = candidate.scale;
@@ -1441,15 +1571,15 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		gameMapCenterCoordinateByMouseMonitoring = candidate.mapCenter;
 		identifyCoordinate = ImgMapToWorldCoordinate(candidate.mapCenter, candidate.sceneId);
 		globalVisualConfirmation.Reset();
-        if (!relative) {
+        if (visual && !relative) {
             trustedMinimapReference = normalizedMinimap.clone();
             trustedMinimapMapCenter = candidate.mapCenter;
             trustedMinimapSceneId = candidate.sceneId;
-            trustedMinimapCapturedAt = snapshotCapturedAt;
+            trustedMinimapCapturedAt = capturedAt;
             trustedMinimapGeneration = coordinateUiGeneration;
             latestOcrHints.clear();
         }
-		playerLocationLock = { candidate.sceneId, candidate.mapCenter, relative ? trustedMinimapCapturedAt : now, candidate.quality,
+		playerLocationLock = { candidate.sceneId, candidate.mapCenter, capturedAt, candidate.quality,
 			coordinateUiGeneration, true };
         RoutePlanningService::UpdatePlayer(PlanningStart(candidate.sceneId, candidate.mapCenter, playerLocationLock.confirmedAt, coordinateUiGeneration, true));
 
@@ -1473,6 +1603,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		RuntimeStatus::SetLocalization("tracking", recognition
 			? std::string(GlobalVisualLocalizer::QualityName(candidate.quality)) : "local-verified",
 			relative ? "小地图地形轮廓短时追踪" : "小地图定位正常");
+        return true;
 	};
 
     auto tryContourTracking = [&]() -> bool {
@@ -1488,7 +1619,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                 candidate.mapCenter = {viewportResumeHint->position.x - motion.shift.x * Scene::MinimapScale(candidate.sceneId),
                     viewportResumeHint->position.y - motion.shift.y * Scene::MinimapScale(candidate.sceneId)};
                 candidate.quality = VisualLocalizationQuality::Marginal;
-                commitVisualPosition(candidate, false);
+                commitVisualPosition(candidate, false, true);
                 Diagnostics::Record("minimap-contour-anchor", "accepted=true score=" + std::to_string(motion.score));
                 return true;
             }
@@ -1513,17 +1644,27 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         return true;
     };
 
+    if (runLegacyLocalizationDiagnostics) prepareVisualFrame();
+    bool acceptedReadoutThisCycle = false;
 	CoordinateRecognitionResult ocrResult;
 	if (ocrAssistEnabled && IdentifyWorldCoordinates::TryTakeLatestResult(ocrResult)) {
+        const auto consumedAt = CoordinateHandoff::Clock::now();
+        const auto ms = [](auto duration) { return std::chrono::duration<double,std::milli>(duration).count(); };
+        Diagnostics::Record("coordinate-readout-latency", "request=" + std::to_string(ocrResult.requestId) +
+            " captureToConsumeMs=" + std::to_string(ms(consumedAt-ocrResult.capturedAt)) +
+            " submitToCompleteMs=" + std::to_string(ms(ocrResult.completedAt-ocrResult.submittedAt)) +
+            " completeToConsumeMs=" + std::to_string(ms(consumedAt-ocrResult.completedAt)));
+
         const bool activeOcrResult = ocrRequestInFlight.has_value() && ocrResult.requestId == *ocrRequestInFlight;
         if (activeOcrResult) ocrRequestInFlight.reset();
 		if (ocrResult.sessionId == coordinateSessionId && ocrResult.uiGeneration == coordinateUiGeneration &&
 			activeOcrResult &&
 			ocrResult.frameId <= snapshotFrameId && lastCoordinateVisible &&
-            now - lastOcrSubmitAt <= std::chrono::seconds(3)) {
+            coordinateHandoff.FreshReadout(ocrResult.frameId, ocrResult.capturedAt, now)) {
 			ocrRequestInFlight.reset();
 			latestOcrHints.clear();
-			for (const auto& candidate : ocrResult.candidates) {
+            if (ocrResult.candidates.empty()) { ocrCoordinateGate.Reset(); coordinateHandoff.BreakReadoutStreak(); }
+            for (const auto& candidate : ocrResult.candidates) {
 				// The number text is only a coarse search prior.  A score of 0.75
 				// is sufficient to choose nearby tiles because any resulting player
 				// position must still be independently confirmed from map features.
@@ -1556,13 +1697,14 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			// and separators ("sign-fallback", "internal-minus-as-separator") and computes the
 			// distance to that same trusted position, so those repairs are candidates too -
 			// they used to be dropped here along with the search hints.
-			const auto lockState = coordinateRecovery.State();
 			// 触发条件不能只看恢复控制器：实测过一次会话从头到尾 lock=0 scene=0
 			// （工具根本没锁上过，控制器还在 Uninitialized），那时用户看到的就是"正在恢复定位"。
-			const bool lockDoubtful = !playerLocationLock.valid ||
-				lockState == CoordinateLockState::Suspect || lockState == CoordinateLockState::Recovering ||
+            // The recovery controller also records global-search failures while
+            // independent local SURF is healthy. Source health owns handoff;
+            // display-recovery state alone must not let a standby OCR take over.
+			const bool lockDoubtful = coordinateHandoff.NeedsReadout(now) || !playerLocationLock.valid ||
 				LocalTrackingStalled(now);
-			if (!ocrAssistEnabled || !lockDoubtful) {
+			if (!ocrAssistEnabled) {
 				ocrCoordinateGate.Reset();
 			}
 			else {
@@ -1609,7 +1751,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 				// **没有可用预测时绝不否决**——那是上次把星海定位锁死的教训。
 				Coordinate predictedForReadout{};
 				double predictedForReadoutSpeed = 0.0;
-				const double secondsForReadout = std::chrono::duration<double>(now.time_since_epoch()).count();
+				const double secondsForReadout = std::chrono::duration<double>(ocrResult.capturedAt.time_since_epoch()).count();
 				const bool hasReadoutPrediction = coordinateTrust.HasScene() &&
 					playerCurrentSceneId == coordinateTrust.Scene() &&
 					coordinateTrust.PredictAt(coordinateTrust.Scene(), secondsForReadout,
@@ -1696,7 +1838,19 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					// Exactly one reading per frame: the gate counts frames, so feeding the
 					// variants of a single read would fake an agreement.
 					const auto decision = ocrCoordinateGate.Feed(reading, lock);
-					if (decision.Publishable()) {
+                    CoordinateHandoff::ReadoutPrior prior;
+                    if (decision.Publishable() && playerLocationLock.valid &&
+                        playerLocationLock.generation == coordinateUiGeneration &&
+                        playerLocationLock.sceneId == reading.sceneId && routeFixSequence != 0 &&
+                        now >= playerLocationLock.confirmedAt &&
+                        now - playerLocationLock.confirmedAt <= std::chrono::milliseconds(1500)) {
+                        const auto worldPrior = ImgMapToWorldCoordinate(playerLocationLock.mapCoordinate, reading.sceneId);
+                        prior = {true, reading.sceneId, routeFixSequence, playerLocationLock.confirmedAt,
+                            worldPrior.x, worldPrior.y};
+                    }
+                    const bool confirmed = coordinateHandoff.ConfirmReadout(ocrResult.frameId,
+                        ocrResult.capturedAt, reading.sceneId, candidate->x, candidate->y, &prior);
+                    if (decision.Publishable() && confirmed && lockDoubtful) {
 						VisualLocalizationCandidate published;
 						published.sceneId = reading.sceneId;
 						published.mapCenter = reading.mapCoordinate;
@@ -1711,15 +1865,21 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 							" stalling=" + std::to_string(LocalTrackingStalled(now)) +
 							" jumpUnits=" + std::to_string(decision.jumpUnits) +
 							" agreements=" + std::to_string(decision.agreementCount) +
+							" corroboration=" + std::string(coordinateHandoff.UsedReadoutPrior() ? "committed-position" : "consecutive-readouts") +
 							" request=" + std::to_string(ocrResult.requestId));
 						// 符合轨迹趋势的读数写回坐标数组，成为下一次拟合的基础（用户 2026-09-21 的设计：
 						// 数组在无特征区也能延续，而不是永远停在入水前那一刻）。
-						coordinateTrust.NoteReadoutAccepted(reading.sceneId, reading.mapCoordinate,
-							std::chrono::duration<double>(now.time_since_epoch()).count());
-						commitVisualPosition(published, false, false, false);
+						if (commitVisualPosition(published, false, false, false, ocrResult.capturedAt, ocrResult.frameId)) {
+                            coordinateTrust.NoteReadoutAccepted(reading.sceneId, reading.mapCoordinate,
+                                std::chrono::duration<double>(ocrResult.capturedAt.time_since_epoch()).count());
+                            acceptedReadoutThisCycle = true;
+                            lastReadoutAcceptedAt = CoordinateHandoff::Clock::now();
+                        }
 					}
 					else {
-						Diagnostics::Record("coordinate-publish-rejected", "reason=" + decision.reason +
+						Diagnostics::Record(decision.Publishable() ?
+                            (confirmed ? "coordinate-readout-standby" : "coordinate-readout-pending") :
+                            "coordinate-publish-rejected", "reason=" + decision.reason +
 							" scene=" + std::to_string(reading.sceneId) + " world=" + world +
 							" score=" + std::to_string(reading.score) +
 							" correction=" + (candidate->correction.empty() ? "none" : candidate->correction) +
@@ -1738,6 +1898,17 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	}
 
 
+    // Publish the newly committed readout before any synchronous visual
+    // revalidation/resume work below. Continue that work afterwards so SURF
+    // recovery cannot starve while OCR remains active.
+    if (acceptedReadoutThisCycle && coordinateHandoff.ReadoutActive() && lastCoordinateVisible &&
+        enabledMinMapShowItem.load() && isExistMinMap.load() && !isOpenMap.load() &&
+        CoordinateHandoff::Clock::now() - routeFixCapturedAt < std::chrono::milliseconds(500)) {
+        auto center = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
+        DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, center, minMapImg.rows / 2.0f,
+            playerCurrentSceneId, minimapTerrainScale);
+        PublishOverlayFrame({snapshotFrameId, snapshot, rect, snapshotCapturedAt, std::chrono::milliseconds(250)}, {});
+    }
 	auto acceptVisualResult = [&]() -> bool {
 		VisualLocalizationResult result;
 		if (!GlobalVisualLocalizer::TryTakeLatestResult(result)) return false;
@@ -1790,9 +1961,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 				<< candidate.retrievalScore << " quality=" << GlobalVisualLocalizer::QualityName(candidate.quality);
 		}
 		Diagnostics::Record("visual-localization-candidates", candidateDetails.str());
-		Diagnostics::SaveImage(result.quality == VisualLocalizationQuality::Rejected
-			? "visual-rejected-minimap" : "visual-candidate-minimap", normalizedMinimap);
+        if (!normalizedMinimap.empty()) Diagnostics::SaveImage(result.quality == VisualLocalizationQuality::Rejected
+            ? "visual-rejected-minimap" : "visual-candidate-minimap", normalizedMinimap);
 		if (result.candidates.empty() || result.ambiguous || result.quality == VisualLocalizationQuality::Rejected) {
+            observeVisualFailure(CoordinateHandoff::VisualSource::Global, result.frameId, lastVisualRequestCapturedAt);
 			std::string rejectionReason;
 			if (result.searchIncomplete) {
                 rejectionReason = "search-budget-exhausted";
@@ -1837,8 +2009,14 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		}
 		VisualLocalizationCandidate candidate;
 		const auto& globalCandidate = result.candidates.front();
-		if (!GlobalVisualLocalizer::TrackNearby(normalizedMinimap, minMapFeatureData,
-			globalCandidate.sceneId, globalCandidate.mapCenter, 64.0, candidate)) {
+        if (coordinateHandoff.ReadoutActive()) {
+            pendingReadoutGlobalCandidate = globalCandidate;
+            pendingReadoutGlobalRequest = latestReadoutGlobalRequest = result.requestId;
+            return false; // Revalidate on a captured image in the private probe worker.
+        }
+		const bool featureRechecked = GlobalVisualLocalizer::TrackNearby(normalizedMinimap, minMapFeatureData,
+            globalCandidate.sceneId, globalCandidate.mapCenter, 64.0, candidate);
+        if (!featureRechecked) {
 			// The candidate came from the index; the map pixels can still vouch for it when
 			// the frame is too flat for the sparse re-check to find its own correspondences.
 			const auto dense = DenseMapConfirmer::Confirm(normalizedMinimap, globalCandidate.sceneId,
@@ -1851,7 +2029,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			else {
 				Diagnostics::Record("visual-localization-revalidate", "accepted=false scene=" +
 					std::to_string(globalCandidate.sceneId) + " request=" + std::to_string(result.requestId));
-				globalVisualConfirmation.Reset();
+				observeVisualFailure(CoordinateHandoff::VisualSource::Global, snapshotFrameId, snapshotCapturedAt);
+                globalVisualConfirmation.Reset();
 				coordinateRecovery.OnRecognitionFailure();
 				RuntimeStatus::SetLocalization("recovering", {}, "小地图候选位置复核失败，正在重试");
 				return false;
@@ -1863,15 +2042,21 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// can publish a position or seed the big-map search.
 		if (!HasReacquisitionSupport(candidate.affineEstimated, candidate.inlierCount,
 			candidate.inlierRatio, candidate.coveredQuadrants)) {
+            observeVisualFailure(CoordinateHandoff::VisualSource::Global, snapshotFrameId,
+                featureRechecked ? snapshotCapturedAt : lastVisualRequestCapturedAt);
 			globalVisualConfirmation.Reset();
 			Diagnostics::Record("visual-localization-revalidate", "accepted=false reason=weak-reacquisition-geometry");
 			coordinateRecovery.OnRecognitionFailure();
 			return false;
 		}
-		if (globalVisualConfirmation.Observe(coordinateUiGeneration, snapshotFrameId,
+		if (coordinateHandoff.ReadoutActive() || globalVisualConfirmation.Observe(coordinateUiGeneration, snapshotFrameId,
 			{ candidate.sceneId, candidate.mapCenter.x, candidate.mapCenter.y }, now)) {
-			commitVisualPosition(candidate, true);
-			return true;
+			if (coordinateHandoff.ReadoutActive() && !featureRechecked) {
+                observeVisualFailure(CoordinateHandoff::VisualSource::Global, result.frameId, lastVisualRequestCapturedAt); return false;
+            }
+            return commitVisualPosition(candidate, true, false, true,
+                featureRechecked ? snapshotCapturedAt : lastVisualRequestCapturedAt,
+                featureRechecked ? snapshotFrameId : result.frameId, CoordinateHandoff::VisualSource::Global);
 		}
 		return false;
 	};
@@ -1882,7 +2067,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	// in-flight and cadence rules cannot drift apart.
 	auto ensureOcrRuntime = [&]() {
 		const auto ocrModelDirectory = ResourceSnapshotContext::BaselineRoot() /
-			"models" / "PP-OCRv5_mobile_rec_infer";
+			"models" / "coordinate-yolo";
 		IdentifyWorldCoordinates::BeginPreload(ocrModelDirectory.string());
 		ocrPreloadStarted = true;
 		Diagnostics::Record("ocr-preload", "enabled=true trigger=minimap-recovery-bootstrap");
@@ -1891,22 +2076,22 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	auto submitOcrRead = [&](bool stalledTracker) {
 		if (!ocrAssistEnabled || !ocrPreloadStarted || !IdentifyWorldCoordinates::isLoaded.load() ||
 			ocrRequestInFlight.has_value()) return;
-		// The recovery path keeps its deferral: it has the global image search running beside
-		// it.  A stalled tracker does not - there the readout is the only live source, so it is
-		// asked every second and without an attempt cap (the cap is what used to leave the
-		// marker frozen on the terrain for the rest of the session).
-		if (!stalledTracker && coordinateRecovery.FailedRecognitionBatches() < 2) return;
-		// 频率就是精度：用户实测飞行 50~70 单位/秒，而小地图半径只有约 97 单位（123px / 1.268），
-		// 所以 1 秒的读数间隔 = 一次滞后吃掉大半个小地图，边缘标记反复进出就是闪烁。
-		// 读数本身只要 60~150 ms（在独立 worker 上），取 250 ms 让滞后降到约 25 单位；
-		// ocrRequestInFlight 保证不会堆积，推理跟不上时自然降速。
-		const auto cadence = stalledTracker ? std::chrono::milliseconds(250) : std::chrono::milliseconds(500);
-		if (ocrAttemptsForRecovery > 0 && now - lastOcrSubmitAt < cadence) return;
+        if (snapshotFrameId == lastOcrSubmittedFrame) return;
+        const auto submitNow = CoordinateHandoff::Clock::now();
+        const auto cadence = coordinateHandoff.ReadoutActive() ? ReadoutWorkSchedule::SubmissionInterval() :
+            (stalledTracker ? std::chrono::milliseconds(250) : coordinateHandoff.Cadence(submitNow));
+        if (coordinateHandoff.ReadoutActive()) {
+            if (!readoutWorkSchedule.SubmissionDue(submitNow, cadence) ||
+                (ocrAttemptsForRecovery > 0 && submitNow - lastOcrSubmitAt < std::chrono::milliseconds(50))) return;
+        } else if (ocrAttemptsForRecovery > 0 && submitNow - lastOcrSubmitAt < cadence) return;
 		CoordinateRecognitionRequest ocrRequest;
 		ocrRequest.sessionId = coordinateSessionId;
 		ocrRequest.uiGeneration = coordinateUiGeneration;
 		ocrRequest.frameId = snapshotFrameId;
 		ocrRequest.requestId = nextOcrRequestId++;
+        ocrRequest.capturedAt = snapshotCapturedAt;
+        ocrRequest.completionSignal = localizationSignal;
+        ocrRequest.deadlineScheduled = coordinateHandoff.ReadoutActive();
 		ocrRequest.snapshot = snapshot;
 		ocrRequest.clientRect = rect;
 		if (playerLocationLock.valid && now - playerLocationLock.confirmedAt < std::chrono::seconds(2))
@@ -1920,10 +2105,15 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		ocrRequest.crossCheckRoutes = !ocrRequest.previousTrusted.has_value();
 		if (!IdentifyWorldCoordinates::Submit(std::move(ocrRequest))) return;
 		++ocrAttemptsForRecovery;
-		lastOcrSubmitAt = now;
+		lastOcrSubmitAt = submitNow;
+        lastOcrSubmittedFrame = snapshotFrameId;
+        if (coordinateHandoff.ReadoutActive()) readoutWorkSchedule.Submitted(submitNow, cadence);
 		ocrRequestInFlight = nextOcrRequestId - 1;
 		Diagnostics::Record("ocr-search-prior-submit", "request=" +
 			std::to_string(*ocrRequestInFlight) + " frame=" + std::to_string(snapshotFrameId) +
+			" cadenceMs=" + std::to_string(cadence.count()) + " captureSteadyMs=" +
+            std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(snapshotCapturedAt.time_since_epoch()).count()) +
+			" submitSteadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(submitNow.time_since_epoch()).count()) +
 			" trigger=" + std::string(stalledTracker ? "tracker-stalled" : "recovery"));
 		if (coordinateRecovery.State() == CoordinateLockState::Recovering)
 			RuntimeStatus::SetLocalization("recovering", {}, "正在参考坐标文字缩小图像搜索范围");
@@ -1932,9 +2122,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	auto submitRecovery = [&]() {
 		if (!minimapFeaturesReady || !GlobalVisualLocalizer::IsReady() ||
 			now - lastVisualSubmitAt < std::chrono::milliseconds(150)) return;
-        // Defer the inference runtime until image recovery has failed twice;
-        // it runs on its own worker and never blocks the first visual search.
-		if (ocrAssistEnabled && !ocrPreloadStarted && coordinateRecovery.FailedRecognitionBatches() >= 2)
+        // Independent workers keep text recognition and visual recovery concurrent.
+		if (ocrAssistEnabled && !ocrPreloadStarted)
 			ensureOcrRuntime();
 		// The image-only matcher is always primary. OCR prewarming must never
 		// postpone or cancel its first global request.
@@ -1977,6 +2166,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		visualRequest.requireOcrHint = !latestOcrHints.empty();
 		if (!GlobalVisualLocalizer::Submit(std::move(visualRequest))) return;
 		lastVisualSubmitAt = now;
+        lastVisualRequestCapturedAt = snapshotCapturedAt;
 		visualRequestInFlight = std::make_pair(coordinateUiGeneration, snapshotFrameId);
 		activeVisualRequestId = nextVisualRequestId - 1;
 
@@ -1988,7 +2178,91 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			" ocrHints=" + std::to_string(latestOcrHints.size()));
 	};
 
-	bool resumeAwaitingConfirmation = false;
+    // Low-frequency standby is independent of visual search cadence and feature availability.
+    if (ocrAssistEnabled && !ocrPreloadStarted) ensureOcrRuntime();
+    submitOcrRead(coordinateHandoff.NeedsReadout(now));
+    if (coordinateHandoff.ReadoutActive()) {
+        // Global results only stage a hint here; all image revalidation runs in
+        // the private context. The localization thread alone accepts state.
+        acceptVisualResult();
+        ReadoutVisualResult probe;
+        std::string probeError;
+        if (readoutVisualWorker.Take(probe, probeError)) {
+            const auto consumedAt = CoordinateHandoff::Clock::now();
+            if (!probeError.empty()) Diagnostics::Record("readout-visual-probe", "error=" + probeError);
+            else if (!probe.source.Fresh(coordinateSessionId, coordinateUiGeneration, snapshotFrameId,
+                snapshotCapturedAt, rect, consumedAt) || probe.source.scene != playerCurrentSceneId) {
+                Diagnostics::Record("readout-visual-probe", "accepted=false reason=stale-envelope");
+            } else {
+                normalizedMinimap = probe.normalized;
+                minMapFeatureData = probe.features;
+                minimapDiagnostics = probe.diagnostics;
+                minimapFeaturesReady = probe.prepared;
+                RuntimeStatus::SetMinimapFeatureStats(minimapDiagnostics.rawKeypointCount,
+                    minimapDiagnostics.retainedKeypointCount, minimapDiagnostics.dynamicMaskPercent);
+                // Layer state remains single-writer and retains its own rate limit.
+                LayeredMap::ObserveMinimap(minMapFeatureData, playerCurrentSceneId,
+                    lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
+                bool committed = false;
+                if (probe.globalMatched && probe.source.globalRequest == latestReadoutGlobalRequest)
+                    committed = commitVisualPosition(probe.global, true, false, true,
+                        probe.source.capturedAt, probe.source.frame, CoordinateHandoff::VisualSource::Global);
+                if (!committed && probe.localMatched)
+                    committed = commitVisualPosition(probe.local, false, false, true,
+                        probe.source.capturedAt, probe.source.frame, CoordinateHandoff::VisualSource::Local);
+                else if (!committed && !probe.localMatched)
+                    observeVisualFailure(CoordinateHandoff::VisualSource::Local, probe.source.frame, probe.source.capturedAt);
+                if (committed) {
+                    readoutVisualAnchor = CapturedFrame{probe.source.frame, probe.source.snapshot,
+                        probe.source.clientRect, probe.source.capturedAt, std::chrono::milliseconds(250)};
+                    readoutVisualAnchorGeneration = coordinateUiGeneration;
+                }
+                Diagnostics::Record("readout-visual-probe", "frame=" + std::to_string(probe.source.frame) +
+                    " local=" + std::to_string(probe.localMatched) + " global=" + std::to_string(probe.globalMatched) +
+                    " committed=" + std::to_string(committed) + " computeMs=" + std::to_string(probe.durationMs) +
+                    " ageMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                        consumedAt - probe.source.capturedAt).count()));
+                if (coordinateHandoff.ReadoutActive() && probe.prepared && !visualRequestInFlight &&
+                    consumedAt - lastVisualSubmitAt >= std::chrono::milliseconds(500) && GlobalVisualLocalizer::IsReady()) {
+                    VisualLocalizationRequest request;
+                    request.sessionId = coordinateSessionId; request.uiGeneration = coordinateUiGeneration;
+                    request.frameId = probe.source.frame; request.requestId = nextVisualRequestId++;
+                    request.hintVersion = visualHintVersion; request.normalizedMinimap = probe.normalized;
+                    request.minimapFeatures = probe.features; request.ocrHints = latestOcrHints;
+                    request.requireOcrHint = !latestOcrHints.empty();
+                    const auto id = request.requestId;
+                    if (GlobalVisualLocalizer::Submit(std::move(request))) {
+                        lastVisualSubmitAt = consumedAt; lastVisualRequestCapturedAt = probe.source.capturedAt;
+                        visualRequestInFlight = std::make_pair(coordinateUiGeneration, probe.source.frame);
+                        activeVisualRequestId = id;
+                        Diagnostics::Record("visual-localization-submit", "mode=readout-background request=" +
+                            std::to_string(id) + " frame=" + std::to_string(probe.source.frame));
+                    }
+                }
+            }
+        }
+        if (!coordinateHandoff.ReadoutActive()) {
+            readoutVisualWorker.Cancel(); pendingReadoutGlobalCandidate.reset();
+        } else if (readoutVisualWorker.CanSubmit() && snapshotFrameId != lastReadoutVisualSubmittedFrame &&
+            readoutWorkSchedule.VisualDue(true, CoordinateHandoff::Clock::now())) {
+            ReadoutVisualRequest request;
+            request.session = coordinateSessionId; request.generation = coordinateUiGeneration;
+            request.frame = snapshotFrameId; request.capturedAt = snapshotCapturedAt; request.clientRect = rect;
+            request.scene = playerCurrentSceneId; request.center = lastPlayerImgMapCoordinate;
+            request.terrainScale = minimapTerrainScale; request.resources = featureResources;
+            request.snapshot = snapshot; request.minimap = minMapImg.clone();
+            request.trustedReference = trustedMinimapReference.clone();
+            request.globalHint = pendingReadoutGlobalCandidate; request.globalRequest = pendingReadoutGlobalRequest;
+            if (readoutVisualWorker.Submit(std::move(request))) {
+                lastReadoutVisualSubmittedFrame = snapshotFrameId; pendingReadoutGlobalCandidate.reset();
+            }
+        }
+        co_return returnTrustedPosition();
+    }
+    if (localizationServiceOnly) co_return returnTrustedPosition();
+    readoutWorkSchedule.VisualDue(false, CoordinateHandoff::Clock::now());
+    prepareVisualFrame();
+    bool resumeAwaitingConfirmation = false;
 	auto tryResumeHint = [&]() -> bool {
 		if (normalizedMinimap.empty()) return false;
 		if (minimapResumePolicy.Generation() != coordinateUiGeneration) PrepareMinimapResumeHints(now);
@@ -2052,8 +2326,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                 minimapTerrainScale = Scene::MinimapScale(candidate.sceneId);
                 viewportTerrainTrackingGeneration = coordinateUiGeneration;
             }
-			commitVisualPosition(candidate, true);
-			return true;
+            return commitVisualPosition(candidate, true, !candidate.affineEstimated, true,
+                snapshotCapturedAt, snapshotFrameId, CoordinateHandoff::VisualSource::Global);
 		}
 		resumeAwaitingConfirmation = minimapResumePolicy.AwaitingConfirmation();
 		RuntimeStatus::SetLocalization("recovering", {}, supported
@@ -2121,6 +2395,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		submitOcrRead(true);
 	}
 
+    if (!minimapFeaturesReady) { observeVisualFailure(CoordinateHandoff::VisualSource::Local, snapshotFrameId, snapshotCapturedAt); submitOcrRead(true); }
     if (!minimapFeaturesReady && tryContourTracking()) {
         outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
         outMinMapRadius = minMapImg.rows / 2.0f;
@@ -2170,6 +2445,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	Diagnostics::Record("visual-local-tracking-time", "durationMs=" + std::to_string(
 		std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - trackingStart).count()) +
 		" accepted=" + std::to_string(continuityAccepted));
+    const bool surfAccepted = continuityAccepted;
+    if (!surfAccepted) { observeVisualFailure(CoordinateHandoff::VisualSource::Local, snapshotFrameId, snapshotCapturedAt); submitOcrRead(true); }
 	if (!continuityAccepted && now - lastDenseConfirmAt >= std::chrono::milliseconds(250)) {
 		// The position we are standing on is the strongest prior there is: if the feature
 		// pack cannot follow this frame, ask the map pixels whether we are still here.
@@ -2209,7 +2486,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		}
 	}
 	if (continuityAccepted || tryContourTracking()) {
-		if (continuityAccepted) commitVisualPosition(tracked, false);
+		if (continuityAccepted) commitVisualPosition(tracked, false, !surfAccepted);
 		localTrackingStalledSince = {};
 		outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
 		outMinMapRadius = minMapImg.rows / 2.0f;
@@ -2276,6 +2553,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 }
 
 void App::SuspendPlayerLocationForMapTransition() {
+    readoutVisualAnchor.reset();
+    readoutVisualWorker.Cancel();
+    pendingReadoutGlobalCandidate.reset(); pendingReadoutGlobalRequest = latestReadoutGlobalRequest = 0;
+    lastReadoutVisualSubmittedFrame = 0; readoutWorkSchedule.ResetSubmissions();
     ++routeFixContinuity;
     GlobalVisualLocalizer::CancelPending();
 	const auto now = CoordinateRecoveryController::Clock::now();
@@ -2294,8 +2575,12 @@ void App::SuspendPlayerLocationForMapTransition() {
 	ocrAttemptsForRecovery = 0;
 	lastOcrSubmitAt = {};
 	localTrackingStalledSince = {};
-	lastCoordinateVisible = false;
-	trustedMinimapReference.release();
+    coordinateHandoff.Reset();
+    ocrCoordinateGate.Reset();
+    lastPositionCapturedAt = {};
+    lastOcrSubmittedFrame = 0;
+    lastCoordinateVisible = false;
+    trustedMinimapReference.release();
 	playerCurrentSceneId = 0;
 	lastPlayerImgMapCoordinate = {};
 	identifyCoordinate = {};
@@ -2340,6 +2625,10 @@ void App::PrepareMinimapResumeHints(CoordinateRecoveryController::Clock::time_po
 }
 
 void App::BeginMinimapReacquisition() {
+    readoutVisualAnchor.reset();
+    readoutVisualWorker.Cancel();
+    pendingReadoutGlobalCandidate.reset(); pendingReadoutGlobalRequest = latestReadoutGlobalRequest = 0;
+    lastReadoutVisualSubmittedFrame = 0; readoutWorkSchedule.ResetSubmissions();
 	const auto now = CoordinateRecoveryController::Clock::now();
 	coordinateRecovery.Reset();
 	coordinateRecoveryStartedAt.reset();
@@ -2905,11 +3194,18 @@ bool App::FrameObserved() const {
 		? kFocusHandoffHold : kFocusHold).count();
 }
 
-void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPrediction& viewport) {
+void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapViewportPrediction& viewport) {
+    // An asynchronous visual fix is tied to its original pixels, never a newer
+    // capture. Expiry is checked by the renderer, not renewed by publication.
+    const bool anchored = readoutVisualAnchor && readoutVisualAnchorGeneration == coordinateUiGeneration &&
+        routeVisualFix && lastPositionCapturedAt == readoutVisualAnchor->capturedAt &&
+        !isOpenMap.load() && isExistMinMap.load();
+    const CapturedFrame& captured = anchored ? *readoutVisualAnchor : requestedCapture;
     OverlayFrame frame;
     frame.frameId = captured.frameId; frame.clientRect = captured.clientRect; frame.capturedAt = captured.capturedAt;
     frame.maximumAge = std::chrono::milliseconds(std::max(500, 2 * std::max(
         updateMapDataCycleTime.load(), updateMinMapDataCycleTime.load())));
+    if (anchored) frame.maximumAge = captured.maximumAge;
     frame.focused = FrameObserved();
     // "The big map is up" is the debounced UI state's answer, exactly as it is for the minimap below.
     // Whether this frame can be *placed* is a separate question, and the renderer already asks it:
@@ -2939,6 +3235,38 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
         GetMinimapProjectionGeometry(captured.clientRect, minimapTerrainScale).pixelsPerMapUnit,
         playerCurrentSceneId, coordinateUiGeneration, captured.frameId, captured.capturedAt,
         coordinateRecovery.State() == CoordinateLockState::Tracking};
+    frame.minimapReadout.active = coordinateHandoff.ReadoutActive();
+    // Copy provenance only after the accepted readout has committed the lock.
+    // A fresh screenshot must never refresh this fix's original capture time.
+    const auto sceneScale = Scene::MinimapScale(playerCurrentSceneId);
+    if (frame.minimapReadout.active && !routeVisualFix && playerLocationLock.valid &&
+        playerLocationLock.sceneId == playerCurrentSceneId && playerLocationLock.generation == coordinateUiGeneration &&
+        coordinateTrust.HasScene() && coordinateTrust.Scene() == playerCurrentSceneId &&
+        routeFixSequence != 0 && routeFixCapturedAt == playerLocationLock.confirmedAt &&
+        std::isfinite(minimapTerrainScale) && sceneScale > 0.0 &&
+        minimapTerrainScale >= sceneScale * 0.85 && minimapTerrainScale <= sceneScale * 1.15) {
+        frame.minimapReadout = {true, playerCurrentSceneId, coordinateUiGeneration,
+            routeFixSequence, routeFixCapturedAt, minimapTerrainScale};
+    }
+    // OCR owns its accepted fix independently of a failed background SURF
+    // search. Resolve this before the old-anchor retention and all consumers.
+    const auto readoutPublicationAt = std::chrono::steady_clock::now();
+    AuthorizeReadoutMinimapPublication(frame, readoutPublicationAt);
+    if (frame.minimapReadout.active) {
+        if (frame.minimapMotion.reliable)
+            RuntimeStatus::SetLocalization("tracking", "readout-verified", "小地图定位正常");
+        static auto lastReadoutPublicationReport = std::chrono::steady_clock::time_point{};
+        if (readoutPublicationAt - lastReadoutPublicationReport >= std::chrono::seconds(1)) {
+            lastReadoutPublicationReport = readoutPublicationAt;
+            Diagnostics::Record("minimap-readout-publication", "frame=" + std::to_string(frame.frameId) +
+                " authorized=" + std::to_string(frame.minimapMotion.reliable) +
+                " fixFrame=" + std::to_string(frame.minimapReadout.fixFrameId) + " fixAgeMs=" +
+                std::to_string(frame.minimapReadout.fixFrameId == 0 ? -1LL :
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        readoutPublicationAt - frame.minimapReadout.capturedAt).count()) + " visualState=" +
+                std::string(CoordinateRecoveryController::StateName(coordinateRecovery.State())));
+        }
+    }
     frame.routePlayer={DrawItemBase::MarkerProfile(),coordinateSessionId,routeFixContinuity,routeFixSequence,
         playerCurrentSceneId,RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate,playerCurrentSceneId),
         routeFixCapturedAt,captured.capturedAt,routeVisualFix,
@@ -3038,5 +3366,16 @@ void App::PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPr
     // in progress and one that was finished but not saved yet — it stays on the map until the player
     // decides to keep or discard it.
 
+    ProjectReadoutMinimapLayout(frame,
+        RelativeCoordinates::ImgMapCoordToROC(frame.playerCoordinate, frame.playerScene));
+    if (frame.minimapReadout.active && frame.minimapMotion.reliable &&
+        frame.minimapReadout.fixFrameId != lastReadoutPublishedFix &&
+        lastReadoutAcceptedAt != std::chrono::steady_clock::time_point{}) {
+        lastReadoutPublishedFix = frame.minimapReadout.fixFrameId;
+        const auto publishedAt = std::chrono::steady_clock::now();
+        Diagnostics::Record("readout-commit-to-layout", "fixFrame=" + std::to_string(lastReadoutPublishedFix) +
+            " layoutFrame=" + std::to_string(frame.frameId) + " durationMs=" +
+            std::to_string(std::chrono::duration<double,std::milli>(publishedAt-lastReadoutAcceptedAt).count()));
+    }
     overlayFrames.Publish(std::move(frame));
 }

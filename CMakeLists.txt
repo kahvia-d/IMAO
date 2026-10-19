@@ -472,6 +472,18 @@ target_compile_definitions(IMaoOptimizationTests PRIVATE IMAO_SOURCE_DIR="${CMAK
 target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib user32.lib)
 
 enable_testing()
+add_subdirectory(IMao-Core/tools/CoordinateYolo)
+add_executable(IMaoCoordinateRuntimeTests
+    IMao-Core/tests/CoordinateRuntimeTests.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
+    IMao-Core/src/Diagnostics/Diagnostics.cpp
+    IMao-Core/src/Runtime/StructuredLogger.cpp)
+target_include_directories(IMaoCoordinateRuntimeTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+target_compile_definitions(IMaoCoordinateRuntimeTests PRIVATE NOMINMAX)
+target_link_libraries(IMaoCoordinateRuntimeTests PRIVATE ${DEPS})
 add_test(NAME IMaoOptimizationTests COMMAND IMaoOptimizationTests)
 
 add_executable(IMaoResourceSnapshotTests
@@ -596,6 +608,8 @@ add_test(NAME IMaoMultiSceneViewportTests COMMAND IMaoVisualRegression --scene-s
 add_executable(IMaoCoordinateRegression
     IMao-Core/tools/CoordinateRegression/main.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
     IMao-Core/src/Diagnostics/Diagnostics.cpp
     IMao-Core/src/Runtime/StructuredLogger.cpp

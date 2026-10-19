@@ -19,6 +19,7 @@
 #include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/ImageAnchoredOverlay.h"
+#include "../Runtime/OverlayVisibilityGap.h"
 #include "../Runtime/FramePacer.h"
 #include "../Runtime/OverlayPacing.h"
 #include "../Runtime/OverlayWindowBounds.h"
@@ -474,16 +475,23 @@ int ImGuiOverWindows::start()
     //std::vector<ID3D11ShaderResourceView*> texturesToRelease; // 用于存储需要释放的纹理
     // Main loop
     DrawMarkerInteraction::Initialize(h_window);
-    ImageAnchoredOverlay mapMotion(false), minimapMotion(true);
+    ImageAnchoredOverlay mapMotion(false), minimapMotion(true, kRuntimeReadoutDisplayMode);
     FramePacer framePacer;
     auto motionReportAt = std::chrono::steady_clock::now();
     std::uint64_t renderedFrames = 0, observedFrames = 0, lastObservedFrame = 0;
     std::uint64_t capturedFrames = 0, lastCapturedFrame = 0;
     std::uint64_t attachedFrames = 0, trackingMisses = 0, heldMinimapFrames = 0;
+    std::uint64_t readoutProjectionFrames = 0;
+    auto lastReadoutProjectionReport = std::chrono::steady_clock::time_point{};
+    std::uint64_t mapRequestedFrames = 0, mapAttachedFrames = 0, mapStaleFrames = 0,
+        mapContextRejectedFrames = 0, mapVisibilityRejectedFrames = 0, mapAttachRejectedFrames = 0;
     // 最近一次**实测**的小地图屏幕变换：配准失败的那一帧复用它（最多 150 毫秒），
     // 只影响叠加层的贴合，不参与任何位置计算。
     OverlayScreenTransform lastMinimapMotion;
     std::chrono::steady_clock::time_point lastMinimapMotionAt{};
+    OverlayVisibilityGap minimapVisibleGap;
+    std::chrono::steady_clock::time_point minimapDropStarted{};
+    std::uint64_t minimapDropFrames = 0;
     // This thread owns the low-level mouse and keyboard hooks, so Windows hands it every input event
     // and waits for the callback. The longest stretch without a pump is therefore the worst-case delay
     // this tool adds to the player's mouse, so each frame segment is tracked separately below.
@@ -765,11 +773,28 @@ int ImGuiOverWindows::start()
                     " captureFps=" + std::to_string(capturedFrames / seconds) + " mode=image-anchored" +
                     " attachedFps=" + std::to_string(attachedFrames / seconds) +
                     " heldMinimapFrames=" + std::to_string(heldMinimapFrames) +
+                    " readoutProjectionFrames=" + std::to_string(readoutProjectionFrames) +
                     " trackingMisses=" + std::to_string(trackingMisses) +
                     " captureAgeMs=" + std::to_string(capture->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
                         frameStart - capture->capturedAt).count() : -1) +
                     " sourceAgeMs=" + std::to_string(frame->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
                         frameStart - frame->capturedAt).count() : -1) +
+                    " sourceMaximumAgeMs=" + std::to_string(frame->maximumAge.count()) +
+                    " visibilityAgeMs=" + std::to_string(visibility->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
+                        frameStart - visibility->capturedAt).count() : -1) +
+                    " visibilityMaximumAgeMs=" + std::to_string(visibility->maximumAge.count()) +
+                    " sourceFrame=" + std::to_string(frame->frameId) +
+                    " visibilityFrame=" + std::to_string(visibility->frameId) +
+                    " visibilitySinceFrame=" + std::to_string(visibility->visibleSinceFrame) +
+                    " visibilityMap=" + std::to_string(visibility->mapVisible) +
+                    " sourceMap=" + std::to_string(frame->mapVisible) +
+                    " sourceReliable=" + std::to_string(frame->mapMotion.reliable) +
+                    " mapRequestedFrames=" + std::to_string(mapRequestedFrames) +
+                    " mapAttachedFrames=" + std::to_string(mapAttachedFrames) +
+                    " mapStaleFrames=" + std::to_string(mapStaleFrames) +
+                    " mapContextRejectedFrames=" + std::to_string(mapContextRejectedFrames) +
+                    " mapVisibilityRejectedFrames=" + std::to_string(mapVisibilityRejectedFrames) +
+                    " mapAttachRejectedFrames=" + std::to_string(mapAttachRejectedFrames) +
                     " inputGapMs=" + std::to_string(attachedGapMs()) +
                     " boundsMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxBounds).count()) +
                     " trackMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(maxTrack).count()) +
@@ -815,6 +840,9 @@ int ImGuiOverWindows::start()
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
                 attachedFrames = trackingMisses = 0; heldMinimapFrames = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;
+                readoutProjectionFrames = 0;
+                mapRequestedFrames = mapAttachedFrames = mapStaleFrames = mapContextRejectedFrames =
+                    mapVisibilityRejectedFrames = mapAttachRejectedFrames = 0;
                 syncTotalMs = newFrameTotalMs = buildTotalMs = renderTotalMs = hashTotalMs = presentTotalMs = 0;
                 syncCalls = renderCalls = hashCalls = presentCalls = 0;
                 maxBounds = maxTrack = maxPresent = maxWait = maxMotion = SegmentDuration::zero();
@@ -823,7 +851,9 @@ int ImGuiOverWindows::start()
             bool mapEligible = false, minimapEligible = false;
             PresentedOverlayFrame presented{frame, {}, false, false, frameStart};
             presented.capture = capture;
-            if (frame->Fresh() && DrawItemBase::IsMarkerDisplayContext(h_window) &&
+            const bool sourceFresh = frame->Fresh();
+            if (frame->mapVisible) ++mapRequestedFrames;
+            if (sourceFresh && DrawItemBase::IsMarkerDisplayContext(h_window) &&
                 frame->clientRect.right == GameRect.right && frame->clientRect.bottom == GameRect.bottom) {
                 if (frame->mapVisible && visibility->AllowsMap(frame->frameId)) {
                     mapEligible = true;
@@ -839,19 +869,43 @@ int ImGuiOverWindows::start()
                         drewMap = true;
                         presented.motion = motion;
                         ++attachedFrames;
-                    } else ++trackingMisses;
+                        ++mapAttachedFrames;
+                    } else { ++trackingMisses; ++mapAttachRejectedFrames; }
                 }
                 else if (frame->minimapVisible && visibility->AllowsMinimap(frame->frameId)) {
                     minimapEligible = true;
                     OverlayScreenTransform motion;
                     const auto motionStarted = std::chrono::steady_clock::now();
                     const bool attached = minimapMotion.Update(frame, *capture, motion);
+                    if (attached && minimapMotion.UsedReadoutProjection()) {
+                        ++readoutProjectionFrames;
+                        const auto at = std::chrono::steady_clock::now();
+                        if (at - lastReadoutProjectionReport >= std::chrono::seconds(1)) {
+                            lastReadoutProjectionReport = at;
+                            Diagnostics::Record("minimap-overlay-placement", "method=readout-projection sourceFrame=" +
+                                std::to_string(frame->frameId) + " captureFrame=" + std::to_string(capture->frameId) +
+                                " fixFrame=" + std::to_string(frame->minimapReadout.fixFrameId) + " fixAgeMs=" +
+                                std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                    at - frame->minimapReadout.capturedAt).count()) +
+                                " displayMode=" + std::string(kRuntimeReadoutDisplayMode == ReadoutDisplayMode::Direct ? "direct" : "animated") +
+                                " displayOffsetPx=" + std::to_string(motion.offset.x) + "," + std::to_string(motion.offset.y));
+                        }
+                    }
+                    if (attached && (minimapMotion.RecoveredFreshSource() || minimapMotion.RecoveredRecentCapture()))
+                        Diagnostics::Record("minimap-overlay-recovered", std::string("method=") +
+                            (minimapMotion.RecoveredRecentCapture() ? "recent-capture" : "fresh-source") + " sourceFrame=" +
+                            std::to_string(frame->frameId) + " captureFrame=" + std::to_string(capture->frameId) +
+                            " steadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::steady_clock::now().time_since_epoch()).count()));
                     maxMotion = std::max(maxMotion, std::chrono::steady_clock::now() - motionStarted);
                     // 配准失败那一帧原来整层不画（实测 70 次 / 2.6 分钟），标记和路线因此一闪一闪。
                     // 这里只复用**上一次实测的屏幕变换**最多 150 毫秒——位置仍来自 App 侧的最新值
                     // （含外推），所以不会像上次被撤掉的 hold 那样"标记跟着漂"。
                     const auto motionNow = std::chrono::steady_clock::now();
-                    const bool mayHold = lastMinimapMotionAt != std::chrono::steady_clock::time_point{} &&
+                    // Readout placement has its own accepted-fix deadline. Never
+                    // turn a failed/stale proof into another 150ms of drawing.
+                    const bool mayHold = !frame->minimapReadout.active &&
+                        lastMinimapMotionAt != std::chrono::steady_clock::time_point{} &&
                         motionNow - lastMinimapMotionAt <= std::chrono::milliseconds(150);
                     if (attached || (!attached && mayHold)) {
                         const auto& useMotion = attached ? motion : lastMinimapMotion;
@@ -865,10 +919,20 @@ int ImGuiOverWindows::start()
                         if (attached) {
                             ++attachedFrames;
                             lastMinimapMotion = motion;
-                            lastMinimapMotionAt = motionNow;
+                            // A coordinate transform is not a measured image fit
+                            // and cannot seed the SURF pixel-hold path on handoff.
+                            lastMinimapMotionAt = minimapMotion.UsedReadoutProjection() ?
+                                std::chrono::steady_clock::time_point{} : motionNow;
                         } else ++heldMinimapFrames;
                     } else {
                         ++trackingMisses;
+                        ++minimapDropFrames;
+                        if (minimapDropStarted == std::chrono::steady_clock::time_point{}) {
+                            minimapDropStarted = motionNow;
+                            Diagnostics::Record("minimap-overlay-gap-start", std::string("stage=") + minimapMotion.LastFailure() +
+                                " sourceFrame=" + std::to_string(frame->frameId) + " captureFrame=" + std::to_string(capture->frameId) +
+                                " steadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(motionNow.time_since_epoch()).count()));
+                        }
                         // An unattached frame draws neither markers nor route.  This is the only
                         // record of that (the marker-count record is gated on the screenshot
                         // opt-in), and it is what separates "the overlay blinked" from "the
@@ -880,8 +944,11 @@ int ImGuiOverWindows::start()
                             // Which condition failed decides the fix: "reliable" is the recovery state
                             // (PublishOverlayFrame ties it to CoordinateLockState::Tracking), so a false
                             // here means the localizer, not the tracker.  The rest is the tracker.
-                            Diagnostics::Record("minimap-overlay-drop", "reason=no-attach frame=" +
-                                std::to_string(frame->frameId) + " misses=" + std::to_string(trackingMisses) +
+                            Diagnostics::Record("minimap-overlay-drop", std::string("reason=no-attach stage=") +
+                                minimapMotion.LastFailure() + " frame=" +
+                                std::to_string(frame->frameId) + " captureFrame=" + std::to_string(capture->frameId) +
+                                " steadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(dropNow.time_since_epoch()).count()) +
+                                " misses=" + std::to_string(trackingMisses) +
                                 " reliable=" + std::to_string(frame->minimapMotion.reliable) +
                                 " scene=" + std::to_string(frame->playerScene) +
                                 " ownFrame=" + std::to_string(frame->frameId >= capture->frameId) +
@@ -893,8 +960,38 @@ int ImGuiOverWindows::start()
                         }
                     }
                 }
+                else if (frame->mapVisible) ++mapVisibilityRejectedFrames;
+            }
+            else if (frame->mapVisible) {
+                if (!sourceFresh) ++mapStaleFrames;
+                else ++mapContextRejectedFrames;
             }
             if (!mapEligible) mapMotion.Reset();
+            if (minimapDropStarted != std::chrono::steady_clock::time_point{} && (drewMinimap || !minimapEligible)) {
+                Diagnostics::Record("minimap-overlay-gap-end", std::string("reason=") +
+                    (drewMinimap ? "attached" : "context-ineligible") + " frames=" + std::to_string(minimapDropFrames) +
+                    " durationMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - minimapDropStarted).count()));
+                minimapDropStarted = {}; minimapDropFrames = 0;
+            }
+            // UI visibility is independent of the publisher's layout authorization.
+            // Count the full absence until an actual draw, including ineligible frames.
+            const bool minimapExpected = !visibility->mapVisible && App::MinimapMarkersEnabled() &&
+                visibility->Fresh() && visibility->minimapVisible && DrawItemBase::IsMarkerDisplayContext(h_window);
+            const auto visibleGapEvent = minimapVisibleGap.Observe(minimapExpected, drewMinimap,
+                std::chrono::steady_clock::now());
+            if (visibleGapEvent != OverlayVisibilityGap::Event::None) {
+                const char* action = visibleGapEvent == OverlayVisibilityGap::Event::Started ? "start" :
+                    visibleGapEvent == OverlayVisibilityGap::Event::Recovered ? "recovered" : "context-closed";
+                Diagnostics::Record("minimap-visible-gap", std::string("action=") + action +
+                    " durationMs=" + std::to_string(minimapVisibleGap.DurationMs()) +
+                    " frames=" + std::to_string(minimapVisibleGap.Frames()) +
+                    " eligible=" + std::to_string(minimapEligible) + " sourceFresh=" + std::to_string(sourceFresh) +
+                    " authorized=" + std::to_string(frame->minimapMotion.reliable) +
+                    " fixFrame=" + std::to_string(frame->minimapReadout.fixFrameId) +
+                    " steadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now().time_since_epoch()).count()));
+            }
             if (!drewMap) DrawMarkerInteraction::Clear();
             DrawMarkerInteraction::DrawMapToolsLauncher(GameRect, h_window);
             // Hand-drawing is one press one point, so it is polled here rather than from a thread

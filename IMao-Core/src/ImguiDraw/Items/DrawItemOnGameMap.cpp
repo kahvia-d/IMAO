@@ -13,6 +13,7 @@ using namespace std;
 namespace {
 constexpr size_t kDiagnosticMarkerSampleLimit = 32;
 std::uint64_t mapFilterRevision = 0; // Guarded with PointNearItemsDataMutex.
+std::string mapMarkerProfile; // The account whose progress was read for this marker set.
 
 string DescribeMarkerSample(const vector<ItemDatas>& markers) {
 	ostringstream stream;
@@ -84,21 +85,20 @@ bool DrawItemOnGameMap::GetBasicDataBySenceId(int senceId) {
 
 vector<ItemDatas> DrawItemOnGameMap::GetAndFilterItemsData(const Coordinate& gameMapcenterPointRC, const vector<Point2f>& captureCorners, const RECT& rect) {
 	vector<ItemDatas> filterItemsData;
+    mapMarkerProfile = DrawItemBase::MarkerProfile();
+    if (itemsDatas_StoragePtr->empty()) return filterItemsData;
+    const auto completions = DrawItemBase::ReadPointFilterCompletions(senceName);
+    mapMarkerProfile = completions.permanent.profileId;
+    // Selecting an account updates the permanent and daily ledgers separately.
+    // Never combine two accounts during that handoff; the next pass re-reads both.
+    if (!completions.Compatible()) return filterItemsData;
 	for (const auto& itemsDatas : *itemsDatas_StoragePtr) {
-		vector<string> filteredPoints = DrawItemBase::GetFilteredPoints(senceName, itemsDatas.nameId);
 		for (const auto& itemDatas : itemsDatas.itemsDatas) {
 			Coordinate itemScreen = ScreenCoordinate::ItemScreenCoordinateOnMap(gameMapcenterPointRC, itemDatas.itemMapROC, captureCorners, rect);
 			if (itemScreen.x < rect.right + 64 && itemScreen.x >= -64 && itemScreen.y < rect.bottom + 64 && itemScreen.y >= -64) {
-				bool isSaved = false;
-				for (const auto& filteredPoint : filteredPoints) {
-					if (filteredPoint == itemDatas.itemId) {
-						isSaved = true;
-						break;
-					}
-				}
 				ItemDatas tempItemData = itemDatas;
                     tempItemData.screenCoordiante = itemScreen;
-                    tempItemData.isSaved = isSaved;
+                    tempItemData.isSaved = completions.Contains(itemsDatas.nameId, itemDatas.itemId);
 				filterItemsData.push_back(tempItemData);
 			}
 		}
@@ -118,4 +118,9 @@ bool DrawItemOnGameMap::HasVisibleItems() {
 
 // The big map selects through the gamepad cursor, so its frame carries no drawn marker
 // radius: the nearby rule would keep every candidate rather than guess two icons apart.
-ItemMarkerFrame DrawItemOnGameMap::Snapshot() { std::scoped_lock lock(PointNearItemsDataMutex); return {senceName, centerPointNearItemsData, {}, 0.0, 0.0, DrawItemBase::MarkerProfile(), mapFilterRevision}; }
+ItemMarkerFrame DrawItemOnGameMap::Snapshot() {
+    std::scoped_lock lock(PointNearItemsDataMutex);
+    const auto profile = DrawItemBase::MarkerProfile();
+    if (profile != mapMarkerProfile) return {senceName, {}, {}, 0.0, 0.0, profile, mapFilterRevision};
+    return {senceName, centerPointNearItemsData, {}, 0.0, 0.0, mapMarkerProfile, mapFilterRevision};
+}

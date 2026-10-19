@@ -3,6 +3,7 @@
 #include "../CoordinateStruct.h"
 
 #include <cstdint>
+#include <chrono>
 #include <optional>
 #include <string>
 #include <vector>
@@ -33,11 +34,13 @@ struct CoordinateRecognitionResult {
     std::uint64_t uiGeneration = 0;
     std::uint64_t frameId = 0;
     std::uint64_t requestId = 0;
+    std::chrono::steady_clock::time_point capturedAt{};
     CoordinateRecognitionStatus status = CoordinateRecognitionStatus::NoCandidate;
     std::vector<CoordinateCandidate> candidates;
     double preprocessingMilliseconds = 0.0;
     double inferenceMilliseconds = 0.0;
     double parsingMilliseconds = 0.0;
+    std::chrono::steady_clock::time_point submittedAt{}, completedAt{};
 };
 
 class CoordinateCandidateParser {

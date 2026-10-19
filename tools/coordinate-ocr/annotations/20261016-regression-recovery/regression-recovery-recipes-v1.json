@@ -1,0 +1,2516 @@
+{
+  "scope": "Exact temporary experiment source and test/counterfactual records. Frozen existing parser/sign code copied for reproducibility; no product code changed. Runtime package versions recorded, not a complete dependency lock.",
+  "scripts": {
+    "agreement_probe.py": {
+      "sha256": "1a298844cd63ef0722a885ece2337258d7f60669517dfdf7d5d335022ea5fbd0",
+      "text": "\"\"\"Throwaway offline probe: dominant agreement, no missing-character insertion.\n\nFixed evidence floor .25, overlap .50 and dominance ratio2 before full replay.\nFrozen parser, sign logic and threshold settings are not modified.\n\"\"\"\nfrom pathlib import Path\nimport sys,math\nB=Path(__file__).resolve().parent.parent\nsys.path.insert(0,str(B/'coordinate-uncertainty-probe-20261016'))\nfrom probe import prefix_digits\nfrom xy_decode import _iou,_center\n\ndef _validate(objects):\n    for o in objects:\n        box=o['xyxy']\n        if not (math.isfinite(o['score']) and len(box)==4 and all(math.isfinite(v) for v in box) and box[2]>box[0] and box[3]>box[1]):\n            raise ValueError('Invalid detector evidence; cannot evaluate agreement')\n\ndef dominant_match(digit, confirmation):\n    _validate(confirmation)\n    candidates=sorted((p for p in confirmation if p['score']>=.25 and _iou(p['xyxy'],digit['xyxy'])>=.5),key=lambda p:-p['score'])\n    if not candidates:return False,'digit-not-confirmed'\n    top=candidates[0]\n    if top['char']!=digit['char']:return False,'strongest-digit-disagrees'\n    alternatives=[p['score'] for p in candidates if p['char']!=top['char']]\n    if alternatives and top['score']<2.*max(alternatives):return False,'secondary-not-dominant'\n    return True,'dominant-agreement'\n\ndef dominant_guard(selected, observations):\n    if selected is None:return None,['base-not-returned']\n    _validate(observations['raw'])\n    digits=prefix_digits(observations['raw'])\n    if not digits:return None,['mandatory-prefix-not-observed']\n    reasons=[]\n    for o in digits:\n        matched,reason=dominant_match(o,observations['contrast'])\n        if not matched:reasons.append(reason)\n    return (None,sorted(set(reasons))) if reasons else (selected,[])\n\ndef resolve_digits(raw, contrast):\n    _validate(raw);_validate(contrast)\n    commas=sorted((o for o in raw if o['char']==',' and o['score']>=.25),key=_center)\n    if len(commas)<2:return list(raw),[]\n    # Limit to observed mandatory XY prefix; never resolve Z or clock/date.\n    right=_center(commas[1]);removed=set();resolutions=[]\n    for k,o in sorted(enumerate(raw),key=lambda pair:-pair[1]['score']):\n        if k in removed or not o['char'].isdigit() or o['score']<.25 or _center(o)>=right:continue\n        alternatives=[(j,p) for j,p in enumerate(raw) if j not in removed and p['char'].isdigit() and p['char']!=o['char'] and p['score']>=.25 and _iou(p['xyxy'],o['xyxy'])>=.5]\n        if not alternatives or o['score']<2.*max(p['score'] for j,p in alternatives):continue\n        confirmed,_=dominant_match(o,contrast)\n        if not confirmed:continue\n        removed.update(j for j,p in alternatives)\n        resolutions.append({'kept':o,'removed':[p for j,p in alternatives]})\n    return [o for j,o in enumerate(raw) if j not in removed],resolutions\n"
+    },
+    "test_agreement_probe.py": {
+      "sha256": "9d58496334b24529127aa3f491a6d1d9ff29550da1b526cd1187143759b94b26",
+      "text": "from pathlib import Path\nimport sys,unittest,copy\nB=Path(__file__).resolve().parent.parent;sys.path.insert(0,str(B/'coordinate-independent-20261016'))\nfrom xy_decode import decode\nfrom agreement_probe import dominant_guard,resolve_digits\n\ndef fixture():\n    out=[];x=36.\n    for c in '14,34,0':\n        width=20. if c.isdigit() else 8.\n        out.append({'char':c,'score':.98,'xyxy':[x,3.,x+width,39.]});x+=width+2.\n    return out\n\nclass AgreementProbeTests(unittest.TestCase):\n    def test_weak_secondary_alternative_does_not_veto_dominant_agreement(self):\n        raw=fixture();other=copy.deepcopy(raw);other.append({**raw[1],'char':'3','score':.27})\n        selected=decode(raw)['selected'];self.assertIsNotNone(dominant_guard(selected,{'raw':raw,'contrast':other})[0])\n\n    def test_close_secondary_alternative_still_rejects(self):\n        raw=fixture();other=copy.deepcopy(raw);other.append({**raw[1],'char':'3','score':.6})\n        self.assertIsNone(dominant_guard(decode(raw)['selected'],{'raw':raw,'contrast':other})[0])\n\n    def test_missing_secondary_digit_is_not_guessed(self):\n        raw=fixture();self.assertIsNone(dominant_guard(decode(raw)['selected'],{'raw':raw,'contrast':raw[:1]+raw[2:]})[0])\n\n    def test_second_route_disagreement_still_rejects(self):\n        raw=fixture();other=copy.deepcopy(raw);other[1]['char']='7'\n        self.assertIsNone(dominant_guard(decode(raw)['selected'],{'raw':raw,'contrast':other})[0])\n\n    def test_clear_digit_overlap_requires_matching_dominant_secondary(self):\n        raw=fixture();raw.append({**raw[1],'char':'3','score':.27});self.assertIsNone(decode(raw)['selected'])\n        repaired,resolutions=resolve_digits(raw,fixture());selected=decode(repaired)['selected'];self.assertIsNotNone(selected);self.assertEqual(selected['xy'],[14,34]);self.assertEqual(len(resolutions),1)\n\n    def test_primary_overlap_not_resolved_without_secondary(self):\n        raw=fixture();raw.append({**raw[1],'char':'3','score':.27});repaired,_=resolve_digits(raw,[]);self.assertIsNone(decode(repaired)['selected'])\n\n    def test_primary_near_tie_not_resolved(self):\n        raw=fixture();raw.append({**raw[1],'char':'3','score':.6});repaired,_=resolve_digits(raw,fixture());self.assertIsNone(decode(repaired)['selected'])\n\n    def test_symbols_are_not_removed_as_digit_alternatives(self):\n        raw=fixture();raw.append({**raw[1],'char':'-','score':.27});repaired,_=resolve_digits(raw,fixture());self.assertIsNone(decode(repaired)['selected'])\n\n    def test_optional_z_conflict_does_not_veto_xy(self):\n        raw=fixture();other=copy.deepcopy(raw);other.append({**raw[-1],'char':'8','score':.98})\n        self.assertEqual(dominant_guard(decode(raw)['selected'],{'raw':raw,'contrast':other})[0]['xy'],[14,34])\n\n    def test_shared_wrong_digit_is_documented_blind_spot(self):\n        raw=fixture();raw[1]['char']='7';self.assertEqual(dominant_guard(decode(raw)['selected'],{'raw':raw,'contrast':copy.deepcopy(raw)})[0]['xy'],[17,34])\n\nif __name__=='__main__':unittest.main()\n"
+    },
+    "replay.py": {
+      "sha256": "129d72fa15d37b84ddf12e2e878a6f10e886b83146c35c5f5540a21f964902ab",
+      "text": "from pathlib import Path\nimport json,sys,hashlib,collections,datetime,cv2\nR=Path(__file__).resolve().parent;B=R.parent;F=B/'coordinate-independent-20261016';T=B/'coordinate-flight-intake-20261016';P=B/'coordinate-uncertainty-probe-20261016';sys.path.insert(0,str(F));sys.path.insert(0,str(P));sys.path.insert(0,str(T));sys.path.insert(0,str(R))\nfrom evaluate_training import load_inputs,grade\nfrom xy_decode import decode\nfrom sign_recovery import recover\nfrom probe import guard\nfrom agreement_probe import dominant_guard,resolve_digits\nread=lambda p:json.loads(p.read_text(encoding='utf-8-sig'));sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\ndef main():\n paths=[T/'evaluation-flight-onnx-v1.json',T/'evaluation-training-gpu-v1.json',T/'score-flight-cpu-v1.json',T/'labels-v3-user-confirmed.json',T/'export/flight.onnx',T/'training/flight/weights/last.pt',F/'xy_decode.py',F/'sign_layout.py',F/'sign_recovery.py',F/'calibration.json',P/'probe.py',R/'agreement_probe.py',R/'test_agreement_probe.py',R/'replay.py']\n lock={'frozenAtUtc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Offline postprocessing spike. Existing model, labels, parser, sign logic, detector threshold and gates unchanged. Dominance ratio2 fixed before full replay, no sweep. All sessions previously observed; historical72frameholdout is now observational for new guard. No independent acceptance or product change.','files':{str(p):sha(p) for p in paths},'constants':{'confidenceFloor':.25,'overlap':.5,'dominanceRatio':2.},'policies':['frozen','secondary-dominance','raw-consensus-only','combined'],'runtimePlan':'Fresh single-image GPU inference vs prior actual single-image CPU on2012inputs; preserve batch32 failure and exact2012agreement assertion.'}\n p=R/'experiment-lock-v1.json';assert not p.exists();p.write_text(json.dumps(lock,ensure_ascii=False,indent=2),encoding='utf-8')\n items,truth=load_inputs();latest={f['id']:f for f in read(T/'labels-v3-user-confirmed.json')['frames']}\n for fid,f in latest.items():truth[fid]['expected']=f['expected']\n obs={r['id']:r for r in read(T/'evaluation-flight-onnx-v1.json')['rows']};cal=read(F/'calibration.json');counts=collections.defaultdict(collections.Counter);rows=[]\n for i in items:\n  fid=i['id'];r=obs[fid];image=cv2.imread(i['images']['contrast']);assert image is not None;raw=r['detections']['raw'];contrast=r['detections']['contrast'];resolved,resolutions=resolve_digits(raw,contrast);newpipe=recover(resolved,decode(resolved),cal,i['context'],image,contrast)\n  for policy in lock['policies']:\n   selectedRaw=raw if policy in ['frozen','secondary-dominance'] else resolved;pipe=r['pipeline'] if policy in ['frozen','secondary-dominance'] else newpipe;objects={'raw':selectedRaw,'contrast':contrast}\n   s,reasons=guard(pipe['selected'],objects,'paired-digits-0.25') if policy in ['frozen','raw-consensus-only'] else dominant_guard(pipe['selected'],objects)\n   if policy=='frozen':assert s==r['pairedSelected']\n   outcome=grade(truth[fid],s)\n   for g in truth[fid]['groups']:counts[policy,g][outcome]+=1\n   rows.append({'id':fid,'policy':policy,'groups':truth[fid]['groups'],'state':truth[fid]['state'],'expected':truth[fid]['expected'],'selected':s,'outcome':outcome,'reasons':reasons,'resolutions':resolutions if policy in ['raw-consensus-only','combined'] else []})\n summary=[{'policy':p,'group':g,**dict(c)} for (p,g),c in counts.items()];by={(r['policy'],r['group']):r for r in summary};qualified={}\n for p in lock['policies'][1:]:\n  subset={g:by[p,g] for g in ['old-development','prior-session','flight-full','heldout']};qualified[p]=all(r.get('wrong',0)==r.get('falsePositive',0)==0 for r in subset.values()) and all(subset[g].get('correct',0)>=n for g,n in [('old-development',166),('prior-session',1022),('heldout',64)])\n report={'scope':lock['scope'],'lockSHA256':sha(R/'experiment-lock-v1.json'),'summary':summary,'rows':rows,'coverageAndKnownErrorQualified':qualified,'runtimeNotYetVerified':True,'productionChanged':False}\n p=R/'replay-cpu-v1.json';assert not p.exists();p.write_text(json.dumps(report,ensure_ascii=False,separators=(',',':')),encoding='utf-8')\n for r in summary:\n  if r['group'] in ['old-development','prior-session','flight-full','heldout']:print(r,flush=True)\n print('Coverage/known-error gates',qualified,flush=True);assert all(sha(Path(p))==h for p,h in lock['files'].items())\nif __name__=='__main__':main()\n"
+    },
+    "runtime_replay.py": {
+      "sha256": "ef1a51040eda6097fe850c18318d2b18d9a1dab81a09214a542644572145b347",
+      "text": "\"\"\"Actual single-image GPU/CPU inference; current-own model plus lazy old-own fallback.\"\"\"\nfrom pathlib import Path\nimport os,json,sys,time,hashlib,statistics,collections,argparse,datetime\nR=Path(__file__).resolve().parent;B=R.parent;T=B/'coordinate-flight-intake-20261016';O=B/'coordinate-targeted-retrain-20261016';F=B/'coordinate-independent-20261016';P=B/'coordinate-uncertainty-probe-20261016'\nos.environ['YOLO_CONFIG_DIR']=str(B/'coordinate-yolo-selftrain-20261015/settings');os.environ['YOLO_AUTOINSTALL']='false';sys.path.insert(0,str(F));sys.path.insert(0,str(P));sys.path.insert(0,str(T));sys.path.insert(0,str(R))\nfrom evaluate_training import load_inputs,grade\nfrom xy_decode import decode\nfrom sign_recovery import recover\nfrom probe import guard\nfrom agreement_probe import resolve_digits,dominant_guard\nread=lambda p:json.loads(p.read_text(encoding='utf-8-sig'));sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\n\ndef main():\n import cv2,torch\n from ultralytics import YOLO\n parser=argparse.ArgumentParser();parser.add_argument('backend',choices=['gpu','cpu']);args=parser.parse_args();device=0 if args.backend=='gpu' else 'cpu';torch.set_num_threads(4)\n weights={'gpu':{'primary':T/'training/flight/weights/last.pt','fallback':O/'training/expanded/weights/last.pt'},'cpu':{'primary':T/'export/flight.onnx','fallback':O/'export/expanded.onnx'}}\n items,truth=load_inputs();latest={f['id']:f for f in read(T/'labels-v3-user-confirmed.json')['frames']}\n for fid,f in latest.items():truth[fid]['expected']=f['expected']\n if args.backend=='gpu':\n  paths=[p for w in weights.values() for p in w.values()]+[R/'agreement_probe.py',R/'runtime_replay.py',T/'labels-v3-user-confirmed.json',R/'replay-cpu-v1.json']\n  lock={'frozenAtUtc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'After initial dominant-agreement diagnostic, test lazy own-old fallback only when newcombined abstains. Parameters fixed; no label-specific branch or missingcharacter insertion. Previously observed sessions only. Extraunknown returns unscored. Existing batch32 assertion remains unchanged.','files':{str(p):sha(p) for p in paths},'inference':{'batch':1,'confidence':.25,'iou':.45,'imgsz':[64,896],'maxDet':256,'half':False},'fallback':'Own expanded139-source model with original frozen strict paired-digit guard, run only when primarycombined returnsNone.'}\n  p=R/'runtime-lock-v1.json';assert not p.exists();p.write_text(json.dumps(lock,ensure_ascii=False,indent=2),encoding='utf-8')\n lock=read(R/'runtime-lock-v1.json');assert all(sha(Path(p))==h for p,h in lock['files'].items());nets={n:YOLO(str(p),task='detect') for n,p in weights[args.backend].items()};cal=read(F/'calibration.json');classes=list('0123456789-,+:')\n def detect(net,images):\n  obs={}\n  for v,im in images.items():\n   pred=net.predict(source=im,imgsz=(64,896),rect=False,conf=.25,iou=.45,max_det=256,device=device,half=False,verbose=False,save=False)[0].boxes.cpu()\n   obs[v]=[{'char':classes[int(c)],'score':float(s),'xyxy':list(map(float,b))} for b,s,c in zip(pred.xyxy.tolist(),pred.conf.tolist(),pred.cls.tolist())]\n  return obs\n # Unscored warmup for both models; actual timed section excludes model construction and file I/O.\n warm={v:cv2.imread(items[0]['images'][v]) for v in ['raw','contrast']}\n for net in nets.values():detect(net,warm)\n rows=[];counts=collections.defaultdict(collections.Counter);start=time.perf_counter()\n for i in items:\n  images={v:cv2.imread(i['images'][v]) for v in ['raw','contrast']};assert all(im is not None for im in images.values());tick=time.perf_counter();obs=detect(nets['primary'],images);resolved,resolutions=resolve_digits(obs['raw'],obs['contrast']);pipe=recover(resolved,decode(resolved),cal,i['context'],images['contrast'],obs['contrast']);primary,reasons=dominant_guard(pipe['selected'],{'raw':resolved,'contrast':obs['contrast']});primary_ms=(time.perf_counter()-tick)*1000\n  fallback=None;fallback_obs=None;fallback_ms=0.;used=primary is None\n  if used:\n   tick=time.perf_counter();fallback_obs=detect(nets['fallback'],images);old=recover(fallback_obs['raw'],decode(fallback_obs['raw']),cal,i['context'],images['contrast'],fallback_obs['contrast']);fallback,_=guard(old['selected'],fallback_obs,'paired-digits-0.25');fallback_ms=(time.perf_counter()-tick)*1000\n  selected=primary if primary is not None else fallback\n  row={'id':i['id'],'primaryDetections':obs,'primaryPipeline':pipe,'primarySelected':primary,'primaryReasons':reasons,'resolutions':resolutions,'fallbackCalled':used,'fallbackDetections':fallback_obs,'fallbackSelected':fallback,'selected':selected,'primaryMilliseconds':primary_ms,'fallbackMilliseconds':fallback_ms};rows.append(row)\n  for mode,s in [('combined-single',primary),('combined-fallback',selected)]:\n   out=grade(truth[i['id']],s)\n   for g in truth[i['id']]['groups']:counts[mode,g][out]+=1\n  if len(rows)%250==0:print(args.backend,'actualsingle',len(rows),'/2012',flush=True)\n report={'scope':lock['scope'],'backend':args.backend,'runtimeLockSHA256':sha(R/'runtime-lock-v1.json'),'weights':{n:{'file':str(p),'sha256':sha(p)} for n,p in weights[args.backend].items()},'rows':rows,'summary':[{'mode':m,'group':g,**dict(c)} for (m,g),c in counts.items()],'frames':len(rows),'fallbackCalls':sum(r['fallbackCalled'] for r in rows),'fallbackReturns':sum(r['fallbackSelected'] is not None for r in rows),'secondsIncludingImageIO':time.perf_counter()-start,'timingScope':'Within-run amortized timing after unscored warmup; model initialization and image file IO excluded from primary/fallbackMilliseconds. Not isolated game-frametime test.','timings':{'primaryMeanMs':statistics.mean(r['primaryMilliseconds'] for r in rows),'totalMeanMs':statistics.mean(r['primaryMilliseconds']+r['fallbackMilliseconds'] for r in rows),'primaryMedianMs':statistics.median(r['primaryMilliseconds'] for r in rows),'totalMedianMs':statistics.median(r['primaryMilliseconds']+r['fallbackMilliseconds'] for r in rows)},'productionChanged':False}\n if args.backend=='cpu':\n  gpu={r['id']:r for r in read(R/'runtime-gpu-v1.json')['rows']};agreement={}\n  for field in ['primarySelected','selected']:\n   for axis in ['xy','z']:\n    key=lambda s:s[axis] if s else None;agreement[field+'-'+axis]=sum(key(r[field])==key(gpu[r['id']][field]) for r in rows)\n  report['singleImageAgreement']=agreement\n p=R/('runtime-'+args.backend+'-v1.json');assert not p.exists();p.write_text(json.dumps(report,ensure_ascii=False,separators=(',',':')),encoding='utf-8')\n assert all(sha(Path(p))==h for p,h in lock['files'].items());print(args.backend,'fallbackCalls',report['fallbackCalls'],'returns',report['fallbackReturns'],'timing',report['timings'],flush=True)\n for r in report['summary']:\n  if r['group'] in ['old-development','prior-session','flight-full','heldout']:print(r,flush=True)\n if args.backend=='cpu':print('Single-image strict agreement',agreement,flush=True);assert all(n==2012 for n in agreement.values())\nif __name__=='__main__':main()\n"
+    },
+    "verify.py": {
+      "sha256": "14e17dae5faea14059ba28e7f1a6b532e619737245c3633da84d803be39359ed",
+      "text": "\"\"\"External evidence audit; preserves older failed batch32 assertion.\"\"\"\nfrom pathlib import Path\nimport json,hashlib,sys,collections,statistics,io,unittest,cv2\nR=Path(__file__).resolve().parent;B=R.parent;T=B/'coordinate-flight-intake-20261016';O=B/'coordinate-targeted-retrain-20261016';F=B/'coordinate-independent-20261016';P=B/'coordinate-uncertainty-probe-20261016';S=Path('C:/Users/Kahvia/.codex/worktrees/coordinate-offline-evaluation/WWMAP-TOOLS')\nfor p in [F,P,T,R]:sys.path.insert(0,str(p))\nfrom evaluate_training import load_inputs,grade\nfrom xy_decode import decode\nfrom sign_recovery import recover\nfrom probe import guard\nfrom agreement_probe import dominant_guard,resolve_digits\nfrom benchmark import pixel_digest\nread=lambda p:json.loads(p.read_text(encoding='utf-8-sig'));sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\ndef main():\n for n in ['experiment-lock-v1.json','runtime-lock-v1.json']:\n  assert all(sha(Path(p))==h for p,h in read(R/n)['files'].items())\n # Provenance closure is an external post-run audit, not claimed as a runner feature.\n recipes=read(S/'tools/coordinate-ocr/annotations/20261016-session-B28F69A4/flight-retrain-recipes-v1.json');evidence=read(S/'tools/coordinate-ocr/annotations/20261016-session-B28F69A4/flight-retrain-v1.json');closure={}\n for n in ['evaluate_training.py','run_frozen.py','export_and_cpu_check.py']:\n  assert sha(T/n)==recipes['scripts'][n]['sha256'];closure[str(T/n)]=sha(T/n)\n for n in ['inspection/corpus.json','labels-v3-user-confirmed.json']:\n  assert sha(T/n)==evidence['files'][n]['sha256'];closure[str(T/n)]=sha(T/n)\n for n in ['xy_decode.py','sign_layout.py','sign_recovery.py','benchmark.py']:\n  assert sha(F/n)==recipes['frozenSources'][n]['sha256'];closure[str(F/n)]=sha(F/n)\n for i in read(O/'evaluation-inputs.json')['inputs']:\n  if i['id'].endswith('000835') and i['id'].startswith('session-110DF22E'):continue\n  for v,p in i['images'].items():assert sha(Path(p))==i['imageSHA256'][v]\n native=read(T/'native.json');trace={r['id']:r for r in native['pipelines']['ppocr-raw']}\n for i in read(T/'inputs.json')['inputs']:\n  assert sha(Path(i['image']))==i['cropSHA256'];assert pixel_digest(cv2.imread(i['image']))==i['pixelDigest']==trace[i['id']]['pixelDigest']\n  for v in ['raw','contrast']:\n   im=cv2.imread(str(T/'native'/(i['id']+'.'+v+'.png')));assert pixel_digest(im)==trace[i['id']]['preprocessingTrace'][v]['pixelDigest']\n for n in ['inputs.json','native.json']:closure[str(T/n)]=sha(T/n)\n print('PASS external source/label/nativeimage provenance audit; runner limitation retained',flush=True)\n items,truth=load_inputs();idx={i['id']:i for i in items};latest={f['id']:f for f in read(T/'labels-v3-user-confirmed.json')['frames']}\n for fid,f in latest.items():truth[fid]['expected']=f['expected']\n cal=read(F/'calibration.json');backends={n:read(R/('runtime-'+n+'-v1.json')) for n in ['gpu','cpu']};selections={};timings={}\n for name,d in backends.items():\n  counts=collections.defaultdict(collections.Counter);assert d['frames']==len(d['rows'])==2012;assert len({r['id'] for r in d['rows']})==2012\n  for r in d['rows']:\n   fid=r['id'];i=idx[fid];obs=r['primaryDetections'];raw,res=resolve_digits(obs['raw'],obs['contrast']);image=cv2.imread(i['images']['contrast']);pipe=recover(raw,decode(raw),cal,i['context'],image,obs['contrast']);s,reasons=dominant_guard(pipe['selected'],{'raw':raw,'contrast':obs['contrast']});assert pipe==r['primaryPipeline'] and res==r['resolutions'] and s==r['primarySelected'] and reasons==r['primaryReasons'];assert r['fallbackCalled']==(s is None)\n   if s is None:\n    old=r['fallbackDetections'];p=recover(old['raw'],decode(old['raw']),cal,i['context'],image,old['contrast']);s,_=guard(p['selected'],old,'paired-digits-0.25');assert s==r['fallbackSelected']\n   else:assert r['fallbackDetections'] is None and r['fallbackSelected'] is None\n   assert s==r['selected']\n   for mode,v in [('combined-single',r['primarySelected']),('combined-fallback',s)]:\n    selections[name,mode,fid]=v\n    for group in truth[fid]['groups']:counts[mode,group][grade(truth[fid],v)]+=1\n  for r in d['summary']:assert dict(counts[r['mode'],r['group']])=={k:v for k,v in r.items() if k not in ['mode','group']}\n  assert d['fallbackCalls']==345 and d['fallbackReturns']==8\n  timings[name]={}\n  for mode in ['primary','total']:\n   xs=[r['primaryMilliseconds']+(r['fallbackMilliseconds'] if mode=='total' else 0) for r in d['rows']];timings[name][mode]={'meanMs':statistics.mean(xs),'medianMs':statistics.median(xs),'p95Ms':statistics.quantiles(xs,n=100,method='inclusive')[94]}\n assert all(v==2012 for v in backends['cpu']['singleImageAgreement'].values())\n for mode in ['combined-single','combined-fallback']:\n  for i in items:\n   for axis in ['xy','z']:\n    key=lambda v:v[axis] if v else None;assert key(selections['gpu',mode,i['id']])==key(selections['cpu',mode,i['id']])\n baselines={'previous-expanded-strict':{},'previous-expanded-raw':{},'frozen-flight-strict':{r['id']:r['pairedSelected'] for r in read(T/'evaluation-flight-onnx-v1.json')['rows']}}\n for i in items:baselines['previous-expanded-strict'][i['id']]=i['baselinePairedSelected'];baselines['previous-expanded-raw'][i['id']]=i['baselineSelected']\n retention={}\n for n,old in baselines.items():\n  good=[fid for fid,v in old.items() if grade(truth[fid],v)=='correct'];missing=[fid for fid in good if grade(truth[fid],selections['cpu','combined-fallback',fid])!='correct'];retention[n]={'previousCorrect':len(good),'retained':len(good)-len(missing),'remainingMissIds':missing}\n assert retention['previous-expanded-strict']['previousCorrect']==retention['previous-expanded-strict']['retained']==1607\n assert retention['frozen-flight-strict']['previousCorrect']==retention['frozen-flight-strict']['retained']==1630\n assert retention['previous-expanded-raw']['retained']==1619 and retention['previous-expanded-raw']['previousCorrect']==1622\n # Counterfactual RED control without modifying the tests, baseline files or probe source.\n import test_agreement_probe as tests\n stream=io.StringIO();green=unittest.TextTestRunner(stream=stream).run(unittest.defaultTestLoader.loadTestsFromModule(tests));assert green.wasSuccessful() and green.testsRun==10\n tests.dominant_guard=lambda selected,obs:guard(selected,obs,'paired-digits-0.25');tests.resolve_digits=lambda raw,contrast:(list(raw),[])\n red=unittest.TextTestRunner(stream=stream).run(unittest.defaultTestLoader.loadTestsFromModule(tests));assert len(red.failures)==2 and not red.errors and red.testsRun==10\n oldcpu=read(T/'evaluation-flight-onnx-v1.json');assert all(v==2011 for v in oldcpu['agreement'].values());assert 'all(n==2012 for n in report[\\'agreement\\'].values())' in (T/'export_and_cpu_check.py').read_text(encoding='utf-8-sig')\n assert all(sha(Path(p))==h for p,h in read(R/'experiment-lock-v1.json')['files'].items())\n out={'scope':'Offline observational verification only; no product changes. Existing batch32 failure remains failed; new matching single-image runners satisfy unchanged all2012 condition. External provenance closure audited after runs; runtime runner does not itself check every dependency at each stage.','dependencyClosureSHA256':closure,'inputImagesAudited':{'priorPairs':1577,'newPairs':435},'runtimeOutputsReplayed':4024,'strictSingleImageAgreement':backends['cpu']['singleImageAgreement'],'oldBatch32AgreementStill':oldcpu['agreement'],'retention':retention,'timings':timings,'tests':{'green':10,'disabledProbeFailures':2,'disabledProbeErrors':0},'unknownReturnPolicy':'Always unscored; fallback adds1unknown return. Same-model correlated evidence can share errors.','productionChanged':False,'downloads':False,'independentAcceptance':False}\n p=R/'verification-v1.json';assert not p.exists();p.write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding='utf-8');print('PASS4024actualoutputs,all2012singleagreement,retention1607/1607and1630/1630;oldbatchfailureunchanged',flush=True)\nif __name__=='__main__':main()\n"
+    },
+    "pack.py": {
+      "sha256": "63dda7b6ca6b005eef80ba7aaa125c71af9fe54c8f81a7b9505cad99ce000cf2",
+      "text": "from pathlib import Path\nimport json,gzip,hashlib,sys,importlib.metadata\nR=Path(__file__).resolve().parent;B=R.parent;T=B/'coordinate-flight-intake-20261016';S=Path('C:/Users/Kahvia/.codex/worktrees/coordinate-offline-evaluation/WWMAP-TOOLS');A=S/'tools/coordinate-ocr/annotations/20261016-regression-recovery';A.mkdir(exist_ok=True)\nsys.path.insert(0,str(T))\nfrom evaluate_training import load_inputs\nread=lambda p:json.loads(p.read_text(encoding='utf-8-sig'));sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\nitems,truth=load_inputs();latest={f['id']:f for f in read(T/'labels-v3-user-confirmed.json')['frames']}\nfor fid,f in latest.items():truth[fid]['expected']=f['expected']\nfor i in items:i['imageSHA256']={v:sha(Path(p)) for v,p in i['images'].items()}\ninputs={'scope':'Post-run audit snapshot of exact native images and baseline outputs, not falsely claimed as pre-run freeze. Truth stored separately and never passed into the detection/guard functions.','inputs':items};p=R/'input-audit-v1.json';assert not p.exists();p.write_text(json.dumps(inputs,ensure_ascii=False,separators=(',',':')),encoding='utf-8')\np=R/'truth-reviewed-v1.json';assert not p.exists();p.write_text(json.dumps({'scope':'Unchanged old reviewed truth and current4user-confirmed revisions, all other labels assistant-reviewed. Unknowns not scored. Previously observed sessions, not independent acceptance.','frames':truth},ensure_ascii=False,separators=(',',':')),encoding='utf-8')\nfiles={n:R/n for n in ['experiment-lock-v1.json','runtime-lock-v1.json','replay-cpu-v1.json','verification-v1.json','input-audit-v1.json','truth-reviewed-v1.json']};files['flight-native-preprocessing-traces.json']=T/'native.json'\nreview={'scope':'Independent read-only review of probe, actualCPU/GPU statistics, retention and report. No logic/numerical blocker found.','confirmed':['Allfour single-imageagreement2012/2012','Strictbaseline1607/1607retained','Frozenflightstrict1630/1630retained','Rawbaseline1619/1622;remaining506/593/596','Fallback8returns:7knowncorrect+1unknown','Mean/P95increaseandobservationaldatastatusdisclosed'],'limitation':'Runner checks partial dependency set; post-run audit covers listedsource/labels/inputs, not everyruntimepackage. Report wording refined accordingly.'}\nevidence={'scope':'Temporary offline dominantagreement and lazyownoldfallback probe. No training, downloads, model/label changes or product replacement. Priorfailedbatch32comparison preserved. All datasets previously observed, not independent acceptance.','files':{n:{'localPath':str(p),'sha256':sha(p),'data':read(p)} for n,p in files.items()},'runtimeSummaries':{n:{k:v for k,v in read(R/('runtime-'+n+'-v1.json')).items() if k!='rows'} for n in ['gpu','cpu']},'independentReview':review,'productionChanged':False}\np=A/'regression-recovery-v1.json';assert not p.exists();p.write_text(json.dumps(evidence,ensure_ascii=False,separators=(',',':')),encoding='utf-8');artifacts={'evidence':{'file':p.name,'sha256':sha(p)}}\nfor backend in ['gpu','cpu']:\n src=R/('runtime-'+backend+'-v1.json');p=A/f'regression-recovery-{backend}-v1.json.gz';assert not p.exists();raw=src.read_bytes();p.write_bytes(gzip.compress(raw,mtime=0));assert gzip.decompress(p.read_bytes())==raw;artifacts[backend]={'file':p.name,'sha256':sha(p),'decompressedSHA256':sha(src),'decompressedBytes':len(raw),'localPath':str(src)}\nscripts=['agreement_probe.py','test_agreement_probe.py','replay.py','runtime_replay.py','verify.py','pack.py'];F=B/'coordinate-independent-20261016';P=B/'coordinate-uncertainty-probe-20261016';recipes={'scope':'Exact temporary experiment source and test/counterfactual records. Frozen existing parser/sign code copied for reproducibility; no product code changed. Runtime package versions recorded, not a complete dependency lock.','scripts':{n:{'sha256':sha(R/n),'text':(R/n).read_text(encoding='utf-8-sig')} for n in scripts},'testLogs':{n:{'sha256':sha(R/n),'text':(R/n).read_text(encoding='utf-8-sig')} for n in ['tests-red.log','tests-red-v2.log','tests-green.log']},'frozenSources':{n:{'sha256':sha(F/n),'text':(F/n).read_text(encoding='utf-8-sig')} for n in ['xy_decode.py','sign_layout.py','sign_recovery.py','benchmark.py']},'frozenCalibration':{'sha256':sha(F/'calibration.json'),'data':read(F/'calibration.json')},'guardProbeSource':{'sha256':sha(P/'probe.py'),'text':(P/'probe.py').read_text(encoding='utf-8-sig')},'inputAndTruthHelper':{'sha256':sha(T/'evaluate_training.py'),'text':(T/'evaluate_training.py').read_text(encoding='utf-8-sig')},'runtime':{n:importlib.metadata.version(n) for n in ['ultralytics','torch','onnxruntime','numpy','opencv-python']},'python':sys.version,'artifacts':artifacts}\np=A/'regression-recovery-recipes-v1.json';assert not p.exists();p.write_text(json.dumps(recipes,ensure_ascii=False,indent=2),encoding='utf-8')\nfor p in sorted(A.iterdir()):print(p.name,p.stat().st_size)\n"
+    }
+  },
+  "testLogs": {
+    "tests-red.log": {
+      "sha256": "e15472c6d43ca31cac87b519a4b4db52a39c3ac2878b9780db41892447af2108",
+      "text": "E........F\n======================================================================\nERROR: test_clear_digit_overlap_requires_matching_dominant_secondary (test_agreement_probe.AgreementProbeTests.test_clear_digit_overlap_requires_matching_dominant_secondary)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-regression-recovery-20261016\\test_agreement_probe.py\", line 32, in test_clear_digit_overlap_requires_matching_dominant_secondary\n    repaired,resolutions=resolve_digits(raw,fixture());self.assertEqual(decode(repaired)['selected']['xy'],[14,34]);self.assertEqual(len(resolutions),1)\n                                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\nTypeError: 'NoneType' object is not subscriptable\n\n======================================================================\nFAIL: test_weak_secondary_alternative_does_not_veto_dominant_agreement (test_agreement_probe.AgreementProbeTests.test_weak_secondary_alternative_does_not_veto_dominant_agreement)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-regression-recovery-20261016\\test_agreement_probe.py\", line 17, in test_weak_secondary_alternative_does_not_veto_dominant_agreement\n    selected=decode(raw)['selected'];self.assertIsNotNone(dominant_guard(selected,{'raw':raw,'contrast':other})[0])\n                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: unexpectedly None\n\n----------------------------------------------------------------------\nRan 10 tests in 0.002s\n\nFAILED (failures=1, errors=1)\n"
+    },
+    "tests-red-v2.log": {
+      "sha256": "420f10a35ef739b3d94ad495527fdb16890d2309ef3a917ca73c40016c364ec0",
+      "text": "F........F\n======================================================================\nFAIL: test_clear_digit_overlap_requires_matching_dominant_secondary (test_agreement_probe.AgreementProbeTests.test_clear_digit_overlap_requires_matching_dominant_secondary)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-regression-recovery-20261016\\test_agreement_probe.py\", line 32, in test_clear_digit_overlap_requires_matching_dominant_secondary\n    repaired,resolutions=resolve_digits(raw,fixture());selected=decode(repaired)['selected'];self.assertIsNotNone(selected);self.assertEqual(selected['xy'],[14,34]);self.assertEqual(len(resolutions),1)\n                                                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: unexpectedly None\n\n======================================================================\nFAIL: test_weak_secondary_alternative_does_not_veto_dominant_agreement (test_agreement_probe.AgreementProbeTests.test_weak_secondary_alternative_does_not_veto_dominant_agreement)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-regression-recovery-20261016\\test_agreement_probe.py\", line 17, in test_weak_secondary_alternative_does_not_veto_dominant_agreement\n    selected=decode(raw)['selected'];self.assertIsNotNone(dominant_guard(selected,{'raw':raw,'contrast':other})[0])\n                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: unexpectedly None\n\n----------------------------------------------------------------------\nRan 10 tests in 0.003s\n\nFAILED (failures=2)\n"
+    },
+    "tests-green.log": {
+      "sha256": "9006308d47a9575a7382b3af4166b3c56e3437f553b56f2859d6c962f008a071",
+      "text": "..........\n----------------------------------------------------------------------\nRan 10 tests in 0.002s\n\nOK\n"
+    }
+  },
+  "frozenSources": {
+    "xy_decode.py": {
+      "sha256": "5bd549690387f39249b76b0a38449e15e6da0fc34ee8b6b658472eb0740934b5",
+      "text": "\"\"\"Own character-box decoder for the fixed, single-row offline coordinate ROI.\n\nX/Y need two observed comma delimiters. Z is optional. Conflicts outside the\nmandatory prefix cannot veto X/Y. No sign repair, temporal state or truth input.\n\"\"\"\nimport math\nimport re\nimport statistics\n\n\ndef _iou(a, b):\n    area = max(0, min(a[2], b[2]) - max(a[0], b[0])) * max(0, min(a[3], b[3]) - max(a[1], b[1]))\n    union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - area\n    return area / union if union > 0 else 0\n\n\ndef _center(item):\n    return (item['xyxy'][0] + item['xyxy'][2]) / 2\n\n\ndef _integer(text):\n    if not re.fullmatch(r'[+-]?\\d+', text):\n        return None\n    value = int(text)\n    return value if -2147483648 <= value <= 2147483647 else None\n\n\ndef _conflicts(items):\n    return any(a['char'] != b['char'] and _iou(a['xyxy'], b['xyxy']) > .45\n               for i, a in enumerate(items) for b in items[i + 1:])\n\n\ndef _continuous(items, digit_width):\n    return all(_center(b) - _center(a) <= 1.8 * digit_width for a, b in zip(items, items[1:]))\n\n\ndef decode(detections):\n    def reject(reason, chunks=None):\n        return {'selected': None, 'reason': reason, 'chunks': chunks or []}\n\n    accepted = []\n    for item in detections:\n        if not math.isfinite(item['score']):\n            return reject('invalid-score')\n        if item['score'] < .25:\n            continue\n        box = item['xyxy']\n        if len(box) != 4 or not all(math.isfinite(v) for v in box) or box[2] <= box[0] or box[3] <= box[1]:\n            return reject('invalid-box')\n        if len(item['char']) != 1 or item['char'] not in '0123456789-,+:':\n            return reject('invalid-character')\n        accepted.append(item)\n\n    unique = []\n    for item in sorted(accepted, key=lambda c: -c['score']):\n        if not any(item['char'] == old['char'] and _iou(item['xyxy'], old['xyxy']) > .45 for old in unique):\n            unique.append(item)\n    unique.sort(key=_center)\n    widths = [c['xyxy'][2] - c['xyxy'][0] for c in unique if c['char'].isdigit()]\n    if not widths:\n        return reject('no-digits')\n    digit_width = statistics.median(widths)\n    threshold = max(12., .75 * digit_width)\n    groups = []\n    right = None\n    for item in unique:\n        if right is None or item['xyxy'][0] - right > threshold:\n            groups.append([])\n            right = item['xyxy'][2]\n        else:\n            right = max(right, item['xyxy'][2])\n        groups[-1].append(item)\n\n    chunks = []\n    candidates = []\n    unsafe_coordinate = False\n    for index, group in enumerate(groups):\n        text = ''.join(c['char'] for c in group)\n        chunk = {'text': text, 'reason': 'no-delimited-xy'}\n        chunks.append(chunk)\n        commas = [i for i, c in enumerate(group) if c['char'] == ',']\n        if len(commas) < 2:\n            continue\n        end = commas[1] + 1\n        prefix = group[:end]\n        # Check ambiguity before syntax: conflicting signs may make the text\n        # unparseable, but must not allow selecting a different coordinate group.\n        if any(a['char'] != b['char'] and _iou(a['xyxy'], b['xyxy']) > .45\n               for a in prefix for b in group if a is not b):\n            chunk['reason'] = 'conflicting-xy'\n            unsafe_coordinate = True\n            continue\n        prefix_text = ''.join(c['char'] for c in prefix)\n        match = re.fullmatch(r'([+-]?\\d+),([+-]?\\d+),', prefix_text)\n        if not match:\n            continue\n        # A comma alternative in an ambiguous Z slot is optional context.\n        # An additional standalone comma still makes the coordinate ambiguous.\n        if any(not any(other['char'] != ',' and _iou(extra['xyxy'], other['xyxy']) > .45\n                       for other in group[end:]) for extra in (group[i] for i in commas[2:])):\n            chunk['reason'] = 'ambiguous-extra-delimiter'\n            unsafe_coordinate = True\n            continue\n        if not _continuous(prefix, digit_width):\n            chunk['reason'] = 'discontinuous-xy'\n            unsafe_coordinate = True\n            continue\n        if index:\n            previous = groups[index - 1]\n            previous_text = ''.join(c['char'] for c in previous)\n            gap = group[0]['xyxy'][0] - max(c['xyxy'][2] for c in previous)\n            if re.fullmatch(r'[+-]?\\d+|[+-]', previous_text) and gap <= 2 * digit_width:\n                chunk['reason'] = 'nearby-leading-number-fragment'\n                unsafe_coordinate = True\n                continue\n        xy = [_integer(t) for t in match.groups()]\n        if None in xy:\n            chunk['reason'] = 'xy-overflow'\n            continue\n\n        suffix = group[end:]\n        z = None\n        if suffix and not _conflicts(suffix) and _continuous(suffix, digit_width):\n            z = _integer(''.join(c['char'] for c in suffix))\n            if index + 1 < len(groups):\n                following = groups[index + 1]\n                following_text = ''.join(c['char'] for c in following)\n                gap = following[0]['xyxy'][0] - max(c['xyxy'][2] for c in group)\n                if re.fullmatch(r'[+-]?\\d+', following_text) and gap <= 2 * digit_width:\n                    z = None\n        chunk['reason'] = 'observed-delimited-xy'\n        candidates.append({'xy': xy, 'z': z, 'xyScore': min(c['score'] for c in prefix),\n                           'zScore': min(c['score'] for c in suffix) if z is not None else None,\n                           'textXY': prefix_text[:-1], 'observedGroupText': text})\n\n    if unsafe_coordinate:\n        return reject('ambiguous-coordinate-group', chunks)\n    if len(candidates) != 1:\n        return reject('no-unique-delimited-xy', chunks)\n    return {'selected': candidates[0], 'reason': 'observed-delimited-xy', 'chunks': chunks}\n"
+    },
+    "sign_layout.py": {
+      "sha256": "687ba58d8bb514a9abc64d88327d36bcdabd87b6efbdfecfeb9371a0ea7b967c",
+      "text": "\"\"\"Decline-only sign-layout audit for an explicitly calibrated offline HUD.\n\nUses observed glyph positions, never truth, temporal state or sign repair.\nUnsupported profiles return an explicit not-applied diagnostic; this is not a\ngeneral game-layout detector. The base XY decoder remains unchanged.\n\"\"\"\nimport statistics\n\nfrom xy_decode import _center, _iou\n\n\ndef measure(detections, decoded):\n    selected = decoded['selected']\n    if selected is None:\n        return None\n    unique = []\n    for item in sorted((o for o in detections if o['score'] >= .25), key=lambda o: -o['score']):\n        if not any(item['char'] == old['char'] and _iou(item['xyxy'], old['xyxy']) > .45 for old in unique):\n            unique.append(item)\n    unique.sort(key=_center)\n    widths = [o['xyxy'][2] - o['xyxy'][0] for o in unique if o['char'].isdigit()]\n    if not widths:\n        return None\n    width = statistics.median(widths)\n    threshold = max(12., .75 * width)\n    groups = []\n    right = None\n    for item in unique:\n        if right is None or item['xyxy'][0] - right > threshold:\n            groups.append([])\n            right = item['xyxy'][2]\n        else:\n            right = max(right, item['xyxy'][2])\n        groups[-1].append(item)\n    matches = []\n    for group in groups:\n        commas = [i for i, o in enumerate(group) if o['char'] == ',']\n        if len(commas) < 2:\n            continue\n        first, second = commas[:2]\n        prefix = group[:second + 1]\n        if ''.join(o['char'] for o in prefix) != selected['textXY'] + ',':\n            continue\n        xdigits = [o for o in group[:first] if o['char'].isdigit()]\n        ydigits = [o for o in group[first + 1:second] if o['char'].isdigit()]\n        if not xdigits or not ydigits:\n            continue\n        matches.append({'xOrigin': (_center(xdigits[0]) - 4.) / width,\n                        'ySpan': (_center(ydigits[0]) - _center(xdigits[-1])) / width,\n                        'digitWidth': width, 'xHasSign': group[0]['char'] in '+-',\n                        'yHasSign': group[first + 1]['char'] in '+-',\n                        'firstXBox': xdigits[0]['xyxy'], 'lastXBox': xdigits[-1]['xyxy'],\n                        'firstYBox': ydigits[0]['xyxy']})\n    return matches[0] if len(matches) == 1 else None\n\n\ndef _inside(value, interval):\n    return interval[0] <= value <= interval[1]\n\n\ndef audit(detections, decoded, calibration, context):\n    result = {'selected': decoded['selected'], 'applied': False, 'reason': 'base-not-returned',\n              'suspectAxes': [], 'measurements': None, 'checks': []}\n    if result['selected'] is None:\n        return result\n    if any(context.get(k) != v for k, v in calibration['context'].items()):\n        result['reason'] = 'uncalibrated-profile'\n        return result\n    features = measure(detections, decoded)\n    if features is None:\n        return {**result, 'selected': None, 'reason': 'missing-candidate-geometry'}\n    result['measurements'] = features\n    if not _inside(features['digitWidth'], calibration['digitWidthRange']):\n        result['reason'] = 'uncalibrated-font-scale'\n        return result\n    result['applied'] = True\n    for axis, feature, unsigned, signed in [\n        ('x', 'xOrigin', 'unsignedXOriginRange', 'signedXOriginRange'),\n        ('y', 'ySpan', 'unsignedYSpanRange', 'signedYSpanRange'),\n    ]:\n        has_sign = features[axis + 'HasSign']\n        value = features[feature]\n        status = 'visible-sign' if has_sign else 'compatible-unsigned' if _inside(value, calibration[unsigned]) else (\n            'possible-missing-sign' if _inside(value, calibration[signed]) else 'outside-calibration')\n        result['checks'].append({'axis': axis, 'feature': value, 'status': status})\n        if not has_sign and status != 'compatible-unsigned':\n            result['suspectAxes'].append(axis)\n    if result['suspectAxes']:\n        result['selected'] = None\n        result['reason'] = 'sign-layout-suspect'\n    else:\n        result['reason'] = 'layout-compatible'\n    return result\n"
+    },
+    "sign_recovery.py": {
+      "sha256": "10650369d75131772761cc8563140d024867d5c8a45bf67336188e17ed4f6863",
+      "text": "\"\"\"Confirm a missing minus in actual image pixels and a second detector route.\n\nNever repairs digits, commas, positive signs, unknown layouts or missing XY.\nThresholds are fixed before development replay, not adjusted per failed frame.\n\"\"\"\nimport math\nimport numpy as np\n\nfrom xy_decode import decode, _iou, _center\nfrom sign_layout import audit\n\n\ndef _valid(item):\n    box = item.get('xyxy', [])\n    return (len(box) == 4 and all(math.isfinite(v) for v in box)\n            and box[2] > box[0] and box[3] > box[1]\n            and math.isfinite(item.get('score', float('nan'))))\n\n\ndef _stroke(image, box):\n    height, width = image.shape[:2]\n    a, t, b, d = box\n    if not (0 <= a < b <= width and 0 <= t < d <= height):\n        return None\n    patch = image[int(math.floor(t)):int(math.ceil(d)), int(math.floor(a)):int(math.ceil(b))]\n    if min(patch.shape[:2]) < 3:\n        return None\n    gray = patch.astype(np.float32).mean(axis=2) if patch.ndim == 3 else patch.astype(np.float32)\n    row_edge = float(np.abs(np.diff(gray, axis=0)).mean())\n    column_edge = float(np.abs(np.diff(gray, axis=1)).mean())\n    contrast = float(gray.max() - gray.min())\n    if contrast < 4. or row_edge < 1. or row_edge < 1.5 * column_edge:\n        return None\n    # A true local bar needs two opposite edges. A monotonic slope or a single\n    # background boundary may have strong horizontal gradients but no bar.\n    core = gray[:, 1:-1]\n    gradients = np.diff(core, axis=0)\n    profile = gradients.mean(axis=1)\n    top_edge, bottom_edge = int(profile.argmax()), int(profile.argmin())\n    edge_floor = max(1.5, .08 * contrast)\n    if profile[top_edge] < edge_floor or profile[bottom_edge] > -edge_floor:\n        return None\n    if abs(top_edge-bottom_edge) < 1:\n        return None\n    top_support = float((gradients[top_edge] >= 1.5).mean())\n    bottom_support = float((gradients[bottom_edge] <= -1.5).mean())\n    if min(top_support, bottom_support) < .60:\n        return None\n    # Both edges must end locally; a full-width scenery stripe is not enough.\n    left, right = int(math.floor(a)), int(math.ceil(b))\n    margin = max(2, int(round((right-left)*.2)))\n    if left-margin < 0 or right+margin > width:\n        return None\n    sides = [image[int(math.floor(t)):int(math.ceil(d)), left-margin:left],\n             image[int(math.floor(t)):int(math.ceil(d)), right:right+margin]]\n    outside_strengths = []\n    for outside in sides:\n        outside = outside.astype(np.float32).mean(axis=2) if outside.ndim == 3 else outside.astype(np.float32)\n        outside_grad = np.diff(outside, axis=0)\n        outside_strengths.append(float(np.abs(outside_grad[[top_edge, bottom_edge]]).mean()))\n    outside_strength = max(outside_strengths)\n    inside_strength = float((abs(profile[top_edge])+abs(profile[bottom_edge]))/2)\n    if inside_strength < 1.3*outside_strength or inside_strength-outside_strength < 1.:\n        return None\n    return {'contrastRange': contrast, 'horizontalStrokeEdge': row_edge, 'verticalStrokeEdge': column_edge,\n            'pairedEdgeStrength': inside_strength, 'outsideEdgeStrength': outside_strength,\n            'outsideEdgeStrengthBySide': outside_strengths,\n            'pairedEdgeSupport': [top_support, bottom_support]}\n\n\ndef recover(detections, decoded, calibration, context, confirmation_image, confirmation_detections):\n    guarded = audit(detections, decoded, calibration, context)\n    result = {'selected': guarded['selected'], 'restoredAxes': [], 'reason': guarded['reason'],\n              'layout': guarded, 'confirmations': []}\n    if not guarded['applied'] or not guarded['suspectAxes']:\n        return result\n    checks = {c['axis']: c for c in guarded['checks']}\n    if any(checks[a]['status'] != 'possible-missing-sign' for a in guarded['suspectAxes']):\n        return {**result, 'reason': 'unexplained-layout-not-repairable'}\n    expected_shape = tuple(reversed(calibration['context']['imageSize']))\n    if confirmation_image is None or tuple(confirmation_image.shape[:2]) != expected_shape:\n        return {**result, 'reason': 'invalid-confirmation-image'}\n    evidence = [o for o in confirmation_detections if _valid(o) and o['score'] >= .25]\n    features = guarded['measurements']\n    digit_width = features['digitWidth']\n    additions = []\n    expected_xy = list(decoded['selected']['xy'])\n    for axis in guarded['suspectAxes']:\n        index = 'xy'.index(axis)\n        if expected_xy[index] <= 0:\n            return {**result, 'reason': 'nonpositive-axis-not-repairable'}\n        digit = features['firstXBox' if axis == 'x' else 'firstYBox']\n        h = digit[3] - digit[1]\n        cx = (digit[0] + digit[2]) / 2 - .84 * digit_width\n        cy = digit[1] + .63 * h\n        neighbors = [o for o in evidence if _iou(o['xyxy'], digit) >= .5]\n        expected_char = decoded['selected']['textXY'].split(',')[index].lstrip('+-')[0]\n        if (not any(o['char'] == expected_char and o['score'] >= .5 for o in neighbors)\n                or any(o['char'] != expected_char for o in neighbors)):\n            return {**result, 'reason': 'neighbor-digit-not-confirmed'}\n        candidates = []\n        for o in evidence:\n            a, t, b, d = o['xyxy']\n            if o['char'] != '-' or o['score'] < .5:\n                continue\n            if not (.35 * digit_width <= b-a <= .95 * digit_width and .10*h <= d-t <= .40*h):\n                continue\n            if abs(_center(o)-cx) > .25*digit_width or abs((t+d)/2-cy) > .15*h:\n                continue\n            if a < digit[0]-1.05*digit_width or b > digit[0]+.10*digit_width:\n                continue\n            if any(p['char'] != '-' and _iou(p['xyxy'], o['xyxy']) > .45 for p in evidence):\n                continue\n            stroke = _stroke(confirmation_image, o['xyxy'])\n            if stroke is not None:\n                candidates.append((o, stroke))\n        unique = []\n        for candidate in sorted(candidates, key=lambda pair: -pair[0]['score']):\n            if not any(_iou(candidate[0]['xyxy'], old[0]['xyxy']) > .45 for old in unique):\n                unique.append(candidate)\n        if len(unique) != 1:\n            return {**result, 'reason': 'local-minus-not-confirmed'}\n        sign, stroke = unique[0]\n        additions.append({'char': '-', 'score': sign['score'], 'xyxy': list(sign['xyxy'])})\n        result['confirmations'].append({'axis': axis, 'detectedMinus': sign, 'pixelStroke': stroke})\n        expected_xy[index] = -expected_xy[index]\n    repaired = decode(list(detections) + additions)\n    checked = audit(list(detections) + additions, repaired, calibration, context)\n    if checked['selected'] is None or checked['selected']['xy'] != expected_xy:\n        return {**result, 'reason': 'repair-failed-full-xy-validation'}\n    return {**result, 'selected': checked['selected'], 'restoredAxes': list(guarded['suspectAxes']),\n            'reason': 'local-minus-confirmed', 'postRepairLayout': checked}\n"
+    },
+    "benchmark.py": {
+      "sha256": "01283640158f964b35ed983e75acdc409118c672065c496c601bb1696fc396d5",
+      "text": "#!/usr/bin/env python3\n\"\"\"Independent, label-blind inference with explicit scoring and input provenance.\"\"\"\nfrom __future__ import annotations\n\nimport argparse\nimport hashlib\nimport json\nimport math\nimport os\nfrom pathlib import Path\nimport statistics\nimport subprocess\nimport sys\nimport time\n\nPROFILES = ('production', 'readout-wide', 'upstream-band', 'readout-line', 'gap-probe')\n\n\ndef read_json(path):\n    return json.loads(Path(path).read_text(encoding='utf-8-sig'))\n\n\ndef write_json(path, value):\n    Path(path).parent.mkdir(parents=True, exist_ok=True)\n    Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\\n', encoding='utf-8')\n\n\ndef sha256(path):\n    with Path(path).open('rb') as stream:\n        return hashlib.file_digest(stream, 'sha256').hexdigest()\n\n\ndef pixel_digest(image):\n    # FNV-1a over decoded BGR bytes, independently computed by the native adapter.\n    value = 14695981039346656037\n    for byte in image.tobytes():\n        value = ((value ^ byte) * 1099511628211) & 0xffffffffffffffff\n    return f'{value:016x}'\n\n\ndef roi(profile, width, height):\n    if width <= 0 or height <= 0:\n        raise ValueError('empty frame')\n    if profile == 'upstream-band':\n        return 0, height - max(1, height // 32), max(1, width // 4), max(1, height // 32)\n    boxes = {'production': (20, 865, 160, 900), 'readout-wide': (20, 870, 248, 900),\n             'readout-line': (20, 878, 400, 899), 'gap-probe': (20, 878, 400, 899)}\n    if profile not in boxes:\n        raise ValueError(f'unknown ROI profile: {profile}')\n    left, top, right, bottom = boxes[profile]\n    scale = min(width / 1600, height / 900)\n    # Positive pixel coordinates use C++ std::lround, not Python ties-to-even round.\n    x1, x2 = (math.floor(value * scale + .5) for value in (left, right))\n    y1, y2 = (math.floor(height - (900 - value) * scale + .5) for value in (top, bottom))\n    return x1, y1, x2 - x1, y2 - y1\n\n\ndef prepare(corpus, data_root, output, profiles):\n    import cv2\n    if not isinstance(corpus.get('frames'), list) or not corpus['frames']:\n        raise ValueError('empty or invalid corpus')\n    if not profiles or len(set(profiles)) != len(profiles):\n        raise ValueError('empty or duplicate ROI profiles')\n    for frame in corpus['frames']:\n        if frame.get('state') not in ('present', 'absent', 'unknown'):\n            raise ValueError('invalid frame state')\n        expected = frame.get('expected')\n        if expected is not None:\n            if (frame['state'] != 'present' or not isinstance(expected, dict) or\n                any(type(expected.get(axis)) is not int for axis in ('x', 'y')) or\n                (expected.get('z') is not None and type(expected['z']) is not int)):\n                raise ValueError(f'invalid coordinate label for {frame.get(\"id\")}')\n            if any(value is not None and not -2147483648 <= value <= 2147483647 for value in expected.values()):\n                raise ValueError('coordinate label outside int32 range')\n    output = Path(output).resolve()\n    inputs = []\n    seen = set()\n    for frame in corpus['frames']:\n        frame_id = frame['id']\n        if frame_id in seen or not frame_id or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in frame_id):\n            raise ValueError(f'duplicate or unsafe frame id: {frame_id}')\n        seen.add(frame_id)\n        source = Path(data_root) / frame['image']\n        if not source.is_file():\n            raise ValueError(f'missing image: {source}')\n        # Decode from bytes so Unicode filenames are supported by the Python adapter.\n        import numpy as np\n        image = cv2.imdecode(np.frombuffer(source.read_bytes(), dtype=np.uint8), cv2.IMREAD_COLOR)\n        if image is None:\n            raise ValueError(f'unreadable image: {source}')\n        stored_height, stored_width = image.shape[:2]\n        width, height = frame.get('frameSize', [stored_width, stored_height])\n        source_rect = frame.get('sourceRect', [0, 0, stored_width, stored_height])\n        if (len(source_rect) != 4 or any(type(value) is not int for value in source_rect) or\n            type(width) is not int or type(height) is not int or width <= 0 or height <= 0):\n            raise ValueError(f'invalid source geometry: {frame_id}')\n        sx, sy, sw, sh = source_rect\n        if (sw != stored_width or sh != stored_height or sx < 0 or sy < 0 or\n            sx+sw > width or sy+sh > height):\n            raise ValueError(f'stored pixels do not match source geometry: {frame_id}')\n        capture_digest = frame.get('captureSHA256')\n        if corpus.get('capturePairedMinimap') or 'captureSHA256' in frame:\n            if (not isinstance(capture_digest, str) or len(capture_digest) != 64 or\n                    any(char not in '0123456789abcdef' for char in capture_digest)):\n                raise ValueError(f'missing or invalid capture image digest: {frame_id}')\n        if capture_digest is not None and sha256(source) != capture_digest:\n            raise ValueError(f'capture image digest mismatch: {frame_id}')\n        minimap = frame.get('minimap')\n        if corpus.get('capturePairedMinimap') or minimap is not None:\n            if (not isinstance(minimap, dict) or minimap.get('frameId') != frame_id or\n                    type(frame.get('frameSystemRelativeTime100ns')) is not int):\n                raise ValueError(f'invalid minimap frame pairing: {frame_id}')\n            mini_source = Path(data_root) / minimap['image']\n            if not mini_source.is_file():\n                raise ValueError(f'missing paired minimap: {mini_source}')\n            mini_data = mini_source.read_bytes()\n            if hashlib.sha256(mini_data).hexdigest() != minimap['sha256']:\n                raise ValueError(f'minimap digest mismatch: {frame_id}')\n            mini_image = cv2.imdecode(np.frombuffer(mini_data, dtype=np.uint8), cv2.IMREAD_COLOR)\n            rect = minimap['sourceRect']\n            if len(rect) != 4 or any(type(value) is not int for value in rect):\n                raise ValueError(f'invalid minimap geometry: {frame_id}')\n            mx, my, mw, mh = rect\n            if (mini_image is None or mini_image.shape[:2] != (mh, mw) or mx < 0 or my < 0 or\n                    mw <= 0 or mh <= 0 or mx+mw > width or my+mh > height):\n                raise ValueError(f'invalid minimap pixel geometry: {frame_id}')\n        for profile in profiles:\n            x, y, w, h = roi(profile, width, height)\n            if w <= 0 or h <= 0 or x < 0 or y < 0 or x + w > width or y + h > height:\n                raise ValueError(f'invalid crop: {frame_id} {profile}')\n            if x < sx or y < sy or x+w > sx+sw or y+h > sy+sh:\n                raise ValueError(f'saved strip does not cover ROI: {frame_id} {profile}')\n            crop = image[y-sy:y-sy+h, x-sx:x-sx+w].copy()\n            crop_decision = None\n            if profile == 'gap-probe':\n                sys.path.insert(0, str(Path(__file__).parent))\n                from line_crop import split_line\n                crop, crop_decision = split_line(crop)\n                w = crop.shape[1]\n            target = output / profile / f'{frame_id}.png'\n            target.parent.mkdir(parents=True, exist_ok=True)\n            ok, encoded = cv2.imencode('.png', crop)\n            if not ok:\n                raise ValueError(f'cannot encode crop: {target}')\n            target.write_bytes(encoded.tobytes())\n            # These are deliberately the only fields passed to either engine.\n            inputs.append({'id': f'{frame_id}@{profile}', 'sourceId': frame_id,\n                           'profile': profile, 'image': str(target), 'rect': [x, y, w, h],\n                           'frameSize': [width, height], 'sourceSHA256': sha256(source),\n                           'cropSHA256': sha256(target), 'pixelDigest': pixel_digest(crop)})\n            if crop_decision is not None:\n                inputs[-1]['pixelCropDecision'] = crop_decision\n    return inputs\n\n\ndef validate_results(inputs, results):\n    wanted = {row['id']: row for row in inputs}\n    if len(wanted) != len(inputs):\n        raise ValueError('duplicate input ids')\n    found = set()\n    for row in results:\n        key = row['id']\n        if key in found:\n            raise ValueError(f'duplicate result id: {key}')\n        found.add(key)\n        if key not in wanted:\n            raise ValueError(f'unexpected result id: {key}')\n        if row.get('error'):\n            raise ValueError(f'engine error for {key}: {row[\"error\"]}')\n        if row.get('pixelDigest') != wanted[key]['pixelDigest']:\n            raise ValueError(f'different input pixels for {key}')\n        if 'selected' not in row:\n            raise ValueError(f'missing selected field for {key}')\n        selected = row.get('selected')\n        if selected is not None and (not isinstance(selected, dict) or\n                any(type(selected.get(axis)) is not int for axis in ('x', 'y', 'z'))):\n            raise ValueError(f'invalid selected coordinate for {key}')\n    missing = wanted.keys() - found\n    if missing:\n        raise ValueError(f'missing engine results: {sorted(missing)}')\n\n\ndef score(frame, prediction):\n    selected = prediction.get('selected')\n    expected = frame.get('expected')\n    xy_known = expected is not None and all(type(expected.get(axis)) is int for axis in ('x', 'y'))\n    xyz_known = xy_known and type(expected.get('z')) is int\n    same = lambda candidate, axes: candidate is not None and all(candidate.get(axis) == expected[axis] for axis in axes)\n    exact_xy = same(selected, ('x', 'y')) if xy_known else None\n    exact_xyz = same(selected, ('x', 'y', 'z')) if xyz_known else None\n    candidates = prediction.get('candidates', [])\n    sign_errors = []\n    if selected is not None and xy_known:\n        for axis in ('x', 'y', 'z'):\n            if type(expected.get(axis)) is int and expected[axis] != 0 and selected[axis] != 0 and (expected[axis] < 0) != (selected[axis] < 0):\n                sign_errors.append(axis)\n    return {'exactXY': exact_xy, 'exactXYZ': exact_xyz,\n            'candidateExactXY': any(same(c, ('x', 'y')) for c in candidates) if xy_known else None,\n            'candidateExactXYZ': any(same(c, ('x', 'y', 'z')) for c in candidates) if xyz_known else None,\n            'abstained': selected is None,\n            'wrongReturn': (selected is not None and not (exact_xyz if xyz_known else exact_xy)) if xy_known else None,\n            'wrongXYReturn': (selected is not None and not exact_xy) if xy_known else None,\n            'wrongXYZReturn': (selected is not None and not exact_xyz) if xyz_known else None,\n            'falsePositive': selected is not None if frame['state'] == 'absent' else None,\n            'signErrors': sign_errors}\n\n\ndef summarize(corpus, inputs, pipelines):\n    labels = {frame['id']: frame for frame in corpus['frames']}\n    summaries, scored = [], []\n    for mode, results in pipelines.items():\n        validate_results(inputs, results)\n        predictions = {row['id']: row for row in results}\n        for profile in dict.fromkeys(row['profile'] for row in inputs):\n            rows, durations = [], []\n            for item in inputs:\n                if item['profile'] != profile:\n                    continue\n                frame = labels[item['sourceId']]\n                prediction = predictions[item['id']]\n                judgment = score(frame, prediction)\n                rows.append(judgment)\n                durations.append(prediction['totalMilliseconds'])\n                scored.append({'mode': mode, 'id': item['id'], 'state': frame['state'],\n                               'expected': frame.get('expected'), **judgment, **prediction})\n            count = lambda field: sum(row[field] is True for row in rows)\n            eligible = lambda field: sum(row[field] is not None for row in rows)\n            summaries.append({'mode': mode, 'profile': profile, 'frames': len(rows),\n                'xyCorrect': count('exactXY'), 'xyLabeled': eligible('exactXY'),\n                'xyzCorrect': count('exactXYZ'), 'xyzLabeled': eligible('exactXYZ'),\n                'candidateXYZ': count('candidateExactXYZ'),\n                'wrongReturns': count('wrongReturn'), 'abstained': count('abstained'),\n                'wrongXYReturns': count('wrongXYReturn'), 'wrongXYZReturns': count('wrongXYZReturn'),\n                'falsePositives': count('falsePositive'), 'absentFrames': eligible('falsePositive'),\n                'signErrorFrames': sum(bool(row['signErrors']) for row in rows),\n                'totalP50Milliseconds': statistics.median(durations),\n                'totalP95Milliseconds': sorted(durations)[max(0, math.ceil(.95 * len(durations))-1)]})\n    return summaries, scored\n\n\ndef resolve_model(args, data_root):\n    return Path(getattr(args, 'ppocr_model', None) or\n                data_root / 'Assets/models/PP-OCRv5_mobile_rec_infer').resolve()\n\n\ndef provenance(source_root, data_root, corpus_path, native, upstream, model=None):\n    import cv2\n    import numpy as np\n    import onnxruntime as ort\n    def git_head(root):\n        return subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()\n    files = {'nativeExecutable': native,\n             'preprocessingSource': source_root / 'IMao-Core/src/Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.cpp',\n             'parserSource': source_root / 'IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp',\n             'upstreamCode': upstream / 'src/ocr_engine.py',\n             'upstreamModel': upstream / 'models/coord_ocr.onnx',\n             'upstreamDictionary': upstream / 'models/class_names.txt',\n             'nativeAdapterSource': source_root / 'IMao-Core/tools/CoordinateOffline/main.cpp',\n             'nativeBuildConfiguration': source_root / 'IMao-Core/tools/CoordinateOffline/CMakeLists.txt',\n             'nativeBuildScript': source_root / 'scripts/Build-CoordinateOffline.ps1',\n             'offlinePreprocessingHeader': source_root / 'IMao-Core/tools/CoordinateOffline/OfflinePreprocessing.h',\n             'offlineClockBoundaryHeader': source_root / 'IMao-Core/tools/CoordinateOffline/OfflineClockBoundary.h',\n             'ppocrLibrary': source_root / 'IMao-Core/paddleocr_cpp_infer/lib/ppocr.lib',\n             'ppocrHeader': source_root / 'IMao-Core/paddleocr_cpp_infer/include/ocr_rec.h',\n             'parserHeader': source_root / 'IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.h',\n             'coordinateStructHeader': source_root / 'IMao-Core/src/Coordinate/CoordinateStruct.h',\n             'hudLayoutHeader': source_root / 'IMao-Core/src/Coordinate/HudLayout.h',\n             'ppocrPreprocessHeader': source_root / 'IMao-Core/paddleocr_cpp_infer/include/preprocess_op.h',\n             'ppocrUtilityHeader': source_root / 'IMao-Core/paddleocr_cpp_infer/include/utility.h',\n             'corpus': corpus_path,\n             'benchmarkCode': Path(__file__),\n             'upstreamAdapterCode': Path(__file__).with_name('upstream_adapter.py')}\n    files['lineCropCode'] = Path(__file__).with_name('line_crop.py')\n    pp = Path(model or data_root / 'Assets/models/PP-OCRv5_mobile_rec_infer').resolve()\n    for path in sorted(pp.iterdir()):\n        if path.is_file():\n            files[f'ppocr/{path.name}'] = path\n    return {'sourceCommit': git_head(source_root), 'upstreamCommit': git_head(upstream),\n            'modelDirectory': str(pp),\n            'versions': {'python': sys.version, 'opencvPython': cv2.__version__,\n                         'numpy': np.__version__, 'onnxruntime': ort.__version__},\n            'sha256': {name: sha256(path) for name, path in files.items()}}\n\n\ndef verify_native_provenance(expected, metadata):\n    if ('modelDirectory' in expected and\n            Path(metadata.get('modelDirectory', '')).resolve() != Path(expected['modelDirectory']).resolve()):\n        raise ValueError('native model directory differs from requested model directory')\n    compiled = metadata.get('compiledSHA256', {})\n    for key in ('preprocessingSource', 'parserSource', 'nativeAdapterSource', 'nativeBuildConfiguration',\n                'parserHeader', 'coordinateStructHeader', 'hudLayoutHeader',\n                'ppocrLibrary', 'ppocrHeader', 'ppocrPreprocessHeader', 'ppocrUtilityHeader', 'offlinePreprocessingHeader',\n                'offlineClockBoundaryHeader'):\n        actual = compiled.get(key, metadata.get(key + 'SHA256'))\n        if key in expected['sha256'] and actual != expected['sha256'][key]:\n            raise ValueError(f'stale native executable: compiled {key} does not match current source; rebuild it')\n\n\ndef markdown(report):\n    lines = ['# 坐标 OCR 独立离线评测', '',\n        f\"PP-OCR 模型：`{report.get('native', {}).get('modelName', '未记录')}`；\"\n        f\"字典字符数：{report.get('native', {}).get('dictionaryCharacters', '未记录')}。\", '',\n        f\"离线预处理：`{report.get('native', {}).get('preprocessingMode', 'production')}`。\", '',\n        report.get('corpusNote') or '素材说明未提供；泛化结论需要独立验收素材。', '',\n        '推理输入不含标签和位置先验。两侧读取同一份无缩放 BGR 裁剪，解码像素摘要逐条核对。', '',\n        '单条输出与候选召回分别计分；未知 z 不计三维命中。无读数误报单独统计。', '',\n        '本报告评估识别与解析，不模拟 App 的位置发布、位移预算或视觉定位。', '',\n        '| 输入区域 | 管线 | XY 正确 | XYZ 正确 | 候选 XYZ 召回 | 错误返回 XY/XYZ | 无输出 | 无读数误报 | 识别器耗时 P50/P95 ms |',\n        '|---|---|---:|---:|---:|---:|---:|---:|---:|']\n    for row in report['summary']:\n        lines.append(f\"| {row['profile']} | {row['mode']} | {row['xyCorrect']}/{row['xyLabeled']} | \"\n                     f\"{row['xyzCorrect']}/{row['xyzLabeled']} | {row['candidateXYZ']}/{row['xyzLabeled']} | \"\n                     f\"{row['wrongXYReturns']}/{row['wrongXYZReturns']} | {row['abstained']} | {row['falsePositives']}/{row['absentFrames']} | \"\n                     f\"{row['totalP50Milliseconds']:.1f}/{row['totalP95Milliseconds']:.1f} |\")\n    lines += ['', 'PP-OCR 单路线取解析器最高分候选（同分保留原顺序）；这是固定的离线选择规则。',\n              'ppocr-corroborated 调用实际 Corroborate，以 TopHat 为主、contrast 为见证，匹配 XY。',\n              'YOLO 使用上游的字符检测和 spacing-dominant 解析器，只计它实际接受的单条输出。',\n              '耗时包含识别器预处理、推理、解析；初始化单列，不包含输入裁切/像素间隔分割、磁盘读取、摘要和冷启动。',\n              '三种取景只用于诊断：production=(20,865)-(160,900)，readout-wide=(20,870)-(248,900)，',\n              'upstream-band=左侧四分之一宽、贴底高度 floor(H/32)。没有将扫描最高分当作新默认值。', '',\n              '实验取景 readout-line=(20,878)-(400,899)；gap-probe 为已发现会误截 z 的失败间隔实验，',\n              '仅用于复现反例，不作为有效坐标裁切；决策见 inputs.json。aspect 保留宽高比，额外 raw 路线保留 BGR，',\n              '其余路线复用现有灰度、CLAHE、TopHat 与解析器；预处理尺寸和像素摘要见 preprocessingTrace。', '',\n              '*-clock 是独立的完整日期及时间边界对照：只提取已识别的三个整数，不补字符，',\n              '仍调用原解析器、0.65 阈值及相同的 Corroborate；原路线保留。', '',\n              '逐帧输出、原文、分数、修复标志、字形框、输入摘要和代码/模型 SHA256 见 report.json。', '']\n    return '\\n'.join(lines)\n\n\ndef run(args):\n    source_root = Path(__file__).resolve().parents[2]\n    data_root, upstream, native = map(lambda p: Path(p).resolve(), (args.data_root, args.upstream, args.native))\n    model = resolve_model(args, data_root)\n    corpus_path, output = Path(args.corpus).resolve(), Path(args.output).resolve()\n    corpus = read_json(corpus_path)\n    if (output / 'report.json').exists():\n        raise ValueError('output already contains a report; choose a fresh directory to preserve evidence')\n    if args.repeats < 1:\n        raise ValueError('repeats must be positive')\n    inputs = prepare(corpus, data_root, output / 'inputs', args.profiles)\n    manifest = output / 'inputs.json'\n    write_json(manifest, {'formatVersion': 1, 'inputs': inputs})\n    provenance_before = provenance(source_root, data_root, corpus_path, native, upstream, model)\n    write_json(output / 'provenance-before.json', provenance_before)\n    env = dict(os.environ)\n    env['PATH'] = str(data_root / 'x64/Release') + os.pathsep + env.get('PATH', '')\n    native_report = output / 'ppocr.json'\n    preprocessing = getattr(args, 'preprocessing', 'production')\n    command = [str(native), str(model), str(manifest), str(native_report), str(args.repeats), preprocessing]\n    if getattr(args, 'save_preprocessed', False):\n        command.append(str(output / 'preprocessed'))\n    completed = subprocess.run(command,\n                               env=env, capture_output=True, text=True, errors='replace')\n    (output / 'native.log').write_text(completed.stdout + completed.stderr, encoding='utf-8')\n    if completed.returncode != 0:\n        raise ValueError(f'native adapter failed ({completed.returncode}); see {output / \"native.log\"}')\n    native_payload = read_json(native_report)\n    if native_payload['metadata'].get('preprocessingMode') != preprocessing:\n        raise ValueError('native preprocessing differs from requested mode; rebuild the native adapter')\n    verify_native_provenance(provenance_before, native_payload['metadata'])\n    sys.path.insert(0, str(Path(__file__).parent))\n    from upstream_adapter import infer\n    yolo = infer(upstream, inputs, args.repeats)\n    write_json(output / 'yolo.json', yolo)\n    pipelines = {name: rows for name, rows in native_payload['pipelines'].items()}\n    pipelines['yolo'] = yolo['results']\n    summaries, scored = summarize(corpus, inputs, pipelines)\n    for item in inputs:\n        if sha256(item['image']) != item['cropSHA256']:\n            raise ValueError(f'input file changed during evaluation: {item[\"id\"]}')\n    provenance_after = provenance(source_root, data_root, corpus_path, native, upstream, model)\n    if provenance_before != provenance_after:\n        raise ValueError('model, source, or binary changed during evaluation')\n    report = {'formatVersion': 1, 'corpusNote': corpus.get('note'), 'repeats': args.repeats,\n              'sourceFrameIds': len(corpus['frames']),\n              'uniqueSourceFrameHashes': len({row['sourceSHA256'] for row in inputs}), 'inputCases': len(inputs),\n              'provenance': provenance_before, 'native': native_payload['metadata'],\n              'yolo': yolo['metadata'], 'summary': summaries, 'samples': scored}\n    write_json(output / 'report.json', report)\n    (output / 'report.md').write_text(markdown(report), encoding='utf-8')\n    print(markdown(report))\n\n\ndef main():\n    sys.stdout.reconfigure(encoding='utf-8')\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument('--data-root', required=True, help='Existing checkout containing models and screenshots')\n    parser.add_argument('--upstream', required=True, help='Existing local upstream checkout; never downloaded')\n    parser.add_argument('--native', required=True, help='Freshly built IMaoCoordinateOffline.exe')\n    parser.add_argument('--ppocr-model', help='Explicit local PP-OCR model directory; defaults to the current IMao model')\n    parser.add_argument('--preprocessing', choices=('production', 'aspect'), default='production',\n                        help='Offline-only preprocessing experiment; default keeps production behavior')\n    parser.add_argument('--save-preprocessed', action='store_true', help='Save actual native preprocessing variants for visual inspection')\n    parser.add_argument('--corpus', default=str(Path(__file__).resolve().parents[2] / 'Tests/CoordinateOffline/corpus.json'))\n    parser.add_argument('--output', required=True)\n    parser.add_argument('--profiles', nargs='+', choices=PROFILES, default=list(PROFILES[:3]))\n    parser.add_argument('--repeats', type=int, default=3)\n    args = parser.parse_args()\n    try:\n        run(args)\n    except (ValueError, OSError, subprocess.CalledProcessError) as error:\n        print(f'evaluation failed: {error}', file=sys.stderr)\n        return 1\n    return 0\n\n\nif __name__ == '__main__':\n    raise SystemExit(main())\n"
+    }
+  },
+  "frozenCalibration": {
+    "sha256": "d48e2d64607221d5ec8052a922e245b141861c7bbaa9390dc73f274df2c0156a",
+    "data": {
+      "context": {
+        "profile": "readout-line-2560x1440",
+        "imageSize": [
+          892,
+          48
+        ],
+        "frameSize": [
+          2560,
+          1440
+        ],
+        "roi": [
+          32,
+          1405,
+          608,
+          33
+        ]
+      },
+      "digitWidthRange": [
+        19.53681640625,
+        31.200585937499998
+      ],
+      "unsignedXOriginRange": [
+        1.5611089586260667,
+        1.9318369967347224
+      ],
+      "signedXOriginRange": [
+        2.239551485178347,
+        2.6686694289991504
+      ],
+      "unsignedYSpanRange": [
+        1.3089860670310716,
+        1.620053439764766
+      ],
+      "signedYSpanRange": [
+        1.8723558009895704,
+        2.2941243508495077
+      ],
+      "scope": "Offline opt-in only: this frame/ROI/observed font. Learned from own train67+3 historical train positive anchors; no development labels used.",
+      "fitMethod": "Class bands from observed min/max plus one quarter of separation gap. Font gate from training width min*0.8,max*1.2. No development tuning.",
+      "samples": [
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000744",
+          "features": {
+            "xOrigin": 2.484917584691195,
+            "ySpan": 2.1641699338620146,
+            "digitWidth": 24.660167694091797,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.70384216308594,
+              2.059645891189575,
+              77.8531265258789,
+              38.63442611694336
+            ],
+            "lastXBox": [
+              102.6505126953125,
+              2.0796406269073486,
+              127.9809341430664,
+              38.658485412597656
+            ],
+            "firstYBox": [
+              156.6597900390625,
+              2.0905020236968994,
+              180.70924377441406,
+              38.63517761230469
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000745",
+          "features": {
+            "xOrigin": 2.4845370651687375,
+            "ySpan": 2.161337096710601,
+            "digitWidth": 24.671916961669922,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.700138092041016,
+              2.0586774349212646,
+              77.89644622802734,
+              38.633182525634766
+            ],
+            "lastXBox": [
+              102.70894622802734,
+              2.073291063308716,
+              127.99308776855469,
+              38.65795135498047
+            ],
+            "firstYBox": [
+              156.66848754882812,
+              2.0914666652679443,
+              180.6822052001953,
+              38.635494232177734
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000746",
+          "features": {
+            "xOrigin": 2.457140376084698,
+            "ySpan": 2.135649701693743,
+            "digitWidth": 24.92992401123047,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.67825698852539,
+              2.0602574348449707,
+              77.83438873291016,
+              38.63369369506836
+            ],
+            "lastXBox": [
+              102.71183776855469,
+              2.0625662803649902,
+              128.013427734375,
+              38.649192810058594
+            ],
+            "firstYBox": [
+              156.5905303955078,
+              2.0902209281921387,
+              180.61790466308594,
+              38.63642883300781
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000747",
+          "features": {
+            "xOrigin": 2.4871574878598883,
+            "ySpan": 2.1679731702371057,
+            "digitWidth": 24.642906188964844,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.71016311645508,
+              2.0596156120300293,
+              77.87141418457031,
+              38.6353645324707
+            ],
+            "lastXBox": [
+              102.59840393066406,
+              2.0877373218536377,
+              127.93634796142578,
+              38.656646728515625
+            ],
+            "firstYBox": [
+              156.6833038330078,
+              2.090106964111328,
+              180.70176696777344,
+              38.63484191894531
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000748",
+          "features": {
+            "xOrigin": 2.4781050413202257,
+            "ySpan": 2.1546416150664593,
+            "digitWidth": 24.758468627929688,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.74419021606445,
+              2.0609524250030518,
+              77.96398162841797,
+              38.64137268066406
+            ],
+            "lastXBox": [
+              102.64637756347656,
+              2.0409045219421387,
+              128.07363891601562,
+              38.6453742980957
+            ],
+            "firstYBox": [
+              156.59629821777344,
+              2.0787746906280518,
+              180.81497192382812,
+              38.642601013183594
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000749",
+          "features": {
+            "xOrigin": 2.4605885897471955,
+            "ySpan": 2.1532113538784,
+            "digitWidth": 24.955657958984375,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.78347396850586,
+              2.064009428024292,
+              78.02774047851562,
+              38.637149810791016
+            ],
+            "lastXBox": [
+              102.3255844116211,
+              2.0694363117218018,
+              127.80531311035156,
+              38.65945816040039
+            ],
+            "firstYBox": [
+              156.70709228515625,
+              2.0746049880981445,
+              180.89341735839844,
+              38.64071273803711
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000750",
+          "features": {
+            "xOrigin": 2.4757847205707124,
+            "ySpan": 2.1481812807603275,
+            "digitWidth": 24.830612182617188,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.8369140625,
+              2.055563449859619,
+              78.11358642578125,
+              38.63845443725586
+            ],
+            "lastXBox": [
+              102.7713851928711,
+              2.0708224773406982,
+              127.97261047363281,
+              38.66496276855469
+            ],
+            "firstYBox": [
+              156.7067413330078,
+              2.0873498916625977,
+              180.71856689453125,
+              38.63699722290039
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000751",
+          "features": {
+            "xOrigin": 2.4796230282162943,
+            "ySpan": 2.1611215992313046,
+            "digitWidth": 24.773101806640625,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.81611251831055,
+              2.0565850734710693,
+              78.039794921875,
+              38.6339225769043
+            ],
+            "lastXBox": [
+              102.53514862060547,
+              2.063629627227783,
+              127.80293273925781,
+              38.65614318847656
+            ],
+            "firstYBox": [
+              156.68194580078125,
+              2.077043056488037,
+              180.73150634765625,
+              38.63462829589844
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000752",
+          "features": {
+            "xOrigin": 2.477355692976122,
+            "ySpan": 2.1647220010738555,
+            "digitWidth": 24.724273681640625,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.661033630371094,
+              2.0608232021331787,
+              77.84060668945312,
+              38.6403694152832
+            ],
+            "lastXBox": [
+              102.63715362548828,
+              2.079477310180664,
+              127.8968734741211,
+              38.66483688354492
+            ],
+            "firstYBox": [
+              156.71751403808594,
+              2.0905590057373047,
+              180.85887145996094,
+              38.63583755493164
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000753",
+          "features": {
+            "xOrigin": 2.4777891029535577,
+            "ySpan": 2.167269539526234,
+            "digitWidth": 24.738540649414062,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.636436462402344,
+              2.0520544052124023,
+              77.95733642578125,
+              38.63658142089844
+            ],
+            "lastXBox": [
+              102.4658203125,
+              2.054898738861084,
+              127.81510162353516,
+              38.67488479614258
+            ],
+            "firstYBox": [
+              156.72158813476562,
+              2.0859029293060303,
+              180.7895050048828,
+              38.633846282958984
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000884",
+          "features": {
+            "xOrigin": 2.4534121799689608,
+            "ySpan": 2.0077526390664806,
+            "digitWidth": 25.012451171875,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.78118133544922,
+              2.0532848834991455,
+              77.95052337646484,
+              38.6320686340332
+            ],
+            "lastXBox": [
+              102.58722686767578,
+              2.0888614654541016,
+              127.79319763183594,
+              38.65538787841797
+            ],
+            "firstYBox": [
+              155.010009765625,
+              2.067248821258545,
+              175.80804443359375,
+              38.62042236328125
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000885",
+          "features": {
+            "xOrigin": 2.4673961344651287,
+            "ySpan": 2.017808589122736,
+            "digitWidth": 24.860687255859375,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.751197814941406,
+              2.052832841873169,
+              77.9311294555664,
+              38.63031768798828
+            ],
+            "lastXBox": [
+              102.80872344970703,
+              2.0608954429626465,
+              127.81034088134766,
+              38.636043548583984
+            ],
+            "firstYBox": [
+              155.03616333007812,
+              2.086066246032715,
+              175.91111755371094,
+              38.66059112548828
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000886",
+          "features": {
+            "xOrigin": 2.4608999944988112,
+            "ySpan": 2.00985201801945,
+            "digitWidth": 24.963531494140625,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.85450744628906,
+              2.0551040172576904,
+              78.01100158691406,
+              38.634613037109375
+            ],
+            "lastXBox": [
+              102.71144104003906,
+              2.085994243621826,
+              127.84054565429688,
+              38.65430450439453
+            ],
+            "firstYBox": [
+              154.9971466064453,
+              2.0584990978240967,
+              175.90084838867188,
+              38.624324798583984
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000887",
+          "features": {
+            "xOrigin": 2.4957824307441507,
+            "ySpan": 2.0347042242687334,
+            "digitWidth": 24.598175048828125,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.80548858642578,
+              2.0555825233459473,
+              77.97789764404297,
+              38.63584899902344
+            ],
+            "lastXBox": [
+              102.7765884399414,
+              2.0626423358917236,
+              127.8050765991211,
+              38.63566207885742
+            ],
+            "firstYBox": [
+              154.82762145996094,
+              2.053558349609375,
+              175.85406494140625,
+              38.62884521484375
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000888",
+          "features": {
+            "xOrigin": 2.472966821612914,
+            "ySpan": 2.018832967453921,
+            "digitWidth": 24.8558349609375,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.901527404785156,
+              2.0607547760009766,
+              78.03378295898438,
+              38.63444137573242
+            ],
+            "lastXBox": [
+              102.50167083740234,
+              2.0900614261627197,
+              127.70833587646484,
+              38.65146255493164
+            ],
+            "firstYBox": [
+              154.86143493652344,
+              2.06774640083313,
+              175.7081298828125,
+              38.62150192260742
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000889",
+          "features": {
+            "xOrigin": 2.475632426523302,
+            "ySpan": 2.0156105319982243,
+            "digitWidth": 24.817413330078125,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.881385803222656,
+              2.0519745349884033,
+              77.99620056152344,
+              38.63583755493164
+            ],
+            "lastXBox": [
+              102.79788970947266,
+              2.062915802001953,
+              127.79497528076172,
+              38.634429931640625
+            ],
+            "firstYBox": [
+              154.8635711669922,
+              2.0563950538635254,
+              175.77377319335938,
+              38.62211608886719
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000890",
+          "features": {
+            "xOrigin": 2.4742102445805414,
+            "ySpan": 2.018079124218448,
+            "digitWidth": 24.78533935546875,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.7344856262207,
+              2.055138111114502,
+              77.9137954711914,
+              38.63334274291992
+            ],
+            "lastXBox": [
+              102.8495864868164,
+              2.0604054927825928,
+              127.94329071044922,
+              38.63611602783203
+            ],
+            "firstYBox": [
+              154.86477661132812,
+              2.113682985305786,
+              175.9656524658203,
+              38.66160583496094
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000891",
+          "features": {
+            "xOrigin": 2.461174657090227,
+            "ySpan": 1.9994930048118675,
+            "digitWidth": 24.95001220703125,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.808258056640625,
+              2.056828022003174,
+              78.0044174194336,
+              38.63643264770508
+            ],
+            "lastXBox": [
+              102.8322982788086,
+              2.0617005825042725,
+              127.90589141845703,
+              38.63654327392578
+            ],
+            "firstYBox": [
+              154.9156036376953,
+              2.0766708850860596,
+              175.5973358154297,
+              38.62600326538086
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000892",
+          "features": {
+            "xOrigin": 2.471523022874292,
+            "ySpan": 2.0168645409178207,
+            "digitWidth": 24.8524169921875,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.88172149658203,
+              2.057811737060547,
+              77.96492004394531,
+              38.6363525390625
+            ],
+            "lastXBox": [
+              102.81683349609375,
+              2.0570597648620605,
+              127.8139877319336,
+              38.6390266418457
+            ],
+            "firstYBox": [
+              154.8825225830078,
+              2.068859100341797,
+              175.9962158203125,
+              38.6674690246582
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000893",
+          "features": {
+            "xOrigin": 2.4630323266509926,
+            "ySpan": 2.009542684197494,
+            "digitWidth": 24.89569091796875,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.7711067199707,
+              2.0804760456085205,
+              77.8666763305664,
+              38.6338996887207
+            ],
+            "lastXBox": [
+              102.77680206298828,
+              2.0661778450012207,
+              127.8181381225586,
+              38.63984680175781
+            ],
+            "firstYBox": [
+              154.85548400878906,
+              2.0686728954315186,
+              175.79736328125,
+              38.62245559692383
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000894",
+          "features": {
+            "xOrigin": 2.4710630745191806,
+            "ySpan": 2.006409084046579,
+            "digitWidth": 24.862762451171875,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.8563232421875,
+              2.058506727218628,
+              78.01858520507812,
+              38.63460922241211
+            ],
+            "lastXBox": [
+              102.82213592529297,
+              2.0627601146698,
+              127.89334869384766,
+              38.632869720458984
+            ],
+            "firstYBox": [
+              154.8058624267578,
+              2.071392059326172,
+              175.6793670654297,
+              38.62520980834961
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000895",
+          "features": {
+            "xOrigin": 2.478781451069004,
+            "ySpan": 2.0157655329267032,
+            "digitWidth": 24.7965087890625,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.89391326904297,
+              2.0779733657836914,
+              78.03633880615234,
+              38.635658264160156
+            ],
+            "lastXBox": [
+              102.72822570800781,
+              2.053140640258789,
+              127.8270263671875,
+              38.63663864135742
+            ],
+            "firstYBox": [
+              154.8547821044922,
+              2.0683465003967285,
+              175.66836547851562,
+              38.63021469116211
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000896",
+          "features": {
+            "xOrigin": 2.4827269928478626,
+            "ySpan": 2.0256406661029107,
+            "digitWidth": 24.75665283203125,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.91671371459961,
+              2.0708718299865723,
+              78.01130676269531,
+              38.63339614868164
+            ],
+            "lastXBox": [
+              102.74769592285156,
+              2.063234806060791,
+              127.79383087158203,
+              38.64017868041992
+            ],
+            "firstYBox": [
+              154.88307189941406,
+              2.056417942047119,
+              175.95462036132812,
+              38.630985260009766
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000897",
+          "features": {
+            "xOrigin": 2.4626079626015343,
+            "ySpan": 1.9985069816019727,
+            "digitWidth": 24.92425537109375,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.81269073486328,
+              2.060242176055908,
+              77.94464874267578,
+              38.63579177856445
+            ],
+            "lastXBox": [
+              102.8655014038086,
+              2.0613739490509033,
+              127.97578430175781,
+              38.63871383666992
+            ],
+            "firstYBox": [
+              154.7768096923828,
+              2.0750303268432617,
+              175.68707275390625,
+              38.623512268066406
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000898",
+          "features": {
+            "xOrigin": 2.5148121847773384,
+            "ySpan": 2.052706384930295,
+            "digitWidth": 24.4210205078125,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.8472900390625,
+              2.063652515411377,
+              77.98126983642578,
+              38.63338088989258
+            ],
+            "lastXBox": [
+              102.5119857788086,
+              2.0829901695251465,
+              127.77493286132812,
+              38.65328598022461
+            ],
+            "firstYBox": [
+              154.68093872070312,
+              2.0534822940826416,
+              175.86434936523438,
+              38.6466064453125
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000900",
+          "features": {
+            "xOrigin": 2.477439599494347,
+            "ySpan": 2.0272569256207307,
+            "digitWidth": 24.768798828125,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              52.812137603759766,
+              2.05328106880188,
+              77.91426849365234,
+              38.6397819519043
+            ],
+            "lastXBox": [
+              102.54696655273438,
+              2.0757291316986084,
+              127.81758880615234,
+              38.653282165527344
+            ],
+            "firstYBox": [
+              154.9259796142578,
+              2.07466197013855,
+              175.864013671875,
+              38.621334075927734
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000563",
+          "features": {
+            "xOrigin": 2.4089258299269316,
+            "ySpan": 1.4502220848123253,
+            "digitWidth": 25.861328125,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.31438064575195,
+              2.071885824203491,
+              79.28166198730469,
+              38.625938415527344
+            ],
+            "lastXBox": [
+              102.69139099121094,
+              2.076158285140991,
+              128.38050842285156,
+              38.63443374633789
+            ],
+            "firstYBox": [
+              140.12770080566406,
+              2.0523924827575684,
+              165.9535369873047,
+              38.6204719543457
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000570",
+          "features": {
+            "xOrigin": 2.4085784490111806,
+            "ySpan": 1.4621540488917886,
+            "digitWidth": 25.867523193359375,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.34528350830078,
+              2.0637741088867188,
+              79.26263427734375,
+              38.63309860229492
+            ],
+            "lastXBox": [
+              102.27561950683594,
+              2.1069610118865967,
+              128.01739501953125,
+              38.61677169799805
+            ],
+            "firstYBox": [
+              139.96728515625,
+              2.0639562606811523,
+              165.9703369140625,
+              38.64098358154297
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000577",
+          "features": {
+            "xOrigin": 2.407302026174519,
+            "ySpan": 1.4617080270282248,
+            "digitWidth": 25.907772064208984,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.41284942626953,
+              2.067256450653076,
+              79.32281494140625,
+              38.63872528076172
+            ],
+            "lastXBox": [
+              102.27189636230469,
+              2.059953451156616,
+              128.08114624023438,
+              38.64488220214844
+            ],
+            "firstYBox": [
+              139.97900390625,
+              2.053072214126587,
+              166.1132354736328,
+              38.627498626708984
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000584",
+          "features": {
+            "xOrigin": 2.409449833894111,
+            "ySpan": 1.4445366187914914,
+            "digitWidth": 25.82006072998047,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.2818717956543,
+              2.0550925731658936,
+              79.14241027832031,
+              38.62042999267578
+            ],
+            "lastXBox": [
+              102.56908416748047,
+              2.070568084716797,
+              128.37611389160156,
+              38.651668548583984
+            ],
+            "firstYBox": [
+              139.859375,
+              2.0617384910583496,
+              165.68186950683594,
+              38.6259651184082
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000631",
+          "features": {
+            "xOrigin": 2.413795944225681,
+            "ySpan": 1.4693240059469808,
+            "digitWidth": 25.6990966796875,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.2392578125,
+              2.0473947525024414,
+              78.82549285888672,
+              38.65454864501953
+            ],
+            "lastXBox": [
+              102.07200622558594,
+              2.079678535461426,
+              128.0638427734375,
+              38.67205047607422
+            ],
+            "firstYBox": [
+              139.85781860351562,
+              2.062817096710205,
+              165.7986297607422,
+              38.65980529785156
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000638",
+          "features": {
+            "xOrigin": 2.4192995710007286,
+            "ySpan": 1.4599059575720936,
+            "digitWidth": 25.731910705566406,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.387245178222656,
+              2.0594446659088135,
+              79.11915588378906,
+              38.636505126953125
+            ],
+            "lastXBox": [
+              102.54142761230469,
+              2.0778253078460693,
+              128.24301147460938,
+              38.6353874206543
+            ],
+            "firstYBox": [
+              140.01409912109375,
+              2.088777780532837,
+              165.90267944335938,
+              38.64789581298828
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000645",
+          "features": {
+            "xOrigin": 2.4145720976440534,
+            "ySpan": 1.4605344935660896,
+            "digitWidth": 25.80322265625,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.362892150878906,
+              2.0575497150421143,
+              79.24459075927734,
+              38.63637161254883
+            ],
+            "lastXBox": [
+              102.4365463256836,
+              2.0473718643188477,
+              128.2871856689453,
+              38.638423919677734
+            ],
+            "firstYBox": [
+              140.10914611816406,
+              2.076727867126465,
+              165.98757934570312,
+              38.64540481567383
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000656",
+          "features": {
+            "xOrigin": 2.4069601627225397,
+            "ySpan": 1.4585227789128774,
+            "digitWidth": 25.854766845703125,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.31724166870117,
+              2.057511568069458,
+              79.14554595947266,
+              38.63765335083008
+            ],
+            "lastXBox": [
+              102.1988296508789,
+              2.0518910884857178,
+              128.21624755859375,
+              38.63311767578125
+            ],
+            "firstYBox": [
+              139.97467041015625,
+              2.0789570808410645,
+              165.8599395751953,
+              38.654239654541016
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000380",
+          "features": {
+            "xOrigin": 2.4027353840309953,
+            "ySpan": 1.444485866344595,
+            "digitWidth": 25.949966430664062,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.31156921386719,
+              2.0767316818237305,
+              79.3902359008789,
+              38.67472457885742
+            ],
+            "lastXBox": [
+              102.52005004882812,
+              2.08651065826416,
+              128.33009338378906,
+              38.632877349853516
+            ],
+            "firstYBox": [
+              139.99632263183594,
+              2.0455071926116943,
+              165.82254028320312,
+              38.65073776245117
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000393",
+          "features": {
+            "xOrigin": 2.4115966571871477,
+            "ySpan": 1.4652451712534134,
+            "digitWidth": 25.877944946289062,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.36158752441406,
+              2.06986927986145,
+              79.45274353027344,
+              38.66441345214844
+            ],
+            "lastXBox": [
+              102.03334045410156,
+              2.0387473106384277,
+              128.0069580078125,
+              38.6610221862793
+            ],
+            "firstYBox": [
+              140.0780487060547,
+              2.0345585346221924,
+              165.7973175048828,
+              38.64626693725586
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000407",
+          "features": {
+            "xOrigin": 2.407530148548836,
+            "ySpan": 1.4610268671222761,
+            "digitWidth": 25.87286376953125,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.28776550292969,
+              2.075941801071167,
+              79.29163360595703,
+              38.64850616455078
+            ],
+            "lastXBox": [
+              102.05131530761719,
+              2.069842576980591,
+              127.92497253417969,
+              38.64781951904297
+            ],
+            "firstYBox": [
+              139.9537353515625,
+              2.0635461807250977,
+              165.62445068359375,
+              38.644554138183594
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000421",
+          "features": {
+            "xOrigin": 2.4060794302416495,
+            "ySpan": 1.4446434787675089,
+            "digitWidth": 25.92737579345703,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.32485580444336,
+              2.082272529602051,
+              79.4417953491211,
+              38.667388916015625
+            ],
+            "lastXBox": [
+              102.7599105834961,
+              2.0545380115509033,
+              128.5478973388672,
+              38.64624786376953
+            ],
+            "firstYBox": [
+              140.1529083251953,
+              2.052365779876709,
+              166.0665283203125,
+              38.64318084716797
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000435",
+          "features": {
+            "xOrigin": 2.412595670680389,
+            "ySpan": 1.4647113295096539,
+            "digitWidth": 25.853790283203125,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.29917526245117,
+              2.067776679992676,
+              79.45030975341797,
+              38.63361740112305
+            ],
+            "lastXBox": [
+              102.39443969726562,
+              2.058981418609619,
+              128.3166961669922,
+              38.66279983520508
+            ],
+            "firstYBox": [
+              140.32064819335938,
+              2.064723491668701,
+              166.12716674804688,
+              38.64110565185547
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000448",
+          "features": {
+            "xOrigin": 2.416308793002502,
+            "ySpan": 1.4581226454707283,
+            "digitWidth": 25.800933837890625,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.34882736206055,
+              2.081979990005493,
+              79.33721923828125,
+              38.6387825012207
+            ],
+            "lastXBox": [
+              126.90695190429688,
+              2.11847186088562,
+              152.65525817871094,
+              38.63089370727539
+            ],
+            "firstYBox": [
+              164.552734375,
+              2.0608878135681152,
+              190.25132751464844,
+              38.646759033203125
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000513",
+          "features": {
+            "xOrigin": 2.4105559152752973,
+            "ySpan": 1.4388649915837364,
+            "digitWidth": 25.898880004882812,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.45142364501953,
+              2.0851168632507324,
+              79.40997314453125,
+              38.65236282348633
+            ],
+            "lastXBox": [
+              127.13667297363281,
+              2.086373805999756,
+              152.96986389160156,
+              38.61943054199219
+            ],
+            "firstYBox": [
+              164.3356170654297,
+              2.0718555450439453,
+              190.3009033203125,
+              38.62190246582031
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000527",
+          "features": {
+            "xOrigin": 2.4075365593701337,
+            "ySpan": 1.442000254244171,
+            "digitWidth": 25.927032470703125,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.369319915771484,
+              2.079291343688965,
+              79.47123718261719,
+              38.64560317993164
+            ],
+            "lastXBox": [
+              126.82438659667969,
+              2.0542571544647217,
+              152.76560974121094,
+              38.63422393798828
+            ],
+            "firstYBox": [
+              164.23629760742188,
+              2.0769214630126953,
+              190.1272735595703,
+              38.64948272705078
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000005",
+          "features": {
+            "xOrigin": 2.409073668537449,
+            "ySpan": 1.4411828094200887,
+            "digitWidth": 25.9481201171875,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.485198974609375,
+              2.0468478202819824,
+              79.53666687011719,
+              38.68446350097656
+            ],
+            "lastXBox": [
+              102.3924789428711,
+              2.046278238296509,
+              128.3968963623047,
+              38.62195587158203
+            ],
+            "firstYBox": [
+              139.886474609375,
+              2.0515379905700684,
+              165.6948699951172,
+              38.661163330078125
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000047",
+          "features": {
+            "xOrigin": 2.412304413492791,
+            "ySpan": 1.4489381329578057,
+            "digitWidth": 25.853378295898438,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.46312713623047,
+              2.069531202316284,
+              79.2693099975586,
+              38.64165115356445
+            ],
+            "lastXBox": [
+              102.53416442871094,
+              2.0604851245880127,
+              128.3898468017578,
+              38.629371643066406
+            ],
+            "firstYBox": [
+              139.90603637695312,
+              2.051997423171997,
+              165.9378662109375,
+              38.6617317199707
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000092",
+          "features": {
+            "xOrigin": 2.4025694628923926,
+            "ySpan": 1.445947625719666,
+            "digitWidth": 25.96258544921875,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.47222137451172,
+              2.057135581970215,
+              79.28160858154297,
+              38.65372848510742
+            ],
+            "lastXBox": [
+              102.37555694580078,
+              2.09841251373291,
+              128.43885803222656,
+              38.65044021606445
+            ],
+            "firstYBox": [
+              139.92323303222656,
+              2.073256731033325,
+              165.97225952148438,
+              38.66533279418945
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000206",
+          "features": {
+            "xOrigin": 2.4156114197920395,
+            "ySpan": 1.4507434654097755,
+            "digitWidth": 25.782344818115234,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.41789627075195,
+              2.065729856491089,
+              79.1423568725586,
+              38.63213348388672
+            ],
+            "lastXBox": [
+              102.52849578857422,
+              2.0907108783721924,
+              128.3075714111328,
+              38.614479064941406
+            ],
+            "firstYBox": [
+              139.86219787597656,
+              2.093555212020874,
+              165.781005859375,
+              38.644775390625
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000250",
+          "features": {
+            "xOrigin": 2.4047032797070798,
+            "ySpan": 1.4417465698334246,
+            "digitWidth": 25.848045349121094,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.303794860839844,
+              2.0615220069885254,
+              79.00996398925781,
+              38.6351203918457
+            ],
+            "lastXBox": [
+              102.48831939697266,
+              2.0700020790100098,
+              128.4901123046875,
+              38.63393020629883
+            ],
+            "firstYBox": [
+              139.99990844726562,
+              2.0590269565582275,
+              165.5111846923828,
+              38.64240646362305
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000293",
+          "features": {
+            "xOrigin": 2.403160126475205,
+            "ySpan": 1.4351372476434738,
+            "digitWidth": 25.885910034179688,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.175533294677734,
+              2.0579636096954346,
+              79.24044036865234,
+              38.65135955810547
+            ],
+            "lastXBox": [
+              102.70356750488281,
+              2.057036876678467,
+              128.5894775390625,
+              38.639801025390625
+            ],
+            "firstYBox": [
+              139.8560028076172,
+              2.05242657661438,
+              165.73670959472656,
+              38.648624420166016
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000336",
+          "features": {
+            "xOrigin": 2.4119617180428476,
+            "ySpan": 1.4435236577587485,
+            "digitWidth": 25.868064880371094,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.48781967163086,
+              2.093069314956665,
+              79.29774475097656,
+              38.63992691040039
+            ],
+            "lastXBox": [
+              102.26498413085938,
+              2.090775489807129,
+              128.3199462890625,
+              38.63066864013672
+            ],
+            "firstYBox": [
+              139.70196533203125,
+              2.030924081802368,
+              165.56529235839844,
+              38.642601013183594
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000379",
+          "features": {
+            "xOrigin": 2.407266234709104,
+            "ySpan": 1.451153061298047,
+            "digitWidth": 25.930126190185547,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.374271392822266,
+              2.0753188133239746,
+              79.4671630859375,
+              38.64932632446289
+            ],
+            "lastXBox": [
+              102.35259246826172,
+              2.0476717948913574,
+              128.2086181640625,
+              38.64975357055664
+            ],
+            "firstYBox": [
+              140.0157470703125,
+              2.0495784282684326,
+              165.80262756347656,
+              38.64510726928711
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000692",
+          "features": {
+            "xOrigin": 2.410634857046969,
+            "ySpan": 1.4530480772185077,
+            "digitWidth": 25.82464599609375,
+            "xHasSign": true,
+            "yHasSign": false,
+            "firstXBox": [
+              53.37127685546875,
+              2.057131767272949,
+              79.13630676269531,
+              38.64610290527344
+            ],
+            "lastXBox": [
+              102.21748352050781,
+              2.0454845428466797,
+              128.2522430419922,
+              38.65856170654297
+            ],
+            "firstYBox": [
+              139.93531799316406,
+              2.0953402519226074,
+              165.58331298828125,
+              38.68855667114258
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": false
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000709",
+          "features": {
+            "xOrigin": 2.4037055466943906,
+            "ySpan": 2.1308565513135505,
+            "digitWidth": 25.758018493652344,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.05895233154297,
+              2.060063600540161,
+              78.77043151855469,
+              38.62976837158203
+            ],
+            "lastXBox": [
+              102.17269897460938,
+              2.0447134971618652,
+              127.91505432128906,
+              38.643226623535156
+            ],
+            "firstYBox": [
+              156.95144653320312,
+              2.078862190246582,
+              182.9095916748047,
+              38.661380767822266
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000730",
+          "features": {
+            "xOrigin": 2.429643638620749,
+            "ySpan": 2.148278920836849,
+            "digitWidth": 25.566272735595703,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.276092529296875,
+              2.0620081424713135,
+              78.95777130126953,
+              38.63591766357422
+            ],
+            "lastXBox": [
+              102.07645416259766,
+              2.099574565887451,
+              127.99776458740234,
+              38.60729217529297
+            ],
+            "firstYBox": [
+              157.04432678222656,
+              2.050280809402466,
+              182.87686157226562,
+              38.618186950683594
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000813",
+          "features": {
+            "xOrigin": 2.393408729400159,
+            "ySpan": 2.1320052144177057,
+            "digitWidth": 25.86236572265625,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.060264587402344,
+              2.0763328075408936,
+              78.7381591796875,
+              38.63043975830078
+            ],
+            "lastXBox": [
+              101.96117401123047,
+              2.068934917449951,
+              127.84719848632812,
+              38.66741180419922
+            ],
+            "firstYBox": [
+              157.0638427734375,
+              2.0522024631500244,
+              183.0219268798828,
+              38.627357482910156
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000835",
+          "features": {
+            "xOrigin": 2.4138759507322898,
+            "ySpan": 2.1341854739068986,
+            "digitWidth": 25.749435424804688,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.26370620727539,
+              2.0703136920928955,
+              79.04817962646484,
+              38.63273620605469
+            ],
+            "lastXBox": [
+              101.98222351074219,
+              2.0682551860809326,
+              127.92193603515625,
+              38.636863708496094
+            ],
+            "firstYBox": [
+              156.96102905273438,
+              2.0644195079803467,
+              182.8512725830078,
+              38.6712532043457
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000853",
+          "features": {
+            "xOrigin": 2.3992915520793465,
+            "ySpan": 2.120095780823989,
+            "digitWidth": 25.8336181640625,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.10346603393555,
+              2.083350896835327,
+              78.86129760742188,
+              38.631919860839844
+            ],
+            "lastXBox": [
+              101.99227905273438,
+              2.0627143383026123,
+              127.82589721679688,
+              38.64922332763672
+            ],
+            "firstYBox": [
+              156.75466918945312,
+              2.0794126987457275,
+              182.60299682617188,
+              38.661956787109375
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000871",
+          "features": {
+            "xOrigin": 2.4142052552504367,
+            "ySpan": 2.130442101672271,
+            "digitWidth": 25.674774169921875,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.18687057495117,
+              2.0504062175750732,
+              78.78147888183594,
+              38.635196685791016
+            ],
+            "lastXBox": [
+              102.1266098022461,
+              2.0765721797943115,
+              128.02552795410156,
+              38.65174865722656
+            ],
+            "firstYBox": [
+              156.86729431152344,
+              2.072960615158081,
+              182.6820831298828,
+              38.660118103027344
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000907",
+          "features": {
+            "xOrigin": 2.4110684857522204,
+            "ySpan": 2.1331769723572114,
+            "digitWidth": 25.766204833984375,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.36708068847656,
+              2.0629422664642334,
+              78.88108825683594,
+              38.650146484375
+            ],
+            "lastXBox": [
+              102.04895782470703,
+              2.1069421768188477,
+              127.95342254638672,
+              38.616783142089844
+            ],
+            "firstYBox": [
+              156.98239135742188,
+              2.0603787899017334,
+              182.94773864746094,
+              38.637332916259766
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000951",
+          "features": {
+            "xOrigin": 2.4097908399636534,
+            "ySpan": 2.123028140214331,
+            "digitWidth": 25.894195556640625,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.360713958740234,
+              2.0787367820739746,
+              79.4384765625,
+              38.63921356201172
+            ],
+            "lastXBox": [
+              126.69061279296875,
+              2.0573294162750244,
+              152.79185485839844,
+              38.62381362915039
+            ],
+            "firstYBox": [
+              181.7509002685547,
+              2.0333735942840576,
+              207.67977905273438,
+              38.631412506103516
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000995",
+          "features": {
+            "xOrigin": 2.4117935024805437,
+            "ySpan": 2.117017031788146,
+            "digitWidth": 25.851211547851562,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.32938003540039,
+              2.075383424758911,
+              79.3661880493164,
+              38.58672332763672
+            ],
+            "lastXBox": [
+              126.74044799804688,
+              2.105924367904663,
+              152.4895782470703,
+              38.61821365356445
+            ],
+            "firstYBox": [
+              181.32618713378906,
+              2.0461034774780273,
+              207.35874938964844,
+              38.63279342651367
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001030",
+          "features": {
+            "xOrigin": 2.4008011405120233,
+            "ySpan": 2.1153386207871123,
+            "digitWidth": 25.9149169921875,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.20759963989258,
+              2.077658176422119,
+              79.22552490234375,
+              38.6893424987793
+            ],
+            "lastXBox": [
+              126.66340637207031,
+              2.057891368865967,
+              152.56668090820312,
+              38.636436462402344
+            ],
+            "firstYBox": [
+              181.46939086914062,
+              2.040422201156616,
+              207.39834594726562,
+              38.63905334472656
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001107",
+          "features": {
+            "xOrigin": 2.4114849936723504,
+            "ySpan": 2.1187616282364274,
+            "digitWidth": 25.8507080078125,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.314205169677734,
+              2.063720941543579,
+              79.36298370361328,
+              38.64883041381836
+            ],
+            "lastXBox": [
+              126.98018646240234,
+              2.113060235977173,
+              152.61888122558594,
+              38.6527099609375
+            ],
+            "firstYBox": [
+              181.56410217285156,
+              2.062349796295166,
+              207.57794189453125,
+              38.64918899536133
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001123",
+          "features": {
+            "xOrigin": 2.4069470350809206,
+            "ySpan": 2.110953735768909,
+            "digitWidth": 25.92816925048828,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.281227111816406,
+              2.098982095718384,
+              79.53423309326172,
+              38.63784408569336
+            ],
+            "lastXBox": [
+              102.50101470947266,
+              2.0489022731781006,
+              128.42918395996094,
+              38.623470306396484
+            ],
+            "firstYBox": [
+              157.1875762939453,
+              2.073507308959961,
+              183.20895385742188,
+              38.63358688354492
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001139",
+          "features": {
+            "xOrigin": 2.395044243788616,
+            "ySpan": 2.123525353762512,
+            "digitWidth": 26.00048828125,
+            "xHasSign": true,
+            "yHasSign": true,
+            "firstXBox": [
+              53.29914093017578,
+              2.057036876678467,
+              79.24549865722656,
+              38.63352584838867
+            ],
+            "lastXBox": [
+              101.95014190673828,
+              2.055138111114502,
+              128.17852783203125,
+              38.626609802246094
+            ],
+            "firstYBox": [
+              157.34320068359375,
+              2.0578343868255615,
+              183.2108612060547,
+              38.62804412841797
+            ]
+          },
+          "expectedSigns": {
+            "x": true,
+            "y": true
+          }
+        },
+        {
+          "id": "laguna",
+          "features": {
+            "xOrigin": 1.7770407859244872,
+            "ySpan": 1.4939022591523636,
+            "digitWidth": 25.86322021484375,
+            "xHasSign": false,
+            "yHasSign": false,
+            "firstXBox": [
+              37.007266998291016,
+              2.053417682647705,
+              62.91272735595703,
+              38.64561080932617
+            ],
+            "lastXBox": [
+              110.52365112304688,
+              2.0557990074157715,
+              136.29336547851562,
+              38.623924255371094
+            ],
+            "firstYBox": [
+              149.07533264160156,
+              2.0388803482055664,
+              175.01593017578125,
+              38.628944396972656
+            ]
+          },
+          "expectedSigns": {
+            "x": false,
+            "y": false
+          }
+        },
+        {
+          "id": "lowervault",
+          "features": {
+            "xOrigin": 1.7779797525129102,
+            "ySpan": 1.4917240718343978,
+            "digitWidth": 25.712554931640625,
+            "xHasSign": false,
+            "yHasSign": false,
+            "firstXBox": [
+              37.21426010131836,
+              2.0778937339782715,
+              62.218544006347656,
+              38.63380813598633
+            ],
+            "lastXBox": [
+              110.5655746459961,
+              2.039727210998535,
+              136.96719360351562,
+              38.62901306152344
+            ],
+            "firstYBox": [
+              149.119873046875,
+              2.0307457447052,
+              175.12496948242188,
+              38.64407730102539
+            ]
+          },
+          "expectedSigns": {
+            "x": false,
+            "y": false
+          }
+        },
+        {
+          "id": "timeriftruins",
+          "features": {
+            "xOrigin": 1.714966202847879,
+            "ySpan": 1.4735516982736727,
+            "digitWidth": 25.836029052734375,
+            "xHasSign": false,
+            "yHasSign": false,
+            "firstXBox": [
+              35.753822326660156,
+              2.04179310798645,
+              60.86201095581055,
+              38.63675308227539
+            ],
+            "lastXBox": [
+              86.01116943359375,
+              2.0578155517578125,
+              111.9480972290039,
+              38.64128112792969
+            ],
+            "firstYBox": [
+              124.0405044555664,
+              2.060321807861328,
+              150.06021118164062,
+              38.65040588378906
+            ]
+          },
+          "expectedSigns": {
+            "x": false,
+            "y": false
+          }
+        }
+      ],
+      "excludedTrainingSources": [
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000899",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001011",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001156"
+      ],
+      "trainingSourceIDs": [
+        "laguna",
+        "lowervault",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000005",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000047",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000092",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000206",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000250",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000293",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000336",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000379",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000380",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000393",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000407",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000421",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000435",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000448",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000513",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000527",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000563",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000570",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000577",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000584",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000631",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000638",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000645",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000656",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000692",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000709",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000730",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000744",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000745",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000746",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000747",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000748",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000749",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000750",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000751",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000752",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000753",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000813",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000835",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000853",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000871",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000884",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000885",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000886",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000887",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000888",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000889",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000890",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000891",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000892",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000893",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000894",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000895",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000896",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000897",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000898",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000899",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000900",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000907",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000951",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000995",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001011",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001030",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001107",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001123",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001139",
+        "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-001156",
+        "timeriftruins"
+      ],
+      "rawStatistics": {
+        "x": {
+          "positive": [
+            1.7770407859244872,
+            1.7779797525129102,
+            1.714966202847879
+          ],
+          "negative": [
+            2.484917584691195,
+            2.4845370651687375,
+            2.457140376084698,
+            2.4871574878598883,
+            2.4781050413202257,
+            2.4605885897471955,
+            2.4757847205707124,
+            2.4796230282162943,
+            2.477355692976122,
+            2.4777891029535577,
+            2.4534121799689608,
+            2.4673961344651287,
+            2.4608999944988112,
+            2.4957824307441507,
+            2.472966821612914,
+            2.475632426523302,
+            2.4742102445805414,
+            2.461174657090227,
+            2.471523022874292,
+            2.4630323266509926,
+            2.4710630745191806,
+            2.478781451069004,
+            2.4827269928478626,
+            2.4626079626015343,
+            2.5148121847773384,
+            2.477439599494347,
+            2.4089258299269316,
+            2.4085784490111806,
+            2.407302026174519,
+            2.409449833894111,
+            2.413795944225681,
+            2.4192995710007286,
+            2.4145720976440534,
+            2.4069601627225397,
+            2.4027353840309953,
+            2.4115966571871477,
+            2.407530148548836,
+            2.4060794302416495,
+            2.412595670680389,
+            2.416308793002502,
+            2.4105559152752973,
+            2.4075365593701337,
+            2.409073668537449,
+            2.412304413492791,
+            2.4025694628923926,
+            2.4156114197920395,
+            2.4047032797070798,
+            2.403160126475205,
+            2.4119617180428476,
+            2.407266234709104,
+            2.410634857046969,
+            2.4037055466943906,
+            2.429643638620749,
+            2.393408729400159,
+            2.4138759507322898,
+            2.3992915520793465,
+            2.4142052552504367,
+            2.4110684857522204,
+            2.4097908399636534,
+            2.4117935024805437,
+            2.4008011405120233,
+            2.4114849936723504,
+            2.4069470350809206,
+            2.395044243788616
+          ],
+          "margin": 0.15385724422181218
+        },
+        "y": {
+          "positive": [
+            1.4502220848123253,
+            1.4621540488917886,
+            1.4617080270282248,
+            1.4445366187914914,
+            1.4693240059469808,
+            1.4599059575720936,
+            1.4605344935660896,
+            1.4585227789128774,
+            1.444485866344595,
+            1.4652451712534134,
+            1.4610268671222761,
+            1.4446434787675089,
+            1.4647113295096539,
+            1.4581226454707283,
+            1.4388649915837364,
+            1.442000254244171,
+            1.4411828094200887,
+            1.4489381329578057,
+            1.445947625719666,
+            1.4507434654097755,
+            1.4417465698334246,
+            1.4351372476434738,
+            1.4435236577587485,
+            1.451153061298047,
+            1.4530480772185077,
+            1.4939022591523636,
+            1.4917240718343978,
+            1.4735516982736727
+          ],
+          "negative": [
+            2.1641699338620146,
+            2.161337096710601,
+            2.135649701693743,
+            2.1679731702371057,
+            2.1546416150664593,
+            2.1532113538784,
+            2.1481812807603275,
+            2.1611215992313046,
+            2.1647220010738555,
+            2.167269539526234,
+            2.0077526390664806,
+            2.017808589122736,
+            2.00985201801945,
+            2.0347042242687334,
+            2.018832967453921,
+            2.0156105319982243,
+            2.018079124218448,
+            1.9994930048118675,
+            2.0168645409178207,
+            2.009542684197494,
+            2.006409084046579,
+            2.0157655329267032,
+            2.0256406661029107,
+            1.9985069816019727,
+            2.052706384930295,
+            2.0272569256207307,
+            2.1308565513135505,
+            2.148278920836849,
+            2.1320052144177057,
+            2.1341854739068986,
+            2.120095780823989,
+            2.130442101672271,
+            2.1331769723572114,
+            2.123028140214331,
+            2.117017031788146,
+            2.1153386207871123,
+            2.1187616282364274,
+            2.110953735768909,
+            2.123525353762512
+          ],
+          "margin": 0.12615118061240227
+        }
+      },
+      "decoderSHA256": "5bd549690387f39249b76b0a38449e15e6da0fc34ee8b6b658472eb0740934b5",
+      "auditSHA256": "687ba58d8bb514a9abc64d88327d36bcdabd87b6efbdfecfeb9371a0ea7b967c"
+    }
+  },
+  "guardProbeSource": {
+    "sha256": "aa851ef4b5fd8e58680c4fbe0196d05cd23d9628dda9c1eec0448e698a93e1b8",
+    "text": "\"\"\"Throwaway offline analysis. No product changes or label-dependent decisions.\"\"\"\nfrom pathlib import Path\nimport json, sys, hashlib, collections, statistics\nR=Path(__file__).resolve().parent; B=R.parent; T=B/'coordinate-targeted-retrain-20261016'; F=B/'coordinate-independent-20261016'\nsys.path.insert(0,str(F))\nfrom xy_decode import decode, _iou, _center\nread=lambda p:json.loads(p.read_text(encoding='utf-8-sig'))\nsha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\n\ndef prefix_digits(obs):\n    # Reproduce frozen decoder grouping, then locate its exact selected group.\n    d=decode(obs)\n    if not d['selected']:return None\n    unique=[]\n    for o in sorted((o for o in obs if o['score']>=.25),key=lambda o:-o['score']):\n        if not any(o['char']==p['char'] and _iou(o['xyxy'],p['xyxy'])>.45 for p in unique):unique.append(o)\n    unique.sort(key=_center)\n    width=statistics.median(o['xyxy'][2]-o['xyxy'][0] for o in unique if o['char'].isdigit())\n    groups=[];right=None\n    for o in unique:\n        if right is None or o['xyxy'][0]-right>max(12.,.75*width):groups.append([]);right=o['xyxy'][2]\n        else:right=max(right,o['xyxy'][2])\n        groups[-1].append(o)\n    groups=[g for g in groups if ''.join(o['char'] for o in g)==d['selected']['observedGroupText']]\n    assert len(groups)==1\n    g=groups[0];end=[n for n,o in enumerate(g) if o['char']==','][1]\n    return [o for o in g[:end] if o['char'].isdigit()]\n\ndef guard(selected,obs,policy):\n    if selected is None:return None,[]\n    if policy=='unmodified':return selected,[]\n    if policy=='xy-score-0.50':return (selected,[]) if selected['xyScore']>=.5 else (None,['low-xy-score'])\n    digits=prefix_digits(obs['raw']);assert digits\n    reasons=[]\n    for o in digits:\n        if policy in ['digit-score-0.50','paired-digits-and-score-0.50'] and o['score']<.5:reasons.append('low-digit-score')\n        if policy in ['paired-digits-0.25','paired-digits-and-score-0.50']:\n            neighbors=[p for p in obs['contrast'] if p['score']>=.25 and _iou(o['xyxy'],p['xyxy'])>=.5]\n            if not any(p['char']==o['char'] for p in neighbors):reasons.append('digit-not-confirmed')\n            if any(p['char']!=o['char'] for p in neighbors):reasons.append('digit-conflict')\n    return (None,sorted(set(reasons))) if reasons else (selected,[])\n\ndef grade(truth,selected):\n    if truth['state']=='unknown':return 'unknownReturned' if selected else 'unknownNoReturn'\n    if truth['state']=='absent':return 'falsePositive' if selected else 'trueNegative'\n    return 'miss' if selected is None else 'correct' if selected['xy']==[truth['expected'][k] for k in 'xy'] else 'wrong'\n\ndef main():\n    sources=[T/'evaluation-pytorch.json',T/'evaluation-refined-pytorch.json',T/'evaluation-expanded-onnx.json',T/'score-final-pytorch.json',T/'evaluation-inputs.json',T/'development-view-v2.json',F/'full-110DF22E/labels-v6-user-confirmed.json',F/'xy_decode.py']\n    frozen={str(p):sha(p) for p in sources}\n    previous=read(T/'score-final-pytorch.json');truth={r['id']:{'state':r['state'],'expected':r['expected']} for r in previous['rows']}\n    groups={r['id']:r['groups'] for r in previous['rows']}\n    new={f['id']:f for f in read(F/'full-110DF22E/labels-v6-user-confirmed.json')['frames']}\n    view=read(T/'development-view-v2.json');train=set(view['trainingFrames']);purge=set(view['purgedFrames'])\n    gpu=read(T/'evaluation-pytorch.json')['trials'];gpu.update(read(T/'evaluation-refined-pytorch.json')['trials'])\n    datasets={k:v['rows'] for k,v in gpu.items()};datasets['expanded-onnx']=read(T/'evaluation-expanded-onnx.json')['rows']\n    policies=['unmodified','xy-score-0.50','digit-score-0.50','paired-digits-0.25','paired-digits-and-score-0.50']\n    counts=collections.defaultdict(collections.Counter);records=[]\n    final_index={(r['mode'],r['id']):r for r in previous['rows']}\n    for model,rows in datasets.items():\n        for r in rows:\n            fid=r['id']\n            if fid not in truth:\n                assert fid.endswith('000835');continue\n            f=truth[fid];base=r['pipeline']['selected'];original=grade(f,base)\n            assert original==final_index[('expanded' if model=='expanded-onnx' else model,fid)]['outcomeXY']\n            gs=[g for g in groups[fid] if g in ['old-development','old-fit-or-historical','new-full-observed']]\n            if fid in new:\n                gs.append(new[fid]['scene'])\n                if new[fid]['frame'] not in train|purge:gs.append('new-39-source-observational')\n            for policy in policies:\n                selected,reasons=guard(base,r['detections'],policy);outcome=grade(f,selected)\n                assert selected is None or selected==base # Guards can only abstain.\n                for group in gs:counts[model,policy,group][outcome]+=1\n                if reasons:records.append({'model':model,'policy':policy,'id':fid,'groups':gs,'before':original,'after':outcome,'selectedBefore':base,'reasons':reasons})\n    summary=[{'model':m,'policy':p,'group':g,**dict(c)} for (m,p,g),c in counts.items()]\n    # Independent CPU cached detections must give exactly the same guarded XY.\n    ix={r['id']:r for r in datasets['expanded']};agreement=collections.Counter()\n    for r in datasets['expanded-onnx']:\n        for policy in policies:\n            a=guard(r['pipeline']['selected'],r['detections'],policy)[0];p=ix[r['id']];b=guard(p['pipeline']['selected'],p['detections'],policy)[0]\n            assert (a['xy'] if a else None)==(b['xy'] if b else None),(policy,r['id'])\n            agreement[policy]+=1\n    assert all(sha(Path(p))==v for p,v in frozen.items())\n    report={'scope':'Throwaway offline diagnostic probe, not product code or independent acceptance. Fixed simple hypotheses: .50 confidence floor and/or .25 same-digit secondary evidence with IoU>=.50. No threshold sweep or per-frame exceptions. Same detector raw/contrast routes are correlated, not independent models. All policies only remove returns. Session has been used for training and analysis.','sourceSHA256':frozen,'policies':policies,'summary':summary,'changed':records,'cpuGpuAgreement':dict(agreement),'productionChanged':False}\n    dest=R/'probe-report.json';assert not dest.exists();dest.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')\n    for row in summary:\n        if row['model'] in ['expanded','refined'] and row['group'] in ['old-development','new-full-observed','new-39-source-observational']:print(row)\n    print('CPU/GPU guarded XY agreement:',dict(agreement))\n\nif __name__=='__main__':main()\n"
+  },
+  "inputAndTruthHelper": {
+    "sha256": "c2954d0a198dee0f6da58eed35d5d73bcd58d9c65a6649de4274d0ff988fc646",
+    "text": "from pathlib import Path\nimport os,json,sys,hashlib,collections\nR=Path(__file__).resolve().parent;B=R.parent;F=B/'coordinate-independent-20261016';T=B/'coordinate-targeted-retrain-20261016';P=B/'coordinate-uncertainty-probe-20261016'\nos.environ['YOLO_CONFIG_DIR']=str(B/'coordinate-yolo-selftrain-20261015/settings');os.environ['YOLO_AUTOINSTALL']='false';sys.path.insert(0,str(F));sys.path.insert(0,str(P))\nfrom xy_decode import decode\nfrom sign_recovery import recover\nfrom probe import guard\nread=lambda p:json.loads(p.read_text(encoding='utf-8-sig'));sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\ndef grade(f,s):\n if f['state']=='unknown':return 'unknownReturned' if s else 'unknownNoReturn'\n if f['state']=='absent':return 'falsePositive' if s else 'trueNegative'\n return 'miss' if s is None else 'correct' if s['xy']==[f['expected'][k] for k in 'xy'] else 'wrong'\ndef load_inputs():\n oldread=read(T/'evaluation-inputs.json')['inputs'];cpu={r['id']:r for r in read(T/'evaluation-expanded-onnx.json')['rows']};oldtruth={r['id']:r for r in read(T/'score-final-pytorch.json')['rows'] if r['mode']=='expanded'};items=[];truth={}\n for i in oldread:\n  if i['id'] not in cpu:assert i['id'].endswith('000835');continue\n  i=dict(i);obs=cpu[i['id']];base=obs['pipeline']['selected'];i['baselineSelected']=base;i['baselinePairedSelected']=guard(base,obs['detections'],'paired-digits-0.25')[0];items.append(i)\n  f=oldtruth[i['id']];truth[i['id']]={'state':f['state'],'expected':f['expected'],'groups':['prior-session' if g=='new-full-observed' else g for g in f['groups'] if g in ['old-development','old-fit-or-historical','new-full-observed']]}\n current={f['frame']:f for f in read(R/'labels-v2-user-confirmed.json')['frames']};selected={r['frame'] for r in read(R/'training-protocol-v2.json')['newRows']}\n for r in read(R/'inference-frozen-v1.json')['rows']:\n  i=r['input'];fid=i['sourceId'];items.append({'id':fid,'context':r['context'],'images':{v:str(R/'native'/(i['id']+'.'+v+'.png')) for v in ['raw','contrast']},'baselineSelected':r['pipelines']['expanded']['selected'],'baselinePairedSelected':r['pipelines']['expanded-paired']['selected']});f=current[r['frame']];groups=['flight-full',f['split']]\n  if f['effectWindow']:groups.append('flight-effect-window')\n  if f['split']=='training-candidate':groups.append('flight-fit25' if f['frame'] in selected else 'flight-unused-training-segment')\n  truth[fid]={'state':f['state'],'expected':f['expected'],'groups':groups}\n assert len(items)==len(truth)==2012\n return items,truth\ndef main():\n import cv2,torch\n from ultralytics import YOLO\n items,truth=load_inputs();cal=read(F/'calibration.json');classes=list('0123456789-,+:');torch.set_num_threads(4);trials={};summaries=[];scores=[]\n for name in ['baseline','control','flight']:\n  if name=='baseline':rows=[]\n  else:\n   train=read(R/(name+'-training.json'));weights=Path(train['weights']);assert sha(weights)==train['weightsSHA256'];net=YOLO(str(weights));objects={i['id']:{v:[] for v in ['raw','contrast']} for i in items};tasks=[(i,v) for i in items for v in ['raw','contrast']]\n   for start in range(0,len(tasks),32):\n    batch=tasks[start:start+32];ims=[cv2.imread(i['images'][v]) for i,v in batch];assert all(im is not None for im in ims)\n    predictions=net.predict(source=ims,imgsz=(64,896),rect=False,conf=.25,iou=.45,max_det=256,device=0,half=False,verbose=False,save=False)\n    for (i,v),prediction in zip(batch,predictions):\n     b=prediction.boxes.cpu();objects[i['id']][v]=[{'char':classes[int(c)],'score':float(s),'xyxy':list(map(float,box))} for box,s,c in zip(b.xyxy.tolist(),b.conf.tolist(),b.cls.tolist())]\n   rows=[]\n   for i in items:\n    obs=objects[i['id']];pipe=recover(obs['raw'],decode(obs['raw']),cal,i['context'],cv2.imread(i['images']['contrast']),obs['contrast']);paired,reasons=guard(pipe['selected'],obs,'paired-digits-0.25');rows.append({'id':i['id'],'detections':obs,'pipeline':pipe,'pairedSelected':paired,'pairedReasons':reasons})\n   trials[name]={'weightsSHA256':sha(weights),'rows':rows};del net;torch.cuda.empty_cache();print('GPUinferencecomplete',name,len(rows),flush=True)\n  ix={r['id']:r for r in rows};counts=collections.defaultdict(collections.Counter)\n  for i in items:\n   fid=i['id'];f=truth[fid]\n   for variant in ['raw-pipeline','paired']:\n    s=i['baselineSelected' if variant=='raw-pipeline' else 'baselinePairedSelected'] if name=='baseline' else ix[fid]['pipeline']['selected'] if variant=='raw-pipeline' else ix[fid]['pairedSelected'];outcome=grade(f,s)\n    for g in f['groups']:counts[variant,g][outcome]+=1\n    scores.append({'id':fid,'model':name,'variant':variant,'groups':f['groups'],'state':f['state'],'expected':f['expected'],'selected':s,'outcome':outcome})\n  summaries.extend({'model':name,'variant':v,'group':g,**dict(c)} for (v,g),c in counts.items())\n  for s in summaries:\n   if s['model']==name and s['group'] in ['old-development','prior-session','flight-full','heldout']:print(s,flush=True)\n by={(r['model'],r['variant'],r['group']):r for r in summaries};qualification={}\n for name in ['control','flight']:\n  subset={g:by[name,'paired',g] for g in ['old-development','prior-session','flight-full','heldout']};qualification[name]=all(r.get('wrong',0)==r.get('falsePositive',0)==0 for r in subset.values()) and all(subset[g].get('correct',0)>=n for g,n in [('old-development',166),('prior-session',1022),('heldout',64)])\n report={'scope':'Fixed40epoch control andflight GPU replay; baselineactualCPUcache. Labels only used by scorer. Temporal visually inspected holdout is not independent new-session acceptance. No product change.','protocolSHA256':sha(R/'training-protocol-v2.json'),'labelsSHA256':sha(R/'labels-v2-user-confirmed.json'),'summary':summaries,'rows':scores,'qualified':qualification,'productionChanged':False}\n for fn,obj in [('evaluation-training-gpu-v1.json',{'trials':trials}),('score-training-v1.json',report)]:\n  p=R/fn;assert not p.exists();p.write_text(json.dumps(obj,ensure_ascii=False,separators=(',',':')),encoding='utf-8')\n print('Qualified',qualification,flush=True)\nif __name__=='__main__':main()\n"
+  },
+  "runtime": {
+    "ultralytics": "8.3.228",
+    "torch": "2.9.1+cu130",
+    "onnxruntime": "1.31.0",
+    "numpy": "1.26.4",
+    "opencv-python": "5.0.0.93"
+  },
+  "python": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]",
+  "artifacts": {
+    "evidence": {
+      "file": "regression-recovery-v1.json",
+      "sha256": "72b2dbde805c08f3cbb138625589b9cf25b3b2b2fb6bd6557fc84c54d1f32328"
+    },
+    "gpu": {
+      "file": "regression-recovery-gpu-v1.json.gz",
+      "sha256": "c53b952b30dc27243d8ea732476f40b7c5a2d7c732c879875f2ab8ee0a3d3623",
+      "decompressedSHA256": "08317e7b8a9324e316e9663b97ab5e6067e6a85a125ed896edfccbd71202dc1a",
+      "decompressedBytes": 17115540,
+      "localPath": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-regression-recovery-20261016\\runtime-gpu-v1.json"
+    },
+    "cpu": {
+      "file": "regression-recovery-cpu-v1.json.gz",
+      "sha256": "4c4b8d8fde434140caa5ac183ebd08e1303b584b5acb6778c18cc89d9553494f",
+      "decompressedSHA256": "3cad51adc058f04f4289cca0eff7da1a64fd860cf2014113175c7eb27760a8a0",
+      "decompressedBytes": 17114195,
+      "localPath": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-regression-recovery-20261016\\runtime-cpu-v1.json"
+    }
+  }
+}

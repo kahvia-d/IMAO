@@ -12,6 +12,9 @@
 #include "..\Feature\RuntimeFeatureRepository.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateRecoveryController.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\OcrCoordinateGate.h"
+#include "../Runtime/ReadoutWorkSchedule.h"
+#include "ReadoutVisualWorker.h"
+#include "../Coordinate/IdentifyWorldCoordinates/CoordinateHandoff.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateTrust.h"
 #include "..\Coordinate\VisualLocalization\GlobalVisualLocalizer.h"
 #include "MapUiStateController.h"
@@ -98,6 +101,7 @@ public:
 
 	void StopTasks() {
 		allThreadStopFlag = true;
+        localizationSignal->NotifyResult();
         GamepadContextSnapshot::Shared().End(coordinateSessionId);
         overlayFrames.Publish({});
         overlayVisibility.Publish({});
@@ -110,6 +114,7 @@ public:
 		if (detectGameStateThread.joinable()) detectGameStateThread.join();
 		if (keyMonitoringThread.joinable()) keyMonitoringThread.join();
 
+        readoutVisualWorker.Shutdown();
 		featureResources.reset();
 		std::vector<cv::KeyPoint>().swap(nearPlayerMapKeypoints);
 		nearPlayerMapDescriptors.release();
@@ -204,6 +209,8 @@ public:
 		enabledMinMapShowItem = setValue;
 	}
 
+    static bool MinimapMarkersEnabled() { return enabledMinMapShowItem.load(); }
+
 private:
 	std::atomic_bool allThreadStopFlag = false;
 	std::thread mainThread;
@@ -273,6 +280,8 @@ private:
     std::uint64_t routeFixSequence = 0, routeFixContinuity = 0;
     std::chrono::steady_clock::time_point routeFixCapturedAt{};
     bool routeVisualFix = false;
+    std::chrono::steady_clock::time_point lastReadoutAcceptedAt{};
+    std::uint64_t lastReadoutPublishedFix = 0;
     double minimapTerrainScale = kNominalMinimapTerrainScale;
 	// A viewport is a search range only; it never publishes player coordinates.
 	std::optional<MinimapResumeHint> viewportResumeHint;
@@ -307,8 +316,21 @@ private:
 	std::uint64_t nextOcrRequestId = 1;
 	int ocrAttemptsForRecovery = 0;
 	CoordinateRecoveryController::Clock::time_point lastOcrSubmitAt{};
-    // OCR may bound visual searches after repeated failures; text never
-    // publishes a position or supplies scene identity by itself.
+    std::shared_ptr<LocalizationSignal> localizationSignal = std::make_shared<LocalizationSignal>();
+    ReadoutVisualWorker readoutVisualWorker{localizationSignal};
+    std::optional<VisualLocalizationCandidate> pendingReadoutGlobalCandidate;
+    std::uint64_t pendingReadoutGlobalRequest = 0, latestReadoutGlobalRequest = 0;
+    std::uint64_t lastReadoutVisualSubmittedFrame = 0;
+    std::optional<CapturedFrame> readoutVisualAnchor;
+    std::uint64_t readoutVisualAnchorGeneration = 0;
+    bool localizationServiceOnly = false;
+    ReadoutWorkSchedule readoutWorkSchedule;
+    CoordinateHandoff coordinateHandoff{std::chrono::milliseconds(750)};
+    std::uint64_t lastOcrSubmittedFrame = 0;
+    std::chrono::steady_clock::time_point lastPositionCapturedAt{};
+    std::chrono::steady_clock::time_point lastVisualRequestCapturedAt{};
+    // Own YOLO runs in standby and may publish through the readout gates.
+    // Region identity remains owned by independent visual/map evidence.
     bool ocrAssistEnabled = true;
     // The game's own coordinate readout is the only source that knows the position outright,
     // so while the visual lock is doubtful it may publish one directly - but only through
@@ -356,7 +378,7 @@ private:
     Coordinate drawnMinimapROC{};
     int drawnMinimapSceneId = 0;
     std::chrono::steady_clock::time_point drawnMinimapAt{};
-    OcrCoordinateGate::Gate ocrCoordinateGate;
+    OcrCoordinateGate::Gate ocrCoordinateGate{OcrCoordinateGate::Config{.minimumScore = 0.25f}};
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being
 	// initialized.  It is warmed in the background after a visual lock, or

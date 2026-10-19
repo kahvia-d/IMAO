@@ -1,5 +1,6 @@
 #pragma once
 #include "AtomicFile.h"
+#include "CompletionReadView.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cctype>
@@ -373,6 +374,23 @@ public:
         return {completed.begin(), completed.end()};
     }
     std::string Profile() const { std::scoped_lock lock(mutex); return document.at("profileId").get<std::string>(); }
+
+    SceneCompletionRead ReadCompletions(const std::string& scene) const {
+        std::scoped_lock lock(mutex);
+        SceneCompletionRead result;
+        result.profileId = document.at("profileId").get<std::string>();
+        const auto& remote = RemoteIds(document, SceneState(scene));
+        result.remoteIds.reserve(remote.size());
+        for (const auto& id : remote) result.remoteIds.insert(id.get<std::string>());
+        for (const auto& point : document.at("points")) {
+            if (point.value("sceneName", "") != scene) continue;
+            // Match CompletedIds exactly: local overrides belong to sceneName
+            // and category, including layered states and explicit local undo.
+            result.localByCategory[point.value("nameId", "")][point.at("pointId").get<std::string>()] =
+                point.value("completed", false);
+        }
+        return result;
+    }
 
     // Removes the active profile's points that `select` accepts and returns them, so a
     // caller can move a whole class of completions into a ledger of its own. Used to take

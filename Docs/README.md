@@ -53,6 +53,9 @@
 | [`KuroSceneCalibrationSamples.md`](KuroSceneCalibrationSamples.md) | 新地区四点校准样本 |
 | [`KuroTileFeaturePacks.md`](KuroTileFeaturePacks.md) | 库街区瓦片特征包 |
 | [`VisualLocalization_zh-Hans.md`](VisualLocalization_zh-Hans.md) | 小地图视觉定位 |
+| [`CoordinateOfflineEvaluation_zh-Hans.md`](CoordinateOfflineEvaluation_zh-Hans.md) | 坐标 OCR 独立离线评测：共同像素输入、无标签先验、单条输出与候选召回、PP-OCR / 单字符 YOLO 对照 |
+| [`CoordinateSampleCapture_zh-Hans.md`](CoordinateSampleCapture_zh-Hans.md) | 独立坐标素材采集：原始像素带、前台游戏限定、暂停/结束、预算、会话校验与离线回放 |
+| [`CoordinateCaptureStudy_20261014_zh-Hans.md`](CoordinateCaptureStudy_20261014_zh-Hans.md) | 首轮实机双图核验：OCR 取景对照、小地图误差、近似 XY 候选及大地图/负号反例 |
 | [`PerformanceOptimizationPlan_zh-Hans.md`](PerformanceOptimizationPlan_zh-Hans.md) | 启动加载与坐标识别优化实施计划 |
 | [`MapRecognitionAudit_20260906.md`](MapRecognitionAudit_20260906.md) | 2026-09-06 地图识别根因审计 |
 | [`MinimapRetrievalAudit_20260907.md`](MinimapRetrievalAudit_20260907.md) | 小地图跨区域定位排查（2026-09-07 晚间） |
@@ -95,6 +98,8 @@
 | [`OverlayContinuityFix_20260908.md`](OverlayContinuityFix_20260908.md) | 小地图闪烁与大地图快拖错位（2026-09-08） |
 | [`MapMarkerFlicker_20260928.md`](MapMarkerFlicker_20260928.md) | 玩家反馈「标记一闪一闪」的日志分析与修复（2026-09-28） |
 | [`MapMarkerFlicker_20260928_evening_playerlog.md`](MapMarkerFlicker_20260928_evening_playerlog.md) | 同一症状的第二轮排查：下午/傍晚新旧版对照，焦点门是大地图标记的另一条来源（2026-09-28） |
+| [`MapMarkerFlicker_20261013_even.md`](MapMarkerFlicker_20261013_even.md) | even 的大世界 / 下层金库对照：源帧年龄、附着绘制差异与新增诊断（2026-10-13） |
+| [`MapMarkerFlicker_20261014_even_diagnostic.md`](MapMarkerFlicker_20261014_even_diagnostic.md) | even 新诊断日志确认：大世界点位过滤耗时高，标记源帧过期导致撤绘（2026-10-14） |
 
 ## 库街区进度同步扩展
 
@@ -169,3 +174,36 @@
 | [`ResourceSelectionRegression_20260909.md`](archive/ResourceSelectionRegression_20260909.md) | F8 更新后地图定位失效：实际资源选择回归 |
 | [`SparseMapViewport_20260909.md`](archive/SparseMapViewport_20260909.md) | 中央海面导致的大地图定位失败 |
 | [`TethysVideoReview_20260909.md`](archive/TethysVideoReview_20260909.md) | Tethys 视频检查 |
+| [`2026-10-14-english-coordinate-model.md`](superpowers/plans/2026-10-14-english-coordinate-model.md) | 英文坐标模型独立离线评测计划 |
+| [`CoordinateLineExperiment_20261015_zh-Hans.md`](CoordinateLineExperiment_20261015_zh-Hans.md) | 坐标行、等比缩放与日期边界离线实验及失败间隔法 |
+| [`CoordinateAnnotationExpansion_20261015_zh-Hans.md`](CoordinateAnnotationExpansion_20261015_zh-Hans.md) | 已有 1160 帧的助手视觉标注扩充、逐帧复核来源与待定清单 |
+| [`CoordinateExpandedEvaluation_20261015_zh-Hans.md`](CoordinateExpandedEvaluation_20261015_zh-Hans.md) | 扩展坐标集全量重评分、负号与 Z 错误分析、1011 张训练裁片准备 |
+| [`CoordinateFinetune_20261015_zh-Hans.md`](CoordinateFinetune_20261015_zh-Hans.md) | 五组 GPU 微调、冻结 BN 对照、数字模型兼容导出与原生 CPU 回放 |
+| [`CoordinateCoverageFinetune_20261015_zh-Hans.md`](CoordinateCoverageFinetune_20261015_zh-Hans.md) | 草地雪地分组覆盖、六张历史正 X 回放、两组补训及未解决难例 |
+| [`CoordinateStationaryGrass_20261015_zh-Hans.md`](CoordinateStationaryGrass_20261015_zh-Hans.md) | 三组同位置草地清晰／遮挡配对、39 帧小地图支持及整组划分约束 |
+| [`CoordinatePairedFinetune_20261015_zh-Hans.md`](CoordinatePairedFinetune_20261015_zh-Hans.md) | 三组配对补充／上下文训练失败对照、整组留出与训练推理差距 |
+| [`CoordinateInputAlignment_20261015_zh-Hans.md`](CoordinateInputAlignment_20261015_zh-Hans.md) | 原生真实张量与 checkpoint 对齐、padding 对照及坐标／日期边界分解 |
+| [`CoordinateImageGap_20261015_zh-Hans.md`](CoordinateImageGap_20261015_zh-Hans.md) | 无标签图像空隙裁切、末位截断反例及整图／裁片 XYZ 支持对照 |
+| [`CoordinateOwnYoloPilot_20261015_zh-Hans.md`](CoordinateOwnYoloPilot_20261015_zh-Hans.md) | 官方通用初始化、自有字符框与自训 YOLO 原型、拟合局限及 ONNX CPU 链路 |
+| [`CoordinateOwnYoloExpansion_20261015_zh-Hans.md`](CoordinateOwnYoloExpansion_20261015_zh-Hans.md) | 自训 YOLO 扩充草地雪地与不同坐标，固定开发回放、错误分析及 ONNX 一致性 |
+| [`CoordinateOwnYoloXY_20261015_zh-Hans.md`](CoordinateOwnYoloXY_20261015_zh-Hans.md) | XY 必需、Z 可选，日期冲突隔离、自训 YOLO 同框对照及 XY 口径比较 |
+| [`CoordinateSignLayout_20261015_zh-Hans.md`](CoordinateSignLayout_20261015_zh-Hans.md) | X 固定起点与 Y 相对间距的漏符号校验、正数检查及删框对照 |
+| [`CoordinateSignRecovery_20261016_zh-Hans.md`](CoordinateSignRecovery_20261016_zh-Hans.md) | 图像确认后补负号、24 张训练来源补充、开发回归及新会话验收冻结 |
+| [`CoordinateIndependentEvaluation_20261016_zh-Hans.md`](CoordinateIndependentEvaluation_20261016_zh-Hans.md) | 新会话 1162 组素材整理、冻结双模型全量回放、错误审计与验收未通过结论 |
+| [`CoordinateTargetedRetrain_20261016_zh-Hans.md`](CoordinateTargetedRetrain_20261016_zh-Hans.md) | 浅色数字与五位数补训、旧数据对照、蓝色耀光续训反例及 CPU ONNX 核验 |
+| [`CoordinateFlightEffectRetrain_20261016_zh-Hans.md`](CoordinateFlightEffectRetrain_20261016_zh-Hans.md) | 飞行特效 435 组素材、25 来源补训与留出回放、旧样本退步及批量／单张边界诊断 |
+| [`CoordinateRegressionRecovery_20261016_zh-Hans.md`](CoordinateRegressionRecovery_20261016_zh-Hans.md) | 字符优势互证与自有旧权重后备、严格基线退步恢复、单张 CPU/GPU 一致性与额外开销 |
+| [`CoordinateYoloIntegration_20261016_zh-Hans.md`](CoordinateYoloIntegration_20261016_zh-Hans.md) | 自训 YOLO 原生接入、SURF/OCR 待命与交接初版、构建和回放验收 |
+| [`CoordinateHandoffStability_20261016_zh-Hans.md`](CoordinateHandoffStability_20261016_zh-Hans.md) | 实机来源切回稳定期、严格像素配准恢复与失败诊断 |
+| [`PixelAnchorHandoffRecovery_20261018_zh-Hans.md`](PixelAnchorHandoffRecovery_20261018_zh-Hans.md) | 最近实测截图恢复、局部/全局来源健康分离、时序保护与掉绘时长诊断 |
+| [`MinimapReadoutProjection_20261018_zh-Hans.md`](MinimapReadoutProjection_20261018_zh-Hans.md) | 固定朝向小地图的可信读数投影、原始读数时效、统一标记/路线中心与像素路径隔离 |
+| [`MinimapReadoutPublication_20261018_zh-Hans.md`](MinimapReadoutPublication_20261018_zh-Hans.md) | OCR绘制快照发布脱离SURF恢复状态、旧锚点替代保护与完整发布决策回归 |
+| [`ReadoutContinuity_20261018_zh-Hans.md`](ReadoutContinuity_20261018_zh-Hans.md) | 已提交历史位置校验断读恢复、接管150ms请求与视觉恢复前提前发布布局 |
+
+| [`ReadoutMotion_20261018_zh-Hans.md`](ReadoutMotion_20261018_zh-Hans.md) | OCR优先消费与100ms接管调度、绘制线程受限运动及完整显示资格缺口诊断 |
+
+| [`ReadoutJitterFix_20261018_zh-Hans.md`](ReadoutJitterFix_20261018_zh-Hans.md) | 新OCR读数交接连续性、短窗估速与量化/延迟/停止/反向回归 |
+
+| [`ReadoutDirectTest_20261018_zh-Hans.md`](ReadoutDirectTest_20261018_zh-Hans.md) | 完全关闭OCR显示预测和平滑的实机对照、零补偿及有效期回归 |
+
+- [OCR 接管调度稳定性（2026-10-18）](ReadoutScheduling_20261018_zh-Hans.md)

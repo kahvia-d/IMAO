@@ -1,0 +1,3778 @@
+{
+  "labelCorpusSHA256": "cf854d2f070d326294ebfdd1b0323754881a19da700e7cab894fe5032a512868",
+  "labels": {
+    "present": 1011,
+    "absent": 141,
+    "unknown": 8
+  },
+  "humanVerified": false,
+  "datasetUse": "one previously explored session; development-only; not independent validation",
+  "inferenceRerun": "Current model aspect comparison only; prior baseline/English/YOLO outputs reused.",
+  "newTraining": false,
+  "productionChanged": false,
+  "sourceEvidence": [
+    {
+      "family": "current-production",
+      "folder": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-minimap-check\\ocr-full-session",
+      "inputs": 3480,
+      "decoderMetadata": {
+        "compiledSHA256": {
+          "coordinateStructHeader": "22edcbe2716a6bff80514eebb1963a5c6e464bd077220b12016f7ed676d55a74",
+          "hudLayoutHeader": "af8de699fa80a9e034864ec0199d1f75d6f37511394b9cade387ededeaddbd4c",
+          "nativeAdapterSource": "ec65100b89b333b8badc2c95faee42307a065daf2954b955bf601a88c969e5ae",
+          "nativeBuildConfiguration": "47f13fe93bc568f9226d350f34e73170f7b6d74f85d927263b0f4d62ce58b0f0",
+          "parserHeader": "4b9a9d0b4a52f1b00e2e89fcfd2183a64169b2445fcec5bace99ba3b059583dd",
+          "parserSource": "1cf1c0272a0d4e4a41a81a51233cbef154a98a799885fbda0b281e6cc04ca4f3",
+          "ppocrHeader": "be49dd437a98dbe184f3c06d9c1bd594f2b82901218efe453b883a164a1c331b",
+          "ppocrLibrary": "91bc6b430f780c1f0e7e07eca394f2414fe833e846db8c5a2a80c437fc3bb488",
+          "ppocrPreprocessHeader": "050a57a1c5a342cb6352cc59073076fe61b5930b14a07ccfae7288a70beaf066",
+          "ppocrUtilityHeader": "7983482fa91cb6c3ee94a6fc98bc806cf9983fe3f9d3a5fcfad1941d70f4b93b",
+          "preprocessingSource": "8d68b8bb1a5b9beb684479e0c16c00d61105ea3bd35fce52c7c0dca683e11ba3"
+        },
+        "compilerVersion": "19.44.35228.0",
+        "inferenceThreads": 4,
+        "initializationMilliseconds": 325.2353,
+        "nativeAdapterSourceSHA256": "ec65100b89b333b8badc2c95faee42307a065daf2954b955bf601a88c969e5ae",
+        "opencvNative": "4.11.0",
+        "parserSourceSHA256": "1cf1c0272a0d4e4a41a81a51233cbef154a98a799885fbda0b281e6cc04ca4f3",
+        "preprocessingSourceSHA256": "8d68b8bb1a5b9beb684479e0c16c00d61105ea3bd35fce52c7c0dca683e11ba3",
+        "previousTrusted": "none",
+        "repeats": 1
+      },
+      "modelReferenceCommit": "abcfc02376488629358406b41f1d5060a933c2f9",
+      "sourceModelReport": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-minimap-check\\ocr-full-session\\report.json",
+      "sourceReportSHA256": "1d56dbf28295471bccfcc82243d984bc4c9d217981b78feb762972670eae9c65",
+      "inputsSHA256": "a6fa60c0b75aada88aa6e8c0949781b020ad7449593990a5b4d6a64d4980852a",
+      "nativeOutput": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-minimap-check\\ocr-full-session\\ppocr.json",
+      "nativeOutputSHA256": "d1518bf9347d218d2fd57b314d16091f8b6384db02cff2565d13c8e0fa10ff26",
+      "yoloOutputSHA256": "76284c75644139d3fbe19b5dc48486b31acf5b787cbc16335a181f4cdd0603ae",
+      "inferenceRerun": false,
+      "cachedProvenance": {
+        "sourceCommit": "abcfc02376488629358406b41f1d5060a933c2f9",
+        "upstreamCommit": "5715fbaa6af97858ad3fb8bc832594f647efbb5c",
+        "versions": {
+          "python": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]",
+          "opencvPython": "5.0.0",
+          "numpy": "2.0.2",
+          "onnxruntime": "1.31.0"
+        },
+        "sha256": {
+          "nativeExecutable": "091bbf570135790690a1b75d50467b264f105f02775a6c678134e7c333dfae7d",
+          "preprocessingSource": "8d68b8bb1a5b9beb684479e0c16c00d61105ea3bd35fce52c7c0dca683e11ba3",
+          "parserSource": "1cf1c0272a0d4e4a41a81a51233cbef154a98a799885fbda0b281e6cc04ca4f3",
+          "upstreamCode": "f9c93b9f961f2617e82e4b75a8637354a52296e8e9a9ea4fdc746c1cfe3c4161",
+          "upstreamModel": "4362a8da7082be40b3f1dfce9fd72b0e3c0d1e85308b362ca225c325e543ea51",
+          "upstreamDictionary": "eaa5e4a868efe78a0e828157c28fefe2d224137ada153ffa223f073fc6814f22",
+          "nativeAdapterSource": "ec65100b89b333b8badc2c95faee42307a065daf2954b955bf601a88c969e5ae",
+          "nativeBuildConfiguration": "47f13fe93bc568f9226d350f34e73170f7b6d74f85d927263b0f4d62ce58b0f0",
+          "nativeBuildScript": "d33a7c42b9ce0e70bc65e850c293039eeaee11942cf403cf7098e71ae153865f",
+          "ppocrLibrary": "91bc6b430f780c1f0e7e07eca394f2414fe833e846db8c5a2a80c437fc3bb488",
+          "ppocrHeader": "be49dd437a98dbe184f3c06d9c1bd594f2b82901218efe453b883a164a1c331b",
+          "parserHeader": "4b9a9d0b4a52f1b00e2e89fcfd2183a64169b2445fcec5bace99ba3b059583dd",
+          "coordinateStructHeader": "22edcbe2716a6bff80514eebb1963a5c6e464bd077220b12016f7ed676d55a74",
+          "hudLayoutHeader": "af8de699fa80a9e034864ec0199d1f75d6f37511394b9cade387ededeaddbd4c",
+          "ppocrPreprocessHeader": "050a57a1c5a342cb6352cc59073076fe61b5930b14a07ccfae7288a70beaf066",
+          "ppocrUtilityHeader": "7983482fa91cb6c3ee94a6fc98bc806cf9983fe3f9d3a5fcfad1941d70f4b93b",
+          "corpus": "7881f4c74a26c8aa4eb34185ae712b47b4ea16e940e4b7d2d1d17b4605b924a6",
+          "benchmarkCode": "96c1a22948b5b366d802c75c6b851edcc4c6230f1684553d9e1c2383f310251e",
+          "upstreamAdapterCode": "be736d74544d51c50a180b78487e4354f05680c75b117ce961769597d3300234",
+          "ppocr/inference.json": "24587345250c7332d0fc6f9a44e794d078cdaeb64c302fef906f325619de2569",
+          "ppocr/inference.pdiparams": "2460da90875937c94db97eba74ae3d9e5d4c4c57c42f1f41531c09a26bcc771a",
+          "ppocr/inference.yml": "bd3e5a58a90d720345edc48dbb30b16bc39c23dac4a90aae1349bec679b0a7ab",
+          "ppocr/ppocr_keys.txt": "1ea29636956177e400af712d9782e7693f3fb25f98617bed10479d2965a836fd"
+        }
+      },
+      "modelFilesVerified": {
+        "ppocr/inference.json": "24587345250c7332d0fc6f9a44e794d078cdaeb64c302fef906f325619de2569",
+        "ppocr/inference.pdiparams": "2460da90875937c94db97eba74ae3d9e5d4c4c57c42f1f41531c09a26bcc771a",
+        "ppocr/inference.yml": "bd3e5a58a90d720345edc48dbb30b16bc39c23dac4a90aae1349bec679b0a7ab",
+        "ppocr/ppocr_keys.txt": "1ea29636956177e400af712d9782e7693f3fb25f98617bed10479d2965a836fd"
+      },
+      "sourceCropHashesVerified": 3480
+    },
+    {
+      "family": "english-aspect",
+      "folder": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-line-study-20261015\\english-aspect-full",
+      "inputs": 2320,
+      "decoderMetadata": {
+        "compiledSHA256": {
+          "coordinateStructHeader": "22edcbe2716a6bff80514eebb1963a5c6e464bd077220b12016f7ed676d55a74",
+          "hudLayoutHeader": "af8de699fa80a9e034864ec0199d1f75d6f37511394b9cade387ededeaddbd4c",
+          "nativeAdapterSource": "99ae91a6fb540d8fc75ef21f77eca38647cbee41bb78a9f2f2954c186056cf5f",
+          "nativeBuildConfiguration": "1336b33e95b1f8adaa1712766f2a019ea45a85fcf0aab4a5ad2116b44952dee0",
+          "offlineClockBoundaryHeader": "f38f15bebb875a873ae41b30b70ad03dc48e3dc061eba7049799a5c9ab9e2a68",
+          "offlinePreprocessingHeader": "1faafca946879c75790850f649fcf45026456c0fc378e408ef2545dfadaf8db4",
+          "parserHeader": "4b9a9d0b4a52f1b00e2e89fcfd2183a64169b2445fcec5bace99ba3b059583dd",
+          "parserSource": "1cf1c0272a0d4e4a41a81a51233cbef154a98a799885fbda0b281e6cc04ca4f3",
+          "ppocrHeader": "be49dd437a98dbe184f3c06d9c1bd594f2b82901218efe453b883a164a1c331b",
+          "ppocrLibrary": "91bc6b430f780c1f0e7e07eca394f2414fe833e846db8c5a2a80c437fc3bb488",
+          "ppocrPreprocessHeader": "050a57a1c5a342cb6352cc59073076fe61b5930b14a07ccfae7288a70beaf066",
+          "ppocrUtilityHeader": "7983482fa91cb6c3ee94a6fc98bc806cf9983fe3f9d3a5fcfad1941d70f4b93b",
+          "preprocessingSource": "8d68b8bb1a5b9beb684479e0c16c00d61105ea3bd35fce52c7c0dca683e11ba3"
+        },
+        "compilerVersion": "19.44.35228.0",
+        "dictionaryCharacters": 436,
+        "inferenceThreads": 4,
+        "initializationMilliseconds": 268.9605,
+        "modelDirectory": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-models\\en_PP-OCRv5_mobile_rec_infer",
+        "modelName": "en_PP-OCRv5_mobile_rec",
+        "nativeAdapterSourceSHA256": "99ae91a6fb540d8fc75ef21f77eca38647cbee41bb78a9f2f2954c186056cf5f",
+        "opencvNative": "4.11.0",
+        "parserSourceSHA256": "1cf1c0272a0d4e4a41a81a51233cbef154a98a799885fbda0b281e6cc04ca4f3",
+        "preprocessingMode": "aspect",
+        "preprocessingSourceSHA256": "8d68b8bb1a5b9beb684479e0c16c00d61105ea3bd35fce52c7c0dca683e11ba3",
+        "previousTrusted": "none",
+        "repeats": 1
+      },
+      "modelReferenceCommit": "b1d9258621e4c2e70cfcc77aaba096d511fc3998",
+      "sourceModelReport": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-line-study-20261015\\english-aspect-full\\report.json",
+      "sourceReportSHA256": "f438c560d66a2029d274c081a4857fa9b65c3a2646ac055451b8793c1053eae0",
+      "inputsSHA256": "23f14a82f963c6ed7ff7c377d78a0f2a770cb037e8e26780ed7643d60905d6e1",
+      "nativeOutput": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-line-study-20261015\\english-aspect-full\\ppocr.json",
+      "nativeOutputSHA256": "d44afcac18e6a01b77f9aeb348cf124587988771391120372cedc14fc667a27f",
+      "yoloOutputSHA256": "a69a5036ba9b38837013a974e64c60fc7836de8ac67e880cc9540eea8756f954",
+      "inferenceRerun": false,
+      "cachedProvenance": {
+        "sourceCommit": "b1d9258621e4c2e70cfcc77aaba096d511fc3998",
+        "upstreamCommit": "5715fbaa6af97858ad3fb8bc832594f647efbb5c",
+        "modelDirectory": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-models\\en_PP-OCRv5_mobile_rec_infer",
+        "versions": {
+          "python": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]",
+          "opencvPython": "5.0.0",
+          "numpy": "2.0.2",
+          "onnxruntime": "1.31.0"
+        },
+        "sha256": {
+          "nativeExecutable": "6e63bd135bcd5bfa7f9d33c40839d839b9f9f7d781f878d3953b3d9658de730f",
+          "preprocessingSource": "8d68b8bb1a5b9beb684479e0c16c00d61105ea3bd35fce52c7c0dca683e11ba3",
+          "parserSource": "1cf1c0272a0d4e4a41a81a51233cbef154a98a799885fbda0b281e6cc04ca4f3",
+          "upstreamCode": "f9c93b9f961f2617e82e4b75a8637354a52296e8e9a9ea4fdc746c1cfe3c4161",
+          "upstreamModel": "4362a8da7082be40b3f1dfce9fd72b0e3c0d1e85308b362ca225c325e543ea51",
+          "upstreamDictionary": "eaa5e4a868efe78a0e828157c28fefe2d224137ada153ffa223f073fc6814f22",
+          "nativeAdapterSource": "99ae91a6fb540d8fc75ef21f77eca38647cbee41bb78a9f2f2954c186056cf5f",
+          "nativeBuildConfiguration": "1336b33e95b1f8adaa1712766f2a019ea45a85fcf0aab4a5ad2116b44952dee0",
+          "nativeBuildScript": "d33a7c42b9ce0e70bc65e850c293039eeaee11942cf403cf7098e71ae153865f",
+          "offlinePreprocessingHeader": "1faafca946879c75790850f649fcf45026456c0fc378e408ef2545dfadaf8db4",
+          "offlineClockBoundaryHeader": "f38f15bebb875a873ae41b30b70ad03dc48e3dc061eba7049799a5c9ab9e2a68",
+          "ppocrLibrary": "91bc6b430f780c1f0e7e07eca394f2414fe833e846db8c5a2a80c437fc3bb488",
+          "ppocrHeader": "be49dd437a98dbe184f3c06d9c1bd594f2b82901218efe453b883a164a1c331b",
+          "parserHeader": "4b9a9d0b4a52f1b00e2e89fcfd2183a64169b2445fcec5bace99ba3b059583dd",
+          "coordinateStructHeader": "22edcbe2716a6bff80514eebb1963a5c6e464bd077220b12016f7ed676d55a74",
+          "hudLayoutHeader": "af8de699fa80a9e034864ec0199d1f75d6f37511394b9cade387ededeaddbd4c",
+          "ppocrPreprocessHeader": "050a57a1c5a342cb6352cc59073076fe61b5930b14a07ccfae7288a70beaf066",
+          "ppocrUtilityHeader": "7983482fa91cb6c3ee94a6fc98bc806cf9983fe3f9d3a5fcfad1941d70f4b93b",
+          "corpus": "54003e825d3da635eb5f9ceeebe00c97e95ad496c06106370dcb41c935c9560d",
+          "benchmarkCode": "01283640158f964b35ed983e75acdc409118c672065c496c601bb1696fc396d5",
+          "upstreamAdapterCode": "be736d74544d51c50a180b78487e4354f05680c75b117ce961769597d3300234",
+          "lineCropCode": "433d7ce48372919974b1b1ccd5ecdd0d9929955f092a09ad5875360379d44873",
+          "ppocr/inference.json": "fd1b6ec722ea841a72d3ba43e527df1d1066d5d7808e0503ee3eec7265188753",
+          "ppocr/inference.pdiparams": "3ec8a97ed6cefe8568d3e2ee90bb193299b566a7661aa4fd52d224b96b59f66b",
+          "ppocr/inference.yml": "27e91d0582f40168aa218303c76e184bc78fa7a5d105aad0cfbad8458b441067",
+          "ppocr/ppocr_keys.txt": "8459e5659185f87d62195cb495f2677493bade134182bfb8c54bf21757b28cdf"
+        }
+      },
+      "modelFilesVerified": {
+        "ppocr/inference.json": "fd1b6ec722ea841a72d3ba43e527df1d1066d5d7808e0503ee3eec7265188753",
+        "ppocr/inference.pdiparams": "3ec8a97ed6cefe8568d3e2ee90bb193299b566a7661aa4fd52d224b96b59f66b",
+        "ppocr/inference.yml": "27e91d0582f40168aa218303c76e184bc78fa7a5d105aad0cfbad8458b441067",
+        "ppocr/ppocr_keys.txt": "8459e5659185f87d62195cb495f2677493bade134182bfb8c54bf21757b28cdf"
+      },
+      "sourceCropHashesVerified": 2320
+    },
+    {
+      "family": "current-aspect",
+      "folder": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-line-study-20261015\\english-aspect-full",
+      "inputs": 2320,
+      "decoderMetadata": {
+        "compiledSHA256": {
+          "coordinateStructHeader": "22edcbe2716a6bff80514eebb1963a5c6e464bd077220b12016f7ed676d55a74",
+          "hudLayoutHeader": "af8de699fa80a9e034864ec0199d1f75d6f37511394b9cade387ededeaddbd4c",
+          "nativeAdapterSource": "99ae91a6fb540d8fc75ef21f77eca38647cbee41bb78a9f2f2954c186056cf5f",
+          "nativeBuildConfiguration": "1336b33e95b1f8adaa1712766f2a019ea45a85fcf0aab4a5ad2116b44952dee0",
+          "offlineClockBoundaryHeader": "f38f15bebb875a873ae41b30b70ad03dc48e3dc061eba7049799a5c9ab9e2a68",
+          "offlinePreprocessingHeader": "1faafca946879c75790850f649fcf45026456c0fc378e408ef2545dfadaf8db4",
+          "parserHeader": "4b9a9d0b4a52f1b00e2e89fcfd2183a64169b2445fcec5bace99ba3b059583dd",
+          "parserSource": "1cf1c0272a0d4e4a41a81a51233cbef154a98a799885fbda0b281e6cc04ca4f3",
+          "ppocrHeader": "be49dd437a98dbe184f3c06d9c1bd594f2b82901218efe453b883a164a1c331b",
+          "ppocrLibrary": "91bc6b430f780c1f0e7e07eca394f2414fe833e846db8c5a2a80c437fc3bb488",
+          "ppocrPreprocessHeader": "050a57a1c5a342cb6352cc59073076fe61b5930b14a07ccfae7288a70beaf066",
+          "ppocrUtilityHeader": "7983482fa91cb6c3ee94a6fc98bc806cf9983fe3f9d3a5fcfad1941d70f4b93b",
+          "preprocessingSource": "8d68b8bb1a5b9beb684479e0c16c00d61105ea3bd35fce52c7c0dca683e11ba3"
+        },
+        "compilerVersion": "19.44.35228.0",
+        "dictionaryCharacters": 18383,
+        "inferenceThreads": 4,
+        "initializationMilliseconds": 346.8302,
+        "modelDirectory": "C:\\Dcode\\WWMAP-TOOLS\\Assets\\models\\PP-OCRv5_mobile_rec_infer",
+        "modelName": "PP-OCRv5_mobile_rec",
+        "nativeAdapterSourceSHA256": "99ae91a6fb540d8fc75ef21f77eca38647cbee41bb78a9f2f2954c186056cf5f",
+        "opencvNative": "4.11.0",
+        "parserSourceSHA256": "1cf1c0272a0d4e4a41a81a51233cbef154a98a799885fbda0b281e6cc04ca4f3",
+        "preprocessingMode": "aspect",
+        "preprocessingSourceSHA256": "8d68b8bb1a5b9beb684479e0c16c00d61105ea3bd35fce52c7c0dca683e11ba3",
+        "previousTrusted": "none",
+        "repeats": 1
+      },
+      "modelReferenceCommit": "abcfc02376488629358406b41f1d5060a933c2f9",
+      "sourceModelReport": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-minimap-check\\ocr-full-session\\report.json",
+      "sourceReportSHA256": "1d56dbf28295471bccfcc82243d984bc4c9d217981b78feb762972670eae9c65",
+      "inputsSHA256": "23f14a82f963c6ed7ff7c377d78a0f2a770cb037e8e26780ed7643d60905d6e1",
+      "nativeOutput": "C:\\Dcode\\WWMAP-TOOLS\\out\\coordinate-expanded-study-20261015\\current-aspect-full.json",
+      "nativeOutputSHA256": "86757151d27c1b2aa7c5b84042f540a0e71d33fc467d469f7bfac1f39eca2d62",
+      "yoloOutputSHA256": null,
+      "inferenceRerun": true,
+      "cachedProvenance": {
+        "sourceCommit": "abcfc02376488629358406b41f1d5060a933c2f9",
+        "upstreamCommit": "5715fbaa6af97858ad3fb8bc832594f647efbb5c",
+        "versions": {
+          "python": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]",
+          "opencvPython": "5.0.0",
+          "numpy": "2.0.2",
+          "onnxruntime": "1.31.0"
+        },
+        "sha256": {
+          "nativeExecutable": "091bbf570135790690a1b75d50467b264f105f02775a6c678134e7c333dfae7d",
+          "preprocessingSource": "8d68b8bb1a5b9beb684479e0c16c00d61105ea3bd35fce52c7c0dca683e11ba3",
+          "parserSource": "1cf1c0272a0d4e4a41a81a51233cbef154a98a799885fbda0b281e6cc04ca4f3",
+          "upstreamCode": "f9c93b9f961f2617e82e4b75a8637354a52296e8e9a9ea4fdc746c1cfe3c4161",
+          "upstreamModel": "4362a8da7082be40b3f1dfce9fd72b0e3c0d1e85308b362ca225c325e543ea51",
+          "upstreamDictionary": "eaa5e4a868efe78a0e828157c28fefe2d224137ada153ffa223f073fc6814f22",
+          "nativeAdapterSource": "ec65100b89b333b8badc2c95faee42307a065daf2954b955bf601a88c969e5ae",
+          "nativeBuildConfiguration": "47f13fe93bc568f9226d350f34e73170f7b6d74f85d927263b0f4d62ce58b0f0",
+          "nativeBuildScript": "d33a7c42b9ce0e70bc65e850c293039eeaee11942cf403cf7098e71ae153865f",
+          "ppocrLibrary": "91bc6b430f780c1f0e7e07eca394f2414fe833e846db8c5a2a80c437fc3bb488",
+          "ppocrHeader": "be49dd437a98dbe184f3c06d9c1bd594f2b82901218efe453b883a164a1c331b",
+          "parserHeader": "4b9a9d0b4a52f1b00e2e89fcfd2183a64169b2445fcec5bace99ba3b059583dd",
+          "coordinateStructHeader": "22edcbe2716a6bff80514eebb1963a5c6e464bd077220b12016f7ed676d55a74",
+          "hudLayoutHeader": "af8de699fa80a9e034864ec0199d1f75d6f37511394b9cade387ededeaddbd4c",
+          "ppocrPreprocessHeader": "050a57a1c5a342cb6352cc59073076fe61b5930b14a07ccfae7288a70beaf066",
+          "ppocrUtilityHeader": "7983482fa91cb6c3ee94a6fc98bc806cf9983fe3f9d3a5fcfad1941d70f4b93b",
+          "corpus": "7881f4c74a26c8aa4eb34185ae712b47b4ea16e940e4b7d2d1d17b4605b924a6",
+          "benchmarkCode": "96c1a22948b5b366d802c75c6b851edcc4c6230f1684553d9e1c2383f310251e",
+          "upstreamAdapterCode": "be736d74544d51c50a180b78487e4354f05680c75b117ce961769597d3300234",
+          "ppocr/inference.json": "24587345250c7332d0fc6f9a44e794d078cdaeb64c302fef906f325619de2569",
+          "ppocr/inference.pdiparams": "2460da90875937c94db97eba74ae3d9e5d4c4c57c42f1f41531c09a26bcc771a",
+          "ppocr/inference.yml": "bd3e5a58a90d720345edc48dbb30b16bc39c23dac4a90aae1349bec679b0a7ab",
+          "ppocr/ppocr_keys.txt": "1ea29636956177e400af712d9782e7693f3fb25f98617bed10479d2965a836fd"
+        }
+      },
+      "modelFilesVerified": {
+        "ppocr/inference.json": "24587345250c7332d0fc6f9a44e794d078cdaeb64c302fef906f325619de2569",
+        "ppocr/inference.pdiparams": "2460da90875937c94db97eba74ae3d9e5d4c4c57c42f1f41531c09a26bcc771a",
+        "ppocr/inference.yml": "bd3e5a58a90d720345edc48dbb30b16bc39c23dac4a90aae1349bec679b0a7ab",
+        "ppocr/ppocr_keys.txt": "1ea29636956177e400af712d9782e7693f3fb25f98617bed10479d2965a836fd"
+      },
+      "sourceCropHashesVerified": 2320
+    }
+  ],
+  "summary": [
+    {
+      "mode": "ppocr-contrast",
+      "profile": "production",
+      "frames": 1160,
+      "xyCorrect": 913,
+      "xyLabeled": 1011,
+      "xyzCorrect": 586,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 586,
+      "wrongReturns": 383,
+      "abstained": 187,
+      "wrongXYReturns": 56,
+      "wrongXYZReturns": 383,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 55,
+      "totalP50Milliseconds": 42.2534,
+      "totalP95Milliseconds": 61.2428,
+      "family": "current-production",
+      "route": "current-production/production/ppocr-contrast",
+      "knownPresentAbstentions": 42,
+      "knownPresentReturned": 969,
+      "xyzRecall": 0.579624134520277,
+      "xyzPrecision": 0.6047471620227038,
+      "wrongAxisCounts": {
+        "z": 356,
+        "x": 42,
+        "y": 25
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 29,
+        "y": 20
+      },
+      "selectedCoordinateCharacterEdits": 489,
+      "returnedExpectedCharacters": 12066,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 200
+        },
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 57
+        },
+        {
+          "expected": "6",
+          "actual": "∅",
+          "count": 24
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 19
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 19
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 18
+        },
+        {
+          "expected": "0",
+          "actual": "∅",
+          "count": 17
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 16
+        },
+        {
+          "expected": "3",
+          "actual": "∅",
+          "count": 15
+        },
+        {
+          "expected": "7",
+          "actual": "∅",
+          "count": 15
+        },
+        {
+          "expected": "2",
+          "actual": "∅",
+          "count": 13
+        },
+        {
+          "expected": "9",
+          "actual": "∅",
+          "count": 12
+        },
+        {
+          "expected": "8",
+          "actual": "∅",
+          "count": 11
+        },
+        {
+          "expected": "4",
+          "actual": "∅",
+          "count": 10
+        },
+        {
+          "expected": "4",
+          "actual": "0",
+          "count": 5
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 145,
+      "xyLabeled": 1011,
+      "xyzCorrect": 143,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 143,
+      "wrongReturns": 10,
+      "abstained": 1006,
+      "wrongXYReturns": 8,
+      "wrongXYZReturns": 10,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 7,
+      "totalP50Milliseconds": 42.31165,
+      "totalP95Milliseconds": 58.458299999999994,
+      "family": "current-production",
+      "route": "current-production/readout-wide/ppocr-contrast",
+      "knownPresentAbstentions": 858,
+      "knownPresentReturned": 153,
+      "xyzRecall": 0.1414441147378833,
+      "xyzPrecision": 0.934640522875817,
+      "wrongAxisCounts": {
+        "y": 5,
+        "z": 2,
+        "x": 4
+      },
+      "magnitudePreservedSignFlips": {
+        "y": 4,
+        "x": 2
+      },
+      "selectedCoordinateCharacterEdits": 22,
+      "returnedExpectedCharacters": 1967,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 6
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 4
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 4
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 3
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 2
+        },
+        {
+          "expected": "-",
+          "actual": "2",
+          "count": 2
+        },
+        {
+          "expected": "6",
+          "actual": "∅",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast",
+      "profile": "upstream-band",
+      "frames": 1160,
+      "xyCorrect": 0,
+      "xyLabeled": 1011,
+      "xyzCorrect": 0,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 0,
+      "wrongReturns": 39,
+      "abstained": 1121,
+      "wrongXYReturns": 39,
+      "wrongXYZReturns": 39,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 38,
+      "totalP50Milliseconds": 42.36095,
+      "totalP95Milliseconds": 59.9556,
+      "family": "current-production",
+      "route": "current-production/upstream-band/ppocr-contrast",
+      "knownPresentAbstentions": 972,
+      "knownPresentReturned": 39,
+      "xyzRecall": 0.0,
+      "xyzPrecision": 0.0,
+      "wrongAxisCounts": {
+        "x": 34,
+        "y": 37,
+        "z": 39
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 29
+      },
+      "selectedCoordinateCharacterEdits": 376,
+      "returnedExpectedCharacters": 469,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 62
+        },
+        {
+          "expected": "∅",
+          "actual": "4",
+          "count": 51
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 43
+        },
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 33
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 25
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 20
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 20
+        },
+        {
+          "expected": "∅",
+          "actual": "5",
+          "count": 11
+        },
+        {
+          "expected": "∅",
+          "actual": "7",
+          "count": 10
+        },
+        {
+          "expected": "6",
+          "actual": "4",
+          "count": 6
+        },
+        {
+          "expected": "8",
+          "actual": "4",
+          "count": 6
+        },
+        {
+          "expected": ",",
+          "actual": "4",
+          "count": 5
+        },
+        {
+          "expected": "∅",
+          "actual": "3",
+          "count": 4
+        },
+        {
+          "expected": "∅",
+          "actual": ",",
+          "count": 4
+        },
+        {
+          "expected": "7",
+          "actual": "4",
+          "count": 4
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated",
+      "profile": "production",
+      "frames": 1160,
+      "xyCorrect": 585,
+      "xyLabeled": 1011,
+      "xyzCorrect": 455,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 455,
+      "wrongReturns": 139,
+      "abstained": 566,
+      "wrongXYReturns": 9,
+      "wrongXYZReturns": 139,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 10,
+      "totalP50Milliseconds": 82.6906,
+      "totalP95Milliseconds": 114.0309,
+      "family": "current-production",
+      "route": "current-production/production/ppocr-corroborated",
+      "knownPresentAbstentions": 417,
+      "knownPresentReturned": 594,
+      "xyzRecall": 0.45004945598417406,
+      "xyzPrecision": 0.765993265993266,
+      "wrongAxisCounts": {
+        "z": 135,
+        "x": 4,
+        "y": 6
+      },
+      "magnitudePreservedSignFlips": {
+        "y": 5,
+        "x": 2
+      },
+      "selectedCoordinateCharacterEdits": 164,
+      "returnedExpectedCharacters": 7376,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 46
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 14
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 12
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 9
+        },
+        {
+          "expected": "3",
+          "actual": "∅",
+          "count": 9
+        },
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 8
+        },
+        {
+          "expected": "0",
+          "actual": "∅",
+          "count": 8
+        },
+        {
+          "expected": "6",
+          "actual": "∅",
+          "count": 8
+        },
+        {
+          "expected": "2",
+          "actual": "∅",
+          "count": 8
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 7
+        },
+        {
+          "expected": "4",
+          "actual": "∅",
+          "count": 7
+        },
+        {
+          "expected": "9",
+          "actual": "∅",
+          "count": 6
+        },
+        {
+          "expected": "7",
+          "actual": "∅",
+          "count": 4
+        },
+        {
+          "expected": "0",
+          "actual": "1",
+          "count": 3
+        },
+        {
+          "expected": "8",
+          "actual": "∅",
+          "count": 3
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 72,
+      "xyLabeled": 1011,
+      "xyzCorrect": 71,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 71,
+      "wrongReturns": 3,
+      "abstained": 1086,
+      "wrongXYReturns": 2,
+      "wrongXYZReturns": 3,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 2,
+      "totalP50Milliseconds": 82.90605,
+      "totalP95Milliseconds": 114.4648,
+      "family": "current-production",
+      "route": "current-production/readout-wide/ppocr-corroborated",
+      "knownPresentAbstentions": 937,
+      "knownPresentReturned": 74,
+      "xyzRecall": 0.0702274975272008,
+      "xyzPrecision": 0.9594594594594594,
+      "wrongAxisCounts": {
+        "x": 1,
+        "z": 1,
+        "y": 1
+      },
+      "magnitudePreservedSignFlips": {
+        "y": 1
+      },
+      "selectedCoordinateCharacterEdits": 6,
+      "returnedExpectedCharacters": 964,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 2
+        },
+        {
+          "expected": "-",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated",
+      "profile": "upstream-band",
+      "frames": 1160,
+      "xyCorrect": 0,
+      "xyLabeled": 1011,
+      "xyzCorrect": 0,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 0,
+      "wrongReturns": 2,
+      "abstained": 1158,
+      "wrongXYReturns": 2,
+      "wrongXYZReturns": 2,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 2,
+      "totalP50Milliseconds": 83.0882,
+      "totalP95Milliseconds": 114.1317,
+      "family": "current-production",
+      "route": "current-production/upstream-band/ppocr-corroborated",
+      "knownPresentAbstentions": 1009,
+      "knownPresentReturned": 2,
+      "xyzRecall": 0.0,
+      "xyzPrecision": 0.0,
+      "wrongAxisCounts": {
+        "x": 2,
+        "z": 2,
+        "y": 1
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 2
+      },
+      "selectedCoordinateCharacterEdits": 11,
+      "returnedExpectedCharacters": 22,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 2
+        },
+        {
+          "expected": "4",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "4",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat",
+      "profile": "production",
+      "frames": 1160,
+      "xyCorrect": 599,
+      "xyLabeled": 1011,
+      "xyzCorrect": 460,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 460,
+      "wrongReturns": 282,
+      "abstained": 416,
+      "wrongXYReturns": 143,
+      "wrongXYZReturns": 282,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 120,
+      "totalP50Milliseconds": 40.1844,
+      "totalP95Milliseconds": 54.5527,
+      "family": "current-production",
+      "route": "current-production/production/ppocr-tophat",
+      "knownPresentAbstentions": 269,
+      "knownPresentReturned": 742,
+      "xyzRecall": 0.4549950544015826,
+      "xyzPrecision": 0.6199460916442049,
+      "wrongAxisCounts": {
+        "z": 213,
+        "x": 66,
+        "y": 99
+      },
+      "magnitudePreservedSignFlips": {
+        "z": 6,
+        "x": 22,
+        "y": 75
+      },
+      "selectedCoordinateCharacterEdits": 439,
+      "returnedExpectedCharacters": 9230,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 115
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 83
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 20
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 17
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 13
+        },
+        {
+          "expected": "4",
+          "actual": "∅",
+          "count": 13
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 12
+        },
+        {
+          "expected": "6",
+          "actual": "∅",
+          "count": 12
+        },
+        {
+          "expected": "7",
+          "actual": "∅",
+          "count": 12
+        },
+        {
+          "expected": "3",
+          "actual": "∅",
+          "count": 11
+        },
+        {
+          "expected": "0",
+          "actual": "∅",
+          "count": 11
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 9
+        },
+        {
+          "expected": "2",
+          "actual": "∅",
+          "count": 9
+        },
+        {
+          "expected": "9",
+          "actual": "∅",
+          "count": 9
+        },
+        {
+          "expected": "8",
+          "actual": "∅",
+          "count": 9
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 564,
+      "xyLabeled": 1011,
+      "xyzCorrect": 560,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 560,
+      "wrongReturns": 29,
+      "abstained": 570,
+      "wrongXYReturns": 25,
+      "wrongXYZReturns": 29,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 20,
+      "totalP50Milliseconds": 40.181200000000004,
+      "totalP95Milliseconds": 55.965799999999994,
+      "family": "current-production",
+      "route": "current-production/readout-wide/ppocr-tophat",
+      "knownPresentAbstentions": 422,
+      "knownPresentReturned": 589,
+      "xyzRecall": 0.5539070227497527,
+      "xyzPrecision": 0.9507640067911715,
+      "wrongAxisCounts": {
+        "x": 18,
+        "y": 15,
+        "z": 12
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 9,
+        "y": 3
+      },
+      "selectedCoordinateCharacterEdits": 112,
+      "returnedExpectedCharacters": 7365,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 19
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 16
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 14
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 7
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 7
+        },
+        {
+          "expected": "7",
+          "actual": "∅",
+          "count": 3
+        },
+        {
+          "expected": ",",
+          "actual": "∅",
+          "count": 3
+        },
+        {
+          "expected": "∅",
+          "actual": ",",
+          "count": 3
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "7",
+          "actual": "0",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "7",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 2
+        },
+        {
+          "expected": "9",
+          "actual": "2",
+          "count": 2
+        },
+        {
+          "expected": "-",
+          "actual": "5",
+          "count": 2
+        },
+        {
+          "expected": "5",
+          "actual": "3",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat",
+      "profile": "upstream-band",
+      "frames": 1160,
+      "xyCorrect": 2,
+      "xyLabeled": 1011,
+      "xyzCorrect": 0,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 0,
+      "wrongReturns": 37,
+      "abstained": 1122,
+      "wrongXYReturns": 35,
+      "wrongXYZReturns": 37,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 35,
+      "totalP50Milliseconds": 40.5031,
+      "totalP95Milliseconds": 55.4909,
+      "family": "current-production",
+      "route": "current-production/upstream-band/ppocr-tophat",
+      "knownPresentAbstentions": 974,
+      "knownPresentReturned": 37,
+      "xyzRecall": 0.0,
+      "xyzPrecision": 0.0,
+      "wrongAxisCounts": {
+        "x": 34,
+        "y": 30,
+        "z": 36
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 26,
+        "y": 2
+      },
+      "selectedCoordinateCharacterEdits": 345,
+      "returnedExpectedCharacters": 439,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 65
+        },
+        {
+          "expected": "∅",
+          "actual": "4",
+          "count": 47
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 43
+        },
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 34
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 30
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 18
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 12
+        },
+        {
+          "expected": "∅",
+          "actual": "5",
+          "count": 7
+        },
+        {
+          "expected": "∅",
+          "actual": "8",
+          "count": 6
+        },
+        {
+          "expected": "∅",
+          "actual": "9",
+          "count": 5
+        },
+        {
+          "expected": "∅",
+          "actual": "7",
+          "count": 5
+        },
+        {
+          "expected": "∅",
+          "actual": ",",
+          "count": 4
+        },
+        {
+          "expected": "9",
+          "actual": "4",
+          "count": 3
+        },
+        {
+          "expected": "7",
+          "actual": "2",
+          "count": 3
+        },
+        {
+          "expected": "8",
+          "actual": "4",
+          "count": 3
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "yolo",
+      "profile": "production",
+      "frames": 1160,
+      "xyCorrect": 873,
+      "xyLabeled": 1011,
+      "xyzCorrect": 561,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 561,
+      "wrongReturns": 355,
+      "abstained": 240,
+      "wrongXYReturns": 43,
+      "wrongXYZReturns": 355,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 17,
+      "totalP50Milliseconds": 8.613850019173697,
+      "totalP95Milliseconds": 34.37970002414659,
+      "family": "current-production",
+      "route": "current-production/production/yolo",
+      "knownPresentAbstentions": 95,
+      "knownPresentReturned": 916,
+      "xyzRecall": 0.5548961424332344,
+      "xyzPrecision": 0.6124454148471615,
+      "wrongAxisCounts": {
+        "y": 29,
+        "z": 350,
+        "x": 19
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 12
+      },
+      "selectedCoordinateCharacterEdits": 502,
+      "returnedExpectedCharacters": 11465,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 123
+        },
+        {
+          "expected": "6",
+          "actual": "∅",
+          "count": 76
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 32
+        },
+        {
+          "expected": "7",
+          "actual": "∅",
+          "count": 30
+        },
+        {
+          "expected": "4",
+          "actual": "∅",
+          "count": 25
+        },
+        {
+          "expected": "3",
+          "actual": "∅",
+          "count": 24
+        },
+        {
+          "expected": "9",
+          "actual": "∅",
+          "count": 23
+        },
+        {
+          "expected": "0",
+          "actual": "∅",
+          "count": 23
+        },
+        {
+          "expected": "8",
+          "actual": "∅",
+          "count": 21
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 20
+        },
+        {
+          "expected": "2",
+          "actual": "∅",
+          "count": 16
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 13
+        },
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 12
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 9
+        },
+        {
+          "expected": "6",
+          "actual": "2",
+          "count": 8
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "yolo",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 951,
+      "xyLabeled": 1011,
+      "xyzCorrect": 949,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 949,
+      "wrongReturns": 61,
+      "abstained": 145,
+      "wrongXYReturns": 59,
+      "wrongXYZReturns": 61,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 56,
+      "totalP50Milliseconds": 8.605699986219406,
+      "totalP95Milliseconds": 34.87149998545647,
+      "family": "current-production",
+      "route": "current-production/readout-wide/yolo",
+      "knownPresentAbstentions": 1,
+      "knownPresentReturned": 1010,
+      "xyzRecall": 0.9386745796241345,
+      "xyzPrecision": 0.9396039603960396,
+      "wrongAxisCounts": {
+        "x": 54,
+        "y": 7,
+        "z": 3
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 53,
+        "y": 4
+      },
+      "selectedCoordinateCharacterEdits": 67,
+      "returnedExpectedCharacters": 12590,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 56
+        },
+        {
+          "expected": "∅",
+          "actual": "7",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 1
+        },
+        {
+          "expected": "3",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "3",
+          "actual": "4",
+          "count": 1
+        },
+        {
+          "expected": "4",
+          "actual": "5",
+          "count": 1
+        },
+        {
+          "expected": "7",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "8",
+          "actual": "9",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "yolo",
+      "profile": "upstream-band",
+      "frames": 1160,
+      "xyCorrect": 973,
+      "xyLabeled": 1011,
+      "xyzCorrect": 973,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 973,
+      "wrongReturns": 13,
+      "abstained": 167,
+      "wrongXYReturns": 13,
+      "wrongXYZReturns": 13,
+      "falsePositives": 2,
+      "absentFrames": 141,
+      "signErrorFrames": 10,
+      "totalP50Milliseconds": 8.866849995683879,
+      "totalP95Milliseconds": 35.865699988789856,
+      "family": "current-production",
+      "route": "current-production/upstream-band/yolo",
+      "knownPresentAbstentions": 25,
+      "knownPresentReturned": 986,
+      "xyzRecall": 0.9624134520276953,
+      "xyzPrecision": 0.986815415821501,
+      "wrongAxisCounts": {
+        "x": 12,
+        "y": 1
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 10
+      },
+      "selectedCoordinateCharacterEdits": 13,
+      "returnedExpectedCharacters": 12311,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 10
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "6",
+          "count": 1
+        },
+        {
+          "expected": "8",
+          "actual": "∅",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 885,
+      "xyLabeled": 1011,
+      "xyzCorrect": 884,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 884,
+      "wrongReturns": 30,
+      "abstained": 244,
+      "wrongXYReturns": 29,
+      "wrongXYZReturns": 30,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 27,
+      "totalP50Milliseconds": 67.87594999999999,
+      "totalP95Milliseconds": 85.8805,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-wide/ppocr-contrast",
+      "knownPresentAbstentions": 97,
+      "knownPresentReturned": 914,
+      "xyzRecall": 0.874381800197824,
+      "xyzPrecision": 0.9671772428884027,
+      "wrongAxisCounts": {
+        "x": 24,
+        "z": 3,
+        "y": 7
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 21,
+        "z": 1,
+        "y": 6
+      },
+      "selectedCoordinateCharacterEdits": 35,
+      "returnedExpectedCharacters": 11331,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 28
+        },
+        {
+          "expected": "∅",
+          "actual": "8",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "7",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "1",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 0,
+      "xyLabeled": 1011,
+      "xyzCorrect": 0,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 0,
+      "wrongReturns": 0,
+      "abstained": 1160,
+      "wrongXYReturns": 0,
+      "wrongXYZReturns": 0,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 0,
+      "totalP50Milliseconds": 131.65224999999998,
+      "totalP95Milliseconds": 162.48829999999998,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-line/ppocr-contrast",
+      "knownPresentAbstentions": 1011,
+      "knownPresentReturned": 0,
+      "xyzRecall": 0.0,
+      "xyzPrecision": null,
+      "wrongAxisCounts": {},
+      "magnitudePreservedSignFlips": {},
+      "selectedCoordinateCharacterEdits": 0,
+      "returnedExpectedCharacters": 0,
+      "topSelectedCoordinateConfusions": [],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast-clock",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 885,
+      "xyLabeled": 1011,
+      "xyzCorrect": 884,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 884,
+      "wrongReturns": 30,
+      "abstained": 244,
+      "wrongXYReturns": 29,
+      "wrongXYZReturns": 30,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 27,
+      "totalP50Milliseconds": 67.90619999999998,
+      "totalP95Milliseconds": 85.9023,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-wide/ppocr-contrast-clock",
+      "knownPresentAbstentions": 97,
+      "knownPresentReturned": 914,
+      "xyzRecall": 0.874381800197824,
+      "xyzPrecision": 0.9671772428884027,
+      "wrongAxisCounts": {
+        "x": 24,
+        "z": 3,
+        "y": 7
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 21,
+        "z": 1,
+        "y": 6
+      },
+      "selectedCoordinateCharacterEdits": 35,
+      "returnedExpectedCharacters": 11331,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 28
+        },
+        {
+          "expected": "∅",
+          "actual": "8",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "7",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "1",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast-clock",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 918,
+      "xyLabeled": 1011,
+      "xyzCorrect": 918,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 918,
+      "wrongReturns": 17,
+      "abstained": 224,
+      "wrongXYReturns": 17,
+      "wrongXYZReturns": 17,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 16,
+      "totalP50Milliseconds": 131.683,
+      "totalP95Milliseconds": 162.51229999999998,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-line/ppocr-contrast-clock",
+      "knownPresentAbstentions": 76,
+      "knownPresentReturned": 935,
+      "xyzRecall": 0.9080118694362018,
+      "xyzPrecision": 0.9818181818181818,
+      "wrongAxisCounts": {
+        "x": 14,
+        "z": 1,
+        "y": 3
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 13,
+        "y": 2
+      },
+      "selectedCoordinateCharacterEdits": 18,
+      "returnedExpectedCharacters": 11637,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 15
+        },
+        {
+          "expected": "-",
+          "actual": "7",
+          "count": 2
+        },
+        {
+          "expected": "6",
+          "actual": "0",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 661,
+      "xyLabeled": 1011,
+      "xyzCorrect": 656,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 656,
+      "wrongReturns": 11,
+      "abstained": 493,
+      "wrongXYReturns": 6,
+      "wrongXYZReturns": 11,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 6,
+      "totalP50Milliseconds": 134.8432,
+      "totalP95Milliseconds": 166.3719,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-wide/ppocr-corroborated",
+      "knownPresentAbstentions": 344,
+      "knownPresentReturned": 667,
+      "xyzRecall": 0.6488625123639961,
+      "xyzPrecision": 0.9835082458770614,
+      "wrongAxisCounts": {
+        "z": 5,
+        "x": 4,
+        "y": 2
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 3,
+        "y": 2
+      },
+      "selectedCoordinateCharacterEdits": 13,
+      "returnedExpectedCharacters": 8289,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 5
+        },
+        {
+          "expected": "3",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "9",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "6",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "7",
+          "count": 1
+        },
+        {
+          "expected": "7",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "3",
+          "actual": "9",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 0,
+      "xyLabeled": 1011,
+      "xyzCorrect": 0,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 0,
+      "wrongReturns": 0,
+      "abstained": 1160,
+      "wrongXYReturns": 0,
+      "wrongXYZReturns": 0,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 0,
+      "totalP50Milliseconds": 263.41315,
+      "totalP95Milliseconds": 316.1955,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-line/ppocr-corroborated",
+      "knownPresentAbstentions": 1011,
+      "knownPresentReturned": 0,
+      "xyzRecall": 0.0,
+      "xyzPrecision": null,
+      "wrongAxisCounts": {},
+      "magnitudePreservedSignFlips": {},
+      "selectedCoordinateCharacterEdits": 0,
+      "returnedExpectedCharacters": 0,
+      "topSelectedCoordinateConfusions": [],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated-clock",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 661,
+      "xyLabeled": 1011,
+      "xyzCorrect": 656,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 656,
+      "wrongReturns": 11,
+      "abstained": 493,
+      "wrongXYReturns": 6,
+      "wrongXYZReturns": 11,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 6,
+      "totalP50Milliseconds": 134.87565,
+      "totalP95Milliseconds": 166.41610000000003,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-wide/ppocr-corroborated-clock",
+      "knownPresentAbstentions": 344,
+      "knownPresentReturned": 667,
+      "xyzRecall": 0.6488625123639961,
+      "xyzPrecision": 0.9835082458770614,
+      "wrongAxisCounts": {
+        "z": 5,
+        "x": 4,
+        "y": 2
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 3,
+        "y": 2
+      },
+      "selectedCoordinateCharacterEdits": 13,
+      "returnedExpectedCharacters": 8289,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 5
+        },
+        {
+          "expected": "3",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "9",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "6",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "7",
+          "count": 1
+        },
+        {
+          "expected": "7",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "3",
+          "actual": "9",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated-clock",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 647,
+      "xyLabeled": 1011,
+      "xyzCorrect": 644,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 644,
+      "wrongReturns": 4,
+      "abstained": 512,
+      "wrongXYReturns": 1,
+      "wrongXYZReturns": 4,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 1,
+      "totalP50Milliseconds": 263.43385,
+      "totalP95Milliseconds": 316.245,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-line/ppocr-corroborated-clock",
+      "knownPresentAbstentions": 363,
+      "knownPresentReturned": 648,
+      "xyzRecall": 0.6369930761622157,
+      "xyzPrecision": 0.9938271604938271,
+      "wrongAxisCounts": {
+        "z": 3,
+        "x": 1
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 1
+      },
+      "selectedCoordinateCharacterEdits": 5,
+      "returnedExpectedCharacters": 8010,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "6",
+          "actual": "5",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "6",
+          "count": 1
+        },
+        {
+          "expected": "3",
+          "actual": "0",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-raw",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 892,
+      "xyLabeled": 1011,
+      "xyzCorrect": 889,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 889,
+      "wrongReturns": 33,
+      "abstained": 234,
+      "wrongXYReturns": 30,
+      "wrongXYZReturns": 33,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 30,
+      "totalP50Milliseconds": 66.15935,
+      "totalP95Milliseconds": 82.30030000000001,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-wide/ppocr-raw",
+      "knownPresentAbstentions": 89,
+      "knownPresentReturned": 922,
+      "xyzRecall": 0.8793273986152325,
+      "xyzPrecision": 0.9642082429501084,
+      "wrongAxisCounts": {
+        "x": 17,
+        "z": 4,
+        "y": 13
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 14,
+        "z": 3,
+        "y": 10
+      },
+      "selectedCoordinateCharacterEdits": 36,
+      "returnedExpectedCharacters": 11440,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 28
+        },
+        {
+          "expected": "6",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "8",
+          "actual": "9",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-raw",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 2,
+      "xyLabeled": 1011,
+      "xyzCorrect": 2,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 2,
+      "wrongReturns": 1,
+      "abstained": 1157,
+      "wrongXYReturns": 1,
+      "wrongXYZReturns": 1,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 1,
+      "totalP50Milliseconds": 130.01085,
+      "totalP95Milliseconds": 160.9957,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-line/ppocr-raw",
+      "knownPresentAbstentions": 1008,
+      "knownPresentReturned": 3,
+      "xyzRecall": 0.0019782393669634025,
+      "xyzPrecision": 0.6666666666666666,
+      "wrongAxisCounts": {
+        "y": 1
+      },
+      "magnitudePreservedSignFlips": {
+        "y": 1
+      },
+      "selectedCoordinateCharacterEdits": 1,
+      "returnedExpectedCharacters": 44,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-raw-clock",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 892,
+      "xyLabeled": 1011,
+      "xyzCorrect": 889,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 889,
+      "wrongReturns": 33,
+      "abstained": 234,
+      "wrongXYReturns": 30,
+      "wrongXYZReturns": 33,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 30,
+      "totalP50Milliseconds": 66.18180000000001,
+      "totalP95Milliseconds": 82.3217,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-wide/ppocr-raw-clock",
+      "knownPresentAbstentions": 89,
+      "knownPresentReturned": 922,
+      "xyzRecall": 0.8793273986152325,
+      "xyzPrecision": 0.9642082429501084,
+      "wrongAxisCounts": {
+        "x": 17,
+        "z": 4,
+        "y": 13
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 14,
+        "z": 3,
+        "y": 10
+      },
+      "selectedCoordinateCharacterEdits": 36,
+      "returnedExpectedCharacters": 11440,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 28
+        },
+        {
+          "expected": "6",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "8",
+          "actual": "9",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-raw-clock",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 927,
+      "xyLabeled": 1011,
+      "xyzCorrect": 926,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 926,
+      "wrongReturns": 14,
+      "abstained": 218,
+      "wrongXYReturns": 13,
+      "wrongXYZReturns": 14,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 12,
+      "totalP50Milliseconds": 130.02745000000002,
+      "totalP95Milliseconds": 161.02,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-line/ppocr-raw-clock",
+      "knownPresentAbstentions": 71,
+      "knownPresentReturned": 940,
+      "xyzRecall": 0.9159248269040554,
+      "xyzPrecision": 0.9851063829787234,
+      "wrongAxisCounts": {
+        "x": 6,
+        "z": 1,
+        "y": 7
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 5,
+        "y": 6
+      },
+      "selectedCoordinateCharacterEdits": 15,
+      "returnedExpectedCharacters": 11700,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 12
+        },
+        {
+          "expected": "6",
+          "actual": "0",
+          "count": 2
+        },
+        {
+          "expected": "7",
+          "actual": "1",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 680,
+      "xyLabeled": 1011,
+      "xyzCorrect": 675,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 675,
+      "wrongReturns": 34,
+      "abstained": 451,
+      "wrongXYReturns": 29,
+      "wrongXYZReturns": 34,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 19,
+      "totalP50Milliseconds": 66.1484,
+      "totalP95Milliseconds": 82.7488,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-wide/ppocr-tophat",
+      "knownPresentAbstentions": 302,
+      "knownPresentReturned": 709,
+      "xyzRecall": 0.6676557863501483,
+      "xyzPrecision": 0.9520451339915373,
+      "wrongAxisCounts": {
+        "x": 19,
+        "z": 8,
+        "y": 13
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 8,
+        "y": 6
+      },
+      "selectedCoordinateCharacterEdits": 60,
+      "returnedExpectedCharacters": 8840,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 16
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 4
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 3
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 3
+        },
+        {
+          "expected": "3",
+          "actual": "2",
+          "count": 2
+        },
+        {
+          "expected": "4",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "-",
+          "actual": "1",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "5",
+          "count": 2
+        },
+        {
+          "expected": "9",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "2",
+          "actual": "3",
+          "count": 1
+        },
+        {
+          "expected": "7",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "9",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "6",
+          "actual": "0",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 2,
+      "xyLabeled": 1011,
+      "xyzCorrect": 2,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 2,
+      "wrongReturns": 0,
+      "abstained": 1158,
+      "wrongXYReturns": 0,
+      "wrongXYZReturns": 0,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 0,
+      "totalP50Milliseconds": 130.3787,
+      "totalP95Milliseconds": 159.4313,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-line/ppocr-tophat",
+      "knownPresentAbstentions": 1009,
+      "knownPresentReturned": 2,
+      "xyzRecall": 0.0019782393669634025,
+      "xyzPrecision": 1.0,
+      "wrongAxisCounts": {},
+      "magnitudePreservedSignFlips": {},
+      "selectedCoordinateCharacterEdits": 0,
+      "returnedExpectedCharacters": 29,
+      "topSelectedCoordinateConfusions": [],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat-clock",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 680,
+      "xyLabeled": 1011,
+      "xyzCorrect": 675,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 675,
+      "wrongReturns": 34,
+      "abstained": 451,
+      "wrongXYReturns": 29,
+      "wrongXYZReturns": 34,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 19,
+      "totalP50Milliseconds": 66.1542,
+      "totalP95Milliseconds": 82.7698,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-wide/ppocr-tophat-clock",
+      "knownPresentAbstentions": 302,
+      "knownPresentReturned": 709,
+      "xyzRecall": 0.6676557863501483,
+      "xyzPrecision": 0.9520451339915373,
+      "wrongAxisCounts": {
+        "x": 19,
+        "z": 8,
+        "y": 13
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 8,
+        "y": 6
+      },
+      "selectedCoordinateCharacterEdits": 60,
+      "returnedExpectedCharacters": 8840,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 16
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 4
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 3
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 3
+        },
+        {
+          "expected": "3",
+          "actual": "2",
+          "count": 2
+        },
+        {
+          "expected": "4",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "-",
+          "actual": "1",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "5",
+          "count": 2
+        },
+        {
+          "expected": "9",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "2",
+          "actual": "3",
+          "count": 1
+        },
+        {
+          "expected": "7",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "9",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "6",
+          "actual": "0",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat-clock",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 660,
+      "xyLabeled": 1011,
+      "xyzCorrect": 657,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 657,
+      "wrongReturns": 14,
+      "abstained": 489,
+      "wrongXYReturns": 11,
+      "wrongXYZReturns": 14,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 4,
+      "totalP50Milliseconds": 130.39205,
+      "totalP95Milliseconds": 159.4331,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-line/ppocr-tophat-clock",
+      "knownPresentAbstentions": 340,
+      "knownPresentReturned": 671,
+      "xyzRecall": 0.6498516320474778,
+      "xyzPrecision": 0.9791356184798807,
+      "wrongAxisCounts": {
+        "x": 6,
+        "y": 5,
+        "z": 3
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 3
+      },
+      "selectedCoordinateCharacterEdits": 17,
+      "returnedExpectedCharacters": 8305,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 5
+        },
+        {
+          "expected": "6",
+          "actual": "0",
+          "count": 2
+        },
+        {
+          "expected": "9",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "6",
+          "actual": "5",
+          "count": 1
+        },
+        {
+          "expected": "2",
+          "actual": "7",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "3",
+          "count": 1
+        },
+        {
+          "expected": "8",
+          "actual": "3",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "6",
+          "count": 1
+        },
+        {
+          "expected": "3",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "9",
+          "actual": "4",
+          "count": 1
+        },
+        {
+          "expected": "8",
+          "actual": "9",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "yolo",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 951,
+      "xyLabeled": 1011,
+      "xyzCorrect": 949,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 949,
+      "wrongReturns": 61,
+      "abstained": 145,
+      "wrongXYReturns": 59,
+      "wrongXYZReturns": 61,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 56,
+      "totalP50Milliseconds": 17.794400000184396,
+      "totalP95Milliseconds": 36.809100000027684,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-wide/yolo",
+      "knownPresentAbstentions": 1,
+      "knownPresentReturned": 1010,
+      "xyzRecall": 0.9386745796241345,
+      "xyzPrecision": 0.9396039603960396,
+      "wrongAxisCounts": {
+        "x": 54,
+        "y": 7,
+        "z": 3
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 53,
+        "y": 4
+      },
+      "selectedCoordinateCharacterEdits": 67,
+      "returnedExpectedCharacters": 12590,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 56
+        },
+        {
+          "expected": "∅",
+          "actual": "7",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 1
+        },
+        {
+          "expected": "3",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "3",
+          "actual": "4",
+          "count": 1
+        },
+        {
+          "expected": "4",
+          "actual": "5",
+          "count": 1
+        },
+        {
+          "expected": "7",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "8",
+          "actual": "9",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "yolo",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 731,
+      "xyLabeled": 1011,
+      "xyzCorrect": 729,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 729,
+      "wrongReturns": 19,
+      "abstained": 409,
+      "wrongXYReturns": 17,
+      "wrongXYZReturns": 19,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 16,
+      "totalP50Milliseconds": 18.152899999904548,
+      "totalP95Milliseconds": 38.49499999978434,
+      "family": "english-aspect",
+      "route": "english-aspect/readout-line/yolo",
+      "knownPresentAbstentions": 263,
+      "knownPresentReturned": 748,
+      "xyzRecall": 0.7210682492581603,
+      "xyzPrecision": 0.9745989304812834,
+      "wrongAxisCounts": {
+        "x": 16,
+        "y": 2,
+        "z": 2
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 14,
+        "y": 1,
+        "z": 1
+      },
+      "selectedCoordinateCharacterEdits": 21,
+      "returnedExpectedCharacters": 9471,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 17
+        },
+        {
+          "expected": "5",
+          "actual": "6",
+          "count": 2
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "8",
+          "actual": "9",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 221,
+      "xyLabeled": 1011,
+      "xyzCorrect": 220,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 220,
+      "wrongReturns": 15,
+      "abstained": 923,
+      "wrongXYReturns": 14,
+      "wrongXYZReturns": 15,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 14,
+      "totalP50Milliseconds": 51.17385,
+      "totalP95Milliseconds": 115.0119,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-wide/ppocr-contrast",
+      "knownPresentAbstentions": 776,
+      "knownPresentReturned": 235,
+      "xyzRecall": 0.2176063303659743,
+      "xyzPrecision": 0.9361702127659575,
+      "wrongAxisCounts": {
+        "x": 11,
+        "z": 2,
+        "y": 6
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 9,
+        "y": 5
+      },
+      "selectedCoordinateCharacterEdits": 32,
+      "returnedExpectedCharacters": 3132,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 16
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 4
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 3
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 3
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 2
+        },
+        {
+          "expected": "-",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": ",",
+          "count": 1
+        },
+        {
+          "expected": ",",
+          "actual": "∅",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 0,
+      "xyLabeled": 1011,
+      "xyzCorrect": 0,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 0,
+      "wrongReturns": 0,
+      "abstained": 1160,
+      "wrongXYReturns": 0,
+      "wrongXYZReturns": 0,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 0,
+      "totalP50Milliseconds": 90.88055,
+      "totalP95Milliseconds": 200.7392,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-line/ppocr-contrast",
+      "knownPresentAbstentions": 1011,
+      "knownPresentReturned": 0,
+      "xyzRecall": 0.0,
+      "xyzPrecision": null,
+      "wrongAxisCounts": {},
+      "magnitudePreservedSignFlips": {},
+      "selectedCoordinateCharacterEdits": 0,
+      "returnedExpectedCharacters": 0,
+      "topSelectedCoordinateConfusions": [],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast-clock",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 221,
+      "xyLabeled": 1011,
+      "xyzCorrect": 220,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 220,
+      "wrongReturns": 15,
+      "abstained": 923,
+      "wrongXYReturns": 14,
+      "wrongXYZReturns": 15,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 14,
+      "totalP50Milliseconds": 51.1953,
+      "totalP95Milliseconds": 115.0133,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-wide/ppocr-contrast-clock",
+      "knownPresentAbstentions": 776,
+      "knownPresentReturned": 235,
+      "xyzRecall": 0.2176063303659743,
+      "xyzPrecision": 0.9361702127659575,
+      "wrongAxisCounts": {
+        "x": 11,
+        "z": 2,
+        "y": 6
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 9,
+        "y": 5
+      },
+      "selectedCoordinateCharacterEdits": 32,
+      "returnedExpectedCharacters": 3132,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 16
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 4
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 3
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 3
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 2
+        },
+        {
+          "expected": "-",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 1
+        },
+        {
+          "expected": "∅",
+          "actual": ",",
+          "count": 1
+        },
+        {
+          "expected": ",",
+          "actual": "∅",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-contrast-clock",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 257,
+      "xyLabeled": 1011,
+      "xyzCorrect": 257,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 257,
+      "wrongReturns": 0,
+      "abstained": 902,
+      "wrongXYReturns": 0,
+      "wrongXYZReturns": 0,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 0,
+      "totalP50Milliseconds": 90.89789999999999,
+      "totalP95Milliseconds": 200.7457,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-line/ppocr-contrast-clock",
+      "knownPresentAbstentions": 754,
+      "knownPresentReturned": 257,
+      "xyzRecall": 0.2542037586547972,
+      "xyzPrecision": 1.0,
+      "wrongAxisCounts": {},
+      "magnitudePreservedSignFlips": {},
+      "selectedCoordinateCharacterEdits": 0,
+      "returnedExpectedCharacters": 3121,
+      "topSelectedCoordinateConfusions": [],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 126,
+      "xyLabeled": 1011,
+      "xyzCorrect": 126,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 126,
+      "wrongReturns": 1,
+      "abstained": 1033,
+      "wrongXYReturns": 1,
+      "wrongXYZReturns": 1,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 1,
+      "totalP50Milliseconds": 100.81909999999999,
+      "totalP95Milliseconds": 221.5503,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-wide/ppocr-corroborated",
+      "knownPresentAbstentions": 884,
+      "knownPresentReturned": 127,
+      "xyzRecall": 0.12462908011869436,
+      "xyzPrecision": 0.9921259842519685,
+      "wrongAxisCounts": {
+        "y": 1
+      },
+      "magnitudePreservedSignFlips": {
+        "y": 1
+      },
+      "selectedCoordinateCharacterEdits": 1,
+      "returnedExpectedCharacters": 1710,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 0,
+      "xyLabeled": 1011,
+      "xyzCorrect": 0,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 0,
+      "wrongReturns": 0,
+      "abstained": 1160,
+      "wrongXYReturns": 0,
+      "wrongXYZReturns": 0,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 0,
+      "totalP50Milliseconds": 181.1678,
+      "totalP95Milliseconds": 401.3162,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-line/ppocr-corroborated",
+      "knownPresentAbstentions": 1011,
+      "knownPresentReturned": 0,
+      "xyzRecall": 0.0,
+      "xyzPrecision": null,
+      "wrongAxisCounts": {},
+      "magnitudePreservedSignFlips": {},
+      "selectedCoordinateCharacterEdits": 0,
+      "returnedExpectedCharacters": 0,
+      "topSelectedCoordinateConfusions": [],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated-clock",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 126,
+      "xyLabeled": 1011,
+      "xyzCorrect": 126,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 126,
+      "wrongReturns": 1,
+      "abstained": 1033,
+      "wrongXYReturns": 1,
+      "wrongXYZReturns": 1,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 1,
+      "totalP50Milliseconds": 100.86415,
+      "totalP95Milliseconds": 221.581,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-wide/ppocr-corroborated-clock",
+      "knownPresentAbstentions": 884,
+      "knownPresentReturned": 127,
+      "xyzRecall": 0.12462908011869436,
+      "xyzPrecision": 0.9921259842519685,
+      "wrongAxisCounts": {
+        "y": 1
+      },
+      "magnitudePreservedSignFlips": {
+        "y": 1
+      },
+      "selectedCoordinateCharacterEdits": 1,
+      "returnedExpectedCharacters": 1710,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-corroborated-clock",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 169,
+      "xyLabeled": 1011,
+      "xyzCorrect": 168,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 168,
+      "wrongReturns": 1,
+      "abstained": 991,
+      "wrongXYReturns": 0,
+      "wrongXYZReturns": 1,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 0,
+      "totalP50Milliseconds": 181.19735,
+      "totalP95Milliseconds": 401.33149999999995,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-line/ppocr-corroborated-clock",
+      "knownPresentAbstentions": 842,
+      "knownPresentReturned": 169,
+      "xyzRecall": 0.1661721068249258,
+      "xyzPrecision": 0.9940828402366864,
+      "wrongAxisCounts": {
+        "z": 1
+      },
+      "magnitudePreservedSignFlips": {},
+      "selectedCoordinateCharacterEdits": 1,
+      "returnedExpectedCharacters": 2038,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "6",
+          "actual": "5",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-raw",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 453,
+      "xyLabeled": 1011,
+      "xyzCorrect": 452,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 452,
+      "wrongReturns": 10,
+      "abstained": 696,
+      "wrongXYReturns": 9,
+      "wrongXYZReturns": 10,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 8,
+      "totalP50Milliseconds": 51.170500000000004,
+      "totalP95Milliseconds": 107.8033,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-wide/ppocr-raw",
+      "knownPresentAbstentions": 549,
+      "knownPresentReturned": 462,
+      "xyzRecall": 0.44708209693372897,
+      "xyzPrecision": 0.9783549783549783,
+      "wrongAxisCounts": {
+        "x": 7,
+        "z": 1,
+        "y": 3
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 5,
+        "y": 2
+      },
+      "selectedCoordinateCharacterEdits": 11,
+      "returnedExpectedCharacters": 5878,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 7
+        },
+        {
+          "expected": "-",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "6",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-raw",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 1,
+      "xyLabeled": 1011,
+      "xyzCorrect": 1,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 1,
+      "wrongReturns": 0,
+      "abstained": 1159,
+      "wrongXYReturns": 0,
+      "wrongXYZReturns": 0,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 0,
+      "totalP50Milliseconds": 90.3549,
+      "totalP95Milliseconds": 198.68890000000002,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-line/ppocr-raw",
+      "knownPresentAbstentions": 1010,
+      "knownPresentReturned": 1,
+      "xyzRecall": 0.0009891196834817012,
+      "xyzPrecision": 1.0,
+      "wrongAxisCounts": {},
+      "magnitudePreservedSignFlips": {},
+      "selectedCoordinateCharacterEdits": 0,
+      "returnedExpectedCharacters": 14,
+      "topSelectedCoordinateConfusions": [],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-raw-clock",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 453,
+      "xyLabeled": 1011,
+      "xyzCorrect": 452,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 452,
+      "wrongReturns": 10,
+      "abstained": 696,
+      "wrongXYReturns": 9,
+      "wrongXYZReturns": 10,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 8,
+      "totalP50Milliseconds": 51.19345,
+      "totalP95Milliseconds": 107.8093,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-wide/ppocr-raw-clock",
+      "knownPresentAbstentions": 549,
+      "knownPresentReturned": 462,
+      "xyzRecall": 0.44708209693372897,
+      "xyzPrecision": 0.9783549783549783,
+      "wrongAxisCounts": {
+        "x": 7,
+        "z": 1,
+        "y": 3
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 5,
+        "y": 2
+      },
+      "selectedCoordinateCharacterEdits": 11,
+      "returnedExpectedCharacters": 5878,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 7
+        },
+        {
+          "expected": "-",
+          "actual": "9",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "2",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "6",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-raw-clock",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 346,
+      "xyLabeled": 1011,
+      "xyzCorrect": 345,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 345,
+      "wrongReturns": 2,
+      "abstained": 811,
+      "wrongXYReturns": 1,
+      "wrongXYZReturns": 2,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 1,
+      "totalP50Milliseconds": 90.36365,
+      "totalP95Milliseconds": 198.7203,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-line/ppocr-raw-clock",
+      "knownPresentAbstentions": 664,
+      "knownPresentReturned": 347,
+      "xyzRecall": 0.34124629080118696,
+      "xyzPrecision": 0.9942363112391931,
+      "wrongAxisCounts": {
+        "z": 1,
+        "x": 1
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 1
+      },
+      "selectedCoordinateCharacterEdits": 2,
+      "returnedExpectedCharacters": 4244,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 592,
+      "xyLabeled": 1011,
+      "xyzCorrect": 589,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 589,
+      "wrongReturns": 30,
+      "abstained": 540,
+      "wrongXYReturns": 27,
+      "wrongXYZReturns": 30,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 24,
+      "totalP50Milliseconds": 49.85355,
+      "totalP95Milliseconds": 104.51029999999999,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-wide/ppocr-tophat",
+      "knownPresentAbstentions": 392,
+      "knownPresentReturned": 619,
+      "xyzRecall": 0.582591493570722,
+      "xyzPrecision": 0.9515347334410339,
+      "wrongAxisCounts": {
+        "x": 21,
+        "y": 13,
+        "z": 12
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 10,
+        "y": 3
+      },
+      "selectedCoordinateCharacterEdits": 119,
+      "returnedExpectedCharacters": 7707,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 19
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 14
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 14
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 9
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 7
+        },
+        {
+          "expected": "∅",
+          "actual": ",",
+          "count": 4
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 3
+        },
+        {
+          "expected": "8",
+          "actual": "1",
+          "count": 2
+        },
+        {
+          "expected": "1",
+          "actual": "4",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "4",
+          "count": 2
+        },
+        {
+          "expected": ",",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "6",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "9",
+          "actual": "2",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "7",
+          "count": 2
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 1,
+      "xyLabeled": 1011,
+      "xyzCorrect": 1,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 1,
+      "wrongReturns": 0,
+      "abstained": 1159,
+      "wrongXYReturns": 0,
+      "wrongXYZReturns": 0,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 0,
+      "totalP50Milliseconds": 91.23195,
+      "totalP95Milliseconds": 201.06470000000002,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-line/ppocr-tophat",
+      "knownPresentAbstentions": 1010,
+      "knownPresentReturned": 1,
+      "xyzRecall": 0.0009891196834817012,
+      "xyzPrecision": 1.0,
+      "wrongAxisCounts": {},
+      "magnitudePreservedSignFlips": {},
+      "selectedCoordinateCharacterEdits": 0,
+      "returnedExpectedCharacters": 14,
+      "topSelectedCoordinateConfusions": [],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat-clock",
+      "profile": "readout-wide",
+      "frames": 1160,
+      "xyCorrect": 592,
+      "xyLabeled": 1011,
+      "xyzCorrect": 589,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 589,
+      "wrongReturns": 30,
+      "abstained": 540,
+      "wrongXYReturns": 27,
+      "wrongXYZReturns": 30,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 24,
+      "totalP50Milliseconds": 49.87485,
+      "totalP95Milliseconds": 104.51189999999998,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-wide/ppocr-tophat-clock",
+      "knownPresentAbstentions": 392,
+      "knownPresentReturned": 619,
+      "xyzRecall": 0.582591493570722,
+      "xyzPrecision": 0.9515347334410339,
+      "wrongAxisCounts": {
+        "x": 21,
+        "y": 13,
+        "z": 12
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 10,
+        "y": 3
+      },
+      "selectedCoordinateCharacterEdits": 119,
+      "returnedExpectedCharacters": 7707,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 19
+        },
+        {
+          "expected": "∅",
+          "actual": "2",
+          "count": 14
+        },
+        {
+          "expected": "∅",
+          "actual": "0",
+          "count": 14
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 9
+        },
+        {
+          "expected": "∅",
+          "actual": "6",
+          "count": 7
+        },
+        {
+          "expected": "∅",
+          "actual": ",",
+          "count": 4
+        },
+        {
+          "expected": "∅",
+          "actual": "-",
+          "count": 3
+        },
+        {
+          "expected": "8",
+          "actual": "1",
+          "count": 2
+        },
+        {
+          "expected": "1",
+          "actual": "4",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "4",
+          "count": 2
+        },
+        {
+          "expected": ",",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "1",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "6",
+          "actual": "∅",
+          "count": 2
+        },
+        {
+          "expected": "9",
+          "actual": "2",
+          "count": 2
+        },
+        {
+          "expected": "∅",
+          "actual": "7",
+          "count": 2
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    },
+    {
+      "mode": "ppocr-tophat-clock",
+      "profile": "readout-line",
+      "frames": 1160,
+      "xyCorrect": 652,
+      "xyLabeled": 1011,
+      "xyzCorrect": 650,
+      "xyzLabeled": 1011,
+      "candidateXYZ": 650,
+      "wrongReturns": 14,
+      "abstained": 496,
+      "wrongXYReturns": 12,
+      "wrongXYZReturns": 14,
+      "falsePositives": 0,
+      "absentFrames": 141,
+      "signErrorFrames": 10,
+      "totalP50Milliseconds": 91.25655,
+      "totalP95Milliseconds": 201.0669,
+      "family": "current-aspect",
+      "route": "current-aspect/readout-line/ppocr-tophat-clock",
+      "knownPresentAbstentions": 347,
+      "knownPresentReturned": 664,
+      "xyzRecall": 0.6429277942631059,
+      "xyzPrecision": 0.9789156626506024,
+      "wrongAxisCounts": {
+        "x": 7,
+        "z": 3,
+        "y": 5
+      },
+      "magnitudePreservedSignFlips": {
+        "x": 5,
+        "y": 2
+      },
+      "selectedCoordinateCharacterEdits": 17,
+      "returnedExpectedCharacters": 8225,
+      "topSelectedCoordinateConfusions": [
+        {
+          "expected": "-",
+          "actual": "∅",
+          "count": 9
+        },
+        {
+          "expected": "∅",
+          "actual": "1",
+          "count": 2
+        },
+        {
+          "expected": "5",
+          "actual": "1",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "∅",
+          "count": 1
+        },
+        {
+          "expected": "6",
+          "actual": "5",
+          "count": 1
+        },
+        {
+          "expected": "8",
+          "actual": "3",
+          "count": 1
+        },
+        {
+          "expected": "5",
+          "actual": "6",
+          "count": 1
+        },
+        {
+          "expected": "-",
+          "actual": "7",
+          "count": 1
+        }
+      ],
+      "latencyCaveat": "Cached adapter timings, shared multi-route work; not per-route isolated model latency."
+    }
+  ],
+  "baselineVsEnglishMutual": {
+    "neitherExact": 288,
+    "englishOnlyExact": 268,
+    "bothExact": 376,
+    "currentOnlyExact": 79
+  },
+  "englishMutualWrongCases": [
+    {
+      "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000201",
+      "expected": {
+        "x": -507,
+        "y": 2134,
+        "z": 66
+      },
+      "englishSelected": {
+        "correction": "",
+        "rawText": "-507,2134,56",
+        "score": 0.9656171798706055,
+        "x": -507,
+        "y": 2134,
+        "z": 56
+      },
+      "englishRawText": "-507,2134,56 2026-10-14 14:05:42±8 *, H",
+      "currentSelected": {
+        "correction": "",
+        "rawText": "-507,2134.66",
+        "score": 0.9332310557365417,
+        "x": -507,
+        "y": 2134,
+        "z": 66
+      },
+      "wideRawSelected": {
+        "correction": "clock-text-dropped",
+        "rawText": "-507,2134,66 2026-10-1",
+        "score": 0.9681034088134766,
+        "x": -507,
+        "y": 2134,
+        "z": 66
+      }
+    },
+    {
+      "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000783",
+      "expected": {
+        "x": -582,
+        "y": -79,
+        "z": -15
+      },
+      "englishSelected": {
+        "correction": "",
+        "rawText": "-582,-79,-16",
+        "score": 0.9384215474128723,
+        "x": -582,
+        "y": -79,
+        "z": -16
+      },
+      "englishRawText": "-582;-79,-16 2026-10-14 14:10:42+8 * rHl",
+      "currentSelected": null,
+      "wideRawSelected": {
+        "correction": "clock-text-dropped",
+        "rawText": "-582,-79,-15 2026-10-12",
+        "score": 0.9727568626403809,
+        "x": -582,
+        "y": -79,
+        "z": -15
+      }
+    },
+    {
+      "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000810",
+      "expected": {
+        "x": -571,
+        "y": -127,
+        "z": -3
+      },
+      "englishSelected": {
+        "correction": "",
+        "rawText": "-571,-127,-0",
+        "score": 0.9687449336051941,
+        "x": -571,
+        "y": -127,
+        "z": 0
+      },
+      "englishRawText": "-571,-127,-0 2026-10-1414:10:56+8* Hl",
+      "currentSelected": null,
+      "wideRawSelected": {
+        "correction": "clock-text-dropped",
+        "rawText": "-571,-127,-3 2026-10-14",
+        "score": 0.9723523259162903,
+        "x": -571,
+        "y": -127,
+        "z": -3
+      }
+    },
+    {
+      "id": "session-1F638949-A4DA-46C7-8131-3F08EEFD62FD-000814",
+      "expected": {
+        "x": -575,
+        "y": -130,
+        "z": -2
+      },
+      "englishSelected": {
+        "correction": "",
+        "rawText": "575,-130,-2",
+        "score": 0.9639706015586853,
+        "x": 575,
+        "y": -130,
+        "z": -2
+      },
+      "englishRawText": "575,-130,-2 2026-10-1414:10:58+8 * HC",
+      "currentSelected": null,
+      "wideRawSelected": {
+        "correction": "clock-text-dropped",
+        "rawText": "+575,-130,-2 2026-10-14",
+        "score": 0.9579217433929443,
+        "x": 575,
+        "y": -130,
+        "z": -2
+      }
+    }
+  ],
+  "independentVerification": {
+    "routesVerified": 46,
+    "judgmentsVerified": 53360,
+    "labelCounts": {
+      "present": 1011,
+      "absent": 141,
+      "unknown": 8
+    },
+    "nativeOutputHashesVerified": [
+      "d1518bf9347d218d2fd57b314d16091f8b6384db02cff2565d13c8e0fa10ff26",
+      "d44afcac18e6a01b77f9aeb348cf124587988771391120372cedc14fc667a27f",
+      "86757151d27c1b2aa7c5b84042f540a0e71d33fc467d469f7bfac1f39eca2d62"
+    ],
+    "freshCurrentModelCompiledSourceMatches": true,
+    "labelFreeInferenceInputs": true,
+    "legacyFilesUnchanged": true,
+    "frame1100Excluded": true,
+    "reportSHA256": "000dc4ac0dd6f8cb239a38810977c7780878395395ab4b5fe02633f99e1d436b"
+  },
+  "trainingPreparation": {
+    "images": 1011,
+    "humanVerified": false,
+    "labelInformedGeometry": true,
+    "evaluationEligible": false,
+    "split": "unassigned-development",
+    "trainingStarted": false,
+    "verificationSHA256": "d524f5cc9589328a1fc441871cc375eac8cfc7e2a8f0fc2b66493f4f8cc72700"
+  }
+}

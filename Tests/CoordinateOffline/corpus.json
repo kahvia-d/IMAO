@@ -1,0 +1,241 @@
+{
+  "formatVersion": 1,
+  "note": "Historical regression corpus, already examined/tuned against. No independent holdout claims. Synthetic fade frames excluded. Missing files are fatal. Session boundaries of old reference frames are unknown.",
+  "frames": [
+    {
+      "id": "mengshutianluo",
+      "image": "map-regions/references/mengshutianluo.png",
+      "state": "present",
+      "expected": {
+        "x": -413,
+        "y": -209,
+        "z": 15
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "manually-verified"
+      }
+    },
+    {
+      "id": "mengshutianluo-p2",
+      "image": "map-regions/references/mengshutianluo-p2.png",
+      "state": "present",
+      "expected": {
+        "x": -179,
+        "y": 281,
+        "z": -23
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "manually-verified"
+      }
+    },
+    {
+      "id": "jinzhou",
+      "image": "map-regions/references/jinzhou.png",
+      "state": "present",
+      "expected": {
+        "x": -96,
+        "y": 1310,
+        "z": 168
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "hand-read"
+      }
+    },
+    {
+      "id": "laguna",
+      "image": "map-regions/references/laguna.png",
+      "state": "present",
+      "expected": {
+        "x": 6944,
+        "y": 5815,
+        "z": 9
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "hand-read"
+      }
+    },
+    {
+      "id": "qiqiu",
+      "image": "map-regions/references/qiqiu.png",
+      "state": "present",
+      "expected": {
+        "x": 12225,
+        "y": 11688,
+        "z": 297
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "hand-read"
+      }
+    },
+    {
+      "id": "lowervault",
+      "image": "map-regions/references/lowervault.png",
+      "state": "present",
+      "expected": {
+        "x": 2383,
+        "y": 505,
+        "z": 94
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "hand-read"
+      }
+    },
+    {
+      "id": "avinoleum",
+      "image": "map-regions/references/avinoleum.png",
+      "state": "present",
+      "expected": {
+        "x": 0,
+        "y": 150,
+        "z": 684
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "hand-read"
+      }
+    },
+    {
+      "id": "blackshores",
+      "image": "map-regions/references/blackshores.png",
+      "state": "present",
+      "expected": {
+        "x": 3011,
+        "y": 1359,
+        "z": 2
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "hand-read"
+      }
+    },
+    {
+      "id": "fabricatorium",
+      "image": "map-regions/references/fabricatorium.png",
+      "state": "present",
+      "expected": {
+        "x": -413,
+        "y": -30,
+        "z": 472
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "hand-read"
+      }
+    },
+    {
+      "id": "timeriftruins",
+      "image": "map-regions/references/timeriftruins.png",
+      "state": "present",
+      "expected": {
+        "x": 115,
+        "y": 22,
+        "z": 2
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "hand-read"
+      }
+    },
+    {
+      "id": "black-shores-gameplay",
+      "image": "Tests/MapUi/black-shores-gameplay.png",
+      "state": "present",
+      "expected": {
+        "x": 3078,
+        "y": 1341,
+        "z": 87
+      },
+      "sourceGroup": "historical-session-unknown",
+      "annotation": {
+        "origin": "chore/coord-ocr-vs-yolo/af38e27 archived hand-read manifest",
+        "confidence": "hand-read"
+      }
+    },
+    {
+      "id": "user-grass",
+      "image": "out/coord-ocr-compare/user-20261011.png",
+      "state": "present",
+      "expected": {
+        "x": 229,
+        "y": 504,
+        "z": null
+      },
+      "sourceGroup": "user-20261011",
+      "annotation": {
+        "origin": "archived user-probe-manifest",
+        "confidence": "xy-only; z unresolved"
+      }
+    },
+    {
+      "id": "user-snow",
+      "image": "out/coord-ocr-compare/user-20261011-snow.png",
+      "state": "unknown",
+      "expected": null,
+      "sourceGroup": "user-20261011",
+      "annotation": {
+        "origin": "existing local hard-frame probe",
+        "confidence": "unverified; exclude from accuracy denominators"
+      }
+    },
+    {
+      "id": "absent-black-shores-map-region-panel",
+      "image": "Tests/MapUi/black-shores-map-region-panel.png",
+      "state": "absent",
+      "expected": null,
+      "sourceGroup": "historical-map-ui",
+      "annotation": {
+        "origin": "existing map UI capture; bottom-left strip visually inspected during benchmark rebuild",
+        "confidence": "absence-only"
+      }
+    },
+    {
+      "id": "absent-region-list",
+      "image": "Tests/MapUi/region-list.png",
+      "state": "absent",
+      "expected": null,
+      "sourceGroup": "historical-map-ui",
+      "annotation": {
+        "origin": "existing map UI capture; bottom-left strip visually inspected during benchmark rebuild",
+        "confidence": "absence-only"
+      }
+    },
+    {
+      "id": "absent-marker-detail-panel",
+      "image": "Tests/MapUi/marker-detail-panel.png",
+      "state": "absent",
+      "expected": null,
+      "sourceGroup": "historical-map-ui",
+      "annotation": {
+        "origin": "existing map UI capture; bottom-left strip visually inspected during benchmark rebuild",
+        "confidence": "absence-only"
+      }
+    },
+    {
+      "id": "absent-reward-panel",
+      "image": "Tests/MapUi/reward-panel.png",
+      "state": "absent",
+      "expected": null,
+      "sourceGroup": "historical-map-ui",
+      "annotation": {
+        "origin": "existing map UI capture; bottom-left strip visually inspected during benchmark rebuild",
+        "confidence": "absence-only"
+      }
+    }
+  ]
+}

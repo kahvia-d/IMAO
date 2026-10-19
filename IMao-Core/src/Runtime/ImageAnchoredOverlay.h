@@ -1,7 +1,9 @@
 #pragma once
 #include "FrameState.h"
 #include "../App/ScreenMotionTracker.h"
+#include "../Coordinate/locationCalculator/MinimapProjectionGeometry.h"
 #include <deque>
+#include "ReadoutMotion.h"
 
 inline OverlayScreenTransform ComposeOverlayTransforms(const OverlayScreenTransform& after,
     const OverlayScreenTransform& before) {
@@ -46,22 +48,41 @@ inline OverlayScreenTransform ReconcileTerrainAnchor(const OverlayMotionSample& 
     return correction;
 }
 
-// Renderer-owned. The only updates come from measured pixels; repeating a
-// capture or waiting longer cannot move a marker. No velocity extrapolation.
+// Renderer-owned. SURF frames use measured pixels. Accepted readout frames
+// already carry a north-up coordinate projection and do not require terrain.
+// Neither path extends the lifetime of its independent position evidence.
 class ImageAnchoredOverlay {
 public:
-    explicit ImageAnchoredOverlay(bool minimap) : minimap_(minimap) {}
-    void Reset() { source_.reset(); tracker_.Reset(); lastCapture_ = 0; captureHistory_.clear(); }
+    explicit ImageAnchoredOverlay(bool minimap, ReadoutDisplayMode displayMode = ReadoutDisplayMode::Animated)
+        : minimap_(minimap), displayMode_(displayMode) {}
+    void Reset() { readoutDisplay_.Reset(); readoutMode_ = false; source_.reset(); tracker_.Reset(); lastCapture_ = 0; freshAttempt_ = recentAttempt_ = 0; captureHistory_.clear(); recent_ = {}; }
+    bool RecoveredFreshSource() const { return recoveredFresh_; }
+    bool RecoveredRecentCapture() const { return recoveredRecent_; }
+    bool UsedReadoutProjection() const { return usedReadoutProjection_; }
+    const char* LastFailure() const { return failure_; }
 
     bool Update(const std::shared_ptr<const OverlayFrame>& source, const CapturedFrame& capture,
         OverlayScreenTransform& output, std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) {
+        recoveredFresh_ = false;
+        recoveredRecent_ = false;
+        usedReadoutProjection_ = false;
+        failure_ = "invalid-input";
+        if (minimap_ && source && source->minimapReadout.active) {
+            if (!readoutMode_) { Reset(); readoutMode_ = true; }
+            const bool placed = PlaceReadout(*source, capture, output, now);
+            if (!placed) readoutDisplay_.Reset();
+            return placed;
+        }
+        if (readoutMode_) Reset();
         if (!source || source->motionImage.empty() || capture.image.empty() || capture.frameId < source->frameId ||
             capture.clientRect.right != source->clientRect.right || capture.clientRect.bottom != source->clientRect.bottom ||
             capture.frameId == 0 || now < capture.capturedAt || now - capture.capturedAt >= capture.maximumAge) {
             Reset(); return false;
         }
         const auto& pose = minimap_ ? source->minimapMotion : source->mapMotion;
+        failure_ = "unreliable-pose";
         if (!pose.reliable || pose.scene <= 0 || pose.pixelsPerUnit <= 0.0) { Reset(); return false; }
+        failure_ = "source-anchor";
         if (source_ != source) {
             bool continued = false;
             if (source_) {
@@ -99,32 +120,133 @@ public:
                 lastCapture_ = source->frameId;
                 captureHistory_.clear();
                 RememberCapture(lastCapture_, {});
+                if (minimap_) RememberRegistered(source->frameId, source->capturedAt, source->motionImage, {});
             }
             source_ = source;
         }
         if (lastCapture_ != capture.frameId) {
             const auto region = source->motionRegion;
+            failure_ = "capture-region";
             if ((region & cv::Rect(0, 0, capture.image.cols, capture.image.rows)) != region) { Reset(); return false; }
             OverlayScreenTransform measured;
-            if (!tracker_.Track(capture.image(region), measured)) return false;
+            failure_ = "primary-track";
+            if (!tracker_.Track(capture.image(region), measured)) {
+                // Reacquire only from recent source pixels, through the same strict
+                // geometric checks. Never substitute coordinates for image evidence.
+                if (!minimap_) return false;
+                if (freshAttempt_ != source->frameId && capture.capturedAt >= source->capturedAt &&
+                    capture.capturedAt - source->capturedAt <= std::chrono::milliseconds(250)) {
+                    freshAttempt_ = source->frameId;
+                    ScreenMotionTracker fresh;
+                    failure_ = "fresh-source-track";
+                    if (fresh.Anchor(source->motionImage, true) && fresh.Track(capture.image(region), measured)) {
+                        tracker_ = std::move(fresh);
+                        anchorToSource_ = {};
+                        recoveredFresh_ = true;
+                    }
+                } else failure_ = freshAttempt_ == source->frameId ? "source-already-attempted" : "source-too-old";
+                // The localizer may still publish an older source while the renderer
+                // has measured several newer captures. Recover through the most
+                // recent successful pixel fit, preserving its transform to source.
+                // No position prediction, age extension or weaker fit is involved.
+                if (!recoveredFresh_ && recent_.frameId != 0 && recent_.frameId != source->frameId) {
+                    if (capture.capturedAt < recent_.capturedAt ||
+                        capture.capturedAt - recent_.capturedAt > std::chrono::milliseconds(250)) {
+                        failure_ = "recent-capture-too-old";
+                    } else if (recentAttempt_ == recent_.frameId) {
+                        failure_ = "recent-capture-already-attempted";
+                    } else {
+                        recentAttempt_ = recent_.frameId;
+                        ScreenMotionTracker fresh;
+                        failure_ = "recent-capture-track";
+                        if (fresh.Anchor(recent_.image, true) && fresh.Track(capture.image(region), measured)) {
+                            anchorToSource_ = ComposeOverlayTransforms(anchorToSource_, InverseOverlayTransform(recent_.motion));
+                            tracker_ = std::move(fresh);
+                            recoveredRecent_ = true;
+                        }
+                    }
+                }
+                if (!recoveredFresh_ && !recoveredRecent_) return false;
+                captureHistory_.clear();
+                RememberCapture(source->frameId, anchorToSource_);
+            }
             anchorToCapture_ = measured;
             lastCapture_ = capture.frameId;
             RememberCapture(lastCapture_, measured);
+            if (minimap_) RememberRegistered(lastCapture_, capture.capturedAt, capture.image(region), measured);
         }
         const auto fromSource = ComposeOverlayTransforms(anchorToCapture_, InverseOverlayTransform(anchorToSource_));
         output = ComposeOverlayTransforms(CropMotionToScreen(fromSource, source->motionRegion, source->motionRegion), correction_);
+        failure_ = "none";
         return true;
     }
 private:
+    bool PlaceReadout(const OverlayFrame& source, const CapturedFrame& capture,
+        OverlayScreenTransform& output, std::chrono::steady_clock::time_point now) {
+        const auto& proof = source.minimapReadout;
+        const auto& pose = source.minimapMotion;
+        failure_ = "readout-context";
+        if (!source.Fresh(now) || !source.focused || !source.minimapVisible || source.mapVisible ||
+            capture.image.empty() || capture.frameId < source.frameId || capture.frameId == 0 ||
+            now < capture.capturedAt || now - capture.capturedAt >= capture.maximumAge ||
+            capture.capturedAt < source.capturedAt ||
+            capture.clientRect.left != source.clientRect.left || capture.clientRect.top != source.clientRect.top ||
+            capture.clientRect.right != source.clientRect.right || capture.clientRect.bottom != source.clientRect.bottom ||
+            capture.image.cols != capture.clientRect.right - capture.clientRect.left ||
+            capture.image.rows != capture.clientRect.bottom - capture.clientRect.top) return false;
+        failure_ = "readout-evidence";
+        if (!pose.reliable || source.playerScene <= 0 || proof.scene != source.playerScene ||
+            pose.scene != proof.scene || proof.generation != pose.generation || proof.fixFrameId == 0 ||
+            proof.fixFrameId > source.frameId || proof.capturedAt == std::chrono::steady_clock::time_point{} ||
+            proof.capturedAt > source.capturedAt || now < proof.capturedAt ||
+            !std::isfinite(pose.center.x) || !std::isfinite(pose.center.y)) return false;
+        failure_ = "readout-fix-stale";
+        if (now - proof.capturedAt >= std::chrono::milliseconds(500)) return false;
+        failure_ = "readout-geometry";
+        if (!std::isfinite(proof.terrainScale) || proof.terrainScale <= 0.0 ||
+            !std::isfinite(pose.pixelsPerUnit) || pose.pixelsPerUnit <= 0.0 ||
+            !std::isfinite(pose.screenCenter.x) || !std::isfinite(pose.screenCenter.y)) return false;
+        const auto geometry = GetMinimapProjectionGeometry(source.clientRect, proof.terrainScale);
+        const cv::Rect region{geometry.left, geometry.top, geometry.width, geometry.height};
+        if (region.width <= 0 || region.height <= 0 || region != source.motionRegion ||
+            (region & cv::Rect(0, 0, capture.image.cols, capture.image.rows)) != region ||
+            std::hypot(geometry.center.x - pose.screenCenter.x, geometry.center.y - pose.screenCenter.y) > 0.01 ||
+            std::abs(geometry.pixelsPerMapUnit - pose.pixelsPerUnit) > 1e-6) return false;
+        // Both modes share exactly the same evidence and geometry checks.
+        // Direct mode leaves the publisher's accepted-coordinate projection intact.
+        output = {};
+        if (displayMode_ == ReadoutDisplayMode::Animated)
+            output = readoutDisplay_.Update(pose.center, proof.scene, proof.generation,
+                proof.fixFrameId, proof.capturedAt, pose.pixelsPerUnit, now);
+        usedReadoutProjection_ = true;
+        failure_ = "none";
+        return true;
+    }
     struct RegisteredCapture { std::uint64_t frameId; OverlayScreenTransform motion; };
+    struct RegisteredPixels {
+        std::uint64_t frameId = 0;
+        std::chrono::steady_clock::time_point capturedAt{};
+        cv::Mat image;
+        OverlayScreenTransform motion;
+    };
+    void RememberRegistered(std::uint64_t frameId, std::chrono::steady_clock::time_point capturedAt,
+        const cv::Mat& image, const OverlayScreenTransform& motion) {
+        recent_ = {frameId, capturedAt, image.clone(), motion};
+    }
     void RememberCapture(std::uint64_t frameId, const OverlayScreenTransform& motion) {
         captureHistory_.push_back({frameId, motion});
         if (captureHistory_.size() > 48) captureHistory_.pop_front();
     }
     std::deque<RegisteredCapture> captureHistory_;
+    ReadoutDisplayMotion readoutDisplay_;
+    bool readoutMode_ = false;
     bool minimap_;
+    ReadoutDisplayMode displayMode_;
     ScreenMotionTracker tracker_;
     std::shared_ptr<const OverlayFrame> source_;
     OverlayScreenTransform correction_, anchorToSource_, anchorToCapture_;
-    std::uint64_t lastCapture_ = 0;
+    RegisteredPixels recent_;
+    std::uint64_t lastCapture_ = 0, freshAttempt_ = 0, recentAttempt_ = 0;
+    bool recoveredFresh_ = false, recoveredRecent_ = false, usedReadoutProjection_ = false;
+    const char* failure_ = "none";
 };
