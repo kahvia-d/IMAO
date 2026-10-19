@@ -89,6 +89,8 @@ std::deque<Click> clicks;
 // being passed through to the game, which is why this is checked before the pass-through branches.
 bool handDrawMode = false;
 bool monsterIconsExpanded=false;
+bool handFarmPrompt=false;
+std::uint64_t handFarmPromptGeneration=0;
 std::string context, expanded, selected, hoverGroup;
 std::string displayedProfile;
 std::string displayedRouteId, displayedRouteTarget;
@@ -1394,7 +1396,7 @@ void DrawMarkerInteraction::Clear() {
     mapInteractive = false; regions.clear(); clicks.clear();
     // Clear transient input immediately, but keep the service's drawing. Only
     // fresh gameplay evidence from App can confirm that the map was closed.
-    handDrawMode = false;monsterIconsExpanded=false; handEscapeRequested = false;
+    handDrawMode = false;monsterIconsExpanded=false;handFarmPrompt=false; handEscapeRequested = false;
     const auto current = GamepadContextSnapshot::Shared().Read(DrawItemBase::MarkerProfile());
     for (auto* capture : {&leftCapture, &rightCapture})
         if (!(capture->owned && capture->target == "maptools:open" && capture->generation == current.generation &&
@@ -1576,10 +1578,11 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     // MapClosed can cancel the draft on the detection thread between service reads.
     // Derive these flags from the same local snapshot whose draft is rendered below.
     const bool drafting = planning.handDraft.has_value() && planning.handDrawnSceneId == displayedScene;
-    // The member picker only belongs to the part where points are being added.
-    const bool drawing = planning.handDrawnActive && drafting;
+    // Mouse gestures belong to an active editor even before its first point exists.
+    const bool drawing = planning.HandDrawingInScene(displayedScene);
+    const bool showActiveRouteOnMap = !RoutePlanningService::DrawingVisibility().hideActiveOnMap;
     // Publish the current input mode for the mouse hook.
-    handDrawMode = planning.handDrawnActive && planning.handDrawnSceneId == displayedScene;
+    handDrawMode = drawing;
     renderedHandHits.clear();renderedHandRevision=planning.handRevision;renderedHandView=planning;
     if(handDrawMode&&planning.handDraft&&planning.handDraft->handEditor)for(const auto& node:planning.handDraft->handEditor->nodes){
         renderedHandHits["route:hand:node:"+node.id]=node.id;
@@ -1601,7 +1604,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     // Saved free points join the same layout, hit regions and controller geometry as catalog points.
     auto mapItems=frame.markers;
     std::string currentFreeKey;
-    if(!drafting&&planningBinding.valid&&planning.active&&planning.active->profileId==frame.profileId&&planning.active->sceneId==sceneId) {
+    if(showActiveRouteOnMap&&!drafting&&planningBinding.valid&&planning.active&&planning.active->profileId==frame.profileId&&planning.active->sceneId==sceneId) {
         const auto* scene=Scene::Find(sceneId);
         if(scene) for(const auto& marker:AutoRoute::FreeMarkers(*planning.active,planning.completed,
                 planning.currentTargetIndex,planning.orderRevision)) {
@@ -1824,7 +1827,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     }
     if (planningBinding.valid) {
         const bool previewing = !drafting && planning.enabled && planning.preview.has_value();
-        const auto* plan = drafting ? &*planning.handDraft : previewing ? &*planning.preview : planning.active ? &*planning.active : nullptr;
+        const auto* plan = drafting ? &*planning.handDraft : previewing ? &*planning.preview : showActiveRouteOnMap&&planning.active ? &*planning.active : nullptr;
         const auto* scene = Scene::Find(sceneId);
         // The "起" glyph used to require selection mode; a drawing has a start too, and so does a
         // hand-drawn route being followed, so it follows whether there is a plan to show at all.
@@ -1912,6 +1915,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             if(const auto* from=AutoRoute::FindHandNode(editor,handMouse.fromNode))arrow(project(from->point),handMouse.current,IM_COL32(255,193,73,255));
         if(!handDelete.Armed()&&!editor.edges.empty()&&order.empty())planningNotice="存在多段路线，请连接成一条后保存";
     }
+    if(!planning.handDrawnTypeChoosing||planning.generation!=handFarmPromptGeneration)handFarmPrompt=false;
     if(planningBinding.valid && (planning.handDrawnTypeChoosing || handDrawMode)) {
         auto* draw=ImGui::GetForegroundDrawList();
         const float scale=std::clamp(static_cast<float>(rect.bottom)/1080.0f,0.75f,1.5f);
@@ -1924,7 +1928,29 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             draw->AddText({px-size.x/2,py-size.y/2},IM_COL32_WHITE,label.c_str());
             AddRegion(px,py,r,r,origin,key);
         };
-        if(planning.handDrawnTypeChoosing) {
+        if(planning.handDrawnTypeChoosing&&handFarmPrompt) {
+            // This modal uses the same published hit regions as the type chooser; no
+            // game click underneath it may accidentally select or create a point.
+            const float width=std::min(680*scale,static_cast<float>(rect.right)-40*scale);
+            const float height=230*scale,left=(rect.right-width)/2,top=(rect.bottom-height)/2;
+            AddRegion(rect.right/2.0,rect.bottom/2.0,rect.right/2.0,rect.bottom/2.0,origin,"route:hand:panel");
+            draw->AddRectFilled({0,0},{static_cast<float>(rect.right),static_cast<float>(rect.bottom)},IM_COL32(0,0,0,120));
+            draw->AddRectFilled({left,top},{left+width,top+height},IM_COL32(25,44,58,255),10*scale);
+            draw->AddRect({left,top},{left+width,top+height},IM_COL32(102,201,222,255),10*scale);
+            draw->AddText({left+20*scale,top+22*scale},IM_COL32_WHITE,"为此路线开启刷怪采集模式？");
+            draw->AddText(ImGui::GetFont(),ImGui::GetFontSize()*0.85f,{left+20*scale,top+65*scale},IM_COL32(190,207,218,255),
+                "导航时，接近当前目标并停留片刻会自动标记完成，然后指引下一个目标；无需逐个手动标记。此模式不会代替游戏内的战斗或拾取操作。",nullptr,width-40*scale);
+            const char* labels[]={"开启并绘制","不开启并绘制","取消"};
+            const char* keys[]={"route:hand:farm:on","route:hand:farm:off","route:hand:farm:cancel"};
+            const float buttonWidth=(width-60*scale)/3,buttonTop=top+height-58*scale;
+            for(int i=0;i<3;++i) {
+                const float x=left+20*scale+i*(buttonWidth+10*scale),h=38*scale;
+                draw->AddRectFilled({x,buttonTop},{x+buttonWidth,buttonTop+h},i==0?IM_COL32(38,111,127,255):IM_COL32(44,61,75,255),5*scale);
+                const auto text=ImGui::CalcTextSize(labels[i]);
+                draw->AddText({x+(buttonWidth-text.x)/2,buttonTop+(h-text.y)/2},IM_COL32_WHITE,labels[i]);
+                AddRegion(x+buttonWidth/2,buttonTop+h/2,buttonWidth/2,h/2,origin,keys[i]);
+            }
+        } else if(planning.handDrawnTypeChoosing) {
             for(int i=0;i<2;++i) {
                 const auto label=i==0?"收集物路线":"非收集物路线";
                 const float y=top+i*(2*r+gap),width=std::max(150.0f*scale,ImGui::CalcTextSize(label).x+20);
@@ -2031,11 +2057,23 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         }
         if (click.target.starts_with("route:")) {
             if (click.right || click.target == "route:panel" || click.target == "route:disabled" || click.target=="route:hand:panel") continue;
+            if(handFarmPrompt&&!click.target.starts_with("route:hand:farm:"))continue;
             CancelGesture();
-            if(click.target.starts_with("route:hand:type:")||click.target.starts_with("route:hand:icon:")) {
+            if(click.target.starts_with("route:hand:farm:")) {
+                if(!handFarmPrompt||!planning.handDrawnTypeChoosing||!planningBinding.valid||!planningBinding.presented.Fresh()||
+                    click.scene!=planningBinding.scene||click.generation!=planning.generation||click.generation!=handFarmPromptGeneration)continue;
+                handFarmPrompt=false;
+                auto command=PlanningContext(click);command.erase("routeId");
+                command["action"]=click.target=="route:hand:farm:cancel"?"handFinish":"handStart";
+                command["category"]="daily";command["farmMode"]=click.target=="route:hand:farm:on";
+                PlanningResult(RoutePlanningService::Command(command));
+            } else if(click.target.starts_with("route:hand:type:")||click.target.starts_with("route:hand:icon:")) {
                 if(!planningBinding.valid||!planningBinding.presented.Fresh()||click.scene!=planningBinding.scene||click.generation!=planning.generation)continue;
                 auto command=PlanningContext(click);command.erase("routeId");
                 const bool type=click.target.starts_with("route:hand:type:");
+                if(type&&click.target=="route:hand:type:daily") {
+                    handFarmPrompt=true;handFarmPromptGeneration=planning.generation;continue;
+                }
                 command["action"]=type?"handStart":"handIcon";
                 command[type?"category":"icon"]=click.target.substr(std::string(type?"route:hand:type:":"route:hand:icon:").size());
                 PlanningResult(RoutePlanningService::Command(command));

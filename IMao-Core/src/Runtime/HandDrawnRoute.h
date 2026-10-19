@@ -35,7 +35,7 @@ public:
             throw std::invalid_argument("收集物路线只能使用数字图标");
         icon=value;
     }
-    void Start(int sceneId,int stateId,FreePointCategory value=FreePointCategory::Daily,std::string id={}) {
+    void Start(int sceneId,int stateId,FreePointCategory value=FreePointCategory::Daily,std::string id={},bool farming=false) {
         if(!Scene::IsKnown(sceneId))throw std::invalid_argument("请先在游戏大地图上打开要绘制的区域");
         if(stateId<=0)throw std::invalid_argument("当前地图没有点位数据，无法手绘");
         if((active||Pending())&&scene!=sceneId)
@@ -43,6 +43,7 @@ public:
         if(active&&categoryLocked){if(value!=category)throw std::invalid_argument("已经开始加点，路线类型不能更改");return;}
         if(Pending()){active=true;return;}
         Cancel();active=true;scene=sceneId;state=stateId;category=value;routeId=std::move(id);
+        farmMode=value==FreePointCategory::Daily&&farming;
     }
     void Edit(const Plan& plan) {
         if(active||Pending())throw std::invalid_argument("请先保存或放弃当前手绘草稿");
@@ -100,7 +101,7 @@ public:
     }
     bool Finish() { if(!active)return false;active=false;return Pending(); }
     void Cancel() {
-        active=false;categoryLocked=false;scene=state=0;routeId.clear();
+        active=false;categoryLocked=false;farmMode=false;scene=state=0;routeId.clear();
         editor={};points.clear();history.clear();original.reset();icon=FreePointIcon::Number;
     }
     Plan Commit(const std::string& id,const std::string& name,const std::string& profile) const {
@@ -109,7 +110,7 @@ public:
         Plan plan=original.value_or(Plan{});
         plan.id=id;plan.name=EditingSaved()?original->name:name;plan.profileId=profile;plan.sceneId=scene;
         plan.handDrawn=true;plan.routeCategory=category;
-        if(!EditingSaved()){plan.legacyHandDrawn=false;plan.collection.clear();}
+        if(!EditingSaved()){plan.legacyHandDrawn=false;plan.collection.clear();plan.farmMode=farmMode;}
         plan.start={scene,ordered.front().itemMapROC,"manual",0,0,true};plan.stops=ordered;plan.handEditor=editor;
         std::unordered_set<std::string> surviving;for(const auto& stop:plan.stops)surviving.insert(Key(stop));
         std::erase_if(plan.skipped,[&](const auto& key){return !surviving.contains(key);});
@@ -117,7 +118,7 @@ public:
         ScopeFreePoints(plan,id);return plan;
     }
 private:
-    bool active=false,categoryLocked=false;
+    bool active=false,categoryLocked=false,farmMode=false;
     int scene=0,state=0;
     std::string routeId;
     FreePointCategory category=FreePointCategory::Daily;

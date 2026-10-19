@@ -115,12 +115,14 @@ struct DrawVisibility {
     bool navigating = false;
     std::uint64_t orderRevision = 0;
     bool comparisonVisible = false;
+    bool hideActiveOnMap = false;
     // Hand-drawn routes used to bypass this entirely, which meant a stale line could outlive
     // switching profile, stopping the navigation or leaving the map. They are ordinary routes
     // now, so there is one rule and no exception.
     bool Allows(const RouteDatas& route, bool minimap = false) const {
         if (route.profileId != profileId || route.routePlanId.empty()) return false;
         if (route.preview) return !minimap && route.routePlanId == previewId;
+        if (!minimap && hideActiveOnMap) return false;
         return route.routePlanId == activeId && route.orderRevision == orderRevision &&
             (!route.previousTarget || comparisonVisible) && (!minimap || navigating);
     }

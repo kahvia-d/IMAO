@@ -40,6 +40,10 @@ struct RoutePlanningView {
     // asks about it separately.
     bool handDrawnActive = false;
     int handDrawnSceneId = 0;
+    bool HandDrawingInScene(int scene) const {
+        // An empty editor has no renderable plan yet, but must accept its first click.
+        return handDrawnActive && handDrawnSceneId > 0 && handDrawnSceneId == scene;
+    }
     // A drawing that was left with Escape but not saved yet. The toolbar offers to save or discard
     // it, which is why leaving must not throw it away.
     bool handDrawnPending = false;
