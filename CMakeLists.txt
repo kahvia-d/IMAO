@@ -501,6 +501,20 @@ target_include_directories(IMaoMarkerTests PRIVATE
 set_target_properties(IMaoMarkerTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoMarkerTests COMMAND IMaoMarkerTests)
 
+# Link the real nearby filter and projection. Only the application's selected-data /
+# ledger boundary and diagnostic sinks are supplied by this isolated fixture.
+add_executable(IMaoMinimapFilterTests
+    IMao-Core/tests/MinimapFilterTests.cpp
+    IMao-Core/src/ImguiDraw/Items/DrawItemOnMinMapFilter.cpp
+    IMao-Core/src/Coordinate/locationCalculator/ScreenCoordinate.cpp
+    IMao-Core/src/util.cpp)
+target_include_directories(IMaoMinimapFilterTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+target_compile_options(IMaoMinimapFilterTests PRIVATE /Gy)
+target_link_options(IMaoMinimapFilterTests PRIVATE /OPT:REF)
+target_link_libraries(IMaoMinimapFilterTests PRIVATE ${OpenCV_LIBS} user32.lib dwmapi.lib windowsapp.lib)
+set_target_properties(IMaoMinimapFilterTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoMinimapFilterTests COMMAND IMaoMinimapFilterTests)
+
 # The layered marker rules depend on two id spaces that are easy to confuse, so the mapping
 # is pinned here rather than only by playing the game.
 add_executable(IMaoLayeredMapTests

@@ -100,6 +100,8 @@
 | [`MapMarkerFlicker_20260928_evening_playerlog.md`](MapMarkerFlicker_20260928_evening_playerlog.md) | 同一症状的第二轮排查：下午/傍晚新旧版对照，焦点门是大地图标记的另一条来源（2026-09-28） |
 | [`MapMarkerFlicker_20261013_even.md`](MapMarkerFlicker_20261013_even.md) | even 的大世界 / 下层金库对照：源帧年龄、附着绘制差异与新增诊断（2026-10-13） |
 | [`MapMarkerFlicker_20261014_even_diagnostic.md`](MapMarkerFlicker_20261014_even_diagnostic.md) | even 新诊断日志确认：大世界点位过滤耗时高，标记源帧过期导致撤绘（2026-10-14） |
+| [`MinimapMarkerFlicker_20261018_even.md`](MinimapMarkerFlicker_20261018_even.md) | even 确认大地图已修复；小地图仍使用逐类别完成状态读取，记录同类瓶颈、撤绘入口与诊断缺口（2026-10-18） |
+| [`MinimapMarkerFlickerFix_20261019_even.md`](MinimapMarkerFlickerFix_20261019_even.md) | 小地图接入批量完成状态读取，保留原筛选规则并补齐生产耗时与渲染拒绝诊断；本地回归和测试包说明（2026-10-19） |
 
 ## 库街区进度同步扩展
 
