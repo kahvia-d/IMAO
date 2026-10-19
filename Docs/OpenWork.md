@@ -38,7 +38,8 @@ GPU→CPU 回读**以游戏呈现节奏持续运行且不节流。出处：`Game
 | 2.4 | 高 | 回放用例主要来自同一区域（大地图 8 用例含同图变体，不是 8 个独立场景） | 增加不同国家/场景、连续移动、传送、遮挡、缩放、开关地图、失焦与重新捕获的实机录像 |
 | 2.5 | 高 | 全局定位 P95 **256.38 ms**、失败搜索可达 **5–7 s**、大地图首帧约 **4 s** | 分离可取消的快速候选搜索与分批后台恢复；复用已加载索引与区域结果；给首次定位/连续追踪/错误输入分别设延迟门槛（不放松几何要求） |
 | 2.6 | 中高 | 点位/特征/标定/索引分散存放；同步 `-Apply` 验证后仍逐文件覆盖 | 按资源版本建立完整候选目录，全部文件与变换验证通过后统一切换，失败能回滚 |
-| 2.7 | 高 | even 已确认 2026.10.14.102 解决大地图闪烁。2026-10-19 小地图也已接入批量完成状态读取和账号绑定，并补齐过滤耗时 / 渲染拒绝分类诊断；真实生产过滤的旧读法性能回归先红后绿 | 交付 2026.10.19.103 自包含测试包，等待 even 实机反馈与新日志，继续区分定位 / 过期 / 画面附着。见 [`MinimapMarkerFlickerFix_20261019_even.md`](MinimapMarkerFlickerFix_20261019_even.md)；前置排查见 [`MinimapMarkerFlicker_20261018_even.md`](MinimapMarkerFlicker_20261018_even.md) |
+| 2.7 | 高 | even 已确认 2026.10.14.102 解决大地图闪烁。2026-10-19 小地图也已接入批量完成状态读取和账号绑定，并补齐过滤耗时 / 渲染拒绝分类诊断；真实生产过滤的旧读法性能回归先红后绿。**2026-10-19 已随 `2026.10.19.1` 正式发布**（用户决定不等 even 反馈先发） | 实机验收仍待 even 反馈与新日志，继续区分定位 / 过期 / 画面附着。见 [`MinimapMarkerFlickerFix_20261019_even.md`](MinimapMarkerFlickerFix_20261019_even.md)；前置排查见 [`MinimapMarkerFlicker_20261018_even.md`](MinimapMarkerFlicker_20261018_even.md) |
+| 2.8 | 高 | 自训 YOLO 坐标识别已随 `2026.10.19.1` 进入玩家版（`Assets/models/coordinate-yolo` 取代原 PaddleOCR 兜底），但接管延迟、恢复交回、连续移动读数误差与推理帧时间成本尚未实机测量；离线评测的零已知错误门槛未通过（用户已知情并要求随版发布） | 用实机日志核对首次失配到接管、两路切换与移动读数误差；必要时回退模型目录并记录原因。见 [`CoordinateYoloIntegration_20261016_zh-Hans.md`](CoordinateYoloIntegration_20261016_zh-Hans.md)、[`CoordinateIndependentEvaluation_20261016_zh-Hans.md`](CoordinateIndependentEvaluation_20261016_zh-Hans.md) |
 
 ## 3. 工程健壮性
 
