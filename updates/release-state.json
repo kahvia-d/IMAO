@@ -13,7 +13,10 @@
     "artifactId": 12162437645,
     "id": "8659cff6951241169b46f0b1e61c2ed3",
     "releaseId": null,
-    "sourceCommit": "b7481415ec72785cccf3bd747158ab13d84ac10b"
+    "sourceCommit": "b7481415ec72785cccf3bd747158ab13d84ac10b",
+    "requestId": "ff74718c48eedf25f52681091e59730533420ed65f8bfc5c3fc3d04e91eb7a34",
+    "requestArtifactId": 12163470211,
+    "requestArtifactDigest": "67e17b8d4f042fd0447d510f3b6d2a488dc3326b3830e805092de009f2c1522c"
   },
   "completed": [
     {
