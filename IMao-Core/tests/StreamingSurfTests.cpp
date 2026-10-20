@@ -6,6 +6,9 @@
 #include <mutex>
 #include <unordered_map>
 #include <cstring>
+#include <condition_variable>
+#include <thread>
+#include <set>
 struct ImageFeatureData { std::vector<cv::KeyPoint> imgKeypoints; cv::Mat imgDescriptors; };
 class Allocator final:public cv::MatAllocator {
  cv::MatAllocator* base_=cv::Mat::getDefaultAllocator();
@@ -70,6 +73,73 @@ int main(int argc,char**) {
             check(cancelled,"cancellation reaches requested detector/descriptor checkpoint");
             check(points.empty()&&descriptors.empty(),"cancelled extraction exposes no partial features");
             check(allocator.Live()==live,"cancellation releases actual allocated matrices");
+        }
+        // A different OpenCV caller holds the process-wide parallel guard.
+        // This must not turn description into one indivisible serial call.
+        {
+            std::mutex mutex; std::condition_variable condition;
+            bool entered=false, release=false;
+            std::jthread competing([&] {
+                cv::parallel_for_(cv::Range(0,2),[&](const cv::Range&) {
+                    std::unique_lock lock(mutex); entered=true; condition.notify_all();
+                    condition.wait(lock,[&]{return release;});
+                });
+            });
+            {std::unique_lock lock(mutex); condition.wait(lock,[&]{return entered;});}
+            const auto live=allocator.Live();
+            std::vector<cv::KeyPoint> points; cv::Mat descriptors;
+            int calls=0; bool cancelled=false;
+            try {ExtractViewportSurf(input,points,descriptors,[&]{return ++calls==40;});}
+            catch(const SearchInterrupted&) {cancelled=true;}
+            catch(...) {
+                {std::scoped_lock lock(mutex);release=true;}condition.notify_all();
+                throw;
+            }
+            {std::scoped_lock lock(mutex);release=true;}condition.notify_all();competing.join();
+            check(cancelled,"description remains cancellable inside competing OpenCV parallel region");
+            check(points.empty()&&descriptors.empty(),"interrupted description exposes no partial features");
+            // Clear successful old implementation output before checking owners.
+            points.clear();descriptors.release();
+            check(allocator.Live()==live,"interrupted description joins workers and releases all matrices");
+        }
+        {
+            std::mutex mutex;std::condition_variable condition;
+            bool entered=false,release=false;
+            std::jthread competing([&] {
+                cv::parallel_for_(cv::Range(0,2),[&](const cv::Range&) {
+                    std::unique_lock lock(mutex);entered=true;condition.notify_all();
+                    condition.wait(lock,[&]{return release;});
+                });
+            });
+            {std::unique_lock lock(mutex);condition.wait(lock,[&]{return entered;});}
+            ImageFeatureData actual,expected;ViewportSurfStatistics measured;
+            int calls=0;std::set<std::thread::id> describingThreads;
+            try {
+                ExtractViewportSurf(input,actual.imgKeypoints,actual.imgDescriptors,[&] {
+                    if (++calls>34) describingThreads.insert(std::this_thread::get_id());
+                    return false;
+                },&measured);
+            } catch(...) {
+                {std::scoped_lock lock(mutex);release=true;}condition.notify_all();throw;
+            }
+            {std::scoped_lock lock(mutex);release=true;}condition.notify_all();competing.join();
+            reference->detectAndCompute(input,cv::noArray(),expected.imgKeypoints,expected.imgDescriptors);
+            check(Equal(actual,expected),"competing region preserves every feature and descriptor byte");
+            check(measured.descriptorWorkers>=1&&measured.descriptorWorkers<=4,"descriptor dispatch has a bounded worker count");
+            if(std::thread::hardware_concurrency()>1)
+                check(describingThreads.size()>1,"descriptor chunks use independent workers under OpenCV parallel contention");
+            check(measured.descriptorMaxWindow>0&&measured.descriptorWindowPixels>0,"descriptor work geometry is observable");
+        }
+        {
+            const auto live=allocator.Live();
+            std::vector<cv::KeyPoint> points;cv::Mat descriptors;int calls=0;bool caught=false;
+            try {ExtractViewportSurf(input,points,descriptors,[&]() -> bool {
+                if(++calls==40)throw std::runtime_error("descriptor cancellation probe failure");
+                return false;
+            });} catch(const std::runtime_error&e){caught=std::string(e.what())=="descriptor cancellation probe failure";}
+            check(caught,"worker callback exception propagates to caller");
+            check(points.empty()&&descriptors.empty(),"callback exception exposes no partial output");
+            check(allocator.Live()==live,"callback exception joins workers and releases matrices");
         }
     } catch(const std::exception&e){std::cerr<<e.what()<<'\n';++failures;}
     check(allocator.Live()==0,"all SURF test matrix owners are released");

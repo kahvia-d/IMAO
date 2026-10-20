@@ -1,5 +1,5 @@
-Viewport Hessian detection includes code derived from OpenCV-contrib 4.11.0 modules/xfeatures2d/src/surf.cpp.
-Modifications: three rolling layers, parallel independent rows and cancellation between layers.
+Viewport Hessian detection and description include code derived from OpenCV-contrib 4.11.0 modules/xfeatures2d/src/surf.cpp.
+Modifications: three rolling layers, parallel independent rows, bounded descriptor dispatch independent of OpenCV's parallel guard, and cancellation between layers/descriptor chunks.
 
 /* Original code has been submitted by Liu Liu. Here is the copyright.
 ----------------------------------------------------------------------------------

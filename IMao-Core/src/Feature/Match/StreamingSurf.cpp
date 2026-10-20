@@ -43,7 +43,7 @@
  * OF SUCH DAMAGE.
  */
 
-// Derived from OpenCV-contrib 4.11.0 surf.cpp (Hessian detection only).
+// Derived from OpenCV-contrib 4.11.0 surf.cpp (Hessian detection and descriptors).
 // Preserve all filters, maxima/interpolation arithmetic and sort order. Keep
 // three adjacent layers instead of every octave; parallelize independent rows.
 #include "StreamingSurf.h"
@@ -52,6 +52,12 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <algorithm>
+#include <atomic>
+#include <cfloat>
+#include <cstring>
+#include <exception>
+#include <mutex>
+#include <thread>
 namespace {
 using namespace cv;
 static const int SURF_HAAR_SIZE0 = 9;
@@ -330,6 +336,435 @@ struct KeypointGreater
     }
 };
 
+static const float SURF_ORI_SIGMA = 2.5f;
+static const float SURF_DESC_SIGMA = 3.3f;
+static const int SURF_ORI_SEARCH_INC = 5;
+
+struct SURFInvoker : ParallelLoopBody
+{
+    enum { ORI_RADIUS = 6, ORI_WIN = 60, PATCH_SZ = 20 };
+
+    SURFInvoker( const Mat& _img, const Mat& _sum,
+                 std::vector<KeyPoint>& _keypoints, Mat& _descriptors,
+                 bool _extended, bool _upright )
+    {
+        keypoints = &_keypoints;
+        descriptors = &_descriptors;
+        img = &_img;
+        sum = &_sum;
+        extended = _extended;
+        upright = _upright;
+
+        // Simple bound for number of grid points in circle of radius ORI_RADIUS
+        const int nOriSampleBound = (2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
+
+        // Allocate arrays
+        apt.resize(nOriSampleBound);
+        aptw.resize(nOriSampleBound);
+        DW.resize(PATCH_SZ*PATCH_SZ);
+
+        /* Coordinates and weights of samples used to calculate orientation */
+        Mat G_ori = getGaussianKernel( 2*ORI_RADIUS+1, SURF_ORI_SIGMA, CV_32F );
+        nOriSamples = 0;
+        for( int i = -ORI_RADIUS; i <= ORI_RADIUS; i++ )
+        {
+            for( int j = -ORI_RADIUS; j <= ORI_RADIUS; j++ )
+            {
+                if( i*i + j*j <= ORI_RADIUS*ORI_RADIUS )
+                {
+                    apt[nOriSamples] = Point(i,j);
+                    aptw[nOriSamples++] = G_ori.at<float>(i+ORI_RADIUS,0) * G_ori.at<float>(j+ORI_RADIUS,0);
+                }
+            }
+        }
+        CV_Assert( nOriSamples <= nOriSampleBound );
+
+        /* Gaussian used to weight descriptor samples */
+        Mat G_desc = getGaussianKernel( PATCH_SZ, SURF_DESC_SIGMA, CV_32F );
+        for( int i = 0; i < PATCH_SZ; i++ )
+        {
+            for( int j = 0; j < PATCH_SZ; j++ )
+                DW[i*PATCH_SZ+j] = G_desc.at<float>(i,0) * G_desc.at<float>(j,0);
+        }
+    }
+
+    void operator()(const Range& range) const CV_OVERRIDE
+    {
+        /* X and Y gradient wavelet data */
+        const int NX=2, NY=2;
+        const int dx_s[NX][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
+        const int dy_s[NY][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
+
+        // Optimisation is better using nOriSampleBound than nOriSamples for
+        // array lengths.  Maybe because it is a constant known at compile time
+        const int nOriSampleBound =(2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
+
+        float X[nOriSampleBound], Y[nOriSampleBound], angle[nOriSampleBound];
+        uchar PATCH[PATCH_SZ+1][PATCH_SZ+1];
+        float DX[PATCH_SZ][PATCH_SZ], DY[PATCH_SZ][PATCH_SZ];
+        Mat _patch(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
+
+        int dsize = extended ? 128 : 64;
+
+        int k, k1 = range.start, k2 = range.end;
+        float maxSize = 0;
+        for( k = k1; k < k2; k++ )
+        {
+            maxSize = std::max(maxSize, (*keypoints)[k].size);
+        }
+        int imaxSize = std::max(cvCeil((PATCH_SZ+1)*maxSize*1.2f/9.0f), 1);
+        cv::AutoBuffer<uchar> winbuf(imaxSize*imaxSize);
+
+        for( k = k1; k < k2; k++ )
+        {
+            int i, j, kk, nangle;
+            float* vec;
+            SurfHF dx_t[NX], dy_t[NY];
+            KeyPoint& kp = (*keypoints)[k];
+            float size = kp.size;
+            Point2f center = kp.pt;
+            /* The sampling intervals and wavelet sized for selecting an orientation
+             and building the keypoint descriptor are defined relative to 's' */
+            float s = size*1.2f/9.0f;
+            /* To find the dominant orientation, the gradients in x and y are
+             sampled in a circle of radius 6s using wavelets of size 4s.
+             We ensure the gradient wavelet size is even to ensure the
+             wavelet pattern is balanced and symmetric around its center */
+            int grad_wav_size = 2*cvRound( 2*s );
+            if( sum->rows < grad_wav_size || sum->cols < grad_wav_size )
+            {
+                /* when grad_wav_size is too big,
+                 * the sampling of gradient will be meaningless
+                 * mark keypoint for deletion. */
+                kp.size = -1;
+                continue;
+            }
+
+            float descriptor_dir = 360.f - 90.f;
+            if (upright == 0)
+            {
+                resizeHaarPattern( dx_s, dx_t, NX, 4, grad_wav_size, sum->cols );
+                resizeHaarPattern( dy_s, dy_t, NY, 4, grad_wav_size, sum->cols );
+                for( kk = 0, nangle = 0; kk < nOriSamples; kk++ )
+                {
+                    int x = cvRound( center.x + apt[kk].x*s - (float)(grad_wav_size-1)/2 );
+                    int y = cvRound( center.y + apt[kk].y*s - (float)(grad_wav_size-1)/2 );
+                    if( y < 0 || y >= sum->rows - grad_wav_size ||
+                        x < 0 || x >= sum->cols - grad_wav_size )
+                        continue;
+                    const int* ptr = &sum->at<int>(y, x);
+                    float vx = calcHaarPattern( ptr, dx_t, 2 );
+                    float vy = calcHaarPattern( ptr, dy_t, 2 );
+                    X[nangle] = vx*aptw[kk];
+                    Y[nangle] = vy*aptw[kk];
+                    nangle++;
+                }
+                if( nangle == 0 )
+                {
+                    // No gradient could be sampled because the keypoint is too
+                    // near too one or more of the sides of the image. As we
+                    // therefore cannot find a dominant direction, we skip this
+                    // keypoint and mark it for later deletion from the sequence.
+                    kp.size = -1;
+                    continue;
+                }
+
+                phase( Mat(1, nangle, CV_32F, X), Mat(1, nangle, CV_32F, Y), Mat(1, nangle, CV_32F, angle), true );
+
+                float bestx = 0, besty = 0, descriptor_mod = 0;
+                for( i = 0; i < 360; i += SURF_ORI_SEARCH_INC )
+                {
+                    float sumx = 0, sumy = 0, temp_mod;
+                    for( j = 0; j < nangle; j++ )
+                    {
+                        int d = std::abs(cvRound(angle[j]) - i);
+                        if( d < ORI_WIN/2 || d > 360-ORI_WIN/2 )
+                        {
+                            sumx += X[j];
+                            sumy += Y[j];
+                        }
+                    }
+                    temp_mod = sumx*sumx + sumy*sumy;
+                    if( temp_mod > descriptor_mod )
+                    {
+                        descriptor_mod = temp_mod;
+                        bestx = sumx;
+                        besty = sumy;
+                    }
+                }
+                descriptor_dir = fastAtan2( -besty, bestx );
+            }
+            kp.angle = descriptor_dir;
+            if( !descriptors || !descriptors->data )
+                continue;
+
+            /* Extract a window of pixels around the keypoint of size 20s */
+            int win_size = (int)((PATCH_SZ+1)*s);
+            CV_Assert( imaxSize >= win_size );
+            Mat win(win_size, win_size, CV_8U, winbuf.data());
+
+            if( !upright )
+            {
+                descriptor_dir *= (float)(CV_PI/180);
+                float sin_dir = -std::sin(descriptor_dir);
+                float cos_dir =  std::cos(descriptor_dir);
+
+                /* Subpixel interpolation version (slower). Subpixel not required since
+                the pixels will all get averaged when we scale down to 20 pixels */
+                /*
+                float w[] = { cos_dir, sin_dir, center.x,
+                -sin_dir, cos_dir , center.y };
+                CvMat W = cvMat(2, 3, CV_32F, w);
+                cvGetQuadrangleSubPix( img, &win, &W );
+                */
+
+                float win_offset = -(float)(win_size-1)/2;
+                float start_x = center.x + win_offset*cos_dir + win_offset*sin_dir;
+                float start_y = center.y - win_offset*sin_dir + win_offset*cos_dir;
+                uchar* WIN = win.data;
+#if 0
+                // Nearest neighbour version (faster)
+                for( i = 0; i < win_size; i++, start_x += sin_dir, start_y += cos_dir )
+                {
+                    float pixel_x = start_x;
+                    float pixel_y = start_y;
+                    for( j = 0; j < win_size; j++, pixel_x += cos_dir, pixel_y -= sin_dir )
+                    {
+                        int x = std::min(std::max(cvRound(pixel_x), 0), img->cols-1);
+                        int y = std::min(std::max(cvRound(pixel_y), 0), img->rows-1);
+                        WIN[i*win_size + j] = img->at<uchar>(y, x);
+                    }
+                }
+#else
+                int ncols1 = img->cols-1, nrows1 = img->rows-1;
+                size_t imgstep = img->step;
+                for( i = 0; i < win_size; i++, start_x += sin_dir, start_y += cos_dir )
+                {
+                    double pixel_x = start_x;
+                    double pixel_y = start_y;
+                    for( j = 0; j < win_size; j++, pixel_x += cos_dir, pixel_y -= sin_dir )
+                    {
+                        int ix = cvFloor(pixel_x), iy = cvFloor(pixel_y);
+                        if( (unsigned)ix < (unsigned)ncols1 &&
+                            (unsigned)iy < (unsigned)nrows1 )
+                        {
+                            float a = (float)(pixel_x - ix), b = (float)(pixel_y - iy);
+                            const uchar* imgptr = &img->at<uchar>(iy, ix);
+                            WIN[i*win_size + j] = (uchar)
+                                cvRound(imgptr[0]*(1.f - a)*(1.f - b) +
+                                        imgptr[1]*a*(1.f - b) +
+                                        imgptr[imgstep]*(1.f - a)*b +
+                                        imgptr[imgstep+1]*a*b);
+                        }
+                        else
+                        {
+                            int x = std::min(std::max(cvRound(pixel_x), 0), ncols1);
+                            int y = std::min(std::max(cvRound(pixel_y), 0), nrows1);
+                            WIN[i*win_size + j] = img->at<uchar>(y, x);
+                        }
+                    }
+                }
+#endif
+            }
+            else
+            {
+                // extract rect - slightly optimized version of the code above
+                // TODO: find faster code, as this is simply an extract rect operation,
+                //       e.g. by using cvGetSubRect, problem is the border processing
+                // descriptor_dir == 90 grad
+                // sin_dir == 1
+                // cos_dir == 0
+
+                float win_offset = -(float)(win_size-1)/2;
+                int start_x = cvRound(center.x + win_offset);
+                int start_y = cvRound(center.y - win_offset);
+                uchar* WIN = win.data;
+                for( i = 0; i < win_size; i++, start_x++ )
+                {
+                    int pixel_x = start_x;
+                    int pixel_y = start_y;
+                    for( j = 0; j < win_size; j++, pixel_y-- )
+                    {
+                        int x = MAX( pixel_x, 0 );
+                        int y = MAX( pixel_y, 0 );
+                        x = MIN( x, img->cols-1 );
+                        y = MIN( y, img->rows-1 );
+                        WIN[i*win_size + j] = img->at<uchar>(y, x);
+                    }
+                }
+            }
+            // Scale the window to size PATCH_SZ so each pixel's size is s. This
+            // makes calculating the gradients with wavelets of size 2s easy
+            resize(win, _patch, _patch.size(), 0, 0, INTER_AREA);
+
+            // Calculate gradients in x and y with wavelets of size 2s
+            for( i = 0; i < PATCH_SZ; i++ )
+                for( j = 0; j < PATCH_SZ; j++ )
+                {
+                    float dw = DW[i*PATCH_SZ + j];
+                    float vx = (PATCH[i][j+1] - PATCH[i][j] + PATCH[i+1][j+1] - PATCH[i+1][j])*dw;
+                    float vy = (PATCH[i+1][j] - PATCH[i][j] + PATCH[i+1][j+1] - PATCH[i][j+1])*dw;
+                    DX[i][j] = vx;
+                    DY[i][j] = vy;
+                }
+
+            // Construct the descriptor
+            vec = descriptors->ptr<float>(k);
+            for( kk = 0; kk < dsize; kk++ )
+                vec[kk] = 0;
+            double square_mag = 0;
+            if( extended )
+            {
+                // 128-bin descriptor
+                for( i = 0; i < 4; i++ )
+                    for( j = 0; j < 4; j++ )
+                    {
+                        for(int y = i*5; y < i*5+5; y++ )
+                        {
+                            for(int x = j*5; x < j*5+5; x++ )
+                            {
+                                float tx = DX[y][x], ty = DY[y][x];
+                                if( ty >= 0 )
+                                {
+                                    vec[0] += tx;
+                                    vec[1] += (float)fabs(tx);
+                                } else {
+                                    vec[2] += tx;
+                                    vec[3] += (float)fabs(tx);
+                                }
+                                if ( tx >= 0 )
+                                {
+                                    vec[4] += ty;
+                                    vec[5] += (float)fabs(ty);
+                                } else {
+                                    vec[6] += ty;
+                                    vec[7] += (float)fabs(ty);
+                                }
+                            }
+                        }
+                        for( kk = 0; kk < 8; kk++ )
+                            square_mag += vec[kk]*vec[kk];
+                        vec += 8;
+                    }
+            }
+            else
+            {
+                // 64-bin descriptor
+                for( i = 0; i < 4; i++ )
+                    for( j = 0; j < 4; j++ )
+                    {
+                        for(int y = i*5; y < i*5+5; y++ )
+                        {
+                            for(int x = j*5; x < j*5+5; x++ )
+                            {
+                                float tx = DX[y][x], ty = DY[y][x];
+                                vec[0] += tx; vec[1] += ty;
+                                vec[2] += (float)fabs(tx); vec[3] += (float)fabs(ty);
+                            }
+                        }
+                        for( kk = 0; kk < 4; kk++ )
+                            square_mag += vec[kk]*vec[kk];
+                        vec+=4;
+                    }
+            }
+
+            // unit vector is essential for contrast invariance
+            vec = descriptors->ptr<float>(k);
+            float scale = (float)(1./(std::sqrt(square_mag) + FLT_EPSILON));
+            for( kk = 0; kk < dsize; kk++ )
+                vec[kk] *= scale;
+        }
+    }
+
+    // Parameters
+    const Mat* img;
+    const Mat* sum;
+    std::vector<KeyPoint>* keypoints;
+    Mat* descriptors;
+    bool extended;
+    bool upright;
+
+    // Pre-calculated values
+    int nOriSamples;
+    std::vector<Point> apt;
+    std::vector<float> aptw;
+    std::vector<float> DW;
+};
+
+
+// Dispatch the upstream kernel independently of OpenCV's process-wide guard.
+static void DescribeViewportSurf(const Mat& gray, std::vector<KeyPoint>& points,
+    Mat& descriptors, const std::function<bool()>& interrupted,
+    ViewportSurfStatistics* statistics) {
+    if (points.empty()) return;
+    Mat sum; integral(gray, sum, CV_32S);
+    descriptors.create(static_cast<int>(points.size()), 128, CV_32F);
+    const SURFInvoker describe(gray, sum, points, descriptors, true, true);
+    constexpr int chunkSize = 32;
+    // Caller participates; at most three extra threads. Global OpenCV thread
+    // settings and another caller's parallel region do not affect dispatch.
+    const unsigned workerCount = std::min({4u, std::max(1u, std::thread::hardware_concurrency()),
+        static_cast<unsigned>((points.size()+chunkSize-1)/chunkSize)});
+    if (statistics) {
+        statistics->descriptorWorkers = workerCount;
+        for (const auto& point : points) {
+            const int window = static_cast<int>(21 * (point.size*1.2f/9.0f));
+            statistics->descriptorWindowPixels += static_cast<uint64_t>(window)*window;
+            statistics->descriptorMaxWindow = std::max(statistics->descriptorMaxWindow, window);
+        }
+    }
+    std::atomic<int> next{0};
+    std::atomic<bool> stopped{false};
+    std::mutex callbackMutex;
+    std::exception_ptr failure;
+    const auto work = [&] {
+        try {
+            while (!stopped.load(std::memory_order_relaxed)) {
+                const int start = next.fetch_add(chunkSize, std::memory_order_relaxed);
+                if (start >= static_cast<int>(points.size())) break;
+                {
+                    // Callbacks remain serialized; pixel work holds no mutex.
+                    std::scoped_lock lock(callbackMutex);
+                    if (stopped.load(std::memory_order_relaxed)) break;
+                    if (interrupted && interrupted()) throw SearchInterrupted{};
+                }
+                describe(Range(start, std::min(start+chunkSize, static_cast<int>(points.size()))));
+            }
+        } catch (...) {
+            stopped.store(true, std::memory_order_relaxed);
+            std::scoped_lock lock(callbackMutex);
+            if (!failure) failure = std::current_exception();
+        }
+    };
+    {
+        std::vector<std::jthread> workers;
+        workers.reserve(workerCount-1);
+        try {
+            for (unsigned i=1; i<workerCount; ++i) workers.emplace_back(work);
+            work();
+        } catch (...) {
+            stopped.store(true, std::memory_order_relaxed);
+            throw; // Join before points, descriptors or sum are destroyed.
+        }
+    }
+    if (failure) std::rethrow_exception(failure);
+    // Same upstream deletion of unrepresentable scales, retaining row order.
+    int retained=0;
+    const int count=static_cast<int>(points.size());
+    for (int i=0; i<count; ++i) if (points[i].size>0) {
+        if (i>retained) {
+            points[retained]=points[i];
+            std::memcpy(descriptors.ptr(retained),descriptors.ptr(i),128*sizeof(float));
+        }
+        ++retained;
+    }
+    if (retained<count) {
+        points.resize(retained);
+        Mat kept=descriptors.rowRange(0,retained);
+        kept.copyTo(descriptors);
+    }
+}
+
 }
 void ExtractViewportSurf(const cv::Mat& gray, std::vector<cv::KeyPoint>& points,
     cv::Mat& descriptors, const std::function<bool()>& interrupted, ViewportSurfStatistics* statistics) {
@@ -377,8 +812,7 @@ void ExtractViewportSurf(const cv::Mat& gray, std::vector<cv::KeyPoint>& points,
     std::sort(found.begin(),found.end(),KeypointGreater());
     const auto detected = std::chrono::steady_clock::now();
     cv::Mat computed;
-    auto surf=cv::xfeatures2d::SURF::create(100,4,3,true,true);
-    surf->compute(gray,found,computed);
+    DescribeViewportSurf(gray,found,computed,interrupted,statistics);
     checkpoint();
     if (statistics) {
         statistics->detectMilliseconds = std::chrono::duration<double,std::milli>(detected-started).count();

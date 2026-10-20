@@ -604,7 +604,10 @@ private:
                             " detectorScratchBytes=" + std::to_string(statistics.detectorScratchBytes) +
                             " resizeMs=" + std::to_string(resizeMs) + " grayMs=" + std::to_string(grayMs) +
                             " detectMs=" + std::to_string(statistics.detectMilliseconds) +
-                            " describeMs=" + std::to_string(statistics.describeMilliseconds));
+                            " describeMs=" + std::to_string(statistics.describeMilliseconds) +
+                            " descriptorWorkers=" + std::to_string(statistics.descriptorWorkers) +
+                            " descriptorWindowPixels=" + std::to_string(statistics.descriptorWindowPixels) +
+                            " descriptorMaxWindow=" + std::to_string(statistics.descriptorMaxWindow));
                         Diagnostics::RecordMemory(sample + "-after");
                     }
                     if (interrupted()) throw SearchInterrupted{};
