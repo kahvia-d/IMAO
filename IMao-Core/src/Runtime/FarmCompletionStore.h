@@ -1,6 +1,7 @@
 #pragma once
 #include "AtomicFile.h"
 #include "CompletionReadView.h"
+#include "RenderCompletionRead.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cctype>
@@ -63,6 +64,16 @@ public:
         std::scoped_lock lock(mutex_);
         ExpireLocked();
         return document_.at("points").contains(Identity(stateId, pointId));
+    }
+
+    RenderFarmCompletionRead ReadRenderCompletions() {
+        std::scoped_lock lock(mutex_);
+        ExpireLocked();
+        RenderFarmCompletionRead result;
+        result.profileId = document_.at("profileId").get<std::string>();
+        result.identities.reserve(document_.at("points").size());
+        for (const auto& [identity, value] : document_.at("points").items()) result.identities.insert(identity);
+        return result;
     }
 
     std::vector<std::string> CompletedIds(int stateId) {

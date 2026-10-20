@@ -1,6 +1,7 @@
 #pragma once
 #include "AtomicFile.h"
 #include "CompletionReadView.h"
+#include "RenderCompletionRead.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cctype>
@@ -388,6 +389,23 @@ public:
             // and category, including layered states and explicit local undo.
             result.localByCategory[point.value("nameId", "")][point.at("pointId").get<std::string>()] =
                 point.value("completed", false);
+        }
+        return result;
+    }
+
+    RenderSceneCompletionRead ReadRenderCompletions(const std::string& scene) const {
+        std::scoped_lock lock(mutex);
+        RenderSceneCompletionRead result;
+        result.profileId = document.at("profileId").get<std::string>();
+        result.stateId = SceneState(scene);
+        const auto& remote = RemoteIds(document, result.stateId);
+        result.remoteIds.reserve(remote.size());
+        for (const auto& id : remote) result.remoteIds.insert(id.get<std::string>());
+        const auto prefix = std::to_string(result.stateId) + ":";
+        for (const auto& [identity, point] : document.at("points").items()) {
+            if (!identity.starts_with(prefix)) continue;
+            result.localById.emplace(identity.substr(prefix.size()), RenderSceneCompletionRead::Local{
+                point.value("nameId", ""), point.value("completed", false)});
         }
         return result;
     }

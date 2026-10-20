@@ -11,6 +11,14 @@ public:
         std::scoped_lock lock(mutex_);Select(profile);Expire();
         return document_.at(Table(item)).contains(AutoRoute::Key(item));
     }
+    FreePointCompletionRead ReadCompletions(const std::string& profile) {
+        std::scoped_lock lock(mutex_); Select(profile); Expire();
+        FreePointCompletionRead result;
+        result.profileId = profile_;
+        for (const auto& [key, value] : document_.at("permanent").items()) result.permanent.insert(key);
+        for (const auto& [key, value] : document_.at("daily").items()) result.daily.insert(key);
+        return result;
+    }
     void Set(const std::string& profile, const ItemDatas& item, bool value) {
         if(!AutoRoute::IsFreeStop(item)||item.freeRouteId.empty()||item.itemId.empty()||item.layer.stateId<=0)
             throw std::invalid_argument("自由点身份无效");

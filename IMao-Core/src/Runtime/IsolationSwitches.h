@@ -42,8 +42,10 @@ inline constexpr int kForceFullReadback = 1 << 7;
 // bit the overlay goes back to a window the size of the whole game client, so "full client against
 // minimap window" can be re-measured on any scene without rebuilding, and it doubles as the rollback.
 inline constexpr int kForceFullOverlay = 1 << 8;
+// Keep drawing and localization intact; disable only new marker mouse capture.
+inline constexpr int kMarkerMouseHook = 1 << 9;
 inline constexpr int kAll = kCapture | kGameStateDetection | kLocalization | kOverlayRender |
-    kOverlayClear | kWindowSync | kOverlayComposition | kForceFullReadback | kForceFullOverlay;
+    kOverlayClear | kWindowSync | kOverlayComposition | kForceFullReadback | kForceFullOverlay | kMarkerMouseHook;
 
 inline std::atomic_int switches{ 0 };
 
@@ -68,6 +70,7 @@ inline const char* Describe(int value) {
     case kOverlayComposition: return "改用 DirectComposition 呈现";
     case kForceFullReadback: return "强制整帧回读（回退/对照）";
     case kForceFullOverlay: return "强制整屏覆盖层（对照/回滚）";
+    case kMarkerMouseHook: return "停用标记鼠标钩子（诊断）";
     default: return "自定义组合";
     }
 }
@@ -85,6 +88,7 @@ inline const char* DescribeAscii(int value) {
     case kOverlayComposition: return "overlay-composition";
     case kForceFullReadback: return "force-full-readback";
     case kForceFullOverlay: return "force-full-overlay";
+    case kMarkerMouseHook: return "no-marker-mouse-hook";
     default: return "custom";
     }
 }

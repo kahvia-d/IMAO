@@ -4,6 +4,7 @@
 #include "DrawMarkerInteraction.h"
 #include "../../Runtime/MarkerLayout.h"
 #include "../../Runtime/StructuredLogger.h"
+#include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/RoutePlanningService.h"
 #include "../../Runtime/HandDrawnRoute.h"
 #include "../../Runtime/HandRouteInput.h"
@@ -16,6 +17,7 @@
 #include "../../Runtime/MarkerGuideProtocol.h"
 #include "../../Runtime/LayeredMapState.h"
 #include "../../Runtime/OverlayPacing.h"
+#include "../../Runtime/IsolationSwitches.h"
 #include "../../Runtime/RouteGamepadBridge.h"
 #include "../../Runtime/RouteGamepadControls.h"
 #include "../../Runtime/RouteToolbarNavigation.h"
@@ -1266,8 +1268,9 @@ void DrawMarkerInteraction::Initialize(HWND gameWindow) {
 // every mouse event of the game through this frame-paced thread and add that frame's work, including
 // the present that blocks on the compositor, to the player's mouse latency.
 void DrawMarkerInteraction::SyncMouseHook() {
-    const bool dragging = leftCapture.owned || rightCapture.owned || gesture.active;
-    const bool wanted = OverlayPacing::WantsMouseHook(mapInteractive, regionsAt, Clock::now(), dragging);
+    const auto transition = OverlayPacing::PlanMouseHook(mapInteractive, regionsAt, Clock::now(),
+        leftCapture.owned || rightCapture.owned, gesture.active, Isolation::Enabled(Isolation::kMarkerMouseHook));
+    const bool wanted = transition.wanted;
     if (wanted == (mouseHook != nullptr)) return;
     if (wanted) {
         mouseHook = SetWindowsHookExW(WH_MOUSE_LL, MouseProcedure, GetModuleHandleW(nullptr), 0);
@@ -1275,7 +1278,10 @@ void DrawMarkerInteraction::SyncMouseHook() {
     } else {
         UnhookWindowsHookEx(mouseHook);
         mouseHook = nullptr;
-        leftCapture = {}; rightCapture = {}; gesture = {}; pendingGesture.reset();
+        leftCapture = {}; rightCapture = {};
+        // The mouse-up may already have queued the final lasso/box operation.
+        // Let DrawMap validate and commit it even when isolation removes the hook.
+        if (transition.discardGestureState) { gesture = {}; pendingGesture.reset(); }
     }
 }
 std::string DrawMarkerInteraction::HookState() {
@@ -1499,8 +1505,34 @@ void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, flo
     }
 }
 
+namespace {
+DrawMarkerInteraction::MapRenderStats mapRenderStats;
+double RenderElapsedMs(Clock::time_point started) {
+    return std::chrono::duration<double, std::milli>(Clock::now() - started).count();
+}
+struct MapRenderTimer {
+    Clock::time_point started = Clock::now();
+    bool accepted = false;
+    ~MapRenderTimer() {
+        if (!accepted) return;
+        // Constructed before frame-owned values: include their destruction,
+        // which the individual read/layout/icon timers cannot otherwise see.
+        const double elapsed = RenderElapsedMs(started);
+        mapRenderStats.totalMs += elapsed;
+        mapRenderStats.maxTotalMs = std::max(mapRenderStats.maxTotalMs, elapsed);
+        if (elapsed >= 50.0)
+            Diagnostics::Record("map-marker-build-slow", "elapsedMs=" + std::to_string(elapsed));
+    }
+};
+}
+
+DrawMarkerInteraction::MapRenderStats DrawMarkerInteraction::TakeMapRenderStats() {
+    return std::exchange(mapRenderStats, {});
+}
+
 void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const ItemMarkerFrame& frame,
     const OverlayScreenTransform& motion, bool showCompleted, const PresentedOverlayFrame* presented) {
+    MapRenderTimer frameTimer;
     DrawItemBase::UpdateMarkerContext(frame.sceneName);
     const auto nextContext = DrawItemBase::MarkerProfile() + ":" + frame.sceneName;
     if (context != nextContext) {
@@ -1508,6 +1540,22 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         leftCapture.cancelled = true; rightCapture.cancelled = true; context = nextContext;
     }
     if (frame.profileId != DrawItemBase::MarkerProfile()) { Clear(); return; }
+    const auto completionStarted = Clock::now();
+    const auto completions = DrawItemBase::ReadPointRenderCompletions(frame.sceneName);
+    mapRenderStats.completionReadMs += RenderElapsedMs(completionStarted);
+    if (!completions.Compatible(frame.profileId) || frame.profileId != DrawItemBase::MarkerProfile()) {
+        Clear();
+        return;
+    }
+    ++mapRenderStats.frames;
+    frameTimer.accepted = true;
+    const auto completed = [&](const ItemDatas& item) {
+        const auto started = Clock::now();
+        const bool value = completions.Contains(item);
+        ++mapRenderStats.completionQueries;
+        mapRenderStats.completionLookupMs += RenderElapsedMs(started);
+        return value;
+    };
     displayedProfile = frame.profileId;
     hitClientRect = rect;
     const float radius = std::max(9.0f, rect.right * 0.0135f / 2);
@@ -1542,7 +1590,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         if(LayeredMap::RoleFor(item)==LayeredMap::MarkerRole::Hidden)continue;
         const auto position = motion.Apply(item.screenCoordiante);
         eligible.Add(item, position, rect.right, rect.bottom,
-            (previousPlanning.handDrawnActive&&showCompleted)?false:DrawItemBase::IsPointCompleted(frame.sceneName, item), observedPanel.Contains(position.x, position.y));
+            (previousPlanning.handDrawnActive&&showCompleted)?false:completed(item), observedPanel.Contains(position.x, position.y));
     }
     const int sceneId = Scene::SceneNameToId(frame.sceneName);
     RoutePlanningService::ObserveMap(sceneId, eligible.inViewport);
@@ -1617,7 +1665,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     std::unordered_map<std::string, std::size_t> visible;
     for (std::size_t index = 0; index < mapItems.size(); ++index) {
         const auto& item = mapItems[index];
-        if ((planning.enabled || !showCompleted) && DrawItemBase::IsPointCompleted(frame.sceneName, item)) continue;
+        if ((planning.enabled || !showCompleted) && completed(item)) continue;
         // Hidden markers must not reach the layout either: a marker that is not drawn must
         // not stay hoverable, selectable or counted in a group.
         const auto role = LayeredMap::RoleFor(item);
@@ -1633,7 +1681,11 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     }
     if (!selected.empty() && !visible.contains(selected)) ClearSelection();
     for (const auto& member : expandedMembers) if (!visible.contains(member)) { ClearSelection(); break; }
+    mapRenderStats.markers += points.size();
+    const auto layoutStarted = Clock::now();
     auto groups = BuildMarkerLayout(std::move(points), radius * 2, MarkerLayoutSettings::OverlapPercent());
+    mapRenderStats.layoutMs += RenderElapsedMs(layoutStarted);
+    mapRenderStats.groups += groups.size();
     GamepadCursorGeometry::Frame cursorGeometry;
     auto& cursorFrame = cursorGeometry.evidence;
     cursorFrame.binding.context = GamepadContextSnapshot::Shared().Read(frame.profileId);
@@ -1680,6 +1732,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     ImVec2 expandedAnchor{};
     bool foundExpanded = false;
     std::set<std::string> expandedSet(expandedMembers.begin(), expandedMembers.end());
+    const auto iconsStarted = Clock::now();
     for (const auto& group : groups) {
         const auto groupKey = "g:" + group.anchor.key;
         bool containsExpanded = false;
@@ -1694,7 +1747,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             return planningBinding.selectedKeys.contains(member.key);
         });
         DrawIcon(item, anchor, radius, hover || (planning.enabled ? selectedCount > 0 : selected == group.anchor.key),
-            DrawItemBase::IsPointCompleted(frame.sceneName, item), group.members.size(),true,AutoRoute::Key(item)==currentFreeKey);
+            completed(item), group.members.size(),true,AutoRoute::Key(item)==currentFreeKey);
         GamepadCursorGeometry::Footprint groupFootprint;
         groupFootprint.position = {anchor.x,anchor.y}; groupFootprint.radius = radius;
         for (const auto& member : group.members) {
@@ -1715,6 +1768,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         if (group.members.size() > 1) for (const auto& member : group.members) groupMembers[groupKey].push_back(member.key);
     }
     const auto now = Clock::now();
+    mapRenderStats.iconsMs += RenderElapsedMs(iconsStarted);
     if (hovered != hoverGroup) { hoverGroup = hovered; hoverAt = now; }
     // While drawing by hand, points that overlap each other would otherwise be a lottery: the hit
     // region on top wins and the rest can never be chosen. Standing near several of them opens the
@@ -1779,7 +1833,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             const bool memberHover = list ? mouseX >= left && mouseX <= left + 240 && std::abs(mouseY - position.y) <= 16 :
                 std::hypot(mouseX - position.x, mouseY - position.y) <= radius + 3;
             DrawIcon(item, position, radius, memberHover || (planning.enabled ? planningBinding.selectedKeys.contains(id) : selected == id),
-                DrawItemBase::IsPointCompleted(frame.sceneName, item),1,true,AutoRoute::Key(item)==currentFreeKey);
+                completed(item),1,true,AutoRoute::Key(item)==currentFreeKey);
             GamepadCursorGeometry::Footprint memberFootprint;
             memberFootprint.position={position.x,position.y}; memberFootprint.radius=radius;
             memberFootprint.rectangle=list; memberFootprint.left=left+3; memberFootprint.right=left+237;

@@ -464,6 +464,17 @@ int ImGuiOverWindows::start()
     RuntimeStatusBar::SetUiFont(io.Fonts->AddFontFromFileTTF(uiPath.c_str(), 40.0f, &uiConfig, uiRanges.Data));
     //IM_ASSERT(font != nullptr);
 
+    // NewFrame lazily builds the full Chinese font atlas and DX11 shaders.
+    // Complete that cold work before installing synchronous system input hooks.
+    const auto warmupStarted = std::chrono::steady_clock::now();
+    if (!rendererReady || !ImGui_ImplDX11_CreateDeviceObjects()) {
+        Diagnostics::Record("overlay-device-warmup-failed", "input hooks not installed");
+        return 1;
+    }
+    Diagnostics::Record("overlay-device-warmup", "elapsedMs=" + std::to_string(
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - warmupStarted).count()) +
+        " inputHooksInstalled=0");
+
     //设置透明窗口
     ImVec4 clear_color = ImVec4(0, 0, 0, 0);
     // The colorkey is the transparent mechanism of the layered path only. A composition surface is
@@ -768,6 +779,7 @@ int ImGuiOverWindows::start()
             if (frameStart - motionReportAt >= std::chrono::seconds(2)) {
                 const double seconds = std::chrono::duration<double>(frameStart - motionReportAt).count();
                 const auto markers = DrawItemOnMinMap::TakeMarkerRenderStats();
+                const auto mapMarkers = DrawMarkerInteraction::TakeMapRenderStats();
                 // The three status switches as one instant, so a reading of the log never combines values
                 // that were true at different moments.
                 const auto statusSwitches = RuntimeStatus::Snapshot();
@@ -847,6 +859,17 @@ int ImGuiOverWindows::start()
                     " markerLayoutMs=" + std::to_string(markers.draws ? markers.layoutMs / markers.draws : 0.0) +
                     " markerTextureLookupMs=" + std::to_string(markers.draws ? markers.textureLookupMs / markers.draws : 0.0) +
                     " markerDraws=" + std::to_string(markers.draws) +
+                    " mapMarkerFrames=" + std::to_string(mapMarkers.frames) +
+                    " mapMarkerCount=" + std::to_string(mapMarkers.frames ? static_cast<double>(mapMarkers.markers) / mapMarkers.frames : 0.0) +
+                    " mapMarkerGroups=" + std::to_string(mapMarkers.frames ? static_cast<double>(mapMarkers.groups) / mapMarkers.frames : 0.0) +
+                    " mapCompletionQueries=" + std::to_string(mapMarkers.completionQueries) +
+                    " mapCompletionReadMs=" + std::to_string(mapMarkers.frames ? mapMarkers.completionReadMs / mapMarkers.frames : 0.0) +
+                    " mapCompletionLookupMs=" + std::to_string(mapMarkers.frames ? mapMarkers.completionLookupMs / mapMarkers.frames : 0.0) +
+                    " mapLayoutMs=" + std::to_string(mapMarkers.frames ? mapMarkers.layoutMs / mapMarkers.frames : 0.0) +
+                    " mapIconsMs=" + std::to_string(mapMarkers.frames ? mapMarkers.iconsMs / mapMarkers.frames : 0.0) +
+                    " mapBuildMs=" + std::to_string(mapMarkers.frames ? mapMarkers.totalMs / mapMarkers.frames : 0.0) +
+                    " mapBuildMaxMs=" + std::to_string(mapMarkers.maxTotalMs) +
+                    " mouseHookIsolation=" + std::to_string(Isolation::Enabled(Isolation::kMarkerMouseHook)) +
                     " hooks=" + DrawMarkerInteraction::HookState());
                 motionReportAt = frameStart; renderedFrames = observedFrames = capturedFrames = 0;
                 attachedFrames = trackingMisses = 0; heldMinimapFrames = 0; skippedPresents = 0; heldPresents = 0; skippedOverlayFrames = 0;

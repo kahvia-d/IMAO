@@ -55,6 +55,7 @@ static RefreshableCategories refreshableCategories;
 // scenes and categories in the shipped data, so one flat set answers the question for a
 // cloud identity that arrives with no category attached. A script asserts that uniqueness.
 static std::unordered_set<std::string> refreshablePointIds;
+static std::shared_ptr<const RenderDailyRouting> renderDailyRouting;
 static std::mutex markerEventMutex;
 static std::function<void(const json&)> markerEventCallback;
 static std::mutex markerGuideMutex;
@@ -134,6 +135,8 @@ void DrawItemBase::Initi() {
             }
         }
     }
+    renderDailyRouting = std::make_shared<const RenderDailyRouting>(RenderDailyRouting{
+        {refreshableCategories.Ids().begin(), refreshableCategories.Ids().end()}, refreshablePointIds});
     if (refreshableCategories.Empty())
         StructuredLogger::Record("warn", "farm", "refresh-categories-unavailable", refreshableCategories.Diagnostic());
     else
@@ -151,6 +154,7 @@ void DrawItemBase::Shutdown() {
     markerStore.reset();
     farmStore.reset();freeStore.reset();
     refreshablePointIds.clear();
+    renderDailyRouting.reset();
     refreshableCategories = RefreshableCategories{};
 }
 
@@ -358,6 +362,28 @@ PointFilterCompletionRead DrawItemBase::ReadPointFilterCompletions(const std::st
     if (farmStore) result.farm = farmStore->ReadCompletions(MarkerCompletionStore::SceneState(scene));
     else result.farm.profileId = result.permanent.profileId;
     result.dailyCategories.insert(refreshableCategories.Ids().begin(), refreshableCategories.Ids().end());
+    return result;
+}
+
+PointRenderCompletionRead DrawItemBase::ReadPointRenderCompletions(const std::string& scene) {
+    PointRenderCompletionRead result;
+    if (!markerStore) return result;
+    result.permanent = markerStore->ReadRenderCompletions(scene);
+    if (farmStore) result.farm = farmStore->ReadRenderCompletions();
+    else result.farm.profileId = result.permanent.profileId;
+    result.free.profileId = result.permanent.profileId;
+    try {
+        if (freeStore) result.free = freeStore->ReadCompletions(result.permanent.profileId);
+    } catch (const std::exception& error) {
+        // Preserve the old unavailable-free-ledger behavior, but report it.
+        static auto lastReport = std::chrono::steady_clock::time_point{};
+        const auto now = std::chrono::steady_clock::now();
+        if (now - lastReport >= std::chrono::seconds(2)) {
+            StructuredLogger::Record("warning", "markers", "render-free-completion-unavailable", error.what());
+            lastReport = now;
+        }
+    }
+    result.dailyRouting = renderDailyRouting;
     return result;
 }
 

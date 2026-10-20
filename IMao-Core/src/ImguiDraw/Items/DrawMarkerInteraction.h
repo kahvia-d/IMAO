@@ -5,6 +5,12 @@
 
 class DrawMarkerInteraction {
 public:
+    struct MapRenderStats {
+        std::uint64_t frames = 0, markers = 0, groups = 0, completionQueries = 0;
+        double completionReadMs = 0, completionLookupMs = 0, layoutMs = 0, iconsMs = 0;
+        double totalMs = 0, maxTotalMs = 0;
+    };
+    static MapRenderStats TakeMapRenderStats();
     static void Initialize(HWND gameWindow);
     static void Shutdown();
     static void BeginFrame();

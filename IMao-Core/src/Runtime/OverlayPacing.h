@@ -24,11 +24,25 @@ inline std::chrono::microseconds FramePeriod(bool routeCanvasActive) {
 // is already in flight when the map closes.
 inline constexpr std::chrono::milliseconds kMouseHookGrace{500};
 
-inline bool WantsMouseHook(bool mapInteractive, Clock::time_point regionsPublishedAt, Clock::time_point now, bool dragging = false) {
+inline bool WantsMouseHook(bool mapInteractive, Clock::time_point regionsPublishedAt, Clock::time_point now,
+    bool dragging = false, bool diagnosticDisabled = false) {
     // A drag that this hook already swallowed must keep owning its release, even when the map closes
     // or loses focus in between, so the game never receives a mouse-up without a matching down.
     if (dragging) return true;
+    if (diagnosticDisabled) return false;
     return mapInteractive && regionsPublishedAt != Clock::time_point{} && now - regionsPublishedAt < kMouseHookGrace;
+}
+
+// Keep controller gestures separate from mouse down/up ownership during isolation.
+struct MouseHookTransition {
+    bool wanted = false;
+    bool discardGestureState = true;
+};
+
+inline MouseHookTransition PlanMouseHook(bool mapInteractive, Clock::time_point regionsAt,
+    Clock::time_point now, bool mouseButtonOwned, bool gestureActive, bool diagnosticDisabled) {
+    return {WantsMouseHook(mapInteractive, regionsAt, now,
+        mouseButtonOwned || (!diagnosticDisabled && gestureActive), diagnosticDisabled), !diagnosticDisabled};
 }
 
 // Capturing the game window is synchronous work inside the game, so it only follows the overlay rate
