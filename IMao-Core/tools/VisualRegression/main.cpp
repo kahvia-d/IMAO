@@ -28,6 +28,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <numeric>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -1025,7 +1026,123 @@ int CheckRankingOnImage(const std::filesystem::path& repositoryRoot, const std::
     return 0;
 }
 
+// A fresh-process component probe: no OCR, capture or overlay threads are started.
+// Process deltas here isolate this pipeline; they are not allocation census data.
+int MeasureMinimapMemory(const std::filesystem::path& snapshotPath,
+    const std::filesystem::path& imagePath, const std::wstring& operation) {
+    if (operation != L"prepare" && operation != L"global") {
+        std::cerr << "Minimap memory operation must be prepare or global.\n";
+        return 2;
+    }
+    const auto memory = [](const char* stage) {
+        PROCESS_MEMORY_COUNTERS_EX c{}; c.cb = sizeof(c);
+        if (!GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&c), sizeof(c)))
+            throw std::runtime_error("Minimap probe process memory query failed");
+        std::cout << nlohmann::json{{"stage", stage}, {"wsBytes", c.WorkingSetSize},
+            {"privateBytes", c.PrivateUsage}, {"peakWsBytes", c.PeakWorkingSetSize}}.dump() << std::endl;
+    };
+    try {
+        memory("baseline");
+        std::string error;
+        nlohmann::json snapshot;
+        if (!ResourceSnapshotValidation::ReadAndValidate(snapshotPath, snapshot, error))
+            throw std::runtime_error("Invalid memory probe snapshot: " + error);
+        ResourceSnapshotContext::Initialize(std::move(snapshot));
+        RuntimeFeatureRepository::Instance().BeginPreload(ResourceSnapshotContext::BaselineRoot());
+        auto resources = RuntimeFeatureRepository::Instance().AwaitReady(error);
+        if (!resources) throw std::runtime_error(error);
+        memory("resources-ready");
+        if (!GlobalVisualLocalizer::Initialize(resources, error)) throw std::runtime_error(error);
+        memory("localizer-ready");
+        {
+            const auto image = cv::imread(imagePath.string(), cv::IMREAD_UNCHANGED);
+            if (image.empty()) throw std::runtime_error("Minimap probe image missing");
+            memory("image-loaded");
+            for (int iteration = 1; iteration <= 3; ++iteration) {
+                cv::Mat normalized;
+                ImageFeatureData features;
+                const bool prepared = GlobalVisualLocalizer::PrepareMinimap(image, normalized, features);
+                memory("minimap-prepared");
+                std::cout << nlohmann::json{{"iteration", iteration}, {"prepared", prepared},
+                    {"descriptorBytes", features.imgDescriptors.total() * features.imgDescriptors.elemSize()}}.dump() << std::endl;
+                if (operation == L"global" && prepared) {
+                    VisualLocalizationRequest request;
+                    request.sessionId = request.uiGeneration = 1;
+                    request.frameId = request.requestId = iteration;
+                    request.normalizedMinimap = normalized; request.minimapFeatures = features;
+                    if (!GlobalVisualLocalizer::Submit(std::move(request))) throw std::runtime_error("Probe submit failed");
+                    VisualLocalizationResult result;
+                    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+                    bool received = false;
+                    while (std::chrono::steady_clock::now() < deadline) {
+                        if (GlobalVisualLocalizer::TryTakeLatestResult(result)) { received = true; break; }
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    }
+                    if (!received) throw std::runtime_error("Minimap probe request timed out");
+                    memory("global-complete");
+                    std::cout << nlohmann::json{{"iteration", iteration}, {"durationMs", result.totalMilliseconds},
+                        {"quality", GlobalVisualLocalizer::QualityName(result.quality)},
+                        {"candidates", result.candidates.size()}}.dump() << std::endl;
+                }
+            }
+        }
+        memory("query-released");
+        GlobalVisualLocalizer::Shutdown();
+        memory("localizer-released");
+        resources.reset(); RuntimeFeatureRepository::Instance().Shutdown();
+        memory("resources-released");
+        return 0;
+    } catch (const std::exception& e) {
+        GlobalVisualLocalizer::Shutdown(); RuntimeFeatureRepository::Instance().Shutdown();
+        std::cerr << e.what() << '\n'; return 1;
+    }
+}
+
 int wmain(int argumentCount, wchar_t** arguments) {
+    if (argumentCount == 3 && std::wstring(arguments[1]) == L"--subset-memory") {
+        try {
+            const auto memory = [](const char* stage) {
+                PROCESS_MEMORY_COUNTERS_EX c{}; c.cb = sizeof(c);
+                if (!GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&c), sizeof(c)))
+                    throw std::runtime_error("Subset probe memory query failed");
+                std::cout << nlohmann::json{{"stage", stage}, {"wsBytes", c.WorkingSetSize},
+                    {"privateBytes", c.PrivateUsage}, {"peakWsBytes", c.PeakWorkingSetSize}}.dump() << std::endl;
+            };
+            memory("baseline");
+            ImageFeatureData source;
+            std::string error;
+            if (!FeatureBinaryCodec::Load(arguments[2], source, error, nullptr, nullptr, true))
+                throw std::runtime_error(error);
+            memory("source-ready");
+            std::vector<uint32_t> rows(source.imgKeypoints.size());
+            std::iota(rows.begin(), rows.end(), uint32_t{});
+            for (int iteration = 0; iteration < 3; ++iteration) {
+                const auto start = std::chrono::steady_clock::now();
+                {
+                    const auto subset = UniqueFeatureSubset(source, rows);
+                    const auto ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+                    memory("subset-ready");
+                    // Hash all output bytes/order, outside the measured preparation time.
+                    uint64_t hash = 14695981039346656037ull;
+                    const auto add = [&](const unsigned char* bytes, size_t count) {
+                        for (size_t i = 0; i < count; ++i) { hash ^= bytes[i]; hash *= 1099511628211ull; }
+                    };
+                    for (const auto& keypoint : subset.imgKeypoints) {
+                        add(reinterpret_cast<const unsigned char*>(&keypoint.pt.x), sizeof(float));
+                        add(reinterpret_cast<const unsigned char*>(&keypoint.pt.y), sizeof(float));
+                    }
+                    for (int row = 0; row < subset.imgDescriptors.rows; ++row)
+                        add(subset.imgDescriptors.ptr(row), subset.imgDescriptors.cols * sizeof(float));
+                    std::cout << nlohmann::json{{"iteration", iteration}, {"inputRows", rows.size()},
+                        {"uniqueRows", subset.imgKeypoints.size()}, {"outputHash", hash}, {"durationMs", ms}}.dump() << std::endl;
+                }
+                memory("subset-released");
+            }
+            source.Release(); memory("source-released"); return 0;
+        } catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }
+    }
+    if (argumentCount == 5 && std::wstring(arguments[1]) == L"--minimap-memory")
+        return MeasureMinimapMemory(arguments[2], arguments[3], arguments[4]);
     if (argumentCount == 2 && std::wstring(arguments[1]) == L"--scene-self-test") return RunMultiSceneViewportTests();
     if (argumentCount == 3 && std::wstring(arguments[1]) == L"--viewport-storage")
         return MeasureViewportCost(std::filesystem::path(arguments[2]), 0, true);

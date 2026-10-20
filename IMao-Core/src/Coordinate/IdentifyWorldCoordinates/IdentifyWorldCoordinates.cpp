@@ -110,9 +110,23 @@ public:
         if (!started_ || !initializationComplete_ || (recognizer_ == nullptr && yolo_ == nullptr) ||
             (lastSubmittedAt_ != std::chrono::steady_clock::time_point{} &&
                 now - lastSubmittedAt_ < (request.deadlineScheduled ? std::chrono::milliseconds(50) : kMinimumSubmissionInterval))) return false;
-        request.snapshot = request.snapshot.clone();
+        const size_t sourceBytes = request.snapshot.total() * request.snapshot.elemSize();
+        cv::Size sourceSize;
+        if (yolo_) {
+            // Own only the pixels inference consumes. Keep the original size for
+            // HUD calibration; never reinterpret the crop as a small game frame.
+            sourceSize = request.snapshot.size();
+            const auto region = YoloCoordinateRecognizer::Region(sourceSize);
+            request.snapshot = region.empty() ? cv::Mat{} : request.snapshot(region).clone();
+        } else {
+            request.snapshot = request.snapshot.clone();
+        }
+        if (inputStorageTraces_++ < 16)
+            Diagnostics::Record("ocr-input-storage", "sourceBytes=" + std::to_string(sourceBytes) +
+                " ownedBytes=" + std::to_string(request.snapshot.total() * request.snapshot.elemSize()) +
+                " cropped=" + std::to_string(!sourceSize.empty()));
         request.submittedAt = now;
-        pendingRequest_ = std::move(request);
+        pendingRequest_ = QueuedRequest{ std::move(request), sourceSize };
         lastSubmittedAt_ = now;
         condition_.notify_all();
         return true;
@@ -128,7 +142,8 @@ public:
         return true;
     }
 
-    CoordinateRecognitionResult Recognize(const CoordinateRecognitionRequest& request) {
+    CoordinateRecognitionResult Recognize(const CoordinateRecognitionRequest& request,
+        cv::Size sourceFrameSize = {}) {
         CoordinateRecognitionResult result;
         result.sessionId = request.sessionId;
         result.uiGeneration = request.uiGeneration;
@@ -137,16 +152,18 @@ public:
         result.capturedAt = request.capturedAt;
 
         if (yolo_) {
-            const auto region = YoloCoordinateRecognizer::Region(request.snapshot.size());
-            if (request.snapshot.empty() || region.empty()) {
+            const bool cropped = !sourceFrameSize.empty();
+            const auto originalSize = cropped ? sourceFrameSize : request.snapshot.size();
+            const auto region = YoloCoordinateRecognizer::Region(originalSize);
+            if (request.snapshot.empty() || region.empty() || (cropped && request.snapshot.size() != region.size())) {
                 result.status = CoordinateRecognitionStatus::UnsupportedResolution;
                 return result;
             }
             const auto started = std::chrono::steady_clock::now();
-            const bool calibrated = request.snapshot.size() == cv::Size(2560,1440) &&
+            const bool calibrated = originalSize == cv::Size(2560,1440) &&
                 region == cv::Rect(32,1405,608,33);
             std::scoped_lock inferenceLock(inferenceMutex_);
-            const auto selected = yolo_->Recognize(request.snapshot(region), calibrated);
+            const auto selected = yolo_->Recognize(cropped ? request.snapshot : request.snapshot(region), calibrated);
             result.inferenceMilliseconds = MillisecondsSince(started);
             if (!selected.is_null()) {
                 CoordinateCandidate candidate;
@@ -333,6 +350,7 @@ public:
             pendingRequest_.reset();
             latestResult_.reset();
             lastSubmittedAt_ = {};
+            inputStorageTraces_ = 0;
         }
         IdentifyWorldCoordinates::isLoaded.store(false);
     }
@@ -395,7 +413,8 @@ private:
 
     void Worker(std::stop_token stopToken) {
         while (!stopToken.stop_requested()) {
-            CoordinateRecognitionRequest request;
+            QueuedRequest queued;
+            auto& request = queued.request;
             {
                 std::unique_lock lock(mutex_);
                 condition_.wait(lock, [&] {
@@ -403,7 +422,7 @@ private:
                         (initializationComplete_ && pendingRequest_.has_value());
                 });
                 if (stopToken.stop_requested()) return;
-                request = std::move(*pendingRequest_);
+                queued = std::move(*pendingRequest_);
                 pendingRequest_.reset();
             }
 
@@ -418,7 +437,7 @@ private:
             result.capturedAt = request.capturedAt;
             result.status = CoordinateRecognitionStatus::NoCandidate;
             try {
-                result = Recognize(request);
+                result = Recognize(request, queued.sourceFrameSize);
             }
             catch (const cv::Exception& exception) {
                 Diagnostics::Record("ocr-worker", std::string("OpenCV exception: ") + exception.what());
@@ -449,7 +468,12 @@ private:
     bool started_ = false;
     bool initializationComplete_ = false;
     std::string error_;
-    std::optional<CoordinateRecognitionRequest> pendingRequest_;
+    struct QueuedRequest {
+        CoordinateRecognitionRequest request;
+        cv::Size sourceFrameSize;
+    };
+    std::optional<QueuedRequest> pendingRequest_;
+    size_t inputStorageTraces_ = 0;
     std::optional<CoordinateRecognitionResult> latestResult_;
     std::chrono::steady_clock::time_point lastSubmittedAt_{};
 };
