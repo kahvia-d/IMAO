@@ -104,18 +104,18 @@ KuroTileFeaturePackStatus Failure(KuroTileFeaturePackStatus status, const std::s
 }
 }
 
-std::vector<KuroTileFeaturePackStatus> KuroTileFeaturePack::LoadRegistered(const std::string& featureDataRoot) {
+std::vector<KuroTileFeaturePackStatus> KuroTileFeaturePack::LoadRegistered(const std::string& featureDataRoot, bool keepQuantized) {
     if (ResourceSnapshotContext::Configured()) {
         std::vector<KuroTileFeaturePackStatus> result;
         for (const auto& package : ResourceSnapshotContext::Snapshot().at("packages")) {
             if (package.at("kind") == "tile")
-                result.push_back(LoadDirectory(ResourceSnapshotContext::Path(package.at("directory").get<std::string>())));
+                result.push_back(LoadDirectory(ResourceSnapshotContext::Path(package.at("directory").get<std::string>()), keepQuantized));
         }
         return result;
     }
     const std::filesystem::path featureRoot(featureDataRoot);
     const auto registryPath = featureRoot / "kuro-tile-packs.json";
-    if (!std::filesystem::exists(registryPath)) return { LoadPack(featureDataRoot, "Dreamzhou") };
+    if (!std::filesystem::exists(registryPath)) return { LoadPack(featureDataRoot, "Dreamzhou", keepQuantized) };
     try {
         std::ifstream input(registryPath);
         if (!input) throw std::runtime_error("tile-pack registry cannot be opened");
@@ -131,7 +131,7 @@ std::vector<KuroTileFeaturePackStatus> KuroTileFeaturePack::LoadRegistered(const
                 throw std::runtime_error("tile-pack registry contains an invalid or duplicate directory");
             }
             directories.push_back(directory);
-            result.push_back(LoadPack(featureDataRoot, directory));
+            result.push_back(LoadPack(featureDataRoot, directory, keepQuantized));
         }
         return result;
     }
@@ -145,15 +145,15 @@ std::vector<KuroTileFeaturePackStatus> KuroTileFeaturePack::LoadRegistered(const
 }
 
 KuroTileFeaturePackStatus KuroTileFeaturePack::LoadPack(const std::string& featureDataRoot,
-    const std::string& directoryName) {
+    const std::string& directoryName, bool keepQuantized) {
     KuroTileFeaturePackStatus status;
     status.directoryName = directoryName;
     if (!IsSafeDirectoryName(directoryName)) return Failure(std::move(status), "invalid tile-pack directory");
     const auto packDirectory = std::filesystem::path(featureDataRoot) / "KuroTilePacks" / directoryName;
-    return LoadDirectory(packDirectory);
+    return LoadDirectory(packDirectory, keepQuantized);
 }
 
-KuroTileFeaturePackStatus KuroTileFeaturePack::LoadDirectory(const std::filesystem::path& packDirectory) {
+KuroTileFeaturePackStatus KuroTileFeaturePack::LoadDirectory(const std::filesystem::path& packDirectory, bool keepQuantized) {
     KuroTileFeaturePackStatus status;
     status.directoryName = packDirectory.filename().string();
     status.directoryPath = packDirectory;
@@ -219,7 +219,7 @@ KuroTileFeaturePackStatus KuroTileFeaturePack::LoadDirectory(const std::filesyst
             FeatureBinaryHeader binaryHeader;
             ImageFeatureData binaryFeatures;
             std::string binaryError;
-            if (FeatureBinaryCodec::Load(binaryPath, binaryFeatures, binaryError, &binaryHeader) &&
+            if (FeatureBinaryCodec::Load(binaryPath, binaryFeatures, binaryError, &binaryHeader, nullptr, keepQuantized) &&
                 binaryHeader.sourceXmlSha256 == status.sourceSha256 &&
                 binaryFeatures.imgKeypoints.size() == static_cast<std::size_t>(expectedCount)) {
                 status.featureData = std::move(binaryFeatures);

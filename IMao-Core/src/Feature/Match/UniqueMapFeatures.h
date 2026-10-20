@@ -11,13 +11,9 @@
 // owned descriptor bytes. Hash collisions never collapse different observations.
 // Persisted IMX row identities remain unchanged.
 class UniqueMapFeatures {
-    // The descriptor is a fixed-size row - MapVisualIndex::DescriptorColumns 128 bytes for the shipped
-    // packs, which is what every caller passes. It used to be held as a std::string, so every inserted
-    // observation heap-allocated its own 512-byte copy and the comparison hashed the bytes twice; a
-    // 25k-point candidate set paid ~15 MB of allocation for data that is already contiguous in the
-    // caller's matrix (2026-10-02). The inline buffer holds it instead, and any row larger than the
-    // buffer falls back to owning a string so a future wider descriptor cannot silently lose bytes.
-    static constexpr std::size_t InlineBytes = 128;
+    // SURF has 128 float columns: keep the owned 512-byte identity inline.
+    // Wider descriptors retain the owning overflow representation.
+    static constexpr std::size_t InlineBytes = 128 * sizeof(float);
     struct Observation {
         uint64_t coordinate;
         std::size_t length;

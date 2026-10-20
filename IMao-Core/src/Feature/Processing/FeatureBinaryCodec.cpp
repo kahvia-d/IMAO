@@ -248,7 +248,7 @@ bool WriteExact(std::ofstream& output, const void* data, std::uint64_t byteCount
 
 bool FeatureBinaryCodec::Load(const std::filesystem::path& path, ImageFeatureData& output,
     std::string& error, FeatureBinaryHeader* returnedHeader,
-    std::array<std::uint8_t, 32>* returnedFileSha256) {
+    std::array<std::uint8_t, 32>* returnedFileSha256, bool keepQuantized) {
     output.Release();
     try {
         std::ifstream input(path, std::ios::binary);
@@ -397,7 +397,7 @@ bool FeatureBinaryCodec::Load(const std::filesystem::path& path, ImageFeatureDat
         }
 
         output.imgDescriptors.create(static_cast<int>(header.descriptorRows),
-            static_cast<int>(header.descriptorColumns), CV_32FC1);
+            static_cast<int>(header.descriptorColumns), quantized && keepQuantized ? CV_8UC1 : CV_32FC1);
         if (!output.imgDescriptors.isContinuous()) {
             output.Release();
             error = "feature descriptor storage is non-contiguous";
@@ -430,10 +430,15 @@ bool FeatureBinaryCodec::Load(const std::filesystem::path& path, ImageFeatureDat
                 return false;
             }
             payloadHash.Update(codes.data(), codes.size());
-            auto* values = output.imgDescriptors.ptr<float>();
-            const auto offset = static_cast<int>(header.descriptorOffset);
-            for (std::size_t index = 0; index < codeBytes; ++index) {
-                values[index] = static_cast<float>(static_cast<int>(codes[index]) + offset) * header.descriptorScale;
+            if (keepQuantized) {
+                std::memcpy(output.imgDescriptors.data, codes.data(), codeBytes);
+                output.descriptorEncoding.push_back({output.imgDescriptors.rows, header.descriptorScale,
+                    static_cast<int>(header.descriptorOffset)});
+            } else {
+                auto* values = output.imgDescriptors.ptr<float>();
+                const auto offset = static_cast<int>(header.descriptorOffset);
+                for (std::size_t index = 0; index < codeBytes; ++index)
+                    values[index] = static_cast<float>(static_cast<int>(codes[index]) + offset) * header.descriptorScale;
             }
         }
         if (payloadHash.Finish() != header.payloadSha256) {

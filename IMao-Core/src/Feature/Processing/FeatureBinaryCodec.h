@@ -55,7 +55,7 @@ class FeatureBinaryCodec {
 public:
     static bool Load(const std::filesystem::path& path, ImageFeatureData& output,
         std::string& error, FeatureBinaryHeader* header = nullptr,
-        std::array<std::uint8_t, 32>* fileSha256 = nullptr);
+        std::array<std::uint8_t, 32>* fileSha256 = nullptr, bool keepQuantized = false);
 
     // Writes the codec's current version (v2: quantized descriptors, deflated
     // payloads). `input.imgDescriptors` stays CV_32FC1 in memory; only the file

@@ -2,6 +2,7 @@
 
 #include "App/MapViewportLocalizer.h"
 #include "Feature/Match/SceneMapFeatures.h"
+#include "Feature/Processing/FeatureBinaryCodec.h"
 #include "Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/xfeatures2d.hpp>
@@ -179,6 +180,31 @@ inline int RunMultiSceneViewportTests() {
     auto ambiguous = locate(images[1]);
     expect(!ambiguous.accepted && ambiguous.sceneId == 0, "ambiguous scenes rejected");
     MapViewportLocalizer::Shutdown();
+    // Exercise the same worker acceptance and ambiguity gates with the storage
+    // representation used by runtime packs, rather than only synthetic float maps.
+    const auto storedPath = std::filesystem::temp_directory_path() /
+        ("imao-viewport-storage-" + std::to_string(GetCurrentProcessId()) + ".imf");
+    expect(FeatureBinaryCodec::Save(storedPath, resources->map, {}, error), "scene fixture saves encoded descriptors");
+    expect(FeatureBinaryCodec::Load(storedPath, resources->map, error, nullptr, nullptr, true),
+        "scene fixture loads runtime encoded descriptors");
+    expect(MapViewportLocalizer::Initialize(resources, error), "encoded scene worker initializes");
+    const auto packedAmbiguity = locate(images[1]);
+    expect(!packedAmbiguity.accepted && packedAmbiguity.sceneId == 0,
+        "encoded scene group checks the second accepting scene before publishing any answer");
+    const auto packedPositive = locate(images[4]);
+    expect(packedPositive.accepted && packedPositive.sceneId == 5,
+        "encoded scene worker preserves unique positive geometry");
+    MapViewportLocalizationRequest cancelled;
+    cancelled.requestId = ++serial; cancelled.mapCrop = images[4];
+    MapViewportLocalizer::Submit(std::move(cancelled));
+    MapViewportLocalizer::CancelPending();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    MapViewportLocalizationResult stale;
+    expect(!MapViewportLocalizer::TryTakeLatestResult(stale), "cancelled request cannot publish an accepting partial group");
+    const auto fresh = locate(images[4]);
+    expect(fresh.accepted && fresh.requestId == serial && fresh.sceneId == 5, "worker accepts fresh evidence after cancellation");
+    MapViewportLocalizer::Shutdown();
+    std::filesystem::remove(storedPath);
     Scene::minimapScales = savedMinimapScales;
     return failures == 0 ? 0 : 3;
 }

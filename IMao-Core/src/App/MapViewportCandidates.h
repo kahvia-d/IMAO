@@ -11,7 +11,7 @@
 // implementations happen to do (2026-10-02).
 
 #include "../Feature/Match/FeatureMatch.h"
-#include "../Feature/Match/UniqueMapFeatures.h"
+#include "../Feature/Match/UniqueFeatureSubset.h"
 #include "../Feature/RuntimeFeatureRepository.h"
 #include "../Feature/VisualIndex/MapVisualIndex.h"
 #include "WorldSearchPrior.h"
@@ -64,10 +64,11 @@ inline std::vector<std::uint32_t> SelectSceneTileIndices(const RuntimeFeatureRes
 // fall outside the descriptor storage left out. Ascending order is part of the contract: the cached-key
 // path relies on the same tile set producing the same sequence.
 inline std::vector<std::uint32_t> SelectCandidateRows(const RuntimeFeatureResources& resources,
-    const std::vector<std::uint32_t>& tileIndices) {
+    const std::vector<std::uint32_t>& tileIndices, const std::function<bool()>& interrupted = {}) {
     if (tileIndices.empty()) return {};
     std::vector<unsigned char> selected(resources.map.imgKeypoints.size(), 0);
     for (const auto tileIndex : tileIndices) {
+        if (interrupted && interrupted()) throw SearchInterrupted{};
         if (tileIndex >= resources.visualIndex.tiles.size()) continue;
         const auto& tile = resources.visualIndex.tiles[tileIndex];
         const std::size_t first = tile.featureRowOffset;
@@ -80,6 +81,7 @@ inline std::vector<std::uint32_t> SelectCandidateRows(const RuntimeFeatureResour
     }
     std::vector<std::uint32_t> rows;
     for (std::size_t row = 0; row < selected.size(); ++row) {
+        if ((row % 1024) == 0 && interrupted && interrupted()) throw SearchInterrupted{};
         if (selected[row] && resources.FeatureRowEnabled(row)) rows.push_back(static_cast<std::uint32_t>(row));
     }
     return rows;
@@ -89,19 +91,9 @@ inline std::vector<std::uint32_t> SelectCandidateRows(const RuntimeFeatureResour
 // map point collapse here, which is what the geometry fit wants - one vote per point - and it is also
 // what makes the copy necessary and what the copy costs.
 inline ImageFeatureData SelectSceneCandidates(const RuntimeFeatureResources& resources,
-    const std::vector<std::uint32_t>& tileIndices) {
-    ImageFeatureData candidates;
-    const auto rows = SelectCandidateRows(resources, tileIndices);
-    if (rows.empty()) return candidates;
-    UniqueMapFeatures unique;
-    candidates.imgKeypoints.reserve(rows.size());
-    for (const auto row : rows) {
-        if (!unique.Insert(resources.map.imgKeypoints[row],
-                resources.map.imgDescriptors.row(static_cast<int>(row)))) continue;
-        candidates.imgKeypoints.push_back(resources.map.imgKeypoints[row]);
-        candidates.imgDescriptors.push_back(resources.map.imgDescriptors.row(static_cast<int>(row)));
-    }
-    return candidates;
+    const std::vector<std::uint32_t>& tileIndices, const std::function<bool()>& interrupted = {}) {
+    const auto rows = SelectCandidateRows(resources, tileIndices, interrupted);
+    return UniqueFeatureSubset(resources.map, rows, interrupted);
 }
 
 inline std::string TileSetKey(const std::vector<std::uint32_t>& tileIndices) {

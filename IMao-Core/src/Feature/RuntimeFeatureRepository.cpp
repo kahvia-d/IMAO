@@ -1,5 +1,6 @@
 #include "LegacyFeatureExclusions.h"
 #include "RuntimeFeatureRepository.h"
+#include "Match/AppendFeatureBatch.h"
 
 #include "CandidateFeaturePack.h"
 #include "KuroTileFeaturePack.h"
@@ -73,79 +74,7 @@ bool FinalizeMergedVisualIndex(MapVisualIndex& index, std::string& error) {
     return MapVisualIndexCodec::BuildPostingOffsets(index, error);
 }
 
-// Repeated cv::vconcat calls reallocate and copy the large base map descriptor
-// matrix for every optional pack.  On lower-memory machines that causes paging
-// and makes a few small extension packs appear to hang the application.
-bool AppendFeatureBatch(ImageFeatureData& destination,
-    const std::vector<const ImageFeatureData*>& additions, std::string& error) {
-    if (additions.empty()) return true;
-    // A snapshot that selects no base atlas arrives here empty: the first usable pack then
-    // seeds the map instead of being rejected as an incomplete base. The seed also defines
-    // the descriptor shape every later pack has to match. It is a copy, so that same pack
-    // must be skipped below - counting or appending it again would duplicate its rows and
-    // shift every later pack's row base away from what its visual shard recorded.
-    const ImageFeatureData* seeded = nullptr;
-    if (destination.imgKeypoints.empty() || destination.imgDescriptors.empty()) {
-        for (const auto* addition : additions) {
-            if (addition == nullptr || addition->imgKeypoints.empty() || addition->imgDescriptors.empty()) continue;
-            if (addition->imgDescriptors.rows != static_cast<int>(addition->imgKeypoints.size())) {
-                error = "optional map feature descriptors are incompatible with their keypoints";
-                return false;
-            }
-            destination = *addition;
-            seeded = addition;
-            break;
-        }
-    }
-    if (destination.imgKeypoints.empty() || destination.imgDescriptors.empty() ||
-        destination.imgDescriptors.rows != static_cast<int>(destination.imgKeypoints.size())) {
-        error = "base map feature data is incomplete";
-        return false;
-    }
 
-    std::size_t totalKeypoints = destination.imgKeypoints.size();
-    for (const auto* addition : additions) {
-        if (addition == nullptr || addition == seeded || addition->imgKeypoints.empty() || addition->imgDescriptors.empty()) continue;
-        if (addition->imgDescriptors.rows != static_cast<int>(addition->imgKeypoints.size()) ||
-            addition->imgDescriptors.type() != destination.imgDescriptors.type() ||
-            addition->imgDescriptors.cols != destination.imgDescriptors.cols) {
-            error = "optional map feature descriptors are incompatible with the base map";
-            return false;
-        }
-        if (addition->imgKeypoints.size() >
-            std::numeric_limits<std::size_t>::max() - totalKeypoints) {
-            error = "optional map feature count overflow";
-            return false;
-        }
-        totalKeypoints += addition->imgKeypoints.size();
-    }
-    if (totalKeypoints > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-        error = "optional map feature row count exceeds OpenCV limits";
-        return false;
-    }
-
-    ImageFeatureData merged;
-    merged.imgKeypoints.reserve(totalKeypoints);
-    merged.imgDescriptors.create(static_cast<int>(totalKeypoints), destination.imgDescriptors.cols,
-        destination.imgDescriptors.type());
-    int row = 0;
-    const auto append = [&merged, &row](const ImageFeatureData& source) {
-        if (source.imgKeypoints.empty() || source.imgDescriptors.empty()) return;
-        merged.imgKeypoints.insert(merged.imgKeypoints.end(), source.imgKeypoints.begin(), source.imgKeypoints.end());
-        const auto nextRow = row + source.imgDescriptors.rows;
-        source.imgDescriptors.copyTo(merged.imgDescriptors.rowRange(row, nextRow));
-        row = nextRow;
-    };
-    append(destination);
-    for (const auto* addition : additions) {
-        if (addition != nullptr && addition != seeded &&
-            !addition->imgKeypoints.empty() && !addition->imgDescriptors.empty()) {
-            append(*addition);
-        }
-    }
-    destination = std::move(merged);
-    return true;
-}
 }
 
 RuntimeFeatureRepository& RuntimeFeatureRepository::Instance() {
@@ -211,7 +140,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         const auto mapStart = std::chrono::steady_clock::now();
         std::array<std::uint8_t, 32> sourceImfSha{};
         bool sourceImfHashReady = FeatureBinaryCodec::Load(
-            mapFeatureRoot / "Map_features.imf", loaded->map, failure, nullptr, &sourceImfSha);
+            mapFeatureRoot / "Map_features.imf", loaded->map, failure, nullptr, &sourceImfSha, true);
         const auto baselineRows = loaded->map.imgKeypoints.size();
         // The base atlas became optional once every region shipped as its own pack: the
         // packs carry their own features and visual index, so a snapshot that selects no
@@ -280,7 +209,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
 
         RuntimeStatus::SetMessage("正在加载扩展地图特征包，请稍候");
         const auto kuroLoadStart = std::chrono::steady_clock::now();
-        const auto kuroPacks = KuroTileFeaturePack::LoadRegistered(featureRoot.string());
+        const auto kuroPacks = KuroTileFeaturePack::LoadRegistered(featureRoot.string(), true);
         Diagnostics::Record("resource-load", "stage=kuro-feature-packs durationMs=" +
             std::to_string(ElapsedMilliseconds(kuroLoadStart)) + " packs=" + std::to_string(kuroPacks.size()));
         std::vector<const ImageFeatureData*> mapFeatureAdditions;
@@ -443,8 +372,8 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
             throw std::runtime_error("地图视觉索引不可用：" + visualError);
         }
         RuntimeStatus::SetMessage("地图识别资源已就绪");
-        // The packs are merged and the index is final: what the process holds here is the whole cost of the
-        // selected regions, and the difference against the next milestone is what the rest of the tool adds.
+        // Includes temporary source pack arrays until this scope exits. Keep the
+        // load peak separate from the retained shared resources below.
         Diagnostics::RecordMemory("resource-load-complete");
     }
     catch (const std::exception& exception) {
@@ -454,6 +383,12 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         loaded.reset();
     }
 
+    if (loaded) {
+        Diagnostics::Record("resource-storage", "mapDescriptorBytes=" +
+            std::to_string(loaded->map.imgDescriptors.total() * loaded->map.imgDescriptors.elemSize()) +
+            " expandedDescriptorBytes=" + std::to_string(loaded->map.imgDescriptors.total() * sizeof(float)));
+        Diagnostics::RecordMemory("resource-load-retained");
+    }
     const bool ready = loaded != nullptr;
     const std::string failureForLog = failure;
     {

@@ -2,6 +2,7 @@
 #include <functional>
 #include "../Feature/Match/ExactDescriptorMatcher.h"
 #include "MapViewportLocalizer.h"
+#include "MapViewportWorkBudget.h"
 #include "MapViewportGeometry.h"
 #include "MapViewportCandidates.h"
 #include "MapViewportMatch.h"
@@ -152,6 +153,7 @@ public:
         localMatcherBytes_ = 0;
         localMatcherEvictions_ = 0;
         localMatcherUseCounter_ = 0;
+        workBudget_.Reset();
         vocabularyIndex_.release();
         resources_.reset();
     }
@@ -560,30 +562,35 @@ private:
             // 1.0, 1.5, 0.75 and 0.5. Lahai is the largest scene in the game, so at any zoom the
             // index was not built at, the scene with the most tiles wins.
             std::vector<SceneRanking> rankings;
-            std::array<std::optional<ImageFeatureData>, kFactors.size()> centreByFactor;
+            std::array<std::array<std::optional<ImageFeatureData>, kFactors.size()>, 2> queryByFactor;
+            const auto queryFeatures = [&](size_t regionIndex, size_t factorIndex) -> const ImageFeatureData& {
+                auto& cached = queryByFactor[regionIndex][factorIndex];
+                if (!cached) {
+                    if (interrupted()) throw SearchInterrupted{};
+                    const auto& region = regions[regionIndex];
+                    const double factor = kFactors[factorIndex];
+                    cv::Mat query = request.mapCrop(region);
+                    if (factor != 1.0) cv::resize(request.mapCrop(region), query, {}, factor, factor,
+                        factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
+                    ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, query);
+                    if (interrupted()) throw SearchInterrupted{};
+                    const double sx = static_cast<double>(query.cols) / region.width;
+                    const double sy = static_cast<double>(query.rows) / region.height;
+                    for (auto& point : features.imgKeypoints) {
+                        if (factor == 1.0) point.pt += cv::Point2f(region.x, region.y);
+                        else {
+                            point.pt.x = static_cast<float>((point.pt.x + 0.5) / sx - 0.5 + region.x);
+                            point.pt.y = static_cast<float>((point.pt.y + 0.5) / sy - 0.5 + region.y);
+                        }
+                    }
+                    cached = std::move(features);
+                }
+                return *cached;
+            };
             if (request.scope == MapViewportSearchScope::Global && scenes.size() > 1 && !regions[0].empty()) {
                 for (std::size_t factorIndex = 0; factorIndex < kFactors.size(); ++factorIndex) {
-                    if (interrupted()) throw SearchInterrupted{};
                     const double factor = kFactors[factorIndex];
-                    cv::Mat query = request.mapCrop(regions[0]);
-                    if (factor != 1.0) {
-                        cv::resize(request.mapCrop(regions[0]), query, {}, factor, factor,
-                            factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
-                        const double sx = static_cast<double>(query.cols) / regions[0].width;
-                        const double sy = static_cast<double>(query.rows) / regions[0].height;
-                        ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, query);
-                        for (auto& point : features.imgKeypoints) {
-                            point.pt.x = static_cast<float>((point.pt.x + 0.5) / sx - 0.5 + regions[0].x);
-                            point.pt.y = static_cast<float>((point.pt.y + 0.5) / sy - 0.5 + regions[0].y);
-                        }
-                        centreByFactor[factorIndex] = std::move(features);
-                    }
-                    else {
-                        ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, query);
-                        for (auto& point : features.imgKeypoints) point.pt += cv::Point2f(regions[0].x, regions[0].y);
-                        centreByFactor[factorIndex] = std::move(features);
-                    }
-                    auto ranking = RankScenes(*centreByFactor[factorIndex]);
+                    auto ranking = RankScenes(queryFeatures(0, factorIndex));
                     ranking.factor = factor;
                     rankings.push_back(std::move(ranking));
                 }
@@ -604,137 +611,110 @@ private:
             const auto plans = BuildPlans(request, scenes, rankings);
             bool sceneAmbiguity = false;
             int acceptedPlan = -1;
-            int planIndex = -1;
-            // Plan 0's own tiles, kept so the answer can be measured against them once it is known.
             std::vector<std::uint32_t> narrowCandidates;
             std::string planRungs;
-            for (const auto& plan : plans) {
-            ++planIndex;
-            if (result.accepted || sceneAmbiguity || plan.scenes.empty()) continue;
-            ++result.plansRun;
-            // What this rung costs, and how many scene-and-zoom comparisons it spent it on. The
-            // sweep is the one worth watching: it compares every scene that scored at every zoom,
-            // against a matcher cache that holds eight, so its comparisons are where a cold start
-            // that answers nothing in fourteen seconds spends the fourteen.
-            const auto planStartedAt = std::chrono::steady_clock::now();
-            int planComparisons = 0;
-            // A plan that carries candidates compares one scale, because they were ranked from
-            // descriptors taken at one scale; the sweep keeps looking for the scale as well.
-            const bool ranked = plan.singleScale;
-            for (std::size_t regionIndex = 0; regionIndex < regions.size(); ++regionIndex) {
-            if (interrupted()) throw SearchInterrupted{};
-            const auto& region = regions[regionIndex];
-            const cv::Mat regionCrop = request.mapCrop(region);
-            // Region 0's crops at every zoom were already extracted for the ranking, so they are not
-            // extracted again here. Region 1, and every case the ranking did not run for, is.
-            const bool centreIsExtracted = regionIndex == 0 && centreByFactor[0].has_value();
-            std::optional<ImageFeatureData> wholeRegion;
-            if (!centreIsExtracted) {
-                ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, regionCrop);
-                for (auto& point : features.imgKeypoints) point.pt += cv::Point2f(region.x, region.y);
-                wholeRegion = std::move(features);
+            struct Group { size_t plan, region, factor; };
+            std::vector<Group> groups;
+            for (size_t p = 0; p < plans.size(); ++p) {
+                if (plans[p].scenes.empty()) continue;
+                for (size_t region = 0; region < regions.size(); ++region)
+                    for (size_t factor = 0; factor < kFactors.size(); ++factor)
+                        if (!plans[p].singleScale || plans[p].factor == kFactors[factor])
+                            groups.push_back({p, region, factor});
             }
-            result.cropKeypointCount = static_cast<int>(centreIsExtracted
-                ? centreByFactor[0]->imgKeypoints.size() : wholeRegion->imgKeypoints.size());
-            if (!centreIsExtracted && wholeRegion->imgDescriptors.empty()) continue;
-            for (std::size_t factorIndex = 0; factorIndex < kFactors.size(); ++factorIndex) {
-                const double factor = kFactors[factorIndex];
-                // A ranked plan compares the one zoom its candidates were ranked at; the sweep is
-                // the only plan that still has to look for the zoom.
-                if (ranked && factor != plan.factor) continue;
+            const bool global = request.scope == MapViewportSearchScope::Global;
+            const size_t first = global ? workBudget_.Begin(request.sessionId, request.uiGeneration,
+                request.viewportGeneration, groups.size()) : 0;
+            std::vector<bool> visitedPlans(plans.size(), false);
+            int plansRun = 0;
+            for (size_t visited = 0; visited < groups.size(); ++visited) {
+                const size_t groupIndex = (first + visited) % groups.size();
+                const auto group = groups[groupIndex];
+                const int planIndex = static_cast<int>(group.plan);
+                const auto& plan = plans[group.plan];
+                if (!visitedPlans[group.plan]) { visitedPlans[group.plan] = true; ++plansRun; }
                 if (interrupted()) throw SearchInterrupted{};
-                ImageFeatureData features;
-                // The map-centre crop at each zoom was already extracted for the ranking. Reusing it
-                // costs nothing, and re-extracting it nine times over the sweep's scenes would cost
-                // more than the sweep itself.
-                if (regionIndex == 0 && centreByFactor[factorIndex].has_value()) {
-                    features = *centreByFactor[factorIndex];
-                }
-                else if (factor == 1.0 && wholeRegion.has_value()) {
-                    features = *wholeRegion;
-                }
-                else {
-                    cv::Mat resized;
-                    cv::resize(regionCrop, resized, {}, factor, factor,
-                        factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
-                    features = FeatureMatch::ExtractSurfFeatures(surf, resized);
-                    const double sx = static_cast<double>(resized.cols) / regionCrop.cols;
-                    const double sy = static_cast<double>(resized.rows) / regionCrop.rows;
-                    for (auto& point : features.imgKeypoints) {
-                        point.pt.x = static_cast<float>((point.pt.x + 0.5) / sx - 0.5 + region.x);
-                        point.pt.y = static_cast<float>((point.pt.y + 0.5) / sy - 0.5 + region.y);
+                const auto groupStart = std::chrono::steady_clock::now();
+                int comparisons = 0;
+                const auto& features = queryFeatures(group.region, group.factor);
+                if (!features.imgDescriptors.empty()) {
+                    int acceptedScenes = 0;
+                    for (const int sceneId : plan.scenes) {
+                        if (interrupted()) throw SearchInterrupted{};
+                        ++comparisons;
+                        // A scene the plan named is compared against exactly the tiles the plan chose.
+                        // No entry means the whole of it, which is what the sweep does.
+                        const auto chosen = plan.candidates.find(sceneId);
+                        std::vector<std::uint32_t> whole;
+                        const std::vector<std::uint32_t>* tiles = nullptr;
+                        if (chosen == plan.candidates.end()) {
+                            whole = SelectSceneTileIndices(*resources_, sceneId, std::nullopt);
+                            tiles = &whole;
+                        }
+                        else {
+                            tiles = &chosen->second;
+                        }
+                        auto* cache = GetLocalMatcher(*tiles, interrupted);
+                        if (!cache || !cache->matcher) continue;
+                        std::vector<std::vector<cv::DMatch>> pairs;
+                        if (interrupted()) throw SearchInterrupted{};
+                        cache->matcher->knnMatch(features.imgDescriptors, pairs, 2);
+                        if (interrupted()) throw SearchInterrupted{};
+                        auto attempt = result;
+                        attempt.accepted = false;
+                        attempt.sceneId = sceneId;
+                        attempt.goodMatchCount = attempt.inlierCount = attempt.coveredQuadrants = 0;
+                        attempt.inlierRatio = attempt.medianReprojectionError = 0.0;
+                        attempt.cropKeypointCount = static_cast<int>(features.imgKeypoints.size());
+                        attempt.captureCorners.clear();
+                        attempt.accepted = TryMatch(features, request.mapCrop, cache->candidates,
+                            FilterGoodMatches(pairs), attempt);
+                        if (interrupted()) throw SearchInterrupted{};
+                        // The comparison runs on the same query and the same tiles, whether or not the shipped
+                        // matcher accepted: a rejection the copy-free matcher would have accepted is exactly the
+                        // kind of difference this is looking for.
+                        if (attempt.accepted) ++acceptedScenes;
+                        const bool keep = attempt.accepted || (!result.accepted &&
+                            (attempt.inlierCount > result.inlierCount ||
+                            (attempt.inlierCount == result.inlierCount && attempt.goodMatchCount > result.goodMatchCount)));
+                        if (keep) {
+                            // The candidates travel with the attempt they produced. Taking them from
+                            // the loop instead recorded whichever scene happened to be visited last -
+                            // in the two-scene case that is the runner-up, which is how this field
+                            // first reported the answer sitting 5 km from its own candidate set.
+                            if (planIndex == 0) narrowCandidates = *tiles;
+                            result = std::move(attempt);
+                        }
+                    }
+                    if (acceptedScenes > 1) {
+                        sceneAmbiguity = true;
+                        result.accepted = false;
+                        result.sceneId = 0;
+                        result.captureCorners.clear();
                     }
                 }
-                if (features.imgDescriptors.empty()) continue;
-                int acceptedScenes = 0;
-                for (const int sceneId : plan.scenes) {
-                    if (interrupted()) throw SearchInterrupted{};
-                    ++planComparisons;
-                    // A scene the plan named is compared against exactly the tiles the plan chose.
-                    // No entry means the whole of it, which is what the sweep does.
-                    const auto chosen = plan.candidates.find(sceneId);
-                    std::vector<std::uint32_t> whole;
-                    const std::vector<std::uint32_t>* tiles = nullptr;
-                    if (chosen == plan.candidates.end()) {
-                        whole = SelectSceneTileIndices(*resources_, sceneId, std::nullopt);
-                        tiles = &whole;
-                    }
-                    else {
-                        tiles = &chosen->second;
-                    }
-                    auto* cache = GetLocalMatcher(*tiles);
-                    if (!cache || !cache->matcher) continue;
-                    std::vector<std::vector<cv::DMatch>> pairs;
-                    cache->matcher->knnMatch(features.imgDescriptors, pairs, 2);
-                    auto attempt = result;
-                    attempt.accepted = false;
-                    attempt.sceneId = sceneId;
-                    attempt.goodMatchCount = attempt.inlierCount = attempt.coveredQuadrants = 0;
-                    attempt.inlierRatio = attempt.medianReprojectionError = 0.0;
-                    attempt.cropKeypointCount = static_cast<int>(features.imgKeypoints.size());
-                    attempt.captureCorners.clear();
-                    const auto shippedStart = std::chrono::steady_clock::now();
-                    attempt.accepted = TryMatch(features, request.mapCrop, cache->candidates,
-                        FilterGoodMatches(pairs), attempt);
-                    const double shippedMs = ElapsedMilliseconds(shippedStart);
-                    // The comparison runs on the same query and the same tiles, whether or not the shipped
-                    // matcher accepted: a rejection the copy-free matcher would have accepted is exactly the
-                    // kind of difference this is looking for.
-                    if (attempt.accepted) ++acceptedScenes;
-                    const bool keep = attempt.accepted || (!result.accepted &&
-                        (attempt.inlierCount > result.inlierCount ||
-                        (attempt.inlierCount == result.inlierCount && attempt.goodMatchCount > result.goodMatchCount)));
-                    if (keep) {
-                        // The candidates travel with the attempt they produced. Taking them from
-                        // the loop instead recorded whichever scene happened to be visited last -
-                        // in the two-scene case that is the runner-up, which is how this field
-                        // first reported the answer sitting 5 km from its own candidate set.
-                        if (planIndex == 0) narrowCandidates = *tiles;
-                        result = std::move(attempt);
-                    }
+                ++result.groupsTried;
+                if (global) workBudget_.Completed(groupIndex);
+                result.nextGroup = static_cast<int>((groupIndex + 1) % groups.size());
+                if (!planRungs.empty()) planRungs += ',';
+                planRungs += std::string(plan.kind);
+                if (plan.singleScale) {
+                    std::ostringstream factor; factor << plan.factor;
+                    planRungs += "@" + factor.str();
                 }
-                if (acceptedScenes > 1) {
-                    sceneAmbiguity = true;
-                    result.accepted = false;
-                    result.sceneId = 0;
-                    result.captureCorners.clear();
+                planRungs += ":" + std::to_string(comparisons) + ":" +
+                    std::to_string(static_cast<int64_t>(ElapsedMilliseconds(groupStart)));
+                if (result.accepted) acceptedPlan = planIndex;
+                if (result.accepted || sceneAmbiguity) { if (global) workBudget_.Reset(); break; }
+                // Never stop halfway through an ambiguity group, even if an indivisible
+                // OpenCV call overruns the soft budget. Later requests rotate to later groups.
+                if (visited + 1 < groups.size() && MapViewportWorkBudget::ShouldYield(global,
+                    result.groupsTried, ElapsedMilliseconds(start))) {
+                    result.budgetExhausted = true;
                     break;
                 }
-                if (result.accepted) break;
             }
-            if (result.accepted || sceneAmbiguity) break;
-            }
-            if (result.accepted) acceptedPlan = planIndex;
-            if (!planRungs.empty()) planRungs += ',';
-            planRungs += std::string(plan.kind);
-            if (plan.singleScale) {
-                std::ostringstream factor;
-                factor << plan.factor;
-                planRungs += "@" + factor.str();
-            }
-            planRungs += ":" + std::to_string(planComparisons) + ":" +
-                std::to_string(static_cast<std::int64_t>(ElapsedMilliseconds(planStartedAt)));
-            }
+            result.plansRun = plansRun;
             result.planMilliseconds = planRungs;
             result.acceptedPlan = acceptedPlan;
             // Finally, the ranking of the plan that answered.
@@ -775,11 +755,14 @@ private:
                 }
             }
         }
-        catch (const cv::Exception&) {
+        catch (const SearchInterrupted&) {
             result.accepted = false;
+            Diagnostics::Record("map-viewport-cancelled", "request=" + std::to_string(request.requestId));
         }
-        catch (const std::exception&) {
+        catch (const std::exception& exception) {
             result.accepted = false;
+            Diagnostics::Record("map-viewport-failed", "request=" + std::to_string(request.requestId) +
+                " error=" + exception.what());
         }
         result.durationMilliseconds = ElapsedMilliseconds(start);
         return result;
@@ -792,7 +775,8 @@ private:
         std::size_t bytes = 0;
     };
 
-    LocalMatcherCache* GetLocalMatcher(const std::vector<std::uint32_t>& tileIndices) {
+    LocalMatcherCache* GetLocalMatcher(const std::vector<std::uint32_t>& tileIndices, const std::function<bool()>& interrupted) {
+        if (interrupted()) throw SearchInterrupted{};
         if (tileIndices.empty()) return nullptr;
         const std::string key = TileSetKey(tileIndices);
         const bool trace = Diagnostics::MemoryTraceEnabled();
@@ -849,11 +833,13 @@ private:
         // making the sweep churn.
         const std::size_t entryBudget = singleEntry ? 1 : (configuredEntries > 0 ? configuredEntries : 16);
         LocalMatcherCache cache;
-        cache.candidates = SelectSceneCandidates(*resources_, tileIndices);
+        cache.candidates = SelectSceneCandidates(*resources_, tileIndices, interrupted);
         if (cache.candidates.imgDescriptors.empty()) return nullptr;
         cache.matcher = cv::makePtr<cv::FlannBasedMatcher>();
         cache.matcher->add(std::vector<cv::Mat>{ cache.candidates.imgDescriptors });
+        if (interrupted()) throw SearchInterrupted{};
         cache.matcher->train();
+        if (interrupted()) throw SearchInterrupted{};
         cache.lastUsed = ++localMatcherUseCounter_;
         cache.bytes = cache.candidates.imgDescriptors.total() * cache.candidates.imgDescriptors.elemSize() +
             cache.candidates.imgKeypoints.capacity() * sizeof(cv::KeyPoint);
@@ -915,6 +901,7 @@ private:
     std::jthread worker_;
     std::atomic_uint64_t epoch_{0};
     bool ready_ = false;
+    MapViewportWorkBudget workBudget_;
     std::shared_ptr<const RuntimeFeatureResources> resources_;
     std::unordered_map<std::string, LocalMatcherCache> localMatchers_;
     std::size_t localMatcherBytes_ = 0;

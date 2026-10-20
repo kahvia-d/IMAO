@@ -96,7 +96,7 @@ void MapPointOfCell(const Transform& transform, int tileX, int tileY, int cellX,
 }
 
 bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error,
-    int maxKeypointsPerFloor) {
+    int maxKeypointsPerFloor, bool keepQuantized) {
     index.floors.clear();
     const auto indexPath = packDirectory / "layered-floors" / "floor-index.json";
     if (!std::filesystem::exists(indexPath)) {
@@ -174,7 +174,7 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
             }
         }
         std::string loadError;
-        if (!FeatureBinaryCodec::Load(root / file, entry.features, loadError)) {
+        if (!FeatureBinaryCodec::Load(root / file, entry.features, loadError, nullptr, nullptr, keepQuantized)) {
             error = "cannot load " + Utf8Text(root / file) + ": " + loadError;
             return false;
         }
@@ -199,9 +199,11 @@ bool Load(const std::filesystem::path& packDirectory, Index& index, std::string&
             descriptors.reserve(keypoints.capacity() * 128);
             for (std::size_t i = 0; i < entry.features.imgKeypoints.size(); i += stride) {
                 keypoints.push_back(entry.features.imgKeypoints[i]);
-                const float* row = entry.features.imgDescriptors.ptr<float>(static_cast<int>(i));
-                descriptors.insert(descriptors.end(), row, row + entry.features.imgDescriptors.cols);
+                const auto start = descriptors.size();
+                descriptors.resize(start + entry.features.imgDescriptors.cols);
+                entry.features.CopyDescriptorRowTo(static_cast<int>(i), descriptors.data() + start);
             }
+            entry.sampleFeatures.descriptorEncoding.clear();
             entry.sampleFeatures.imgKeypoints = std::move(keypoints);
             entry.sampleFeatures.imgDescriptors = cv::Mat(
                 static_cast<int>(entry.sampleFeatures.imgKeypoints.size()),
@@ -556,7 +558,8 @@ Classification Classify(const ImageFeatureData& query, const std::vector<const F
         const auto& own = sampled ? floor->sampleOwnArt : floor->ownArt;
         const bool hasOwn = own.size() == static_cast<std::size_t>(source.imgDescriptors.rows);
         std::vector<std::vector<cv::DMatch>> knn;
-        matcher.knnMatch(query.imgDescriptors, source.imgDescriptors, knn, 2);
+        const auto descriptors = source.FloatDescriptors();
+        matcher.knnMatch(query.imgDescriptors, descriptors, knn, 2);
         FloorVote vote;
         vote.layerId = floor->layerId;
         vote.floorId = floor->floorId;

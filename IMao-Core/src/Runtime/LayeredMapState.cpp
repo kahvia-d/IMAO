@@ -211,7 +211,7 @@ void Install(const std::filesystem::path& featureDataRoot) {
         std::vector<LayeredFloors::FloorEntry> floors;
         LayeredFloors::Index index;
         std::string loadError;
-        if (!LayeredFloors::Load(packRoot, index, loadError, kFloorDescriptorCap)) {
+        if (!LayeredFloors::Load(packRoot, index, loadError, kFloorDescriptorCap, true)) {
             Diagnostics::Record("layered-floor-index", "region=" + Utf8Text(directory.path().filename()) +
                 " loaded=0 error=" + loadError);
             continue;

@@ -647,3 +647,8 @@ add_custom_command(TARGET ${DEMO_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_LIB}/paddle/lib/paddle_inference.dll ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/paddle_inference.dll
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_LIB}/paddle/lib/common.dll ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/common.dll
 )
+
+add_executable(IMaoViewportBudgetTests IMao-Core/tests/ViewportBudgetTests.cpp)
+target_include_directories(IMaoViewportBudgetTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+set_target_properties(IMaoViewportBudgetTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoViewportBudgetTests COMMAND IMaoViewportBudgetTests)

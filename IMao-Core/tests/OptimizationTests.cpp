@@ -16,6 +16,7 @@
 #include "HudLayoutTests.h"
 #include "Coordinate/HudLayout.h"
 #include "App/MapViewportSearchGate.h"
+#include "DescriptorStorageTests.h"
 #include "DenseMapConfirmerTests.h"
 #include "OcrCoordinateGateTests.h"
 #include "OcrRouteAgreementTests.h"
@@ -1191,6 +1192,7 @@ void TestVisualIndexRetrieval() {
 }
 
 int main(int argc, char** argv) {
+    if (argc == 3 && std::string(argv[1]) == "--descriptor-storage") return CompareDescriptorStorage(argv[2]);
     if (argc == 5 && std::string(argv[1]) == "--map-minimap") {
         auto map = cv::imread(argv[2]);
         auto mini = cv::imread(argv[4]);
@@ -1347,6 +1349,7 @@ int main(int argc, char** argv) {
 	TestWorldSearchPrior();
     TestNewSceneRegistry();
     TestFeatureBinaryCodec();
+    TestDescriptorStorage(Expect);
     TestMapVisualIndexCodec();
     TestVisualIndexRetrieval();
     TestManifestShardLineEndings();

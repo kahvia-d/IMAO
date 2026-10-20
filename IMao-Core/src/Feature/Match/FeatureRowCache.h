@@ -1,6 +1,6 @@
 #pragma once
 #include "FeatureMatch.h"
-#include "UniqueMapFeatures.h"
+#include "UniqueFeatureSubset.h"
 #include "../../Diagnostics/Diagnostics.h"
 #include <map>
 #include <memory>
@@ -32,23 +32,7 @@ public:
                 return found->second.data;
             }
         }
-        auto data = std::make_shared<ImageFeatureData>();
-        data->imgDescriptors.create(static_cast<int>(rows.size()), source_.imgDescriptors.cols, CV_32FC1);
-        data->imgKeypoints.reserve(rows.size());
-        UniqueMapFeatures unique(rows.size());
-        size_t checked = 0;
-        for (const auto row : rows) {
-            if ((checked++ % 512) == 0 && interrupted && interrupted()) throw SearchInterrupted{};
-            if (row >= source_.imgKeypoints.size() || row >= static_cast<uint32_t>(source_.imgDescriptors.rows))
-                throw std::out_of_range("Map feature row outside descriptor storage");
-            auto descriptor = source_.imgDescriptors.row(static_cast<int>(row));
-            if (!unique.Insert(source_.imgKeypoints[row], descriptor)) continue;
-            descriptor.copyTo(data->imgDescriptors.row(static_cast<int>(data->imgKeypoints.size())));
-            data->imgKeypoints.push_back(source_.imgKeypoints[row]);
-        }
-        // Clone releases unused capacity after deduplication instead of retaining the original matrix.
-        if (data->imgDescriptors.rows != static_cast<int>(data->imgKeypoints.size()))
-            data->imgDescriptors = data->imgDescriptors.rowRange(0, static_cast<int>(data->imgKeypoints.size())).clone();
+        auto data = std::make_shared<ImageFeatureData>(UniqueFeatureSubset(source_, rows, interrupted));
         const size_t bytes = data->imgDescriptors.total() * data->imgDescriptors.elemSize() +
             data->imgKeypoints.capacity() * sizeof(cv::KeyPoint) + key.size() * sizeof(uint32_t);
         // The row sets a full-screen search builds are far larger than a tracking window's, and this is the

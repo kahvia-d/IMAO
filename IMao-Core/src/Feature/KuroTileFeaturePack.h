@@ -28,8 +28,8 @@ struct KuroTileFeaturePackStatus {
 
 class KuroTileFeaturePack {
 public:
-    static std::vector<KuroTileFeaturePackStatus> LoadRegistered(const std::string& featureDataRoot);
+    static std::vector<KuroTileFeaturePackStatus> LoadRegistered(const std::string& featureDataRoot, bool keepQuantized = false);
     static KuroTileFeaturePackStatus LoadPack(const std::string& featureDataRoot,
-        const std::string& directoryName);
-    static KuroTileFeaturePackStatus LoadDirectory(const std::filesystem::path& packDirectory);
+        const std::string& directoryName, bool keepQuantized = false);
+    static KuroTileFeaturePackStatus LoadDirectory(const std::filesystem::path& packDirectory, bool keepQuantized = false);
 };

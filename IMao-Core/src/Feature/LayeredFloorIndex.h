@@ -198,7 +198,7 @@ struct Classification {
 /// (see FloorEntry); `maxKeypointsPerFloor` is the cap for that copy, 0 disabling it. The full
 /// `features` set is always loaded: it is what the deciding vote uses.
 bool Load(const std::filesystem::path& packDirectory, Index& index, std::string& error,
-    int maxKeypointsPerFloor = 0);
+    int maxKeypointsPerFloor = 0, bool keepQuantized = false);
 
 /// True when the map coordinate falls inside this floor's cave. One coordinate can be inside
 /// several floors' footprints only where two caves overlap, and it is inside none of them out

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../RuntimeFeatureRepository.h"
-#include "UniqueMapFeatures.h"
+#include "UniqueFeatureSubset.h"
 #include "../../Coordinate/CoordinateStruct.h"
 #include <cmath>
 
@@ -25,13 +25,8 @@ inline ImageFeatureData SceneMapFeaturesNear(const RuntimeFeatureResources& reso
             if (std::abs(point.x - center.x) <= radius && std::abs(point.y - center.y) <= radius) selected[row] = 1;
         }
     }
-    UniqueMapFeatures unique;
-    for (std::size_t row = 0; row < selected.size(); ++row) {
-        if (!selected[row] || !resources.FeatureRowEnabled(row)) continue;
-        const auto descriptor = resources.map.imgDescriptors.row(static_cast<int>(row));
-        if (!unique.Insert(resources.map.imgKeypoints[row], descriptor)) continue;
-        result.imgKeypoints.push_back(resources.map.imgKeypoints[row]);
-        result.imgDescriptors.push_back(descriptor);
-    }
-    return result;
+    std::vector<uint32_t> rows;
+    for (std::size_t row = 0; row < selected.size(); ++row)
+        if (selected[row] && resources.FeatureRowEnabled(row)) rows.push_back(static_cast<uint32_t>(row));
+    return UniqueFeatureSubset(resources.map, rows);
 }
