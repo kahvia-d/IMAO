@@ -84,6 +84,7 @@ struct MapViewportLocalizationResult {
     // windowed sweep. Without this the difference between "the ranking worked" and "the ranking
     // missed and something below rescued it" has to be inferred from how many matchers were built,
     // which is a guess dressed as a measurement.
+    std::uint64_t matcherCacheBytes = 0;
     bool budgetExhausted = false;
     int groupsTried = 0;
     int nextGroup = 0;
@@ -120,6 +121,7 @@ inline std::string MapViewportRetrievalFields(const MapViewportLocalizationResul
         " retrievalRunnerUp=" + std::to_string(result.retrievalRunnerUpScore) +
         " retrievalTiles=" + std::to_string(result.retrievalTileCount) +
         " retrievalMs=" + std::to_string(result.retrievalMilliseconds) +
+        " matcherCacheBytes=" + std::to_string(result.matcherCacheBytes) +
         " budgetExhausted=" + std::to_string(result.budgetExhausted) +
         " groupsTried=" + std::to_string(result.groupsTried) +
         " nextGroup=" + std::to_string(result.nextGroup) +

@@ -2,6 +2,7 @@
 
 #include "App/MapViewportLocalizer.h"
 #include "Feature/Match/SceneMapFeatures.h"
+#include "Feature/Match/OwnedFlannMatcher.h"
 #include "Feature/Processing/FeatureBinaryCodec.h"
 #include "Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
 #include <opencv2/imgproc.hpp>
@@ -205,6 +206,49 @@ inline int RunMultiSceneViewportTests() {
     expect(fresh.accepted && fresh.requestId == serial && fresh.sceneId == 5, "worker accepts fresh evidence after cancellation");
     MapViewportLocalizer::Shutdown();
     std::filesystem::remove(storedPath);
+    {
+        // A valid scene can exceed the cache budget; its current result must
+        // still work, but that one request must not turn into permanent storage.
+        auto oversized = std::make_shared<RuntimeFeatureResources>();
+        oversized->visualIndexReady = true; oversized->baseVisualTileCount = 1;
+        auto surf = cv::xfeatures2d::SURF::create(100,4,3,true,true);
+        auto original = FeatureMatch::ExtractSurfFeatures(surf,images[0]);
+        constexpr int count = 100000;
+        oversized->map.imgDescriptors.create(count,128,CV_32F);
+        cv::RNG(51).fill(oversized->map.imgDescriptors,cv::RNG::UNIFORM,100.,101.);
+        original.imgDescriptors.copyTo(oversized->map.imgDescriptors.rowRange(0,original.imgDescriptors.rows));
+        for(int i=0;i<count;++i) {
+            cv::KeyPoint point(static_cast<float>(10000+i),10000.f,1.f);
+            if(i<static_cast<int>(original.imgKeypoints.size())) {point=original.imgKeypoints[i];point.pt+=cv::Point2f(100,100);}
+            oversized->map.imgKeypoints.push_back(point);
+            oversized->visualIndex.featureRows.push_back(static_cast<uint32_t>(i));
+        }
+        MapVisualTile tile;tile.sceneId=1;tile.minX=tile.minY=100;tile.maxX=tile.maxY=500;
+        tile.featureRowOffset=0;tile.featureRowCount=count;
+        oversized->visualIndex.tiles.push_back(tile);
+        expect(MapViewportLocalizer::Initialize(oversized,error),"oversized candidate worker initializes");
+        const auto result=locate(images[0]);
+        expect(result.accepted && result.sceneId==1,"over-budget candidates still produce their current verified result");
+        expect(result.matcherCacheBytes==0,"over-budget descriptor/index data is not retained in the matcher cache");
+        expect(OwnedFlannMatcher::LiveDescriptorBytes()==0 && OwnedFlannMatcher::LiveIndexBytes()==0,
+            "completed request destroys its actual transient descriptor/index owners before publishing");
+        MapViewportLocalizationRequest active;
+        active.requestId=++serial;active.mapCrop=images[0];
+        MapViewportLocalizer::Submit(std::move(active));
+        auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+        while(OwnedFlannMatcher::LiveDescriptorBytes()==0 && std::chrono::steady_clock::now()<deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        expect(OwnedFlannMatcher::LiveDescriptorBytes()>0,"cancellation fixture observes an actually allocated transient matcher");
+        MapViewportLocalizer::CancelPending();
+        deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+        while(OwnedFlannMatcher::LiveDescriptorBytes()>0 && std::chrono::steady_clock::now()<deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        expect(OwnedFlannMatcher::LiveDescriptorBytes()==0 && OwnedFlannMatcher::LiveIndexBytes()==0,
+            "cancelled request destroys its actual transient descriptor/index owners");
+        MapViewportLocalizationResult cancelledResult;
+        expect(!MapViewportLocalizer::TryTakeLatestResult(cancelledResult),"cancelled oversized work cannot publish a result");
+        MapViewportLocalizer::Shutdown();
+    }
     Scene::minimapScales = savedMinimapScales;
     return failures == 0 ? 0 : 3;
 }

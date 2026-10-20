@@ -4,6 +4,7 @@
 #include "Coordinate/VisualLocalization/RecoveryPolicy.h"
 #include "App/MapViewportCandidates.h"
 #include "App/MapViewportLocalizer.h"
+#include "Feature/Match/OwnedFlannMatcher.h"
 #include "App/MapUiVisualDetector.h"
 #include "App/MinimapResumePolicy.h"
 #include "Coordinate/locationCalculator/MapCoordinate.h"
@@ -528,7 +529,7 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
 // scene. The shipped code comments quote 0.1-0.4 ms for a knnMatch, but those were measured against
 // small local windows, so this measures the real thing: the real merged index, the real matcher
 // construction, and query sizes taken from what the field log actually reports for a viewport crop.
-int MeasureViewportCost(const std::filesystem::path& repositoryRoot, int sceneId) {
+int MeasureViewportCost(const std::filesystem::path& repositoryRoot, int sceneId, bool storageOnly = false) {
     std::string error;
     // The real runtime loader, not this tool's own LoadResources: that one still expects the retired
     // base atlas, and the atlas is gone. BeginPreload with no snapshot configured takes the
@@ -542,6 +543,40 @@ int MeasureViewportCost(const std::filesystem::path& repositoryRoot, int sceneId
     if (!resources->visualIndexReady) {
         std::cerr << "Visual index is not ready for this tree.\n";
         return 1;
+    }
+
+    if (storageOnly) {
+        std::map<int,std::vector<uint32_t>> byScene;
+        for (size_t i=0;i<resources->visualIndex.tiles.size();++i) {
+            const int scene=MapViewportCandidates::TileScene(*resources,i);
+            if (Scene::IsRuntimeApproved(scene)) byScene[scene].push_back(static_cast<uint32_t>(i));
+        }
+        size_t total=0;
+        std::cout << "scene,rows,descriptorBytes,indexBytes,keypointBytes,totalBytes\n";
+        for (const auto& [scene, all] : byScene) {
+            std::vector<unsigned char> counted(resources->map.imgKeypoints.size(),0);
+            std::vector<uint32_t> tiles;
+            size_t points=0;
+            for (auto i : all) {
+                if (tiles.size()>=64) break;
+                const auto& tile=resources->visualIndex.tiles[i];
+                for (size_t j=tile.featureRowOffset;j<static_cast<size_t>(tile.featureRowOffset)+tile.featureRowCount;++j) {
+                    const auto row=resources->visualIndex.featureRows[j];
+                    if (!counted[row]) { counted[row]=1; ++points; }
+                }
+                tiles.push_back(i);
+                if (points*(128*sizeof(float)+sizeof(cv::KeyPoint))>=4*1024*1024) break;
+            }
+            const auto candidate=MapViewportCandidates::SelectSceneCandidates(*resources,tiles);
+            if (candidate.imgDescriptors.empty()) continue;
+            OwnedFlannMatcher matcher(candidate.imgDescriptors);
+            const size_t keypoints=candidate.imgKeypoints.capacity()*sizeof(cv::KeyPoint);
+            const size_t bytes=matcher.DescriptorBytes()+matcher.IndexBytes()+keypoints;
+            total+=bytes;
+            std::cout<<scene<<","<<candidate.imgKeypoints.size()<<","<<matcher.DescriptorBytes()<<","<<matcher.IndexBytes()<<","<<keypoints<<","<<bytes<<"\n";
+        }
+        std::cout<<"all-windows-bytes,"<<total<<"\n";
+        return 0;
     }
 
     // One matcher at a time, exactly as GetLocalMatcher builds them.
@@ -992,6 +1027,8 @@ int CheckRankingOnImage(const std::filesystem::path& repositoryRoot, const std::
 
 int wmain(int argumentCount, wchar_t** arguments) {
     if (argumentCount == 2 && std::wstring(arguments[1]) == L"--scene-self-test") return RunMultiSceneViewportTests();
+    if (argumentCount == 3 && std::wstring(arguments[1]) == L"--viewport-storage")
+        return MeasureViewportCost(std::filesystem::path(arguments[2]), 0, true);
     if (argumentCount >= 3 && std::wstring(arguments[1]) == L"--viewport-cost") {
         const int sceneId = argumentCount >= 4 ? std::stoi(arguments[3]) : Scene::SceneNameToId("World");
         return MeasureViewportCost(std::filesystem::path(arguments[2]), sceneId);

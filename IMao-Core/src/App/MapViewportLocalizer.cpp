@@ -3,6 +3,7 @@
 #include "../Feature/Match/ExactDescriptorMatcher.h"
 #include "MapViewportLocalizer.h"
 #include "MapViewportWorkBudget.h"
+#include "../Feature/Match/OwnedFlannMatcher.h"
 #include "MapViewportGeometry.h"
 #include "MapViewportCandidates.h"
 #include "MapViewportMatch.h"
@@ -150,6 +151,7 @@ public:
         request_.reset();
         result_.reset();
         localMatchers_.clear();
+        transientMatcher_.reset();
         localMatcherBytes_ = 0;
         localMatcherEvictions_ = 0;
         localMatcherUseCounter_ = 0;
@@ -572,7 +574,20 @@ private:
                     cv::Mat query = request.mapCrop(region);
                     if (factor != 1.0) cv::resize(request.mapCrop(region), query, {}, factor, factor,
                         factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
+                    static std::atomic_uint32_t measuredExtractions{0};
+                    const bool measure = measuredExtractions.fetch_add(1) < 16;
+                    const std::string sample = "viewport-surf-r" + std::to_string(regionIndex) +
+                        "-f" + std::to_string(factorIndex);
+                    if (measure) Diagnostics::RecordMemory(sample + "-before");
                     ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, query);
+                    if (measure) {
+                        Diagnostics::Record("viewport-query-storage", "region=" + std::to_string(regionIndex) +
+                            " factor=" + std::to_string(factor) + " width=" + std::to_string(query.cols) +
+                            " height=" + std::to_string(query.rows) + " imageBytes=" +
+                            std::to_string(query.total() * query.elemSize()) + " descriptorBytes=" +
+                            std::to_string(features.imgDescriptors.total() * features.imgDescriptors.elemSize()));
+                        Diagnostics::RecordMemory(sample + "-after");
+                    }
                     if (interrupted()) throw SearchInterrupted{};
                     const double sx = static_cast<double>(query.cols) / region.width;
                     const double sy = static_cast<double>(query.rows) / region.height;
@@ -764,19 +779,22 @@ private:
             Diagnostics::Record("map-viewport-failed", "request=" + std::to_string(request.requestId) +
                 " error=" + exception.what());
         }
+        result.matcherCacheBytes = localMatcherBytes_;
         result.durationMilliseconds = ElapsedMilliseconds(start);
         return result;
     }
 
     struct LocalMatcherCache {
         ImageFeatureData candidates;
-        cv::Ptr<cv::FlannBasedMatcher> matcher;
+        std::unique_ptr<OwnedFlannMatcher> matcher;
         std::uint64_t lastUsed = 0;
         std::size_t bytes = 0;
     };
 
     LocalMatcherCache* GetLocalMatcher(const std::vector<std::uint32_t>& tileIndices, const std::function<bool()>& interrupted) {
         if (interrupted()) throw SearchInterrupted{};
+        // The previous scene has completed geometry verification before this call.
+        transientMatcher_.reset();
         if (tileIndices.empty()) return nullptr;
         const std::string key = TileSetKey(tileIndices);
         const bool trace = Diagnostics::MemoryTraceEnabled();
@@ -835,14 +853,23 @@ private:
         LocalMatcherCache cache;
         cache.candidates = SelectSceneCandidates(*resources_, tileIndices, interrupted);
         if (cache.candidates.imgDescriptors.empty()) return nullptr;
-        cache.matcher = cv::makePtr<cv::FlannBasedMatcher>();
-        cache.matcher->add(std::vector<cv::Mat>{ cache.candidates.imgDescriptors });
         if (interrupted()) throw SearchInterrupted{};
-        cache.matcher->train();
+        cache.matcher = std::make_unique<OwnedFlannMatcher>(cache.candidates.imgDescriptors);
         if (interrupted()) throw SearchInterrupted{};
         cache.lastUsed = ++localMatcherUseCounter_;
-        cache.bytes = cache.candidates.imgDescriptors.total() * cache.candidates.imgDescriptors.elemSize() +
-            cache.candidates.imgKeypoints.capacity() * sizeof(cv::KeyPoint);
+        const size_t descriptorBytes = cache.matcher->DescriptorBytes();
+        const size_t indexBytes = cache.matcher->IndexBytes();
+        cache.bytes = descriptorBytes + indexBytes + cache.candidates.imgKeypoints.capacity() * sizeof(cv::KeyPoint);
+        if (!singleEntry && cache.bytes > byteBudget) {
+            // Use oversized candidates for this request without discarding warm
+            // entries or retaining a wide search beyond the request's lifetime.
+            Diagnostics::Record("local-matcher-storage", "cacheable=0 descriptorBytes=" +
+                std::to_string(descriptorBytes) + " indexBytes=" + std::to_string(indexBytes) +
+                " entryBytes=" + std::to_string(cache.bytes) + " heldBytes=" +
+                std::to_string(localMatcherBytes_) + " budgetBytes=" + std::to_string(byteBudget));
+            transientMatcher_.emplace(std::move(cache));
+            return &*transientMatcher_;
+        }
         // Evict until this entry fits, oldest first. Evictions are counted because they are the difference
         // between a cache that grows to its budget once and one that churns: a rebuild costs the bytes it
         // allocates plus the FLANN index trained over them, and churn is what the trace showed at 1.3
@@ -859,6 +886,9 @@ private:
             localMatchers_.erase(oldest);
             ++localMatcherEvictions_;
         }
+        Diagnostics::Record("local-matcher-storage", "descriptorBytes=" + std::to_string(descriptorBytes) +
+            " indexBytes=" + std::to_string(indexBytes) + " entryBytes=" + std::to_string(cache.bytes) +
+            " heldBytes=" + std::to_string(localMatcherBytes_) + " budgetBytes=" + std::to_string(byteBudget));
         if (trace) Diagnostics::Record("local-matcher-cache", "result=miss tiles=" + std::to_string(tileIndices.size()) +
             " keypoints=" + std::to_string(cache.candidates.imgKeypoints.size()) + " bytes=" +
             std::to_string(cache.bytes) + " entries=" + std::to_string(localMatchers_.size()) +
@@ -889,6 +919,7 @@ private:
                 request_.reset();
             }
             auto result = Locate(request, [&] { return token.stop_requested() || epoch_.load() != epoch; });
+            transientMatcher_.reset();
             {
                 std::scoped_lock lock(mutex_);
                 if (!token.stop_requested() && epoch_.load() == epoch) result_ = std::move(result);
@@ -903,6 +934,7 @@ private:
     bool ready_ = false;
     MapViewportWorkBudget workBudget_;
     std::shared_ptr<const RuntimeFeatureResources> resources_;
+    std::optional<LocalMatcherCache> transientMatcher_;
     std::unordered_map<std::string, LocalMatcherCache> localMatchers_;
     std::size_t localMatcherBytes_ = 0;
     std::uint64_t localMatcherEvictions_ = 0;

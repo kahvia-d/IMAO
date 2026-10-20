@@ -231,7 +231,12 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             " winReadbackMaxMs=" + std::to_string(m_windowReadbackMaxMs) +
             // Which readback each frame used, so a phase of an A/B can be read off the log instead of
             // assumed from the switch.
-            " roiFrames=" + std::to_string(m_roiFrames.load()) + " fullFrames=" + std::to_string(m_fullFrames.load()));
+            " roiFrames=" + std::to_string(m_roiFrames.load()) + " fullFrames=" + std::to_string(m_fullFrames.load()) +
+            " cpuFrameBytes=" + std::to_string(m_latestFrame.total() * m_latestFrame.elemSize() +
+                m_scratchFrame.total() * m_scratchFrame.elemSize()) +
+            // Logical texture sizes, not an assertion about GPU/driver residency.
+            " stagingLogicalBytes=" + std::to_string(static_cast<uint64_t>(m_stagingWidth) * m_stagingHeight * 4 +
+                static_cast<uint64_t>(m_roiStagingWidth) * m_roiStagingHeight * 4));
         m_windowReadbackTotalMs = 0.0; m_windowReadbackMaxMs = 0.0; m_windowReadbackCount = 0;
     }
     auto swapChainResizedToFrame = false;

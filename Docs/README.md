@@ -213,3 +213,5 @@
 | [`ReadoutDirectTest_20261018_zh-Hans.md`](ReadoutDirectTest_20261018_zh-Hans.md) | 完全关闭OCR显示预测和平滑的实机对照、零补偿及有效期回归 |
 
 - [OCR 接管调度稳定性（2026-10-18）](ReadoutScheduling_20261018_zh-Hans.md)
+
+- [运行时内存归因与匹配副本优化计划](RuntimeMemoryPlan_20261020.md)
