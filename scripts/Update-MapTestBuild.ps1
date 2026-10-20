@@ -163,15 +163,17 @@ foreach ($package in $oldSnapshot.packages | Where-Object kind -ne 'map-features
     $packages += [ordered]@{ id = $package.id; kind = $package.kind; version = $identity.version; directory = $directory;
         sha256 = $identity.sha256; files = $identity.files }
 }
-$snapshot = [ordered]@{ formatVersion = 2; snapshotId = "maptest-$($build.sourceCommit)-$(Get-Date -Format yyyyMMddHHmmss)";
+$snapshot = [ordered]@{ formatVersion = 1; snapshotId = "maptest-$($build.sourceCommit)-$(Get-Date -Format yyyyMMddHHmmss)";
     sequence = 0; baselineId = $oldSnapshot.baselineId; minAppVersion = $build.appVersion; baselineRoot = $assets;
     mapDataRoot = (Join-Path $assets 'KuroMap'); mapIconRoot = (Join-Path $assets 'KuroMapIcons'); mapFeatureRoot = '';
-    bundled = $false; packages = $packages }
+    bundled = $true; packages = $packages }
 $snapshotPath = Join-Path $assets 'Updates/bundled-snapshot.json'
 $candidatePath = Join-Path $EvidenceRoot 'native-candidate.json'
 $snapshot | ConvertTo-Json -Depth 100 | Set-Content $candidatePath -Encoding UTF8
 # The client bootstrap accepts only a relative format-1 bundled descriptor.
-# The absolute format-2 non-bundled candidate is strictly separate native evidence.
+# The absolute format-1 candidate preserves the same bundled identity for native validation.
+# Local custom bundles have real per-file hashes but no published archive SHA;
+# labeling this candidate as a strict update would reject a valid test tree.
 $snapshot.formatVersion = 1
 $snapshot.bundled = $true
 $snapshot.baselineRoot = '.'

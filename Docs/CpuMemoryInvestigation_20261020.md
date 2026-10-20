@@ -248,3 +248,12 @@ CoreHost Release 构建成功；最终 Optimization、Marker、MinimapFilter、L
 独立审阅未发现确定代码缺陷，指出的楼层 Load 采样 ownArt 对齐与编码 worker 歧义/取消测试缺口已补。两项临时故障注入分别令掩码断言和跨场景歧义断言变红，逐字节恢复后全部回归再次通过。预算回归首次误复用旧 stub 二进制，改为直接引用正式 helper 并重新编译，最终使用正确产物通过；未修改既有断言。
 
 本轮没有刷新测试树、修改玩家版安装或发布；目前新实现处于开发分支和工作树 Release 输出，完整游戏内表现仍待实测。
+
+
+### 后续测试树刷新
+
+用户要求刷新后，已通过 `Update-MapTestBuild.ps1` 整树更新 `C:/Dcode/WWMAP-TOOLS/out/map-test`，396 个程序载荷文件 SHA-256 对照 `differing=0`（包含 resources.pri）；自包含检查、原生 resources/visual/viewport 初始化、实际 ResourceUpdateBootstrap 均通过。启用状态保留原来的 14 地区，刷新前后玩家/测试的 activation、selection 共四个文件 hash 相同；玩家安装不修改。客户端随后完整重新启动。
+
+本次真实部署暴露出脚本边界：保留本机地图校准的自定义 map-data 没有已发布 archive SHA，原脚本将 native 候选误标成 format2/non-bundled 更新包，因而被严格更新包规则拒绝并自动回滚。修正为与客户端实际身份一致的 format1/bundled，并保留绝对路径供 native 验证、相对路径供客户端启动；没有修改原生校验规则、没有伪造发布 archive SHA。原来的失败日志与成功部署形成对照，package identity 回归也通过。首次失败和中途路径形式检查均安全回滚，最终成功证据在 `out/cpu-memory-analysis/performance-maptest-deploy-20261020-3/`。
+
+该交付复用先前已验证的 self-contained managed publish 与 resources.pri；native CoreHost 对应 `df365db`，SHA-256 和 managed 原始构建身份分别保存在 `verification.json`，不把 managed 的旧构建元数据误写成新编译版本。
