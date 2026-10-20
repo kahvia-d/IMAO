@@ -36,6 +36,9 @@ public:
     static bool TryBridgePrediction(const cv::Mat& requestCrop, const cv::Mat& currentCrop,
         const MapViewportPrediction& requestPrediction, MapViewportPrediction& currentPrediction,
         int* inlierCount = nullptr, double* scale = nullptr);
+    // Conservative image-only witness for retaining work, including near-static
+    // sparse frames. Supplies no position, geometric acceptance or publication.
+    static bool CanRetainRequestFrame(const cv::Mat& requestCrop, const cv::Mat& currentCrop);
     static bool CanConfirmAfterBridge(const cv::Mat& pendingCrop, const cv::Mat& currentCrop,
         const MapViewportPrediction& pendingPrediction, const MapViewportPrediction& currentPrediction,
         double centerTolerance, double scaleRatioTolerance);

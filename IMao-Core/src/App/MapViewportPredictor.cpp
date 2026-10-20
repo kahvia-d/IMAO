@@ -280,6 +280,18 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
     return true;
 }
 
+bool MapViewportPredictor::CanRetainRequestFrame(const cv::Mat& requestCrop, const cv::Mat& currentCrop) {
+    if (requestCrop.empty() || currentCrop.empty() || requestCrop.size() != currentCrop.size()) return false;
+    const auto before = PrepareFrame(requestCrop), after = PrepareFrame(currentCrop);
+    // Sparse/flat stationary maps may be localizable by SURF but cannot satisfy
+    // the motion fit's spatial-support gate. Lack of motion evidence alone must
+    // not starve them. This witness only retains work; publication still needs
+    // the unchanged geometric bridge and matching/ambiguity checks.
+    if (cv::norm(before, after, cv::NORM_L1) / before.total() <= 1.0) return true;
+    int accepted = 0;
+    return !TrackFrameMotion(before, after, accepted).empty();
+}
+
 bool MapViewportPredictor::TryBridgePrediction(const cv::Mat& requestCrop, const cv::Mat& currentCrop,
     const MapViewportPrediction& requestPrediction, MapViewportPrediction& currentPrediction,
     int* inlierCount, double* scale) {

@@ -430,6 +430,26 @@ winrt::IAsyncAction App::Start() {
                 std::chrono::steady_clock::now() - resultStarted).count();
             const auto searchStarted = std::chrono::steady_clock::now();
 
+            if (mapViewportRequestInFlight.has_value() && mapViewportRequestFrame.has_value() &&
+                mapViewportFreshness.Due(lastMapViewportScope == MapViewportSearchScope::Global,
+                    std::chrono::duration_cast<std::chrono::milliseconds>(now-mapViewportRequestSubmittedAt).count(),
+                    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count())) {
+                const auto& source = *mapViewportRequestFrame;
+                const bool bridgeable = source.clientRect.right == rect.right && source.clientRect.bottom == rect.bottom &&
+                    MapViewportPredictor::CanRetainRequestFrame(source.mapCrop, mapCrop);
+                if (mapViewportFreshness.Observe(bridgeable)) {
+                    Diagnostics::Record("map-viewport-cancelled-stale", "request=" +
+                        std::to_string(activeMapViewportRequestId) + " frame=" + std::to_string(snapshotFrameId) +
+                        " ageMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                            now-mapViewportRequestSubmittedAt).count()));
+                    MapViewportLocalizer::CancelPending();
+                    mapViewportRequestInFlight.reset();
+                    mapViewportRequestFrame.reset();
+                    activeMapViewportRequestId = 0;
+                    lastMapViewportSubmitAt = {};
+                }
+            }
+
 			// Abandon a search that has stopped answering. Without this the map stays blind for as
 			// long as the worker takes, and the submit gate below can never reopen.
 			if (mapViewportRequestInFlight.has_value() &&
@@ -2746,19 +2766,23 @@ bool App::SubmitMapViewportSearch(const Mat& currentSnapshot, MapViewportSearchS
 	}
 	const MapViewportSearchScope effectiveScope = request.scope;
 	const auto submittedPrior = request.prior;
-	request.mapCrop = ImageProcessing::CropToMapCenterArea(currentSnapshot, rect);
+	// The crop helper returns a view into the entire captured frame. Freeze the
+    // crop once, then share those immutable pixels with the later bridge check.
+    // Neither the worker nor its source witness needs to retain the full frame.
+	request.mapCrop = ImageProcessing::CropToMapCenterArea(currentSnapshot, rect).clone();
 	const auto requestId = request.requestId;
 	const auto viewportRevision = request.viewportRevision;
 	// Keep the exact image represented by the asynchronous absolute result.
 	// A later capture may have moved even when frame prediction failed to
 	// advance its revision.
 	const MapViewportRequestFrame requestFrame{ requestId, request.frameId,
-		viewportRevision, rect, request.mapCrop.clone() };
+		viewportRevision, rect, request.mapCrop };
 	if (request.mapCrop.empty() || !MapViewportLocalizer::Submit(std::move(request))) return false;
 	mapViewportRequestInFlight = std::make_pair(mapViewportGeneration, snapshotFrameId);
 	mapViewportRequestSubmittedAt = std::chrono::steady_clock::now();
 	activeMapViewportRequestId = requestId;
 	mapViewportRequestFrame = requestFrame;
+    mapViewportFreshness.Reset();
 	mapViewportRequestCapturedAt = snapshotCapturedAt;
 	lastMapViewportSubmitAt = std::chrono::steady_clock::now();
 	lastMapViewportScope = effectiveScope;

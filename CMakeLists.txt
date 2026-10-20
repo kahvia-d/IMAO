@@ -585,6 +585,7 @@ target_link_libraries(IMaoOverlayPresentProbe PRIVATE dcomp.lib dwmapi.lib d3d11
 
 add_executable(IMaoVisualRegression
     IMao-Core/tools/VisualRegression/main.cpp
+    IMao-Core/src/Feature/Match/StreamingSurf.cpp
     IMao-Core/src/Feature/RuntimeFeatureRepository.cpp
     IMao-Core/src/Runtime/ResourceSnapshotContext.cpp
     IMao-Core/src/Runtime/RuntimeStatus.cpp
@@ -636,6 +637,9 @@ target_include_directories(IMaoCoordinateRegression PRIVATE ${CMAKE_SOURCE_DIR}/
 target_link_libraries(IMaoCoordinateRegression PRIVATE ${DEPS})
 
 add_custom_command(TARGET ${DEMO_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/Assets/Licenses/ViewportSURF.txt
+            ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/ViewportSURF-LICENSE.txt
         COMMAND ${CMAKE_COMMAND}
             -DIMAO_SOURCE_ASSETS=${CMAKE_SOURCE_DIR}/Assets
             -DIMAO_DESTINATION_ROOT=${CMAKE_SOURCE_DIR}/x64/$<CONFIG>
@@ -663,3 +667,17 @@ target_include_directories(IMaoOwnedFlannTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-
 set_target_properties(IMaoOwnedFlannTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 target_link_libraries(IMaoOwnedFlannTests PRIVATE ${OpenCV_LIBS})
 add_test(NAME IMaoOwnedFlannTests COMMAND IMaoOwnedFlannTests)
+
+add_executable(IMaoStreamingSurfTests IMao-Core/tests/StreamingSurfTests.cpp
+    IMao-Core/src/Feature/Match/StreamingSurf.cpp)
+target_include_directories(IMaoStreamingSurfTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+set_target_properties(IMaoStreamingSurfTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+target_link_libraries(IMaoStreamingSurfTests PRIVATE ${OpenCV_LIBS})
+add_test(NAME IMaoStreamingSurfTests COMMAND IMaoStreamingSurfTests)
+
+add_executable(IMaoViewportFreshnessTests IMao-Core/tests/ViewportFreshnessTests.cpp
+    IMao-Core/src/App/MapViewportPredictor.cpp)
+target_include_directories(IMaoViewportFreshnessTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+set_target_properties(IMaoViewportFreshnessTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+target_link_libraries(IMaoViewportFreshnessTests PRIVATE ${OpenCV_LIBS})
+add_test(NAME IMaoViewportFreshnessTests COMMAND IMaoViewportFreshnessTests)

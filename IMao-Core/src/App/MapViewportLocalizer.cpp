@@ -4,6 +4,7 @@
 #include "MapViewportLocalizer.h"
 #include "MapViewportWorkBudget.h"
 #include "../Feature/Match/OwnedFlannMatcher.h"
+#include "../Feature/Match/StreamingSurf.h"
 #include "MapViewportGeometry.h"
 #include "MapViewportCandidates.h"
 #include "MapViewportMatch.h"
@@ -533,8 +534,6 @@ private:
 
         try {
             if (interrupted()) throw SearchInterrupted{};
-            auto surf = cv::xfeatures2d::SURF::create(100, 4, 3, true, true);
-            if (interrupted()) throw SearchInterrupted{};
             // Independent coordinate systems must never share one geometry fit.
             // Test each installed, approved scene and reject ambiguous scenes.
             std::vector<int> scenes;
@@ -571,26 +570,46 @@ private:
                     if (interrupted()) throw SearchInterrupted{};
                     const auto& region = regions[regionIndex];
                     const double factor = kFactors[factorIndex];
+                    const auto resizeStarted = std::chrono::steady_clock::now();
                     cv::Mat query = request.mapCrop(region);
                     if (factor != 1.0) cv::resize(request.mapCrop(region), query, {}, factor, factor,
                         factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
+                    const double resizeMs = ElapsedMilliseconds(resizeStarted);
+                    const auto grayStarted = std::chrono::steady_clock::now();
+                    const auto querySize = query.size();
+                    const auto imageBytes = query.total() * query.elemSize();
+                    const cv::Mat gray = ImageProcessing::imgToGray(query);
+                    // Scaling still precedes grayscale conversion, preserving exact pixels.
+                    // The detector does not need to retain the scaled colour image.
+                    query.release();
+                    if (interrupted()) throw SearchInterrupted{};
+                    const double grayMs = ElapsedMilliseconds(grayStarted);
                     static std::atomic_uint32_t measuredExtractions{0};
-                    const bool measure = measuredExtractions.fetch_add(1) < 16;
+                    const bool measure = request.scope == MapViewportSearchScope::Global ||
+                        measuredExtractions.fetch_add(1) < 16;
                     const std::string sample = "viewport-surf-r" + std::to_string(regionIndex) +
                         "-f" + std::to_string(factorIndex);
                     if (measure) Diagnostics::RecordMemory(sample + "-before");
-                    ImageFeatureData features = FeatureMatch::ExtractSurfFeatures(surf, query);
+                    ImageFeatureData features;
+                    ViewportSurfStatistics statistics;
+                    ExtractViewportSurf(gray, features.imgKeypoints, features.imgDescriptors, interrupted, &statistics);
                     if (measure) {
                         Diagnostics::Record("viewport-query-storage", "region=" + std::to_string(regionIndex) +
-                            " factor=" + std::to_string(factor) + " width=" + std::to_string(query.cols) +
-                            " height=" + std::to_string(query.rows) + " imageBytes=" +
-                            std::to_string(query.total() * query.elemSize()) + " descriptorBytes=" +
-                            std::to_string(features.imgDescriptors.total() * features.imgDescriptors.elemSize()));
+                            " factor=" + std::to_string(factor) + " width=" + std::to_string(querySize.width) +
+                            " height=" + std::to_string(querySize.height) + " imageBytes=" +
+                            std::to_string(imageBytes) + " descriptorBytes=" +
+                            std::to_string(features.imgDescriptors.total() * features.imgDescriptors.elemSize()) +
+                            " request=" + std::to_string(request.requestId) +
+                            " grayBytes=" + std::to_string(gray.total() * gray.elemSize()) +
+                            " detectorScratchBytes=" + std::to_string(statistics.detectorScratchBytes) +
+                            " resizeMs=" + std::to_string(resizeMs) + " grayMs=" + std::to_string(grayMs) +
+                            " detectMs=" + std::to_string(statistics.detectMilliseconds) +
+                            " describeMs=" + std::to_string(statistics.describeMilliseconds));
                         Diagnostics::RecordMemory(sample + "-after");
                     }
                     if (interrupted()) throw SearchInterrupted{};
-                    const double sx = static_cast<double>(query.cols) / region.width;
-                    const double sy = static_cast<double>(query.rows) / region.height;
+                    const double sx = static_cast<double>(querySize.width) / region.width;
+                    const double sy = static_cast<double>(querySize.height) / region.height;
                     for (auto& point : features.imgKeypoints) {
                         if (factor == 1.0) point.pt += cv::Point2f(region.x, region.y);
                         else {

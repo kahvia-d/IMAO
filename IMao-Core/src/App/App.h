@@ -22,6 +22,7 @@
 #include "OverlayVisibilityPolicy.h"
 #include "MapViewportLocalizer.h"
 #include "MapViewportPredictor.h"
+#include "MapViewportFreshness.h"
 #include "MinimapResumePolicy.h"
 #include "WorldSearchPrior.h"
 
@@ -411,6 +412,7 @@ private:
 		cv::Mat mapCrop;
 	};
 	std::optional<MapViewportRequestFrame> mapViewportRequestFrame;
+    MapViewportFreshness mapViewportFreshness;
 	struct PendingMapViewportAnchor {
 		MapViewportLocalizationResult result;
 		int sceneId = 0;
