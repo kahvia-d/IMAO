@@ -117,6 +117,7 @@
 |---|---|
 | [`CpuMemoryInvestigation_20261020.md`](CpuMemoryInvestigation_20261020.md) | 游戏内定位与大地图匹配 CPU / 内存分析：main 资源核算、缓存峰值与取消边界、OCR / 视觉恢复并行及实机对照方案 |
 | [`PlayerCursorStutter_20261020.md`](PlayerCursorStutter_20261020.md) | 玩家日志确认大地图附着时覆盖层构建变慢与输入服务间隔增长，排查鼠标钩子共线程及逐标记完成状态查询 |
+| [`TestResourceStateIncident_20261020.md`](TestResourceStateIncident_20261020.md) | 测试版切换地区串扰玩家版的状态恢复、资源更新隔离、包身份修复与零下载验收 |
 | [`ProjectAudit_20260907.md`](ProjectAudit_20260907.md) | 全项目审计与基础修复（2026-09-07） |
 | [`Refactor_20260907.md`](Refactor_20260907.md) | 核心重构记录（2026-09-07） |
 | [`GameFrameCostAnalysis_20260918.md`](GameFrameCostAnalysis_20260918.md) | 工具对游戏帧率的影响：玩家现场现象与成因分析 |

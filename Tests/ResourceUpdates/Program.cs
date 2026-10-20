@@ -46,6 +46,33 @@ async Task Test(string name, Func<Task> action)
 Task TestPure(string name, Action action) => Test(name, () => { action(); return Task.CompletedTask; });
 Fixture New() => new(Path.Combine(suiteRoot, Guid.NewGuid().ToString("N")));
 
+await Test("maptest resource activation and selection cannot mutate player state", async () =>
+{
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles");
+    var playerApp = Path.Combine(f.Root, "player-app");
+    var testApp = Path.Combine(f.Root, "test-app");
+    var userRoot = Path.Combine(f.Root, "user-data");
+    Directory.CreateDirectory(playerApp); Directory.CreateDirectory(testApp);
+    File.WriteAllText(Path.Combine(testApp, "maptest-build-receipt.json"), "{}");
+    string Resolve(string app) => ResourceUpdateStatePaths.Resolve(app, userRoot);
+    var playerRoot = Resolve(playerApp); var testRoot = Resolve(testApp);
+    Equal(Path.Combine(userRoot, "ResourceUpdates"), playerRoot);
+    if (string.Equals(playerRoot, testRoot, StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Test tree shares player resource activation state.");
+    var player = new ResourceSnapshotService(playerRoot, f.Bundled, f.Build.AppVersion);
+    await player.InitializeAsync();
+    await player.SetDeselectedPackagesAsync(["tethys-kurotiles"]);
+    var activation = File.ReadAllBytes(Path.Combine(playerRoot, "activation.json"));
+    var selection = File.ReadAllBytes(Path.Combine(playerRoot, "selection.json"));
+    var test = new ResourceSnapshotService(testRoot, f.Bundled with { SnapshotId = "maptest-local" }, f.Build.AppVersion);
+    await test.InitializeAsync();
+    await test.SetDeselectedPackagesAsync([]);
+    if (!activation.SequenceEqual(File.ReadAllBytes(Path.Combine(playerRoot, "activation.json"))) ||
+        !selection.SequenceEqual(File.ReadAllBytes(Path.Combine(playerRoot, "selection.json"))))
+        throw new Exception("Test initialization or region selection rewrote player state.");
+    Equal(testRoot, Resolve(testApp));
+});
+
 await Test("trusted P-256 signature verifies exact signed bytes", async () =>
 {
     using var f = New(); await f.Initialize();

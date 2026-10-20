@@ -60,12 +60,16 @@ function New-LinkedEntry([string]$LinkPath, [string]$TargetPath) {
 
 # 1. Binaries. Assets is skipped: it is rebuilt below, and in a dev output it is a junction.
 [IO.Directory]::CreateDirectory($RunRoot) | Out-Null
+$scopeReceipt = Join-Path $RunRoot 'maptest-build-receipt.json'
+if (Test-Path -LiteralPath $scopeReceipt) { [IO.File]::Delete($scopeReceipt) }
+[ordered]@{ runRoot = $RunRoot; status = 'preparing'; resourceState = '.maptest-state/ResourceUpdates' } |
+    ConvertTo-Json | Set-Content -LiteralPath $scopeReceipt -Encoding UTF8
 # Idempotent: the binaries only change when the build output does, and re-copying them
 # fails while the application is running from the run root.
 $copiedBinaries = 0
 $skippedBinaries = 0
 foreach ($entry in @(Get-ChildItem -LiteralPath $BinaryRoot -Force)) {
-    if ($entry.Name -eq 'Assets') { continue }
+    if ($entry.Name -in @('Assets','maptest-build-receipt.json','.maptest-state')) { continue }
     $destination = Join-Path $RunRoot $entry.Name
     if (-not $RefreshBinaries) {
         if ($entry.PSIsContainer) { if (Test-Path -LiteralPath $destination) { ++$skippedBinaries; continue } }
@@ -286,4 +290,8 @@ Write-Host "  snapshot tile packs  : $($snapshotPackDirs -join ', ')   <- what t
 Write-Host "  Assets cloned from   : $assetsRoot (untouched)"
 Write-Host "  trial-only isolation : $(if ($isolated.Count -gt 0) { $isolated -join ', ' } else { 'none (links to the build output; a staging run can revert this tree)' })"
 Write-Host "  approved in this tree: $(if ($approvedScenes.Count -gt 0) { $approvedScenes -join ', ' } else { 'none' })"
+$scopeReceipt = Join-Path $RunRoot 'maptest-build-receipt.json'
+if (Test-Path -LiteralPath $scopeReceipt) { [IO.File]::Delete($scopeReceipt) }
+[ordered]@{ runRoot = $RunRoot; binaryRoot = $BinaryRoot; createdAtUtc = [DateTime]::UtcNow.ToString('o'); resourceState = '.maptest-state/ResourceUpdates' } |
+    ConvertTo-Json | Set-Content -LiteralPath $scopeReceipt -Encoding UTF8
 Write-Host "Launch: $RunRoot\IMao-WinUI.exe"

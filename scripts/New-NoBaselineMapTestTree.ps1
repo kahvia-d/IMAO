@@ -82,6 +82,10 @@ function New-LinkedEntry([string]$LinkPath, [string]$TargetPath) {
 
 # 1. Binaries. Assets is rebuilt below, so it is skipped here.
 [IO.Directory]::CreateDirectory($RunRoot) | Out-Null
+$scopeReceipt = Join-Path $RunRoot 'maptest-build-receipt.json'
+if (Test-Path -LiteralPath $scopeReceipt) { [IO.File]::Delete($scopeReceipt) }
+[ordered]@{ runRoot = $RunRoot; status = 'preparing'; resourceState = '.maptest-state/ResourceUpdates' } |
+    ConvertTo-Json | Set-Content -LiteralPath $scopeReceipt -Encoding UTF8
 # A binary directory that already exists used to be skipped whole, which silently kept every
 # nested build output stale: Views\SettingsPage.xbf stayed at an older revision and opening the
 # settings or usage page then crashed against the newer generated code. Walk in and sync only
@@ -129,7 +133,7 @@ function Sync-BinaryLevel([string]$Source, [string]$Destination) {
 $copiedBinaries = 0
 $reusedBinaries = 0
 foreach ($entry in @(Get-ChildItem -LiteralPath $BinaryRoot -Force)) {
-    if ($entry.Name -eq 'Assets') { continue }
+    if ($entry.Name -in @('Assets','maptest-build-receipt.json','.maptest-state')) { continue }
     $destination = Join-Path $RunRoot $entry.Name
     if ($entry.PSIsContainer) {
         # 非 Assets 的顶层目录里只有构建产物，逐个文件比对后同步。
@@ -311,6 +315,10 @@ $sourceFilesAfter = Get-SourceFileCount
 if ($sourceFilesAfter -ne $sourceFilesBefore) {
     throw "The cloned Assets tree lost files: $sourceFilesBefore -> $sourceFilesAfter"
 }
+$scopeReceipt = Join-Path $RunRoot 'maptest-build-receipt.json'
+if (Test-Path -LiteralPath $scopeReceipt) { [IO.File]::Delete($scopeReceipt) }
+[ordered]@{ runRoot = $RunRoot; binaryRoot = $BinaryRoot; createdAtUtc = [DateTime]::UtcNow.ToString('o'); resourceState = '.maptest-state/ResourceUpdates' } |
+    ConvertTo-Json | Set-Content -LiteralPath $scopeReceipt -Encoding UTF8
 Write-Host "No-base-atlas test run root ready: $RunRoot" -ForegroundColor Green
 Write-Host "  binaries cloned from : $BinaryRoot (its Assets untouched)"
 Write-Host "  Assets cloned from   : $assetsRoot (hard links, $sourceFilesAfter files intact)"

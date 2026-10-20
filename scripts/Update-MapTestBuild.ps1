@@ -2,6 +2,7 @@
 param([Parameter(Mandatory)][string]$RunRoot, [Parameter(Mandatory)][string]$BinaryRoot,
     [Parameter(Mandatory)][string]$EvidenceRoot)
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'MapTestPackageIdentity.ps1')
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'Use PowerShell 7.' }
 $RunRoot = [IO.Path]::GetFullPath($RunRoot).TrimEnd('\')
 $BinaryRoot = [IO.Path]::GetFullPath($BinaryRoot).TrimEnd('\')
@@ -25,8 +26,25 @@ foreach ($process in @(Get-CimInstance Win32_Process -Filter "name = 'IMao-WinUI
         throw 'Close the maptest application before updating. Other installations are not stopped.'
     }
 }
+# Protect legacy test trees before any new executable can be deployed. Keep
+# this scope marker even if a later build/resource validation aborts the update.
+$scopeReceipt = Join-Path $RunRoot 'maptest-build-receipt.json'
+if (-not (Test-Path -LiteralPath $scopeReceipt)) {
+    [ordered]@{ runRoot = $RunRoot; status = 'preparing'; resourceState = '.maptest-state/ResourceUpdates' } |
+        ConvertTo-Json | Set-Content -LiteralPath $scopeReceipt -Encoding UTF8
+}
 $oldSnapshot = Get-Content (Join-Path $assets 'Updates/bundled-snapshot.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $build = Get-Content (Join-Path $BinaryRoot 'build-info.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+$sourceSnapshot = Get-Content (Join-Path $BinaryRoot 'Assets/Updates/bundled-snapshot.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+$canonicalPackages = @{}
+foreach ($package in $sourceSnapshot.packages) { $canonicalPackages[$package.id] = $package }
+# Same repository publication metadata used by Stage-UpdateResources, entirely offline.
+$catalogPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'updates/stable.json'
+$envelope = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$catalog = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($envelope.payload)) | ConvertFrom-Json
+foreach ($release in @($catalog.resources | Sort-Object sequence)) {
+    foreach ($package in $release.packages) { $canonicalPackages[$package.id] = $package }
+}
 $backup = Join-Path $EvidenceRoot 'backup'
 $replacement = Join-Path $EvidenceRoot 'replacement'
 [IO.Directory]::CreateDirectory($backup) | Out-Null
@@ -42,7 +60,17 @@ foreach ($name in @('KuroMap','KuroMapIcons','Updates')) {
     if ($existing.LinkType -and $existing.LinkType -ne 'Junction') { throw 'Only physical or junction resource directories are supported.' }
     $links += [ordered]@{ name = $name; linkType = $existing.LinkType; target = $existing.Target }
     Copy-Item -LiteralPath $existing.FullName -Destination (Join-Path $backup $name) -Recurse
-    Copy-Item -LiteralPath (Join-Path $BinaryRoot "Assets/$name") -Destination (Join-Path $replacement $name) -Recurse
+    if ($name -eq 'KuroMap') {
+        $destination = Join-Path $replacement $name
+        [IO.Directory]::CreateDirectory($destination) | Out-Null
+        # CopyKuroMapAssets can leave icons beside map data in a development
+        # output. Icons belong only to KuroMapIcons, as in the published layout.
+        Get-ChildItem -LiteralPath (Join-Path $BinaryRoot "Assets/$name") |
+            Where-Object Name -NotIn @('icons','icon-manifest.json') |
+            Copy-Item -Destination $destination -Recurse
+    } else {
+        Copy-Item -LiteralPath (Join-Path $BinaryRoot "Assets/$name") -Destination (Join-Path $replacement $name) -Recurse
+    }
 }
 $links | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $EvidenceRoot 'original-links.json') -Encoding UTF8
 # Preserve the user's exact calibration and scene approval, including local trials.
@@ -54,7 +82,7 @@ foreach ($name in @('scene-calibrations.json','scene-validation.json')) {
 $changes = @()
 foreach ($file in Get-ChildItem -LiteralPath $BinaryRoot -Recurse -File) {
     $relative = $file.FullName.Substring($BinaryRoot.Length + 1)
-    if ($relative.StartsWith('Assets\') -or $relative -match '(^|\\)(publish|SavedPoints|SavedRoutes|ProgramUpdates)(\\|$)' -or $relative -match 'Tests\.exe$') { continue }
+    if ($relative -eq 'maptest-build-receipt.json' -or $relative.StartsWith('Assets\') -or $relative -match '(^|\\)(publish|SavedPoints|SavedRoutes|ProgramUpdates|\.maptest-state)(\\|$)' -or $relative -match 'Tests\.exe$') { continue }
     $target = Join-Path $RunRoot $relative
     $parent = [IO.Path]::GetDirectoryName($target)
     while ($parent.Length -gt $RunRoot.Length) {
@@ -122,9 +150,18 @@ foreach ($package in $oldSnapshot.packages | Where-Object kind -ne 'map-features
         [ordered]@{ path = $_.FullName.Substring($directory.Length + 1).Replace('\','/'); size = $_.Length;
             sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
     })
-    $packageVersion = if ($package.kind -in @('map-data','map-icons')) { $build.appVersion } else { $package.version }
-    $packages += [ordered]@{ id = $package.id; kind = $package.kind; version = $packageVersion; directory = $directory;
-        sha256 = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant(); files = $files }
+    # Map data/icons were copied from this build, while region bytes were
+    # preserved from the existing tree. Use the actual source's version for a
+    # custom package; never relabel old bytes with a newer catalog version.
+    $identitySource = $package
+    if ($package.kind -in @('map-data','map-icons')) {
+        $identitySource = @($sourceSnapshot.packages | Where-Object id -EQ $package.id)[0]
+        if ($null -eq $identitySource) { throw "Build snapshot does not identify $($package.id)." }
+    }
+    $identity = Resolve-MapTestPackageIdentity $identitySource $canonicalPackages[$package.id] $files
+    if ($identity.customized) { Write-Host "Local test customization: $($package.id); actual file hashes retained, no published archive hash claimed." }
+    $packages += [ordered]@{ id = $package.id; kind = $package.kind; version = $identity.version; directory = $directory;
+        sha256 = $identity.sha256; files = $identity.files }
 }
 $snapshot = [ordered]@{ formatVersion = 2; snapshotId = "maptest-$($build.sourceCommit)-$(Get-Date -Format yyyyMMddHHmmss)";
     sequence = 0; baselineId = $oldSnapshot.baselineId; minAppVersion = $build.appVersion; baselineRoot = $assets;

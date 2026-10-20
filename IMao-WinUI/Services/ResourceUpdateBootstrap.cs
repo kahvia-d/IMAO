@@ -14,7 +14,7 @@ internal static class ResourceUpdateBootstrap
             ?? throw new InvalidDataException("程序版本信息无效。") : new BuildInfo();
     }
 
-    public static ResourceSnapshotService CreateSnapshots()
+    public static ResourceSnapshotService CreateSnapshots(string? resourceStateRoot = null)
     {
         var info = ReadBuildInfo();
         string assets = Path.Combine(AppContext.BaseDirectory, "Assets");
@@ -63,7 +63,8 @@ internal static class ResourceUpdateBootstrap
             bundled = new() { SnapshotId = "bundled-" + info.AppVersion, BaselineId = info.BaselineId,
                 BaselineRoot = assets, MapDataRoot = Path.Combine(assets, "KuroMap"), Bundled = true, Packages = packages };
         }
-        return new ResourceSnapshotService(Path.Combine(UserDataPaths.Root, "ResourceUpdates"), bundled, info.AppVersion, PreflightAsync, Path.Combine(AppContext.BaseDirectory, "IMao-CoreHost.exe"));
+        string stateRoot = resourceStateRoot ?? ResourceUpdateStatePaths.Resolve(AppContext.BaseDirectory, UserDataPaths.Root);
+        return new ResourceSnapshotService(stateRoot, bundled, info.AppVersion, PreflightAsync, Path.Combine(AppContext.BaseDirectory, "IMao-CoreHost.exe"));
     }
 
     public static UpdateService CreateUpdater(ResourceSnapshotService snapshots, MirrorChyanCredentialVault credentials)
