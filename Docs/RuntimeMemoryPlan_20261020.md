@@ -138,3 +138,17 @@ OCR版已在20:46刷新测试树。20:46:34–20:49:07复测16条诊断均为源
 CoreHost、VisualRegression、StreamingSurfTests、OptimizationTests Release构建通过，10/10相关原生套件通过（34.64秒）。完整旧/新独立定位回放均8/8，6个正例接受且场景一致、坐标最大差0.11672地图单位（原fixture5单位容差未改）；2个负例均拒绝。特征字节一致不等于含随机索引/预算的全流程逐位一致。仅原生源码变化，无托管/XAML修改。
 
 证据：out/cpu-memory-analysis/descriptor-investigation-20261020/（根因探针及限制），out/cpu-memory-analysis/descriptor-fix-20261020/（取消红绿、同图16项执行对照、8组真实特征比较、10项回归、完整定位前后报告）。本节记录的是实验收益；实机收益需部署后复测，不承诺总内存下降或600MB目标。
+
+## 采集关闭生命周期修复（2026-10-21）
+
+实机2026-10-20 21:52:56的CoreHost异常为0xc0000005读null。使用该版本原OBJ/原link命令顺序离线生成MAP，部署版本与离线重链.text的3,348,480字节及RVA完全一致，异常在SimpleCapture::ProcessFrame的Unmap前接口解引用。该版本FrameArrived保存裸this；Close关闭session/pool后即允许析构继续，没有明确排空正在执行的回调，也没有令迟到委托与owner脱离。m_d3dContext正常路径仅在构造时初始化，成员析构会释放它，存在与异常吻合的关闭生命周期危险窗口。不能仅凭该窗口断言历史事件没有其它内存破坏原因。
+
+新增CaptureCallbackGate：WinRT委托仅强持独立gate，owner为gate内受锁保护的非拥有指针。Invoke独立锁覆盖整个帧处理（包含异常报告），StopAndWait先原子关闭入口，再获取锁等待活动回调退出并清空owner。SimpleCapture::Close在析构体内先排空、撤销FrameArrived，再逐步关闭session/pool及释放相关成员；迟到委托只访问仍存活的gate，不能再访问owner。Close串行化且无异常外逃，单步骤关闭失败保留步骤、HRESULT/异常文本，后续清理继续；日志自身失败输出调试诊断。新增capture-wgc-closed记录callbacksDrained和closeErrors，用于实机停止验收。
+
+gate锁与m_frameMutex分离，取最新帧仍只使用后者；新等待仅位于回调互斥及关闭流程，不把GPU读回时间移回日常消费者。当前可达Close调用仅来自析构，帧回调不自关闭；未来若增加回调内Close调用，必须重新设计排空，不能在回调内等待自身。
+
+测试先运行原裸owner/无排空契约的安全模拟负控制，7条断言失败；marker保留分配以避免真的触发C++悬空引用UB。新gate测试通过：Close等待活动回调后才能标记资源释放、正在执行帧完成一次、关闭后拒绝迟到委托、owner销毁后gate仍可安全接收拒绝请求、异常释放锁、重复关闭。握手控制了回调已进入、关闭已发起的顺序，但50ms等待断言仍受线程调度影响，不称为真实WinRT崩溃的完全确定性复现。
+
+CoreHost Release构建通过，11/11相关原生套件通过（36.05秒）。独立审阅未发现阻断问题；补充了审阅提出的关闭异常详情。真实WinRT驱动的事件撤销/Close行为、并发多次停止以及历史崩溃是否完全消失仍需实机开始/停止循环验收。既有OnFrameArrived错误诊断本身可能抛出的边界缺口未在本轮改动，不把gate单测称为整个WinRT委托绝不抛出的证明。
+
+证据位于out/cpu-memory-analysis/capture-lifetime-20261021/；原崩溃转储分析和MAP等价验证在descriptor-fix-field-test-20261020/。本轮只改原生采集关闭生命周期和原生测试，没有调整描述子、定位阈值、OCR显示策略或地区资源选择。

@@ -681,3 +681,8 @@ target_include_directories(IMaoViewportFreshnessTests PRIVATE ${CMAKE_SOURCE_DIR
 set_target_properties(IMaoViewportFreshnessTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 target_link_libraries(IMaoViewportFreshnessTests PRIVATE ${OpenCV_LIBS})
 add_test(NAME IMaoViewportFreshnessTests COMMAND IMaoViewportFreshnessTests)
+
+add_executable(IMaoCaptureCallbackLifetimeTests IMao-Core/tests/CaptureCallbackLifetimeTests.cpp)
+target_include_directories(IMaoCaptureCallbackLifetimeTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+set_target_properties(IMaoCaptureCallbackLifetimeTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoCaptureCallbackLifetimeTests COMMAND IMaoCaptureCallbackLifetimeTests)

@@ -9,6 +9,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
+#include "CaptureCallbackGate.h"
 class SimpleCapture
 {
 public:
@@ -46,7 +47,7 @@ public:
     winrt::Windows::Foundation::TimeSpan MinUpdateInterval() { CheckClosed(); return m_session.MinUpdateInterval(); }
     void MinUpdateInterval(winrt::Windows::Foundation::TimeSpan value) { CheckClosed(); m_session.MinUpdateInterval(value); }
 
-    void Close();
+    void Close() noexcept;
 
     /// Reads back only the regions ordinary exploration samples, instead of copying the whole client to
     /// the CPU. The caller owns the decision: it knows when the big map (whose canvas, viewport and
@@ -150,6 +151,9 @@ private:
 
 
 private:
+    std::shared_ptr<CaptureCallbackGate<SimpleCapture>> m_callbackGate;
+    winrt::event_token m_frameArrivedToken{};
+    std::mutex m_closeMutex;
     winrt::Windows::Graphics::Capture::GraphicsCaptureItem m_item{ nullptr };
     winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool m_framePool{ nullptr };
     winrt::Windows::Graphics::Capture::GraphicsCaptureSession m_session{ nullptr };

@@ -52,7 +52,11 @@ SimpleCapture::SimpleCapture(
     m_framePool = winrt::Direct3D11CaptureFramePool::CreateFreeThreaded(m_device, m_pixelFormat, 2, m_item.Size());
     m_session = m_framePool.CreateCaptureSession(m_item);
     m_lastSize = m_item.Size();
-    m_framePool.FrameArrived({ this, &SimpleCapture::OnFrameArrived });
+    m_callbackGate = std::make_shared<CaptureCallbackGate<SimpleCapture>>(this);
+    m_frameArrivedToken = m_framePool.FrameArrived(
+        [gate = m_callbackGate](winrt::Direct3D11CaptureFramePool const& sender, winrt::IInspectable const& args) {
+            gate->Invoke([&](SimpleCapture& capture) { capture.OnFrameArrived(sender, args); });
+        });
     ApplyMinUpdateInterval();
 }
 
@@ -108,20 +112,47 @@ void SimpleCapture::VisualizeDirtyRegions(bool value)
     }
 }
 
-void SimpleCapture::Close()
+void SimpleCapture::Close() noexcept
 {
-    auto expected = false;
-    if (m_closed.compare_exchange_strong(expected, true))
+    // Destruction may run while a free-threaded FrameArrived is copying pixels.
+    // Drain it before any COM member is released. Queued delegates retain only
+    // the detached gate, so revocation need not synchronously destroy delegates.
+    std::scoped_lock closeLock(m_closeMutex);
+    if (m_closed.exchange(true)) return;
+    m_frameCondition.notify_all();
+    if (m_callbackGate) m_callbackGate->StopAndWait();
+    unsigned closeErrors = 0;
+    const auto recordCloseError = [&](const char* step, auto&& detail) noexcept {
+        ++closeErrors;
+        try {
+            StructuredLogger::Record("error", "capture", "capture-wgc-close-error",
+                std::string("step=") + step + " " + detail());
+        }
+        catch (...) { OutputDebugStringA("IMao: capture close failed; diagnostic logging also failed.\n"); }
+    };
+    const auto closeStep = [&](const char* step, auto&& action) noexcept {
+        try { action(); }
+        catch (const winrt::hresult_error& error) {
+            recordCloseError(step, [&] { return "hr=" + std::to_string(static_cast<long>(error.code().value)); });
+        }
+        catch (const std::exception& error) {
+            recordCloseError(step, [&] { return std::string("what=") + error.what(); });
+        }
+        catch (...) { recordCloseError(step, [] { return "unknown exception"; }); }
+    };
+    closeStep("revoke-frame-arrived", [&] { if (m_framePool) m_framePool.FrameArrived(m_frameArrivedToken); });
+    closeStep("close-session", [&] { if (m_session) m_session.Close(); });
+    closeStep("close-frame-pool", [&] { if (m_framePool) m_framePool.Close(); });
+    m_swapChain = nullptr;
+    m_framePool = nullptr;
+    m_session = nullptr;
+    m_item = nullptr;
+    try
     {
-        m_session.Close();
-        m_framePool.Close();
-
-        m_swapChain = nullptr;
-        m_framePool = nullptr;
-        m_session = nullptr;
-        m_item = nullptr;
-        m_frameCondition.notify_all();
+        StructuredLogger::Record("info", "capture", "capture-wgc-closed",
+            "callbacksDrained=1 closeErrors=" + std::to_string(closeErrors));
     }
+    catch (...) { OutputDebugStringA("IMao: capture close diagnostic logging failed.\n"); }
 }
 
 bool SimpleCapture::WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::milliseconds timeout,
