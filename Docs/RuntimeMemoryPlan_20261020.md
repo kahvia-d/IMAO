@@ -152,3 +152,21 @@ gate锁与m_frameMutex分离，取最新帧仍只使用后者；新等待仅位�
 CoreHost Release构建通过，11/11相关原生套件通过（36.05秒）。独立审阅未发现阻断问题；补充了审阅提出的关闭异常详情。真实WinRT驱动的事件撤销/Close行为、并发多次停止以及历史崩溃是否完全消失仍需实机开始/停止循环验收。既有OnFrameArrived错误诊断本身可能抛出的边界缺口未在本轮改动，不把gate单测称为整个WinRT委托绝不抛出的证明。
 
 证据位于out/cpu-memory-analysis/capture-lifetime-20261021/；原崩溃转储分析和MAP等价验证在descriptor-fix-field-test-20261020/。本轮只改原生采集关闭生命周期和原生测试，没有调整描述子、定位阈值、OCR显示策略或地区资源选择。
+
+## 运行期字体像素副本回收（2026-10-21）
+
+继续拆分资源保留约487MiB到探索约1GiB的增量时，发现另一块与地图特征无关的明确所有者：DX11字体图集上传后，CPU同时保留Alpha8和RGBA32。按实际15px完整中文字集、40px UI字集（含现有场景类别名称）、本机msyh.ttc独立构建：4096×4096，RGBA67,108,864字节（64MiB）、Alpha16,777,216字节（16MiB）、两份字体来源39,408,704字节（约37.58MiB）。ImGui实际live分配125,303,261字节（约119.50MiB），释放RGBA后58,194,397字节（约55.50MiB）。独立进程private从128,909,312到61,661,184字节，下降约64MiB。未把全部运行增量归因于字体。
+
+仅在字体GPU视图创建成功、图集不含彩色像素且Alpha8仍在时，回收CPU RGBA并置空。保留所有字体来源、字形、度量、UV、Alpha8和GPU纹理。设备重建从原Alpha8展开RGBA再上传，不重新栅格化中文字库；彩色及RGBA-only图集保留唯一像素来源。正常帧无需RGBA，因此不在日常绘制循环重建，也未更改字体、字号、字集、输入钩子和首次字体预热顺序。
+
+新增font-atlas-storage实机诊断，分别记录alphaBytes、rgbaRetainedBytes、rgbaUploadBytes、fontSourceBytes、glyphCapacityBytes；上传逻辑字节不等于CPU仍持有的RGBA字节，也不等于进程或GPU总内存。字体来源两份约37.6MiB仍保留，未在本轮改变其所有权。
+
+红绿：产品原DX11 backend的5条像素持有断言RED，新实现GREEN。永久新测试使用实际ImGui和产品DX11 backend、无窗口WARP设备及自定义ImGui allocator，确认上传时live拥有量恰好少64MiB。GPU纹理读回、所有glyph/advance表逐字节对照；实际AddText/RenderDrawData绘制15px+40px中英文，连续10帧无RGBA重分配；3次Invalidate/Create后的纹理、文字渲染像素和几何均一致。彩色和无Alpha8图集不丢失来源，最终ImGui分配归零。HEAD原backend独立编译同测试为负控制，持有断言保持RED；旧/新atlasHash均17394923171921121514，renderedTextHash均15156769773180374645。没有修改既有断言。
+
+WARP设备重建约29–38ms，旧版已保留RGBA时约9–13ms；新增开销只在设备对象重建，正常帧实测不触发RGBA展开，且首次构建仍在安装输入钩子之前。不把测试称为真实硬件设备丢失故障注入；GPU上传失败未做故障注入，既有backend失败处理未在本轮重构。
+
+CoreHost与新字体测试Release构建通过；12/12相关原生套件通过（35.79秒）。独立审阅未发现阻断问题，之后补全了其建议的实际文字绘制/原backend对照。只修改原生代码，没有托管/XAML变化；没有减少地图候选、楼层、描述子或放宽定位规则。
+
+停止探索后、刷新前的CoreHost快照另存quiescent-process-before.json；其残留占用不能全部认作字体，因为停止时ImGui context已销毁。本轮明确消除了活动会话64MiB冗余所有者；约500MiB运行增量的其余部分、基线地区按需加载仍待继续归因，不能承诺客户端总占用下降恰好64MiB或已达到600MB。
+
+证据位于out/cpu-memory-analysis/font-memory-20261021/，包含实际字体分配探针、字体/GPU/文字读回红绿、原backend对照、构建与12项回归日志。刷新前后另核验全部载荷和地区激活/选择状态。

@@ -686,3 +686,16 @@ add_executable(IMaoCaptureCallbackLifetimeTests IMao-Core/tests/CaptureCallbackL
 target_include_directories(IMaoCaptureCallbackLifetimeTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
 set_target_properties(IMaoCaptureCallbackLifetimeTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoCaptureCallbackLifetimeTests COMMAND IMaoCaptureCallbackLifetimeTests)
+
+# Headless WARP texture roundtrip: verifies CPU owner release and exact font
+# pixels/geometry across renderer invalidation and recreation.
+add_executable(IMaoFontTextureMemoryTests IMao-Core/tests/FontTextureMemoryTests.cpp
+    IMao-Core/src/Base/imgui_dx11/imgui.cpp
+    IMao-Core/src/Base/imgui_dx11/imgui_draw.cpp
+    IMao-Core/src/Base/imgui_dx11/imgui_tables.cpp
+    IMao-Core/src/Base/imgui_dx11/imgui_widgets.cpp
+    IMao-Core/src/Base/imgui_dx11/imgui_impl_dx11.cpp)
+target_include_directories(IMaoFontTextureMemoryTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src ${CMAKE_SOURCE_DIR}/IMao-Core/src/Base/imgui_dx11)
+target_link_libraries(IMaoFontTextureMemoryTests PRIVATE d3d11.lib d3dcompiler.lib dxgi.lib)
+set_target_properties(IMaoFontTextureMemoryTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoFontTextureMemoryTests COMMAND IMaoFontTextureMemoryTests "${CMAKE_SOURCE_DIR}/x64/Release/Assets/Fonts/msyh.ttc")

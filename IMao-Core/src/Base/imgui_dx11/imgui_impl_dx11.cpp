@@ -365,6 +365,17 @@ static void ImGui_ImplDX11_CreateFontsTexture()
 
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)bd->pFontTextureView);
+
+    // The GPU owns its upload now. Keep the compact Alpha8 reconstruction
+    // source, glyphs and font inputs, but not the redundant RGBA expansion
+    // (64 MiB for the overlay's 4096-square atlas). Device recreation can
+    // expand Alpha8 again without re-rasterizing fonts. Colored or RGBA-only
+    // atlases must retain their original pixels to preserve their contents.
+    if (bd->pFontTextureView && !io.Fonts->TexPixelsUseColors && io.Fonts->TexPixelsAlpha8)
+    {
+        ImGui::MemFree(io.Fonts->TexPixelsRGBA32);
+        io.Fonts->TexPixelsRGBA32 = nullptr;
+    }
 }
 
 static void ImGui_ImplDX11_DestroyFontsTexture()

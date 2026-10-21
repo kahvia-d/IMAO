@@ -474,6 +474,20 @@ int ImGuiOverWindows::start()
     Diagnostics::Record("overlay-device-warmup", "elapsedMs=" + std::to_string(
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - warmupStarted).count()) +
         " inputHooksInstalled=0");
+    const auto* fontAtlas = io.Fonts;
+    const auto atlasPixels = static_cast<std::uint64_t>(fontAtlas->TexWidth) * fontAtlas->TexHeight;
+    std::uint64_t fontSourceBytes = 0, glyphBytes = 0;
+    for (const auto& config : fontAtlas->ConfigData) fontSourceBytes += config.FontDataSize;
+    for (const auto* atlasFont : fontAtlas->Fonts)
+        glyphBytes += static_cast<std::uint64_t>(atlasFont->Glyphs.Capacity) * sizeof(ImFontGlyph);
+    Diagnostics::Record("font-atlas-storage", "width=" + std::to_string(fontAtlas->TexWidth) +
+        " height=" + std::to_string(fontAtlas->TexHeight) +
+        " alphaBytes=" + std::to_string(fontAtlas->TexPixelsAlpha8 ? atlasPixels : 0) +
+        " rgbaRetainedBytes=" + std::to_string(fontAtlas->TexPixelsRGBA32 ? atlasPixels * 4 : 0) +
+        " rgbaUploadBytes=" + std::to_string(atlasPixels * 4) +
+        " fontSourceBytes=" + std::to_string(fontSourceBytes) +
+        " glyphCapacityBytes=" + std::to_string(glyphBytes) +
+        " colors=" + std::to_string(fontAtlas->TexPixelsUseColors));
 
     //设置透明窗口
     ImVec4 clear_color = ImVec4(0, 0, 0, 0);
