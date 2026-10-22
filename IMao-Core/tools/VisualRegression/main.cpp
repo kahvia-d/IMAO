@@ -1,3 +1,7 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include "Runtime/FrameStorageTrace.h"
 #include "Feature/LegacyFeatureExclusions.h"
 #include "../../tests/MultiSceneViewportTests.h"
 #include "Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
@@ -15,6 +19,10 @@
 #include "Feature/VisualIndex/VisualIndexRetrieval.h"
 #include "ImageProcessing/ImageProcessing.h"
 #include "Runtime/ResourceSnapshotContext.h"
+#include "Runtime/LayeredMapState.h"
+#include "MatMemoryLedger.h"
+#include "Feature/Match/MappedDescriptorStorage.h"
+#include "Coordinate/VisualLocalization/DenseMapConfirmer.h"
 
 #include <nlohmann/json.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -452,13 +460,15 @@ __declspec(noinline) int ReplayRecoverySequence(const std::filesystem::path& roo
 }
 
 __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, const nlohmann::json& manifest,
-    const std::filesystem::path& reportPath, std::shared_ptr<const RuntimeFeatureResources> resources) {
+    const std::filesystem::path& reportPath, std::shared_ptr<const RuntimeFeatureResources> resources,
+    MatMemoryLedger* ledger = nullptr) {
     std::string error;
     if (!MapViewportLocalizer::Initialize(resources, error)) {
         std::cerr << error << '\n';
         return 1;
     }
     nlohmann::json results = nlohmann::json::array();
+    if (ledger) ledger->Record("viewport-ready");
     int failed = 0;
     std::uint64_t requestId = 0;
     for (const auto& sample : manifest.at("samples")) {
@@ -490,6 +500,9 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
                 result.sceneId == expected.value("sceneId", 1);
         }
         if (!correct) ++failed;
+        if (ledger) FrameStorage::Report("memory-ledger-viewport-result", {}, {}, {}, resources->map.imgDescriptors);
+        if (ledger) ledger->Record("viewport-result", {{"id", sample.at("id")},
+            {"accepted", result.accepted}, {"matcherCacheBytes", result.matcherCacheBytes}});
         nlohmann::json corners = nlohmann::json::array();
         for (const auto& point : result.captureCorners) corners.push_back({point.x, point.y});
         results.push_back({{"captureCorners", corners}, {"id", sample.at("id")}, {"accepted", result.accepted}, {"correct", correct},
@@ -511,7 +524,12 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
             {"candidateNearestM", result.candidateNearestM}, {"candidateReachM", result.candidateReachM},
             {"planMs", result.planMilliseconds}});
     }
+    if (ledger) {
+        MapViewportLocalizer::CancelPending();
+        ledger->Record("viewport-cancelled");
+    }
     MapViewportLocalizer::Shutdown();
+    if (ledger) ledger->Record("viewport-released");
     std::filesystem::create_directories(reportPath.parent_path());
     const nlohmann::json report = {{"diagnosticOnly", manifest.contains("diagnosticPacks")}, {"failed", failed}, {"samples", results}};
     std::ofstream(reportPath) << report.dump(2) << '\n';
@@ -560,11 +578,9 @@ int MeasureViewportCost(const std::filesystem::path& repositoryRoot, int sceneId
             size_t points=0;
             for (auto i : all) {
                 if (tiles.size()>=64) break;
-                const auto& tile=resources->visualIndex.tiles[i];
-                for (size_t j=tile.featureRowOffset;j<static_cast<size_t>(tile.featureRowOffset)+tile.featureRowCount;++j) {
-                    const auto row=resources->visualIndex.featureRows[j];
-                    if (!counted[row]) { counted[row]=1; ++points; }
-                }
+                resources->VisitTileRows(i, [&](uint32_t row) {
+                    if (row < counted.size() && !counted[row]) { counted[row]=1; ++points; }
+                });
                 tiles.push_back(i);
                 if (points*(128*sizeof(float)+sizeof(cv::KeyPoint))>=4*1024*1024) break;
             }
@@ -628,15 +644,11 @@ int MeasureViewportCost(const std::filesystem::path& repositoryRoot, int sceneId
         std::size_t keypoints = 0;
         for (const auto tileIndex : ordered) {
             if (tiles.size() >= cap) break;
-            const auto& tile = resources->visualIndex.tiles[tileIndex];
-            for (std::uint32_t row = 0; row < tile.featureRowCount; ++row) {
-                const auto index = tile.featureRowOffset + row;
-                if (index >= resources->visualIndex.featureRows.size()) break;
-                const auto mapRow = resources->visualIndex.featureRows[index];
-                if (mapRow >= counted.size() || counted[mapRow] != 0) continue;
+            resources->VisitTileRows(tileIndex, [&](uint32_t mapRow) {
+                if (mapRow >= counted.size() || counted[mapRow] != 0) return;
                 counted[mapRow] = 1;
                 ++keypoints;
-            }
+            }, true);
             tiles.push_back(tileIndex);
             if (keypoints * (MapVisualIndex::DescriptorColumns * sizeof(float) + sizeof(cv::KeyPoint)) >= budget) break;
         }
@@ -740,12 +752,9 @@ int CheckSceneRanking(const std::filesystem::path& repositoryRoot, int queryScen
     for (std::size_t tileIndex = 0; tileIndex < resources->visualIndex.tiles.size() && query.rows < querySize; ++tileIndex) {
         if (MapViewportCandidates::TileScene(*resources, tileIndex) != querySceneId) continue;
         const auto& tile = resources->visualIndex.tiles[tileIndex];
-        for (std::uint32_t row = 0; row < tile.featureRowCount && query.rows < querySize; ++row) {
-            const auto index = tile.featureRowOffset + row;
-            if (index >= resources->visualIndex.featureRows.size()) break;
-            query.push_back(resources->map.imgDescriptors.row(
-                static_cast<int>(resources->visualIndex.featureRows[index])));
-        }
+        resources->VisitTileRows(tileIndex, [&](uint32_t row) {
+            if (query.rows < querySize) query.push_back(resources->map.imgDescriptors.row(static_cast<int>(row)));
+        }, true);
         queried.push_back(static_cast<int>(tileIndex));
     }
     if (query.rows == 0) {
@@ -858,12 +867,9 @@ int SweepSceneRanking(const std::filesystem::path& repositoryRoot, int queryScen
         for (std::size_t offset = 0; offset < sceneTiles.size() && query.rows < querySize; ++offset) {
             const auto tileIndex = sceneTiles[(start + offset) % sceneTiles.size()];
             const auto& tile = resources->visualIndex.tiles[tileIndex];
-            for (std::uint32_t row = 0; row < tile.featureRowCount && query.rows < querySize; ++row) {
-                const auto index = tile.featureRowOffset + row;
-                if (index >= resources->visualIndex.featureRows.size()) break;
-                query.push_back(resources->map.imgDescriptors.row(
-                    static_cast<int>(resources->visualIndex.featureRows[index])));
-            }
+            resources->VisitTileRows(tileIndex, [&](uint32_t row) {
+                if (query.rows < querySize) query.push_back(resources->map.imgDescriptors.row(static_cast<int>(row)));
+            }, true);
             centreX += (static_cast<double>(tile.minX) + tile.maxX) / 2.0;
             centreY += (static_cast<double>(tile.minY) + tile.maxY) / 2.0;
             ++centreCount;
@@ -1098,7 +1104,189 @@ int MeasureMinimapMemory(const std::filesystem::path& snapshotPath,
     }
 }
 
+// Same resource loader and workers as normal replay, without capture/OCR/D3D.
+// Untracked private bytes include vectors, libraries, heaps and probe overhead;
+// private minus Mat bytes must never be labelled "allocator retained bytes".
+int MeasureMemoryLedger(const std::filesystem::path& root, const std::filesystem::path& manifestPath,
+    const std::filesystem::path& outputPrefix) {
+    std::filesystem::create_directories(outputPrefix.parent_path());
+    FrameStorage::InstallFromEnvironment();
+    auto ledger = std::make_unique<MatMemoryLedger>(outputPrefix.wstring() + L".jsonl");
+    cv::Mat::setDefaultAllocator(ledger.get());
+    int exitCode = 1;
+    try {
+        ledger->Record("baseline");
+        // Verify ownership accounting before measuring the real pipeline.
+        {
+            const auto before = ledger->Live();
+            cv::Mat image(32, 64, CV_8U);
+            cv::Mat alias = image(cv::Rect(0, 0, 16, 16));
+            if (ledger->Live() != before + 2048) throw std::runtime_error("Ledger alias double counted");
+            auto copy = alias.clone();
+            image.release(); alias.release();
+            if (ledger->Live() != before + 256) throw std::runtime_error("Ledger did not observe owner release");
+        }
+        if (ledger->Live() != 0) throw std::runtime_error("Ledger self check leaked a matrix");
+        ledger->Record("self-check-complete");
+        std::ifstream input(manifestPath);
+        const auto manifest = nlohmann::json::parse(input);
+        nlohmann::json snapshot; std::string error;
+        if (!ResourceSnapshotValidation::ReadAndValidate(
+            ResourceSnapshotContext::Path(manifest.at("resourceSnapshot").get<std::string>()), snapshot, error))
+            throw std::runtime_error("Invalid ledger resource snapshot: " + error);
+        ResourceSnapshotContext::Initialize(std::move(snapshot));
+        LayeredMap::Install(ResourceSnapshotContext::BaselineRoot() / "FeaturesDatas");
+        ledger->Record("floors-ready");
+        if (manifest.value("memoryDisableDescriptorMapping", false)) SetEnvironmentVariableW(L"IMAO_DESCRIPTOR_MAPPING", L"0");
+        if (manifest.value("memoryDisableRuntimeIndexPacking", false)) SetEnvironmentVariableW(L"IMAO_RUNTIME_INDEX_COMPACT", L"0");
+        RuntimeFeatureRepository::Instance().BeginPreload(ResourceSnapshotContext::BaselineRoot());
+        auto resources = RuntimeFeatureRepository::Instance().AwaitReady(error);
+        if (!resources) throw std::runtime_error(error);
+        if (manifest.value("memoryRequireRuntimeIndexPacked", false) &&
+            (!resources->runtimeIndex.Ready() || resources->visualIndex.featureRows.capacity() || resources->visualIndex.postings.capacity()))
+            throw std::runtime_error("Repository did not release original row/posting allocations");
+        ledger->Record("runtime-index-storage", {{"packed", resources->runtimeIndex.Ready()},
+            {"rowBytes", resources->runtimeIndex.RowBytes()}, {"postingBytes", resources->runtimeIndex.PostingBytes()}});
+        if (manifest.value("memoryRequireRuntimeIndexCompacted", false) &&
+            (!resources->visualIndex.histograms.empty() || resources->visualIndex.histograms.capacity() != 0))
+            throw std::runtime_error("Repository published a retained build histogram");
+        const bool descriptorsMapped = MappedDescriptorStorage::IsMapped(resources->map.imgDescriptors);
+        if (manifest.value("memoryRequireMappedDescriptors", false) && !descriptorsMapped)
+            throw std::runtime_error("Repository descriptors were not mapped");
+        size_t descriptorResident = 0; std::string residentError;
+        if (descriptorsMapped && !MappedDescriptorStorage::ResidentBytes(resources->map.imgDescriptors, descriptorResident, residentError))
+            throw std::runtime_error(residentError);
+        ledger->Record("descriptor-storage-ready", {{"mapped", descriptorsMapped},
+            {"logicalBytes", resources->map.imgDescriptors.total() * resources->map.imgDescriptors.elemSize()},
+            {"residentBytes", descriptorResident}});
+        const auto featureBytes = [](const ImageFeatureData& data) {
+            return nlohmann::json{{"descriptorBytes", data.imgDescriptors.total() * data.imgDescriptors.elemSize()},
+                {"keypointCapacityBytes", data.imgKeypoints.capacity() * sizeof(cv::KeyPoint)}};
+        };
+        const auto& index = resources->visualIndex;
+        ledger->Record("resources-ready", {{"map", featureBytes(resources->map)},
+            {"curated", featureBytes(resources->curatedCandidates)}, {"iconTask", featureBytes(resources->iconTask)},
+            {"wavePlate", featureBytes(resources->wavePlateCrystal)},
+            {"indexVectorCapacityBytes", resources->runtimeIndex.Bytes() + index.tiles.capacity() * sizeof(MapVisualTile) +
+                index.histograms.capacity() * sizeof(MapVisualHistogramEntry) +
+                index.featureRows.capacity() * sizeof(uint32_t) + index.postings.capacity() * sizeof(MapVisualPosting) +
+                index.postingOffsets.capacity() * sizeof(uint32_t)},
+            {"vocabularyBytes", index.vocabulary.total() * index.vocabulary.elemSize()}});
+        ledger->Record("index-vectors", {
+            {"tiles", {{"size", index.tiles.size()}, {"capacity", index.tiles.capacity()}, {"itemBytes", sizeof(MapVisualTile)}}},
+            {"histograms", {{"size", index.histograms.size()}, {"capacity", index.histograms.capacity()}, {"itemBytes", sizeof(MapVisualHistogramEntry)}}},
+            {"featureRows", {{"size", index.featureRows.size()}, {"capacity", index.featureRows.capacity()}, {"itemBytes", sizeof(uint32_t)}}},
+            {"postings", {{"size", index.postings.size()}, {"capacity", index.postings.capacity()}, {"itemBytes", sizeof(MapVisualPosting)}}},
+            {"postingOffsets", {{"size", index.postingOffsets.size()}, {"capacity", index.postingOffsets.capacity()}, {"itemBytes", sizeof(uint32_t)}}}});
+        if (manifest.contains("memoryMinimap")) {
+            if (!GlobalVisualLocalizer::Initialize(resources, error)) throw std::runtime_error(error);
+            ledger->Record("minimap-ready");
+            {
+                const auto image = cv::imread((root / manifest.at("memoryMinimap").get<std::string>()).string());
+                if (image.empty()) throw std::runtime_error("Ledger minimap image missing");
+                for (int iteration = 1; iteration <= 3; ++iteration) {
+                    cv::Mat normalized; ImageFeatureData features;
+                    if (!GlobalVisualLocalizer::PrepareMinimap(image, normalized, features))
+                        throw std::runtime_error("Ledger minimap has no features");
+                    VisualLocalizationRequest request;
+                    request.sessionId = request.uiGeneration = 1; request.frameId = request.requestId = iteration;
+                    request.normalizedMinimap = normalized; request.minimapFeatures = features;
+                    if (!GlobalVisualLocalizer::Submit(std::move(request))) throw std::runtime_error("Ledger submit failed");
+                    VisualLocalizationResult result; bool received = false;
+                    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+                    while (std::chrono::steady_clock::now() < deadline) {
+                        if (GlobalVisualLocalizer::TryTakeLatestResult(result)) { received = true; break; }
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    }
+                    if (!received) throw std::runtime_error("Ledger minimap timed out");
+                    nlohmann::json candidates = nlohmann::json::array();
+                    for (const auto& candidate : result.candidates) candidates.push_back(SerializeCandidate(candidate));
+                    ledger->Record("minimap-result", {{"iteration", iteration}, {"durationMs", result.totalMilliseconds},
+                        {"quality", GlobalVisualLocalizer::QualityName(result.quality)}, {"ambiguous", result.ambiguous},
+                        {"searchIncomplete", result.searchIncomplete}, {"candidates", candidates}});
+                }
+            }
+            GlobalVisualLocalizer::CancelPending(); ledger->Record("minimap-cancelled");
+            if (!manifest.value("memoryKeepMinimapAlive", false)) {
+                GlobalVisualLocalizer::Shutdown(); ledger->Record("minimap-released");
+            }
+        }
+        exitCode = manifest.value("viewport", false)
+            ? ReplayViewports(root, manifest, outputPrefix.wstring() + L".report.json", resources, ledger.get()) : 0;
+        if (descriptorsMapped) {
+            if (!MappedDescriptorStorage::ResidentBytes(resources->map.imgDescriptors, descriptorResident, residentError))
+                throw std::runtime_error(residentError);
+            ledger->Record("descriptor-storage-after-replay", {{"logicalBytes", resources->map.imgDescriptors.total() * resources->map.imgDescriptors.elemSize()},
+                {"residentBytes", descriptorResident}});
+        }
+        GlobalVisualLocalizer::Shutdown(); ledger->Record("all-localizers-released");
+        resources.reset(); RuntimeFeatureRepository::Instance().Shutdown();
+        ledger->Record("resources-released");
+        LayeredMap::Reset(); ledger->Record("floors-released");
+        FrameStorage::Report("memory-ledger-end");
+        if (FrameStorage::ActiveAllocator() && FrameStorage::ActiveAllocator()->Read().matLiveBytes != 0)
+            throw std::runtime_error("Census allocator chain still has matrix owners after teardown");
+        const auto mappedFinal = MappedDescriptorStorage::Read();
+        ledger->Record("descriptor-storage-released", {{"bytes", mappedFinal.bytes}, {"mappings", mappedFinal.mappings},
+            {"failures", mappedFinal.failures}, {"closeErrors", mappedFinal.closeErrors}});
+        if (mappedFinal.bytes || mappedFinal.mappings || mappedFinal.closeErrors)
+            throw std::runtime_error("Mapped descriptor ownership did not drain cleanly");
+        if (ledger->Live() != 0) throw std::runtime_error("Ledger still has matrix owners after teardown");
+    } catch (const std::exception& e) {
+        std::cerr << "Memory ledger failed: " << e.what() << '\n'; exitCode = 1;
+        MapViewportLocalizer::Shutdown(); GlobalVisualLocalizer::Shutdown();
+        RuntimeFeatureRepository::Instance().Shutdown(); LayeredMap::Reset();
+        ledger->Record("failed-after-cleanup", {{"error", e.what()}});
+    }
+    cv::Mat::setDefaultAllocator(ledger->Base());
+    // A failing probe may have static Mat owners. Keep their allocator alive
+    // until process exit rather than introduce a dangling allocator pointer.
+    if (ledger->Live() != 0) (void)ledger.release();
+    return exitCode;
+}
+
 int wmain(int argumentCount, wchar_t** arguments) {
+    if (argumentCount == 4 && std::wstring(arguments[1]) == L"--dense-memory") {
+        // The production tile cache is process-static. Its allocator deliberately
+        // outlives main so cached Mats can still be destroyed safely at exit.
+        auto* ledger = new MatMemoryLedger(arguments[3]);
+        cv::Mat::setDefaultAllocator(ledger);
+        try {
+            ledger->Record("dense-baseline");
+            const std::filesystem::path root(arguments[2]);
+            std::vector<std::filesystem::path> paths;
+            for (const auto& entry : std::filesystem::directory_iterator(root / "8"))
+                if (entry.is_regular_file() && entry.path().extension() == ".png") paths.push_back(entry.path());
+            std::sort(paths.begin(), paths.end());
+            if (paths.size() < 64) throw std::runtime_error("Dense probe requires 64 real World tiles");
+            {
+                cv::Mat query(184, 184, CV_8U, cv::Scalar(127));
+                const auto* scene = Scene::Find(1);
+                if (!scene) throw std::runtime_error("Dense probe World scene unavailable");
+                for (int pass = 0; pass < 3; ++pass) {
+                    for (int i = 0; i < 64; ++i) {
+                        auto stem = paths[i].stem().string(); std::replace(stem.begin(), stem.end(), '_', ' ');
+                        std::istringstream coordinates(stem); int state = 0, x = 0, y = 0;
+                        if (!(coordinates >> state >> x >> y) || state != 8) throw std::runtime_error("Dense tile coordinate invalid");
+                        const cv::Point2d prior(scene->originX + (x - .5) * 850.0 * scene->scale,
+                            scene->originY + (.5 - y) * 850.0 * scene->scale);
+                        const auto result = DenseMapConfirmer::Confirm(query, 1, prior, 1.0, root);
+                        if (!result.available) throw std::runtime_error("Dense tile confirmation unavailable: " + result.detail);
+                        if (i == 0 || i == 15 || i == 31 || i == 47 || i == 63)
+                            ledger->Record("dense-cache", {{"pass", pass}, {"tilesVisited", i + 1}, {"accepted", result.accepted}});
+                    }
+                }
+            }
+            ledger->Record("dense-query-released");
+            cv::Mat::setDefaultAllocator(ledger->Base());
+            return 0;
+        } catch (const std::exception& e) {
+            std::cerr << "Dense memory probe failed: " << e.what() << '\n';
+            cv::Mat::setDefaultAllocator(ledger->Base()); return 1;
+        }
+    }
+    if (argumentCount == 5 && std::wstring(arguments[1]) == L"--memory-ledger")
+        return MeasureMemoryLedger(arguments[2], arguments[3], arguments[4]);
     if (argumentCount == 3 && std::wstring(arguments[1]) == L"--subset-memory") {
         try {
             const auto memory = [](const char* stage) {

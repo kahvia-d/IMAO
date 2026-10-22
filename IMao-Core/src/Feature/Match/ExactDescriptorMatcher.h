@@ -11,13 +11,14 @@ struct SearchInterrupted : std::exception {
 
 // Compute each exact L2 distance once, reusing it for both nearest-neighbour
 // directions. Batches bound temporary storage and provide cancellation points.
-inline void MatchDescriptorsExactly(const cv::Mat& map, const cv::Mat& query,
+template<class RowProvider>
+inline void MatchDescriptorBatchesExactly(int mapRows, const cv::Mat& query, RowProvider provideRows,
     std::vector<std::vector<cv::DMatch>>& forward,
     std::vector<std::vector<cv::DMatch>>& reverse,
     const std::function<bool()>& interrupted = {}) {
-    forward.assign(map.rows, {});
+    forward.assign(mapRows, {});
     reverse.assign(query.rows, {});
-    if (map.empty() || query.empty()) return;
+    if (mapRows == 0 || query.empty()) return;
     std::vector<float> reverseDistances(query.rows, std::numeric_limits<float>::max());
     std::vector<int> reverseRows(query.rows, -1);
     // Small minimaps have few descriptors: use larger row batches to avoid
@@ -25,11 +26,11 @@ inline void MatchDescriptorsExactly(const cv::Mat& map, const cv::Mat& query,
     constexpr size_t distanceBufferBytes = 2 * 1024 * 1024;
     const int batchRows = static_cast<int>(std::max<size_t>(1, std::min<size_t>(4096,
         distanceBufferBytes / (static_cast<size_t>(query.rows) * sizeof(float)))));
-    for (int begin = 0; begin < map.rows; begin += batchRows) {
+    for (int begin = 0; begin < mapRows; begin += batchRows) {
         if (interrupted && interrupted()) throw SearchInterrupted{};
         cv::Mat distances;
-        const int end = std::min(begin + batchRows, map.rows);
-        cv::batchDistance(map.rowRange(begin, end), query, distances, CV_32F, cv::noArray(), cv::NORM_L2);
+        const int end = std::min(begin + batchRows, mapRows);
+        cv::batchDistance(provideRows(begin, end), query, distances, CV_32F, cv::noArray(), cv::NORM_L2);
         for (int row = begin; row < end; ++row) {
             const float* values = distances.ptr<float>(row - begin);
             int first = -1, second = -1;
@@ -46,4 +47,12 @@ inline void MatchDescriptorsExactly(const cv::Mat& map, const cv::Mat& query,
     }
     for (int row = 0; row < query.rows; ++row)
         if (reverseRows[row] >= 0) reverse[row].emplace_back(row, reverseRows[row], reverseDistances[row]);
+}
+
+inline void MatchDescriptorsExactly(const cv::Mat& map, const cv::Mat& query,
+    std::vector<std::vector<cv::DMatch>>& forward,
+    std::vector<std::vector<cv::DMatch>>& reverse,
+    const std::function<bool()>& interrupted = {}) {
+    MatchDescriptorBatchesExactly(map.rows, query, [&](int begin, int end) { return map.rowRange(begin, end); },
+        forward, reverse, interrupted);
 }

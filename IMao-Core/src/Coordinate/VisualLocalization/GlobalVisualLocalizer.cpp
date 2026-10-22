@@ -9,7 +9,7 @@
 #include "MinimapTerrainEvidence.h"
 #include "../../Feature/Match/UniqueMapFeatures.h"
 #include "../../Feature/Match/FeatureRowCache.h"
-#include "../../Feature/Match/ExactDescriptorMatcher.h"
+#include "../../Feature/Match/EncodedExactMatcher.h"
 #include "../../Feature/VisualIndex/VisualIndexRetrieval.h"
 
 #include <opencv2/calib3d.hpp>
@@ -31,6 +31,13 @@
 #include <unordered_map>
 
 namespace {
+bool EncodedMinimapCacheEnabled() {
+    static const bool enabled = [] {
+        char value[16]{}; size_t length = 0;
+        return getenv_s(&length, value, sizeof(value), "IMAO_MINIMAP_ENCODED_CACHE") != 0 || value[0] != '0';
+    }();
+    return enabled;
+}
 constexpr std::size_t kMaximumCoarseCandidates = 12;
 constexpr double kExpectedScale = 194.0 / 184.0;
 constexpr double kMaximumScaleDeviation = 0.15;
@@ -337,8 +344,12 @@ class VisualLocalizationEngine {
     };
 public:
     explicit VisualLocalizationEngine(std::shared_ptr<const RuntimeFeatureResources> resources)
-        : resources_(std::move(resources)), rowCache_(resources_->map), vocabularyIndex_(
-            resources_->visualIndex.vocabulary, cv::flann::KDTreeIndexParams(4)) {
+        : resources_(std::move(resources)), rowCache_(resources_->map, 64 * 1024 * 1024, EncodedMinimapCacheEnabled()), vocabularyIndex_([&] {
+            FrameStorage::Scope owner(FrameStorage::Origin::MinimapVocabulary);
+            return cv::flann::Index(resources_->visualIndex.vocabulary, cv::flann::KDTreeIndexParams(4));
+        }()) {
+        if (Diagnostics::MemoryTraceEnabled()) Diagnostics::Record("minimap-candidate-storage",
+            std::string("mode=") + (EncodedMinimapCacheEnabled() ? "encoded" : "float") + " budgetCharge=float-equivalent");
     }
 
     VisualLocalizationResult Locate(const VisualLocalizationRequest& request, double recoveryAngle = 0.0,
@@ -465,10 +476,7 @@ public:
                 const int compatibleSceneId = compatibleIndex < resources_->baseVisualTileCount ? 1 : compatible.sceneId;
                 if (compatibleSceneId != resultSceneId || compatible.gridX != tile.gridX ||
                     compatible.gridY != tile.gridY) continue;
-                rows.insert(rows.end(),
-                    resources_->visualIndex.featureRows.begin() + compatible.featureRowOffset,
-                    resources_->visualIndex.featureRows.begin() + compatible.featureRowOffset +
-                        compatible.featureRowCount);
+                resources_->AppendTileRows(compatibleIndex, rows);
             }
             std::sort(rows.begin(), rows.end());
             rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
@@ -531,10 +539,7 @@ public:
                     if (request.requireOcrHint && !TileMatchesHint(tile, shard.sceneId, request.ocrHints)) {
                         continue;
                     }
-                    sceneRows.insert(sceneRows.end(),
-                        resources_->visualIndex.featureRows.begin() + tile.featureRowOffset,
-                        resources_->visualIndex.featureRows.begin() + tile.featureRowOffset +
-                            tile.featureRowCount);
+                    resources_->AppendTileRows(tileIndex, sceneRows);
                 }
                 std::sort(sceneRows.begin(), sceneRows.end());
                 sceneRows.erase(std::unique(sceneRows.begin(), sceneRows.end()), sceneRows.end());
@@ -633,8 +638,7 @@ public:
                 previousCenter.y >= tile.minY && previousCenter.y < tile.maxY;
             if (!overlapsPreviousTile && (searchRadius <= 0.0 ||
                 std::hypot(previousCenter.x - nearestX, previousCenter.y - nearestY) > searchRadius)) continue;
-            rows.insert(rows.end(), resources_->visualIndex.featureRows.begin() + tile.featureRowOffset,
-                resources_->visualIndex.featureRows.begin() + tile.featureRowOffset + tile.featureRowCount);
+            resources_->AppendTileRows(tileIndex, rows);
         }
         std::sort(rows.begin(), rows.end());
         rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
@@ -700,7 +704,7 @@ private:
         }
         matches.subset = rowCache_.Get(rows, interrupted);
         const auto prepared = std::chrono::steady_clock::now();
-        MatchDescriptorsExactly(matches.subset->imgDescriptors, query.imgDescriptors,
+        MatchDescriptorsExactly(*matches.subset, query.imgDescriptors,
             matches.forward, matches.reverse, interrupted);
         if (profile) std::cerr << "matching-profile rows=" << rows.size() << " query=" << query.imgDescriptors.rows
             << " prepareMs=" << std::chrono::duration<double, std::milli>(prepared - start).count()

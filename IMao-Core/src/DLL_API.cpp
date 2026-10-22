@@ -1,4 +1,4 @@
-#include "DLL_API.h"
+﻿#include "DLL_API.h"
 #include "Runtime/RoutePlanningService.h"
 #include <iostream>
 #include"App/App.h"
@@ -17,6 +17,7 @@
 #include "Runtime/RuntimeStatus.h"
 #include "Runtime/StructuredLogger.h"
 #include "Runtime/IsolationSwitches.h"
+#include "Runtime/FrameStorageTrace.h"
 #include "util.h"
 #include <condition_variable>
 #include <DbgHelp.h>
@@ -252,6 +253,7 @@ void RuntimeMain(std::stop_token stopToken) {
         }
         DrawItemOnGameMap::ClearNearItemsData();
         DrawItemOnMinMap::ClearNearItemsData();
+        FrameStorage::Report("session-stopped");
 
 		{
 			std::scoped_lock lock(runtimeMutex);
@@ -271,6 +273,7 @@ void Initi()
 	SetUnhandledExceptionFilter(WriteNativeCrashDump);
 	std::scoped_lock lock(runtimeMutex);
 	if (runtimeInitialized) return;
+	FrameStorage::InstallFromEnvironment();
 	std::call_once(drawItemsInitialized, [] { DrawItemBase::Initi(); });
 	Diagnostics::Initialize();
 	// Before a single region pack is read: the floor under "what does IMAO cost", with the modules loaded and
@@ -362,6 +365,7 @@ void Shutdown() {
 	GlobalVisualLocalizer::Shutdown();
 	IdentifyWorldCoordinates::Shutdown();
 	RuntimeFeatureRepository::Instance().Shutdown();
+    FrameStorage::Report("core-shutdown");
 	{
 		std::scoped_lock lock(runtimeMutex);
 		runtimeInitialized = false;

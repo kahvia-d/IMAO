@@ -20,6 +20,8 @@
 // prior, a missing reference makes it inert, and it only ever confirms a position that
 // some other part of the runtime already proposed.
 namespace DenseMapConfirmer {
+struct CacheStorage { size_t entries = 0, bytes = 0; };
+CacheStorage ReadCacheStorage();
 struct Result {
     bool available = false;  // false when the reference imagery or the inputs are missing
     bool accepted = false;

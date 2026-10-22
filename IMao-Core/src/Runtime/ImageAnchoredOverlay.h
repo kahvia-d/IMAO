@@ -100,7 +100,7 @@ public:
                     if (registered) toSource = known->motion;
                     else {
                         auto history = tracker_;
-                        registered = history.Track(source->motionImage, toSource);
+                        registered = TrackSource(history, *source, toSource);
                     }
                     if (registered) {
                         const auto betweenSources = ComposeOverlayTransforms(toSource, InverseOverlayTransform(anchorToSource_));
@@ -115,12 +115,12 @@ public:
             // it every80ms would integrate tiny registration errors indefinitely.
             // ScreenMotionTracker rebases only after measured terrain displacement.
             if (!continued) {
-                if (!tracker_.Anchor(source->motionImage, minimap_)) { Reset(); return false; }
+                if (!AnchorSource(tracker_, *source, minimap_)) { Reset(); return false; }
                 correction_ = anchorToSource_ = anchorToCapture_ = {};
                 lastCapture_ = source->frameId;
                 captureHistory_.clear();
                 RememberCapture(lastCapture_, {});
-                if (minimap_) RememberRegistered(source->frameId, source->capturedAt, source->motionImage, {});
+                if (minimap_) RememberRegistered(source->frameId, source->capturedAt, source->motionImage, {}, source->motionSourceSize);
             }
             source_ = source;
         }
@@ -139,7 +139,7 @@ public:
                     freshAttempt_ = source->frameId;
                     ScreenMotionTracker fresh;
                     failure_ = "fresh-source-track";
-                    if (fresh.Anchor(source->motionImage, true) && fresh.Track(capture.image(region), measured)) {
+                    if (AnchorSource(fresh, *source, true) && fresh.Track(capture.image(region), measured)) {
                         tracker_ = std::move(fresh);
                         anchorToSource_ = {};
                         recoveredFresh_ = true;
@@ -159,7 +159,7 @@ public:
                         recentAttempt_ = recent_.frameId;
                         ScreenMotionTracker fresh;
                         failure_ = "recent-capture-track";
-                        if (fresh.Anchor(recent_.image, true) && fresh.Track(capture.image(region), measured)) {
+                        if ((recent_.originalSize.empty() ? fresh.Anchor(recent_.image, true) : fresh.AnchorStored(recent_.image, recent_.originalSize, true)) && fresh.Track(capture.image(region), measured)) {
                             anchorToSource_ = ComposeOverlayTransforms(anchorToSource_, InverseOverlayTransform(recent_.motion));
                             tracker_ = std::move(fresh);
                             recoveredRecent_ = true;
@@ -222,16 +222,25 @@ private:
         failure_ = "none";
         return true;
     }
+    static bool AnchorSource(ScreenMotionTracker& tracker, const OverlayFrame& source, bool minimap) {
+        return source.motionSourceSize.empty() ? tracker.Anchor(source.motionImage, minimap) :
+            tracker.AnchorStored(source.motionImage, source.motionSourceSize, minimap);
+    }
+    static bool TrackSource(ScreenMotionTracker& tracker, const OverlayFrame& source, OverlayScreenTransform& result) {
+        return source.motionSourceSize.empty() ? tracker.Track(source.motionImage, result) :
+            tracker.TrackStored(source.motionImage, source.motionSourceSize, result);
+    }
     struct RegisteredCapture { std::uint64_t frameId; OverlayScreenTransform motion; };
     struct RegisteredPixels {
         std::uint64_t frameId = 0;
         std::chrono::steady_clock::time_point capturedAt{};
         cv::Mat image;
         OverlayScreenTransform motion;
+        cv::Size originalSize{};
     };
     void RememberRegistered(std::uint64_t frameId, std::chrono::steady_clock::time_point capturedAt,
-        const cv::Mat& image, const OverlayScreenTransform& motion) {
-        recent_ = {frameId, capturedAt, image.clone(), motion};
+        const cv::Mat& image, const OverlayScreenTransform& motion, cv::Size originalSize = {}) {
+        recent_ = {frameId, capturedAt, image.clone(), motion, originalSize};
     }
     void RememberCapture(std::uint64_t frameId, const OverlayScreenTransform& motion) {
         captureHistory_.push_back({frameId, motion});

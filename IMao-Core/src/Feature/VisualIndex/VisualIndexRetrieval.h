@@ -83,8 +83,8 @@ inline bool ScoreTiles(const RuntimeFeatureResources& resources, cv::flann::Inde
         const auto end = index.postingOffsets[word + 1];
         for (std::uint32_t postingIndex = begin; postingIndex < end; ++postingIndex) {
             // A truncated or hand-built index must rank what it has rather than read past it.
-            if (postingIndex >= index.postings.size()) break;
-            const auto& posting = index.postings[postingIndex];
+            if (postingIndex >= resources.PostingCount()) break;
+            const auto posting = resources.Posting(postingIndex);
             if (posting.tileIndex >= scores.size()) continue;
             scores[posting.tileIndex] += queryWeight * posting.weight;
         }

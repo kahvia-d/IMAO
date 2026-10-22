@@ -2,9 +2,36 @@
 #include <opencv2/imgcodecs.hpp>
 #include <fstream>
 #include <iostream>
+#include <Windows.h>
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
 
 int main(int argc,char**argv) {
     try {
+        // Isolated, read-only model probe: no map loader, marker store or capture
+        // can contaminate the process-wide before/after samples.
+        if(argc==4 && std::string(argv[1])=="--memory") {
+            std::ofstream report{std::filesystem::path(argv[3])};
+            if(!report)throw std::runtime_error("Cannot create OCR memory report");
+            const auto sample=[&](const char* point) {
+                PROCESS_MEMORY_COUNTERS_EX memory{}; memory.cb=sizeof(memory);
+                if(!GetProcessMemoryInfo(GetCurrentProcess(),reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&memory),sizeof(memory)))
+                    throw std::runtime_error("OCR memory query failed: "+std::to_string(GetLastError()));
+                report<<CoordinateYolo::Json{{"point",point},{"wsBytes",memory.WorkingSetSize},
+                    {"privateBytes",memory.PrivateUsage},{"peakWsBytes",memory.PeakWorkingSetSize}}.dump()<<std::endl;
+                if(!report)throw std::runtime_error("Cannot persist OCR memory sample");
+            };
+            sample("before-model");
+            auto model=std::make_unique<YoloCoordinateRecognizer>(std::filesystem::path(argv[2]));
+            sample("model-warmup-ready");
+            // Exercise repeated inference at the production input dimensions.
+            const cv::Mat crop(48,892,CV_8UC3,cv::Scalar::all(0));
+            for(int i=0;i<20;++i)model->Detect(crop);
+            sample("after-20-inferences");
+            model.reset();
+            sample("model-released");
+            return 0;
+        }
         if(argc!=5)throw std::runtime_error("Usage: IMaoCoordinateYolo decode|infer model-directory manifest.json report.json");
         std::ifstream file{std::filesystem::path(argv[3])};CoordinateYolo::Json manifest;file>>manifest;
         std::unique_ptr<YoloCoordinateRecognizer> net;

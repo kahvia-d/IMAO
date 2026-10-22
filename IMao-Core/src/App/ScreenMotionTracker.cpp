@@ -7,6 +7,11 @@
 
 namespace {
 constexpr int kMinimumSupport = 12;
+cv::Size TrackingSize(cv::Size original) {
+    if (original.width <= 0 || original.height <= 0) return {};
+    const double ratio = std::min(1.0, 320.0 / std::max(original.width, original.height));
+    return {cvRound(original.width * ratio), cvRound(original.height * ratio)};
+}
 
 float Sample(const cv::Mat& image, float x, float y) {
     const int ix = static_cast<int>(x), iy = static_cast<int>(y);
@@ -16,6 +21,7 @@ float Sample(const cv::Mat& image, float x, float y) {
     return (row[ix] * (1 - dx) + row[ix + 1] * dx) * (1 - dy) +
         (next[ix] * (1 - dx) + next[ix + 1] * dx) * dy;
 }
+
 
 double Median(std::vector<double> values) {
     const auto middle = values.begin() + values.size() / 2;
@@ -40,6 +46,17 @@ OverlayScreenTransform Compose(const OverlayScreenTransform& first, const Overla
 }
 }
 
+cv::Mat ScreenMotionTracker::FreezeSource(const cv::Mat& image) {
+    if (image.empty() || image.depth() != CV_8U ||
+        (image.channels() != 1 && image.channels() != 3 && image.channels() != 4)) return {};
+    const auto size = TrackingSize(image.size());
+    if (size.empty()) return {};
+    if (size == image.size()) return image.clone();
+    cv::Mat result;
+    cv::resize(image, result, size, 0, 0, cv::INTER_AREA);
+    return result;
+}
+
 void ScreenMotionTracker::Reset() {
     reference_.release(); referenceMask_.release(); descriptors_.release();
     for (auto& level : referencePyramid_) level.release();
@@ -48,8 +65,8 @@ void ScreenMotionTracker::Reset() {
     anchorToReference_ = {}; referenceToCurrent_ = {};
 }
 
-bool ScreenMotionTracker::Prepare(const cv::Mat& image, cv::Mat& gray, cv::Mat& mask) const {
-    if (image.empty() || image.depth() != CV_8U || image.size() != inputSize_ ||
+bool ScreenMotionTracker::Prepare(const cv::Mat& image, cv::Mat& gray, cv::Mat& mask, bool stored) const {
+    if (image.empty() || image.depth() != CV_8U || image.size() != (stored ? trackingSize_ : inputSize_) ||
         (image.channels() != 1 && image.channels() != 3 && image.channels() != 4)) return false;
     cv::Mat resized;
     if (image.size() != trackingSize_) cv::resize(image, resized, trackingSize_, 0, 0, cv::INTER_AREA);
@@ -90,14 +107,22 @@ bool ScreenMotionTracker::Prepare(const cv::Mat& image, cv::Mat& gray, cv::Mat& 
 }
 
 bool ScreenMotionTracker::Anchor(const cv::Mat& image, bool minimap) {
+    return AnchorPixels(image, image.size(), minimap, false);
+}
+
+bool ScreenMotionTracker::AnchorStored(const cv::Mat& image, cv::Size originalSize, bool minimap) {
+    return AnchorPixels(image, originalSize, minimap, true);
+}
+
+bool ScreenMotionTracker::AnchorPixels(const cv::Mat& image, cv::Size originalSize, bool minimap, bool stored) {
     Reset();
-    if (image.empty() || image.cols < 64 || image.rows < 64) return false;
+    if (image.empty() || originalSize.width < 64 || originalSize.height < 64) return false;
     minimap_ = minimap;
-    inputSize_ = image.size();
-    imageRatio_ = std::min(1.0, 320.0 / std::max(image.cols, image.rows));
-    trackingSize_ = {cvRound(image.cols * imageRatio_), cvRound(image.rows * imageRatio_)};
+    inputSize_ = originalSize;
+    imageRatio_ = std::min(1.0, 320.0 / std::max(originalSize.width, originalSize.height));
+    trackingSize_ = TrackingSize(originalSize);
     cv::Mat gray, mask;
-    if (!Prepare(image, gray, mask) || !SetReference(gray, mask)) { Reset(); return false; }
+    if (!Prepare(image, gray, mask, stored) || !SetReference(gray, mask)) { Reset(); return false; }
     return true;
 }
 
@@ -272,10 +297,19 @@ bool ScreenMotionTracker::DescriptorFit(const cv::Mat& gray, const cv::Mat& mask
 }
 
 bool ScreenMotionTracker::Track(const cv::Mat& image, OverlayScreenTransform& imageTransform) {
+    return TrackPixels(image, imageTransform, false);
+}
+
+bool ScreenMotionTracker::TrackStored(const cv::Mat& image, cv::Size originalSize, OverlayScreenTransform& result) {
+    if (originalSize != inputSize_) { result = {}; return false; }
+    return TrackPixels(image, result, true);
+}
+
+bool ScreenMotionTracker::TrackPixels(const cv::Mat& image, OverlayScreenTransform& imageTransform, bool stored) {
     imageTransform = {};
     if (reference_.empty()) return false;
     cv::Mat gray, mask;
-    if (!Prepare(image, gray, mask)) return false;
+    if (!Prepare(image, gray, mask, stored)) return false;
     std::array<cv::Mat, kLevels> pyramid;
     Pyramid(gray, pyramid, !minimap_);
     cv::Mat currentGx, currentGy;

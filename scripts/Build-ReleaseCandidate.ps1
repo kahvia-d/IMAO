@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$OutputRoot,
     [string]$SourceCommit,
@@ -90,7 +90,7 @@ Invoke-CandidateProcess $taskCmake @('-S',$taskRepo,'-B',$taskNativeBuild,'-G',$
     "-DCMAKE_CXX_FLAGS=$taskCxxFlags /MP$Parallel /Brepro /d1trimfile:`"$taskSourcePrefix`"",
     '-DCMAKE_EXE_LINKER_FLAGS=/Brepro','-DCMAKE_SHARED_LINKER_FLAGS=/Brepro',
     '-DIMAO_ENABLE_DIAGNOSTICS=OFF','-DIMAO_ALLOW_XML_FEATURE_FALLBACK=OFF') 'native-configure.log'
-Invoke-CandidateProcess $taskCmake @('--build',$taskNativeBuild,'--config','Release','--target','IMao-CoreHost','IMaoOptimizationTests',
+Invoke-CandidateProcess $taskCmake @('--build',$taskNativeBuild,'--config','Release','--target','IMao-CoreHost','IMaoOptimizationTests','IMaoOcrDependencyTests','IMaoMarkerIdentityIndexTests',
     'IMaoMarkerTests','IMaoRoutePlanningTests','IMaoRoutePlanningServiceTests','IMaoVisualRegression','IMaoResourceSnapshotTests','--parallel',"$Parallel") 'native-build.log'
 Assert-ResourceBuildUnchanged $taskSource (Get-ResourceBuildProvenance $taskRepo $SourceCommit)
 $taskNative = Join-Path $OutputRoot 'native'

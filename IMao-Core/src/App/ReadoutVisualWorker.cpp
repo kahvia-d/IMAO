@@ -1,10 +1,12 @@
-#include "ReadoutVisualWorker.h"
+﻿#include "ReadoutVisualWorker.h"
 #include "../Coordinate/VisualLocalization/RecoveryPolicy.h"
+#include "../Runtime/FrameStorageTrace.h"
 ReadoutVisualWorker::ReadoutVisualWorker(std::weak_ptr<LocalizationSignal> signal)
  :worker_([this](ReadoutVisualRequest request){return Compute(std::move(request));},
   [signal]{if(auto wake=signal.lock())wake->NotifyResult();}){}
 ReadoutVisualResult ReadoutVisualWorker::Compute(ReadoutVisualRequest request){
  const auto start=std::chrono::steady_clock::now();ReadoutVisualResult result;result.source=std::move(request);
+ auto captureReadTrace=FrameStorage::Observe(result.source.snapshot,FrameStorage::ReaderRole::ReadoutWorker,result.source.frame);
  const auto& source=result.source;
  if(!source.resources||!source.resources->visualIndexReady)throw std::runtime_error("readout visual resources unavailable");
  if(resources_!=source.resources){context_.reset();resources_=source.resources;context_=std::make_unique<VisualTrackingContext>(resources_);}

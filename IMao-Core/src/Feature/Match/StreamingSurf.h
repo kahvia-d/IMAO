@@ -5,7 +5,7 @@
 #include <cstdint>
 
 struct ViewportSurfStatistics {
-    // Integral image + live Hessian determinant/trace matrices only.
+    // Integral image + live float Hessian determinants/int8 trace signs only.
     // Excludes caller pixels, descriptors, keypoints and library/parallel overhead.
     size_t detectorScratchBytes = 0;
     double detectMilliseconds = 0;
@@ -16,6 +16,7 @@ struct ViewportSurfStatistics {
 };
 
 // Same CPU SURF(100,4,3,true,true), with at most three adjacent Hessian layers.
+// Trace storage keeps only the sign consumed by keypoint class_id.
 // No mask, scale omission, feature pruning or changed descriptor arithmetic.
 // Input is the same grayscale conversion used by FeatureMatch. On cancellation,
 // no partial output escapes; all detector temporaries are owned by this call.

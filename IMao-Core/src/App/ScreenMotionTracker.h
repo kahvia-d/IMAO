@@ -13,8 +13,13 @@ public:
     void Reset();
     bool Anchor(const cv::Mat& image, bool minimap);
     bool Track(const cv::Mat& image, OverlayScreenTransform& imageTransform);
+    static cv::Mat FreezeSource(const cv::Mat& image);
+    bool AnchorStored(const cv::Mat& image, cv::Size originalSize, bool minimap);
+    bool TrackStored(const cv::Mat& image, cv::Size originalSize, OverlayScreenTransform& imageTransform);
 
 private:
+    bool AnchorPixels(const cv::Mat& image, cv::Size originalSize, bool minimap, bool stored);
+    bool TrackPixels(const cv::Mat& image, OverlayScreenTransform& imageTransform, bool stored);
     static constexpr int kLevels = 3;
     static constexpr int kPatchRadius = 4;
     static constexpr int kPatchPixels = 81;
@@ -26,7 +31,7 @@ private:
     };
     struct Feature { std::array<Patch, kLevels> patch; };
 
-    bool Prepare(const cv::Mat& image, cv::Mat& gray, cv::Mat& mask) const;
+    bool Prepare(const cv::Mat& image, cv::Mat& gray, cv::Mat& mask, bool stored = false) const;
     bool SetReference(const cv::Mat& gray, const cv::Mat& mask);
     static Patch MakePatch(const cv::Mat& image, const cv::Mat& gx, const cv::Mat& gy, const cv::Point2f& point);
     bool Align(const Feature& feature, const std::array<cv::Mat, kLevels>& current,

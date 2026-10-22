@@ -1,4 +1,4 @@
-#include "Feature/Match/StreamingSurf.h"
+﻿#include "Feature/Match/StreamingSurf.h"
 #include "Feature/Match/ExactDescriptorMatcher.h"
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
@@ -41,7 +41,7 @@ int main(int argc,char**) {
     const auto check=[&](bool passed,const char* message) {if(!passed){std::cerr<<"FAIL "<<message<<'\n';++failures;}};
     try {
         auto reference=cv::xfeatures2d::SURF::create(100,4,3,true,true);
-        for(const auto size:{cv::Size(31,19),cv::Size(183,257),cv::Size(560,560),cv::Size(1024,768)}) {
+        for(const auto size:{cv::Size(31,19),cv::Size(183,257),cv::Size(560,560),cv::Size(1024,768),cv::Size(4096,2016)}) {
             cv::Mat backing(size.height+4,size.width+16,CV_8UC1);
             cv::RNG(71).fill(backing,cv::RNG::UNIFORM,0,256);
             cv::Mat gray=backing(cv::Rect(3,2,size.width,size.height));
@@ -60,8 +60,13 @@ int main(int argc,char**) {
                 check(Equal(before,after),"keypoint fields/order and descriptor bytes equal stock SURF");
                 check(allocator.Peak()-live<=gray.total()*36+after.imgDescriptors.total()*after.imgDescriptors.elemSize(),
                     "detector scratch stays below full-pyramid allocation");
+                const size_t compactScratch = gray.total()*15 + size_t(gray.rows+1)*(gray.cols+1)*sizeof(int);
+                check(measured.detectorScratchBytes<=compactScratch,
+                    "trace signs bound logical detector scratch without dropping scales");
+                check(allocator.Peak()-live<=compactScratch+after.imgDescriptors.total()*after.imgDescriptors.elemSize(),
+                    "trace signs reduce actual live matrix allocations, not just diagnostic totals");
                 std::cout<<"size="<<gray.cols<<'x'<<gray.rows<<" kind="<<kind<<" points="<<after.imgKeypoints.size()
-                    <<" peakAdditionalMatBytes="<<allocator.Peak()-live<<" detectorScratchBytes="<<measured.detectorScratchBytes<<'\n';
+                    <<" peakAdditionalMatBytes="<<allocator.Peak()-live<<" detectMs="<<measured.detectMilliseconds<<" describeMs="<<measured.describeMilliseconds<<" detectorScratchBytes="<<measured.detectorScratchBytes<<'\n';
             }
         }
         cv::Mat input(560,560,CV_8UC1);cv::RNG(17).fill(input,cv::RNG::UNIFORM,0,256);

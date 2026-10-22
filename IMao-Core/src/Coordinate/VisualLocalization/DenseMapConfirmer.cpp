@@ -125,6 +125,15 @@ std::string Numbers(double score, double peak, double offsetX, double offsetY) {
 }
 }
 
+CacheStorage ReadCacheStorage() {
+    std::scoped_lock lock(cacheMutex);
+    CacheStorage result;
+    result.entries = tileCache.size();
+    for (const auto& [key, value] : tileCache)
+        if (value.image.u) result.bytes += value.image.u->size;
+    return result;
+}
+
 std::filesystem::path ReferenceRoot() {
     // A development or self-built tree may stage the tile archive beside the program;
     // shipped installs do not carry map imagery yet, and then this stays empty.

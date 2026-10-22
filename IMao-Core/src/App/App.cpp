@@ -1,3 +1,4 @@
+﻿#include "ScreenMotionTracker.h"
 #include "../Feature/Match/SceneMapFeatures.h"
 #include "App.h"
 #include "MapViewportSearchGate.h"
@@ -20,6 +21,7 @@
 #include "../ImguiDraw/Routes/DrawRouteOnMinMap.h"
 #include "../ImguiDraw/Items/DrawMarkerInteraction.h"
 #include "../Diagnostics/Diagnostics.h"
+#include "../Runtime/FrameStorageTrace.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/FramePacer.h"
 #include "../Runtime/OverlayPacing.h"
@@ -35,6 +37,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <sstream>
+#include "../Runtime/GamepadCursorGeometry.h"
 
 using namespace std;
 using namespace cv;
@@ -292,6 +295,15 @@ void App::Thread_Capture() {
                  now - presented->presentedAt < std::chrono::milliseconds(500));
             const auto capturePeriod = OverlayPacing::CapturePeriod(overlayActive, slowCapture);
             if (now - reportAt >= std::chrono::seconds(2)) {
+                if (FrameStorage::ActiveAllocator()) {
+                    const auto publishedPixels = capturedFrames.Read();
+                    const auto cursorPixels = GamepadCursorGeometry::Shared().Read();
+                    const cv::Mat noPixels;
+                    const cv::Mat& presentedPixels = presented->capture ? presented->capture->image : noPixels;
+                    const cv::Mat& cursorImage = cursorPixels && cursorPixels->capture ? cursorPixels->capture->image : noPixels;
+                    FrameStorage::Report("capture-cadence", publishedPixels->image, presentedPixels, cursorImage,
+                        featureResources ? featureResources->map.imgDescriptors : noPixels);
+                }
                 Diagnostics::Record("capture-cadence", "fps=" + std::to_string(published /
                     std::chrono::duration<double>(now - reportAt).count()) + " independentOfLocalization=1" +
                     " captureAvgMs=" + std::to_string(captureAttempts ? captureTotalMs / captureAttempts : 0.0) +
@@ -333,7 +345,13 @@ winrt::IAsyncAction App::Start() {
 	auto frameWindowStartedAt = std::chrono::steady_clock::now();
 	while (!allThreadStopFlag) {
         const auto wakeVersion = localizationSignal->Snapshot();
+        std::optional<CoordinateHandoff::Clock::time_point> waitDeadline;
+        bool waitOnCaptures = true, cycleProcessed = false;
+        {
+        // End all local pixel aliases before waiting. Asynchronous and displayed
+        // frame owners keep their own immutable image/geometry pairs.
         const auto latest = capturedFrames.Read();
+        auto captureReadTrace = FrameStorage::Observe(latest->image, FrameStorage::ReaderRole::Localizer, latest->frameId);
         const auto serviceNow = CoordinateHandoff::Clock::now();
         const bool newCapture = latest->frameId != lastLocalizedFrame;
         const bool serviceContext = lastCoordinateVisible && !isOpenMap.load() && isExistMinMap.load() &&
@@ -350,9 +368,8 @@ winrt::IAsyncAction App::Start() {
             if (serviceContext && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && latest->frameId != lastOcrSubmittedFrame)
                 deadline = std::max(lastOcrSubmitAt + std::chrono::milliseconds(50),
                     readoutWorkSchedule.NextSubmission(serviceNow, ReadoutWorkSchedule::SubmissionInterval()));
-            localizationSignal->WaitUntil(wakeVersion, deadline);
-            continue;
-        }
+            waitDeadline = deadline;
+        } else {
         localizationServiceOnly = !newCapture;
         const CapturedFrame captured = *latest;
         const auto cycleStarted = std::chrono::steady_clock::now();
@@ -776,14 +793,20 @@ winrt::IAsyncAction App::Start() {
             if (coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && snapshotFrameId != lastOcrSubmittedFrame)
                 deadline = std::min(deadline, std::max(lastOcrSubmitAt + std::chrono::milliseconds(50),
                     readoutWorkSchedule.NextSubmission(CoordinateHandoff::Clock::now(), ReadoutWorkSchedule::SubmissionInterval())));
-            localizationSignal->WaitUntil(wakeVersion, deadline, coordinateHandoff.ReadoutActive());
+            waitDeadline = deadline;
+            waitOnCaptures = coordinateHandoff.ReadoutActive();
 		}
-		startTime = std::chrono::high_resolution_clock::now();
+        cycleProcessed = true;
+        }
+        } // latest, captured, currentSnapshot and their diagnostic lease expire here.
+        if (waitDeadline) localizationSignal->WaitUntil(wakeVersion, *waitDeadline, waitOnCaptures);
+        if (cycleProcessed) startTime = std::chrono::high_resolution_clock::now();
 	}
 }
 
 winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result, uint64_t* frameSequence,
     const RECT* requestedRect, std::chrono::steady_clock::time_point* capturedAt) {
+	FrameStorage::Scope allocationOrigin(FrameStorage::Origin::CaptureDelivery);
 	const auto waitStart = std::chrono::steady_clock::now();
     const RECT captureRect = requestedRect ? *requestedRect : rect;
 	Mat temp;
@@ -897,6 +920,7 @@ void App::Thread_DetectGameState() {
 		// std::thread would then terminate the whole WinUI process.
 		try {
         const auto captured = capturedFrames.Read();
+        auto captureReadTrace = FrameStorage::Observe(captured->image, FrameStorage::ReaderRole::StateDetector, captured->frameId);
         const bool liveCapture = !captured->image.empty() && captured->frameId != 0 &&
             std::chrono::steady_clock::now() - captured->capturedAt < captured->maximumAge;
         if (!liveCapture || captured->frameId == lastObservedFrame) {
@@ -908,6 +932,7 @@ void App::Thread_DetectGameState() {
                 // and until the focus grace has run out, the last published
                 // surface stays on screen instead of blinking off on this frame.
                 if (FrameObserved()) {
+                    captureReadTrace.Waiting();
                     std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime));
                     continue;
                 }
@@ -922,6 +947,7 @@ void App::Thread_DetectGameState() {
                 coordinateSuspendRequested = true; mapViewportResetRequested = true;
                 RuntimeStatus::SetGameState("unknown", isWindowFocused.load());
             }
+            captureReadTrace.Waiting();
             std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime));
             continue;
         }
@@ -2769,7 +2795,10 @@ bool App::SubmitMapViewportSearch(const Mat& currentSnapshot, MapViewportSearchS
 	// The crop helper returns a view into the entire captured frame. Freeze the
     // crop once, then share those immutable pixels with the later bridge check.
     // Neither the worker nor its source witness needs to retain the full frame.
-	request.mapCrop = ImageProcessing::CropToMapCenterArea(currentSnapshot, rect).clone();
+	{
+        FrameStorage::Scope allocationOrigin(FrameStorage::Origin::ViewportRequest);
+        request.mapCrop = ImageProcessing::CropToMapCenterArea(currentSnapshot, rect).clone();
+    }
 	const auto requestId = request.requestId;
 	const auto viewportRevision = request.viewportRevision;
 	// Keep the exact image represented by the asynchronous absolute result.
@@ -3022,6 +3051,7 @@ void App::ProcessMapViewportResult(const Mat& currentSnapshot) {
 				CommitMapViewportResult(result, snapshotCapturedAt, currentSnapshot);
 			}
 			else {
+                FrameStorage::Scope allocationOrigin(FrameStorage::Origin::ViewportAnchor);
 				pendingMapViewportAnchor = PendingMapViewportAnchor{ result, resultSceneId,
 					requestFrameId, currentMapCrop.clone() };
 				Diagnostics::Record("map-viewport-result", "accepted=false reason=prediction-conflict-awaiting-confirmation revision=" +
@@ -3342,7 +3372,9 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
             static_cast<int>(area.rightPoint.x - area.leftPoint.x), static_cast<int>(area.bottomPoint.y - area.topPoint.y));
         if (region.width > 0 && region.height > 0 && (region & cv::Rect(0, 0, captured.image.cols, captured.image.rows)) == region) {
             frame.motionRegion = region;
-            frame.motionImage = captured.image(region).clone();
+            FrameStorage::Scope allocationOrigin(FrameStorage::Origin::MotionImage);
+            frame.motionSourceSize = region.size();
+            frame.motionImage = ScreenMotionTracker::FreezeSource(captured.image(region));
         }
     }
     frame.mapMarkers = DrawItemOnGameMap::Snapshot(); frame.minimapMarkers = DrawItemOnMinMap::Snapshot();

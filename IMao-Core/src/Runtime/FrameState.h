@@ -42,6 +42,8 @@ struct OverlayFrame {
     std::vector<RouteDatas> mapRoutes, minimapRoutes;
     std::vector<FreeRouteMarker> minimapFreeMarkers;
     MinimapReadoutProjection minimapReadout;
+    // Empty for legacy full-size pixels; otherwise motionImage is tracking-size color.
+    cv::Size motionSourceSize{};
 
     bool Fresh(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) const {
         return frameId != 0 && now >= capturedAt && now - capturedAt < maximumAge;

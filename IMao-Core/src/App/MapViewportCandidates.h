@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // Everything a full-screen search does to decide *which map features it compares against*, kept in one
 // place so the shipped path and the offline comparison cannot drift apart.
@@ -70,14 +70,9 @@ inline std::vector<std::uint32_t> SelectCandidateRows(const RuntimeFeatureResour
     for (const auto tileIndex : tileIndices) {
         if (interrupted && interrupted()) throw SearchInterrupted{};
         if (tileIndex >= resources.visualIndex.tiles.size()) continue;
-        const auto& tile = resources.visualIndex.tiles[tileIndex];
-        const std::size_t first = tile.featureRowOffset;
-        const std::size_t last = first + tile.featureRowCount;
-        if (last > resources.visualIndex.featureRows.size()) continue;
-        for (std::size_t index = first; index < last; ++index) {
-            const auto row = resources.visualIndex.featureRows[index];
+        resources.VisitTileRows(tileIndex, [&](std::uint32_t row) {
             if (row < selected.size()) selected[row] = 1;
-        }
+        });
     }
     std::vector<std::uint32_t> rows;
     for (std::size_t row = 0; row < selected.size(); ++row) {

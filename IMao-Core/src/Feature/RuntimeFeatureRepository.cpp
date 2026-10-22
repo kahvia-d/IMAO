@@ -1,6 +1,8 @@
-#include "LegacyFeatureExclusions.h"
+﻿#include "LegacyFeatureExclusions.h"
 #include "RuntimeFeatureRepository.h"
 #include "Match/AppendFeatureBatch.h"
+#include "Match/MappedDescriptorStorage.h"
+#include "../Runtime/FrameStorageTrace.h"
 
 #include "CandidateFeaturePack.h"
 #include "KuroTileFeaturePack.h"
@@ -371,6 +373,48 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
         if (!loaded->visualIndexReady) {
             throw std::runtime_error("地图视觉索引不可用：" + visualError);
         }
+        // All on-disk checks and shard merges are complete. Runtime scoring
+        // uses postings; release the build histogram copy before any reader sees it.
+        const auto histogramBytesReleased = loaded->ReleaseBuildOnlyIndexData();
+        Diagnostics::Record("visual-index-runtime-storage", "histogramBytesReleased=" +
+            std::to_string(histogramBytesReleased) + " histogramBytesRetained=" +
+            std::to_string(loaded->visualIndex.histograms.capacity() * sizeof(MapVisualHistogramEntry)) +
+            " postingBytes=" + std::to_string(loaded->visualIndex.postings.capacity() * sizeof(MapVisualPosting)));
+        if (stopToken.stop_requested()) throw std::runtime_error("feature preload cancelled");
+        const auto indexStorageStarted = std::chrono::steady_clock::now();
+        const auto originalRowBytes = loaded->visualIndex.featureRows.capacity() * sizeof(uint32_t);
+        const auto originalPostingBytes = loaded->visualIndex.postings.capacity() * sizeof(MapVisualPosting);
+        wchar_t indexFlag[4]{};
+        const bool indexDisabled = GetEnvironmentVariableW(L"IMAO_RUNTIME_INDEX_COMPACT", indexFlag, 4) == 1 && indexFlag[0] == L'0';
+        std::string indexStorageError;
+        const bool indexPacked = !indexDisabled && loaded->CompactRuntimeIndex(indexStorageError);
+        Diagnostics::Record("runtime-index-storage", "mode=" + std::string(indexPacked ? "packed" : indexDisabled ? "heap-disabled" : "heap-fallback") +
+            " originalRowBytes=" + std::to_string(originalRowBytes) + " originalPostingBytes=" + std::to_string(originalPostingBytes) +
+            " packedRowBytes=" + std::to_string(loaded->runtimeIndex.RowBytes()) +
+            " packedPostingBytes=" + std::to_string(loaded->runtimeIndex.PostingBytes()) +
+            " elapsedMs=" + std::to_string(ElapsedMilliseconds(indexStorageStarted)) + " error=" + indexStorageError);
+        if (!indexDisabled && !indexPacked) Diagnostics::Record("runtime-index-storage-error", "fallback=heap error=" + indexStorageError);
+        if (stopToken.stop_requested()) throw std::runtime_error("feature preload cancelled");
+        const auto storageStarted = std::chrono::steady_clock::now();
+        wchar_t mappingFlag[4]{};
+        const bool mappingDisabled = GetEnvironmentVariableW(L"IMAO_DESCRIPTOR_MAPPING", mappingFlag, 4) == 1 && mappingFlag[0] == L'0';
+        bool mapped = false;
+        std::string storageError;
+        if (!mappingDisabled) {
+            cv::Mat stored;
+            mapped = MappedDescriptorStorage::Create(loaded->map.imgDescriptors, stored, storageError);
+            if (mapped) loaded->map.imgDescriptors = std::move(stored);
+        }
+        size_t residentBytes = 0;
+        std::string residentError;
+        const bool residentKnown = mapped && MappedDescriptorStorage::ResidentBytes(loaded->map.imgDescriptors, residentBytes, residentError);
+        Diagnostics::Record("descriptor-storage", "mode=" + std::string(mapped ? "mapped" : mappingDisabled ? "heap-disabled" : "heap-fallback") +
+            " logicalBytes=" + std::to_string(loaded->map.imgDescriptors.total() * loaded->map.imgDescriptors.elemSize()) +
+            " residentKnown=" + std::to_string(residentKnown) + " residentBytes=" + std::to_string(residentBytes) +
+            " elapsedMs=" + std::to_string(ElapsedMilliseconds(storageStarted)) + " error=" + storageError + residentError);
+        if (!mappingDisabled && !mapped) Diagnostics::Record("descriptor-storage-error", "point=preload fallback=heap error=" + storageError);
+        if (mapped && !residentKnown) Diagnostics::Record("descriptor-storage-error", "point=preload residencyUnknown=1 error=" + residentError);
+        if (stopToken.stop_requested()) throw std::runtime_error("feature preload cancelled");
         RuntimeStatus::SetMessage("地图识别资源已就绪");
         // Includes temporary source pack arrays until this scope exits. Keep the
         // load peak separate from the retained shared resources below.
@@ -388,6 +432,7 @@ void RuntimeFeatureRepository::Load(std::stop_token stopToken, std::filesystem::
             std::to_string(loaded->map.imgDescriptors.total() * loaded->map.imgDescriptors.elemSize()) +
             " expandedDescriptorBytes=" + std::to_string(loaded->map.imgDescriptors.total() * sizeof(float)));
         Diagnostics::RecordMemory("resource-load-retained");
+        FrameStorage::Report("resource-load-retained", {}, {}, {}, loaded->map.imgDescriptors);
     }
     const bool ready = loaded != nullptr;
     const std::string failureForLog = failure;

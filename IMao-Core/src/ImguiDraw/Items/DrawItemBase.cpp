@@ -13,6 +13,7 @@
 #include "../../Runtime/SceneItemStore.h"
 #include "../../Runtime/AtomicFile.h"
 #include "../../Runtime/MarkerCompletionStore.h"
+#include "../../Runtime/MarkerIdentityIndex.h"
 #include "../../Runtime/FarmCompletionStore.h"
 #include "../../Runtime/FreePointCompletionStore.h"
 #include "../../Runtime/RefreshableCategories.h"
@@ -20,6 +21,7 @@
 #include "../../Runtime/MarkerGuideProtocol.h"
 #include <functional>
 #include "../../Runtime/StructuredLogger.h"
+#include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/RouteGamepadBridge.h"
 #include "../../Runtime/MapToolsBridge.h"
 #include "../../Runtime/GamepadContext.h"
@@ -61,7 +63,7 @@ static std::function<void(const json&)> markerEventCallback;
 static std::mutex markerGuideMutex;
 static HWND markerGuideWindow = nullptr;
 static json markerGuideRegistration = json::object();
-static std::unordered_map<std::string, json> markerIdentities;
+static MarkerIdentityIndex markerIdentities;
 static std::mutex markerCandidatesMutex;
 static json markerCandidates = json::array();
 static std::string candidatesProfile, candidatesScene;
@@ -105,7 +107,11 @@ json& DrawItemBase::GetSavedItemPoints() {
 }
 
 void DrawItemBase::Initi() {
+    // This sequence precedes feature preload. These deltas isolate marker setup
+    // without concurrent map decoding, unlike the later legacy core-baseline.
+    Diagnostics::RecordMemory("marker-init-before");
     DrawItemBase::LoadItemsjson();
+    Diagnostics::RecordMemory("marker-json-ready");
     const auto directory = StructuredLogger::ApplicationDataDirectory() / "SavedPoints";
     fs::create_directories(directory);
     const auto legacy = fs::path(GetCurrentPath()) / "SavedPoints" / "account_1.json";
@@ -114,29 +120,42 @@ void DrawItemBase::Initi() {
     markerStore = std::make_unique<MarkerCompletionStore>(directory);
     farmStore = std::make_unique<FarmCompletionStore>(directory);
     freeStore = std::make_unique<FreePointCompletionStore>(directory);
-    markerIdentities.clear();
+    Diagnostics::RecordMemory("marker-ledgers-ready");
+    markerIdentities.Clear();
     refreshablePointIds.clear();
+    size_t categoryCount = 0, locationCount = 0;
     for (const auto sceneId : Scene::sceneIds) {
         json* source = nullptr;
         if (!FindItemJsonData(sceneId, source) || !source || !source->is_array()) continue;
         const auto scene = Scene::SceneIdToName(sceneId);
         for (const auto& category : *source) {
+            ++categoryCount;
             const auto categoryId = category.value("id", "");
+            const auto identityGroup = markerIdentities.AddGroup(scene, categoryId);
             const bool refreshable = refreshableCategories.Contains(categoryId);
             for (const auto& location : category.value("location", json::array())) {
+                ++locationCount;
                 if (!location.contains("id") || !location.at("id").is_string()) continue;
                 const auto id = location.at("id").get<std::string>();
                 const int state = location.value("stateId", MarkerCompletionStore::SceneState(scene));
-                markerIdentities[std::to_string(state) + ":" + id] = {{"sceneName", scene},
-                    {"nameId", categoryId}, {"stateId", state}, {"pointId", id}};
+                markerIdentities.Insert(identityGroup, state, id);
                 // Point ids are unique across all scenes and categories, so one flat set can
                 // answer for a cloud identity that arrives with no category attached.
                 if (refreshable) refreshablePointIds.insert(id);
             }
         }
     }
+    Diagnostics::RecordMemory("marker-identities-ready");
+    StructuredLogger::Record("info", "core", "marker-index-storage",
+        "mode=compact groups=" + std::to_string(markerIdentities.GroupCount()) +
+        " categories=" + std::to_string(categoryCount) + " locations=" + std::to_string(locationCount) +
+        " identities=" + std::to_string(markerIdentities.Size()) +
+        " identityBuckets=" + std::to_string(markerIdentities.BucketCount()) +
+        " refreshableIds=" + std::to_string(refreshablePointIds.size()) +
+        " refreshableBuckets=" + std::to_string(refreshablePointIds.bucket_count()));
     renderDailyRouting = std::make_shared<const RenderDailyRouting>(RenderDailyRouting{
         {refreshableCategories.Ids().begin(), refreshableCategories.Ids().end()}, refreshablePointIds});
+    Diagnostics::RecordMemory("marker-routing-ready");
     if (refreshableCategories.Empty())
         StructuredLogger::Record("warn", "farm", "refresh-categories-unavailable", refreshableCategories.Diagnostic());
     else
@@ -145,6 +164,7 @@ void DrawItemBase::Initi() {
             (refreshableCategories.UnreadableFiles() ? " unreadable=" + std::to_string(refreshableCategories.UnreadableFiles()) : ""));
     MoveRefreshableToFarmLedger();
     RoutePlanningService::Initialize();
+    Diagnostics::RecordMemory("marker-init-ready");
 }
 
 void DrawItemBase::Shutdown() {
@@ -175,6 +195,14 @@ void DrawItemBase::LoadItemsjson() {
         if (!fs::exists(path) || !LoadExternalKuroRuntimeJson(*data, name.c_str())) {
             throw std::runtime_error("required scene points missing: " + name);
         }
+        size_t points = 0;
+        for (const auto& category : *data) {
+            const auto locations = category.find("location");
+            if (locations != category.end() && locations->is_array()) points += locations->size();
+        }
+        StructuredLogger::Record("info", "core", "marker-json-storage", "scene=" + std::to_string(sceneId) +
+            " categories=" + std::to_string(data->size()) + " locations=" + std::to_string(points));
+        Diagnostics::RecordMemory("marker-json-scene-" + std::to_string(sceneId));
     }
 }
 
@@ -589,9 +617,8 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
     if (type == "markerSetCompletion" && command.contains("stateId") && command.contains("pointId")) {
         const auto key = std::to_string(command.at("stateId").get<int>()) + ":" +
         (command.value("stopKind",std::string{}) == "free" ? "free-route:" + command.value("routeId",std::string{}) + ":" : "") + command.at("pointId").get<std::string>();
-        const auto identity = markerIdentities.find(key);
-        if (identity == markerIdentities.end()) return {{"accepted", false}, {"message", "unknown-public-point"}, {"data", json::object()}};
-        for (const auto& [name, value] : identity->second.items()) normalized[name] = value;
+        if (!markerIdentities.Apply(key, normalized))
+            return {{"accepted", false}, {"message", "unknown-public-point"}, {"data", json::object()}};
         // The daily-refresh categories are kept out of the synchronized document entirely:
         // a completion for one of them is written to the farming ledger instead, which is
         // also what keeps it out of the upload outbox and off the cloud comparison. Reads
@@ -608,9 +635,7 @@ json DrawItemBase::HandleMarkerCommand(const json& command) {
         // A missing state selects every region: the cloud set is account-wide and
         // the store groups it by the local catalog each identity belongs to.
         const int state = command.value("stateId", 0);
-        normalized["points"] = json::array();
-        for (const auto& [key, identity] : markerIdentities)
-            if (state <= 0 || identity.at("stateId") == state) normalized["points"].push_back(identity);
+        normalized["points"] = markerIdentities.Export(state);
     }
     // A cloud completion for a daily-refresh point must not be applied: it would resurrect
     // the point the 04:00 reset just cleared, and its identity must not be reported as

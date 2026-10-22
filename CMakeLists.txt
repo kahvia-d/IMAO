@@ -248,7 +248,16 @@ set_target_properties(${DEMO_NAME} PROPERTIES
 
 target_include_directories(${DEMO_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${DEMO_NAME} ${DEPS})
+# The shipped OCR route uses YOLO. Keep the legacy recognizer available,
+# but let its first actual call load Paddle and its transitive oneDNN/MKL DLLs.
+# Do not unload it after use: predictor objects and workers can still own it.
+function(imao_delay_legacy_ocr target)
+    target_link_libraries(${target} PRIVATE delayimp.lib)
+    target_link_options(${target} PRIVATE "/DELAYLOAD:paddle_inference.dll")
+endfunction()
+
+target_link_libraries(${DEMO_NAME} PRIVATE ${DEPS})
+imao_delay_legacy_ocr(${DEMO_NAME})
 
 if(IMAO_GENERATE_LINK_MAP)
     target_link_options(${DEMO_NAME} PRIVATE "/MAP:${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/IMao-CoreHost.map")
@@ -472,6 +481,18 @@ target_compile_definitions(IMaoOptimizationTests PRIVATE IMAO_SOURCE_DIR="${CMAK
 target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib user32.lib)
 
 enable_testing()
+
+add_executable(IMaoOcrDependencyTests
+    IMao-Core/tests/OcrDependencyTests.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp)
+set_target_properties(IMaoOcrDependencyTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+target_include_directories(IMaoOcrDependencyTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+target_link_libraries(IMaoOcrDependencyTests PRIVATE ${DEPS})
+imao_delay_legacy_ocr(IMaoOcrDependencyTests)
+add_test(NAME IMaoOcrDependencyTests COMMAND IMaoOcrDependencyTests
+    "${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/Assets/models"
+    "${CMAKE_BINARY_DIR}/ocr-dependencies-$<CONFIG>.jsonl")
 add_subdirectory(IMao-Core/tools/CoordinateYolo)
 add_executable(IMaoCoordinateRuntimeTests
     IMao-Core/tests/CoordinateRuntimeTests.cpp
@@ -484,6 +505,7 @@ add_executable(IMaoCoordinateRuntimeTests
 target_include_directories(IMaoCoordinateRuntimeTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
 target_compile_definitions(IMaoCoordinateRuntimeTests PRIVATE NOMINMAX)
 target_link_libraries(IMaoCoordinateRuntimeTests PRIVATE ${DEPS})
+imao_delay_legacy_ocr(IMaoCoordinateRuntimeTests)
 add_test(NAME IMaoOptimizationTests COMMAND IMaoOptimizationTests)
 
 add_executable(IMaoResourceSnapshotTests
@@ -493,6 +515,11 @@ target_include_directories(IMaoResourceSnapshotTests PRIVATE ${CMAKE_SOURCE_DIR}
 target_link_libraries(IMaoResourceSnapshotTests PRIVATE bcrypt.lib)
 set_target_properties(IMaoResourceSnapshotTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoResourceSnapshotTests COMMAND IMaoResourceSnapshotTests)
+
+add_executable(IMaoMarkerIdentityIndexTests IMao-Core/tests/MarkerIdentityIndexTests.cpp)
+set_target_properties(IMaoMarkerIdentityIndexTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+target_include_directories(IMaoMarkerIdentityIndexTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
+add_test(NAME IMaoMarkerIdentityIndexTests COMMAND IMaoMarkerIdentityIndexTests)
 
 add_executable(IMaoMarkerTests IMao-Core/tests/MarkerTests.cpp)
 target_include_directories(IMaoMarkerTests PRIVATE
@@ -585,8 +612,12 @@ target_link_libraries(IMaoOverlayPresentProbe PRIVATE dcomp.lib dwmapi.lib d3d11
 
 add_executable(IMaoVisualRegression
     IMao-Core/tools/VisualRegression/main.cpp
+    IMao-Core/src/Runtime/LayeredMapState.cpp
+    IMao-Core/src/Feature/LayeredFloorIndex.cpp
+    IMao-Core/src/Coordinate/VisualLocalization/DenseMapConfirmer.cpp
     IMao-Core/src/Feature/Match/StreamingSurf.cpp
     IMao-Core/src/Feature/RuntimeFeatureRepository.cpp
+    IMao-Core/src/Feature/Match/MappedDescriptorStorage.cpp
     IMao-Core/src/Runtime/ResourceSnapshotContext.cpp
     IMao-Core/src/Runtime/RuntimeStatus.cpp
     IMao-Core/src/App/MapViewportLocalizer.cpp
@@ -699,3 +730,21 @@ target_include_directories(IMaoFontTextureMemoryTests PRIVATE ${CMAKE_SOURCE_DIR
 target_link_libraries(IMaoFontTextureMemoryTests PRIVATE d3d11.lib d3dcompiler.lib dxgi.lib)
 set_target_properties(IMaoFontTextureMemoryTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoFontTextureMemoryTests COMMAND IMaoFontTextureMemoryTests "${CMAKE_SOURCE_DIR}/x64/Release/Assets/Fonts/msyh.ttc")
+add_executable(IMaoFrameStorageAccountingTests IMao-Core/tests/FrameStorageAccountingTests.cpp)
+target_include_directories(IMaoFrameStorageAccountingTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(IMaoFrameStorageAccountingTests PRIVATE ${OpenCV_LIBS})
+set_target_properties(IMaoFrameStorageAccountingTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoFrameStorageAccountingTests COMMAND IMaoFrameStorageAccountingTests)
+
+add_executable(IMaoMappedDescriptorStorageTests IMao-Core/tests/MappedDescriptorStorageTests.cpp
+    IMao-Core/src/Feature/Match/MappedDescriptorStorage.cpp)
+target_include_directories(IMaoMappedDescriptorStorageTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(IMaoMappedDescriptorStorageTests PRIVATE ${OpenCV_LIBS} psapi.lib bcrypt.lib windowsapp.lib)
+set_target_properties(IMaoMappedDescriptorStorageTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoMappedDescriptorStorageTests COMMAND IMaoMappedDescriptorStorageTests)
+
+add_executable(IMaoRuntimeIndexStorageTests IMao-Core/tests/RuntimeIndexStorageTests.cpp)
+target_include_directories(IMaoRuntimeIndexStorageTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(IMaoRuntimeIndexStorageTests PRIVATE ${OpenCV_LIBS})
+set_target_properties(IMaoRuntimeIndexStorageTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoRuntimeIndexStorageTests COMMAND IMaoRuntimeIndexStorageTests)

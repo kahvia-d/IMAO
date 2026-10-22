@@ -11,7 +11,7 @@
 using namespace std::chrono_literals;
 static void Check(bool value,const char*message){if(!value)throw std::runtime_error(message);}
 
-void TestFreshSourceReacquisition() {
+void TestFreshSourceReacquisition(bool compact = false) {
     const auto t=std::chrono::steady_clock::now();
     cv::Mat original(320,320,CV_8UC1),replacement(320,320,CV_8UC1),third(320,320,CV_8UC1);
     cv::RNG rng(161017);
@@ -26,13 +26,16 @@ void TestFreshSourceReacquisition() {
         Check(fresh.Anchor(middle,mini)&&fresh.Track(current,measured),"recent source must have strict measurable overlap");
         auto source=std::make_shared<OverlayFrame>();source->frameId=1;source->capturedAt=t;
         source->clientRect={0,0,320,320};source->motionRegion={0,0,320,320};source->motionImage=original;
+        if(compact){source->motionSourceSize=original.size();source->motionImage=ScreenMotionTracker::FreezeSource(original);}
         source->focused=true;source->minimapVisible=true;source->playerScene=1;
         source->minimapMotion={{0,0},{160,160},1,1,1,1,t,true};
         ImageAnchoredOverlay overlay(mini);
         Check(overlay.Update(source,{1,original,source->clientRect,t},measured,t),"initial frame must attach");
         Check(overlay.Update(source,{2,middle,source->clientRect,t+33ms},measured,t+33ms),"history capture must register");
         source=std::make_shared<OverlayFrame>(*source);source->frameId=2;source->capturedAt=t+33ms;
-        source->motionImage=middle;source->minimapMotion.frameId=2;source->minimapMotion.capturedAt=t+33ms;
+        source->motionImage=middle;
+        if(compact){source->motionSourceSize=middle.size();source->motionImage=ScreenMotionTracker::FreezeSource(middle);}
+        source->minimapMotion.frameId=2;source->minimapMotion.capturedAt=t+33ms;
         auto stale=overlay;
         Check(!stale.Update(source,{3,current,source->clientRect,t+300ms},measured,t+300ms),
             "source older than 250ms must not reacquire");
@@ -80,7 +83,7 @@ void TestStableHandoff() {
     h.RejectVisual(2,t+400ms,S::Local);
     Check(h.ObserveVisual(5,t+1250ms,1,1),"late rejected result cannot erase newer recovery evidence");
 }
-void TestRecentRegisteredCaptureReacquisition() {
+void TestRecentRegisteredCaptureReacquisition(bool compact = false) {
     const auto t=std::chrono::steady_clock::now();
     cv::Mat original(320,320,CV_8UC1),replacement(320,320,CV_8UC1),third(320,320,CV_8UC1);
     cv::RNG rng(161017);
@@ -91,6 +94,7 @@ void TestRecentRegisteredCaptureReacquisition() {
     cv::warpAffine(current,current,cv::Matx23d(1,0,6,0,1,0),current.size(),cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(95));
     auto source=std::make_shared<OverlayFrame>();source->frameId=1;source->capturedAt=t;
     source->clientRect={0,0,320,320};source->motionRegion={0,0,320,320};source->motionImage=original;
+        if(compact){source->motionSourceSize=original.size();source->motionImage=ScreenMotionTracker::FreezeSource(original);}
     source->focused=true;source->minimapVisible=true;source->playerScene=1;
     source->minimapMotion={{0,0},{160,160},1,1,1,1,t,true};
     ScreenMotionTracker primary,fresh;OverlayScreenTransform measured;
@@ -413,5 +417,5 @@ int main(int argc,char**argv){try{
     if(argc>2&&std::string(argv[1])=="projection-video"){TestReadoutProjectionVideoPixels(argv[2]);return 0;}
     if(argc>1&&std::string(argv[1])=="projection"){TestReadoutProjectionWithoutTerrain();return 0;}
     if(argc>1&&std::string(argv[1])=="recent"){TestRecentRegisteredCaptureReacquisition();return 0;}
-    TestAsyncVisualEnvelope();TestDirectReadoutDisplay();TestContinuousReadoutLayoutHandoff();TestReadoutRenderMotion();TestFreshSourceReacquisition();TestStableHandoff();TestIndependentSourceHealth();TestRecentRegisteredCaptureReacquisition();TestReadoutProjectionWithoutTerrain();TestReadoutLayoutSharesOneCenter();TestAcceptedReadoutSurvivesVisualRecoveryPublication();std::cout<<"Coordinate continuity tests passed\n";}
+    TestFreshSourceReacquisition(true);TestRecentRegisteredCaptureReacquisition(true);TestAsyncVisualEnvelope();TestDirectReadoutDisplay();TestContinuousReadoutLayoutHandoff();TestReadoutRenderMotion();TestFreshSourceReacquisition();TestStableHandoff();TestIndependentSourceHealth();TestRecentRegisteredCaptureReacquisition();TestReadoutProjectionWithoutTerrain();TestReadoutLayoutSharesOneCenter();TestAcceptedReadoutSurvivesVisualRecoveryPublication();std::cout<<"Coordinate continuity tests passed\n";}
     catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}

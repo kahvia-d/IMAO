@@ -112,17 +112,24 @@ void Diagnostics::Record(const std::string& eventName, const std::string& detail
 void Diagnostics::RecordMemory(const std::string& point) {
     PROCESS_MEMORY_COUNTERS_EX counters{};
     if (!GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&counters),
-        sizeof(counters))) return;
+        sizeof(counters))) {
+        Record("memory-error", "point=" + point + " api=GetProcessMemoryInfo error=" + std::to_string(GetLastError()));
+        return;
+    }
     const auto megabytes = [](std::size_t bytes) { return std::to_string(bytes / (1024 * 1024)); };
     // Handles travel with the bytes because a per-frame leak of device contexts or capture sessions shows up
     // there first, and a growing handle count next to a growing working set names the culprit immediately.
     DWORD handles = 0;
-    GetProcessHandleCount(GetCurrentProcess(), &handles);
+    const bool handlesKnown = GetProcessHandleCount(GetCurrentProcess(), &handles) != FALSE;
+    if (!handlesKnown) Record("memory-error", "point=" + point + " api=GetProcessHandleCount error=" + std::to_string(GetLastError()));
     Record("memory", "point=" + point +
         " wsMB=" + megabytes(counters.WorkingSetSize) +
         " privateMB=" + megabytes(counters.PagefileUsage) +
         " peakWsMB=" + megabytes(counters.PeakWorkingSetSize) +
-        " handles=" + std::to_string(handles));
+        " handles=" + std::to_string(handles) + " handlesKnown=" + std::to_string(handlesKnown) +
+        " wsBytes=" + std::to_string(counters.WorkingSetSize) +
+        " privateBytes=" + std::to_string(counters.PrivateUsage) +
+        " peakWsBytes=" + std::to_string(counters.PeakWorkingSetSize));
 }
 
 bool Diagnostics::MemoryTraceEnabled() {

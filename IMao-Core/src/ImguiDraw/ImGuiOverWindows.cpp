@@ -1,4 +1,4 @@
-#include <wil/resource.h>
+﻿#include <wil/resource.h>
 #include "ImGuiOverWindows.h"
 #include "../App/App.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -35,6 +35,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cmath>
+#include "../Runtime/FrameStorageTrace.h"
 
 std::atomic<HWND> ImGuiOverWindows::overWindowsHwnd{nullptr};
 std::atomic_bool ImGuiOverWindows::keepWindowHidden{false};
@@ -786,6 +787,7 @@ int ImGuiOverWindows::start()
         if (buildOverlayFrame) {
             const auto frame = markerFrame;
             const auto capture = app.ReadCapturedFrame();
+            auto captureReadTrace = FrameStorage::Observe(capture->image, FrameStorage::ReaderRole::Renderer, capture->frameId);
             const auto visibility = app.ReadOverlayVisibility();
             ++renderedFrames;
             if (frame->frameId != lastObservedFrame) { ++observedFrames; lastObservedFrame = frame->frameId; }

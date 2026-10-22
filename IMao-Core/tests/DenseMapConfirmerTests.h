@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 // Confirming a trusted position from the map's own pixels instead of the feature pack.
 //
 // The fixture is a synthetic but structured map: smooth sinusoidal relief plus a few
@@ -90,7 +90,13 @@ inline void TestDenseMapConfirmer(void (*check)(bool, const std::string&)) {
 
     const auto accepted = DenseMapConfirmer::Confirm(query, 1, prior, 1.0, root);
     std::cout << "dense confirm cold:  " << accepted.detail << '\n';
+    const auto cacheBefore = DenseMapConfirmer::ReadCacheStorage();
+    check(cacheBefore.entries > 0 && cacheBefore.bytes >= 1024*1024,
+        "dense cache diagnostic reports actual retained tile backing bytes");
     const auto warm = DenseMapConfirmer::Confirm(query, 1, prior, 1.0, root);
+    const auto cacheAfter = DenseMapConfirmer::ReadCacheStorage();
+    check(cacheBefore.entries == cacheAfter.entries && cacheBefore.bytes == cacheAfter.bytes,
+        "dense cache diagnostic and warm read do not allocate duplicate tiles");
     std::cout << "dense confirm warm:  " << warm.detail << '\n';
     check(accepted.available && accepted.accepted,
         "dense confirm accepts the position the minimap was taken from (score=" +

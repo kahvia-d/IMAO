@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param([switch]$SkipBuild, [switch]$SkipHost, [string]$OutputDirectory,
     [string]$NativeBuildDirectory = 'out\build\windows-x64-release',
     [ValidateRange(1, 64)][int]$Parallel = 4)
@@ -32,10 +32,15 @@ function Invoke-TestCommand([string]$Command, [string]$LogName) {
     if ($code -ne 0) { throw "$LogName failed with exit code $code; see $log" }
 }
 if (-not $SkipBuild) {
-    Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoMarkerTests IMaoRoutePlanningTests IMaoHandDrawnRouteTests IMaoRoutePlanningServiceTests IMaoVisualRegression IMaoResourceSnapshotTests IMaoLayeredMapTests --parallel ' + $Parallel) 'native-build.log'
+    Invoke-TestCommand ('"' + $taskCmake + '" --build "' + $NativeBuildDirectory + '" --config Release --target IMao-CoreHost IMaoOptimizationTests IMaoOcrDependencyTests IMaoMarkerIdentityIndexTests IMaoMarkerTests IMaoRoutePlanningTests IMaoHandDrawnRouteTests IMaoRoutePlanningServiceTests IMaoVisualRegression IMaoResourceSnapshotTests IMaoLayeredMapTests --parallel ' + $Parallel) 'native-build.log'
     Invoke-TestCommand ('"' + $env:IMAO_DOTNET + '" build Tests\ManagedRuntime\ManagedRuntime.csproj -c Release --output "' + $taskManagedOutput + '" --source "' + $env:IMAO_NUGET_SOURCE + '" -p:NuGetAudit=false') 'managed-build.log'
 }
 Invoke-TestCommand 'x64\Release\IMaoOptimizationTests.exe' 'native-tests.log'
+# This test exercises both production YOLO and the legacy recognizer. The latter
+# stays shipped, but must not enter the process until first requested.
+Invoke-TestCommand ('x64\Release\IMaoOcrDependencyTests.exe "' + (Join-Path $taskRepo 'x64\Release\Assets\models') + '" "' + (Join-Path $taskOutput 'ocr-dependencies.jsonl') + '"') 'ocr-dependency-tests.log'
+
+Invoke-TestCommand 'x64\Release\IMaoMarkerIdentityIndexTests.exe' 'marker-identity-index-tests.log'
 Invoke-TestCommand 'x64\Release\IMaoMarkerTests.exe' 'marker-tests.log'
 Invoke-TestCommand 'x64\Release\IMaoHandDrawnRouteTests.exe' 'hand-drawn-route-tests.log'
 # The layered floor state machine had its own suite registered with ctest since 2026-09 but this

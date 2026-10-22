@@ -1,6 +1,7 @@
 #include "..\..\pch.h"
 #include "..\..\Coordinate\HudLayout.h"
 #include "SimpleCapture.h"
+#include "../../Runtime/FrameStorageAccounting.h"
 #include "..\..\Runtime\StructuredLogger.h"
 #include "..\..\Runtime\OverlayPacing.h"
 #include <iostream>
@@ -242,6 +243,7 @@ void SimpleCapture::RecordFrameDiagnostic(const char* message, const std::string
 
 void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender)
 {
+    FrameStorage::Scope allocationOrigin(FrameStorage::Origin::CaptureBuffer);
     ++m_framesArrived;
     // Frame accounting is what distinguishes "the capture never delivers" from "we drop every frame".
     const auto frameNow = std::chrono::steady_clock::now();

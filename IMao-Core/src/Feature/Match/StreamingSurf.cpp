@@ -104,10 +104,10 @@ resizeHaarPattern( const int src[][5], SurfHF* dst, int n, int oldSize, int newS
 }
 
 /*
- * Calculate the determinant and trace of the Hessian for a layer of the
+ * Calculate the determinant and trace sign of the Hessian for a layer of the
  * scale-space pyramid
  */
-static void calcLayerDetAndTrace( const Mat& sum, int size, int sampleStep,
+static void calcLayerDetAndTraceSign( const Mat& sum, int size, int sampleStep,
                                   Mat& det, Mat& trace )
 {
     const int NX=3, NY=3, NXY=4;
@@ -136,7 +136,7 @@ static void calcLayerDetAndTrace( const Mat& sum, int size, int sampleStep,
     {
         const int* sum_ptr = sum.ptr<int>(i*sampleStep);
         float* det_ptr = &det.at<float>(i+margin, margin);
-        float* trace_ptr = &trace.at<float>(i+margin, margin);
+        schar* trace_ptr = &trace.at<schar>(i+margin, margin);
         for( int j = 0; j < samples_j; j++ )
         {
             float dx  = calcHaarPattern( sum_ptr, Dx , 3 );
@@ -144,7 +144,10 @@ static void calcLayerDetAndTrace( const Mat& sum, int size, int sampleStep,
             float dxy = calcHaarPattern( sum_ptr, Dxy, 4 );
             sum_ptr += sampleStep;
             det_ptr[j] = dx*dy - 0.81f*dxy*dxy;
-            trace_ptr[j] = dx + dy;
+            // Only the Laplacian sign is used by maxima/class_id. Evaluate the
+            // same float sum before encoding; +/-0 and NaN still map to zero.
+            const float traceValue = dx + dy;
+            trace_ptr[j] = static_cast<schar>((traceValue > 0) - (traceValue < 0));
         }
     }
     });
@@ -247,7 +250,7 @@ void SURFFindInvoker::findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
     for( int i = rows.start; i < rows.end; i++ )
     {
         const float* det_ptr = dets[layer].ptr<float>(i);
-        const float* trace_ptr = traces[layer].ptr<float>(i);
+        const schar* trace_ptr = traces[layer].ptr<schar>(i);
         for( int j = margin; j < layer_cols-margin; j++ )
         {
             float val0 = det_ptr[j];
@@ -300,7 +303,7 @@ void SURFFindInvoker::findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                     float center_j = sum_j + (size-1)*0.5f;
 
                     KeyPoint kpt( center_j, center_i, (float)sizes[layer],
-                                  -1, val0, octave, (trace_ptr[j] > 0) - (trace_ptr[j] < 0) );
+                                  -1, val0, octave, trace_ptr[j] );
 
                     /* Interpolate maxima location within the 3x3x3 neighbourhood  */
                     int ds = size - sizes[layer-1];
@@ -787,15 +790,15 @@ void ExtractViewportSurf(const cv::Mat& gray, std::vector<cv::KeyPoint>& points,
                         checkpoint();
                         sizes[layer]=(SURF_HAAR_SIZE0+SURF_HAAR_SIZE_INC*layer)<<octave;
                         dets[layer].create(gray.rows/step,gray.cols/step,CV_32F);
-                        traces[layer].create(gray.rows/step,gray.cols/step,CV_32F);
-                        calcLayerDetAndTrace(sum,sizes[layer],step,dets[layer],traces[layer]);
+                        traces[layer].create(gray.rows/step,gray.cols/step,CV_8S);
+                        calcLayerDetAndTraceSign(sum,sizes[layer],step,dets[layer],traces[layer]);
                     }
                 } else {
                     std::swap(dets[0],dets[1]);std::swap(dets[1],dets[2]);
                     std::swap(traces[0],traces[1]);std::swap(traces[1],traces[2]);
                     sizes[0]=sizes[1];sizes[1]=sizes[2];
                     sizes[2]=(SURF_HAAR_SIZE0+SURF_HAAR_SIZE_INC*(middle+1))<<octave;
-                    checkpoint();calcLayerDetAndTrace(sum,sizes[2],step,dets[2],traces[2]);
+                    checkpoint();calcLayerDetAndTraceSign(sum,sizes[2],step,dets[2],traces[2]);
                 }
                 if (statistics) {
                     size_t held = sum.total() * sum.elemSize();

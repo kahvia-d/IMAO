@@ -1,3 +1,4 @@
+#include "EncodedCandidateTests.h"
 #include <opencv2/imgcodecs.hpp>
 #include "CoarseSearchCoverageTests.h"
 #include "OverlayVisibilityTests.h"
@@ -10,6 +11,7 @@
 #include "MapControllerUiTests.h"
 #include "OverlayMotionTests.h"
 #include "ScreenMotionTrackerTests.h"
+#include "MotionSourceStorageTests.h"
 #include "MinimapTrackingGeometryTests.h"
 #include "ImageAnchoredOverlayTests.h"
 #include "MinimapHudEvidenceTests.h"
@@ -744,6 +746,73 @@ MapVisualIndex CreateVisualIndexFixture(const std::array<std::uint8_t, 32>& sour
     return index;
 }
 
+void TestPackedRuntimeIndex() {
+    const auto rngState = cv::theRNG().state;
+    RuntimeFeatureResources resources;
+    resources.visualIndex = CreateVisualIndexFixture({});
+    auto& index = resources.visualIndex;
+    index.featureRows = {2, 0, 1, 2, 0, 2};
+    index.tiles[0].featureRowCount = 4;
+    auto tile = index.tiles[0]; tile.featureRowOffset = 4; tile.featureRowCount = 2;
+    index.tiles.push_back(tile);
+    index.postings.push_back({0, 1, 0.3456789f});
+    std::string error;
+    Expect(MapVisualIndexCodec::BuildPostingOffsets(index, error), "packed runtime fixture has valid offsets");
+    const auto vocabulary = VisualIndexRetrieval::BuildVocabularyIndex(index.vocabulary);
+    const auto query = index.vocabulary.row(0).clone();
+    std::vector<double> before, after;
+    Expect(VisualIndexRetrieval::ScoreTiles(resources, *vocabulary, query, before), "unpacked fixture scores");
+    Expect(!resources.CompactRuntimeIndex(error) && !error.empty() && !index.featureRows.empty(),
+        "unready resource refuses index compaction without releasing source");
+    resources.visualIndexReady = true;
+    const auto expected = index.featureRows;
+    Expect(resources.CompactRuntimeIndex(error) && resources.runtimeIndex.Ready(), "runtime resource publishes packed rows and postings");
+    Expect(index.featureRows.capacity() == 0 && index.postings.capacity() == 0, "runtime resource releases both original heap capacities");
+    std::vector<uint32_t> actual;
+    resources.AppendTileRows(0, actual); resources.AppendTileRows(1, actual);
+    Expect(actual == expected, "runtime tile adapter preserves exact row order and duplicates");
+    Expect(VisualIndexRetrieval::ScoreTiles(resources, *vocabulary, query, after) && before == after,
+        "packed postings preserve every runtime tile score exactly");
+    const auto bytes = resources.runtimeIndex.Bytes();
+    Expect(resources.CompactRuntimeIndex(error) && resources.runtimeIndex.Bytes() == bytes,
+        "runtime compaction is idempotent after original arrays release");
+    cv::theRNG().state = rngState;
+}
+
+void TestRuntimeIndexStorage() {
+    const auto rngState = cv::theRNG().state;
+    RuntimeFeatureResources resources;
+    auto& index = resources.visualIndex;
+    index = CreateVisualIndexFixture({});
+    std::string error;
+    Expect(MapVisualIndexCodec::BuildPostingOffsets(index, error), "runtime index fixture validates postings");
+    const auto bytes = index.histograms.capacity() * sizeof(MapVisualHistogramEntry);
+    Expect(bytes > 0, "runtime fixture owns histogram capacity");
+    Expect(resources.ReleaseBuildOnlyIndexData() == 0 && !index.histograms.empty(),
+        "unvalidated runtime resources keep their construction data");
+    resources.visualIndexReady = true;
+    const auto vocabulary = VisualIndexRetrieval::BuildVocabularyIndex(index.vocabulary);
+    cv::Mat query = index.vocabulary.row(0).clone();
+    std::vector<double> before, after;
+    Expect(vocabulary && VisualIndexRetrieval::ScoreTiles(resources, *vocabulary, query, before),
+        "complete runtime index scores its query");
+    const auto* postings = index.postings.data();
+    const auto* rows = index.featureRows.data();
+    const auto* tiles = index.tiles.data();
+    const auto* offsets = index.postingOffsets.data();
+    const auto* words = index.vocabulary.u;
+    Expect(resources.ReleaseBuildOnlyIndexData() == bytes, "runtime finalization reports released histogram capacity");
+    Expect(index.histograms.empty() && index.histograms.capacity() == 0,
+        "runtime finalization releases histogram allocation rather than only clearing size");
+    Expect(index.postings.data() == postings && index.featureRows.data() == rows && index.tiles.data() == tiles &&
+        index.postingOffsets.data() == offsets && index.vocabulary.u == words && index.featureRows[0] == 0 && index.featureCount == 1,
+        "runtime storage cleanup preserves all retrieval owners and global row identity");
+    Expect(VisualIndexRetrieval::ScoreTiles(resources, *vocabulary, query, after) && before == after,
+        "runtime storage cleanup preserves every tile score exactly");
+    Expect(resources.ReleaseBuildOnlyIndexData() == 0, "runtime storage cleanup is idempotent");
+    cv::theRNG().state = rngState;
+}
+
 void TestMapVisualIndexCodec() {
     const auto testDirectory = std::filesystem::temp_directory_path() /
         ("imao-visual-index-codec-" + std::to_string(GetCurrentProcessId()));
@@ -1192,6 +1261,7 @@ void TestVisualIndexRetrieval() {
 }
 
 int main(int argc, char** argv) {
+    if (argc == 2 && std::string(argv[1]) == "--encoded-benchmark") return BenchmarkEncodedCandidates();
     if (argc == 3 && std::string(argv[1]) == "--descriptor-storage") return CompareDescriptorStorage(argv[2]);
     if (argc == 5 && std::string(argv[1]) == "--map-minimap") {
         auto map = cv::imread(argv[2]);
@@ -1317,6 +1387,7 @@ int main(int argc, char** argv) {
     TestMapViewportGeometry();
     TestRecordedMapViewportGeometry();
     TestExactDescriptorMatching();
+    TestEncodedCandidates(Expect);
     TestCandidateParser();
     TestRecoveryController();
     TestMinimapResumePolicy();
@@ -1332,6 +1403,7 @@ int main(int argc, char** argv) {
     TestOverlayPanelLayout(Expect);
     TestControllerMapUi(Expect);
     TestScreenMotionTracker(Expect);
+    TestMotionSourceStorage(Expect);
     TestMinimapTrackingGeometry(Expect);
     TestImageAnchoredOverlay(Expect);
     TestMinimapHudEvidence(Expect);
@@ -1350,6 +1422,8 @@ int main(int argc, char** argv) {
     TestNewSceneRegistry();
     TestFeatureBinaryCodec();
     TestDescriptorStorage(Expect);
+    TestRuntimeIndexStorage();
+    TestPackedRuntimeIndex();
     TestMapVisualIndexCodec();
     TestVisualIndexRetrieval();
     TestManifestShardLineEndings();

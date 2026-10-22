@@ -359,12 +359,15 @@ private:
     void Initialize(std::stop_token stopToken, const std::string& modelDirectory,
         const std::string& requestedDictionaryPath) {
         const auto start = std::chrono::steady_clock::now();
+        // Process-wide samples: active capture/search may allocate concurrently.
+        Diagnostics::RecordMemory("ocr-init-before");
         std::unique_ptr<CRNNRecognizer> recognizer;
         std::unique_ptr<YoloCoordinateRecognizer> yolo;
         std::string failure;
         try {
             if (std::filesystem::path(modelDirectory).filename() == "coordinate-yolo") {
                 yolo = std::make_unique<YoloCoordinateRecognizer>(std::filesystem::path(modelDirectory));
+                Diagnostics::RecordMemory("ocr-yolo-model-warmup-ready");
                 if (stopToken.stop_requested()) throw std::runtime_error("YOLO initialization cancelled");
             } else {
             const unsigned int hardwareThreads = std::max(1u, std::thread::hardware_concurrency());
@@ -374,6 +377,7 @@ private:
                 : requestedDictionaryPath;
             recognizer = std::make_unique<CRNNRecognizer>(modelDirectory, false, 0, 4000,
                 inferenceThreads, true, dictionaryPath, false, "fp32", 1, 48, 320);
+            Diagnostics::RecordMemory("ocr-paddle-model-ready");
             if (stopToken.stop_requested()) throw std::runtime_error("OCR initialization cancelled");
 
             cv::Mat blank(48, 320, CV_8UC3, cv::Scalar(0, 0, 0));
@@ -381,6 +385,7 @@ private:
             std::vector<float> scores(1);
             std::vector<double> times{ 0.0, 0.0, 0.0 };
             recognizer->Run({ blank }, texts, scores, times);
+            Diagnostics::RecordMemory("ocr-paddle-warmup-ready");
             }
         }
         catch (const std::exception& exception) {

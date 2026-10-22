@@ -1,4 +1,4 @@
-#include <atomic>
+﻿#include <atomic>
 #include <functional>
 #include "../Feature/Match/ExactDescriptorMatcher.h"
 #include "MapViewportLocalizer.h"
@@ -12,6 +12,7 @@
 #include "../Feature/VisualIndex/VisualIndexRetrieval.h"
 #include "../Runtime/ThreadPriority.h"
 #include "../Diagnostics/Diagnostics.h"
+#include "../Runtime/FrameStorageAccounting.h"
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/features2d.hpp>
@@ -247,6 +248,7 @@ private:
     // resource startup right after the Start button is pressed.
     cv::flann::Index* VocabularyIndex() {
         if (!vocabularyIndex_ && resources_) {
+            FrameStorage::Scope owner(FrameStorage::Origin::ViewportVocabulary);
             vocabularyIndex_ = VisualIndexRetrieval::BuildVocabularyIndex(resources_->visualIndex.vocabulary);
         }
         return vocabularyIndex_.get();
@@ -291,15 +293,11 @@ private:
         for (const auto tileIndex : rankedTiles) {
             if (chosen.size() >= tileCap) break;
             if (tileIndex >= resources_->visualIndex.tiles.size()) continue;
-            const auto& tile = resources_->visualIndex.tiles[tileIndex];
-            for (std::uint32_t row = 0; row < tile.featureRowCount; ++row) {
-                const auto index = tile.featureRowOffset + row;
-                if (index >= resources_->visualIndex.featureRows.size()) break;
-                const auto mapRow = resources_->visualIndex.featureRows[index];
-                if (mapRow >= counted.size() || counted[mapRow] != 0) continue;
+            resources_->VisitTileRows(tileIndex, [&](std::uint32_t mapRow) {
+                if (mapRow >= counted.size() || counted[mapRow] != 0) return;
                 counted[mapRow] = 1;
                 ++keypoints;
-            }
+            }, true);
             chosen.push_back(tileIndex);
             if (keypoints * kBytesPerKeypoint >= byteBudget) break;
         }
@@ -572,6 +570,7 @@ private:
                     const double factor = kFactors[factorIndex];
                     const auto resizeStarted = std::chrono::steady_clock::now();
                     cv::Mat query = request.mapCrop(region);
+                    FrameStorage::Scope allocationOrigin(FrameStorage::Origin::ViewportScale);
                     if (factor != 1.0) cv::resize(request.mapCrop(region), query, {}, factor, factor,
                         factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
                     const double resizeMs = ElapsedMilliseconds(resizeStarted);
@@ -873,7 +872,10 @@ private:
         // making the sweep churn.
         const std::size_t entryBudget = singleEntry ? 1 : (configuredEntries > 0 ? configuredEntries : 16);
         LocalMatcherCache cache;
-        cache.candidates = SelectSceneCandidates(*resources_, tileIndices, interrupted);
+        cache.candidates = [&] {
+            FrameStorage::Scope owner(FrameStorage::Origin::ViewportCandidates);
+            return SelectSceneCandidates(*resources_, tileIndices, interrupted);
+        }();
         if (cache.candidates.imgDescriptors.empty()) return nullptr;
         if (interrupted()) throw SearchInterrupted{};
         cache.matcher = std::make_unique<OwnedFlannMatcher>(cache.candidates.imgDescriptors);
