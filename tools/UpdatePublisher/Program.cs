@@ -724,6 +724,11 @@ static partial class Publisher
             throw new Exception("Map data and map icons must stay in separate shards.");
         if (ShardMap.IdFor("Assets/models/ocr.json") != ShardMap.AssetsMisc || ShardMap.IdFor("Assets/Fonts/a.ttf") != ShardMap.AssetsMisc || ShardMap.IdFor("Assets/th.jpg") != ShardMap.AssetsMisc)
             throw new Exception("Miscellaneous assets must share one shard.");
+        // Vendored-code licence notices live under Assets/ and change only with the licensed component,
+        // so they follow the root Licenses/ convention into the smallest shard. A missing rule here
+        // already failed one cloud release; keep the probe so the next generated notice cannot slip through.
+        if (ShardMap.IdFor("Assets/Licenses/ViewportSURF.txt") != ShardMap.Ui || ShardMap.IdFor("Assets/Licenses/another-notice.txt") != ShardMap.Ui)
+            throw new Exception("Vendored licence notices must map to the ui shard.");
         if (ShardMap.IdFor("IMao-WinUI.Unknown.dll") is not null || ShardMap.IdFor("KuroSyncBridge.Unknown.exe") is not null || ShardMap.IdFor("Assets/newdir/file.json") is not null || ShardMap.IdFor("Assets/KuroMapExtra/file.json") is not null)
             throw new Exception("Unclassified files must not be assigned to a shard.");
         passed.Add("shard table pins every release-changing file to the smallest shard and refuses unknown paths");

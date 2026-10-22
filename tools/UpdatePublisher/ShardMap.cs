@@ -36,6 +36,9 @@ static class ShardMap
     static readonly (string Id, string Prefix)[] PrefixRules = [
         (Ui, "Assets/Updates/"),
         (Ui, "Licenses/"),
+        // Vendored-code licence notices live under Assets/ but ship with the app notices in the
+        // smallest shard; they change only when the licensed component itself changes.
+        (Ui, "Assets/Licenses/"),
         (AssetsTiles, "Assets/FeaturesDatas/"),
         (AssetsMapData, "Assets/KuroMap/"),
         (AssetsMapIcons, "Assets/KuroMapIcons/"),
