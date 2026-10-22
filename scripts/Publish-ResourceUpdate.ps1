@@ -256,18 +256,26 @@ if ($LASTEXITCODE -eq 0) {
 }
 $releaseOutput = & gh api "repos/$repo/releases/tags/$tag" 2>$null
 if ($LASTEXITCODE -ne 0) {
-    # Drafts without a created Git tag can be absent from the by-tag endpoint.
-    # Discover and reuse them by ID instead of creating another draft on retry.
-    $all = (Invoke-Gh @('api',"repos/$repo/releases?per_page=100")) | ConvertFrom-Json
-    $matching = @($all | Where-Object tag_name -EQ $tag)
+    # Drafts without a created Git tag can be absent from the by-tag endpoint, and on 2026-10-22 the
+    # REST releases list omitted a draft even for the token that had just created it (GraphQL still
+    # returned it). Discover drafts by id through GraphQL so a retry resumes the same draft instead of
+    # creating a second one; the by-id endpoint below does return drafts.
+    $owner, $name = $repo.Split('/')
+    $draftQuery = 'query($owner:String!,$name:String!){repository(owner:$owner,name:$name){releases(first:100,orderBy:{field:CREATED_AT,direction:DESC}){nodes{databaseId tagName isDraft}}}}'
+    $findDrafts = {
+        $found = Invoke-Gh @('api','graphql','-f',"query=$draftQuery",'-f',"owner=$owner",'-f',"name=$name") | ConvertFrom-Json
+        @($found.data.repository.releases.nodes |
+            Where-Object { $_.tagName -ceq $tag -and $_.isDraft } |
+            ForEach-Object { [pscustomobject]@{ id=[long]$_.databaseId; tag_name=$_.tagName; draft=$true } })
+    }
+    $matching = & $findDrafts
     if ($matching.Count -eq 0) {
         Invoke-Gh @('release','create',$tag,'--repo',$repo,'--target',[string]$report.sourceCommit,'--draft','--title',$tag,'--notes-file',[IO.Path]::GetFullPath($NotesFile)) | Out-Null
-        # The releases list can lag a moment behind creation. Retry the lookup instead of failing a
-        # promotion that has not touched a single attachment yet.
-        for ($attempt = 0; $attempt -lt 5 -and $matching.Count -eq 0; $attempt++) {
-            if ($attempt -gt 0) { Start-Sleep -Seconds 2 }
-            $all = (Invoke-Gh @('api',"repos/$repo/releases?per_page=100")) | ConvertFrom-Json
-            $matching = @($all | Where-Object tag_name -EQ $tag)
+        # Creation itself can lag behind the API; retry instead of failing a promotion that has not
+        # touched a single attachment yet.
+        for ($attempt = 0; $attempt -lt 10 -and $matching.Count -eq 0; $attempt++) {
+            if ($attempt -gt 0) { Start-Sleep -Seconds 3 }
+            $matching = & $findDrafts
         }
     }
     if ($matching.Count -ne 1) { throw 'Cannot uniquely identify the release draft. No attachments were changed.' }
