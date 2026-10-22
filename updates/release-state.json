@@ -7,7 +7,7 @@
     "sequence": 47,
     "previousStableSha256": "e0d1f37a031b30dd60e570f0db2e23a76b8fb7209ca5960d1866224bdd2f8a07",
     "version": "2026.10.22.1",
-    "releaseId": null,
+    "releaseId": 420875009,
     "previousChannelSequence": 46,
     "sourceCommit": "ba0254f2b3f26a9d1e60ff3c95b2cf2a367546e2",
     "status": "publishing",
