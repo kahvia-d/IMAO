@@ -13,7 +13,10 @@
     "status": "awaiting-signature",
     "artifactDigest": "b55da69ec80351b38c006ce5c28560b177a9f180d4b5223abc2c7fb5eb6178b8",
     "buildRunId": 39794961176,
-    "id": "04992cc5edf44758a3dad0f22c961fdb"
+    "id": "04992cc5edf44758a3dad0f22c961fdb",
+    "requestId": "63b8266986f897011e4dc7edbe135004fdf737d9a60ce3fcebb24f6dca22f0ae",
+    "requestArtifactId": 12435282909,
+    "requestArtifactDigest": "6e086ae965c1783c235f6dc43b7d8b101540287de1c24c6e3d7ef5c470eaa0ac"
   },
   "completed": [
     {
