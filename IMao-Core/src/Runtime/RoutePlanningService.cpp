@@ -383,7 +383,7 @@ void HandleHandDrawnLocked(const std::string& action,const Json& command){
         if(!resuming&&!command.contains("category")){InvalidateLocked();r.enabled=false;r.tool="pan";r.handTypeChoosing=true;r.message="请选择收集物或非收集物路线";return;}
         const auto category=resuming?r.handDraft.Category():AutoRoute::ParseCategory(command.at("category").get<std::string>());
         InvalidateLocked();r.enabled=false;r.tool="pan";
-        r.handDraft.Start(r.scene,scene->kuroStateId,category,resuming?r.handDraft.RouteId():NewId());
+        r.handDraft.Start(r.scene,scene->kuroStateId,category,resuming?r.handDraft.RouteId():NewId(),command.value("farmMode",false));
         r.handTypeChoosing=false;
         r.message=resuming ? "已继续手绘：接着画下去，画完按 Esc 结束"
                            : "手绘已开始：点击创建点位，按住点位拖拽连线，Esc 结束编辑";
@@ -1043,6 +1043,9 @@ RoutePlanningView RoutePlanningService::View(){
 AutoRoute::DrawVisibility RoutePlanningService::DrawingVisibility(){
     auto& r=R();std::scoped_lock lock(r.mutex);
     AutoRoute::DrawVisibility result;result.profileId=r.profile;
+    // New drawings also need a clear canvas, including the chooser and zero-point
+    // editors. Keep navigation loaded so saving/discarding restores it immediately.
+    result.hideActiveOnMap=r.handTypeChoosing||r.handDraft.Active()||r.handDraft.Pending();
     // The editor draws its own edges. Suppress the saved version at the render gate too,
     // so even queued frames cannot paint its original path underneath the active or pending draft.
     if(r.active&&!(r.handDraft.EditingSaved()&&AutoRoute::SameRouteId(r.active->id,r.handDraft.RouteId())))

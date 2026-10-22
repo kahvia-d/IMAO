@@ -4,6 +4,7 @@ using IMao_WinUI.Services;
 using IMao_WinUI.Views.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System.IO;
@@ -137,6 +138,58 @@ internal sealed class MapToolsWindow : Window
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, accessible ?? label);
         button.Click += async (_, _) => { if (CanInteract || failedReturn) await command(key); };
         return button;
+    }
+
+    internal ContentDialog CreateHandFarmDialog() => new()
+    {
+        XamlRoot = root.XamlRoot,
+        Title = "为此路线开启刷怪采集模式？",
+        Content = new TextBlock
+        {
+            Text = "导航时，接近当前目标并停留片刻会自动标记完成，然后指引下一个目标；无需逐个手动标记。此模式不会代替游戏内的战斗或拾取操作。",
+            FontSize = 14, TextWrapping = TextWrapping.Wrap, MaxWidth = 420
+        },
+        PrimaryButtonText = "开启并绘制", SecondaryButtonText = "不开启并绘制",
+        CloseButtonText = "取消", DefaultButton = ContentDialogButton.Primary
+    };
+
+    private ContentDialog? handFarmDialog;
+    private int handFarmChoice;
+    internal bool HandFarmDialogOpen => handFarmDialog is not null;
+
+    internal async Task<ContentDialogResult> ShowHandFarmDialogAsync()
+    {
+        var dialog=CreateHandFarmDialog();handFarmDialog=dialog;handFarmChoice=0;
+        try { return await dialog.ShowAsync(); }
+        finally { if(ReferenceEquals(handFarmDialog,dialog))handFarmDialog=null; }
+    }
+
+    internal void HandleHandFarmGamepad(GamepadAction action)
+    {
+        if(handFarmDialog is not { } dialog)return;
+        if(action==GamepadAction.Back){dialog.Hide();return;}
+        var labels=new[]{dialog.PrimaryButtonText,dialog.SecondaryButtonText,dialog.CloseButtonText};
+        var buttons=DialogButtons(dialog).Where(b=>b.Content is string text&&labels.Contains(text)).ToArray();
+        if(buttons.Length!=3)return; // The template is not loaded yet; wait for the next press.
+        if(action is GamepadAction.Left or GamepadAction.Up)handFarmChoice=Math.Max(0,handFarmChoice-1);
+        if(action is GamepadAction.Right or GamepadAction.Down)handFarmChoice=Math.Min(2,handFarmChoice+1);
+        var focused=FocusManager.GetFocusedElement(root.XamlRoot);
+        if(action==GamepadAction.Accept&&focused is Button focus&&buttons.Contains(focus))
+            handFarmChoice=Array.IndexOf(labels,(string)focus.Content);
+        var selected=buttons.Single(b=>Equals(b.Content,labels[handFarmChoice]));
+        selected.Focus(FocusState.Keyboard);
+        if(action==GamepadAction.Accept&&new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(selected)
+            .GetPattern(Microsoft.UI.Xaml.Automation.Peers.PatternInterface.Invoke) is Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider invoke)
+            invoke.Invoke();
+    }
+
+    private static IEnumerable<Button> DialogButtons(DependencyObject parent)
+    {
+        for(int i=0;i<VisualTreeHelper.GetChildrenCount(parent);++i) {
+            var child=VisualTreeHelper.GetChild(parent,i);
+            if(child is Button button)yield return button;
+            foreach(var nested in DialogButtons(child))yield return nested;
+        }
     }
 
     public void Prepare(nint gameWindow)

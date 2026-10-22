@@ -60,6 +60,7 @@ namespace IMao_WinUI.Services
     }
     public sealed class MarkerGuideCoordinator
     {
+        internal Func<string,string> FormatGamepadButtons { get; set; } = text => text;
         public Task OpenRouteGuideFromToolsAsync(string profile, nint game, nint source) => Task.CompletedTask;
     }
     public sealed class CoreHostService : INotifyPropertyChanged

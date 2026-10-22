@@ -357,6 +357,24 @@ public partial class App : Application
             Check(GetField<TextBox>(view,"routesName") is {IsReadOnly:true,Text:"Original"},"editing preserves original saved route name");
             view.RenderRoutes(state with {HandDrawnActive=true,HandCanUndo=true,HandDrawnCount=0});
             Check(Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Tag,"handUndo")).IsEnabled,"undo remains available after removing the last canvas node");
+            var farmDialog=view.CreateHandFarmDialog();
+            Check(farmDialog.Title is string prompt&&prompt.Contains("此路线")&&farmDialog.PrimaryButtonText=="开启并绘制"&&
+                farmDialog.SecondaryButtonText=="不开启并绘制"&&farmDialog.CloseButtonText=="取消","daily hand route asks for an explicit per-route farm choice");
+            Check(farmDialog.Content is TextBlock explanation&&explanation.FontSize==14&&explanation.Text.Contains("当前目标")&&
+                explanation.Text.Contains("不会代替游戏内"),"farm prompt explains automatic completion and its gameplay limit in small text");
+            view.SetBusy(true);
+            foreach(var expected in new[]{ContentDialogResult.Primary,ContentDialogResult.Secondary,ContentDialogResult.None}) {
+                var pendingChoice=view.ShowHandFarmDialogAsync();await Task.Delay(150);
+                Check(view.HandFarmDialogOpen,"farm confirmation owns input while the route command is busy");
+                if(expected==ContentDialogResult.None)view.HandleHandFarmGamepad(GamepadAction.Back);
+                else {
+                    if(expected==ContentDialogResult.Secondary)view.HandleHandFarmGamepad(GamepadAction.Right);
+                    view.HandleHandFarmGamepad(GamepadAction.Accept);
+                }
+                Check(await Task.WhenAny(pendingChoice,Task.Delay(2000))==pendingChoice&&await pendingChoice==expected,
+                    "gamepad can select farm dialog result "+expected);
+            }
+            view.SetBusy(false);
             view.FocusCurrent();Check(true,"checkbox participates in navigation without button casts");
             log.WriteLine($"ALL {checks} ROUTE CONTROL CHECKS PASSED");Environment.ExitCode=0;
         }catch(Exception error){log.WriteLine("FAIL "+error);Environment.ExitCode=1;}

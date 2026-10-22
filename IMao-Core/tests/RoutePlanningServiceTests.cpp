@@ -30,6 +30,91 @@ void ConnectHandPoints() {
     const auto nodes=view.handDraft->handEditor->nodes;
     for(std::size_t i=1;i<nodes.size();++i)Command({{"action","handConnect"},{"fromNodeId",nodes[i-1].id},{"toNodeId",nodes[i].id}});
 }
+void VerifyHandFarmChoice() {
+    RoutePlanningService::SetAutoReplanEnabled(false);Command({{"action","stop"}});
+    RoutePlanningService::ObserveMap(1,{});
+    for(const bool enabled:{true,false}) {
+        Command({{"action","handStart"},{"category","daily"},{"farmMode",enabled}});
+        Command({{"action","handPoint"},{"x",1000},{"y",1000}});
+        Command({{"action","handPoint"},{"x",2000},{"y",1000}});ConnectHandPoints();
+        Command({{"action","handFinish"}});
+        Command({{"action","handStart"},{"farmMode",!enabled}});
+        Command({{"action","handCommit"},{"name",enabled?"Farm choice on":"Farm choice off"}});
+        const auto rows=RoutePlanningService::Snapshot().at("savedRoutes");std::string id;
+        for(const auto& row:rows)if(row.at("name")== (enabled?"Farm choice on":"Farm choice off"))id=row.at("id").get<std::string>();
+        Command({{"action","switch"},{"routeId",id}});
+        Check(RoutePlanningService::View().active->farmMode==enabled,"new daily route persists its farm choice across finish, resume and reload");
+        Command({{"action","handEdit"},{"routeId",id}});Command({{"action","handCommit"}});
+        Check(RoutePlanningService::View().active->farmMode==enabled,"editing preserves the saved farm setting");
+    }
+    for(const auto* category:{"daily","collectible"}) {
+        Json start={{"action","handStart"},{"category",category}};
+        if(std::string(category)=="collectible")start["farmMode"]=true;
+        Command(start);Command({{"action","handPoint"},{"x",1000},{"y",1000}});
+        Command({{"action","handPoint"},{"x",2000},{"y",1000}});ConnectHandPoints();
+        Command({{"action","handCommit"},{"name",category}});
+        const auto rows=RoutePlanningService::Snapshot().at("savedRoutes");std::string id;
+        for(const auto& row:rows)if(row.at("name")==category)id=row.at("id").get<std::string>();
+        Command({{"action","switch"},{"routeId",id}});
+        Check(!RoutePlanningService::View().active->farmMode,"default daily and collectible routes do not inherit a prior farm choice");
+    }
+}
+void VerifyHandFirstPoint() {
+    RoutePlanningService::SetAutoReplanEnabled(false);Command({{"action","stop"}});
+    RoutePlanningService::ObserveMap(1,{});
+    for(const auto* category:{"daily","collectible"}) {
+        Command({{"action","handStart"},{"category",category}});
+        auto view=RoutePlanningService::View();
+        Check(!view.handDraft&&view.handDrawnCount==0,"a newly started hand route has no rendered draft yet");
+        Check(view.HandDrawingInScene(1),"a zero-point drawing keeps the first mouse gesture alive between frames");
+        Check(!view.HandDrawingInScene(2)&&!view.HandDrawingInScene(0),"drawing input never belongs to a different or unknown map");
+        Command({{"action","handPoint"},{"x",1000},{"y",1000}});
+        view=RoutePlanningService::View();
+        Check(view.HandDrawingInScene(1)&&view.handDrawnCount==1,"recording a point keeps the same mouse drawing mode");
+        Command({{"action","handRemove"},{"nodeId","n1"}});
+        view=RoutePlanningService::View();
+        Check(!view.handDraft&&view.HandDrawingInScene(1),"removing every point still allows a new first mouse point");
+        Command({{"action","handFinish"}});
+        Check(!RoutePlanningService::View().HandDrawingInScene(1),"finished drawing no longer captures mouse gestures");
+        Command({{"action","handStart"}});
+        Check(RoutePlanningService::View().HandDrawingInScene(1),"resuming an emptied draft restores mouse drawing before any point exists");
+        Command({{"action","handDiscard"}});
+        Check(!RoutePlanningService::View().HandDrawingInScene(1),"discarded drawing no longer captures mouse gestures");
+    }
+}
+void VerifyHandDrawingVisibility(const AutoRoute::Plan& original) {
+    RoutePlanningService::SetAutoReplanEnabled(false);
+    RoutePlanningService::UpdatePlayer({1,{20,0},"test",0,1,true});RoutePlanningService::SetPlayerAvailable(true);
+    RouteDatas cached("Navigation before drawing",1);cached.profileId="local";cached.routePlanId=original.id;
+    const auto visible=[&](bool minimap=false){cached.orderRevision=RoutePlanningService::View().orderRevision;
+        return RoutePlanningService::DrawingVisibility().Allows(cached,minimap);};
+    Check(visible()&&visible(true),"navigation is visible before starting a new hand route");
+    RoutePlanningService::ObserveMap(1,{});
+    Command({{"action","handStart"}});
+    Check(!visible(),"the hand route type chooser hides the cached navigation path");
+    Command({{"action","handFinish"}});
+    Check(visible(),"cancelling the type chooser restores the navigation path");
+    for(const auto* category:{"daily","collectible"}) {
+        Command({{"action","handStart"},{"category",category}});
+        Check(!visible(),"a zero-point hand drawing hides the cached navigation path");
+        Check(visible(true),"big-map drawing does not hide the existing minimap navigation");
+        Command({{"action","handPoint"},{"x",1000},{"y",1000}});
+        Command({{"action","handPoint"},{"x",2000},{"y",1000}});ConnectHandPoints();
+        RouteDatas draft("Hand draft",1);draft.profileId="local";draft.routePlanId="hand-draft";draft.preview=true;
+        Check(!visible()&&RoutePlanningService::DrawingVisibility().Allows(draft),"only the new hand draft is shown over the big map");
+        Command({{"action","handFinish"}});
+        Check(!visible(),"the pending drawing keeps the original path hidden");
+        Command({{"action","handStart"}});
+        Command({{"action","handRemove"},{"nodeId","n1"}});Command({{"action","handRemove"},{"nodeId","n2"}});
+        Check(!visible(),"removing every draft point does not reveal the navigation path");
+        Command({{"action","handUndo"}});Command({{"action","handUndo"}});
+        Command({{"action","handCommit"},{"name",category}});
+        Check(visible(),"saving the unrelated drawing restores the navigation path");
+        Check(RoutePlanningService::View().active->id==original.id,"drawing and saving never replaces the active navigation");
+        Command({{"action","handStart"},{"category",category}});Command({{"action","handDiscard"}});
+        Check(visible(),"discarding an empty drawing restores the navigation path");
+    }
+}
 void VerifyHandEditing(const AutoRoute::Plan& original) {
     RoutePlanningService::SetAutoReplanEnabled(false);Command({{"action","stop"}});
     RoutePlanningService::ObserveMap(1,{});
@@ -83,7 +168,7 @@ void VerifyHandEditing(const AutoRoute::Plan& original) {
     Command({{"action","handUndo"}});Command({{"action","handDiscard"}});
     Check(RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),"discard restores visibility of the original saved route");
     Command({{"action","handStart"},{"category","collectible"}});Command({{"action","handPoint"},{"x",7000.0},{"y",7000.0}});
-    Check(RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),"drawing a new unrelated route leaves the active saved route visible");
+    Check(!RoutePlanningService::DrawingVisibility().Allows(cachedOriginal),"drawing a new unrelated route hides the active saved route on the big map");
     Command({{"action","handDiscard"}});
     Command({{"action","handEdit"},{"routeId",id}});Command({{"action","handRemove"},{"nodeId","n1"}});Command({{"action","handCommit"}});
     Check(!RoutePlanningService::View().completed.contains(AutoRoute::Key(survivor)),"deleted free point progress is cleaned only after save");
@@ -1404,6 +1489,18 @@ int main(int argc,char** argv){
     const bool failSave=argc>2&&std::string(argv[2])=="save-failure";
     try{
         const auto original=Prepare();const auto originalIds=Ids(original);const auto oldKey=AutoRoute::Key(original.stops.front());
+        if(argc>2&&std::string(argv[2])=="hand-drawing-visibility") {
+            VerifyHandDrawingVisibility(original);RoutePlanningService::Shutdown();
+            std::cout<<"Hand drawing visibility failures="<<failures<<'\n';return failures?1:0;
+        }
+        if(argc>2&&std::string(argv[2])=="hand-first-point") {
+            VerifyHandFirstPoint();RoutePlanningService::Shutdown();
+            std::cout<<"Hand first point failures="<<failures<<'\n';return failures?1:0;
+        }
+        if(argc>2&&std::string(argv[2])=="hand-farm-choice") {
+            VerifyHandFarmChoice();RoutePlanningService::Shutdown();
+            std::cout<<"Hand farm choice failures="<<failures<<'\n';return failures?1:0;
+        }
         if(argc>2&&std::string(argv[2])=="order-rotation") {
             VerifyOrderAndRotation(original);RoutePlanningService::Shutdown();std::cout<<"Order rotation failures="<<failures<<"\n";return failures?1:0;
         }

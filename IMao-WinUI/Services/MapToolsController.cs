@@ -328,6 +328,11 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
             return;
         }
         controllerConnected = true;
+        if(window.HandFarmDialogOpen) {
+            var update=navigation.Update(sample,new(GamepadInputMode.Menu,$"tools:{generation}:hand-farm"),now);
+            if(update.Action is { } action)window.HandleHandFarmGamepad(action);
+            return;
+        }
         if (!window.CanInteract || commandBusy) { navigation.Reset(); return; }
         if (window.CanvasTool == "pan")
         {
@@ -530,6 +535,16 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
                         ["name"] = name
                     };
                 if(handCategory is not null)handArguments["category"]=handCategory;
+                if(action=="handStart"&&handCategory=="daily"&&!core.RoutePlanning.HandDrawnActive&&!core.RoutePlanning.HandDrawnPending) {
+                    var owner=window;
+                    var context=core.RoutePlanning;
+                    var choice=await owner.ShowHandFarmDialogAsync();
+                    if(operation!=generation||!ReferenceEquals(window,owner)||closing||handoff||
+                        choice==Microsoft.UI.Xaml.Controls.ContentDialogResult.None)return;
+                    handArguments["farmMode"]=choice==Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary;
+                    handArguments["expectedSceneId"]=context.SceneId;
+                    handArguments["expectedGeneration"]=context.Generation;
+                }
                 await core.ExecuteRoutePlanningAsync(action,handArguments,sessionCancellation?.Token ?? default);
                 await core.ExecuteRoutePlanningAsync("list", new Dictionary<string, object?> { ["profileId"] = profile },
                     sessionCancellation?.Token ?? default);
