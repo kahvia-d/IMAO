@@ -1,15 +1,27 @@
 <Page x:Class="IMao_WinUI.Views.DiagnosticsPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="using:CommunityToolkit.WinUI.Controls">
     <Grid RowSpacing="14">
-        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
         <StackPanel Spacing="5"><TextBlock Text="RUNTIME INSIGHT" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="诊断" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="查看运行状态，保留排查问题需要的线索。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
         <InfoBar Grid.Row="1" x:Name="Diagnostics_Status" IsOpen="True" IsClosable="False" Severity="Informational" CornerRadius="10">
             <StackPanel Spacing="4"><TextBlock x:Name="Diagnostics_StatusTitle" FontWeight="SemiBold" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_StatusDetail" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_CoreVersion" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
         </InfoBar>
-        <Button Grid.Row="2" Content="诊断工具" HorizontalAlignment="Left"><Button.Flyout><Flyout><ScrollViewer MaxHeight="300" Width="320" HorizontalScrollBarVisibility="Disabled">
+        <Border Grid.Row="2" Style="{StaticResource IMaoCardStyle}" Padding="14">
+            <StackPanel Spacing="10">
+                <TextBlock Text="短时完整采集" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <TextBlock Text="记录问题发生时的画面和识别结果，最多 3 分钟，可提前停止。采集可能增加磁盘占用和运行负担。结束后发送整个采集文件夹。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                    <Button x:Name="Diagnostics_CaptureStart" Content="开始 3 分钟采集" Click="CaptureStart_Click" IsEnabled="False" />
+                    <Button x:Name="Diagnostics_CaptureStop" Content="提前停止" Click="CaptureStop_Click" IsEnabled="False" />
+                    <Button x:Name="Diagnostics_CaptureOpen" Content="打开采集文件夹" Click="CaptureOpen_Click" IsEnabled="False" />
+                </controls:WrapPanel>
+                <ProgressBar x:Name="Diagnostics_CaptureProgress" Minimum="0" Maximum="100" Value="0" AutomationProperties.Name="采集进度" />
+                <InfoBar x:Name="Diagnostics_CaptureStatus" IsOpen="True" IsClosable="False" Severity="Informational" Title="采集暂不可用" />
+            </StackPanel>
+        </Border>
+        <Button Grid.Row="3" Content="诊断工具" HorizontalAlignment="Left"><Button.Flyout><Flyout><ScrollViewer MaxHeight="300" Width="320" HorizontalScrollBarVisibility="Disabled">
 
                 <StackPanel Spacing="12">
-                    <TextBlock Text="事件日志始终保存。诊断截图仅在手动启用后采集。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                    <ToggleSwitch x:Name="Diagnostics_CaptureToggle" Header="采集诊断截图" AutomationProperties.Name="采集诊断截图" Toggled="Diagnostics_CaptureToggle_Toggled" />
+                    <TextBlock Text="事件日志始终保存。短时完整采集仅在手动开始后运行。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                     <ToggleSwitch x:Name="Diagnostics_OverlayHiddenToggle" Header="隐藏叠加层窗口（仅采集）" AutomationProperties.Name="隐藏叠加层窗口" Toggled="Diagnostics_OverlayHiddenToggle_Toggled" />
                     <TextBlock Text="隐藏后叠加层不再显示，但画面采集与定位仍在运行：用它对比帧率，可以判断掉帧是否来自叠加层窗口本身。修改会在下次点击「开始探索」后完全生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                     <ToggleSwitch x:Name="Diagnostics_HoldPresentToggle" Header="暂停叠加层画面更新（窗口仍显示）" AutomationProperties.Name="暂停叠加层画面更新" Toggled="Diagnostics_HoldPresentToggle_Toggled" />
@@ -21,7 +33,7 @@
                 </StackPanel>
             </ScrollViewer>
         </Flyout></Button.Flyout></Button>
-        <Border Grid.Row="3" Style="{StaticResource IMaoCardStyle}" Padding="14" MinHeight="80">
+        <Border Grid.Row="4" Style="{StaticResource IMaoCardStyle}" Padding="14" MinHeight="80">
             <Grid RowSpacing="10"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions><TextBlock Text="实时事件" Style="{StaticResource IMaoSectionTitleStyle}" /><ListView Grid.Row="1" x:Name="Diagnostics_LogList" SelectionMode="None" ScrollViewer.HorizontalScrollBarVisibility="Disabled"><ListView.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayText}" TextWrapping="Wrap" Margin="0,5" FontSize="14" /></DataTemplate></ListView.ItemTemplate></ListView></Grid>
         </Border>
     </Grid>

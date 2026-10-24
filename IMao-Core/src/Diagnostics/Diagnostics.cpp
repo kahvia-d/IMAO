@@ -1,112 +1,60 @@
 #include "Diagnostics.h"
-
-#include "../util.h"
+#include "ReproCapture.h"
 #include "../Runtime/StructuredLogger.h"
-#include "../Runtime/TextEncoding.h"
-
-#include <chrono>
-#include <cctype>
-#include <filesystem>
+#include "../Runtime/ResourceSnapshotContext.h"
+#include <Windows.h>
+#include <psapi.h>
+#include <bcrypt.h>
+#include <array>
 #include <fstream>
 #include <iomanip>
-#include <map>
-#include <mutex>
-#include <opencv2/imgcodecs.hpp>
 #include <sstream>
 
-#include <atomic>
-#include <psapi.h>
-#include <processthreadsapi.h>
-
 namespace {
-    std::mutex diagnosticsMutex;
-    std::filesystem::path sessionDirectory;
-    std::map<std::string, std::chrono::steady_clock::time_point> lastSavedAt;
-    std::atomic_bool captureEnabled = false;
-    int savedImageCount = 0;
-    // A live coordinate regression session needs at least 100 raw crops plus
-    // both preprocessing variants. Keep the cap bounded while allowing that
-    // complete set to be collected in one session.
-    constexpr int maxSavedImages = 360;
-
-    std::string Timestamp() {
-        const auto now = std::chrono::system_clock::now();
-        const auto time = std::chrono::system_clock::to_time_t(now);
-        std::tm localTime{};
-        localtime_s(&localTime, &time);
-        std::ostringstream result;
-        result << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
-        return result.str();
-    }
-
-    std::string FileTimestamp() {
-        const auto now = std::chrono::system_clock::now();
-        const auto time = std::chrono::system_clock::to_time_t(now);
-        std::tm localTime{};
-        localtime_s(&localTime, &time);
-        std::ostringstream result;
-        result << std::put_time(&localTime, "%Y%m%d-%H%M%S");
-        return result.str();
-    }
-
-    std::string SafeTag(std::string tag) {
-        for (char& character : tag) {
-            if (!std::isalnum(static_cast<unsigned char>(character)) && character != '-' && character != '_') {
-                character = '_';
-            }
-        }
-        return tag;
-    }
-
-    bool EnsureInitializedLocked() {
-        if (!sessionDirectory.empty()) {
-            return true;
-        }
-
-        try {
-            sessionDirectory = StructuredLogger::DiagnosticsDirectory() / FileTimestamp();
-            std::filesystem::create_directories(sessionDirectory);
-            std::ofstream events(sessionDirectory / "events.log", std::ios::app);
-            events << Timestamp() << "\tSESSION\tDiagnostics enabled.\n";
-            return static_cast<bool>(events);
-        }
-        catch (...) {
-            sessionDirectory.clear();
-            return false;
-        }
+std::string ModelSha256(const std::filesystem::path& path) {
+    BCRYPT_ALG_HANDLE algorithm = nullptr;
+    BCRYPT_HASH_HANDLE hash = nullptr;
+    const auto check = [](NTSTATUS status) { if (status < 0) throw std::runtime_error("diagnostic model SHA-256 failed"); };
+    try {
+        check(BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0));
+        check(BCryptCreateHash(algorithm, &hash, nullptr, 0, nullptr, 0, 0));
+        std::ifstream input(path, std::ios::binary);
+        if (!input) throw std::runtime_error("diagnostic model cannot be opened");
+        std::array<char, 65536> buffer{};
+        while (input.read(buffer.data(), buffer.size()) || input.gcount())
+            check(BCryptHashData(hash, reinterpret_cast<PUCHAR>(buffer.data()), static_cast<ULONG>(input.gcount()), 0));
+        if (!input.eof()) throw std::runtime_error("diagnostic model read failed");
+        std::array<unsigned char, 32> digest{};
+        check(BCryptFinishHash(hash, digest.data(), static_cast<ULONG>(digest.size()), 0));
+        BCryptDestroyHash(hash); hash = nullptr;
+        BCryptCloseAlgorithmProvider(algorithm, 0); algorithm = nullptr;
+        std::ostringstream output; output << std::hex << std::setfill('0');
+        for (auto byte : digest) output << std::setw(2) << static_cast<unsigned>(byte);
+        return output.str();
+    } catch (...) {
+        if (hash) BCryptDestroyHash(hash);
+        if (algorithm) BCryptCloseAlgorithmProvider(algorithm, 0);
+        throw;
     }
 }
-
-void Diagnostics::Initialize() {
-    StructuredLogger::Initialize();
-    std::scoped_lock lock(diagnosticsMutex);
-    // Event logs are always available through StructuredLogger.  Screenshots
-    // are intentionally opt-in so a normal release build does not retain game
-    // images until the user enables diagnostics.
-    if (captureEnabled.load()) EnsureInitializedLocked();
 }
 
-bool Diagnostics::Enabled() {
-    return captureEnabled.load();
+void Diagnostics::Initialize() { StructuredLogger::Initialize(); }
+bool Diagnostics::Enabled() { return ReproCapture::Active(); }
+bool Diagnostics::SetCaptureEnabled(bool enabled) {
+    if (!enabled) { ReproCapture::Stop(); return true; }
+    nlohmann::json metadata{{"appVersion", ResourceSnapshotContext::AppVersion()},
+        {"resourceSnapshotId", ResourceSnapshotContext::Id()},
+        {"pixelFormat", "OpenCV BGRA/BGR lossless PNG"},
+        {"capturePolicy", "actual delivered frames; ROI validRegions only; no forced full readback"}};
+    if (ResourceSnapshotContext::Configured()) metadata["resourceSnapshot"] = ResourceSnapshotContext::Snapshot();
+    const auto model = ResourceSnapshotContext::BaselineRoot() / "models" / "coordinate-yolo" / "coordinate.onnx";
+    try { metadata["modelSha256"] = ModelSha256(model); }
+    catch (const std::exception& error) { metadata["modelHashError"] = error.what(); }
+    return ReproCapture::Start(StructuredLogger::DiagnosticsDirectory(), metadata);
 }
-
-void Diagnostics::SetCaptureEnabled(bool enabled) {
-    captureEnabled = enabled;
-    if (!enabled) return;
-    std::scoped_lock lock(diagnosticsMutex);
-    if (sessionDirectory.empty()) EnsureInitializedLocked();
-}
-
 void Diagnostics::Record(const std::string& eventName, const std::string& details) {
     StructuredLogger::Record("info", "core", eventName, details);
-    if (!captureEnabled.load()) return;
-    std::scoped_lock lock(diagnosticsMutex);
-    if (!EnsureInitializedLocked()) {
-        return;
-    }
-
-    std::ofstream events(sessionDirectory / "events.log", std::ios::app);
-    events << Timestamp() << '\t' << eventName << '\t' << details << '\n';
 }
 
 void Diagnostics::RecordMemory(const std::string& point) {
@@ -140,42 +88,9 @@ bool Diagnostics::MemoryTraceEnabled() {
     return enabled;
 }
 
-void Diagnostics::SaveImage(const std::string& tag, const cv::Mat& image) {    if (!captureEnabled.load()) return;
-    if (image.empty()) {
-        Record("image-skipped", tag + " image=empty");
-        return;
-    }
-
-    std::scoped_lock lock(diagnosticsMutex);
-    if (!EnsureInitializedLocked() || savedImageCount >= maxSavedImages) {
-        return;
-    }
-
-    const auto now = std::chrono::steady_clock::now();
-    const auto lastSave = lastSavedAt.find(tag);
-    if (lastSave != lastSavedAt.end() && now - lastSave->second < std::chrono::seconds(2)) {
-        return;
-    }
-
-    lastSavedAt[tag] = now;
-    const auto fileName = std::to_string(++savedImageCount) + "_" + SafeTag(tag) + ".png";
-    try {
-        const auto written = cv::imwrite((sessionDirectory / fileName).string(), image);
-        std::ofstream events(sessionDirectory / "events.log", std::ios::app);
-        events << Timestamp() << "\timage\t" << fileName << " size=" << image.cols << "x" << image.rows
-               << " written=" << (written ? "true" : "false") << '\n';
-    }
-    catch (const cv::Exception& exception) {
-        std::ofstream events(sessionDirectory / "events.log", std::ios::app);
-        events << Timestamp() << "\timage-error\t" << tag << " " << exception.what() << '\n';
-    }
+void Diagnostics::SaveImage(const std::string& tag, const cv::Mat& image) {
+    ReproCapture::Image(tag, image);
 }
-
 std::string Diagnostics::SessionDirectory() {
-    if (!captureEnabled.load()) return {};
-    std::scoped_lock lock(diagnosticsMutex);
-    if (!EnsureInitializedLocked()) {
-        return {};
-    }
-    return Utf8Text(sessionDirectory);
+    return ReproCapture::Status().value("directory", std::string{});
 }

@@ -157,7 +157,7 @@ void SimpleCapture::Close() noexcept
 }
 
 bool SimpleCapture::WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::milliseconds timeout,
-    std::uint64_t* frameSequence)
+    std::uint64_t* frameSequence, nlohmann::json* readbackInfo)
 {
     // Based on the last sequence this call itself handed out, not on whether a frame is being held:
     // the callback now overwrites one retained buffer, so "not empty" can no longer mean "not seen".
@@ -171,6 +171,7 @@ bool SimpleCapture::WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::millise
     m_latestFrame.copyTo(outputFrame);
     m_deliveredSequence = m_frameSequence;
     if (frameSequence != nullptr) *frameSequence = m_frameSequence;
+    if (readbackInfo != nullptr) *readbackInfo = m_latestReadbackInfo;
     return true;
 }
 
@@ -358,6 +359,15 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             const int width = static_cast<int>(readbackDesc.Width);
             const int height = static_cast<int>(readbackDesc.Height);
 
+            nlohmann::json readbackInfo = {
+                { "partial", true }, { "validRegions", nlohmann::json::array() },
+                { "width", width }, { "height", height },
+                { "configuredClient", { m_roiSlotsOriginX, m_roiSlotsOriginY,
+                    m_roiSlotsLayoutWidth, m_roiSlotsLayoutHeight } }
+            };
+            for (const auto& slot : m_roiSlots)
+                readbackInfo["validRegions"].push_back({ slot.x, slot.y, slot.width, slot.height });
+
             const auto readbackStart = std::chrono::steady_clock::now();
             for (const auto& slot : m_roiSlots)
             {
@@ -422,6 +432,7 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                         std::lock_guard<std::mutex> lock(m_frameMutex);
                         using std::swap;
                         swap(m_latestFrame, m_scratchFrame);
+                        m_latestReadbackInfo.swap(readbackInfo);
                         m_frameCapturedAt = std::chrono::steady_clock::now();
                         ++m_frameSequence;
                     }
@@ -452,6 +463,11 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
             readbackSource->GetDesc(&readbackDesc);
             const int width = static_cast<int>(readbackDesc.Width);
             const int height = static_cast<int>(readbackDesc.Height);
+
+            nlohmann::json readbackInfo = {
+                { "partial", false }, { "validRegions", { { 0, 0, width, height } } },
+                { "width", width }, { "height", height }
+            };
 
             const auto readbackStart = std::chrono::steady_clock::now();
             m_d3dContext->CopyResource(m_stagingTexture.get(), readbackSource);
@@ -499,6 +515,7 @@ void SimpleCapture::ProcessFrame(winrt::Direct3D11CaptureFramePool const& sender
                         std::lock_guard<std::mutex> lock(m_frameMutex);
                         using std::swap;
                         swap(m_latestFrame, m_scratchFrame);
+                        m_latestReadbackInfo.swap(readbackInfo);
                         m_frameCapturedAt = std::chrono::steady_clock::now();
                         ++m_frameSequence;
                     }
@@ -567,14 +584,16 @@ bool SimpleCapture::EnsureRoiStaging(ID3D11Texture2D* source)
     // rectangle plus that crop's origin. Sizing the boxes from the texture instead moved every
     // top-anchored box on a windowed client - a 2564x1487 texture for a 2560x1440 client is 3% off by
     // the bottom of the minimap - and left the tail of each crop unread.
-    const int clientWidth = m_roiClientWidth.load();
-    const int clientHeight = m_roiClientHeight.load();
+    std::array<int,4> clientGeometry;
+    { std::lock_guard<std::mutex> lock(m_roiClientGeometryMutex); clientGeometry=m_roiClientGeometry; }
+    const int clientWidth = clientGeometry[2];
+    const int clientHeight = clientGeometry[3];
     const bool haveClientGeometry = clientWidth > 0 && clientHeight > 0;
     const hud::Layout layout = haveClientGeometry
         ? hud::Layout::For(clientWidth, clientHeight)
         : hud::Layout::For(static_cast<double>(desc.Width), static_cast<double>(desc.Height));
-    const LONG originX = haveClientGeometry ? std::max<LONG>(0, m_roiClientOriginX.load()) : 0;
-    const LONG originY = haveClientGeometry ? std::max<LONG>(0, m_roiClientOriginY.load()) : 0;
+    const LONG originX = haveClientGeometry ? std::max<LONG>(0, clientGeometry[0]) : 0;
+    const LONG originY = haveClientGeometry ? std::max<LONG>(0, clientGeometry[1]) : 0;
 
     std::vector<RoiSlot> slots;
     UINT widest = 0, totalRows = 0;
@@ -627,6 +646,8 @@ bool SimpleCapture::EnsureRoiStaging(ID3D11Texture2D* source)
     m_roiSlots = std::move(slots);
     m_roiSlotsClientWidth = clientWidth; m_roiSlotsClientHeight = clientHeight;
     m_roiSlotsOriginX = static_cast<int>(originX); m_roiSlotsOriginY = static_cast<int>(originY);
+    m_roiSlotsLayoutWidth = haveClientGeometry ? clientWidth : static_cast<int>(desc.Width);
+    m_roiSlotsLayoutHeight = haveClientGeometry ? clientHeight : static_cast<int>(desc.Height);
 
     // Everything the boxes do not cover is cleared on every probed frame. The alternative - leaving the
     // previous frame there - would let a reader the box list forgot keep working on stale pixels that

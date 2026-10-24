@@ -27,6 +27,7 @@
 param(
     [string]$SourceRoot,
     [string]$RunRoot,
+    [string]$BinaryRoot,
     [switch]$DryRun
 )
 
@@ -36,7 +37,8 @@ $ErrorActionPreference = 'Stop'
 if (-not $SourceRoot) { $SourceRoot = Split-Path -Parent $PSScriptRoot }
 $SourceRoot = [IO.Path]::GetFullPath($SourceRoot)
 if (-not $RunRoot) { $RunRoot = Join-Path $SourceRoot 'out/map-test' }
-$binaryRoot = Join-Path $SourceRoot 'x64/Release'
+if (-not $BinaryRoot) { $BinaryRoot = Join-Path $SourceRoot 'x64/Release' }
+$BinaryRoot = [IO.Path]::GetFullPath($BinaryRoot)
 $packsRoot = Join-Path $RunRoot 'Assets/FeaturesDatas/KuroTilePacks'
 $sharedPacksRoot = Join-Path $SourceRoot 'Assets/FeaturesDatas/KuroTilePacks'
 
@@ -72,7 +74,9 @@ foreach ($entry in @(Get-ChildItem -LiteralPath $binaryRoot -Force -File)) {
     $destination = Join-Path $RunRoot $entry.Name
     if (-not (Test-Path -LiteralPath $destination)) { continue }
     $existing = Get-Item -LiteralPath $destination -Force
-    if ($entry.LastWriteTimeUtc -le $existing.LastWriteTimeUtc -and $entry.Length -eq $existing.Length) { continue }
+    if ($entry.Length -eq $existing.Length -and
+        (Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash -eq
+        (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash) { continue }
     if (-not $DryRun) { Copy-Item -LiteralPath $entry.FullName -Destination $destination -Force }
     [void]$copied.Add([pscustomobject]@{
             Name = $entry.Name
@@ -106,7 +110,9 @@ function Test-ShardNamesSharedVocabulary([string]$ShardPath) {
     return ([BitConverter]::ToUInt64($header, 56) -eq 0)
 }
 $vocabularyName = 'Map_visual_vocabulary.imx'
-$stagedVocabulary = Join-Path $binaryRoot "Assets/FeaturesDatas/$vocabularyName"
+# BinaryRoot may be a managed publish directory; resource staging still belongs to the build tree.
+$resourceBuildRoot = Join-Path $SourceRoot 'x64/Release'
+$stagedVocabulary = Join-Path $resourceBuildRoot "Assets/FeaturesDatas/$vocabularyName"
 $runVocabulary = Join-Path $RunRoot "Assets/FeaturesDatas/$vocabularyName"
 $needsVocabulary = $false
 foreach ($region in @(Get-ChildItem -LiteralPath $packsRoot -Directory -ErrorAction SilentlyContinue)) {
@@ -265,7 +271,7 @@ if (Test-Path -LiteralPath $runSnapshotPath) {
     # staging run replaces the snapshot through the link and the pack disappears. A tree whose packs
     # all come from the published registry is fine either way - after 2026-09-30's release the trial
     # no longer needs isolation, and warning about the link there was pure noise.
-    $stagedRegistry = Join-Path $BinaryRoot 'Assets/FeaturesDatas/kuro-tile-packs.json'
+    $stagedRegistry = Join-Path $resourceBuildRoot 'Assets/FeaturesDatas/kuro-tile-packs.json'
     $stagedPacks = if (Test-Path -LiteralPath $stagedRegistry) {
         @((Get-Content -LiteralPath $stagedRegistry -Raw -Encoding UTF8 | ConvertFrom-Json).packs)
     } else { @() }

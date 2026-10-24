@@ -1,6 +1,7 @@
 #include "IdentifyWorldCoordinates.h"
 
 #include "../../Diagnostics/Diagnostics.h"
+#include "../../Diagnostics/ReproCapture.h"
 #include "../../Runtime/ThreadPriority.h"
 #include "CoordinateReadoutRoi.h"
 #include "../../Runtime/ReadoutWorkSchedule.h"
@@ -144,6 +145,8 @@ public:
 
     CoordinateRecognitionResult Recognize(const CoordinateRecognitionRequest& request,
         cv::Size sourceFrameSize = {}) {
+        ReproCapture::Scope reproRequest({{"captureRun", request.sessionId}, {"frameId", request.frameId},
+            {"requestId", request.requestId}, {"stage", "ocr-recognize"}});
         CoordinateRecognitionResult result;
         result.sessionId = request.sessionId;
         result.uiGeneration = request.uiGeneration;
@@ -162,6 +165,10 @@ public:
             const auto started = std::chrono::steady_clock::now();
             const bool calibrated = originalSize == cv::Size(2560,1440) &&
                 region == cv::Rect(32,1405,608,33);
+            ReproCapture::Image("ocr-crop", cropped ? request.snapshot : request.snapshot(region),
+                {{"sourceSize", {originalSize.width, originalSize.height}},
+                {"crop", {region.x, region.y, region.width, region.height}}, {"calibrated", calibrated},
+                {"capturedSteadyMs", std::chrono::duration_cast<std::chrono::milliseconds>(request.capturedAt.time_since_epoch()).count()}});
             std::scoped_lock inferenceLock(inferenceMutex_);
             const auto selected = yolo_->Recognize(cropped ? request.snapshot : request.snapshot(region), calibrated);
             result.inferenceMilliseconds = MillisecondsSince(started);
@@ -434,6 +441,8 @@ private:
             // OCR runs in its own jthread.  Treat an inference/preprocessing
             // failure as a no-candidate result instead of terminating the host
             // process because an exception escaped the thread entry point.
+            ReproCapture::Scope reproWorker({{"captureRun", request.sessionId}, {"frameId", request.frameId},
+                {"requestId", request.requestId}, {"stage", "ocr-worker"}});
             CoordinateRecognitionResult result;
             result.sessionId = request.sessionId;
             result.uiGeneration = request.uiGeneration;

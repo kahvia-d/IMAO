@@ -2,6 +2,7 @@
 #include "GlobalVisualLocalizer.h"
 
 #include "../../Diagnostics/Diagnostics.h"
+#include "../../Diagnostics/ReproCapture.h"
 #include "../../Runtime/ThreadPriority.h"
 #include "RecoveryPolicy.h"
 #include "CoarseSearchCoverage.h"
@@ -998,6 +999,9 @@ private:
             // A bad or partially updated capture must only reject this request.
             // Letting an exception escape a std::jthread invokes std::terminate
             // and closes the whole WinUI application.
+            ReproCapture::Scope reproVisual({{"captureRun", request.sessionId}, {"frameId", request.frameId},
+                {"requestId", request.requestId}, {"stage", "global-visual-worker"}});
+            if (!request.normalizedMinimap.empty()) ReproCapture::Image("global-minimap-input", request.normalizedMinimap);
             VisualLocalizationResult result;
             result.sessionId = request.sessionId;
             result.uiGeneration = request.uiGeneration;

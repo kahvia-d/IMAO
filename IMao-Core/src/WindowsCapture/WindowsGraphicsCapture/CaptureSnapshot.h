@@ -39,13 +39,14 @@ public:
     /// A caller that keeps `output` across calls reuses its buffer instead of allocating a
     /// full-screen image every time.
     bool WaitForFirstFrame(Mat& output, std::chrono::milliseconds timeout,
-        std::uint64_t* frameSequence = nullptr) {
-        return m_capture != nullptr && m_capture->WaitForFirstFrame(output, timeout, frameSequence);
+        std::uint64_t* frameSequence = nullptr, nlohmann::json* readbackInfo = nullptr) {
+        return m_capture != nullptr && m_capture->WaitForFirstFrame(output, timeout, frameSequence, readbackInfo);
     }
 
     bool GetLatestFrame(Mat& output, std::uint64_t* frameSequence = nullptr,
-        std::chrono::steady_clock::time_point* capturedAt = nullptr) {
-        return m_capture != nullptr && m_capture->GetLatestFrame_Mat(output, frameSequence, capturedAt);
+        std::chrono::steady_clock::time_point* capturedAt = nullptr,
+        nlohmann::json* readbackInfo = nullptr) {
+        return m_capture != nullptr && m_capture->GetLatestFrame_Mat(output, frameSequence, capturedAt, readbackInfo);
     }
 
     CaptureSnapshot(HWND hwnd) {

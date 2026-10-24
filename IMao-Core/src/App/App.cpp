@@ -21,6 +21,7 @@
 #include "../ImguiDraw/Routes/DrawRouteOnMinMap.h"
 #include "../ImguiDraw/Items/DrawMarkerInteraction.h"
 #include "../Diagnostics/Diagnostics.h"
+#include "../Diagnostics/ReproCapture.h"
 #include "../Runtime/FrameStorageTrace.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/FramePacer.h"
@@ -28,6 +29,7 @@
 #include "../Runtime/RoutePlanningService.h"
 #include "../Runtime/RuntimeHotkeys.h"
 #include "../Runtime/IsolationSwitches.h"
+#include "../WindowsCapture/ClientCaptureGeometry.h"
 #include "MinimapHudEvidence.h"
 #include "../Coordinate/VisualLocalization/MinimapTerrainEvidence.h"
 #include "../Coordinate/VisualLocalization/DenseMapConfirmer.h"
@@ -257,6 +259,10 @@ void App::Thread_Capture() {
                 const std::uint64_t frameId = frameSource.Publish(sequence);
                 if (frameId == 0) ++unpublishedCaptures;
                 else {
+                    ReproCapture::Scope reproPublished({{"captureRun", coordinateSessionId}, {"frameId", frameId},
+                        {"sourceSequence", sequence}, {"stage", "capture-published"}});
+                    ReproCapture::Record("capture-published", {{"capturedSteadyMs",
+                        std::chrono::duration_cast<std::chrono::milliseconds>(capturedAt.time_since_epoch()).count()}});
                     capturedFrames.Publish({frameId, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250)});
                     localizationSignal->NotifyCapture();
                     ++published;
@@ -372,6 +378,8 @@ winrt::IAsyncAction App::Start() {
         } else {
         localizationServiceOnly = !newCapture;
         const CapturedFrame captured = *latest;
+        ReproCapture::Scope reproFrame({{"captureRun", coordinateSessionId}, {"frameId", captured.frameId},
+            {"stage", "localization"}});
         const auto cycleStarted = std::chrono::steady_clock::now();
         double mapPredictMs = 0.0, mapResultMs = 0.0, mapSearchMs = 0.0, mapFilterMs = 0.0;
         bool measuredMapCycle = false;
@@ -821,9 +829,14 @@ winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result, uint64_t
 		co_return;
 	}
 	else if (graphicsCapture.has_value()) {
+		std::uint64_t diagnosticSequence = 0;
+		auto* sequenceOutput = frameSequence ? frameSequence : &diagnosticSequence;
+		nlohmann::json readbackInfo;
+		// Return provenance atomically with pixels even if recording starts during this read.
+		auto* readbackOutput = &readbackInfo;
 		const bool captured = isTaketAsync
-			? graphicsCapture->WaitForFirstFrame(temp, std::chrono::milliseconds(1500), frameSequence)
-			: graphicsCapture->GetLatestFrame(temp, frameSequence, capturedAt);
+			? graphicsCapture->WaitForFirstFrame(temp, std::chrono::milliseconds(1500), sequenceOutput, readbackOutput)
+			: graphicsCapture->GetLatestFrame(temp, sequenceOutput, capturedAt, readbackOutput);
 		if (!captured || temp.empty()) {
 			result.release();
 			if (isTaketAsync) {
@@ -833,28 +846,58 @@ winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result, uint64_t
 			}
 			co_return;
 		}
-		NonClientRegion nonClientRegion;
-		CalculateNonClientAreaSize(hwnd, nonClientRegion);
-		// The ROI readback builds its boxes from the client geometry, so it needs the same crop origin
-		// the consumer applies just below.
-		if (auto capture = graphicsCapture->Getcapture()) {
-			capture->SetClientGeometry(nonClientRegion.non_client_width_total,
-				nonClientRegion.non_client_height_total, captureRect.right, captureRect.bottom);
+		ReproCapture::Scope reproCapture({{"captureRun", coordinateSessionId},
+			{"sourceSequence", *sequenceOutput}, {"stage", "capture"}});
+		const auto directory = ReproCapture::Active() ? Diagnostics::SessionDirectory() : std::string{};
+		const bool recordPixels = !directory.empty() && (directory != diagnosticLastDirectory ||
+			*sequenceOutput != diagnosticLastSourceSequence);
+		if (recordPixels) {
+			diagnosticLastDirectory = directory;
+			diagnosticLastSourceSequence = *sequenceOutput;
+			ReproCapture::Image("wgc", temp, readbackInfo);
 		}
-		const cv::Rect clientRoi(nonClientRegion.non_client_width_total,
-			nonClientRegion.non_client_height_total, captureRect.right, captureRect.bottom);
-		if (clientRoi.width <= 0 || clientRoi.height <= 0 || clientRoi.x < 0 || clientRoi.y < 0 ||
-			clientRoi.x + clientRoi.width > temp.cols || clientRoi.y + clientRoi.height > temp.rows) {
-			result.release();
-			// The frame size is what distinguishes a window that reports its own border from one that
-			// does not, so a rejected crop has to carry both rectangles.
-			Diagnostics::Record("capture-frame-rejected", "client crop is outside the WGC frame" +
-				std::string(" frame=") + std::to_string(temp.cols) + "x" + std::to_string(temp.rows) +
-				" client=" + std::to_string(captureRect.right) + "x" + std::to_string(captureRect.bottom) +
-				" nonClient=" + std::to_string(nonClientRegion.non_client_width_total) + "x" +
-				std::to_string(nonClientRegion.non_client_height_total));
-			co_return;
-		}
+        ClientCapture::Geometry geometry;
+        std::string geometryError;
+        const auto rejectCrop = [&](const std::string& reason) {
+            result.release();
+            Diagnostics::Record("capture-frame-rejected", reason +
+                " frame=" + std::to_string(temp.cols) + "x" + std::to_string(temp.rows) +
+                " client=" + std::to_string(captureRect.right) + "x" + std::to_string(captureRect.bottom));
+            if (recordPixels) ReproCapture::Record("client-crop-rejected", {{"reason",reason},{"readback",readbackInfo}});
+        };
+        if (!ClientCapture::Query(hwnd,geometry,geometryError)) {
+            rejectCrop(geometryError);co_return;
+        }
+        // Configure future ROI readback even when the current frame belongs to the old
+        // window size. The producer and consumer must use exactly the same client origin.
+        const auto desired = ClientCapture::Resolve(geometry,
+            geometry.frameBounds.right-geometry.frameBounds.left,
+            geometry.frameBounds.bottom-geometry.frameBounds.top,
+            geometry.clientRect.right,geometry.clientRect.bottom,geometryError);
+        if (!desired) { rejectCrop(geometryError);co_return; }
+        if (auto capture = graphicsCapture->Getcapture())
+            capture->SetClientGeometry(desired->x,desired->y,desired->width,desired->height);
+        const auto crop = ClientCapture::Resolve(geometry,temp.cols,temp.rows,
+            captureRect.right,captureRect.bottom,geometryError);
+        if (!crop) { rejectCrop(geometryError);co_return; }
+        std::optional<ClientCapture::Crop> configured;
+        const auto prior = readbackInfo.find("configuredClient");
+        if (prior != readbackInfo.end() && prior->is_array() && prior->size() == 4)
+            configured = ClientCapture::Crop{(*prior)[0].get<int>(),(*prior)[1].get<int>(),
+                (*prior)[2].get<int>(),(*prior)[3].get<int>()};
+        if (!ClientCapture::AcceptReadback(*crop,readbackInfo.value("partial",false),configured)) {
+            rejectCrop("ROI readback geometry does not match current client crop");co_return;
+        }
+        const cv::Rect clientRoi(crop->x,crop->y,crop->width,crop->height);
+        if (recordPixels) {
+            const auto& origin=geometry.clientScreenOrigin;const auto& bounds=geometry.frameBounds;
+            ReproCapture::Record("client-crop", {{"parentStage", "wgc"}, {"storage", "crop-reference"},
+                {"crop", {crop->x,crop->y,crop->width,crop->height}},
+                {"clientOriginKnown", true}, {"clientScreenOrigin", {origin.x, origin.y}},
+                {"frameBoundsKnown", true}, {"frameBoundsHresult", 0},
+                {"frameBounds", {bounds.left, bounds.top, bounds.right, bounds.bottom}},
+                {"capturedSteadyMs", capturedAt ? std::chrono::duration_cast<std::chrono::milliseconds>(capturedAt->time_since_epoch()).count() : 0}});
+        }
         result = temp(clientRoi); // The capture getter already returned an owned immutable image.
 		if (isTaketAsync) {
 			Diagnostics::Record("first-frame-wait", "capture=wgc durationMs=" + std::to_string(
@@ -954,6 +997,8 @@ void App::Thread_DetectGameState() {
         lastObservedFrame = captured->frameId;
         const Mat stateSnapshot = captured->image;
         const RECT stateRect = captured->clientRect;
+		ReproCapture::Scope reproState({{"captureRun", coordinateSessionId}, {"frameId", captured->frameId},
+			{"stage", "game-state"}});
         int minimapMatchCount = 0, mapMatchCount = 0;
 		const bool mapKeyPressed = (GetAsyncKeyState(0x4D) & 1) != 0;
 		const bool manualMapCheckPressed = Diagnostics::Enabled() && (GetAsyncKeyState(VK_F10) & 1) != 0;
@@ -1441,6 +1486,7 @@ int App::ValidateCoordinateCandidate(const Coordinate& identifyCoordinate, const
 
 winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordinate& outPlayerROC, float& outMinMapRadius) {
 	Mat minMapImg = ImageProcessing::CropToMinMapAreaImg(snapshot, rect, minMapBottomPoint);
+	ReproCapture::Image("minimap-crop", minMapImg, {{"clientSize", {snapshot.cols, snapshot.rows}}});
 	Mat normalizedMinimap;
 	ImageFeatureData minMapFeatureData;
 	MinimapFeatureDiagnostics minimapDiagnostics;
@@ -1454,6 +1500,15 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	minimapFeaturesReady = GlobalVisualLocalizer::PrepareMinimap(
 		minMapImg, normalizedMinimap, minMapFeatureData,
 		trustedMinimapReference.empty() ? nullptr : &trustedMinimapReference, &minimapDiagnostics);
+	if (!normalizedMinimap.empty()) ReproCapture::Image("minimap-normalized", normalizedMinimap);
+	if (!minimapDiagnostics.featureMask.empty()) ReproCapture::Image("minimap-mask", minimapDiagnostics.featureMask);
+	if (ReproCapture::Active()) {
+		nlohmann::json points = nlohmann::json::array();
+		for (const auto& point : minMapFeatureData.imgKeypoints)
+			points.push_back({point.pt.x, point.pt.y, point.size, point.angle, point.response, point.octave});
+		ReproCapture::Record("minimap-features", {{"prepared", minimapFeaturesReady}, {"keypoints", points},
+			{"rawKeypoints", minimapDiagnostics.rawKeypointCount}, {"retainedKeypoints", minimapDiagnostics.retainedKeypointCount}});
+	}
 	RuntimeStatus::SetMinimapFeatureStats(minimapDiagnostics.rawKeypointCount,
 		minimapDiagnostics.retainedKeypointCount, minimapDiagnostics.dynamicMaskPercent);
 	// Which floor of a layered map this capture belongs to. The classifier is cheap and
@@ -1725,6 +1780,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
     bool acceptedReadoutThisCycle = false;
 	CoordinateRecognitionResult ocrResult;
 	if (ocrAssistEnabled && IdentifyWorldCoordinates::TryTakeLatestResult(ocrResult)) {
+		ReproCapture::Scope reproResult({{"captureRun", ocrResult.sessionId}, {"frameId", ocrResult.frameId},
+			{"requestId", ocrResult.requestId}, {"stage", "ocr-consume"}});
         const auto consumedAt = CoordinateHandoff::Clock::now();
         const auto ms = [](auto duration) { return std::chrono::duration<double,std::milli>(duration).count(); };
         Diagnostics::Record("coordinate-readout-latency", "request=" + std::to_string(ocrResult.requestId) +
@@ -1989,6 +2046,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	auto acceptVisualResult = [&]() -> bool {
 		VisualLocalizationResult result;
 		if (!GlobalVisualLocalizer::TryTakeLatestResult(result)) return false;
+		ReproCapture::Scope reproVisualResult({{"captureRun", result.sessionId}, {"frameId", result.frameId},
+			{"requestId", result.requestId}, {"stage", "global-visual-consume"}});
 		if (result.requestId != activeVisualRequestId) {
 			Diagnostics::Record("visual-localization-stale", "reason=request-id result=" +
 				std::to_string(result.requestId) + " active=" + std::to_string(activeVisualRequestId));
@@ -2038,8 +2097,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 				<< candidate.retrievalScore << " quality=" << GlobalVisualLocalizer::QualityName(candidate.quality);
 		}
 		Diagnostics::Record("visual-localization-candidates", candidateDetails.str());
-        if (!normalizedMinimap.empty()) Diagnostics::SaveImage(result.quality == VisualLocalizationQuality::Rejected
-            ? "visual-rejected-minimap" : "visual-candidate-minimap", normalizedMinimap);
+        ReproCapture::Record("global-visual-result", {{"inputStage", "global-minimap-input"},
+            {"quality", static_cast<int>(result.quality)}, {"candidates", result.candidates.size()}});
 		if (result.candidates.empty() || result.ambiguous || result.quality == VisualLocalizationQuality::Rejected) {
             observeVisualFailure(CoordinateHandoff::VisualSource::Global, result.frameId, lastVisualRequestCapturedAt);
 			std::string rejectionReason;
@@ -2091,6 +2150,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
             pendingReadoutGlobalRequest = latestReadoutGlobalRequest = result.requestId;
             return false; // Revalidate on a captured image in the private probe worker.
         }
+		ReproCapture::Scope reproRevalidation({{"frameId", snapshotFrameId}, {"sourceFrameId", result.frameId},
+			{"stage", "global-visual-revalidate"}});
 		const bool featureRechecked = GlobalVisualLocalizer::TrackNearby(normalizedMinimap, minMapFeatureData,
             globalCandidate.sceneId, globalCandidate.mapCenter, 64.0, candidate);
         if (!featureRechecked) {
@@ -2265,6 +2326,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         ReadoutVisualResult probe;
         std::string probeError;
         if (readoutVisualWorker.Take(probe, probeError)) {
+            ReproCapture::Scope reproProbe({{"captureRun", probe.source.session}, {"frameId", probe.source.frame},
+                {"requestId", probe.source.globalRequest}, {"stage", "readout-visual-consume"}});
             const auto consumedAt = CoordinateHandoff::Clock::now();
             if (!probeError.empty()) Diagnostics::Record("readout-visual-probe", "error=" + probeError);
             else if (!probe.source.Fresh(coordinateSessionId, coordinateUiGeneration, snapshotFrameId,
@@ -2800,6 +2863,11 @@ bool App::SubmitMapViewportSearch(const Mat& currentSnapshot, MapViewportSearchS
         request.mapCrop = ImageProcessing::CropToMapCenterArea(currentSnapshot, rect).clone();
     }
 	const auto requestId = request.requestId;
+	{
+		ReproCapture::Scope reproViewport({{"captureRun", coordinateSessionId}, {"frameId", request.frameId},
+			{"requestId", requestId}, {"stage", "map-viewport-submit"}});
+		ReproCapture::Image("map-viewport-crop", request.mapCrop);
+	}
 	const auto viewportRevision = request.viewportRevision;
 	// Keep the exact image represented by the asynchronous absolute result.
 	// A later capture may have moved even when frame prediction failed to
@@ -2936,6 +3004,8 @@ void App::CommitMapViewportResult(const MapViewportLocalizationResult& result,
 void App::ProcessMapViewportResult(const Mat& currentSnapshot) {
     MapViewportLocalizationResult result;
     if (!MapViewportLocalizer::TryTakeLatestResult(result)) return;
+    ReproCapture::Scope reproViewportResult({{"captureRun", result.sessionId}, {"frameId", result.frameId},
+        {"requestId", result.requestId}, {"stage", "map-viewport-consume"}});
     if (result.sessionId != coordinateSessionId) {
         Diagnostics::Record("map-viewport-stale", "reason=session-mismatch session=" +
             std::to_string(result.sessionId));
@@ -2970,6 +3040,8 @@ void App::ProcessMapViewportResult(const Mat& currentSnapshot) {
 	}
 	if (result.accepted) {
 		const auto requestFrameId = result.frameId;
+		ReproCapture::Scope reproBridge({{"frameId", snapshotFrameId}, {"sourceFrameId", requestFrameId},
+			{"stage", "map-viewport-bridge"}});
 		const auto requestRevision = result.viewportRevision;
 		MapViewportPrediction requestPrediction, bridgedPrediction;
 		requestPrediction.sceneId = result.sceneId;
@@ -2980,6 +3052,7 @@ void App::ProcessMapViewportResult(const Mat& currentSnapshot) {
 		const bool sameClientSize = sourceFrame->clientRect.right == rect.right &&
 			sourceFrame->clientRect.bottom == rect.bottom;
 		const Mat currentMapCrop = ImageProcessing::CropToMapCenterArea(currentSnapshot, rect);
+		if (!currentMapCrop.empty()) ReproCapture::Image("map-viewport-current-crop", currentMapCrop);
 		const bool bridged = sameClientSize && MapViewportPredictor::TryBridgePrediction(
 			sourceFrame->mapCrop, currentMapCrop,
 			requestPrediction, bridgedPrediction, &bridgeInliers, &bridgeScale);
@@ -3286,6 +3359,8 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
         routeVisualFix && lastPositionCapturedAt == readoutVisualAnchor->capturedAt &&
         !isOpenMap.load() && isExistMinMap.load();
     const CapturedFrame& captured = anchored ? *readoutVisualAnchor : requestedCapture;
+    ReproCapture::Scope reproLayout({{"captureRun", coordinateSessionId}, {"frameId", captured.frameId},
+        {"stage", "overlay-layout"}});
     OverlayFrame frame;
     frame.frameId = captured.frameId; frame.clientRect = captured.clientRect; frame.capturedAt = captured.capturedAt;
     frame.maximumAge = std::chrono::milliseconds(std::max(500, 2 * std::max(

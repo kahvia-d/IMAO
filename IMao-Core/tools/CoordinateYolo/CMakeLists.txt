@@ -6,6 +6,7 @@ get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
 set(IMAO_DEPENDENCY_ROOT "${ROOT}" CACHE PATH "Existing dependency checkout")
 find_package(OpenCV REQUIRED PATHS "${IMAO_DEPENDENCY_ROOT}/third_party/build/opencv-4.11.0" NO_DEFAULT_PATH)
 add_executable(IMaoCoordinateYolo main.cpp
+    "${ROOT}/IMao-Core/src/Diagnostics/ReproCapture.cpp"
     "${ROOT}/IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.cpp"
     "${ROOT}/IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp")
 target_include_directories(IMaoCoordinateYolo PRIVATE "${ROOT}/IMao-Core/src" "${ROOT}/IMao-Core/packages/nlohmann" ${OpenCV_INCLUDE_DIRS})

@@ -4,6 +4,9 @@ namespace IMao_WinUI.Models;
 
 public sealed class CoreRuntimeStatus
 {
+    [JsonPropertyName("diagnosticCapture")]
+    public DiagnosticCaptureStatus? DiagnosticCapture { get; init; }
+
     [JsonPropertyName("resourceSnapshotId")]
     public string ResourceSnapshotId { get; init; } = "";
 
@@ -82,4 +85,26 @@ public sealed class CoreRuntimeStatus
         "faulted" => "核心故障",
         _ => CoreState
     };
+}
+
+public sealed class DiagnosticCaptureStatus
+{
+    [JsonPropertyName("state")]
+    public string State { get; init; } = "idle";
+    [JsonPropertyName("directory")]
+    public string Directory { get; init; } = "";
+    [JsonPropertyName("elapsedMs")]
+    public long ElapsedMs { get; init; }
+    [JsonPropertyName("durationMs")]
+    public long DurationMs { get; init; } = 180000;
+    [JsonPropertyName("savedImages")]
+    public long SavedImages { get; init; }
+    [JsonPropertyName("missingImages")]
+    public long MissingImages { get; init; }
+    [JsonPropertyName("queuedBytes")]
+    public long QueuedBytes { get; init; }
+    [JsonPropertyName("diskBytes")]
+    public long DiskBytes { get; init; }
+    [JsonPropertyName("error")]
+    public string Error { get; init; } = "";
 }

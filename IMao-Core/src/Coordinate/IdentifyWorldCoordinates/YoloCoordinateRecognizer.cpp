@@ -2,6 +2,7 @@
 #define NOMINMAX
 #endif
 #include "YoloCoordinateRecognizer.h"
+#include "../../Diagnostics/ReproCapture.h"
 #include "../HudLayout.h"
 #include "../../../packages/onnxruntime/include/onnxruntime_c_api.h"
 #include <opencv2/imgproc.hpp>
@@ -137,5 +138,12 @@ std::pair<cv::Mat,cv::Mat> YoloCoordinateRecognizer::Prepare(const cv::Mat& crop
 }
 Json YoloCoordinateRecognizer::Recognize(const cv::Mat& crop,bool calibrated) {
     const auto [raw,contrast]=Prepare(crop);
-    return CoordinateYolo::Select(Detect(raw),Detect(contrast),contrast,calibrated);
+    ReproCapture::Image("ocr-raw", raw, {{"calibrated", calibrated}});
+    ReproCapture::Image("ocr-contrast", contrast, {{"calibrated", calibrated}});
+    const auto rawDetections = Detect(raw);
+    const auto contrastDetections = Detect(contrast);
+    const auto selected = CoordinateYolo::Select(rawDetections,contrastDetections,contrast,calibrated);
+    ReproCapture::Record("ocr-detections", {{"raw", rawDetections}, {"contrast", contrastDetections},
+        {"calibrated", calibrated}, {"selected", selected}});
+    return selected;
 }

@@ -104,6 +104,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public event EventHandler<CoreRuntimeStatus>? StatusChanged;
     public string LogDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IMao-WinUI", "Logs");
     public string CrashDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IMao-WinUI", "CrashReports");
+    public string LastDiagnosticCaptureDirectory { get; private set; } = "";
 
     public async Task EnsureStartedAsync(CancellationToken cancellationToken = default)
     {
@@ -386,8 +387,20 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         finally { lifecycleLock.Release(); }
     }
 
-    public Task SetDiagnosticsCaptureAsync(bool enabled, CancellationToken cancellationToken = default) =>
-        SendCommandAsync("setDiagnosticsCapture", new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken);
+    public async Task SetDiagnosticsCaptureAsync(bool enabled, CancellationToken cancellationToken = default)
+    {
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            Session? session = active;
+            if (session is null || !IsConnected || session.Stop.IsCancellationRequested)
+                throw new IOException("核心未连接，采集暂不可用");
+            if (!await SendLockedAsync(session, "setDiagnosticsCapture",
+                new Dictionary<string, object?> { ["enabled"] = enabled }, cancellationToken))
+                throw new InvalidOperationException("采集操作未被接受，请查看实时事件中的说明");
+        }
+        finally { lifecycleLock.Release(); }
+    }
 
     /// Diagnostic only. Keeps capture, tracking and drawing running while the overlay window itself
     /// stays hidden, so a frame-rate comparison can show what the visible window costs the game.
@@ -724,6 +737,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             return;
         }
         Status = value;
+        if (!string.IsNullOrWhiteSpace(value.DiagnosticCapture?.Directory))
+            LastDiagnosticCaptureDirectory = value.DiagnosticCapture.Directory;
         if (value.CoreState == "faulted") LastFault = value.Message;
         if (resourceSnapshots is not null && value.ResourcesReady && value.CoreState != "faulted" && !resourceHealthReported)
         {

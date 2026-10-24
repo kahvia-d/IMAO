@@ -718,6 +718,12 @@ target_include_directories(IMaoCaptureCallbackLifetimeTests PRIVATE ${CMAKE_SOUR
 set_target_properties(IMaoCaptureCallbackLifetimeTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoCaptureCallbackLifetimeTests COMMAND IMaoCaptureCallbackLifetimeTests)
 
+add_executable(IMaoClientCaptureGeometryTests IMao-Core/tests/ClientCaptureGeometryTests.cpp)
+target_include_directories(IMaoClientCaptureGeometryTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+target_link_libraries(IMaoClientCaptureGeometryTests PRIVATE dwmapi user32)
+set_target_properties(IMaoClientCaptureGeometryTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoClientCaptureGeometryTests COMMAND IMaoClientCaptureGeometryTests)
+
 # Headless WARP texture roundtrip: verifies CPU owner release and exact font
 # pixels/geometry across renderer invalidation and recreation.
 add_executable(IMaoFontTextureMemoryTests IMao-Core/tests/FontTextureMemoryTests.cpp
@@ -748,3 +754,10 @@ target_include_directories(IMaoRuntimeIndexStorageTests PRIVATE ${CMAKE_SOURCE_D
 target_link_libraries(IMaoRuntimeIndexStorageTests PRIVATE ${OpenCV_LIBS})
 set_target_properties(IMaoRuntimeIndexStorageTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoRuntimeIndexStorageTests COMMAND IMaoRuntimeIndexStorageTests)
+
+# These tools compile production diagnostics/recognition sources directly.
+foreach(_repro_target IN ITEMS IMaoOptimizationTests IMaoOcrDependencyTests
+    IMaoCoordinateRuntimeTests IMaoLayeredMapTests IMaoVisualRegression IMaoCoordinateRegression)
+    target_sources(${_repro_target} PRIVATE IMao-Core/src/Diagnostics/ReproCapture.cpp)
+endforeach()
+add_subdirectory(IMao-Core/tools/ReproCaptureTests)

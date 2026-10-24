@@ -75,6 +75,7 @@ namespace IMao_WinUI.Services
         public ObservableCollection<FixtureLog> RecentLogs { get; } = new(Enumerable.Range(1,400).Select(i=>new FixtureLog($"20:30:{i%60:D2}  [状态]  测试事件 {i} · 地图定位和显示工作正常")));
         public string LastFault { get; private set; } = "";
         public string LogDirectory => Path.Combine(AppContext.BaseDirectory,"fixture","logs");
+        public string LastDiagnosticCaptureDirectory => "";
         public string CrashDirectory => Path.Combine(AppContext.BaseDirectory,"fixture","crashes");
         public bool RejectConfigure { get; set; }
         public List<(string Action,object? Arguments)> RouteCommands { get; } = new();

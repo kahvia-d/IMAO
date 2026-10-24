@@ -12,6 +12,7 @@
 #include "../Feature/VisualIndex/VisualIndexRetrieval.h"
 #include "../Runtime/ThreadPriority.h"
 #include "../Diagnostics/Diagnostics.h"
+#include "../Diagnostics/ReproCapture.h"
 #include "../Runtime/FrameStorageAccounting.h"
 
 #include <opencv2/calib3d.hpp>
@@ -942,6 +943,8 @@ private:
                 request = std::move(*request_);
                 request_.reset();
             }
+            ReproCapture::Scope reproViewport({{"captureRun", request.sessionId}, {"frameId", request.frameId},
+                {"requestId", request.requestId}, {"stage", "map-viewport-worker"}});
             auto result = Locate(request, [&] { return token.stop_requested() || epoch_.load() != epoch; });
             transientMatcher_.reset();
             {

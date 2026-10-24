@@ -1,4 +1,5 @@
 #include "Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.h"
+#include "Diagnostics/ReproCapture.h"
 #include <opencv2/imgcodecs.hpp>
 #include <fstream>
 #include <iostream>
@@ -8,6 +9,32 @@
 
 int main(int argc,char**argv) {
     try {
+        // Exercise the exact recorder and model on an offline client frame. No game/user state.
+        if(argc==5 && std::string(argv[1])=="--record-fixture") {
+            const auto frame=cv::imread(argv[3],cv::IMREAD_UNCHANGED);
+            if(frame.empty())throw std::runtime_error("Missing fixture frame");
+            if(!ReproCapture::Start(std::filesystem::path(argv[4]),{{"fixture",true}}))
+                throw std::runtime_error("Cannot start fixture recorder");
+            {
+                ReproCapture::Scope source({{"captureRun",1},{"sourceSequence",1},{"frameId",1}});
+                ReproCapture::Image("wgc",frame,{{"partial",false},{"validRegions",{{0,0,frame.cols,frame.rows}}},
+                    {"width",frame.cols},{"height",frame.rows}});
+                ReproCapture::Record("client-crop",{{"parentStage","wgc"},{"storage","crop-reference"},
+                    {"crop",{0,0,frame.cols,frame.rows}}});
+                ReproCapture::Record("capture-published");
+                ReproCapture::Scope request({{"requestId",1},{"stage","ocr-recognize"}});
+                const auto region=YoloCoordinateRecognizer::Region(frame.size());
+                const bool calibrated=frame.size()==cv::Size(2560,1440)&&region==cv::Rect(32,1405,608,33);
+                ReproCapture::Image("ocr-crop",frame(region),{{"calibrated",calibrated},
+                    {"sourceSize",{frame.cols,frame.rows}},{"crop",{region.x,region.y,region.width,region.height}}});
+                YoloCoordinateRecognizer net{std::filesystem::path(argv[2])};
+                const auto selected=net.Recognize(frame(region),calibrated);
+                ReproCapture::Record("fixture-result",{{"selected",selected}});
+            }
+            ReproCapture::Stop();ReproCapture::Shutdown();
+            std::cout<<ReproCapture::Status().dump()<<std::endl;
+            return ReproCapture::Status().value("state",std::string{})=="completed"?0:1;
+        }
         // Isolated, read-only model probe: no map loader, marker store or capture
         // can contaminate the process-wide before/after samples.
         if(argc==4 && std::string(argv[1])=="--memory") {

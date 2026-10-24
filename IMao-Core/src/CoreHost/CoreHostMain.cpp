@@ -1,5 +1,6 @@
 #include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
+#include "../Diagnostics/ReproCapture.h"
 #include "../Runtime/RuntimeStatus.h"
 #include "../Runtime/ResourceSnapshotContext.h"
 #include "../Runtime/StructuredLogger.h"
@@ -172,7 +173,8 @@ json StatusEvent() {
         { "minimapDynamicMaskPercent", status.minimapDynamicMaskPercent },
         { "statusBarEnabled", status.statusBarEnabled },
         { "mapStatusBarEnabled", status.mapStatusBarEnabled },
-        { "statusBallEnabled", status.statusBallEnabled }
+        { "statusBallEnabled", status.statusBallEnabled },
+        { "diagnosticCapture", ReproCapture::Status() }
     };
 }
 
@@ -700,8 +702,10 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
         }
         if (type == "setDiagnosticsCapture") {
             const bool enabled = command.value("enabled", false);
-            Diagnostics::SetCaptureEnabled(enabled);
-            SendAck(events, command, true, enabled ? "诊断截图已开启" : "诊断截图已关闭");
+            const bool accepted = Diagnostics::SetCaptureEnabled(enabled);
+            SendAck(events, command, accepted, accepted
+                ? (enabled ? "短时完整采集已开始，最多3分钟" : "正在完成采集文件写入")
+                : ReproCapture::Status().value("error", std::string("无法开始采集")));
             return true;
         }
         if (type == "setOverlayHidden") {
@@ -948,6 +952,7 @@ int wmain(int argc, wchar_t** wideArgv) {
         Shutdown();
     }
     StructuredLogger::Record("info", "host", "corehost-stopped");
+    ReproCapture::Shutdown();
     return 0;
     }
     catch (const std::exception& exception) {

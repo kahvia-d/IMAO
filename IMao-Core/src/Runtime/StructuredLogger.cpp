@@ -1,5 +1,6 @@
 #include "StructuredLogger.h"
 #include "TextEncoding.h"
+#include "../Diagnostics/ReproCapture.h"
 
 #include <Windows.h>
 
@@ -107,12 +108,13 @@ void StructuredLogger::Record(std::string severity, std::string category, std::s
     Initialize();
     StructuredLogEvent event{ Timestamp(), std::move(severity), std::move(category), std::move(message), std::move(details) };
     Observer observerCopy;
+    nlohmann::json record{
+        { "timestamp", event.timestamp }, { "severity", event.severity },
+        { "category", event.category }, { "message", event.message }, { "details", event.details }
+    };
+    if (ReproCapture::Active()) record["diagnosticContext"] = ReproCapture::Context();
     {
         std::scoped_lock lock(loggerMutex);
-        nlohmann::json record{
-            { "timestamp", event.timestamp }, { "severity", event.severity },
-            { "category", event.category }, { "message", event.message }, { "details", event.details }
-        };
         {
             std::ofstream output(LogDirectory() / ("events-" + DateStamp() + ".jsonl"), std::ios::app);
             if (output) output << DumpJsonText(record) << '\n';
@@ -122,6 +124,7 @@ void StructuredLogger::Record(std::string severity, std::string category, std::s
         PruneLocked();
         observerCopy = observer;
     }
+    ReproCapture::Log(std::move(record));
     if (observerCopy) observerCopy(event);
 }
 

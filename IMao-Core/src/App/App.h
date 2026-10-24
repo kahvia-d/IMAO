@@ -263,6 +263,8 @@ private:
 	const std::uint64_t coordinateSessionId;
 	std::uint64_t coordinateUiGeneration = 1;
 	std::uint64_t snapshotFrameId = 0;
+	std::uint64_t diagnosticLastSourceSequence = 0;
+	std::string diagnosticLastDirectory;
 	std::chrono::steady_clock::time_point snapshotCapturedAt{};
 	bool lastCoordinateVisible = false;
 	CoordinateRecoveryController coordinateRecovery;

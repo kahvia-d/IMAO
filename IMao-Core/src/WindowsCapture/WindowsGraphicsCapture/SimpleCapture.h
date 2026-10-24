@@ -9,6 +9,8 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
+#include <array>
+#include <nlohmann/json.hpp>
 #include "CaptureCallbackGate.h"
 class SimpleCapture
 {
@@ -61,10 +63,8 @@ public:
     /// hands the geometry over whenever it changes. Until it does, the boxes are sized from the
     /// frame itself, which is what a borderless client reports anyway.
     void SetClientGeometry(int originX, int originY, int clientWidth, int clientHeight) {
-        m_roiClientOriginX.store(originX);
-        m_roiClientOriginY.store(originY);
-        m_roiClientWidth.store(clientWidth);
-        m_roiClientHeight.store(clientHeight);
+        std::lock_guard<std::mutex> lock(m_roiClientGeometryMutex);
+        m_roiClientGeometry = {originX,originY,clientWidth,clientHeight};
     }
 
     /// Takes the frame the consumer has not read yet. `outputFrame` is reused when it already has the
@@ -73,10 +73,11 @@ public:
     /// waits for one the caller could not already have seen, which is what lets the capture loop start
     /// from a frame that arrived after the startup frame was consumed.
     bool WaitForFirstFrame(cv::Mat& outputFrame, std::chrono::milliseconds timeout,
-        std::uint64_t* frameSequence = nullptr);
+        std::uint64_t* frameSequence = nullptr, nlohmann::json* readbackInfo = nullptr);
 
     bool GetLatestFrame_Mat(cv::Mat& outputFrame, std::uint64_t* frameSequence = nullptr,
-        std::chrono::steady_clock::time_point* capturedAt = nullptr) {
+        std::chrono::steady_clock::time_point* capturedAt = nullptr,
+        nlohmann::json* readbackInfo = nullptr) {
         std::lock_guard<std::mutex> lock(m_frameMutex);
         if (m_latestFrame.empty()) {
             return false;
@@ -84,6 +85,7 @@ public:
         m_latestFrame.copyTo(outputFrame);
         if (frameSequence != nullptr) *frameSequence = m_frameSequence;
         if (capturedAt != nullptr) *capturedAt = m_frameCapturedAt;
+        if (readbackInfo != nullptr) *readbackInfo = m_latestReadbackInfo;
         return true;
     }
 
@@ -176,8 +178,9 @@ private:
     /// rebuilds it even when the staging texture happens to keep its size.
     int m_roiSlotsClientWidth = 0, m_roiSlotsClientHeight = 0;
     int m_roiSlotsOriginX = 0, m_roiSlotsOriginY = 0;
-    std::atomic<int> m_roiClientOriginX{ -1 }, m_roiClientOriginY{ -1 };
-    std::atomic<int> m_roiClientWidth{ 0 }, m_roiClientHeight{ 0 };
+    int m_roiSlotsLayoutWidth = 0, m_roiSlotsLayoutHeight = 0;
+    std::mutex m_roiClientGeometryMutex;
+    std::array<int,4> m_roiClientGeometry{ -1,-1,0,0 };
     winrt::com_ptr<ID3D11Texture2D> m_roiStaging{ nullptr };
     UINT m_roiStagingWidth = 0, m_roiStagingHeight = 0;
     DXGI_FORMAT m_roiStagingFormat = DXGI_FORMAT_UNKNOWN;
@@ -215,6 +218,8 @@ private:
     ImTextureID                                 m_imguiImTextureID;
 
     cv::Mat m_latestFrame;
+    /// Describes the pixels published with m_latestFrame, guarded by the same mutex and sequence.
+    nlohmann::json m_latestReadbackInfo;
     /// Destination of the readback copy. The copy itself needs no lock - the frame pool callback is
     /// its only writer - so it runs here and the result is swapped into m_latestFrame under the lock.
     cv::Mat m_scratchFrame;
