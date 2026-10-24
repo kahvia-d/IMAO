@@ -5,7 +5,7 @@
     "sequence": 48,
     "previousStableSha256": "6819959c2a108403f02f4d1412026a354b19beeba4ed6c0f89703bf222ee4d5e",
     "artifactId": 12553079266,
-    "status": "awaiting-signature",
+    "status": "publishing",
     "version": "2026.10.24.1",
     "sourceCommit": "cbb2294d220005c9e3bdb577d3256aa3ed167c36",
     "previousChannelSequence": 47,
@@ -16,7 +16,9 @@
     "releaseId": null,
     "requestId": "2b3ada64bf8d269efb7bad17752248f3ded902681ab2295b189df2643c779f35",
     "requestArtifactId": 12553717443,
-    "requestArtifactDigest": "a66a1fab29474bcfd76d28004e1136b5c61218a8cf4366461e76dafbadd810ba"
+    "requestArtifactDigest": "a66a1fab29474bcfd76d28004e1136b5c61218a8cf4366461e76dafbadd810ba",
+    "responseSha256": "9c7e16cf75cca3ce0e68d7fda0b736a2554dc6940cc408a972f8b30edbcf4df1",
+    "response": "{\r\n  \"formatVersion\": 1,\r\n  \"requestId\": \"2b3ada64bf8d269efb7bad17752248f3ded902681ab2295b189df2643c779f35\",\r\n  \"keyId\": \"wwmap-production-2026\",\r\n  \"catalogSha256\": \"080a9dcce5dfe2cb4add12b1ea26d40594f7c0ee58502e1f6fe9f74591e5452c\",\r\n  \"approvalSha256\": \"8007749eabd23f1845d522a6ae81bfce0c5bd3263ff4e045c5ec5493f00a30bc\",\r\n  \"catalogSignature\": \"qMHuXAJMk2DHZH14S54b\\u002BIY1mErOrw4PVDFlUH83yQw7Ye0O\\u002B3y/QTpNdlvc7CrVO093keItGiEn3UY25yjS8w==\",\r\n  \"approvalSignature\": \"XU3aoCJFnhtOjEKUJOcaW8C8kOb3hjXiY0/782GM19NIuNhVUpGjlb/flqD\\u002Bi9xs1qGjP6A8R6jExTMYWZ0dPA==\"\r\n}"
   },
   "completed": [
     {
