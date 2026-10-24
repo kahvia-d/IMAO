@@ -13,7 +13,10 @@
     "tag": "v2026.10.24.1",
     "artifactDigest": "f5bb86a0c6b5e14435b15f42e5a630d80300b684719014db975ef377f2f9b2a6",
     "buildRunId": 40074906646,
-    "releaseId": null
+    "releaseId": null,
+    "requestId": "2b3ada64bf8d269efb7bad17752248f3ded902681ab2295b189df2643c779f35",
+    "requestArtifactId": 12553717443,
+    "requestArtifactDigest": "a66a1fab29474bcfd76d28004e1136b5c61218a8cf4366461e76dafbadd810ba"
   },
   "completed": [
     {
