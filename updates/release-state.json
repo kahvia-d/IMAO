@@ -10,13 +10,15 @@
     "version": "2026.10.30.1",
     "artifactId": 12961745613,
     "artifactDigest": "767e6ffa9aff81774893b5b651459e4ccfccbed148c4f8e08a918ff7d851e1a2",
-    "status": "awaiting-signature",
+    "status": "publishing",
     "sourceCommit": "72f4d991d07b4f846d309387acd5afdeadd2f37f",
     "previousStableSha256": "1dc2d9d6431b83c1eb3b8c241951cfcaa123b27a5781c5159ad109e5f8590c56",
     "sequence": 49,
     "requestId": "9d77211770e94e94e60fa04af64369e01db127621192ab4cd1785adbff5702f2",
     "requestArtifactId": 12961273352,
-    "requestArtifactDigest": "cb4207bb7a1257a379978d82b16547e44a633eb09272cda64d9107892eff7cd1"
+    "requestArtifactDigest": "cb4207bb7a1257a379978d82b16547e44a633eb09272cda64d9107892eff7cd1",
+    "responseSha256": "94846a34a0b771e4ff7a123eac899e6a3d0f9b552b636819b2ada1f0aaad8659",
+    "response": "{\r\n  \"formatVersion\": 1,\r\n  \"requestId\": \"9d77211770e94e94e60fa04af64369e01db127621192ab4cd1785adbff5702f2\",\r\n  \"keyId\": \"wwmap-production-2026\",\r\n  \"catalogSha256\": \"2c5de55fe89fadd0ce2b5b8e9b6067ae95eff742b6c2848a45ba9535329334e2\",\r\n  \"approvalSha256\": \"23df1c7a56e75af18c0525707b53394b7c7fb0203224a7c1952cb08c6d175047\",\r\n  \"catalogSignature\": \"I7kwQZDcwFzJwGBUUL9jWZfdlaYduOdEh9k6DReusC6HeEUDah11Pm8evaIR3x7wk9HscGukxIipR1g6NDuzrA==\",\r\n  \"approvalSignature\": \"dj19CPV5YKa5ImUIZ5LpJYbkuea3crHOWAS9OTumuRPeMeR3m5O6PnwPGvV188XvdgK1bhBNmlQNqQNkibEAlQ==\"\r\n}"
   },
   "completed": [
     {
