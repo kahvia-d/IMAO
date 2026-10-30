@@ -1583,6 +1583,28 @@ int main(int argc,char** argv){
             Check(!refused.value("accepted",true),"stale add rejected at mutation boundary after filter changes");
             RoutePlanningService::SetGapFillModeEnabled(false);
         }
+        {
+            const auto current=RoutePlanningService::View().active;
+            Check(current&&current->stops.size()>1,"reset fixture has mixed targets");
+            if(current&&current->stops.size()>1){
+                const auto daily=current->stops.front(),permanent=current->stops.back();
+                DrawItemBase::refreshablePointIds.insert(daily.itemId);
+                Complete(daily,true);Complete(permanent,true);RoutePlanningService::OnMarkerChanged();
+                const auto before=RoutePlanningService::View();
+                const auto refused=RoutePlanningService::Command({{"action","resetDaily"},{"routeId",current->id}});
+                Check(!refused.value("accepted",true)&&DrawItemBase::IsPointCompleted("World",daily),"reset without confirmation cannot modify completion");
+                Check(!RoutePlanningService::Command({{"action","resetDaily"},{"routeId","another-route"},{"confirmed",true}}).value("accepted",true),"stale selected route rejected");
+                Check(RoutePlanningService::Snapshot().at("currentRoute").at("refreshableCount").get<int>()>0,"automatic mixed route exposes resettable targets");
+                const auto resetSummary=RoutePlanningService::Snapshot().at("currentRoute");
+                int resetTotal=0;for(const auto& group:resetSummary.at("resetGroups")){resetTotal+=group.at("count").get<int>();Check(!group.at("name").get<std::string>().empty(),"reset group has a display name");}
+                Check(resetTotal==resetSummary.at("refreshableCount").get<int>(),"reset summary includes exactly eligible route stops");
+                Command({{"action","resetDaily"},{"routeId",current->id},{"confirmed",true}});
+                Check(!DrawItemBase::IsPointCompleted("World",daily)&&DrawItemBase::IsPointCompleted("World",permanent),"reset clears daily identity and preserves collectible identity");
+                Check(Ids(*RoutePlanningService::View().active)==Ids(*before.active),"reset preserves route targets");
+                DrawItemBase::refreshablePointIds.erase(daily.itemId);
+                Check(!RoutePlanningService::Command({{"action","resetDaily"},{"routeId",current->id},{"confirmed",true}}).value("accepted",true),"route without daily targets refuses reset");
+            }
+        }
         VerifyFarmMode();
         VerifyRouteListShape();
         VerifyCollections();

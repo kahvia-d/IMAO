@@ -154,8 +154,16 @@ public sealed record RouteStop
     public string ListLabel => $"{(Order > 0 ? $"{Order}. " : "")}{Description} · {StatusLabel}";
 }
 
+public sealed record RouteResetGroup
+{
+    public string Name { get; init; } = "";
+    public int Count { get; init; }
+}
+
 public sealed record AutomaticRoute
 {
+    public RouteResetGroup[] ResetGroups { get; init; } = [];
+    public int RefreshableCount { get; init; }
     public bool FilterByRoute { get; init; } = true;
     public bool HandDrawn { get; init; }
     public string Collection { get; init; } = "default";

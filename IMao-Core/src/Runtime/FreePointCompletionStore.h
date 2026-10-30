@@ -29,6 +29,14 @@ public:
         if(next==document_)return;
         WriteTextAtomically(Path(),next.dump(2));document_=std::move(next);
     }
+    std::size_t ResetDaily(const std::string& profile,const std::vector<ItemDatas>& items) {
+        std::scoped_lock lock(mutex_);Select(profile);Expire();
+        auto next=document_;std::size_t changed=0;
+        for(const auto& item:items)if(AutoRoute::IsFreeStop(item)&&item.freeCategory==FreePointCategory::Daily)
+            changed+=next["daily"].erase(AutoRoute::Key(item));
+        if(changed){WriteTextAtomically(Path(),next.dump(2));document_=std::move(next);}
+        return changed;
+    }
     bool TakeExpired(const std::string& profile) {
         std::scoped_lock lock(mutex_);Select(profile);Expire();
         return std::exchange(expired_,false);

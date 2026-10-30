@@ -705,6 +705,16 @@ json DrawItemBase::SetFreePointCompletion(const std::string& profile,const ItemD
     }catch(const std::exception& error){return {{"accepted",false},{"message",error.what()}};}
 }
 
+std::size_t DrawItemBase::ResetRouteDailyCompletions(const std::string& profile,const std::string& scene,const std::vector<ItemDatas>& items) {
+    if(profile!=MarkerProfile()||!farmStore||!freeStore)throw std::runtime_error("完成记录不可用或档案已变化");
+    std::vector<FarmCompletionStore::Entry> entries;
+    for(const auto& item:items)if(!AutoRoute::IsFreeStop(item)&&(IsRefreshablePoint(item.nameId)||IsRefreshablePointId(item.itemId)))
+        entries.push_back({item.layer.stateId>0?item.layer.stateId:MarkerCompletionStore::SceneState(scene),item.itemId,false});
+    const auto changed=farmStore->SetManyForProfile(profile,entries);
+    try {const auto freeChanged=freeStore->ResetDaily(profile,items);ClearMarkerCandidates(true);return changed+freeChanged;}
+    catch(const std::exception& e){ClearMarkerCandidates(true);throw std::runtime_error("官方点位已重置 "+std::to_string(changed)+" 个，自由点保存失败，可重试："+e.what());}
+}
+
 bool DrawItemBase::IsRefreshablePoint(const std::string& nameId) {
     return !nameId.empty() && refreshableCategories.Contains(nameId);
 }

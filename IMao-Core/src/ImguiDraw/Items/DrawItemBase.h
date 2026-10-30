@@ -49,6 +49,7 @@ public:
     // cleared by the 04:00 reset; everything else keeps needing a deliberate mark.
     static bool IsRefreshablePoint(const std::string& nameId);
     static bool IsCollectiblePoint(const std::string& nameId);
+    static std::size_t ResetRouteDailyCompletions(const std::string& profile,const std::string& scene,const std::vector<ItemDatas>& items);
     static nlohmann::json SetFarmPointCompletion(const std::string& profile, const ItemDatas& item);
     static nlohmann::json SetFreePointCompletion(const std::string& profile, const ItemDatas& item, bool completed);
     static void PruneFreePointCompletions(const std::string& profile,const std::string& routeId,const std::unordered_set<std::string>& retained);

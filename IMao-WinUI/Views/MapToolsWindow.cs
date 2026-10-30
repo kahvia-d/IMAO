@@ -146,6 +146,16 @@ internal sealed class MapToolsWindow : Window
         return button;
     }
 
+    internal async Task<ContentDialogResult> ShowResetDailyDialogAsync(AutomaticRoute current)
+    {
+        var dialog=new ContentDialog { XamlRoot=root.XamlRoot,Title="重置点位完成状态？",
+            Content=new TextBlock { Text=$"是否重置路线「{current.Name}」中以下点位的完成状态？\n\n范围包含当前路线中的：{string.Join("、", current.ResetGroups.Select(group => $"{group.Count} 个{group.Name}"))}。",
+                FontSize=14,TextWrapping=TextWrapping.Wrap,MaxWidth=440 },
+            PrimaryButtonText="重置",CloseButtonText="取消",DefaultButton=ContentDialogButton.Close };
+        handFarmDialog=dialog;handFarmChoice=1;
+        try{return await dialog.ShowAsync();}finally{if(ReferenceEquals(handFarmDialog,dialog))handFarmDialog=null;}
+    }
+
     internal ContentDialog CreateHandFarmDialog() => new()
     {
         XamlRoot = root.XamlRoot,
@@ -174,11 +184,11 @@ internal sealed class MapToolsWindow : Window
     {
         if(handFarmDialog is not { } dialog)return;
         if(action==GamepadAction.Back){dialog.Hide();return;}
-        var labels=new[]{dialog.PrimaryButtonText,dialog.SecondaryButtonText,dialog.CloseButtonText};
+        var labels=new[]{dialog.PrimaryButtonText,dialog.SecondaryButtonText,dialog.CloseButtonText}.Where(text=>!string.IsNullOrEmpty(text)).ToArray();
         var buttons=DialogButtons(dialog).Where(b=>b.Content is string text&&labels.Contains(text)).ToArray();
-        if(buttons.Length!=3)return; // The template is not loaded yet; wait for the next press.
+        if(buttons.Length!=labels.Length)return; // The template is not loaded yet; wait for the next press.
         if(action is GamepadAction.Left or GamepadAction.Up)handFarmChoice=Math.Max(0,handFarmChoice-1);
-        if(action is GamepadAction.Right or GamepadAction.Down)handFarmChoice=Math.Min(2,handFarmChoice+1);
+        if(action is GamepadAction.Right or GamepadAction.Down)handFarmChoice=Math.Min(labels.Length-1,handFarmChoice+1);
         var focused=FocusManager.GetFocusedElement(root.XamlRoot);
         if(action==GamepadAction.Accept&&focused is Button focus&&buttons.Contains(focus))
             handFarmChoice=Array.IndexOf(labels,(string)focus.Content);
@@ -369,6 +379,9 @@ internal sealed class MapToolsWindow : Window
             !next.HandDrawnActive && !next.HandDrawnPending;
         routesHeader.Children.Add(MakeButton("修改路线", "edit:" + (current?.Id ?? ""),
             "修改当前选中的手绘路线", editable));
+
+        routesHeader.Children.Add(MakeButton("重置完成状态", "resetDaily", "重置当前路线中指定点位的完成状态",
+            current is { RefreshableCount: > 0 } && !next.CurrentRouteIsPreview && !next.HandDrawnActive && !next.HandDrawnPending && !next.Computing));
 
         routes.Children.Add(routesCurrent);
         if (routeFilterActive)

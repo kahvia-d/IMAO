@@ -27,6 +27,12 @@ struct DrawItemBase {
     static std::string MarkerProfile(){return markerProfile;}
     static bool IsPointCompleted(const std::string&,const ItemDatas& item){std::scoped_lock lock(mutex);return completed.contains(AutoRoute::Key(item));}
     static bool IsCollectiblePoint(const std::string& nameId){return nameId=="chest";}
+    static std::size_t ResetRouteDailyCompletions(const std::string& profile,const std::string&,const std::vector<ItemDatas>& items){
+        if(profile!=markerProfile)throw std::runtime_error("profile-mismatch");
+        std::scoped_lock lock(mutex);std::size_t count=0;
+        for(const auto& item:items)if(AutoRoute::IsFreeStop(item)?item.freeCategory==FreePointCategory::Daily:IsRefreshablePoint(item.nameId)||IsRefreshablePointId(item.itemId))count+=completed.erase(AutoRoute::Key(item));
+        return count;
+    }
     static Json SetFreePointCompletion(const std::string& profile,const ItemDatas& item,bool value){
         if(profile!=markerProfile)return {{"accepted",false}};
         {std::scoped_lock lock(mutex);if(value)completed.insert(AutoRoute::Key(item));else completed.erase(AutoRoute::Key(item));}

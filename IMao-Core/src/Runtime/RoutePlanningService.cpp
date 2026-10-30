@@ -558,15 +558,25 @@ Json StopJsonLocked(const ItemDatas& item,int order=0,bool skipped=false){
         {"freeIcon",AutoRoute::IconId(item.freeIcon)},{"freeCategory",AutoRoute::CategoryId(item.freeCategory)},
         {"completed",R().completed.contains(AutoRoute::Key(item))},{"skipped",skipped},{"order",order}};
 }
+bool DailyResettable(const ItemDatas& item){return AutoRoute::IsFreeStop(item)?item.freeCategory==FreePointCategory::Daily:
+    DrawItemBase::IsRefreshablePoint(item.nameId)||DrawItemBase::IsRefreshablePointId(item.itemId);}
 Json PlanJsonLocked(const AutoRoute::Plan& plan){
-    Json stops=Json::array();Coordinate previous=plan.start.roc;double length=0;
+    Json stops=Json::array();Json resetGroups=Json::array();Coordinate previous=plan.start.roc;double length=0;
     for(std::size_t i=0;i<plan.stops.size();++i){const auto& item=plan.stops[i];
         stops.push_back(StopJsonLocked(item,static_cast<int>(i+1),plan.skipped.contains(AutoRoute::Key(item))));
+        if(DailyResettable(item)) {
+            const auto found=R().names.find(item.nameId);
+            const std::string label=AutoRoute::IsFreeStop(item)?(item.freeIcon==FreePointIcon::Number?"其它":AutoRoute::FreePointLabel(item.freeIcon,0)):
+                found==R().names.end()?item.nameId:found->second;
+            auto group=std::find_if(resetGroups.begin(),resetGroups.end(),[&](const Json& value){return value.at("name")==label;});
+            if(group==resetGroups.end())resetGroups.push_back({{"name",label},{"count",1}});
+            else (*group)["count"]=group->at("count").get<int>()+1;
+        }
         if(!R().completed.contains(AutoRoute::Key(item))&&!plan.skipped.contains(AutoRoute::Key(item))){
             length+=std::hypot(item.itemMapROC.x-previous.x,item.itemMapROC.y-previous.y);previous=item.itemMapROC;}}
     return {{"id",plan.id},{"name",plan.name},{"profileId",plan.profileId},{"sceneId",plan.sceneId},
         {"sceneName",Scene::SceneIdToName(plan.sceneId)},{"start",AutoRoute::StartJson(plan.start)},
-        {"stops",std::move(stops)},{"planarLength",length},{"handDrawn",plan.handDrawn},
+        {"stops",std::move(stops)},{"resetGroups",std::move(resetGroups)},{"refreshableCount",std::count_if(plan.stops.begin(),plan.stops.end(),DailyResettable)},{"planarLength",length},{"handDrawn",plan.handDrawn},
         {"routeCategory",AutoRoute::CategoryId(plan.routeCategory)},{"legacyHandDrawn",plan.legacyHandDrawn},
         {"filterByRoute",plan.filterByRoute},{"collection",AutoRoute::NormalizeCollectionId(plan.collection)}};
 }
@@ -1667,6 +1677,16 @@ Json RoutePlanningService::Command(const Json& command){
             const bool start=command.value("start",true);
             ApplySavedRouteLocked(next,start);
             r.message=start?"已应用该路线并开始指引":"已应用该路线，点击继续导航";
+        }else if(action=="resetDaily"){
+            if(!r.active||!command.contains("routeId")||!command.value("confirmed",false))throw std::runtime_error("请先选择路线并确认重置");
+            if(r.handDraft.Active()||r.handDraft.Pending()||r.computing)throw std::runtime_error("请先完成路线编辑或计算，再重置完成状态");
+            if(!std::any_of(r.active->stops.begin(),r.active->stops.end(),DailyResettable))throw std::runtime_error("当前路线没有可重置的点位");
+            const auto reconcile=[&]{RefreshCompletedLocked();InvalidateAutoLocked(true);r.farmConfirmation.Reset();};
+            std::size_t changed=0;
+            try{changed=DrawItemBase::ResetRouteDailyCompletions(r.profile,Scene::SceneIdToName(r.active->sceneId),r.active->stops);}
+            catch(...){reconcile();throw;}
+            reconcile();r.message="已重置当前路线中 "+std::to_string(changed)+" 个点位的完成状态";
+            StructuredLogger::Record("info","routes","daily-completions-reset","route="+r.active->id+" changed="+std::to_string(changed));
         }else if(action=="current"){
             // Reading only: the list page asks what the top row should say.
         }else if(action=="handStart"||action=="handPoint"||action=="handUndo"||action=="handCancel"||action=="handCommit"||action=="handFinish"||action=="handDiscard"||action=="handIcon"||action=="handChoose"||action=="handEdit"||action=="handConnect"||action=="handRemove"){

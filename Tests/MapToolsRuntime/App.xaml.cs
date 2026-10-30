@@ -363,6 +363,12 @@ public partial class App : Application
             Check(header.Children.Contains(edit)&&header.Children.IndexOf(edit)==header.Children.IndexOf(header.Children.OfType<Button>().Single(b=>Equals(b.Tag,"page:route")))+1,"editor sits immediately after return-to-planning in the header");
             view.RenderRoutes(state with {CurrentRoute=new(){Id="auto"}});
             Check(!Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"修改路线")).IsEnabled,"selected automatic route cannot be edited");
+            view.RenderRoutes(state with {CurrentRoute=new(){Id="mixed",RefreshableCount=2},CurrentRouteIsPreview=false});
+            Check(Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"重置完成状态")).IsEnabled,"mixed automatic route enables daily reset");
+            view.RenderRoutes(state with {CurrentRoute=new(){Id="collectible",RefreshableCount=0},CurrentRouteIsPreview=false});
+            Check(!Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"重置完成状态")).IsEnabled,"collectible-only route disables daily reset");
+            view.RenderRoutes(state with {CurrentRoute=new(){Id="preview",RefreshableCount=2},CurrentRouteIsPreview=true});
+            Check(!Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"重置完成状态")).IsEnabled,"unsaved preview cannot reset completion");
             view.RenderRoutes(state with {CurrentRoute=new(){Id="hand"},CurrentRouteIsPreview=true});
             Check(!Descendants((DependencyObject)view.Content).OfType<Button>().Single(b=>Equals(b.Content,"修改路线")).IsEnabled,"preview route cannot be edited");
             state=state with {CurrentRoute=new(){Id="hand"}};
@@ -401,6 +407,18 @@ public partial class App : Application
                 }
                 Check(await Task.WhenAny(pendingChoice,Task.Delay(2000))==pendingChoice&&await pendingChoice==expected,
                     "gamepad can select farm dialog result "+expected);
+            }
+            foreach(var accept in new[]{false,true}) {
+                var pendingReset=view.ShowResetDailyDialogAsync(new(){Id="mixed",Name="Mixed",RefreshableCount=7,ResetGroups=[new(){Name="先锋幼岩",Count=2},new(){Name="1C",Count=1},new(){Name="3C",Count=1},new(){Name="怪",Count=1},new(){Name="其它",Count=2}]});await Task.Delay(150);
+                Check(view.HandFarmDialogOpen,"daily reset confirmation owns input");
+                var resetDialog=GetField<ContentDialog>(view,"handFarmDialog");
+                Check(resetDialog.Title is string resetTitle&&resetTitle=="重置点位完成状态？"&&resetDialog.Content is TextBlock resetText&&
+                    resetText.Text.Contains("范围包含当前路线中的：2 个先锋幼岩、1 个1C、1 个3C、1 个怪、2 个其它。")&&
+                    !resetText.Text.Contains("收集物")&&!resetText.Text.Contains("共用"),"reset prompt shows grouped scope without category or shared-route explanation");
+                if(accept)view.HandleHandFarmGamepad(GamepadAction.Left);
+                view.HandleHandFarmGamepad(GamepadAction.Accept);
+                Check(await Task.WhenAny(pendingReset,Task.Delay(2000))==pendingReset&&await pendingReset==(accept?ContentDialogResult.Primary:ContentDialogResult.None),
+                    "daily reset defaults to cancel and gamepad explicitly confirms: "+accept);
             }
             view.SetBusy(false);
             view.FocusCurrent();Check(true,"checkbox participates in navigation without button casts");

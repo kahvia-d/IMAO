@@ -314,6 +314,12 @@ void FreeCompletionTests() {
     Check(store.Completed("local",daily)&&store.Completed("local",permanent),"both free-point classes can be marked complete");
     auto other=daily;other.freeRouteId="route-b";
     Check(!store.Completed("local",other)&&!store.Completed("other",daily),"free completion is isolated by route and profile");
+    store.Set("local",other,true);
+    Check(store.ResetDaily("local",{daily,permanent})==1,"manual reset clears only supplied daily free point");
+    Check(!store.Completed("local",daily)&&store.Completed("local",permanent)&&store.Completed("local",other),"manual reset preserves collectible and other-route free records");
+    FreePointCompletionStore resetReload(root,[&]{return epoch;});
+    Check(!resetReload.Completed("local",daily)&&resetReload.Completed("local",permanent),"manual free reset survives reload");
+    store.Set("local",daily,true);
     ++epoch;
     Check(!store.Completed("local",daily)&&store.Completed("local",permanent),"daily expiry never erases collectible free-point completion");
     FreePointCompletionStore restarted(root,[&]{return epoch;});
@@ -404,6 +410,13 @@ void FarmWriteIdentityTests(){
     Check(!store.Completed(1,"target"),"stale write never marks the new profile");
     store.SelectProfile("local");store.SetForProfile("local",1,"target",true);
     Check(store.Completed(1,"target"),"matched farm profile persists completion");
+    store.SetForProfile("local",1,"keep",true);
+    store.SetForProfile("local",2,"target",true);
+    Rejects([&]{store.SetManyForProfile("other",{{1,"target",false}});},"batch reset rejects changed profile");
+    Check(store.SetManyForProfile("local",{{1,"target",false}})==1,"batch reset updates selected official identity");
+    Check(!store.Completed(1,"target")&&store.Completed(1,"keep")&&store.Completed(2,"target"),"batch reset preserves unrelated and cross-state identities");
+    store.SetForProfile("local",1,"target",true);
+
     const auto held=CreateFileW(store.Path("local").c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
     Rejects([&]{store.SetForProfile("local",1,"failed",true);},"farm write failure is reported");
     Check(!store.Completed(1,"failed"),"farm failed write cannot advance memory");

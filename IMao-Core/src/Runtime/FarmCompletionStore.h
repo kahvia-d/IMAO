@@ -117,6 +117,12 @@ public:
         ExpireLocked();SetManyLocked({{state,point,completed}});
     }
 
+    std::size_t SetManyForProfile(const std::string& expected,const std::vector<Entry>& entries) {
+        std::scoped_lock lock(mutex_);
+        if(profile_!=expected)throw std::runtime_error("profile-mismatch");
+        ExpireLocked();return SetManyLocked(entries);
+    }
+
     // Moves pre-existing completions out of the synchronized ledger on the first run of
     // this feature. The caller selects the records (they must all be daily-refresh ones);
     // what arrives here is recorded for the current epoch and therefore expires at the

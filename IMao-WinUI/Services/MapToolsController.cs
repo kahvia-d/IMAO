@@ -558,6 +558,18 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
                 await guides.OpenRouteGuideFromToolsAsync(profile, gameIdentity.Handle, window.Handle);
                 return;
             }
+            if (action == "resetDaily")
+            {
+                var owner=window;var context=core.RoutePlanning;var current=context.CurrentRoute;
+                if(current is null||context.CurrentRouteIsPreview||current.RefreshableCount<=0)return;
+                var choice=await owner.ShowResetDailyDialogAsync(current);
+                if(choice!=Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary||operation!=generation||!ReferenceEquals(window,owner)||closing||handoff)return;
+                await core.ExecuteRoutePlanningAsync("resetDaily",new Dictionary<string,object?> {
+                    ["profileId"]=profile,["routeId"]=current.Id,["expectedGeneration"]=context.Generation,["confirmed"]=true
+                },sessionCancellation?.Token??default);
+                window.RenderRoutes(core.RoutePlanning,RouteFilterActive,FilteredRouteName,FilteredKindCount);
+                Report(core.RoutePlanning.Message);return;
+            }
             if (action == "gapFill")
             {
                 bool applied = await core.ConfigureAsync(gapFillModeEnabled: !core.Configuration.GapFillModeEnabled,
