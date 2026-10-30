@@ -13,7 +13,10 @@
     "status": "awaiting-signature",
     "sourceCommit": "72f4d991d07b4f846d309387acd5afdeadd2f37f",
     "previousStableSha256": "1dc2d9d6431b83c1eb3b8c241951cfcaa123b27a5781c5159ad109e5f8590c56",
-    "sequence": 49
+    "sequence": 49,
+    "requestId": "9d77211770e94e94e60fa04af64369e01db127621192ab4cd1785adbff5702f2",
+    "requestArtifactId": 12961273352,
+    "requestArtifactDigest": "cb4207bb7a1257a379978d82b16547e44a633eb09272cda64d9107892eff7cd1"
   },
   "completed": [
     {
